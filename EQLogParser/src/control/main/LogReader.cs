@@ -35,9 +35,12 @@ namespace EQLogParser
     public bool IsWaiting() => _waiting;
     public bool IsInValid() => _invalid;
 
+    /// <summary>
+    /// Starts the asynchronous log reading process.
+    /// </summary>
     public async Task StartAsync()
     {
-      if (await WhenFileExists())
+      if (await WhenFileExistsAsync())
       {
         logProcessor.LinkTo(_lines);
         FileUtil.QueueFileArchiveAsync(this);
@@ -45,7 +48,7 @@ namespace EQLogParser
 
       try
       {
-        await ReadFile();
+        await ReadFileAsync();
       }
       catch (Exception ex)
       {
@@ -53,7 +56,7 @@ namespace EQLogParser
       }
       finally
       {
-        CleanupStreams();
+        await CleanupStreamsAsync();
 
         if (_watcher != null)
         {
@@ -70,6 +73,9 @@ namespace EQLogParser
       }
     }
 
+    /// <summary>
+    /// Gets the current reading progress as a percentage.
+    /// </summary>
     public double GetProgress()
     {
       if (!_ready)
@@ -85,7 +91,7 @@ namespace EQLogParser
       return _currentPos / (double)_initSize * 100;
     }
 
-    private async Task ReadFile()
+    private async Task ReadFileAsync()
     {
       string line;
       string previous = null;
@@ -198,12 +204,12 @@ namespace EQLogParser
         try
         {
           // if deleted or truncated
-          if (_fileDeleted || _fs.Length < _currentPos)
-          {
-            _fileDeleted = false;
-            await ReOpen();
-            continue;
-          }
+        if (_fileDeleted || _fs.Length < _currentPos)
+        {
+          _fileDeleted = false;
+          await ReOpenAsync();
+          continue;
+        }
 
           if (_cts == null || _cts.IsCancellationRequested)
           {
@@ -225,7 +231,7 @@ namespace EQLogParser
         }
         catch (Exception)
         {
-          await ReOpen();
+          await ReOpenAsync();
         }
       }
     }
@@ -289,7 +295,7 @@ namespace EQLogParser
       }
     }
 
-    private async Task<bool> WhenFileExists()
+    private async Task<bool> WhenFileExistsAsync()
     {
       while (true)
       {
@@ -316,12 +322,12 @@ namespace EQLogParser
       }
     }
 
-    private async Task ReOpen()
+    private async Task ReOpenAsync()
     {
-      CleanupStreams();
+      await CleanupStreamsAsync();
       await Task.Delay(100);
 
-      if (await WhenFileExists())
+      if (await WhenFileExistsAsync())
       {
         _fileDeleted = false;
         _fs = new FileStream(
@@ -341,7 +347,7 @@ namespace EQLogParser
       }
     }
 
-    private async void CleanupStreams()
+    private async Task CleanupStreamsAsync()
     {
       _reader?.Dispose();
       _reader = null;

@@ -32,7 +32,7 @@ namespace EQLogParser
       },
       { "SortBy", ["Trigger Time", "Remaining Time", "Timer Name (Alphabetical)", "Timer Name (Natural)"] },
       { "TimerMode", ["Standard", "Cooldown"] },
-      { "TimerType", ["No Timer", "Countdown", "Fast Countdown", "Progress", "Looping"] },
+      { "TimerType", TriggerListOptionLabels.TimerTypes },
       { "FontFamily", UiElementUtil.GetSystemFontFamilies().Select(font => font.Source).ToList() },
       { "FontWeight", UiElementUtil.GetFontWeights() },
       { "HorizontalAlignment", ["Left", "Center", "Right"]},

@@ -68,6 +68,20 @@ namespace EQLogParser
           activeSelectText.Visibility = Visibility.Collapsed;
         }
 
+        if (_theCharacter.IdleColor != null && UiUtil.GetBrush(_theCharacter.IdleColor, false) is { } idleColor)
+        {
+          idleColorPicker.Color = idleColor.Color;
+          idleColorPicker.Visibility = Visibility.Visible;
+          idleSelectText.Visibility = Visibility.Collapsed;
+        }
+
+        if (_theCharacter.ResetColor != null && UiUtil.GetBrush(_theCharacter.ResetColor, false) is { } resetColor)
+        {
+          resetColorPicker.Color = resetColor.Color;
+          resetColorPicker.Visibility = Visibility.Visible;
+          resetSelectText.Visibility = Visibility.Collapsed;
+        }
+
         if (_theCharacter.FontColor != null && UiUtil.GetBrush(_theCharacter.FontColor, false) is { } fontColor)
         {
           fontColorPicker.Color = fontColor.Color;
@@ -116,18 +130,18 @@ namespace EQLogParser
     private async void SaveClicked(object sender, RoutedEventArgs e)
     {
       var activeColor = activeColorPicker.Visibility == Visibility.Visible ? activeColorPicker?.Color.ToHexString() : null;
+      var idleColor = idleColorPicker.Visibility == Visibility.Visible ? idleColorPicker?.Color.ToHexString() : null;
+      var resetColor = resetColorPicker.Visibility == Visibility.Visible ? resetColorPicker?.Color.ToHexString() : null;
       var fontColor = fontColorPicker.Visibility == Visibility.Visible ? fontColorPicker?.Color.ToHexString() : null;
       var customVolume = volumeOption.SelectedIndex == 1 ? (int)Math.Round(volumeSlider.Value) : -1;
 
       if (_theCharacter == null)
       {
-        await TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
-          rateOption.SelectedIndex, customVolume, activeColor, fontColor);
+        await TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
       }
       else
       {
-        await TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
-          rateOption.SelectedIndex, customVolume, activeColor, fontColor);
+        await TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
       }
 
       Close();
@@ -248,6 +262,36 @@ namespace EQLogParser
       fontColorPicker.Color = Colors.White;
       fontColorPicker.Visibility = Visibility.Visible;
       fontSelectText.Visibility = Visibility.Collapsed;
+      EnableSave();
+    }
+
+    private void ResetIdleColorClick(object sender, RoutedEventArgs e)
+    {
+      idleColorPicker.Visibility = Visibility.Collapsed;
+      idleSelectText.Visibility = Visibility.Visible;
+      EnableSave();
+    }
+
+    private void SelectIdleColorClick(object sender, MouseButtonEventArgs e)
+    {
+      idleColorPicker.Color = Colors.White;
+      idleColorPicker.Visibility = Visibility.Visible;
+      idleSelectText.Visibility = Visibility.Collapsed;
+      EnableSave();
+    }
+
+    private void ResetResetColorClick(object sender, RoutedEventArgs e)
+    {
+      resetColorPicker.Visibility = Visibility.Collapsed;
+      resetSelectText.Visibility = Visibility.Visible;
+      EnableSave();
+    }
+
+    private void SelectResetColorClick(object sender, MouseButtonEventArgs e)
+    {
+      resetColorPicker.Color = Colors.White;
+      resetColorPicker.Visibility = Visibility.Visible;
+      resetSelectText.Visibility = Visibility.Collapsed;
       EnableSave();
     }
 

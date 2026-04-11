@@ -1,3 +1,15 @@
+# 2.3.50 | 04/11/26
+1. There are **Major** UI changes in **Trigger Manager** when editing **Triggers** and **Overlays**. Some properties were moved to their own tab, categories were renamed, and some labels updated. All to make room for additional features in the future.
+2. Added options for **Custom Idle Color** and **Custom Reset Color** to Trigger properties as well as the character settings when using Advanced mode. These work just like the previous option for **Custom Active Color**.
+3. Added a **Match End Early Pattern #3** option to the **Timer End Early** section now that there is extra room to work with.
+4. The **Timeline** charts like, **ADPS Timeline**, now support **saving** and **restoring layouts**. Make changes toe the chart, click **Manage Layouts** and create a layout. It will appear in the **Select a Layout** dropdown. The rest should be obvious.
+5. Updated **Check for Updates** to query github.com APIs to be a little more reliable. Hopefully, auto update still works.
+6. Fix for the classes dropdown on the **Damage Summary** table not showing child rows for pets when you choose a subset of classes to display.
+7. Updated spells based on latest from Test server.
+8. Updated Syncfusion as well as audio and caching libraries to the latest version. Should address some minor bugs.
+9. Note that previous versios of EQLP will be more reliably available from the releases tab on github.
+https://github.com/kauffman12/EQLogParser/releases
+
 # 2.3.49 | 04/01/26
 1. Bug fix for some missing Overlay options.
 

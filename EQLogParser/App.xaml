@@ -4,6 +4,7 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf">
   <Application.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <Style x:Key="EQIconStyle" TargetType="fa:ImageAwesome">
       <Setter Property="Foreground" Value="{DynamicResource EQMenuIconBrush}" />
       <Setter Property="Height" Value="{DynamicResource EQContentSize}"/>

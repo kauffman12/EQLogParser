@@ -305,29 +305,33 @@ namespace EQLogParser
       {
         dataGrid.View.Filter = stats =>
         {
-          var name = "";
-          var className = "";
-          if (stats is PlayerStats playerStats)
+          if (!(stats is PlayerStats playerStats)) return false;
+
+          var name = playerStats.Name;
+          var className = playerStats.ClassName;
+          bool isPet = PlayerManager.Instance.IsVerifiedPet(name);
+
+          if (isPet)
           {
-            name = playerStats.Name;
-            className = playerStats.ClassName;
+            var ownerName = PlayerManager.Instance.GetPlayerFromPet(name);
+            if (!string.IsNullOrEmpty(ownerName) && ownerName != Labels.Unassigned)
+            {
+              var owner = CurrentStats?.ExpandedStatsList.FirstOrDefault(s => s.Name == ownerName);
+              if (owner != null)
+              {
+                className = owner.ClassName;
+              }
+            }
           }
 
-          bool result;
-          if (_currentPetOrPlayerOption == 1)
-          {
-            result = !PlayerManager.Instance.IsVerifiedPet(name) && (SelectedClasses.Count == 16 || SelectedClasses.Contains(className));
-          }
-          else if (_currentPetOrPlayerOption == 2)
-          {
-            result = PlayerManager.Instance.IsVerifiedPet(name);
-          }
-          else
-          {
-            result = SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
-          }
+          bool classMatches = SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
 
-          return result;
+          return _currentPetOrPlayerOption switch
+          {
+            1 => !isPet && classMatches,
+            2 => isPet && classMatches,
+            _ => classMatches
+          };
         };
 
         if (dataGrid.SelectedItems.Count > 0)

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -21,6 +22,29 @@
       <CheckBox x:Name="showMeleeAdps" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Melee ADPS" IsEnabled="False" Checked="OptionsChange" Unchecked="OptionsChange" />
       <CheckBox x:Name="hideSelfOnly" IsChecked="True" Template="{StaticResource CustomCheckBoxTemplate}" Margin="0,0,8,2" Content="Hide Spells Only You See" IsEnabled="False" ToolTip="{StaticResource AdpsHideMineToolTipTemplate}"
                 Checked="OptionsChange" Unchecked="OptionsChange" />
+      <Grid Width="120" Margin="0,0,8,2">
+        <ComboBox x:Name="layoutSelector" Width="120" SelectionChanged="LayoutSelectorSelectionChanged" IsEnabled="False" />
+        <TextBlock x:Name="layoutStatus" FontStyle="Italic" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"  HorizontalAlignment="Left"  Margin="4,0,0,0" IsHitTestVisible="False">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Collapsed" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedItem, ElementName=layoutSelector}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </Grid>
+      <syncfusion:DropDownButtonAdv Label="Manage Layouts" IconHeight="0" IconWidth="5" Height="{DynamicResource EQButtonHeight}" Padding="4,0,4,0" Margin="0,0,4,1">
+        <syncfusion:DropDownMenuGroup>
+          <syncfusion:DropDownMenuItem Header="Create New Layout" Margin="0,0,15,0" Click="CreateLayoutClick" />
+          <syncfusion:DropDownMenuItem x:Name="saveLayoutButton" Header="Save Layout" IsEnabled="False" Click="SaveLayoutClick"/>
+          <Separator />
+          <syncfusion:DropDownMenuItem x:Name="deleteLayoutButton" Header="Delete Layout" IsEnabled="False" Click="DeleteLayoutClick"/>
+        </syncfusion:DropDownMenuGroup>
+      </syncfusion:DropDownButtonAdv>
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <Grid Grid.Row="1" HorizontalAlignment="Left">

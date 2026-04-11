@@ -208,7 +208,7 @@ namespace EQLogParser
     internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
     internal async Task Dispose() => await _taskQueue.Stop();
 
-    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string fontColor)
+    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string idleColor, string resetColor, string fontColor)
     {
       if (await GetConfig() is { } config)
       {
@@ -220,6 +220,8 @@ namespace EQLogParser
           Voice = voice,
           VoiceRate = voiceRate,
           ActiveColor = activeColor,
+          IdleColor = idleColor,
+          ResetColor = resetColor,
           FontColor = fontColor,
           Id = Guid.NewGuid().ToString()
         };
@@ -725,7 +727,7 @@ namespace EQLogParser
       }
     }
 
-    internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string fontColor)
+    internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string idleColor, string resetColor, string fontColor)
     {
       if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
       {
@@ -735,6 +737,8 @@ namespace EQLogParser
         existing.Voice = voice;
         existing.VoiceRate = voiceRate;
         existing.ActiveColor = activeColor;
+        existing.IdleColor = idleColor;
+        existing.ResetColor = resetColor;
         existing.FontColor = fontColor;
         await UpdateConfig(config);
       }
@@ -1428,6 +1432,9 @@ namespace EQLogParser
       if (newNode.TriggerData != null)
       {
         newNode.TriggerData.FontColor = FixColor(newNode.TriggerData.FontColor);
+        newNode.TriggerData.ActiveColor = FixColor(newNode.TriggerData.ActiveColor);
+        newNode.TriggerData.IdleColor = FixColor(newNode.TriggerData.IdleColor);
+        newNode.TriggerData.ResetColor = FixColor(newNode.TriggerData.ResetColor);
         if (newNode.TriggerData.SelectedOverlays is { } selected)
         {
           var remapped = selected.Where(overlayIds.ContainsKey).Select(id => overlayIds[id]).ToList();

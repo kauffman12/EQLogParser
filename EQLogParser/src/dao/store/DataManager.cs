@@ -982,6 +982,9 @@ namespace EQLogParser
       }
     }
 
+    /// <summary>
+    /// Searches for a spell path in the provided spell tree.
+    /// </summary>
     public static SpellTreeResult SearchSpellPath(SpellTreeNode node, string[] split, int lastIndex = -1)
     {
       if (lastIndex == -1)

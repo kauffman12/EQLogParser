@@ -135,7 +135,8 @@
             <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left">
               <Label Content="Overlay Font Color:" Padding="5,5,0,0" FontSize="{DynamicResource EQTitleSize}" />
               <Label Content="*Overrides overlay setting" FontWeight="Thin" Foreground="{DynamicResource EQWarnForegroundBrush}" FontSize="{DynamicResource EQDescriptionSize}" Padding="0" Margin="14,0,0,-10"/>
-            </StackPanel>            <Grid Grid.Column="1">
+            </StackPanel>
+            <Grid Grid.Column="1">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280" />
                 <ColumnDefinition Width="70*" />
@@ -143,6 +144,48 @@
               <TextBox x:Name="fontSelectText" Grid.Column="0" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectFontColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" BorderThickness="0" Padding="4,10,0,4" Margin="0"></TextBox>
               <syncfusion:ColorPicker x:Name="fontColorPicker" Grid.Column="0" SelectedBrushChanged="SelectedColorChanged" Visibility="Collapsed" BorderThickness="0" Padding="4,0,0,4" Margin="0,2,0,0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" />
               <Button Grid.Column="1" Margin="5,3,0,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="ResetFontColorClick">Reset</Button>
+            </Grid>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="205" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left">
+              <Label Content="Overlay Idle Color:" Padding="5,5,0,0" FontSize="{DynamicResource EQTitleSize}" />
+              <Label Content="*Overrides overlay setting" FontWeight="Thin" Foreground="{DynamicResource EQWarnForegroundBrush}" FontSize="{DynamicResource EQDescriptionSize}" Padding="0" Margin="14,0,0,-10"/>
+            </StackPanel>
+            <Grid Grid.Column="1">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="70*" />
+              </Grid.ColumnDefinitions>
+              <TextBox x:Name="idleSelectText" Grid.Column="0" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectIdleColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" BorderThickness="0" Padding="4,10,0,4" Margin="0"></TextBox>
+              <syncfusion:ColorPicker x:Name="idleColorPicker" Grid.Column="0" SelectedBrushChanged="SelectedColorChanged" Visibility="Collapsed" BorderThickness="0" Padding="4,0,0,4" Margin="0,2,0,0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" />
+              <Button Grid.Column="1" Margin="5,3,0,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="ResetIdleColorClick">Reset</Button>
+            </Grid>
+          </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="205" />
+              <ColumnDefinition Width="70*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left">
+              <Label Content="Overlay Reset Color:" Padding="5,5,0,0" FontSize="{DynamicResource EQTitleSize}" />
+              <Label Content="*Overrides overlay setting" FontWeight="Thin" Foreground="{DynamicResource EQWarnForegroundBrush}" FontSize="{DynamicResource EQDescriptionSize}" Padding="0" Margin="14,0,0,-10"/>
+            </StackPanel>
+            <Grid Grid.Column="1">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="70*" />
+              </Grid.ColumnDefinitions>
+              <TextBox x:Name="resetSelectText" Grid.Column="0" IsReadOnly="True" PreviewMouseLeftButtonDown="SelectResetColorClick" Text="Click to Select Color" FontStyle="Italic" Cursor="Hand" FontSize="{DynamicResource EQContentSize}" BorderThickness="0" Padding="4,10,0,4" Margin="0"></TextBox>
+              <syncfusion:ColorPicker x:Name="resetColorPicker" Grid.Column="0" SelectedBrushChanged="SelectedColorChanged" Visibility="Collapsed" BorderThickness="0" Padding="4,0,0,4" Margin="0,2,0,0" IsGradientPropertyEnabled="False" EnableSolidToGradientSwitch="False" />
+              <Button Grid.Column="1" Margin="5,3,0,1" Padding="10,0,10,0" Height="{DynamicResource EQButtonHeight}" Click="ResetResetColorClick">Reset</Button>
             </Grid>
           </Grid>
         </StackPanel>

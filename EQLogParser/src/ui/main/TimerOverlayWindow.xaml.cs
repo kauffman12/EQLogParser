@@ -949,10 +949,10 @@ namespace EQLogParser
           timerBar.SetActive(timerData);
           break;
         case TimerBar.State.Reset:
-          timerBar.SetReset();
+          timerBar.SetReset(timerData);
           break;
         case TimerBar.State.Idle:
-          timerBar.SetIdle();
+          timerBar.SetIdle(timerData);
           break;
       }
     }
