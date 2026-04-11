@@ -310,5 +310,8 @@
     <DataTemplate x:Key="HeaderAvgNonTwincastCritTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Crit Damage for all Hits that were not a Twincast" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderAvgNonTwincastLuckyTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Average Lucky Damage for all Hits that were not a Twincast" />
+    </DataTemplate>
   </Application.Resources>
 </Application>
