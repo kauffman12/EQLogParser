@@ -193,21 +193,21 @@
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport.Core" Version="2.3.2" />
-    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.Edit.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfInput.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.Shared.WPF" Version="33.1.46" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.Edit.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.PropertyGrid.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfInput.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfProgressBar.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfRichTextBoxAdv.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.Shared.WPF" Version="33.1.47" />
     <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="22.2.5" />
-    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="33.1.46" />
-    <PackageReference Include="Syncfusion.Tools.WPF" Version="33.1.46" />
+    <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="33.1.47" />
+    <PackageReference Include="Syncfusion.Tools.WPF" Version="33.1.47" />
     <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
