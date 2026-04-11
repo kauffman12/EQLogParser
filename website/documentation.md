@@ -130,33 +130,8 @@ Not a trigger variable. You send this text as a say, to the group, raid, another
 ## {EQLP:STOP}
 Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
 
-# UI Architecture
-
-EQLogParser uses a sophisticated WPF-based UI designed for high performance and flexibility, utilizing the Syncfusion WPF toolkit for many of its core components.
-
-## 🖥️ Main Workspace
-The main application window is built around a **Docking Manager**, providing an IDE-like experience. This allows users to dock, float, and rearrange various tool windows (such as the Fight List and Summary Tables). The layout state is persistable and is saved to `dockSite.xml` in the application configuration directory, ensuring your preferred workspace is restored on startup.
-
-## 🌳 Trigger Manager
-The Trigger Manager utilizes a customized **TreeView** implementation to handle complex hierarchies of triggers and folders. Key features include:
-- **Recursive State Management**: Checkboxes can enable or disable entire folders of triggers recursively.
-- **Asynchronous Search**: A debounced search mechanism allows users to find triggers by name or pattern without freezing the UI thread.
-- **Drag-and-Drop**: Full support for reorganizing triggers and folders via intuitive drag-and-drop operations.
-
-## 📈 Timeline View
-The Timeline is a custom-rendered component that provides a visual representation of spell and event timing.
-- **Synchronized Scrolling**: Uses multiple `ScrollViewers` and a `Canvas` to keep labels and event data perfectly aligned during navigation.
-- **Dynamic Scaling**: Implements a pixels-per-second scaling system, allowing users to zoom in and out of the timeline using `Ctrl + Mouse Wheel`.
-- **Custom Rendering**: High-performance rendering of event "blocks" and a specialized image export system using `RenderTargetBitmap` to capture the full timeline for sharing.
-
-## 💬 Chat Archive
-To handle potentially massive log files without performance degradation, the Chat Viewer employs several optimization strategies:
-- **Virtual Paging**: Instead of loading the entire chat history, the viewer loads data in small, manageable chunks (pages), fetching more data as the user scrolls up.
-- **Chat Iterator Pattern**: Uses a specialized iterator to filter and retrieve chat lines efficiently from the log archive.
-- **Dynamic Formatting**: Supports real-time adjustment of fonts and colors to ensure readability across different themes.
 
 # Linux Support
-
 
 EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required.
 
@@ -213,13 +188,11 @@ Once installation is finished, simply click the **Run App** button to launch EQL
 
 ---
 
-## Manual Installation Steps Tested on Ubuntu 25
+## Manually installing without Flatpak/Bottles
 
-If you prefer to install manually without Flatpak/Bottles, first download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
-
-The following steps are tested on Ubuntu/Debian-based systems:
-
-```bash
+### Download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html).
+Use the following steps to install under Linx (tested on Ubuntu/Debian-based systems):
+```
 sudo apt install wine  # (version 10)
 sudo apt install winetricks  # (version 20250102-1)
 winetricks allfonts
@@ -228,7 +201,7 @@ wine windowsdesktop-runtime-8.0.25-win-x64.exe  # (or latest)
 wine EQLogParser-install-2.3.49.exe  # (or latest)
 ```
 
-## Known Issues
+## Known Issues with Linux
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
     - Note the WINELOADER environment variable is used to detect WINE
     - Make sure that variable exists if you notice problems
