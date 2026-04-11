@@ -85,7 +85,7 @@ Replaced by your character name. Use it in any `Pattern` field as well as all ot
 
 ## `{S}`, `{Sx}`
 
-Acts as a wildcard to capture values in `Pattern` fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires `Regex` to be enabled and internally to the parser when you use `{s1}` it will be replaced with `(?<s1>.+)`.
+Acts as a wildcard to capture values in `Pattern` fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires `Regex` to be enabled; internally, the parser replaces `{s1}` with `(?<s1>.+)`.
 
 ## `{N}`, `{Nx}`
 
@@ -105,7 +105,7 @@ Replaced by the time from the line that triggered the event in the `hh:mm:ss` fo
 
 ## `{REPEATED}`
 
-This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value caputed by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
+This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value captured by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
 
 ## `{COUNTER}`
 
@@ -127,7 +127,36 @@ Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your
 
 Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
 
+## {EQLP:STOP}
+Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
+
+# UI Architecture
+
+EQLogParser uses a sophisticated WPF-based UI designed for high performance and flexibility, utilizing the Syncfusion WPF toolkit for many of its core components.
+
+## 🖥️ Main Workspace
+The main application window is built around a **Docking Manager**, providing an IDE-like experience. This allows users to dock, float, and rearrange various tool windows (such as the Fight List and Summary Tables). The layout state is persistable and is saved to `dockSite.xml` in the application configuration directory, ensuring your preferred workspace is restored on startup.
+
+## 🌳 Trigger Manager
+The Trigger Manager utilizes a customized **TreeView** implementation to handle complex hierarchies of triggers and folders. Key features include:
+- **Recursive State Management**: Checkboxes can enable or disable entire folders of triggers recursively.
+- **Asynchronous Search**: A debounced search mechanism allows users to find triggers by name or pattern without freezing the UI thread.
+- **Drag-and-Drop**: Full support for reorganizing triggers and folders via intuitive drag-and-drop operations.
+
+## 📈 Timeline View
+The Timeline is a custom-rendered component that provides a visual representation of spell and event timing.
+- **Synchronized Scrolling**: Uses multiple `ScrollViewers` and a `Canvas` to keep labels and event data perfectly aligned during navigation.
+- **Dynamic Scaling**: Implements a pixels-per-second scaling system, allowing users to zoom in and out of the timeline using `Ctrl + Mouse Wheel`.
+- **Custom Rendering**: High-performance rendering of event "blocks" and a specialized image export system using `RenderTargetBitmap` to capture the full timeline for sharing.
+
+## 💬 Chat Archive
+To handle potentially massive log files without performance degradation, the Chat Viewer employs several optimization strategies:
+- **Virtual Paging**: Instead of loading the entire chat history, the viewer loads data in small, manageable chunks (pages), fetching more data as the user scrolls up.
+- **Chat Iterator Pattern**: Uses a specialized iterator to filter and retrieve chat lines efficiently from the log archive.
+- **Dynamic Formatting**: Supports real-time adjustment of fonts and colors to ensure readability across different themes.
+
 # Linux Support
+
 
 EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required.
 
@@ -188,12 +217,16 @@ Once installation is finished, simply click the **Run App** button to launch EQL
 
 If you prefer to install manually without Flatpak/Bottles, first download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html) and continue below.
 
-1. apt install wine (version 10)
-2. apt install winetricks (version 20250102-1)
-3. winetricks allfonts
-4. winetricks renderer=gdi
-5. wine windowsdesktop-runtime-8.0.25-win-x64.exe (or latest)
-6. wine EQLogParser-install-2.3.49.exe (or latest)
+The following steps are tested on Ubuntu/Debian-based systems:
+
+```bash
+sudo apt install wine  # (version 10)
+sudo apt install winetricks  # (version 20250102-1)
+winetricks allfonts
+winetricks renderer=gdi
+wine windowsdesktop-runtime-8.0.25-win-x64.exe  # (or latest)
+wine EQLogParser-install-2.3.49.exe  # (or latest)
+```
 
 ## Known Issues
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
@@ -230,7 +263,7 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
 
 ## Why does unknown or spell names show in the DPS Summary?
 1. If a **DoT** is on an **NPC** and the player dies or zones it may stop reporting the player and say unknown instead
-    - Check the damage breakdown for the **Unkown** player to get a better idea of the cause
+    - Check the damage breakdown for the **Unknown** player to get a better idea of the cause
     - Unknown is also included to make sure all damage is counted for the group or raid
 2. If a name of a spell is listed in the **DPS Summary** it may be for a similar reason
     - Sometimes if the spell is a proc or other effect related to a **DoT** where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare.
