@@ -471,6 +471,7 @@ namespace EQLogParser
       try
       {
         _isClosed = true;
+        StopOverlay();
         _timer?.Dispose();
         TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
