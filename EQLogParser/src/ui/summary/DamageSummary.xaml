@@ -193,6 +193,25 @@
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
+        <syncfusion:TreeGridTemplateColumn MappingName="AssignedGroup" HeaderText="Group" ColumnSizer="Auto">
+          <syncfusion:TreeGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
+                        SelectedItem="{Binding AssignedGroup, Mode=TwoWay}"
+                        HorizontalAlignment="Center" 
+                        Width="50" 
+                        Margin="2">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding}" 
+                               HorizontalAlignment="Center" 
+                               Padding="4"/>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </DataTemplate>
+          </syncfusion:TreeGridTemplateColumn.CellTemplate>
+        </syncfusion:TreeGridTemplateColumn>
         <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
         <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />

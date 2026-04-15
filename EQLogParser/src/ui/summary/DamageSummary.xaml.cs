@@ -15,6 +15,8 @@ namespace EQLogParser
 {
   public partial class DamageSummary : IDocumentContent
   {
+    public static readonly List<int> GroupNumbers = new() { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private int _currentPetOrPlayerOption;
@@ -23,7 +25,14 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.AllOption };
+      petOrPlayerList.ItemsSource = new List<string>
+      {
+        Labels.PetPlayerOption,   // 0: Players + Pets
+        Labels.PlayerOption,      // 1: Players
+        Labels.PetOption,         // 2: Pets
+        Labels.AllOption,         // 3: Uncategorized
+        Labels.ByGroupOption      // 4: By Group (NEW)
+      };
       petOrPlayerList.SelectedIndex = 0;
 
       CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
@@ -156,13 +165,17 @@ namespace EQLogParser
         var beforeList = dataGrid.ItemsSource;
         switch (_currentPetOrPlayerOption)
         {
-          case 0:
+          case 0: // Players + Pets
             dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
             break;
-          case 1:
-          case 2:
-          case 3:
+          case 1: // Players
+          case 2: // Pets
+          case 3: // Uncategorized
             dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
+            break;
+          case 4: // NEW: By Group
+            var groupedPlayers = BuildGroupedPlayers();
+            dataGrid.ItemsSource = UpdateRank(groupedPlayers);
             break;
         }
 
@@ -173,6 +186,131 @@ namespace EQLogParser
           dataGrid.View.RefreshFilter();
         }
       }
+    }
+
+    /// <summary>
+    /// Builds grouped players for Group View mode. Creates group headers with aggregated stats and merges time ranges for accurate TotalSeconds calculation.
+    /// </summary>
+    /// <returns>List of PlayerStats objects representing groups, sorted by total damage descending.</returns>
+    private List<PlayerStats> BuildGroupedPlayers()
+    {
+      if (CurrentStats == null) return new List<PlayerStats>();
+
+      // Create group containers (1-12 + Unassigned Group)
+      var groupMap = new Dictionary<int, PlayerStats>();
+
+      for (int i = 1; i <= 12; i++)
+      {
+        groupMap[i] = new PlayerStats {
+          Name = $"Group {i}",
+          OrigName = $"Group {i}",
+          IsTopLevel = true,
+          ClassName = null
+        };
+      }
+
+      groupMap[0] = new PlayerStats {
+        Name = "Unassigned Group",
+        OrigName = "Unassigned Group",
+        IsTopLevel = true,
+        ClassName = null
+      };
+
+      // Track merged TimeRanges per group for accurate TotalSeconds calculation
+      var groupTimeRanges = new Dictionary<int, TimeRange>();
+
+      // Track which players belong to each group
+      var groupPlayerLists = new Dictionary<int, List<PlayerStats>>();
+
+      // Iterate through existing StatsList (Player +Pets aggregates)
+      foreach (var stats in CurrentStats.StatsList)
+      {
+        if (!IsPlayerVisible(stats))
+          continue;
+
+        var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
+
+        // Initialize group TimeRange if needed
+        if (!groupTimeRanges.ContainsKey(groupId))
+          groupTimeRanges[groupId] = new TimeRange();
+
+        // MERGE this player's time segments into group (handles overlaps correctly!)
+        if (stats.Ranges != null && stats.Ranges.TimeSegments.Count > 0)
+        {
+          groupTimeRanges[groupId].Add(stats.Ranges.TimeSegments);
+        }
+
+        // Add player to this group's list
+        if (!groupPlayerLists.ContainsKey(groupId))
+          groupPlayerLists[groupId] = new List<PlayerStats>();
+
+        stats.IsTopLevel = true;  // Mark so RequestTreeItems knows not to expand further
+        groupPlayerLists[groupId].Add(stats);
+      }
+
+      // Sort players within each group by Total descending
+      foreach (var kvp in groupPlayerLists)
+      {
+        kvp.Value.Sort((a, b) => b.Total.CompareTo(a.Total));
+      }
+
+      // Calculate aggregate stats for each group header and populate Children dictionary
+       foreach (var group in groupMap.Values)
+      {
+        int groupId = group.AssignedGroup;
+
+        if (groupPlayerLists.TryGetValue(groupId, out var players))
+        {
+          // Store the player list in CurrentStats.Children for this group
+          CurrentStats.Children[group.Name] = players;
+
+          // Damage totals - sum all players (damage doesn't overlap)
+          group.Total = players.Sum(p => p.Total);
+          group.Dps = players.Sum(p => p.Dps);
+          group.Sdps = players.Sum(p => p.Sdps);
+          group.Hits = (uint)players.Sum(p => p.Hits);
+
+          // Time - use MERGED ranges for accurate calculation (handles overlap)
+          if (groupTimeRanges.TryGetValue(groupId, out var mergedRange))
+          {
+            group.TotalSeconds = mergedRange.GetTotal();
+          }
+          else
+          {
+            // Fallback: Simple sum if no time range data
+            group.TotalSeconds = players.Sum(p => p.TotalSeconds);
+          }
+        }
+      }
+
+       // Return non-empty groups sorted by aggregate Total descending
+      return groupMap.Values
+        .Where(g =>
+        {
+          CurrentStats.Children.TryGetValue(g.Name, out var c);
+          return c != null && c.Count > 0;
+        })
+        .OrderByDescending(g => g.Total)
+        .ToList();
+    }
+
+    /// <summary>
+    /// Checks if player should be visible based on class filter selection.
+    /// </summary>
+    private bool IsPlayerVisible(PlayerStats player)
+    {
+      if (SelectedClasses.Count > 0 && SelectedClasses.Count < 16)
+      {
+        var className = player.ClassName;
+
+        // For Player +Pets entries, className should already be set correctly
+        if (className != null && !SelectedClasses.Contains(className))
+        {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
@@ -305,6 +443,14 @@ namespace EQLogParser
       {
         dataGrid.View.Filter = stats =>
         {
+          // Always show group headers (they don't have ClassName)
+          if (stats is PlayerStats groupHeader &&
+              string.IsNullOrEmpty(groupHeader.ClassName) &&
+              (groupHeader.Name.StartsWith("Group ") || groupHeader.Name == "Unassigned Group"))
+          {
+            return true;
+          }
+
           if (!(stats is PlayerStats playerStats)) return false;
 
           var name = playerStats.Name;
@@ -324,12 +470,13 @@ namespace EQLogParser
             }
           }
 
-          bool classMatches = SelectedClasses.Count == 16 || SelectedClasses.Contains(className);
+          bool classMatches = SelectedClasses.Count == 16 || (className != null && SelectedClasses.Contains(className));
 
           return _currentPetOrPlayerOption switch
           {
             1 => !isPet && classMatches,
             2 => isPet && classMatches,
+            4 => true,  // Group View - pre-filtered in BuildGroupedPlayers
             _ => classMatches
           };
         };
@@ -363,13 +510,50 @@ namespace EQLogParser
         {
           e.ChildItems = list;
         }
-        else if (e.ParentItem is PlayerStats stats && CurrentStats.Children.TryGetValue(stats.Name, out var childs))
+        else if (e.ParentItem is PlayerStats parentStats)
         {
-          e.ChildItems = childs;
-        }
-        else
-        {
-          e.ChildItems = new List<PlayerStats>();
+          // Check if this is a group header
+          bool isGroupHeader = string.IsNullOrEmpty(parentStats.ClassName) &&
+                              (parentStats.Name.StartsWith("Group ") || parentStats.Name == "Unassigned Group");
+
+          if (isGroupHeader)
+          {
+            // Return Player +Pets entries for this group from CurrentStats.Children
+            if (CurrentStats.Children.TryGetValue(parentStats.Name, out var groupPlayers))
+            {
+              e.ChildItems = groupPlayers;
+            }
+            else
+            {
+              e.ChildItems = new List<PlayerStats>();
+            }
+          }
+          else
+          {
+            // Check if we're in Group View by examining the parent list type
+            var itemList = dataGrid.ItemsSource as List<PlayerStats>;
+            bool isInGroupView = itemList != null && itemList.Count > 0 &&
+                                itemList[0] is PlayerStats firstItem &&
+                                string.IsNullOrEmpty(firstItem.ClassName);
+
+            if (isInGroupView)
+            {
+              // Level 2: Player +Pets - DON'T expand further, return empty list
+              e.ChildItems = new List<PlayerStats>();
+            }
+            else
+            {
+              // Regular view: Expand to show pets
+              if (CurrentStats.Children.TryGetValue(parentStats.Name, out var childPets))
+              {
+                e.ChildItems = childPets;
+              }
+              else
+              {
+                e.ChildItems = new List<PlayerStats>();
+              }
+            }
+          }
         }
       }
     }

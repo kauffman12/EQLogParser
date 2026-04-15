@@ -592,7 +592,7 @@ namespace EQLogParser
     public uint MeleeUndefended { get; set; }
     public string ClassName { get; set; }
     public string Key { get; set; }
-    public TimeRange Ranges { get; } = new();
+    public TimeRange Ranges { get; set; } = new();
     public TimeRange AllRanges { get; set; } = new();
     public List<PlayerSubStats> SubSubStats { get; } = [];
   }
@@ -602,8 +602,15 @@ namespace EQLogParser
     public List<PlayerSubStats> Children { get; set; } = [];
   }
 
-  internal class PlayerStats : PlayerSubStats
+  internal class PlayerStats : PlayerSubStats, System.ComponentModel.INotifyPropertyChanged
   {
+    public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+    protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
+    }
+
     public List<DeathEvent> Deaths { get; } = [];
     public ConcurrentDictionary<string, string> Specials { get; } = new();
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
@@ -616,6 +623,20 @@ namespace EQLogParser
     public double MinTime { get; set; }
     public double MaxBeginTime { get; set; }
     public double MinBeginTime { get; set; }
+
+    private int _assignedGroup;
+    public int AssignedGroup
+    {
+      get => _assignedGroup;
+      set
+      {
+        if (_assignedGroup != value)
+        {
+          _assignedGroup = value;
+          OnPropertyChanged();
+        }
+      }
+    }
   }
 
 }

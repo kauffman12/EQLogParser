@@ -21,6 +21,7 @@
 - Async suffix: `Async` for asynchronous methods
 
 ### Variables
+- prefer use of var over naming the type when possible
 - camelCase (e.g., `_assassinateEnabled`, `_mainWindow`)
 - Short, meaningful names (e.g., `wrapper`, `lineData`, `matches`)
 - Descriptive names for complex data (e.g., `dynamicDuration`, `swTime`)
