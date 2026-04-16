@@ -163,6 +163,7 @@ namespace EQLogParser
       if (CurrentStats != null)
       {
         var beforeList = dataGrid.ItemsSource;
+
         switch (_currentPetOrPlayerOption)
         {
           case 0: // Players + Pets
@@ -196,13 +197,13 @@ namespace EQLogParser
     {
       if (CurrentStats == null)
       {
-        return new List<PlayerStats>();
+        return [];
       }
 
       // Create group containers (1-12 + Unassigned Group)
       var groupMap = new Dictionary<int, PlayerStats>();
 
-      for (int i = 1; i <= 12; i++)
+      for (var i = 1; i <= 12; i++)
       {
         groupMap[i] = new PlayerStats
         {
@@ -466,7 +467,7 @@ namespace EQLogParser
 
           var name = playerStats.Name;
           var className = playerStats.ClassName;
-          bool isPet = PlayerManager.Instance.IsVerifiedPet(name);
+          var isPet = PlayerManager.Instance.IsVerifiedPet(name);
 
           if (isPet)
           {
@@ -481,7 +482,7 @@ namespace EQLogParser
             }
           }
 
-          bool classMatches = SelectedClasses.Count == 16 || (className != null && SelectedClasses.Contains(className));
+          var classMatches = SelectedClasses.Count == 16 || (className != null && SelectedClasses.Contains(className));
 
           return _currentPetOrPlayerOption switch
           {
@@ -524,7 +525,7 @@ namespace EQLogParser
         else if (e.ParentItem is PlayerStats parentStats)
         {
           // Check if this is a group header
-          bool isGroupHeader = string.IsNullOrEmpty(parentStats.ClassName) &&
+          var isGroupHeader = string.IsNullOrEmpty(parentStats.ClassName) &&
                               (parentStats.Name.StartsWith("Group ") || parentStats.Name == "Unassigned Group");
 
           if (isGroupHeader)
@@ -543,7 +544,7 @@ namespace EQLogParser
           {
             // Check if we're in Group View by examining the parent list type
             var itemList = dataGrid.ItemsSource as List<PlayerStats>;
-            bool isInGroupView = itemList != null && itemList.Count > 0 &&
+            var isInGroupView = itemList != null && itemList.Count > 0 &&
                                 itemList[0] is PlayerStats firstItem &&
                                 string.IsNullOrEmpty(firstItem.ClassName);
 

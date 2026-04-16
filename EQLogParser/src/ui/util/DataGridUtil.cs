@@ -680,7 +680,7 @@ namespace EQLogParser
         return MainActions.CurrentShortWidth;
       }
 
-      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
+      if (mappingName is "AssignedGroup" or "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
           "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
           or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
       {

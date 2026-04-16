@@ -193,27 +193,28 @@
         </ContextMenu>
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
-        <syncfusion:TreeGridTemplateColumn MappingName="AssignedGroup" HeaderText="Group" ColumnSizer="Auto">
+        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTemplateColumn x:Name="groupColumn" MappingName="AssignedGroup" HeaderText="Group">
           <syncfusion:TreeGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <ComboBox ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Row="0" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
                         SelectedItem="{Binding AssignedGroup, Mode=TwoWay}"
-                        HorizontalAlignment="Center" 
-                        Width="50" 
+                        HorizontalAlignment="Stretch"
                         Margin="2">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding}" 
-                               HorizontalAlignment="Center" 
-                               Padding="4"/>
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}"  HorizontalAlignment="Center" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
             </DataTemplate>
           </syncfusion:TreeGridTemplateColumn.CellTemplate>
-        </syncfusion:TreeGridTemplateColumn>
-        <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
-        <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
+        </syncfusion:TreeGridTemplateColumn>        <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
         <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:TreeGridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
