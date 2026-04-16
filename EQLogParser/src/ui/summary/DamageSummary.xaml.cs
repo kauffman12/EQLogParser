@@ -369,11 +369,36 @@ public partial class DamageSummary : IDocumentContent
         // Skip if value hasn't actually changed
         if (player.AssignedGroup == newGroupId) return;
 
+        // IMMEDIATELY persist the change to player object BEFORE any rebuild
+        player.AssignedGroup = newGroupId;
+
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
 
-        await UpdatePlayerGroupsAsync([(player, newGroupId)]);
+        await Task.Run(() =>
+        {
+          // Background work: Sync time segments for moved player
+          RebuildGroupTimeSegmentsForMovedPlayer(player, _playerGroups.GetValueOrDefault(player, -1), newGroupId);
+        });
+
+        // Force full ItemsSource replacement on UI thread
+        await Dispatcher.InvokeAsync(() =>
+        {
+          try
+          {
+            var newList = BuildGroupedPlayers();  // Uses updated player.AssignedGroup
+            dataGrid.ItemsSource = null;           // Clear first to reset TreeGrid state
+            dataGrid.ItemsSource = UpdateRank(newList);  // Set new reference
+            
+            CleanupEmptyGroups();
+          }
+          finally
+          {
+            prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+            prog.Visibility = Visibility.Hidden;
+          }
+        });
       }
       else
       {
@@ -530,6 +555,32 @@ public partial class DamageSummary : IDocumentContent
         }
       }
       return segments;
+    }
+
+    private void RebuildGroupTimeSegmentsForMovedPlayer(PlayerStats player, int oldGroupId, int newGroupId)
+    {
+      // Remove from old group's time segments by rebuilding
+      if (oldGroupId >= 0)
+      {
+        var oldGroupName = GetGroupName(oldGroupId);
+        _groupTimeSegments[oldGroupName] = RebuildGroupTimeSegments(oldGroupId);
+      }
+
+      // Add to new group's time segments
+      if (newGroupId >= 0)
+      {
+        var newGroupName = GetGroupName(newGroupId);
+        
+        if (!_groupTimeSegments.ContainsKey(newGroupName))
+        {
+          _groupTimeSegments[newGroupName] = new List<TimeSegment>();
+        }
+
+        if (player.Ranges?.TimeSegments != null)
+        {
+          _groupTimeSegments[newGroupName].AddRange(player.Ranges.TimeSegments);
+        }
+      }
     }
 
     private void RebuildChildrenDictionary(Dictionary<int, List<PlayerStats>> newGroupMembers)
