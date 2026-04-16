@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
@@ -194,26 +194,33 @@ namespace EQLogParser
     /// <returns>List of PlayerStats objects representing groups, sorted by total damage descending.</returns>
     private List<PlayerStats> BuildGroupedPlayers()
     {
-      if (CurrentStats == null) return new List<PlayerStats>();
+      if (CurrentStats == null)
+      {
+        return new List<PlayerStats>();
+      }
 
       // Create group containers (1-12 + Unassigned Group)
       var groupMap = new Dictionary<int, PlayerStats>();
 
       for (int i = 1; i <= 12; i++)
       {
-        groupMap[i] = new PlayerStats {
+        groupMap[i] = new PlayerStats
+        {
           Name = $"Group {i}",
           OrigName = $"Group {i}",
           IsTopLevel = true,
-          ClassName = null
+          ClassName = null,
+          AssignedGroup = i
         };
       }
 
-      groupMap[0] = new PlayerStats {
+      groupMap[0] = new PlayerStats
+      {
         Name = "Unassigned Group",
         OrigName = "Unassigned Group",
         IsTopLevel = true,
-        ClassName = null
+        ClassName = null,
+        AssignedGroup = 0
       };
 
       // Track merged TimeRanges per group for accurate TotalSeconds calculation
@@ -226,13 +233,17 @@ namespace EQLogParser
       foreach (var stats in CurrentStats.StatsList)
       {
         if (!IsPlayerVisible(stats))
+        {
           continue;
+        }
 
         var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
 
         // Initialize group TimeRange if needed
         if (!groupTimeRanges.ContainsKey(groupId))
+        {
           groupTimeRanges[groupId] = new TimeRange();
+        }
 
         // MERGE this player's time segments into group (handles overlaps correctly!)
         if (stats.Ranges != null && stats.Ranges.TimeSegments.Count > 0)
@@ -242,7 +253,9 @@ namespace EQLogParser
 
         // Add player to this group's list
         if (!groupPlayerLists.ContainsKey(groupId))
+        {
           groupPlayerLists[groupId] = new List<PlayerStats>();
+        }
 
         stats.IsTopLevel = true;  // Mark so RequestTreeItems knows not to expand further
         groupPlayerLists[groupId].Add(stats);
@@ -255,35 +268,33 @@ namespace EQLogParser
       }
 
       // Calculate aggregate stats for each group header and populate Children dictionary
-       foreach (var group in groupMap.Values)
+      foreach (var group in groupMap.Values)
       {
-        int groupId = group.AssignedGroup;
+        var groupId = group.AssignedGroup;
 
         if (groupPlayerLists.TryGetValue(groupId, out var players))
         {
           // Store the player list in CurrentStats.Children for this group
           CurrentStats.Children[group.Name] = players;
 
-          // Damage totals - sum all players (damage doesn't overlap)
-          group.Total = players.Sum(p => p.Total);
-          group.Dps = players.Sum(p => p.Dps);
-          group.Sdps = players.Sum(p => p.Sdps);
-          group.Hits = (uint)players.Sum(p => p.Hits);
+          // Aggregate stats using MergeStats
+          foreach (var player in players)
+          {
+            StatsUtil.MergeStats(group, player);
+          }
 
-          // Time - use MERGED ranges for accurate calculation (handles overlap)
+          // Correct the TotalSeconds using the merged TimeRange
           if (groupTimeRanges.TryGetValue(groupId, out var mergedRange))
           {
             group.TotalSeconds = mergedRange.GetTotal();
           }
-          else
-          {
-            // Fallback: Simple sum if no time range data
-            group.TotalSeconds = players.Sum(p => p.TotalSeconds);
-          }
+
+          // Re-calculate rates based on the correct aggregated totals and TotalSeconds
+          StatsUtil.CalculateRates(group, CurrentStats.RaidStats, null);
         }
       }
 
-       // Return non-empty groups sorted by aggregate Total descending
+      // Return non-empty groups sorted by aggregate Total descending
       return groupMap.Values
         .Where(g =>
         {

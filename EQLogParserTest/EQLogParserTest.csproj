@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Platforms>AnyCPU;x64</Platforms>
     <ProjectGuid>{66098053-1304-4A12-8F16-3AC568A4EC11}</ProjectGuid>
   </PropertyGroup>
