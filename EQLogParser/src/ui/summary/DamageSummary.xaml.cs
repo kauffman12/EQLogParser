@@ -205,39 +205,21 @@ public partial class DamageSummary : IDocumentContent
     /// Builds grouped players for Group View mode. Creates group headers with aggregated stats and merges time ranges for accurate TotalSeconds calculation.
     /// </summary>
     /// <returns>List of PlayerStats objects representing groups, sorted by total damage descending.</returns>
-    private List<PlayerStats> BuildGroupedPlayers()
+   private List<PlayerStats> BuildGroupedPlayers()
     {
       if (CurrentStats == null)
       {
         return [];
       }
 
-      // Create group containers (1-12 + Unassigned Group)
-      var groupMap = new Dictionary<int, PlayerStats>();
-
-      for (var i = 1; i <= 12; i++)
+      // Clear existing group children before rebuilding
+      foreach (var key in CurrentStats.Children.Keys.ToList())
       {
-        groupMap[i] = new PlayerStats
+        if (key.StartsWith("Group ") || key == "Unassigned Group")
         {
-          Name = $"Group {i}",
-          OrigName = $"Group {i}",
-          IsTopLevel = true,
-          ClassName = null,
-          AssignedGroup = i
-        };
+          CurrentStats.Children.Remove(key);
+        }
       }
-
-      groupMap[0] = new PlayerStats
-      {
-        Name = "Unassigned Group",
-        OrigName = "Unassigned Group",
-        IsTopLevel = true,
-        ClassName = null,
-        AssignedGroup = 0
-      };
-
-      // Track merged TimeRanges per group for accurate TotalSeconds calculation
-      var groupTimeRanges = new Dictionary<int, TimeRange>();
 
       // Track which players belong to each group
       var groupPlayerLists = new Dictionary<int, List<PlayerStats>>();
@@ -251,18 +233,6 @@ public partial class DamageSummary : IDocumentContent
         }
 
         var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
-
-        // Initialize group TimeRange if needed
-        if (!groupTimeRanges.ContainsKey(groupId))
-        {
-          groupTimeRanges[groupId] = new TimeRange();
-        }
-
-        // MERGE this player's time segments into group (handles overlaps correctly!)
-        if (stats.Ranges != null && stats.Ranges.TimeSegments.Count > 0)
-        {
-          groupTimeRanges[groupId].Add(stats.Ranges.TimeSegments);
-        }
 
         // Add player to this group's list
         if (!groupPlayerLists.ContainsKey(groupId))
@@ -280,42 +250,44 @@ public partial class DamageSummary : IDocumentContent
         kvp.Value.Sort((a, b) => b.Total.CompareTo(a.Total));
       }
 
-      // Calculate aggregate stats for each group header and populate Children dictionary
-      foreach (var group in groupMap.Values)
+      // Use persistent group headers from _groupHeaders
+      var nonEmptyGroups = new List<PlayerStats>();
+      foreach (var kvp in _groupHeaders)
       {
-        var groupId = group.AssignedGroup;
+        var groupName = kvp.Key;
+        var groupHeader = kvp.Value;
 
-        if (groupPlayerLists.TryGetValue(groupId, out var players))
+        if (groupPlayerLists.TryGetValue(groupHeader.AssignedGroup, out var players))
         {
           // Store the player list in CurrentStats.Children for this group
-          CurrentStats.Children[group.Name] = players;
+          CurrentStats.Children[groupName] = players;
 
-          // Aggregate stats using MergeStats
+          // Reset and recalculate stats using persistent header
+          StatsUtil.ResetPlayerStats(groupHeader);
+
+          // Merge time segments from _groupTimeSegments
+          var mergedRange = new TimeRange();
+          if (_groupTimeSegments.TryGetValue(groupName, out var timeSegments))
+          {
+            mergedRange.Add(timeSegments);
+          }
+          groupHeader.TotalSeconds = mergedRange.GetTotal();
+
+          // Merge all player stats
           foreach (var player in players)
           {
-            StatsUtil.MergeStats(group, player);
-          }
-
-          // Correct the TotalSeconds using the merged TimeRange
-          if (groupTimeRanges.TryGetValue(groupId, out var mergedRange))
-          {
-            group.TotalSeconds = mergedRange.GetTotal();
+            StatsUtil.MergeStats(groupHeader, player);
           }
 
           // Re-calculate rates based on the correct aggregated totals and TotalSeconds
-          StatsUtil.CalculateRates(group, CurrentStats.RaidStats, null);
+          StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
+
+          nonEmptyGroups.Add(groupHeader);
         }
       }
 
       // Return non-empty groups sorted by aggregate Total descending
-      return groupMap.Values
-        .Where(g =>
-        {
-          CurrentStats.Children.TryGetValue(g.Name, out var c);
-          return c != null && c.Count > 0;
-        })
-        .OrderByDescending(g => g.Total)
-        .ToList();
+      return nonEmptyGroups.OrderBy(g => g.Total).Reverse().ToList();
     }
 
     private string GetGroupName(int groupId)
@@ -562,7 +534,7 @@ public partial class DamageSummary : IDocumentContent
 
     private void RebuildChildrenDictionary(Dictionary<int, List<PlayerStats>> newGroupMembers)
     {
-      // Clear existing children
+      // Clear ALL existing group children before rebuilding
       foreach (var key in CurrentStats.Children.Keys.ToList())
       {
         if (key.StartsWith("Group ") || key == "Unassigned Group")
@@ -571,13 +543,17 @@ public partial class DamageSummary : IDocumentContent
         }
       }
 
-      // Add new group members to children
-      foreach (var kvp in newGroupMembers)
+      // Rebuild ALL groups from _playerGroups tracking
+      var groupsByPlayer = _playerGroups.GroupBy(p => p.Value);
+      foreach (var group in groupsByPlayer)
       {
-        var groupName = GetGroupName(kvp.Key);
-        if (kvp.Value.Count > 0)
+        var groupId = group.Key;
+        var playersInGroup = group.Select(p => p.Key).ToList();
+
+        if (playersInGroup.Count > 0)
         {
-          CurrentStats.Children[groupName] = kvp.Value;
+          var groupName = GetGroupName(groupId);
+          CurrentStats.Children[groupName] = playersInGroup;
         }
       }
     }
@@ -591,8 +567,7 @@ public partial class DamageSummary : IDocumentContent
 
       // Merge time segments for accurate TotalSeconds
       var mergedRange = new TimeRange();
-      var groupNameKey = groupName;
-      if (_groupTimeSegments.TryGetValue(groupNameKey, out var timeSegments))
+      if (_groupTimeSegments.TryGetValue(groupName, out var timeSegments))
       {
         mergedRange.Add(timeSegments);
       }
@@ -610,21 +585,19 @@ public partial class DamageSummary : IDocumentContent
 
   private void CleanupEmptyGroups()
     {
-      var groupsToRemove = new List<string>();
+      // Get all active group names from _playerGroups
+      var activeGroupIds = _playerGroups.Values.Distinct().ToHashSet();
+      var activeGroupNames = activeGroupIds.Select(g => GetGroupName(g)).ToHashSet();
 
-      foreach (var groupName in _groupHeaders.Keys)
+      // Remove groups that are no longer in use
+      foreach (var groupName in _groupHeaders.Keys.ToList())
       {
-        if (!CurrentStats.Children.ContainsKey(groupName) || CurrentStats.Children[groupName].Count == 0)
+        if (!activeGroupNames.Contains(groupName))
         {
-          groupsToRemove.Add(groupName);
+          _groupHeaders.Remove(groupName);
+          CurrentStats.Children.Remove(groupName);
+          _groupTimeSegments.Remove(groupName);
         }
-      }
-
-      foreach (var groupName in groupsToRemove)
-      {
-        _groupHeaders.Remove(groupName);
-        CurrentStats.Children.Remove(groupName);
-        _groupTimeSegments.Remove(groupName);
       }
     }
 
