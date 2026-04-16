@@ -382,23 +382,32 @@ public partial class DamageSummary : IDocumentContent
       _groupTimeSegments?.Clear();
     }
 
-    private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
+   private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (!_isGroupViewActive || e.AddedItems.Count == 0) return;
+      if (e.AddedItems.Count == 0) return;
 
       var player = (sender as System.Windows.Controls.ComboBox)?.DataContext as PlayerStats;
       if (player == null) return;
 
       var newGroupId = (int)e.AddedItems[0];
 
-      // Skip if value hasn't actually changed
-      if (player.AssignedGroup == newGroupId) return;
+      // If we're in Group View, use incremental update with progress indicator
+      if (_isGroupViewActive)
+      {
+        // Skip if value hasn't actually changed
+        if (player.AssignedGroup == newGroupId) return;
 
-      // Show progress indicator
-      prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
-      prog.Visibility = Visibility.Visible;
+        // Show progress indicator
+        prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
+        prog.Visibility = Visibility.Visible;
 
-      await UpdatePlayerGroupsAsync([(player, newGroupId)]);
+        await UpdatePlayerGroupsAsync([(player, newGroupId)]);
+      }
+      else
+      {
+        // Not in Group View - just update the value directly
+        player.AssignedGroup = newGroupId;
+      }
     }
 
     private async Task UpdatePlayerGroupsAsync(List<(PlayerStats Player, int NewGroupId)> changes)
@@ -458,13 +467,12 @@ public partial class DamageSummary : IDocumentContent
             var affectedGroups = results.affectedGroups;
             var newGroupMembers = results.newGroupMembers;
 
-            // Update tracking first (move all players)
-            foreach (var kvp in results.playerOldGroups)
+            // Update tracking first (move all players) AND persist to player object
+            foreach (var (player, oldGroupId) in results.playerOldGroups)
             {
-              if (_playerGroups.TryGetValue(kvp.Key, out var currentGroup))
-              {
-                _playerGroups[kvp.Key] = kvp.Value;
-              }
+              var newGroupId = changes.FirstOrDefault(c => c.Player == player).NewGroupId;
+              _playerGroups[player] = newGroupId;
+              player.AssignedGroup = newGroupId;  // Persist to underlying data model
             }
 
             // Rebuild CurrentStats.Children based on new grouping
@@ -535,7 +543,7 @@ public partial class DamageSummary : IDocumentContent
       if (!_groupHeaders.TryGetValue(groupName, out var groupHeader)) return;
 
       // Reset group header stats
-      ResetPlayerStats(groupHeader);
+      StatsUtil.ResetPlayerStats(groupHeader);
 
       // Merge time segments for accurate TotalSeconds
       var mergedRange = new TimeRange();
@@ -556,56 +564,7 @@ public partial class DamageSummary : IDocumentContent
       StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
     }
 
-    private void ResetPlayerStats(PlayerStats stats)
-    {
-      stats.Total = 0;
-      stats.Hits = 0;
-      stats.Max = 0;
-      stats.Min = 0;
-      stats.TotalSeconds = 0;
-      stats.Dps = 0;
-      stats.Sdps = 0;
-      stats.Pdps = 0;
-      stats.CritHits = 0;
-      stats.LuckyHits = 0;
-      stats.DoubleBowHits = 0;
-      stats.FinishingHits = 0;
-      stats.FlurryHits = 0;
-      stats.HeadHits = 0;
-      stats.RampageHits = 0;
-      stats.RegularMeleeHits = 0;
-      stats.RiposteHits = 0;
-      stats.SlayHits = 0;
-      stats.StrikethroughHits = 0;
-      stats.TwincastHits = 0;
-      stats.BaneHits = 0;
-      stats.AssHits = 0;
-      stats.NonTwincastCritHits = 0;
-      stats.NonTwincastLuckyHits = 0;
-      stats.Absorbs = 0;
-      stats.Blocks = 0;
-      stats.Dodges = 0;
-      stats.Misses = 0;
-      stats.Parries = 0;
-      stats.Invulnerable = 0;
-      stats.MeleeAttempts = 0;
-      stats.MeleeHits = 0;
-      stats.SpellHits = 0;
-      stats.Resists = 0;
-      stats.Extra = 0;
-      stats.TotalAss = 0;
-      stats.TotalCrit = 0;
-      stats.TotalFinishing = 0;
-      stats.TotalHead = 0;
-      stats.TotalLucky = 0;
-      stats.TotalNonTwincast = 0;
-      stats.TotalNonTwincastCrit = 0;
-      stats.TotalNonTwincastLucky = 0;
-      stats.TotalRiposte = 0;
-      stats.TotalSlay = 0;
-    }
-
-    private void CleanupEmptyGroups()
+  private void CleanupEmptyGroups()
     {
       var groupsToRemove = new List<string>();
 

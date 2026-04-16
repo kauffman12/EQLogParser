@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -781,7 +781,7 @@ namespace EQLogParser
       return isHitType;
     }
 
-    private static uint GetMin(uint to, uint from)
+   private static uint GetMin(uint to, uint from)
     {
       if (to == 0 && from > 0)
       {
@@ -794,6 +794,55 @@ namespace EQLogParser
       }
 
       return Math.Min(to, from);
+    }
+
+    internal static void ResetPlayerStats(PlayerStats stats)
+    {
+      stats.Total = 0;
+      stats.Hits = 0;
+      stats.Max = 0;
+      stats.Min = 0;
+      stats.TotalSeconds = 0;
+      stats.Dps = 0;
+      stats.Sdps = 0;
+      stats.Pdps = 0;
+      stats.CritHits = 0;
+      stats.LuckyHits = 0;
+      stats.DoubleBowHits = 0;
+      stats.FinishingHits = 0;
+      stats.FlurryHits = 0;
+      stats.HeadHits = 0;
+      stats.RampageHits = 0;
+      stats.RegularMeleeHits = 0;
+      stats.RiposteHits = 0;
+      stats.SlayHits = 0;
+      stats.StrikethroughHits = 0;
+      stats.TwincastHits = 0;
+      stats.BaneHits = 0;
+      stats.AssHits = 0;
+      stats.NonTwincastCritHits = 0;
+      stats.NonTwincastLuckyHits = 0;
+      stats.Absorbs = 0;
+      stats.Blocks = 0;
+      stats.Dodges = 0;
+      stats.Misses = 0;
+      stats.Parries = 0;
+      stats.Invulnerable = 0;
+      stats.MeleeAttempts = 0;
+      stats.MeleeHits = 0;
+      stats.SpellHits = 0;
+      stats.Resists = 0;
+      stats.Extra = 0;
+      stats.TotalAss = 0;
+      stats.TotalCrit = 0;
+      stats.TotalFinishing = 0;
+      stats.TotalHead = 0;
+      stats.TotalLucky = 0;
+      stats.TotalNonTwincast = 0;
+      stats.TotalNonTwincastCrit = 0;
+      stats.TotalNonTwincastLucky = 0;
+      stats.TotalRiposte = 0;
+      stats.TotalSlay = 0;
     }
   }
 }
