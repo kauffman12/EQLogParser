@@ -467,18 +467,46 @@ public partial class DamageSummary : IDocumentContent
             var affectedGroups = results.affectedGroups;
             var newGroupMembers = results.newGroupMembers;
 
-            // Update tracking first (move all players) AND persist to player object
-            foreach (var (player, oldGroupId) in results.playerOldGroups)
-            {
-              var newGroupId = changes.FirstOrDefault(c => c.Player == player).NewGroupId;
-              _playerGroups[player] = newGroupId;
-              player.AssignedGroup = newGroupId;  // Persist to underlying data model
-            }
-
-            // Rebuild CurrentStats.Children based on new grouping
+             // Rebuild CurrentStats.Children based on new grouping first
             RebuildChildrenDictionary(newGroupMembers);
 
-            // Recalculate affected groups
+            // Update tracking AND sync time segments for moved players
+            foreach (var (player, oldGroupId) in results.playerOldGroups)
+            {
+              var change = changes.First(c => c.Player == player);
+              var newGroupId = change.NewGroupId;
+              
+              _playerGroups[player] = newGroupId;
+              player.AssignedGroup = newGroupId;  // Persist to underlying data model
+
+              // Sync time segments: remove from old group, add to new group
+              if (oldGroupId >= 0)
+              {
+                var oldGroupName = GetGroupName(oldGroupId);
+                
+                // Rebuild old group's time segments by collecting from remaining players
+                _groupTimeSegments[oldGroupName] = RebuildGroupTimeSegments(oldGroupId);
+              }
+
+              if (newGroupId >= 0)
+              {
+                var newGroupName = GetGroupName(newGroupId);
+                
+                // Ensure the new group has an entry in time segments
+                if (!_groupTimeSegments.ContainsKey(newGroupName))
+                {
+                  _groupTimeSegments[newGroupName] = new List<TimeSegment>();
+                }
+
+                // Add player's time segments to new group (merge with existing)
+                if (player.Ranges?.TimeSegments != null)
+                {
+                  _groupTimeSegments[newGroupName].AddRange(player.Ranges.TimeSegments);
+                }
+              }
+            }
+
+            // Recalculate affected groups using the updated time segments and children
             foreach (var groupId in affectedGroups)
             {
               if (groupId >= 0 && _playerGroups.Count > 0)
@@ -514,6 +542,22 @@ public partial class DamageSummary : IDocumentContent
           prog.Visibility = Visibility.Hidden;
         });
       }
+    }
+
+     private List<TimeSegment> RebuildGroupTimeSegments(int groupId)
+    {
+      var groupName = GetGroupName(groupId);
+      var playersInGroup = CurrentStats.Children.TryGetValue(groupName, out var children) ? children : new List<PlayerStats>();
+
+      var segments = new List<TimeSegment>();
+      foreach (var player in playersInGroup)
+      {
+        if (player.Ranges?.TimeSegments != null)
+        {
+          segments.AddRange(player.Ranges.TimeSegments);
+        }
+      }
+      return segments;
     }
 
     private void RebuildChildrenDictionary(Dictionary<int, List<PlayerStats>> newGroupMembers)
