@@ -316,7 +316,8 @@ public partial class DamageSummary : IDocumentContent
           IsTopLevel = true,
           ClassName = null,
           AssignedGroup = i,
-          IsExpanded = false  // Default: groups start collapsed
+          IsExpanded = false,  // Default: groups start collapsed
+          IsGroupHeader = true  // Mark as group header row
         };
       }
 
@@ -328,7 +329,8 @@ public partial class DamageSummary : IDocumentContent
         IsTopLevel = true,
         ClassName = null,
         AssignedGroup = 0,
-        IsExpanded = false  // Default: groups start collapsed
+        IsExpanded = false,  // Default: groups start collapsed
+        IsGroupHeader = true  // Mark as group header row
       };
 
       // Initialize player tracking and time segments

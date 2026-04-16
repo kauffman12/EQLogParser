@@ -196,26 +196,36 @@
       <syncfusion:SfTreeGrid.Columns>
         <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
         <syncfusion:TreeGridTemplateColumn x:Name="groupColumn" MappingName="AssignedGroup" HeaderText="Group">
-          <syncfusion:TreeGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <ComboBox Grid.Row="0" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
-                        SelectedItem="{Binding AssignedGroup, Mode=OneWay}"
-                        SelectionChanged="PlayerGroup_SelectionChanged"
-                        HorizontalAlignment="Stretch"
-                        Margin="2">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding}"  HorizontalAlignment="Center" />
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </Grid>
-            </DataTemplate>
-          </syncfusion:TreeGridTemplateColumn.CellTemplate>
+     <syncfusion:TreeGridTemplateColumn.CellTemplate>
+             <DataTemplate>
+               <Grid>
+                 <Grid.ColumnDefinitions>
+                   <ColumnDefinition Width="*" />
+                 </Grid.ColumnDefinitions>
+                 <ComboBox Grid.Row="0" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
+                         SelectedItem="{Binding AssignedGroup, Mode=OneWay}"
+                         SelectionChanged="PlayerGroup_SelectionChanged"
+                         HorizontalAlignment="Stretch"
+                         Margin="2">
+                   <ComboBox.ItemTemplate>
+                     <DataTemplate>
+                       <TextBlock Text="{Binding}"  HorizontalAlignment="Center" />
+                     </DataTemplate>
+                   </ComboBox.ItemTemplate>
+                   <ComboBox.Style>
+                     <Style TargetType="ComboBox">
+                       <Setter Property="Visibility" Value="Visible"/>
+                       <Style.Triggers>
+                         <DataTrigger Binding="{Binding IsGroupHeader}" Value="True">
+                           <Setter Property="Visibility" Value="Collapsed"/>
+                         </DataTrigger>
+                       </Style.Triggers>
+                     </Style>
+                   </ComboBox.Style>
+                 </ComboBox>
+               </Grid>
+             </DataTemplate>
+           </syncfusion:TreeGridTemplateColumn.CellTemplate>
         </syncfusion:TreeGridTemplateColumn>        <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
         <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />

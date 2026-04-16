@@ -639,7 +639,7 @@ namespace EQLogParser
     }
 
     // For Syncfusion TreeGrid expansion state preservation
-    private bool _isExpanded;
+private bool _isExpanded;
     public bool IsExpanded
     {
       get => _isExpanded;
@@ -652,6 +652,20 @@ namespace EQLogParser
         }
       }
     }
-  }
 
+    // For identifying group header rows (used to hide ComboBox in Group View)
+    private bool _isGroupHeader;
+    public bool IsGroupHeader
+    {
+      get => _isGroupHeader;
+      set
+      {
+        if (_isGroupHeader != value)
+        {
+          _isGroupHeader = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+  }
 }
