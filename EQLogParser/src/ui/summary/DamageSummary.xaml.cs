@@ -1,9 +1,12 @@
 using FontAwesome5;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,14 +16,22 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  public partial class DamageSummary : IDocumentContent
-  {
-    public static readonly List<int> GroupNumbers = new() { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+public partial class DamageSummary : IDocumentContent
+    {
+     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private readonly DispatcherTimer _selectionTimer;
+     public static readonly List<int> GroupNumbers = new() { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+
+     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private int _currentPetOrPlayerOption;
     private bool _ready;
+
+    // Group view tracking for incremental updates
+    private bool _isGroupViewActive;
+    private Dictionary<string, PlayerStats> _groupHeaders;
+    private ConcurrentDictionary<PlayerStats, int> _playerGroups;
+    private Dictionary<string, List<TimeSegment>> _groupTimeSegments;
 
     public DamageSummary()
     {
@@ -174,10 +185,11 @@ namespace EQLogParser
           case 3: // Uncategorized
             dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
             break;
-          case 4: // NEW: By Group
-            var groupedPlayers = BuildGroupedPlayers();
-            dataGrid.ItemsSource = UpdateRank(groupedPlayers);
-            break;
+           case 4: // NEW: By Group
+             InitializeGroupTracking();
+             var groupedPlayers = BuildGroupedPlayers();
+             dataGrid.ItemsSource = UpdateRank(groupedPlayers);
+             break;
         }
 
         // if list stayed the same then update the filter
@@ -306,6 +318,325 @@ namespace EQLogParser
         .ToList();
     }
 
+    private string GetGroupName(int groupId)
+    {
+      return groupId == 0 ? "Unassigned Group" : $"Group {groupId}";
+    }
+
+    private void InitializeGroupTracking()
+    {
+      _isGroupViewActive = true;
+      _groupHeaders = new Dictionary<string, PlayerStats>();
+      _playerGroups = new ConcurrentDictionary<PlayerStats, int>();
+      _groupTimeSegments = new Dictionary<string, List<TimeSegment>>();
+
+      // Create persistent group headers
+      for (int i = 1; i <= 12; i++)
+      {
+        var groupName = GetGroupName(i);
+        _groupHeaders[groupName] = new PlayerStats
+        {
+          Name = groupName,
+          OrigName = groupName,
+          IsTopLevel = true,
+          ClassName = null,
+          AssignedGroup = i
+        };
+      }
+
+      var unassignedName = GetGroupName(0);
+      _groupHeaders[unassignedName] = new PlayerStats
+      {
+        Name = unassignedName,
+        OrigName = unassignedName,
+        IsTopLevel = true,
+        ClassName = null,
+        AssignedGroup = 0
+      };
+
+      // Initialize player tracking and time segments
+      foreach (var stats in CurrentStats.StatsList)
+      {
+        if (!IsPlayerVisible(stats)) continue;
+
+        var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
+        var groupName = GetGroupName(groupId);
+
+        _playerGroups[stats] = groupId;
+
+        if (!_groupTimeSegments.ContainsKey(groupName))
+          _groupTimeSegments[groupName] = new List<TimeSegment>();
+        
+        if (stats.Ranges?.TimeSegments != null)
+        {
+          _groupTimeSegments[groupName].AddRange(stats.Ranges.TimeSegments);
+        }
+      }
+    }
+
+    private void CleanupGroupTracking()
+    {
+      _isGroupViewActive = false;
+      _groupHeaders?.Clear();
+      _playerGroups?.Clear();
+      _groupTimeSegments?.Clear();
+    }
+
+    private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (!_isGroupViewActive || e.AddedItems.Count == 0) return;
+
+      var player = (sender as System.Windows.Controls.ComboBox)?.DataContext as PlayerStats;
+      if (player == null) return;
+
+      var newGroupId = (int)e.AddedItems[0];
+
+      // Skip if value hasn't actually changed
+      if (player.AssignedGroup == newGroupId) return;
+
+      // Show progress indicator
+      prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
+      prog.Visibility = Visibility.Visible;
+
+      await UpdatePlayerGroupsAsync([(player, newGroupId)]);
+    }
+
+    private async Task UpdatePlayerGroupsAsync(List<(PlayerStats Player, int NewGroupId)> changes)
+    {
+      try
+      {
+        var results = await Task.Run(() =>
+        {
+          var affectedGroups = new HashSet<int>();
+          var playerOldGroups = new Dictionary<PlayerStats, int>();
+
+          // Collect old and new groups
+          foreach (var (player, newGroupId) in changes)
+          {
+            var oldGroupId = _playerGroups.GetValueOrDefault(player, -1);
+            playerOldGroups[player] = oldGroupId;
+            
+            if (oldGroupId != -1) affectedGroups.Add(oldGroupId);
+            if (newGroupId >= 0) affectedGroups.Add(newGroupId);
+          }
+
+          // Build new group membership after all moves
+          var newGroupMembers = new Dictionary<int, List<PlayerStats>>();
+          foreach (var groupId in affectedGroups)
+          {
+            newGroupMembers[groupId] = new List<PlayerStats>();
+          }
+
+          // Add players from changes to their new groups
+          foreach (var (player, newGroupId) in changes)
+          {
+            if (newGroupId >= 0 && newGroupMembers.ContainsKey(newGroupId))
+              newGroupMembers[newGroupId].Add(player);
+          }
+
+          // Add players who stayed in affected groups
+          foreach (var kvp in _playerGroups)
+          {
+            var player = kvp.Key;
+            var groupId = kvp.Value;
+            
+            // Skip if this player is being moved (already added above)
+            if (changes.Any(c => c.Player == player)) continue;
+            
+            if (affectedGroups.Contains(groupId))
+              newGroupMembers[groupId].Add(player);
+          }
+
+          return (affectedGroups, newGroupMembers, playerOldGroups);
+        });
+
+        // Marshal UI updates back to dispatcher thread
+        await Dispatcher.InvokeAsync(() =>
+        {
+          try
+          {
+            var affectedGroups = results.affectedGroups;
+            var newGroupMembers = results.newGroupMembers;
+
+            // Update tracking first (move all players)
+            foreach (var kvp in results.playerOldGroups)
+            {
+              if (_playerGroups.TryGetValue(kvp.Key, out var currentGroup))
+              {
+                _playerGroups[kvp.Key] = kvp.Value;
+              }
+            }
+
+            // Rebuild CurrentStats.Children based on new grouping
+            RebuildChildrenDictionary(newGroupMembers);
+
+            // Recalculate affected groups
+            foreach (var groupId in affectedGroups)
+            {
+              if (groupId >= 0 && _playerGroups.Count > 0)
+              {
+                var groupName = GetGroupName(groupId);
+                if (newGroupMembers.TryGetValue(groupId, out var playersInGroup))
+                {
+                  RecalculateGroupStatsInternal(groupName, playersInGroup);
+                }
+              }
+            }
+
+            // Clean up empty groups
+            CleanupEmptyGroups();
+
+            // Refresh the view
+            RefreshGroupView();
+          }
+          finally
+          {
+            // Always hide progress indicator
+            prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+            prog.Visibility = Visibility.Hidden;
+          }
+        });
+      }
+      catch (Exception ex)
+      {
+        Log.Warn("Problem updating player groups. Check Error Log for details.", ex);
+        Dispatcher.Invoke(() =>
+        {
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+          prog.Visibility = Visibility.Hidden;
+        });
+      }
+    }
+
+    private void RebuildChildrenDictionary(Dictionary<int, List<PlayerStats>> newGroupMembers)
+    {
+      // Clear existing children
+      foreach (var key in CurrentStats.Children.Keys.ToList())
+      {
+        if (key.StartsWith("Group ") || key == "Unassigned Group")
+        {
+          CurrentStats.Children.Remove(key);
+        }
+      }
+
+      // Add new group members to children
+      foreach (var kvp in newGroupMembers)
+      {
+        var groupName = GetGroupName(kvp.Key);
+        if (kvp.Value.Count > 0)
+        {
+          CurrentStats.Children[groupName] = kvp.Value;
+        }
+      }
+    }
+
+    private void RecalculateGroupStatsInternal(string groupName, List<PlayerStats> playersInGroup)
+    {
+      if (!_groupHeaders.TryGetValue(groupName, out var groupHeader)) return;
+
+      // Reset group header stats
+      ResetPlayerStats(groupHeader);
+
+      // Merge time segments for accurate TotalSeconds
+      var mergedRange = new TimeRange();
+      var groupNameKey = groupName;
+      if (_groupTimeSegments.TryGetValue(groupNameKey, out var timeSegments))
+      {
+        mergedRange.Add(timeSegments);
+      }
+      groupHeader.TotalSeconds = mergedRange.GetTotal();
+
+      // Merge all player stats
+      foreach (var player in playersInGroup)
+      {
+        StatsUtil.MergeStats(groupHeader, player);
+      }
+
+      // Recalculate rates
+      StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
+    }
+
+    private void ResetPlayerStats(PlayerStats stats)
+    {
+      stats.Total = 0;
+      stats.Hits = 0;
+      stats.Max = 0;
+      stats.Min = 0;
+      stats.TotalSeconds = 0;
+      stats.Dps = 0;
+      stats.Sdps = 0;
+      stats.Pdps = 0;
+      stats.CritHits = 0;
+      stats.LuckyHits = 0;
+      stats.DoubleBowHits = 0;
+      stats.FinishingHits = 0;
+      stats.FlurryHits = 0;
+      stats.HeadHits = 0;
+      stats.RampageHits = 0;
+      stats.RegularMeleeHits = 0;
+      stats.RiposteHits = 0;
+      stats.SlayHits = 0;
+      stats.StrikethroughHits = 0;
+      stats.TwincastHits = 0;
+      stats.BaneHits = 0;
+      stats.AssHits = 0;
+      stats.NonTwincastCritHits = 0;
+      stats.NonTwincastLuckyHits = 0;
+      stats.Absorbs = 0;
+      stats.Blocks = 0;
+      stats.Dodges = 0;
+      stats.Misses = 0;
+      stats.Parries = 0;
+      stats.Invulnerable = 0;
+      stats.MeleeAttempts = 0;
+      stats.MeleeHits = 0;
+      stats.SpellHits = 0;
+      stats.Resists = 0;
+      stats.Extra = 0;
+      stats.TotalAss = 0;
+      stats.TotalCrit = 0;
+      stats.TotalFinishing = 0;
+      stats.TotalHead = 0;
+      stats.TotalLucky = 0;
+      stats.TotalNonTwincast = 0;
+      stats.TotalNonTwincastCrit = 0;
+      stats.TotalNonTwincastLucky = 0;
+      stats.TotalRiposte = 0;
+      stats.TotalSlay = 0;
+    }
+
+    private void CleanupEmptyGroups()
+    {
+      var groupsToRemove = new List<string>();
+
+      foreach (var groupName in _groupHeaders.Keys)
+      {
+        if (!CurrentStats.Children.ContainsKey(groupName) || CurrentStats.Children[groupName].Count == 0)
+        {
+          groupsToRemove.Add(groupName);
+        }
+      }
+
+      foreach (var groupName in groupsToRemove)
+      {
+        _groupHeaders.Remove(groupName);
+        CurrentStats.Children.Remove(groupName);
+        _groupTimeSegments.Remove(groupName);
+      }
+    }
+
+    private void RefreshGroupView()
+    {
+      var list = dataGrid.ItemsSource as List<PlayerStats>;
+      if (list == null) return;
+
+      // In-place sort preserves reference
+      list.Sort((a, b) => b.Total.CompareTo(a.Total));
+
+      // Notify TreeGrid of changes
+      dataGrid.View?.RefreshFilter();
+    }
+
     /// <summary>
     /// Checks if player should be visible based on class filter selection.
     /// </summary>
@@ -378,7 +709,14 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(bool cleared) => ClearData();
+    private void EventsClearedActiveData(bool cleared)
+    {
+      if (cleared && _isGroupViewActive)
+      {
+        CleanupGroupTracking();
+      }
+      ClearData();
+    }
 
     private void ClearData()
     {
@@ -643,6 +981,11 @@ namespace EQLogParser
       DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
+
+      if (_isGroupViewActive)
+      {
+        CleanupGroupTracking();
+      }
 
       ClearData();
 

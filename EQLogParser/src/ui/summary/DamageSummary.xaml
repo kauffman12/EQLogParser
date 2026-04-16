@@ -1,4 +1,4 @@
-﻿<local:SummaryTable x:Class="EQLogParser.DamageSummary"
+<local:SummaryTable x:Class="EQLogParser.DamageSummary"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -202,7 +202,8 @@
                   <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <ComboBox Grid.Row="0" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" 
-                        SelectedItem="{Binding AssignedGroup, Mode=TwoWay}"
+                        SelectedItem="{Binding AssignedGroup, Mode=OneWay}"
+                        SelectionChanged="PlayerGroup_SelectionChanged"
                         HorizontalAlignment="Stretch"
                         Margin="2">
                   <ComboBox.ItemTemplate>
