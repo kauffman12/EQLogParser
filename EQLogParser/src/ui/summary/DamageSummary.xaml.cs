@@ -282,6 +282,9 @@ public partial class DamageSummary : IDocumentContent
           // Re-calculate rates based on the correct aggregated totals and TotalSeconds
           StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
 
+          // Default: collapsed state for all groups (user expands as needed)
+          groupHeader.IsExpanded = false;
+
           nonEmptyGroups.Add(groupHeader);
         }
       }
@@ -312,7 +315,8 @@ public partial class DamageSummary : IDocumentContent
           OrigName = groupName,
           IsTopLevel = true,
           ClassName = null,
-          AssignedGroup = i
+          AssignedGroup = i,
+          IsExpanded = false  // Default: groups start collapsed
         };
       }
 
@@ -323,7 +327,8 @@ public partial class DamageSummary : IDocumentContent
         OrigName = unassignedName,
         IsTopLevel = true,
         ClassName = null,
-        AssignedGroup = 0
+        AssignedGroup = 0,
+        IsExpanded = false  // Default: groups start collapsed
       };
 
       // Initialize player tracking and time segments
@@ -369,8 +374,11 @@ public partial class DamageSummary : IDocumentContent
         // Skip if value hasn't actually changed
         if (player.AssignedGroup == newGroupId) return;
 
+        var oldGroupId = _playerGroups.GetValueOrDefault(player, -1);
+
         // IMMEDIATELY persist the change to player object BEFORE any rebuild
         player.AssignedGroup = newGroupId;
+        _playerGroups[player] = newGroupId;  // Update tracking immediately
 
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
@@ -379,7 +387,7 @@ public partial class DamageSummary : IDocumentContent
         await Task.Run(() =>
         {
           // Background work: Sync time segments for moved player
-          RebuildGroupTimeSegmentsForMovedPlayer(player, _playerGroups.GetValueOrDefault(player, -1), newGroupId);
+          RebuildGroupTimeSegmentsForMovedPlayer(player, oldGroupId, newGroupId);
         });
 
         // Force full ItemsSource replacement on UI thread
@@ -387,11 +395,10 @@ public partial class DamageSummary : IDocumentContent
         {
           try
           {
+            CleanupEmptyGroups();  // Clean up first, then rebuild with correct data
             var newList = BuildGroupedPlayers();  // Uses updated player.AssignedGroup
             dataGrid.ItemsSource = null;           // Clear first to reset TreeGrid state
             dataGrid.ItemsSource = UpdateRank(newList);  // Set new reference
-            
-            CleanupEmptyGroups();
           }
           finally
           {
@@ -404,140 +411,6 @@ public partial class DamageSummary : IDocumentContent
       {
         // Not in Group View - just update the value directly
         player.AssignedGroup = newGroupId;
-      }
-    }
-
-    private async Task UpdatePlayerGroupsAsync(List<(PlayerStats Player, int NewGroupId)> changes)
-    {
-      try
-      {
-        var results = await Task.Run(() =>
-        {
-          var affectedGroups = new HashSet<int>();
-          var playerOldGroups = new Dictionary<PlayerStats, int>();
-
-          // Collect old and new groups
-          foreach (var (player, newGroupId) in changes)
-          {
-            var oldGroupId = _playerGroups.GetValueOrDefault(player, -1);
-            playerOldGroups[player] = oldGroupId;
-            
-            if (oldGroupId != -1) affectedGroups.Add(oldGroupId);
-            if (newGroupId >= 0) affectedGroups.Add(newGroupId);
-          }
-
-          // Build new group membership after all moves
-          var newGroupMembers = new Dictionary<int, List<PlayerStats>>();
-          foreach (var groupId in affectedGroups)
-          {
-            newGroupMembers[groupId] = new List<PlayerStats>();
-          }
-
-          // Add players from changes to their new groups
-          foreach (var (player, newGroupId) in changes)
-          {
-            if (newGroupId >= 0 && newGroupMembers.ContainsKey(newGroupId))
-              newGroupMembers[newGroupId].Add(player);
-          }
-
-          // Add players who stayed in affected groups
-          foreach (var kvp in _playerGroups)
-          {
-            var player = kvp.Key;
-            var groupId = kvp.Value;
-            
-            // Skip if this player is being moved (already added above)
-            if (changes.Any(c => c.Player == player)) continue;
-            
-            if (affectedGroups.Contains(groupId))
-              newGroupMembers[groupId].Add(player);
-          }
-
-          return (affectedGroups, newGroupMembers, playerOldGroups);
-        });
-
-        // Marshal UI updates back to dispatcher thread
-        await Dispatcher.InvokeAsync(() =>
-        {
-          try
-          {
-            var affectedGroups = results.affectedGroups;
-            var newGroupMembers = results.newGroupMembers;
-
-             // Rebuild CurrentStats.Children based on new grouping first
-            RebuildChildrenDictionary(newGroupMembers);
-
-            // Update tracking AND sync time segments for moved players
-            foreach (var (player, oldGroupId) in results.playerOldGroups)
-            {
-              var change = changes.First(c => c.Player == player);
-              var newGroupId = change.NewGroupId;
-              
-              _playerGroups[player] = newGroupId;
-              player.AssignedGroup = newGroupId;  // Persist to underlying data model
-
-              // Sync time segments: remove from old group, add to new group
-              if (oldGroupId >= 0)
-              {
-                var oldGroupName = GetGroupName(oldGroupId);
-                
-                // Rebuild old group's time segments by collecting from remaining players
-                _groupTimeSegments[oldGroupName] = RebuildGroupTimeSegments(oldGroupId);
-              }
-
-              if (newGroupId >= 0)
-              {
-                var newGroupName = GetGroupName(newGroupId);
-                
-                // Ensure the new group has an entry in time segments
-                if (!_groupTimeSegments.ContainsKey(newGroupName))
-                {
-                  _groupTimeSegments[newGroupName] = new List<TimeSegment>();
-                }
-
-                // Add player's time segments to new group (merge with existing)
-                if (player.Ranges?.TimeSegments != null)
-                {
-                  _groupTimeSegments[newGroupName].AddRange(player.Ranges.TimeSegments);
-                }
-              }
-            }
-
-            // Recalculate affected groups using the updated time segments and children
-            foreach (var groupId in affectedGroups)
-            {
-              if (groupId >= 0 && _playerGroups.Count > 0)
-              {
-                var groupName = GetGroupName(groupId);
-                if (newGroupMembers.TryGetValue(groupId, out var playersInGroup))
-                {
-                  RecalculateGroupStatsInternal(groupName, playersInGroup);
-                }
-              }
-            }
-
-            // Clean up empty groups
-            CleanupEmptyGroups();
-
-            // Refresh the view
-            RefreshGroupView();
-          }
-          finally
-          {
-            // Always hide progress indicator
-            prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
-            prog.Visibility = Visibility.Hidden;
-          }
-        });
-      }
-      catch (Exception ex)
-      {
-        Log.Warn("Problem updating player groups. Check Error Log for details.", ex);
-        Dispatcher.Invoke(() =>
-        {
-          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
-          prog.Visibility = Visibility.Hidden;
-        });
       }
     }
 
@@ -640,29 +513,24 @@ public partial class DamageSummary : IDocumentContent
       var activeGroupIds = _playerGroups.Values.Distinct().ToHashSet();
       var activeGroupNames = activeGroupIds.Select(g => GetGroupName(g)).ToHashSet();
 
-      // Remove groups that are no longer in use
+      // Remove groups that are no longer in use, but preserve expansion state for potential re-addition
       foreach (var groupName in _groupHeaders.Keys.ToList())
       {
         if (!activeGroupNames.Contains(groupName))
         {
-          _groupHeaders.Remove(groupName);
+          var groupHeader = _groupHeaders[groupName];
+          
+          // Preserve the IsExpanded state before removing
           CurrentStats.Children.Remove(groupName);
           _groupTimeSegments.Remove(groupName);
+          
+          // Keep the header in _groupHeaders to preserve IsExpanded, just remove children
+          // This way if players move back to this group later, expansion state is preserved
         }
       }
     }
 
-    private void RefreshGroupView()
-    {
-      var list = dataGrid.ItemsSource as List<PlayerStats>;
-      if (list == null) return;
-
-      // In-place sort preserves reference
-      list.Sort((a, b) => b.Total.CompareTo(a.Total));
-
-      // Notify TreeGrid of changes
-      dataGrid.View?.RefreshFilter();
-    }
+ 
 
     /// <summary>
     /// Checks if player should be visible based on class filter selection.

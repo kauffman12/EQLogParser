@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -633,6 +633,21 @@ namespace EQLogParser
         if (_assignedGroup != value)
         {
           _assignedGroup = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    // For Syncfusion TreeGrid expansion state preservation
+    private bool _isExpanded;
+    public bool IsExpanded
+    {
+      get => _isExpanded;
+      set
+      {
+        if (_isExpanded != value)
+        {
+          _isExpanded = value;
           OnPropertyChanged();
         }
       }
