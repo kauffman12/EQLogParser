@@ -390,15 +390,48 @@ public partial class DamageSummary : IDocumentContent
           RebuildGroupTimeSegmentsForMovedPlayer(player, oldGroupId, newGroupId);
         });
 
-        // Force full ItemsSource replacement on UI thread
+              // Force full ItemsSource replacement on UI thread
         await Dispatcher.InvokeAsync(() =>
         {
           try
           {
+            // 1. CAPTURE current expanded group names BEFORE changing ItemsSource
+            var expandedGroupNames = new List<string>();
+            if (dataGrid.View?.Nodes != null)
+            {
+              foreach (var node in dataGrid.View.Nodes)
+              {
+                var dataItem = node.Item as PlayerStats;
+                if (dataItem?.IsExpanded == true && 
+                    (dataItem.Name.StartsWith("Group ") || dataItem.Name == "Unassigned Group"))
+                {
+                  expandedGroupNames.Add(dataItem.Name);
+                }
+              }
+            }
+
+            // 2. DO THE ItemsSource replacement
             CleanupEmptyGroups();  // Clean up first, then rebuild with correct data
             var newList = BuildGroupedPlayers();  // Uses updated player.AssignedGroup
             dataGrid.ItemsSource = null;           // Clear first to reset TreeGrid state
             dataGrid.ItemsSource = UpdateRank(newList);  // Set new reference
+
+            // 3. RESTORE expansion state after rebuild
+            if (dataGrid.View?.Nodes != null)
+            {
+              foreach (var groupName in expandedGroupNames)
+              {
+                var headerGroup = _groupHeaders[groupName];
+                if (headerGroup != null)
+                {
+                  var node = dataGrid.View.Nodes.GetNode(headerGroup);
+                  if (node != null)
+                  {
+                    dataGrid.ExpandNode(node);
+                  }
+                }
+              }
+            }
           }
           finally
           {
