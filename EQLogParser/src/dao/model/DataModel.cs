@@ -668,4 +668,16 @@ private bool _isExpanded;
       }
     }
   }
+
+  /// <summary>
+  /// Represents a group header entry in the DamageSummary group view.
+  /// Self-contained with its own members, time segments, and children for the TreeGrid.
+  /// </summary>
+  internal class GroupEntry : PlayerStats
+  {
+    public int GroupId { get; set; }
+    public List<PlayerStats> Members { get; set; } = [];
+    public List<TimeSegment> TimeSegments { get; set; } = [];
+    public List<PlayerStats> Children { get; set; } = [];
+  }
 }

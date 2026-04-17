@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -212,6 +212,10 @@ namespace EQLogParser
           if (CurrentStats.Children.TryGetValue(stats.Name, out var child))
           {
             results.AddRange(child);
+          }
+          else if (stats is GroupEntry groupEntry)
+          {
+            results.AddRange(groupEntry.Children);
           }
         }
         return results;

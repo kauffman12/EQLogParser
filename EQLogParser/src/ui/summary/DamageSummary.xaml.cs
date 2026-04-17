@@ -26,9 +26,7 @@ namespace EQLogParser
     private bool _ready;
 
     // Group view tracking for incremental updates
-    private Dictionary<string, PlayerStats> _groupHeaders;
-    private ConcurrentDictionary<PlayerStats, int> _playerGroups;
-    private Dictionary<string, List<TimeSegment>> _groupTimeSegments;
+    private List<GroupEntry> _groupEntries;
 
     public DamageSummary()
     {
@@ -186,7 +184,7 @@ namespace EQLogParser
           case 4: // NEW: By Group
             InitializeGroupTracking();
             var groupedPlayers = BuildGroupedPlayers();
-            dataGrid.ItemsSource = UpdateRank(groupedPlayers);
+            dataGrid.ItemsSource = UpdateRankGrouped(groupedPlayers);
             break;
         }
 
@@ -202,90 +200,56 @@ namespace EQLogParser
     /// <summary>
     /// Builds grouped players for Group View mode. Creates group headers with aggregated stats and merges time ranges for accurate TotalSeconds calculation.
     /// </summary>
-    /// <returns>List of PlayerStats objects representing groups, sorted by total damage descending.</returns>
-    private List<PlayerStats> BuildGroupedPlayers()
+    /// <returns>List of GroupEntry objects representing groups, sorted by total damage descending.</returns>
+    private List<GroupEntry> BuildGroupedPlayers()
     {
       if (CurrentStats == null)
       {
         return [];
       }
 
-      // Clear existing group children before rebuilding
-      foreach (var key in CurrentStats.Children.Keys.ToList())
-      {
-        if (key.StartsWith("Group ") || key == "Unassigned Group")
-        {
-          CurrentStats.Children.Remove(key);
-        }
-      }
+      var nonEmptyGroups = new List<GroupEntry>();
 
-      // Track which players belong to each group
-      var groupPlayerLists = new Dictionary<int, List<PlayerStats>>();
-
-      // Iterate through existing StatsList (Player +Pets aggregates)
-      foreach (var stats in CurrentStats.StatsList)
+      foreach (var groupEntry in _groupEntries)
       {
-        if (!IsPlayerVisible(stats))
+        if (groupEntry.Members.Count == 0)
         {
           continue;
         }
 
-        var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
+        // Sort players within each group by Total descending
+        groupEntry.Members.Sort((a, b) => b.Total.CompareTo(a.Total));
 
-        // Add player to this group's list
-        if (!groupPlayerLists.TryGetValue(groupId, out var value))
+        // Mark players so RequestTreeItems knows not to expand further
+        foreach (var player in groupEntry.Members)
         {
-          value = [];
-          groupPlayerLists[groupId] = value;
+          player.IsTopLevel = true;
         }
 
-        stats.IsTopLevel = true;  // Mark so RequestTreeItems knows not to expand further
-        value.Add(stats);
-      }
+        // Reset and recalculate stats
+        StatsUtil.ResetPlayerStats(groupEntry);
 
-      // Sort players within each group by Total descending
-      foreach (var kvp in groupPlayerLists)
-      {
-        kvp.Value.Sort((a, b) => b.Total.CompareTo(a.Total));
-      }
+        // Merge time segments for accurate TotalSeconds
+        var mergedRange = new TimeRange();
+        mergedRange.Add(groupEntry.TimeSegments);
+        groupEntry.TotalSeconds = mergedRange.GetTotal();
 
-      // Use persistent group headers from _groupHeaders
-      var nonEmptyGroups = new List<PlayerStats>();
-      foreach (var kvp in _groupHeaders)
-      {
-        var groupName = kvp.Key;
-        var groupHeader = kvp.Value;
-
-        if (groupPlayerLists.TryGetValue(groupHeader.AssignedGroup, out var players))
+        // Merge all player stats into group entry
+        foreach (var player in groupEntry.Members)
         {
-          // Store the player list in CurrentStats.Children for this group
-          CurrentStats.Children[groupName] = players;
-
-          // Reset and recalculate stats using persistent header
-          StatsUtil.ResetPlayerStats(groupHeader);
-
-          // Merge time segments from _groupTimeSegments
-          var mergedRange = new TimeRange();
-          if (_groupTimeSegments.TryGetValue(groupName, out var timeSegments))
-          {
-            mergedRange.Add(timeSegments);
-          }
-          groupHeader.TotalSeconds = mergedRange.GetTotal();
-
-          // Merge all player stats
-          foreach (var player in players)
-          {
-            StatsUtil.MergeStats(groupHeader, player);
-          }
-
-          // Re-calculate rates based on the correct aggregated totals and TotalSeconds
-          StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
-
-          // Default: collapsed state for all groups (user expands as needed)
-          groupHeader.IsExpanded = false;
-
-          nonEmptyGroups.Add(groupHeader);
+          StatsUtil.MergeStats(groupEntry, player);
         }
+
+        // Re-calculate rates based on the correct aggregated totals and TotalSeconds
+        StatsUtil.CalculateRates(groupEntry, CurrentStats.RaidStats, null);
+
+        // Set children for TreeGrid expansion
+        groupEntry.Children = [.. groupEntry.Members];
+
+        // Default: collapsed state for all groups (user expands as needed)
+        groupEntry.IsExpanded = false;
+
+        nonEmptyGroups.Add(groupEntry);
       }
 
       // Return non-empty groups sorted by aggregate Total descending
@@ -299,63 +263,44 @@ namespace EQLogParser
 
     private void InitializeGroupTracking()
     {
-      _groupHeaders = [];
-      _playerGroups = new ConcurrentDictionary<PlayerStats, int>();
-      _groupTimeSegments = [];
+      _groupEntries = [];
 
-      // Create persistent group headers
-      for (var i = 1; i <= 12; i++)
+      // Create group entries for each group ID
+      for (var i = 0; i <= 12; i++)
       {
-        var groupName = GetGroupName(i);
-        _groupHeaders[groupName] = new PlayerStats
+        _groupEntries.Add(new GroupEntry
         {
-          Name = groupName,
-          OrigName = groupName,
+          Name = GetGroupName(i),
+          OrigName = GetGroupName(i),
+          GroupId = i,
           IsTopLevel = true,
           ClassName = null,
           AssignedGroup = i,
-          IsExpanded = false,  // Default: groups start collapsed
-          IsGroupHeader = true  // Mark as group header row
-        };
+          IsExpanded = false,
+          IsGroupHeader = true
+        });
       }
 
-      var unassignedName = GetGroupName(0);
-      _groupHeaders[unassignedName] = new PlayerStats
-      {
-        Name = unassignedName,
-        OrigName = unassignedName,
-        IsTopLevel = true,
-        ClassName = null,
-        AssignedGroup = 0,
-        IsExpanded = false,  // Default: groups start collapsed
-        IsGroupHeader = true  // Mark as group header row
-      };
-
-      // Initialize player tracking and time segments
+      // Assign players to groups and collect time segments
       foreach (var stats in CurrentStats.StatsList)
       {
         if (!IsPlayerVisible(stats)) continue;
 
         var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
-        var groupName = GetGroupName(groupId);
+        var groupEntry = _groupEntries[groupId];
 
-        _playerGroups[stats] = groupId;
-
-        if (!_groupTimeSegments.ContainsKey(groupName))
-          _groupTimeSegments[groupName] = new List<TimeSegment>();
+        groupEntry.Members.Add(stats);
 
         if (stats.Ranges?.TimeSegments != null)
         {
-          _groupTimeSegments[groupName].AddRange(stats.Ranges.TimeSegments);
+          groupEntry.TimeSegments.AddRange(stats.Ranges.TimeSegments);
         }
       }
     }
 
     private void CleanupGroupTracking()
     {
-      _groupHeaders?.Clear();
-      _playerGroups?.Clear();
-      _groupTimeSegments?.Clear();
+      _groupEntries?.Clear();
     }
 
     private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -373,11 +318,11 @@ namespace EQLogParser
         // Skip if value hasn't actually changed
         if (player.AssignedGroup == newGroupId) return;
 
-        var oldGroupId = _playerGroups.GetValueOrDefault(player, -1);
+        var oldGroupId = player.AssignedGroup;
+        if (oldGroupId == newGroupId) return;
 
         // IMMEDIATELY persist the change to player object BEFORE any rebuild
         player.AssignedGroup = newGroupId;
-        _playerGroups[player] = newGroupId;  // Update tracking immediately
 
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
@@ -385,8 +330,8 @@ namespace EQLogParser
 
         await Task.Run(() =>
         {
-          // Background work: Sync time segments for moved player
-          RebuildGroupTimeSegmentsForMovedPlayer(player, oldGroupId, newGroupId);
+          // Background work: Update group membership and time segments
+          UpdateGroupMembership(player, oldGroupId, newGroupId);
         });
 
         // Force full ItemsSource replacement on UI thread
@@ -395,35 +340,33 @@ namespace EQLogParser
           try
           {
             // 1. CAPTURE current expanded group names BEFORE changing ItemsSource
-            var expandedGroupNames = new List<string>();
+            var expandedGroups = new List<int>();
             if (dataGrid.View?.Nodes != null)
             {
               foreach (var node in dataGrid.View.Nodes)
               {
-                var dataItem = node.Item as PlayerStats;
-                if (dataItem?.IsExpanded == true &&
-                    (dataItem.Name.StartsWith("Group ") || dataItem.Name == "Unassigned Group"))
+                var dataItem = node.Item as GroupEntry;
+                if (dataItem?.IsExpanded == true)
                 {
-                  expandedGroupNames.Add(dataItem.Name);
+                  expandedGroups.Add(dataItem.GroupId);
                 }
               }
             }
 
             // 2. DO THE ItemsSource replacement
-            CleanupEmptyGroups();  // Clean up first, then rebuild with correct data
-            var newList = BuildGroupedPlayers();  // Uses updated player.AssignedGroup
-            dataGrid.ItemsSource = null;           // Clear first to reset TreeGrid state
-            dataGrid.ItemsSource = UpdateRank(newList);  // Set new reference
+            var newList = BuildGroupedPlayers();
+            dataGrid.ItemsSource = null;
+            dataGrid.ItemsSource = UpdateRankGrouped(newList);
 
             // 3. RESTORE expansion state after rebuild
             if (dataGrid.View?.Nodes != null)
             {
-              foreach (var groupName in expandedGroupNames)
+              foreach (var groupId in expandedGroups)
               {
-                var headerGroup = _groupHeaders[groupName];
-                if (headerGroup != null)
+                var entry = _groupEntries.FirstOrDefault(e => e.GroupId == groupId);
+                if (entry != null)
                 {
-                  var node = dataGrid.View.Nodes.GetNode(headerGroup);
+                  var node = dataGrid.View.Nodes.GetNode(entry);
                   if (node != null)
                   {
                     dataGrid.ExpandNode(node);
@@ -446,123 +389,38 @@ namespace EQLogParser
       }
     }
 
-    private List<TimeSegment> RebuildGroupTimeSegments(int groupId)
+    private void UpdateGroupMembership(PlayerStats player, int oldGroupId, int newGroupId)
     {
-      var groupName = GetGroupName(groupId);
-      var playersInGroup = CurrentStats.Children.TryGetValue(groupName, out var children) ? children : new List<PlayerStats>();
+      var oldGroup = _groupEntries[oldGroupId];
+      var newGroup = _groupEntries[newGroupId];
 
-      var segments = new List<TimeSegment>();
-      foreach (var player in playersInGroup)
+      // Remove from old group
+      oldGroup.Members.Remove(player);
+      if (player.Ranges?.TimeSegments != null)
       {
-        if (player.Ranges?.TimeSegments != null)
-        {
-          segments.AddRange(player.Ranges.TimeSegments);
-        }
-      }
-      return segments;
-    }
-
-    private void RebuildGroupTimeSegmentsForMovedPlayer(PlayerStats player, int oldGroupId, int newGroupId)
-    {
-      // Remove from old group's time segments by rebuilding
-      if (oldGroupId >= 0)
-      {
-        var oldGroupName = GetGroupName(oldGroupId);
-        _groupTimeSegments[oldGroupName] = RebuildGroupTimeSegments(oldGroupId);
+        oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));
       }
 
-      // Add to new group's time segments
-      if (newGroupId >= 0)
+      // Add to new group
+      newGroup.Members.Add(player);
+      if (player.Ranges?.TimeSegments != null)
       {
-        var newGroupName = GetGroupName(newGroupId);
-
-        if (!_groupTimeSegments.ContainsKey(newGroupName))
-        {
-          _groupTimeSegments[newGroupName] = new List<TimeSegment>();
-        }
-
-        if (player.Ranges?.TimeSegments != null)
-        {
-          _groupTimeSegments[newGroupName].AddRange(player.Ranges.TimeSegments);
-        }
+        newGroup.TimeSegments.AddRange(player.Ranges.TimeSegments);
       }
-    }
-
-    private void RebuildChildrenDictionary(Dictionary<int, List<PlayerStats>> newGroupMembers)
-    {
-      // Clear ALL existing group children before rebuilding
-      foreach (var key in CurrentStats.Children.Keys.ToList())
-      {
-        if (key.StartsWith("Group ") || key == "Unassigned Group")
-        {
-          CurrentStats.Children.Remove(key);
-        }
-      }
-
-      // Rebuild ALL groups from _playerGroups tracking
-      var groupsByPlayer = _playerGroups.GroupBy(p => p.Value);
-      foreach (var group in groupsByPlayer)
-      {
-        var groupId = group.Key;
-        var playersInGroup = group.Select(p => p.Key).ToList();
-
-        if (playersInGroup.Count > 0)
-        {
-          var groupName = GetGroupName(groupId);
-          CurrentStats.Children[groupName] = playersInGroup;
-        }
-      }
-    }
-
-    private void RecalculateGroupStatsInternal(string groupName, List<PlayerStats> playersInGroup)
-    {
-      if (!_groupHeaders.TryGetValue(groupName, out var groupHeader)) return;
-
-      // Reset group header stats
-      StatsUtil.ResetPlayerStats(groupHeader);
-
-      // Merge time segments for accurate TotalSeconds
-      var mergedRange = new TimeRange();
-      if (_groupTimeSegments.TryGetValue(groupName, out var timeSegments))
-      {
-        mergedRange.Add(timeSegments);
-      }
-      groupHeader.TotalSeconds = mergedRange.GetTotal();
-
-      // Merge all player stats
-      foreach (var player in playersInGroup)
-      {
-        StatsUtil.MergeStats(groupHeader, player);
-      }
-
-      // Recalculate rates
-      StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
     }
 
     private void CleanupEmptyGroups()
     {
-      // Get all active group names from _playerGroups
-      var activeGroupIds = _playerGroups.Values.Distinct().ToHashSet();
-      var activeGroupNames = activeGroupIds.Select(g => GetGroupName(g)).ToHashSet();
-
-      // Remove groups that are no longer in use, but preserve expansion state for potential re-addition
-      foreach (var groupName in _groupHeaders.Keys.ToList())
+      // Remove empty groups' children and time segments
+      foreach (var entry in _groupEntries)
       {
-        if (!activeGroupNames.Contains(groupName))
+        if (entry.Members.Count == 0)
         {
-          var groupHeader = _groupHeaders[groupName];
-
-          // Preserve the IsExpanded state before removing
-          CurrentStats.Children.Remove(groupName);
-          _groupTimeSegments.Remove(groupName);
-
-          // Keep the header in _groupHeaders to preserve IsExpanded, just remove children
-          // This way if players move back to this group later, expansion state is preserved
+          entry.Children.Clear();
+          entry.TimeSegments.Clear();
         }
       }
     }
-
-
 
     /// <summary>
     /// Checks if player should be visible based on class filter selection.
@@ -720,10 +578,8 @@ namespace EQLogParser
       {
         dataGrid.View.Filter = stats =>
         {
-          // Always show group headers (they don't have ClassName)
-          if (stats is PlayerStats groupHeader &&
-              string.IsNullOrEmpty(groupHeader.ClassName) &&
-              (groupHeader.Name.StartsWith("Group ") || groupHeader.Name == "Unassigned Group"))
+          // Always show group entries in group view
+          if (stats is GroupEntry)
           {
             return true;
           }
@@ -787,48 +643,31 @@ namespace EQLogParser
         {
           e.ChildItems = list;
         }
+        else if (e.ParentItem is GroupEntry groupEntry)
+        {
+          // Group view: return the group's children
+          e.ChildItems = groupEntry.Children;
+        }
         else if (e.ParentItem is PlayerStats parentStats)
         {
-          // Check if this is a group header
-          var isGroupHeader = string.IsNullOrEmpty(parentStats.ClassName) &&
-                              (parentStats.Name.StartsWith("Group ") || parentStats.Name == "Unassigned Group");
+          // Check if we're in Group View by examining the parent list type
+          var isInGroupView = list.Count > 0 && list[0] is GroupEntry;
 
-          if (isGroupHeader)
+          if (isInGroupView)
           {
-            // Return Player +Pets entries for this group from CurrentStats.Children
-            if (CurrentStats.Children.TryGetValue(parentStats.Name, out var groupPlayers))
-            {
-              e.ChildItems = groupPlayers;
-            }
-            else
-            {
-              e.ChildItems = new List<PlayerStats>();
-            }
+            // Level 2: Player +Pets - DON'T expand further, return empty list
+            e.ChildItems = new List<PlayerStats>();
           }
           else
           {
-            // Check if we're in Group View by examining the parent list type
-            var itemList = dataGrid.ItemsSource as List<PlayerStats>;
-            var isInGroupView = itemList != null && itemList.Count > 0 &&
-                                itemList[0] is PlayerStats firstItem &&
-                                string.IsNullOrEmpty(firstItem.ClassName);
-
-            if (isInGroupView)
+            // Regular view: Expand to show pets
+            if (CurrentStats.Children.TryGetValue(parentStats.Name, out var childPets))
             {
-              // Level 2: Player +Pets - DON'T expand further, return empty list
-              e.ChildItems = new List<PlayerStats>();
+              e.ChildItems = childPets;
             }
             else
             {
-              // Regular view: Expand to show pets
-              if (CurrentStats.Children.TryGetValue(parentStats.Name, out var childPets))
-              {
-                e.ChildItems = childPets;
-              }
-              else
-              {
-                e.ChildItems = new List<PlayerStats>();
-              }
+              e.ChildItems = new List<PlayerStats>();
             }
           }
         }
@@ -850,6 +689,17 @@ namespace EQLogParser
       foreach (var stats in list.OrderByDescending(stats => stats.Total))
       {
         stats.Rank = (ushort)rank++;
+      }
+
+      return list;
+    }
+
+    private static List<GroupEntry> UpdateRankGrouped(List<GroupEntry> list)
+    {
+      var rank = 1;
+      foreach (var entry in list.OrderByDescending(e => e.Total))
+      {
+        entry.Rank = (ushort)rank++;
       }
 
       return list;
