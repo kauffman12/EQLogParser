@@ -289,7 +289,7 @@ namespace EQLogParser
       }
 
       // Return non-empty groups sorted by aggregate Total descending
-      return nonEmptyGroups.OrderBy(g => g.Total).Reverse().ToList();
+      return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
     }
 
     private string GetGroupName(int groupId)
