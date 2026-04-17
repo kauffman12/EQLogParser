@@ -898,7 +898,7 @@ namespace EQLogParser
       }
     }
 
-    private void OwnerEdit_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+ private void OwnerEdit_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is ImageAwesome ia && ia.Parent is Grid grid)
       {

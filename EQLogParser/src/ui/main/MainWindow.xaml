@@ -526,18 +526,18 @@
              <syncfusion:SfDataGrid.Columns>
                <syncfusion:GridTemplateColumn x:Name="ownerList" Width="160" HeaderText="Owner">
                  <syncfusion:GridTemplateColumn.CellTemplate>
-                   <DataTemplate>
-                     <Grid>
-                       <Grid.ColumnDefinitions>
-                         <ColumnDefinition Width="*" />
-                         <ColumnDefinition Width="Auto" />
-                       </Grid.ColumnDefinitions>
-                       <TextBlock Grid.Column="0" Padding="4,0,0,0" VerticalAlignment="Center" Text="{Binding Owner}" />
-                       <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" PreviewMouseLeftButtonDown="OwnerEdit_PreviewMouseLeftButtonDown"/>
-                       <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}" SelectedValue="{Binding Owner, Mode=TwoWay}" SelectedValuePath="Name" DisplayMemberPath="Name"
-                           SelectionChanged="OwnerSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}" Visibility="Collapsed" />
-                     </Grid>
-                   </DataTemplate>
+                  <DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Padding="4,0,0,0" VerticalAlignment="Center" Text="{Binding Owner}" />
+                        <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEdit_MouseLeftButtonUp"/>
+                        <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}" SelectedValue="{Binding Owner, Mode=TwoWay}" SelectedValuePath="Name" DisplayMemberPath="Name"
+                            SelectionChanged="OwnerSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}" Visibility="Collapsed" />
+                      </Grid>
+                    </DataTemplate>
                  </syncfusion:GridTemplateColumn.CellTemplate>
                </syncfusion:GridTemplateColumn>
                <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
