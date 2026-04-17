@@ -243,6 +243,7 @@ namespace EQLogParser
 
         // Re-calculate rates based on the correct aggregated totals and TotalSeconds
         StatsUtil.CalculateRates(groupEntry, CurrentStats.RaidStats, null);
+        StatsUtil.CalculatePercentOfRaid(groupEntry, CurrentStats.RaidStats);
 
         // Set children for TreeGrid expansion
         groupEntry.Children = [.. groupEntry.Members];

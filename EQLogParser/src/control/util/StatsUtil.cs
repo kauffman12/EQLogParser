@@ -544,6 +544,14 @@ namespace EQLogParser
       }
     }
 
+    internal static void CalculatePercentOfRaid(PlayerSubStats stats, PlayerStats raidTotals)
+    {
+      if (raidTotals.Total > 0)
+      {
+        stats.PercentOfRaid = (float)Math.Round((float)stats.Total / raidTotals.Total * 100, 2);
+      }
+    }
+
     internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals,
       ConcurrentDictionary<string, int> resistCounts = null, PlayerStats superStats = null)
     {
@@ -557,11 +565,7 @@ namespace EQLogParser
 
       CalculateRates(stats, raidTotals, superStats);
 
-      // total percents
-      if (raidTotals.Total > 0)
-      {
-        stats.PercentOfRaid = (float)Math.Round((float)stats.Total / raidTotals.Total * 100, 2);
-      }
+      CalculatePercentOfRaid(stats, raidTotals);
 
       // remaining amount
       if (stats.BestSecTemp > 0)
