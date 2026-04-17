@@ -2,6 +2,7 @@ using FontAwesome5;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -637,22 +638,21 @@ namespace EQLogParser
 
     private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
     {
-      if (dataGrid.ItemsSource is List<PlayerStats> list)
+      if (dataGrid.ItemsSource is IList list)
       {
+        var isInGroupView = list.Count > 0 && list[0] is GroupEntry;
+
         if (e.ParentItem == null)
         {
           e.ChildItems = list;
         }
-        else if (e.ParentItem is GroupEntry groupEntry)
+        else if (isInGroupView && e.ParentItem is GroupEntry groupEntry)
         {
           // Group view: return the group's children
           e.ChildItems = groupEntry.Children;
         }
         else if (e.ParentItem is PlayerStats parentStats)
         {
-          // Check if we're in Group View by examining the parent list type
-          var isInGroupView = list.Count > 0 && list[0] is GroupEntry;
-
           if (isInGroupView)
           {
             // Level 2: Player +Pets - DON'T expand further, return empty list
