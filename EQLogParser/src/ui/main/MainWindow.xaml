@@ -1,4 +1,4 @@
-﻿<Window
+<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:fa="http://schemas.fontawesome.com/icons/"
@@ -514,39 +514,54 @@
         <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <syncfusion:SfDataGrid x:Name="petMappingGrid"
-                               AllowResizingColumns="False"
-                               AutoGenerateColumns="False"
-                               ColumnSizer="AutoLastColumnFill"
-                               CurrentCellDropDownSelectionChanged="PetMappingDropDownSelectionChanged"
-                               EditTrigger="OnTap"
-                               HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                               RowHeight="{DynamicResource EQTableRowHeight}"
-                               ShowRowHeader="False"
-                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended">
-            <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridComboBoxColumn x:Name="ownerList" Width="160" HeaderText="Owner" AllowEditing="True" IsReadOnly="False" MappingName="Owner" SelectedValuePath="Name" DisplayMemberPath="Name" />
-              <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
-            </syncfusion:SfDataGrid.Columns>
-          </syncfusion:SfDataGrid>
+                                ItemsSource="{x:Static local:MainActions.PetPlayersView}"
+                                AllowResizingColumns="False"
+                                AutoGenerateColumns="False"
+                                ColumnSizer="AutoLastColumnFill"
+                                HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                                RowHeight="{DynamicResource EQTableRowHeight}"
+                                ShowRowHeader="False"
+                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                                SelectionMode="Extended">
+             <syncfusion:SfDataGrid.Columns>
+               <syncfusion:GridTemplateColumn x:Name="ownerList" Width="160" HeaderText="Owner">
+                 <syncfusion:GridTemplateColumn.CellTemplate>
+                   <DataTemplate>
+                     <Grid>
+                       <Grid.ColumnDefinitions>
+                         <ColumnDefinition Width="*" />
+                         <ColumnDefinition Width="Auto" />
+                       </Grid.ColumnDefinitions>
+                       <TextBlock Grid.Column="0" Padding="4,0,0,0" VerticalAlignment="Center" Text="{Binding Owner}" />
+                       <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" PreviewMouseLeftButtonDown="OwnerEdit_PreviewMouseLeftButtonDown"/>
+                       <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}" SelectedValue="{Binding Owner, Mode=TwoWay}" SelectedValuePath="Name" DisplayMemberPath="Name"
+                           SelectionChanged="OwnerSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}" Visibility="Collapsed" />
+                     </Grid>
+                   </DataTemplate>
+                 </syncfusion:GridTemplateColumn.CellTemplate>
+               </syncfusion:GridTemplateColumn>
+               <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
+             </syncfusion:SfDataGrid.Columns>
+           </syncfusion:SfDataGrid>
         </ContentControl>
         <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
                       syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPlayersWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPlayersWindowWidth}"
                       syncfusion:DockingManager.CanDocument="False">
-          <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
-                               AllowResizingColumns="False"
-                               AutoGenerateColumns="False"
-                               ColumnSizer="Star"
-                               CurrentCellBorderThickness="0"
-                               CurrentCellDropDownSelectionChanged="PlayerClassDropDownSelectionChanged"
-                               EditTrigger="OnTap"
-                               HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                               IsReadOnly="True"
-                               RowHeight="{DynamicResource EQTableRowHeight}"
-                               RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
-                               ShowRowHeader="True"
-                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended">
+         <syncfusion:SfDataGrid x:Name="verifiedPlayersGrid"
+                                ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}"
+                                AllowResizingColumns="False"
+                                AutoGenerateColumns="False"
+                                ColumnSizer="Star"
+                                CurrentCellBorderThickness="0"
+                                CurrentCellDropDownSelectionChanged="PlayerClassDropDownSelectionChanged"
+                                EditTrigger="OnTap"
+                                HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                                IsReadOnly="True"
+                                RowHeight="{DynamicResource EQTableRowHeight}"
+                                RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
+                                ShowRowHeader="True"
+                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                                SelectionMode="Extended">
             <syncfusion:SfDataGrid.Resources>
               <Style TargetType="syncfusion:GridRowHeaderCell">
                 <Setter Property="Template">
@@ -570,18 +585,19 @@
         </ContentControl>
         <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270" syncfusion:DockingManager.CanDocument="False">
-          <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
-                               AllowResizingColumns="False"
-                               AutoGenerateColumns="False"
-                               ColumnSizer="AutoLastColumnFill"
-                               CurrentCellBorderThickness="0"
-                               HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                               IsReadOnly="True"
-                               RowHeight="{DynamicResource EQTableRowHeight}"
-                               RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
-                               ShowRowHeader="True"
-                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionMode="Extended">
+         <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
+                                ItemsSource="{x:Static local:MainActions.VerifiedPetsView}"
+                                AllowResizingColumns="False"
+                                AutoGenerateColumns="False"
+                                ColumnSizer="AutoLastColumnFill"
+                                CurrentCellBorderThickness="0"
+                                HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                                IsReadOnly="True"
+                                RowHeight="{DynamicResource EQTableRowHeight}"
+                                RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
+                                ShowRowHeader="True"
+                                GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                                SelectionMode="Extended">
             <syncfusion:SfDataGrid.Resources>
               <Style TargetType="syncfusion:GridRowHeaderCell">
                 <Setter Property="Template">

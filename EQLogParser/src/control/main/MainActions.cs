@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
@@ -74,9 +74,9 @@ namespace EQLogParser
     private const string PetsListTitle = "Verified Pets";
     private const string PlayerListTitle = "Verified Players";
     private const string PetOwnersTitle = "Pet Owners";
-    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
-    private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
-    private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
+    internal static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
+    internal static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    internal static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static readonly JsonSerializerOptions VersionCheckSerializationOptions = new() { PropertyNameCaseInsensitive = true };
@@ -499,11 +499,8 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
+    internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
     {
-      // pet -> players
-      petMappingGrid.ItemsSource = PetPlayersView;
-      ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -517,11 +514,9 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, GridComboBoxColumn classList,
+    internal static void InitVerifiedPlayers(MainWindow main, GridComboBoxColumn classList,
       ContentControl playersWindow, ContentControl petMappingWindow)
     {
-      // verified player table
-      playersGrid.ItemsSource = VerifiedPlayersView;
       var list = DataManager.Instance.GetClassList();
       list.Insert(0, ""); // insert null case
       classList.ItemsSource = list;
@@ -571,10 +566,8 @@ namespace EQLogParser
       };
     }
 
-    internal static void InitVerifiedPets(MainWindow main, SfDataGrid petsGrid, ContentControl petsWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
     {
-      // verified pets table
-      petsGrid.ItemsSource = VerifiedPetsView;
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
       {
         await UiUtil.InvokeAsync(() =>

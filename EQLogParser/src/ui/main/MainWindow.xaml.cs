@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using log4net.Appender;
 using Microsoft.Win32;
@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -183,9 +184,9 @@ namespace EQLogParser
       MainActions.AddDocumentWindows(dockSite);
 
       // populate windows that need data
-      MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
-      MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
-      MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
+      MainActions.InitPetOwners(this, petMappingWindow);
+      MainActions.InitVerifiedPlayers(this, classList, verifiedPlayersWindow, petMappingWindow);
+      MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
 
       // add notify icon
       // this attaches to state change events so do toward the end
@@ -897,12 +898,57 @@ namespace EQLogParser
       }
     }
 
-    private void PetMappingDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+    private void OwnerEdit_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is PetMapping mapping)
+      if (sender is ImageAwesome ia && ia.Parent is Grid grid)
       {
-        dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, mapping.Owner);
+        foreach (var child in grid.Children)
+        {
+          if (child is ComboBox combo)
+          {
+            combo.Visibility = Visibility.Visible;
+            Dispatcher.InvokeAsync(() =>
+            {
+              combo.IsDropDownOpen = true;
+            }, DispatcherPriority.Background);
+            petMappingGrid.SelectionChanging += OwnerContextChangeHandler;
+          }
+          else if (child is FrameworkElement fe)
+          {
+            fe.Visibility = Visibility.Collapsed;
+          }
+        }
+      }
+
+      void OwnerContextChangeHandler(object s, GridSelectionChangingEventArgs args)
+      {
+        foreach (var child in grid.Children)
+        {
+          if (child is ComboBox combo)
+          {
+            combo.Visibility = Visibility.Collapsed;
+            combo.IsDropDownOpen = false;
+          }
+          else if (child is FrameworkElement fe)
+          {
+            fe.Visibility = Visibility.Visible;
+          }
+        }
+        petMappingGrid.SelectionChanging -= OwnerContextChangeHandler;
+      }
+    }
+
+    private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (e.AddedItems.Count == 0) return;
+
+      var combo = sender as ComboBox;
+      if (combo?.DataContext is not PetMapping mapping) return;
+
+      var selectedName = e.AddedItems[0] is ExpandoObject exp ? Convert.ToString(((dynamic)exp).Name) : e.AddedItems[0]?.ToString();
+      if (!string.IsNullOrEmpty(selectedName))
+      {
+        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selectedName);
       }
     }
 
