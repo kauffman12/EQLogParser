@@ -91,28 +91,41 @@ namespace EQLogParser
       {
         if (CurrentStats != null && CurrentStats.StatsList.Count > 0 && dataGrid.View != null)
         {
-          menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
-          menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
-          menuItemShowAdpsTimeline.IsEnabled = dataGrid.SelectedItems.Count is 1 or 2 && _currentGroupCount == 1;
+          var hasPlayerSelection = dataGrid.SelectedItems.Any(s => s is PlayerStats && s is not GroupEntry);
+
+          // Copy/send options always available
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
-          // default before making check
-          menuItemShowDeathLog.IsEnabled = false;
+          // Player-only options: disabled for group selections
           menuItemSetPlayerClass.IsEnabled = false;
           menuItemSetAsPet.IsEnabled = false;
+          menuItemShowSpellCasts.IsEnabled = false;
+          menuItemShowSpellCounts.IsEnabled = false;
+          menuItemShowBreakdown.IsEnabled = false;
+          menuItemShowDamageLog.IsEnabled = false;
+          menuItemShowHitFreq.IsEnabled = false;
+          menuItemShowAdpsTimeline.IsEnabled = false;
+          menuItemShowDeathLog.IsEnabled = false;
 
-          if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+          if (hasPlayerSelection)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
-            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-            !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
-            selectedName = playerStats.OrigName;
-            menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
-          }
+            menuItemShowSpellCasts.IsEnabled = menuItemShowBreakdown.IsEnabled = menuItemShowSpellCounts.IsEnabled = true;
+            menuItemShowDamageLog.IsEnabled = menuItemShowHitFreq.IsEnabled = dataGrid.SelectedItems.Count == 1;
+            menuItemShowAdpsTimeline.IsEnabled = dataGrid.SelectedItems.Count is 1 or 2 && _currentGroupCount == 1;
 
-          EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
-          EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
-          EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
+            if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
+            {
+              menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+              menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
+              !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+              selectedName = playerStats.OrigName;
+              menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
+            }
+
+            EnableClassMenuItems(menuItemShowBreakdown, dataGrid, CurrentStats?.UniqueClasses);
+            EnableClassMenuItems(menuItemShowSpellCasts, dataGrid, CurrentStats?.UniqueClasses);
+            EnableClassMenuItems(menuItemShowSpellCounts, dataGrid, CurrentStats?.UniqueClasses);
+          }
         }
         else
         {
