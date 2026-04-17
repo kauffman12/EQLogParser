@@ -74,9 +74,9 @@ namespace EQLogParser
     private const string PetsListTitle = "Verified Pets";
     private const string PlayerListTitle = "Verified Players";
     private const string PetOwnersTitle = "Pet Owners";
-    internal static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
-    internal static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
-    internal static readonly ObservableCollection<PetMapping> PetPlayersView = [];
+    public static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
+    public static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    public static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static readonly JsonSerializerOptions VersionCheckSerializationOptions = new() { PropertyNameCaseInsensitive = true };
