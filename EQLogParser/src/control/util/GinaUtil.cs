@@ -527,7 +527,7 @@ namespace EQLogParser
                   triggers.Add(new ExportTriggerNode { Name = triggerName, TriggerData = trigger, HasMissingMedia = missingMedia });
                 }
               }
-           }
+            }
 
             var moreGroups = node.SelectNodes("TriggerGroups");
             ParseGinaTriggerGroups(moreGroups, data.Nodes);

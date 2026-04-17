@@ -639,7 +639,7 @@ namespace EQLogParser
     }
 
     // For Syncfusion TreeGrid expansion state preservation
-private bool _isExpanded;
+    private bool _isExpanded;
     public bool IsExpanded
     {
       get => _isExpanded;

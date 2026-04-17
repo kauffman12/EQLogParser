@@ -785,7 +785,7 @@ namespace EQLogParser
       return isHitType;
     }
 
-   private static uint GetMin(uint to, uint from)
+    private static uint GetMin(uint to, uint from)
     {
       if (to == 0 && from > 0)
       {

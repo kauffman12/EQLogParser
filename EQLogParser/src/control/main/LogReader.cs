@@ -204,12 +204,12 @@ namespace EQLogParser
         try
         {
           // if deleted or truncated
-        if (_fileDeleted || _fs.Length < _currentPos)
-        {
-          _fileDeleted = false;
-          await ReOpenAsync();
-          continue;
-        }
+          if (_fileDeleted || _fs.Length < _currentPos)
+          {
+            _fileDeleted = false;
+            await ReOpenAsync();
+            continue;
+          }
 
           if (_cts == null || _cts.IsCancellationRequested)
           {
