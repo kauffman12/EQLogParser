@@ -898,7 +898,12 @@ namespace EQLogParser
       }
     }
 
- private void OwnerEdit_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      CloseAllComboBoxes(petMappingGrid);
+    }
+
+    private void OwnerEdit_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is ImageAwesome ia && ia.Parent is Grid grid)
       {
@@ -935,6 +940,31 @@ namespace EQLogParser
           }
         }
         petMappingGrid.SelectionChanging -= OwnerContextChangeHandler;
+      }
+    }
+
+    private static void CloseAllComboBoxes(SfDataGrid grid)
+    {
+      foreach (var child in GetVisualChildren(grid))
+      {
+        if (child is ComboBox combo && combo.Visibility == Visibility.Visible)
+        {
+          combo.Visibility = Visibility.Collapsed;
+          combo.IsDropDownOpen = false;
+        }
+      }
+    }
+
+    private static IEnumerable<DependencyObject> GetVisualChildren(DependencyObject parent)
+    {
+      for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+      {
+        var child = VisualTreeHelper.GetChild(parent, i);
+        yield return child;
+        foreach (var descendant in GetVisualChildren(child))
+        {
+          yield return descendant;
+        }
       }
     }
 

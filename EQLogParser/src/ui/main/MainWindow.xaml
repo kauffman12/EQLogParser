@@ -527,7 +527,7 @@
                <syncfusion:GridTemplateColumn x:Name="ownerList" Width="160" HeaderText="Owner">
                  <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                      <Grid>
+                      <Grid PreviewMouseLeftButtonDown="OwnerCell_PreviewMouseLeftButtonDown">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="*" />
                           <ColumnDefinition Width="Auto" />
