@@ -1,12 +1,10 @@
 using FontAwesome5;
-using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,19 +14,18 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-public partial class DamageSummary : IDocumentContent
-    {
-     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+  public partial class DamageSummary : IDocumentContent
+  {
+    public static readonly List<int> GroupNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-     public static readonly List<int> GroupNumbers = new() { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-
-     private readonly DispatcherTimer _selectionTimer;
+    private const int DEFAULT_VIEW = 0;
+    private const int GROUP_VIEW = 4;
+    private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private int _currentPetOrPlayerOption;
     private bool _ready;
 
     // Group view tracking for incremental updates
-    private bool _isGroupViewActive;
     private Dictionary<string, PlayerStats> _groupHeaders;
     private ConcurrentDictionary<PlayerStats, int> _playerGroups;
     private Dictionary<string, List<TimeSegment>> _groupTimeSegments;
@@ -44,6 +41,7 @@ public partial class DamageSummary : IDocumentContent
         Labels.AllOption,         // 3: Uncategorized
         Labels.ByGroupOption      // 4: By Group (NEW)
       };
+
       petOrPlayerList.SelectedIndex = 0;
 
       CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
@@ -132,7 +130,7 @@ public partial class DamageSummary : IDocumentContent
     }
 
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.DamageParse);
-    internal override bool IsPetsCombined() => _currentPetOrPlayerOption == 0;
+    internal override bool IsPetsCombined() => _currentPetOrPlayerOption == DEFAULT_VIEW;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void CreatePetOwnerMenu()
@@ -185,11 +183,11 @@ public partial class DamageSummary : IDocumentContent
           case 3: // Uncategorized
             dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
             break;
-           case 4: // NEW: By Group
-             InitializeGroupTracking();
-             var groupedPlayers = BuildGroupedPlayers();
-             dataGrid.ItemsSource = UpdateRank(groupedPlayers);
-             break;
+          case 4: // NEW: By Group
+            InitializeGroupTracking();
+            var groupedPlayers = BuildGroupedPlayers();
+            dataGrid.ItemsSource = UpdateRank(groupedPlayers);
+            break;
         }
 
         // if list stayed the same then update the filter
@@ -205,7 +203,7 @@ public partial class DamageSummary : IDocumentContent
     /// Builds grouped players for Group View mode. Creates group headers with aggregated stats and merges time ranges for accurate TotalSeconds calculation.
     /// </summary>
     /// <returns>List of PlayerStats objects representing groups, sorted by total damage descending.</returns>
-   private List<PlayerStats> BuildGroupedPlayers()
+    private List<PlayerStats> BuildGroupedPlayers()
     {
       if (CurrentStats == null)
       {
@@ -235,13 +233,14 @@ public partial class DamageSummary : IDocumentContent
         var groupId = Math.Clamp(stats.AssignedGroup, 0, 12);
 
         // Add player to this group's list
-        if (!groupPlayerLists.ContainsKey(groupId))
+        if (!groupPlayerLists.TryGetValue(groupId, out var value))
         {
-          groupPlayerLists[groupId] = new List<PlayerStats>();
+          value = [];
+          groupPlayerLists[groupId] = value;
         }
 
         stats.IsTopLevel = true;  // Mark so RequestTreeItems knows not to expand further
-        groupPlayerLists[groupId].Add(stats);
+        value.Add(stats);
       }
 
       // Sort players within each group by Total descending
@@ -300,13 +299,12 @@ public partial class DamageSummary : IDocumentContent
 
     private void InitializeGroupTracking()
     {
-      _isGroupViewActive = true;
-      _groupHeaders = new Dictionary<string, PlayerStats>();
+      _groupHeaders = [];
       _playerGroups = new ConcurrentDictionary<PlayerStats, int>();
-      _groupTimeSegments = new Dictionary<string, List<TimeSegment>>();
+      _groupTimeSegments = [];
 
       // Create persistent group headers
-      for (int i = 1; i <= 12; i++)
+      for (var i = 1; i <= 12; i++)
       {
         var groupName = GetGroupName(i);
         _groupHeaders[groupName] = new PlayerStats
@@ -345,7 +343,7 @@ public partial class DamageSummary : IDocumentContent
 
         if (!_groupTimeSegments.ContainsKey(groupName))
           _groupTimeSegments[groupName] = new List<TimeSegment>();
-        
+
         if (stats.Ranges?.TimeSegments != null)
         {
           _groupTimeSegments[groupName].AddRange(stats.Ranges.TimeSegments);
@@ -355,23 +353,22 @@ public partial class DamageSummary : IDocumentContent
 
     private void CleanupGroupTracking()
     {
-      _isGroupViewActive = false;
       _groupHeaders?.Clear();
       _playerGroups?.Clear();
       _groupTimeSegments?.Clear();
     }
 
-   private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (e.AddedItems.Count == 0) return;
 
-      var player = (sender as System.Windows.Controls.ComboBox)?.DataContext as PlayerStats;
+      var player = (sender as ComboBox)?.DataContext as PlayerStats;
       if (player == null) return;
 
       var newGroupId = (int)e.AddedItems[0];
 
       // If we're in Group View, use incremental update with progress indicator
-      if (_isGroupViewActive)
+      if (_currentPetOrPlayerOption == GROUP_VIEW)
       {
         // Skip if value hasn't actually changed
         if (player.AssignedGroup == newGroupId) return;
@@ -392,7 +389,7 @@ public partial class DamageSummary : IDocumentContent
           RebuildGroupTimeSegmentsForMovedPlayer(player, oldGroupId, newGroupId);
         });
 
-              // Force full ItemsSource replacement on UI thread
+        // Force full ItemsSource replacement on UI thread
         await Dispatcher.InvokeAsync(() =>
         {
           try
@@ -404,7 +401,7 @@ public partial class DamageSummary : IDocumentContent
               foreach (var node in dataGrid.View.Nodes)
               {
                 var dataItem = node.Item as PlayerStats;
-                if (dataItem?.IsExpanded == true && 
+                if (dataItem?.IsExpanded == true &&
                     (dataItem.Name.StartsWith("Group ") || dataItem.Name == "Unassigned Group"))
                 {
                   expandedGroupNames.Add(dataItem.Name);
@@ -449,7 +446,7 @@ public partial class DamageSummary : IDocumentContent
       }
     }
 
-     private List<TimeSegment> RebuildGroupTimeSegments(int groupId)
+    private List<TimeSegment> RebuildGroupTimeSegments(int groupId)
     {
       var groupName = GetGroupName(groupId);
       var playersInGroup = CurrentStats.Children.TryGetValue(groupName, out var children) ? children : new List<PlayerStats>();
@@ -478,7 +475,7 @@ public partial class DamageSummary : IDocumentContent
       if (newGroupId >= 0)
       {
         var newGroupName = GetGroupName(newGroupId);
-        
+
         if (!_groupTimeSegments.ContainsKey(newGroupName))
         {
           _groupTimeSegments[newGroupName] = new List<TimeSegment>();
@@ -542,7 +539,7 @@ public partial class DamageSummary : IDocumentContent
       StatsUtil.CalculateRates(groupHeader, CurrentStats.RaidStats, null);
     }
 
-  private void CleanupEmptyGroups()
+    private void CleanupEmptyGroups()
     {
       // Get all active group names from _playerGroups
       var activeGroupIds = _playerGroups.Values.Distinct().ToHashSet();
@@ -554,18 +551,18 @@ public partial class DamageSummary : IDocumentContent
         if (!activeGroupNames.Contains(groupName))
         {
           var groupHeader = _groupHeaders[groupName];
-          
+
           // Preserve the IsExpanded state before removing
           CurrentStats.Children.Remove(groupName);
           _groupTimeSegments.Remove(groupName);
-          
+
           // Keep the header in _groupHeaders to preserve IsExpanded, just remove children
           // This way if players move back to this group later, expansion state is preserved
         }
       }
     }
 
- 
+
 
     /// <summary>
     /// Checks if player should be visible based on class filter selection.
@@ -641,7 +638,7 @@ public partial class DamageSummary : IDocumentContent
 
     private void EventsClearedActiveData(bool cleared)
     {
-      if (cleared && _isGroupViewActive)
+      if (cleared && _currentPetOrPlayerOption == GROUP_VIEW)
       {
         CleanupGroupTracking();
       }
@@ -912,7 +909,7 @@ public partial class DamageSummary : IDocumentContent
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
 
-      if (_isGroupViewActive)
+      if (_currentPetOrPlayerOption == GROUP_VIEW)
       {
         CleanupGroupTracking();
       }
@@ -925,6 +922,46 @@ public partial class DamageSummary : IDocumentContent
       }
 
       _ready = false;
+    }
+
+    private void ImageAwesome_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is ImageAwesome ia && ia.Parent is Grid grid)
+      {
+        foreach (var child in grid.Children)
+        {
+          if (child is ComboBox combo)
+          {
+            combo.Visibility = Visibility.Visible;
+            Dispatcher.InvokeAsync(() =>
+            {
+              combo.IsDropDownOpen = true;
+            }, DispatcherPriority.Background);
+            dataGrid.SelectionChanging += ContextChangeHandler;
+          }
+          else if (child is FrameworkElement fe)
+          {
+            fe.Visibility = Visibility.Collapsed;
+          }
+        }
+      }
+
+      void ContextChangeHandler(object s, GridSelectionChangingEventArgs args)
+      {
+        foreach (var child in grid.Children)
+        {
+          if (child is ComboBox combo)
+          {
+            combo.Visibility = Visibility.Collapsed;
+            combo.IsDropDownOpen = false;
+          }
+          else if (child is FrameworkElement fe)
+          {
+            fe.Visibility = Visibility.Visible;
+          }
+        }
+        dataGrid.SelectionChanging -= ContextChangeHandler;
+      }
     }
   }
 }

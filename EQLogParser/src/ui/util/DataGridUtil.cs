@@ -672,6 +672,13 @@ namespace EQLogParser
         return MainActions.CurrentItemWidth;
       }
 
+      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
+          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
+          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      {
+        return MainActions.CurrentMediumWidth;
+      }
+
       if (mappingName is "TimeSince" or "Hits" or "Lucky" or "Critical" or "Twincast" or
           "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "CritRate" or
           "LuckRate" or "ExtraRate" or "BaneHits" or "MeleeAccRate" or "MeleeHitRate" or
@@ -680,11 +687,9 @@ namespace EQLogParser
         return MainActions.CurrentShortWidth;
       }
 
-      if (mappingName is "AssignedGroup" or "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
-          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
-          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      if (mappingName is "AssignedGroup")
       {
-        return MainActions.CurrentMediumWidth;
+        return MainActions.CurrentShortWidth;
       }
 
       if (!string.IsNullOrEmpty(text))

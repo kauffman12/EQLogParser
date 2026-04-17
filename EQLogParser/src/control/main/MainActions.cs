@@ -66,6 +66,7 @@ namespace EQLogParser
     internal static double CurrentNameWidth;
     internal static double CurrentSpellWidth;
     internal static double CurrentShortWidth;
+    internal static double CurrentShortestWidth;
     internal static double CurrentMediumWidth;
     internal static DropShadowEffect OverlayTextEffect;
 
@@ -1012,6 +1013,7 @@ namespace EQLogParser
       CurrentSpellWidth = (10.0 * CurrentFontSize) + 90;
       CurrentItemWidth = (15.0 * CurrentFontSize) + 115;
       CurrentShortWidth = 5.0 * CurrentFontSize;
+      CurrentShortestWidth = 4.0 * CurrentFontSize;
       CurrentMediumWidth = 6.5 * CurrentFontSize;
       Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
