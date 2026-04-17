@@ -718,6 +718,11 @@ namespace EQLogParser
       return list;
     }
 
+    internal override List<PlayerStats> GetSelectedStats()
+    {
+      return base.GetSelectedStats().Where(s => s is not GroupEntry).ToList();
+    }
+
     internal override void FireSelectionChangedEvent(List<PlayerStats> selected)
     {
       Dispatcher.InvokeAsync(() =>

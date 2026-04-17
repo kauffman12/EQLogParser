@@ -181,7 +181,7 @@ namespace EQLogParser
       return headers;
     }
 
-    internal List<PlayerStats> GetSelectedStats()
+    internal virtual List<PlayerStats> GetSelectedStats()
     {
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
