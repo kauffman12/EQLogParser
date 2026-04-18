@@ -51,7 +51,7 @@ namespace EQLogParser
     private readonly NpcDamageManager _npcDamageManager = new();
     private PetMapping _currentEditMapping;
     private bool _isPopupOpen;
-    private ExpandoObject _currentEditPlayer;
+    private dynamic _currentEditPlayerClass;
     private bool _isClassPopupOpen;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -86,7 +86,7 @@ namespace EQLogParser
         _isClassPopupOpen = value;
         if (!value)
         {
-          _currentEditPlayer = null;
+          _currentEditPlayerClass = null;
           classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
         }
       }
@@ -579,7 +579,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseEnterRed(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = _redHoverBrush;
       }
@@ -587,7 +587,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseEnter(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = _hoverBrush;
       }
@@ -595,7 +595,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseLeave(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = Brushes.Transparent;
       }
@@ -924,7 +924,7 @@ namespace EQLogParser
 
     private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping { } mapping)
+      if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping mapping)
         return;
 
       var cell = UiElementUtil.FindGridCell(ia);
@@ -932,7 +932,7 @@ namespace EQLogParser
         return;
 
       _currentEditMapping = mapping;
-      ownerEditComboBox.SelectedValue = mapping.Owner;
+      ownerEditComboBox.SelectedItem = mapping.Owner;
       OpenCellPopup(ownerEditPopup, ownerEditComboBox, gridCell, () => _isPopupOpen = true);
     }
 
@@ -945,8 +945,8 @@ namespace EQLogParser
       if (cell is not GridCell gridCell)
         return;
 
-      _currentEditPlayer = obj;
-      classEditComboBox.SelectedValue = ((dynamic)obj).PlayerClass;
+      _currentEditPlayerClass = obj;
+      classEditComboBox.SelectedItem = _currentEditPlayerClass.PlayerClass;
       OpenCellPopup(classEditPopup, classEditComboBox, gridCell, () => _isClassPopupOpen = true);
     }
 
@@ -984,16 +984,13 @@ namespace EQLogParser
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (e.AddedItems.Count == 0) return;
+      if (sender is not ComboBox combo || combo.SelectedValue is not string className || string.IsNullOrEmpty(className))
+        return;
 
-      if (_currentEditPlayer == null) return;
+      if (_currentEditPlayerClass == null || _currentEditPlayerClass.PlayerClass == className)
+        return;
 
-      var selectedClass = e.AddedItems[0]?.ToString();
-      if (!string.IsNullOrEmpty(selectedClass))
-      {
-        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)_currentEditPlayer).Name, selectedClass);
-      }
-
+      PlayerManager.Instance.SetDefaultPlayerClass(_currentEditPlayerClass.Name, className);
       classEditPopup.IsOpen = false;
     }
 
@@ -1160,7 +1157,7 @@ namespace EQLogParser
     {
       if (sender is FrameworkElement icon)
       {
-        if (icon.Tag is string name)
+        if (icon.Tag is string name && !string.IsNullOrEmpty(name))
         {
           var opened = SyncFusionUtil.GetOpenWindows(dockSite);
           if (opened.TryGetValue(name, out var control))
