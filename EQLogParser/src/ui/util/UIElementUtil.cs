@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,8 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Syncfusion.UI.Xaml.Grid;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -437,6 +439,14 @@ namespace EQLogParser
       var totalWidth = textWidth + (padding?.Left ?? 0) + (padding?.Right ?? 0) + (borderThickness?.Left ?? 0) + (borderThickness?.Right ?? 0);
 
       return Math.Round(totalWidth);
+    }
+
+    internal static GridCell FindGridCell(DependencyObject source)
+    {
+      DependencyObject current = source;
+      while (current != null && current is not GridCell)
+        current = VisualTreeHelper.GetParent(current);
+      return current as GridCell;
     }
 
     internal static Style CloneStyle(Style originalStyle)

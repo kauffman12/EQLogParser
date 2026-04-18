@@ -51,6 +51,8 @@ namespace EQLogParser
     private readonly NpcDamageManager _npcDamageManager = new();
     private PetMapping _currentEditMapping;
     private bool _isPopupOpen;
+    private ExpandoObject _currentEditPlayer;
+    private bool _isClassPopupOpen;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
@@ -72,6 +74,20 @@ namespace EQLogParser
         {
           _currentEditMapping = null;
           ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+        }
+      }
+    }
+
+    public bool IsClassPopupOpen
+    {
+      get => _isClassPopupOpen;
+      set
+      {
+        _isClassPopupOpen = value;
+        if (!value)
+        {
+          _currentEditPlayer = null;
+          classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
         }
       }
     }
@@ -911,29 +927,47 @@ namespace EQLogParser
       if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping { } mapping)
         return;
 
-      DependencyObject cell = ia;
-      while (cell != null && cell is not GridCell)
-        cell = VisualTreeHelper.GetParent(cell);
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is not GridCell gridCell)
+        return;
 
-      if (cell is GridCell gridCell)
+      _currentEditMapping = mapping;
+      ownerEditComboBox.SelectedValue = mapping.Owner;
+      OpenCellPopup(ownerEditPopup, ownerEditComboBox, gridCell, () => _isPopupOpen = true);
+    }
+
+    private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject obj)
+        return;
+
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is not GridCell gridCell)
+        return;
+
+      _currentEditPlayer = obj;
+      classEditComboBox.SelectedValue = ((dynamic)obj).PlayerClass;
+      OpenCellPopup(classEditPopup, classEditComboBox, gridCell, () => _isClassPopupOpen = true);
+    }
+
+    private void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onOpened)
+    {
+      popup.PlacementTarget = cell;
+      popup.Placement = PlacementMode.Relative;
+      popup.HorizontalOffset = 0;
+      popup.VerticalOffset = 0;
+
+      void OnPopupOpen(object s, EventArgs args)
       {
-        ownerEditPopup.PlacementTarget = gridCell;
-        ownerEditPopup.Placement = PlacementMode.Relative;
-        ownerEditPopup.HorizontalOffset = 0;
-        ownerEditPopup.VerticalOffset = 0;
-
-        _currentEditMapping = mapping;
-        ownerEditComboBox.SelectedValue = mapping.Owner;
-        ownerEditPopup.Opened += PopupOpen;
-        ownerEditPopup.IsOpen = true;
+        popup.Opened -= OnPopupOpen;
+        popup.Width = cell.ActualWidth;
+        popup.Height = cell.ActualHeight;
+        comboBox.Width = cell.ActualWidth;
+        onOpened();
       }
 
-      void PopupOpen(object s, EventArgs args)
-      {
-        ownerEditPopup.Width = gridCell.ActualWidth;
-        ownerEditPopup.Height = gridCell.ActualHeight;
-        ownerEditPopup.Opened -= PopupOpen;
-      }
+      popup.Opened += OnPopupOpen;
+      popup.IsOpen = true;
     }
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -952,14 +986,15 @@ namespace EQLogParser
     {
       if (e.AddedItems.Count == 0) return;
 
-      var combo = sender as ComboBox;
-      if (combo?.DataContext is not ExpandoObject obj) return;
+      if (_currentEditPlayer == null) return;
 
       var selectedClass = e.AddedItems[0]?.ToString();
       if (!string.IsNullOrEmpty(selectedClass))
       {
-        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)obj).Name, selectedClass);
+        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)_currentEditPlayer).Name, selectedClass);
       }
+
+      classEditPopup.IsOpen = false;
     }
 
     private void OpenLogFile(string previousFile, int lastMins)
