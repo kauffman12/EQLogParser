@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -23,7 +22,6 @@ namespace EQLogParser
   internal static class DataGridUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static int _startRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
@@ -331,18 +329,6 @@ namespace EQLogParser
       }
     }
 
-    internal static void EnableMouseSelection(object sender, MouseButtonEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-      {
-        _startRow = row;
-        // Left click happened, current item is selected, now listen for mouse movement and release of left button
-        treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove += MouseMove;
-      }
-    }
-
     internal static void RefreshTableColumns(SfGridBase gridBase)
     {
       try
@@ -478,58 +464,6 @@ namespace EQLogParser
       }
 
       return allData ? width : Math.Min(width, gridBase.ActualWidth);
-    }
-
-    private static void PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is SfTreeGrid treeGrid)
-      {
-        // remove listeners if left button released
-        treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove -= MouseMove;
-      }
-    }
-
-    private static void MouseMove(object sender, MouseEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid)
-      {
-        if (e.LeftButton == MouseButtonState.Released)
-        {
-          // remove listeners if left button released
-          treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-          treeGrid.PreviewMouseMove -= MouseMove;
-        }
-        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-        {
-          if (treeGrid.CurrentItem != stats)
-          {
-            if (!treeGrid.SelectionController.SelectedRows.Contains(row))
-            {
-              treeGrid.SelectRows(_startRow, row);
-            }
-            else
-            {
-              treeGrid.SelectionController.ClearSelections(false);
-              var direction = 0;
-              if (_startRow < row)
-              {
-                direction = -1;
-              }
-              else if (_startRow > row)
-              {
-                direction = 1;
-              }
-
-              treeGrid.SelectRows(_startRow, row + direction);
-            }
-
-            treeGrid.CurrentItem = stats;
-            CallSelectionChanged(treeGrid.Parent);
-          }
-        }
-      }
     }
 
     internal static void RestoreAllTableColumns()

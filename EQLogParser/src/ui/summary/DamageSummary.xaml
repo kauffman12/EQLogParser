@@ -80,7 +80,6 @@
                             RowHeight="{DynamicResource EQTableRowHeight}"
                             IsReadOnly="True"
                             ItemsSourceChanged="ItemsSourceChanged"
-                            PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                             SelectionMode="Extended"
                             SelectionChanged="DataGridSelectionChanged"
                             ShowRowHeader="True">
@@ -201,13 +200,13 @@
             <DataTemplate>
               <Grid Visibility="{Binding Path=IsGroupHeader, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="10*" />
-                  <ColumnDefinition Width="10*" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Padding="0,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup}" />
-                <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" PreviewMouseLeftButtonDown="ImageAwesome_PreviewMouseLeftButtonDown"/>
+                <TextBlock Grid.Column="0" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup}" />
+                <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonDown="EditGroupMouseLeftButtonDown"/>
                 <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" SelectedItem="{Binding AssignedGroup, Mode=OneWay}"
-                    SelectionChanged="PlayerGroup_SelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}"
+                    SelectionChanged="PlayerGroupSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}"
                     Visibility="Collapsed" />
               </Grid>
             </DataTemplate>

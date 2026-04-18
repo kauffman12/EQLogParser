@@ -518,6 +518,7 @@
                                 AllowResizingColumns="False"
                                 AutoGenerateColumns="False"
                                 ColumnSizer="AutoLastColumnFill"
+                                CurrentCellBorderThickness="0"
                                 HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                 RowHeight="{DynamicResource EQTableRowHeight}"
                                 ShowRowHeader="False"
@@ -527,13 +528,13 @@
                <syncfusion:GridTemplateColumn x:Name="ownerList" Width="160" HeaderText="Owner">
                  <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                      <Grid PreviewMouseLeftButtonDown="OwnerCell_PreviewMouseLeftButtonDown">
+                      <Grid>
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Padding="4,0,0,0" VerticalAlignment="Center" Text="{Binding Owner}" />
-                        <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEdit_MouseLeftButtonUp"/>
+                        <TextBlock Grid.Column="0" Margin="2,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Owner}" />
+                        <fa:ImageAwesome Grid.Column="1" Margin="0,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEditMouseLeftButtonUp"/>
                         <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}" SelectedValue="{Binding Owner, Mode=TwoWay}" SelectedValuePath="Name" DisplayMemberPath="Name"
                             SelectionChanged="OwnerSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}" Visibility="Collapsed" />
                       </Grid>
@@ -585,7 +586,7 @@
         </ContentControl>
         <ContentControl x:Name="verifiedPetsWindow" syncfusion:DockingManager.Header="Verified Pets" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="270" syncfusion:DockingManager.DesiredWidthInFloatingMode="270" syncfusion:DockingManager.CanDocument="False">
-         <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
+          <syncfusion:SfDataGrid x:Name="verifiedPetsGrid" 
                                 ItemsSource="{x:Static local:MainActions.VerifiedPetsView}"
                                 AllowResizingColumns="False"
                                 AutoGenerateColumns="False"

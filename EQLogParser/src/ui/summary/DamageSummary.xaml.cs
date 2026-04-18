@@ -270,7 +270,7 @@ namespace EQLogParser
       return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
     }
 
-    private string GetGroupName(int groupId)
+    private static string GetGroupName(int groupId)
     {
       return groupId == 0 ? "Unassigned Group" : $"Group {groupId}";
     }
@@ -317,7 +317,7 @@ namespace EQLogParser
       _groupEntries?.Clear();
     }
 
-    private async void PlayerGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void PlayerGroupSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (e.AddedItems.Count == 0) return;
 
@@ -420,19 +420,6 @@ namespace EQLogParser
       if (player.Ranges?.TimeSegments != null)
       {
         newGroup.TimeSegments.AddRange(player.Ranges.TimeSegments);
-      }
-    }
-
-    private void CleanupEmptyGroups()
-    {
-      // Remove empty groups' children and time segments
-      foreach (var entry in _groupEntries)
-      {
-        if (entry.Members.Count == 0)
-        {
-          entry.Children.Clear();
-          entry.TimeSegments.Clear();
-        }
       }
     }
 
@@ -792,7 +779,7 @@ namespace EQLogParser
       _ready = false;
     }
 
-    private void ImageAwesome_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void EditGroupMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
       if (sender is ImageAwesome ia && ia.Parent is Grid grid)
       {
@@ -801,11 +788,12 @@ namespace EQLogParser
           if (child is ComboBox combo)
           {
             combo.Visibility = Visibility.Visible;
+            combo.DropDownClosed += DropDownClosed;
+
             Dispatcher.InvokeAsync(() =>
             {
               combo.IsDropDownOpen = true;
             }, DispatcherPriority.Background);
-            dataGrid.SelectionChanging += ContextChangeHandler;
           }
           else if (child is FrameworkElement fe)
           {
@@ -814,21 +802,20 @@ namespace EQLogParser
         }
       }
 
-      void ContextChangeHandler(object s, GridSelectionChangingEventArgs args)
+      void DropDownClosed(object s, EventArgs argss)
       {
         foreach (var child in grid.Children)
         {
           if (child is ComboBox combo)
           {
+            combo.DropDownClosed -= DropDownClosed;
             combo.Visibility = Visibility.Collapsed;
-            combo.IsDropDownOpen = false;
           }
           else if (child is FrameworkElement fe)
           {
             fe.Visibility = Visibility.Visible;
           }
         }
-        dataGrid.SelectionChanging -= ContextChangeHandler;
       }
     }
   }

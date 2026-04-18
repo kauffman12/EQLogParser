@@ -15,13 +15,13 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
 using Application = System.Windows.Application;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -898,12 +898,7 @@ namespace EQLogParser
       }
     }
 
-private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-      CloseAllComboBoxes(petMappingGrid, e.OriginalSource as DependencyObject);
-    }
-
-    private void OwnerEdit_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is ImageAwesome ia && ia.Parent is Grid grid)
       {
@@ -912,11 +907,12 @@ private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEven
           if (child is ComboBox combo)
           {
             combo.Visibility = Visibility.Visible;
+            combo.DropDownClosed += DropDownClosed;
+
             Dispatcher.InvokeAsync(() =>
             {
               combo.IsDropDownOpen = true;
             }, DispatcherPriority.Background);
-            petMappingGrid.SelectionChanging += OwnerContextChangeHandler;
           }
           else if (child is FrameworkElement fe)
           {
@@ -925,59 +921,21 @@ private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEven
         }
       }
 
-      void OwnerContextChangeHandler(object s, GridSelectionChangingEventArgs args)
+      void DropDownClosed(object s, EventArgs args)
       {
         foreach (var child in grid.Children)
         {
           if (child is ComboBox combo)
           {
+            combo.DropDownClosed -= DropDownClosed;
             combo.Visibility = Visibility.Collapsed;
-            combo.IsDropDownOpen = false;
           }
           else if (child is FrameworkElement fe)
           {
             fe.Visibility = Visibility.Visible;
           }
         }
-        petMappingGrid.SelectionChanging -= OwnerContextChangeHandler;
       }
-    }
-
-    private static void CloseAllComboBoxes(SfDataGrid grid, DependencyObject clickTarget)
-    {
-      foreach (var child in GetVisualChildren(grid))
-      {
-        if (child is ComboBox combo && combo.Visibility == Visibility.Visible)
-        {
-          if (IsDescendantOf(clickTarget, combo) || IsDescendantOf(combo, clickTarget))
-          {
-            continue;
-          }
-          combo.Visibility = Visibility.Collapsed;
-          combo.IsDropDownOpen = false;
-          if (combo.Parent is Panel parent)
-          {
-            foreach (var sibling in parent.Children)
-            {
-              if (sibling is FrameworkElement fe && fe != combo)
-              {
-                fe.Visibility = Visibility.Visible;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    private static bool IsDescendantOf(DependencyObject potentialDescendant, DependencyObject potentialAncestor)
-    {
-      while (potentialDescendant != null)
-      {
-        if (potentialDescendant == potentialAncestor)
-          return true;
-        potentialDescendant = VisualTreeHelper.GetParent(potentialDescendant);
-      }
-      return false;
     }
 
     private static IEnumerable<DependencyObject> GetVisualChildren(DependencyObject parent)
