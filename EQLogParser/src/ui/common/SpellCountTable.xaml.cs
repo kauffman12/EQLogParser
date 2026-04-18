@@ -84,15 +84,10 @@ namespace EQLogParser
       var icon = new FrameworkElementFactory(typeof(ImageAwesome));
       icon.SetValue(ImageAwesome.MarginProperty, new Thickness(8, 2, 8, 0));
       icon.SetValue(ImageAwesome.StyleProperty, (Style)Application.Current.Resources["EQIconStyle"]);
-      icon.SetValue(ImageAwesome.IconProperty, FontAwesome5.FontAwesomeIcon.Solid_Times);
+      icon.SetValue(ImageAwesome.IconProperty, EFontAwesomeIcon.Solid_Times);
       icon.SetValue(ImageAwesome.CursorProperty, Cursors.Hand);
       icon.AddHandler(ImageAwesome.PreviewMouseDownEvent, new MouseButtonEventHandler(RemoveSpellMouseDown));
-
-      var scaleTransform = new FrameworkElementFactory(typeof(ScaleTransform));
-      scaleTransform.SetValue(ScaleTransform.ScaleXProperty, 0.9);
-      scaleTransform.SetValue(ScaleTransform.ScaleYProperty, 0.9);
-      icon.SetValue(ImageAwesome.LayoutTransformProperty, scaleTransform);
-
+      icon.SetValue(ImageAwesome.LayoutTransformProperty, new ScaleTransform(0.9, 0.9));
       stackPanel.AppendChild(icon);
 
       var textBlock = new FrameworkElementFactory(typeof(TextBlock));
@@ -100,7 +95,6 @@ namespace EQLogParser
       var binding = new Binding("Spell");
       textBlock.SetBinding(TextBlock.TextProperty, binding);
       stackPanel.AppendChild(textBlock);
-
       cellTemplate.VisualTree = stackPanel;
 
       var headerCol = new GridTemplateColumn

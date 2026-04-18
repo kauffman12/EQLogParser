@@ -517,7 +517,6 @@
                                 ItemsSource="{x:Static local:MainActions.PetPlayersView}"
                                 AllowResizingColumns="False"
                                 AutoGenerateColumns="False"
-                                ColumnSizer="AutoLastColumnFill"
                                 CurrentCellBorderThickness="0"
                                 HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                 RowHeight="{DynamicResource EQTableRowHeight}"
@@ -526,7 +525,7 @@
                                 SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
               <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
-              <syncfusion:GridTemplateColumn x:Name="ownerList" HeaderText="Owner">
+              <syncfusion:GridTemplateColumn x:Name="ownerList" HeaderText="Owner" ColumnSizer="AutoWithLastColumnFill">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
