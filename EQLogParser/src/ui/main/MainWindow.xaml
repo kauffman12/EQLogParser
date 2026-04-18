@@ -546,14 +546,14 @@
                                   ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}"
                                   AllowResizingColumns="False"
                                   AutoGenerateColumns="False"
-                                  ColumnSizer="Star"
+                                  ColumnSizer="AutoWithLastColumnFill"
                                   CurrentCellBorderThickness="0"
                                   HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                   RowHeight="{DynamicResource EQTableRowHeight}"
                                   GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                   SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridTemplateColumn Width="145" HeaderText="Name">
+              <syncfusion:GridTemplateColumn Width="160" HeaderText="Name">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -567,7 +567,7 @@
                   </DataTemplate>
                 </syncfusion:GridTemplateColumn.CellTemplate>
               </syncfusion:GridTemplateColumn>
-              <syncfusion:GridTemplateColumn Width="145" HeaderText="Default Class">
+              <syncfusion:GridTemplateColumn HeaderText="Default Class">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -594,7 +594,7 @@
                                 GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                 SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridTemplateColumn Width="145" HeaderText="Name">
+              <syncfusion:GridTemplateColumn HeaderText="Name">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
