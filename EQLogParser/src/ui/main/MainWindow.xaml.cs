@@ -1190,10 +1190,10 @@ namespace EQLogParser
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border { DataContext: ExpandoObject sortable })
-      {
-        PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
-      }
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
+        return;
+
+      PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "It's a callback function")]
