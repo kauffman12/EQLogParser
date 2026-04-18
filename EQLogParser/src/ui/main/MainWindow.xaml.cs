@@ -949,12 +949,22 @@ private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEven
       {
         if (child is ComboBox combo && combo.Visibility == Visibility.Visible)
         {
-          if (IsDescendantOf(clickTarget, combo))
+          if (IsDescendantOf(clickTarget, combo) || IsDescendantOf(combo, clickTarget))
           {
             continue;
           }
           combo.Visibility = Visibility.Collapsed;
           combo.IsDropDownOpen = false;
+          if (combo.Parent is Panel parent)
+          {
+            foreach (var sibling in parent.Children)
+            {
+              if (sibling is FrameworkElement fe && fe != combo)
+              {
+                fe.Visibility = Visibility.Visible;
+              }
+            }
+          }
         }
       }
     }
