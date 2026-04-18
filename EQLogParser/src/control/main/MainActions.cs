@@ -5,7 +5,6 @@ using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialDarkCustom.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
-using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -76,6 +75,7 @@ namespace EQLogParser
     private const string PetOwnersTitle = "Pet Owners";
     public static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
     public static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    public static readonly List<string> ClassList = [];
     public static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -514,12 +514,11 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitVerifiedPlayers(MainWindow main, GridComboBoxColumn classList,
-      ContentControl playersWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPlayers(ContentControl playersWindow, ContentControl petMappingWindow)
     {
-      var list = DataManager.Instance.GetClassList();
-      list.Insert(0, ""); // insert null case
-      classList.ItemsSource = list;
+      ClassList.Clear();
+      ClassList.Add("");
+      ClassList.AddRange(DataManager.Instance.GetClassList());
       PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -560,7 +559,7 @@ namespace EQLogParser
               DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
-            main.CheckComputeStats();
+            _mainWindow?.CheckComputeStats();
           }
         }, DispatcherPriority.DataBind);
       };

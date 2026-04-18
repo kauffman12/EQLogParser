@@ -185,7 +185,7 @@ namespace EQLogParser
 
       // populate windows that need data
       MainActions.InitPetOwners(this, petMappingWindow);
-      MainActions.InitVerifiedPlayers(this, classList, verifiedPlayersWindow, petMappingWindow);
+      MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
       MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
 
       // add notify icon
@@ -889,15 +889,6 @@ namespace EQLogParser
       }, DispatcherPriority.DataBind);
     }
 
-    private void PlayerClassDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
-    {
-      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
-      {
-        dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)obj).Name, ((dynamic)obj).PlayerClass);
-      }
-    }
-
     private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is ImageAwesome ia && ia.Parent is Grid grid)
@@ -962,6 +953,20 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(selectedName))
       {
         PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selectedName);
+      }
+    }
+
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (e.AddedItems.Count == 0) return;
+
+      var combo = sender as ComboBox;
+      if (combo?.DataContext is not ExpandoObject obj) return;
+
+      var selectedClass = e.AddedItems[0]?.ToString();
+      if (!string.IsNullOrEmpty(selectedClass))
+      {
+        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)obj).Name, selectedClass);
       }
     }
 

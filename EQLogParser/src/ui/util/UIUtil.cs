@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -65,14 +65,20 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = name;
 
-      var index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      bool hasSentinel = collection.Count > 0 &&
+        ((dynamic)collection[0])?.Name == Labels.Unassigned;
+
+      var searchStart = hasSentinel ? 1 : 0;
+      var searchList = collection.Skip(searchStart).ToList();
+      var index = searchList.BinarySearch(entry, TheSortableNameComparer);
+
       if (index < 0)
       {
-        collection.Insert(~index, entry);
+        collection.Insert(searchStart + ~index, entry);
       }
       else
       {
-        entry = collection[index];
+        entry = collection[searchStart + index];
       }
 
       if (isPlayer)
