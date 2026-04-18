@@ -220,7 +220,7 @@ namespace EQLogParser
     {
       public int Compare(PetMapping x, PetMapping y)
       {
-        return string.CompareOrdinal(x?.Owner, y?.Owner);
+        return string.CompareOrdinal(x?.Pet, y?.Pet);
       }
     }
 

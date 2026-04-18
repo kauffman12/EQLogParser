@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -70,7 +71,7 @@ namespace EQLogParser
         if (!value)
         {
           _currentEditMapping = null;
-          OwnerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+          ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
         }
       }
     }
@@ -907,26 +908,44 @@ namespace EQLogParser
 
     private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      if (sender is not ImageAwesome ia) return;
+      if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping { } mapping)
+        return;
 
-      _currentEditMapping = ia.DataContext as PetMapping;
-      if (_currentEditMapping == null) return;
+      DependencyObject cell = ia;
+      while (cell != null && cell is not GridCell)
+        cell = VisualTreeHelper.GetParent(cell);
 
-      OwnerEditComboBox.SelectedValue = _currentEditMapping.Owner;
-      OwnerEditPopup.IsOpen = true;
+      if (cell is GridCell gridCell)
+      {
+        ownerEditPopup.PlacementTarget = gridCell;
+        ownerEditPopup.Placement = PlacementMode.Relative;
+        ownerEditPopup.HorizontalOffset = 0;
+        ownerEditPopup.VerticalOffset = 0;
+
+        _currentEditMapping = mapping;
+        ownerEditComboBox.SelectedValue = mapping.Owner;
+        ownerEditPopup.Opened += PopupOpen;
+        ownerEditPopup.IsOpen = true;
+      }
+
+      void PopupOpen(object s, EventArgs args)
+      {
+        ownerEditPopup.Width = gridCell.ActualWidth;
+        ownerEditPopup.Height = gridCell.ActualHeight;
+        ownerEditPopup.Opened -= PopupOpen;
+      }
     }
-
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (e.AddedItems.Count == 0) return;
-      if (_currentEditMapping == null) return;
+      if (sender is not ComboBox combo || combo.SelectedValue is not string name || string.IsNullOrEmpty(name))
+        return;
 
-      var selectedName = e.AddedItems[0] is ExpandoObject exp ? Convert.ToString(((dynamic)exp).Name) : e.AddedItems[0]?.ToString();
-      if (!string.IsNullOrEmpty(selectedName))
-      {
-        PlayerManager.Instance.AddPetToPlayer(_currentEditMapping.Pet, selectedName);
-      }
+      if (_currentEditMapping == null || _currentEditMapping.Owner == name)
+        return;
+
+      PlayerManager.Instance.AddPetToPlayer(_currentEditMapping.Pet, name);
+      ownerEditPopup.IsOpen = false;
     }
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
