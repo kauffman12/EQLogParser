@@ -552,18 +552,22 @@
                                   RowHeight="{DynamicResource EQTableRowHeight}"
                                   GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                   SelectionMode="Extended">
-             <syncfusion:SfDataGrid.Columns>
-               <syncfusion:GridTemplateColumn Width="145" HeaderText="Name">
-                 <syncfusion:GridTemplateColumn.CellTemplate>
-                   <DataTemplate>
-                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                       <fa:ImageAwesome Margin="0,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePlayerMouseDown" />
-                       <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
-                     </StackPanel>
-                   </DataTemplate>
-                 </syncfusion:GridTemplateColumn.CellTemplate>
-               </syncfusion:GridTemplateColumn>
-               <syncfusion:GridTemplateColumn Width="145" HeaderText="Default Class">
+            <syncfusion:SfDataGrid.Columns>
+              <syncfusion:GridTemplateColumn Width="145" HeaderText="Name">
+                <syncfusion:GridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePlayerMouseDown">
+                        <fa:ImageAwesome.LayoutTransform>
+                          <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
+                        </fa:ImageAwesome.LayoutTransform>
+                      </fa:ImageAwesome>
+                      <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </syncfusion:GridTemplateColumn.CellTemplate>
+              </syncfusion:GridTemplateColumn>
+              <syncfusion:GridTemplateColumn Width="145" HeaderText="Default Class">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
