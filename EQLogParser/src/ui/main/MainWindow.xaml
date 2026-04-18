@@ -527,19 +527,17 @@
              <syncfusion:SfDataGrid.Columns>
                <syncfusion:GridTemplateColumn x:Name="ownerList" Width="160" HeaderText="Owner">
                  <syncfusion:GridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                      <Grid>
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Margin="2,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Owner}" />
-                        <fa:ImageAwesome Grid.Column="1" Margin="0,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEditMouseLeftButtonUp"/>
-                        <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}" SelectedValue="{Binding Owner, Mode=TwoWay}" SelectedValuePath="Name" DisplayMemberPath="Name"
-                            SelectionChanged="OwnerSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}" Visibility="Collapsed" />
-                      </Grid>
-                    </DataTemplate>
-                 </syncfusion:GridTemplateColumn.CellTemplate>
+                   <DataTemplate>
+                       <Grid>
+                         <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="*" />
+                           <ColumnDefinition Width="*" />
+                         </Grid.ColumnDefinitions>
+                         <TextBlock Grid.Column="0" Margin="2,0,0,0" Padding="0" VerticalAlignment="Center" Text="{Binding Owner}" />
+                         <fa:ImageAwesome Grid.Column="1" Margin="0,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEditMouseLeftButtonUp"/>
+                       </Grid>
+                     </DataTemplate>
+                  </syncfusion:GridTemplateColumn.CellTemplate>
                </syncfusion:GridTemplateColumn>
                <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
              </syncfusion:SfDataGrid.Columns>
@@ -632,5 +630,14 @@
         </ContentControl>
       </syncfusion:DockingManager>
     </Grid>
+
+    <Popup x:Name="OwnerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse" 
+           HorizontalOffset="2" VerticalOffset="2" IsOpen="{Binding IsPopupOpen, Mode=TwoWay, RelativeSource={RelativeSource AncestorType=Window}}">
+      <ComboBox x:Name="OwnerEditComboBox" Width="140"
+                ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}"
+                SelectedValuePath="Name" DisplayMemberPath="Name"
+                SelectionChanged="OwnerSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
   </Grid>
 </Window>

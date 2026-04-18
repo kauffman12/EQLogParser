@@ -48,6 +48,8 @@ namespace EQLogParser
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
+    private PetMapping _currentEditMapping;
+    private bool _isPopupOpen;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
@@ -58,6 +60,20 @@ namespace EQLogParser
     private bool _resetWindowState;
     private bool _isStarting;
     private bool _appLoadingComplete;
+
+    public bool IsPopupOpen
+    {
+      get => _isPopupOpen;
+      set
+      {
+        _isPopupOpen = value;
+        if (!value)
+        {
+          _currentEditMapping = null;
+          OwnerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+        }
+      }
+    }
 
     public MainWindow()
     {
@@ -891,68 +907,25 @@ namespace EQLogParser
 
     private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome ia && ia.Parent is Grid grid)
-      {
-        foreach (var child in grid.Children)
-        {
-          if (child is ComboBox combo)
-          {
-            combo.Visibility = Visibility.Visible;
-            combo.DropDownClosed += DropDownClosed;
+      if (sender is not ImageAwesome ia) return;
 
-            Dispatcher.InvokeAsync(() =>
-            {
-              combo.IsDropDownOpen = true;
-            }, DispatcherPriority.Background);
-          }
-          else if (child is FrameworkElement fe)
-          {
-            fe.Visibility = Visibility.Collapsed;
-          }
-        }
-      }
+      _currentEditMapping = ia.DataContext as PetMapping;
+      if (_currentEditMapping == null) return;
 
-      void DropDownClosed(object s, EventArgs args)
-      {
-        foreach (var child in grid.Children)
-        {
-          if (child is ComboBox combo)
-          {
-            combo.DropDownClosed -= DropDownClosed;
-            combo.Visibility = Visibility.Collapsed;
-          }
-          else if (child is FrameworkElement fe)
-          {
-            fe.Visibility = Visibility.Visible;
-          }
-        }
-      }
+      OwnerEditComboBox.SelectedValue = _currentEditMapping.Owner;
+      OwnerEditPopup.IsOpen = true;
     }
 
-    private static IEnumerable<DependencyObject> GetVisualChildren(DependencyObject parent)
-    {
-      for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-      {
-        var child = VisualTreeHelper.GetChild(parent, i);
-        yield return child;
-        foreach (var descendant in GetVisualChildren(child))
-        {
-          yield return descendant;
-        }
-      }
-    }
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (e.AddedItems.Count == 0) return;
-
-      var combo = sender as ComboBox;
-      if (combo?.DataContext is not PetMapping mapping) return;
+      if (_currentEditMapping == null) return;
 
       var selectedName = e.AddedItems[0] is ExpandoObject exp ? Convert.ToString(((dynamic)exp).Name) : e.AddedItems[0]?.ToString();
       if (!string.IsNullOrEmpty(selectedName))
       {
-        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, selectedName);
+        PlayerManager.Instance.AddPetToPlayer(_currentEditMapping.Pet, selectedName);
       }
     }
 
