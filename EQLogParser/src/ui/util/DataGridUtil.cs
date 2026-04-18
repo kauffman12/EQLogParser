@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
@@ -586,7 +586,7 @@ namespace EQLogParser
         return MainActions.CurrentNpcWidth;
       }
 
-      if (mappingName is "Name")
+      if (mappingName is "Name" or "Pet")
       {
         return MainActions.CurrentNameWidth;
       }

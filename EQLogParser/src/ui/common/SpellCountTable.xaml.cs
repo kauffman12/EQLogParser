@@ -1,4 +1,5 @@
-﻿using log4net;
+using FontAwesome5;
+using log4net;
 using Microsoft.Win32;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
@@ -17,6 +18,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
@@ -74,10 +76,38 @@ namespace EQLogParser
     private void Display()
     {
       dataGrid.Columns.Clear();
-      var headerCol = new GridTextColumn
+      var cellTemplate = new DataTemplate();
+      var stackPanel = new FrameworkElementFactory(typeof(StackPanel));
+      stackPanel.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+      stackPanel.SetValue(StackPanel.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+
+      var icon = new FrameworkElementFactory(typeof(ImageAwesome));
+      icon.SetValue(ImageAwesome.MarginProperty, new Thickness(8, 2, 8, 0));
+      icon.SetValue(ImageAwesome.StyleProperty, (Style)Application.Current.Resources["EQIconStyle"]);
+      icon.SetValue(ImageAwesome.IconProperty, FontAwesome5.FontAwesomeIcon.Solid_Times);
+      icon.SetValue(ImageAwesome.CursorProperty, Cursors.Hand);
+      icon.AddHandler(ImageAwesome.PreviewMouseDownEvent, new MouseButtonEventHandler(RemoveSpellMouseDown));
+
+      var scaleTransform = new FrameworkElementFactory(typeof(ScaleTransform));
+      scaleTransform.SetValue(ScaleTransform.ScaleXProperty, 0.9);
+      scaleTransform.SetValue(ScaleTransform.ScaleYProperty, 0.9);
+      icon.SetValue(ImageAwesome.LayoutTransformProperty, scaleTransform);
+
+      stackPanel.AppendChild(icon);
+
+      var textBlock = new FrameworkElementFactory(typeof(TextBlock));
+      textBlock.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+      var binding = new Binding("Spell");
+      textBlock.SetBinding(TextBlock.TextProperty, binding);
+      stackPanel.AppendChild(textBlock);
+
+      cellTemplate.VisualTree = stackPanel;
+
+      var headerCol = new GridTemplateColumn
       {
         HeaderText = "",
         MappingName = "Spell",
+        CellTemplate = cellTemplate,
         CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter()),
         Width = MainActions.CurrentSpellWidth
       };
@@ -422,12 +452,15 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        if (sender is Border { DataContext: IDictionary<string, object> spr })
-        {
-          _hiddenSpells[spr["Spell"] as string ?? string.Empty] = 1;
-          dataGrid.View.Remove(spr);
-          UpdateCounts();
-        }
+        if (sender is not ImageAwesome ia)
+          return;
+
+        if (ia.DataContext is not IDictionary<string, object> spr)
+          return;
+
+        _hiddenSpells[spr["Spell"] as string ?? string.Empty] = 1;
+        dataGrid.View.Remove(spr);
+        UpdateCounts();
       });
     }
 
