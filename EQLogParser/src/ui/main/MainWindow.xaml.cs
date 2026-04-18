@@ -900,7 +900,7 @@ namespace EQLogParser
 
 private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-      CloseAllComboBoxes(petMappingGrid);
+      CloseAllComboBoxes(petMappingGrid, e.OriginalSource as DependencyObject);
     }
 
     private void OwnerEdit_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -943,16 +943,31 @@ private void OwnerCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEven
       }
     }
 
-    private static void CloseAllComboBoxes(SfDataGrid grid)
+    private static void CloseAllComboBoxes(SfDataGrid grid, DependencyObject clickTarget)
     {
       foreach (var child in GetVisualChildren(grid))
       {
         if (child is ComboBox combo && combo.Visibility == Visibility.Visible)
         {
+          if (IsDescendantOf(clickTarget, combo))
+          {
+            continue;
+          }
           combo.Visibility = Visibility.Collapsed;
           combo.IsDropDownOpen = false;
         }
       }
+    }
+
+    private static bool IsDescendantOf(DependencyObject potentialDescendant, DependencyObject potentialAncestor)
+    {
+      while (potentialDescendant != null)
+      {
+        if (potentialDescendant == potentialAncestor)
+          return true;
+        potentialDescendant = VisualTreeHelper.GetParent(potentialDescendant);
+      }
+      return false;
     }
 
     private static IEnumerable<DependencyObject> GetVisualChildren(DependencyObject parent)
