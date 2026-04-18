@@ -591,27 +591,23 @@
                                 HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                                 IsReadOnly="True"
                                 RowHeight="{DynamicResource EQTableRowHeight}"
-                                RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
-                                ShowRowHeader="True"
                                 GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                 SelectionMode="Extended">
-            <syncfusion:SfDataGrid.Resources>
-              <Style TargetType="syncfusion:GridRowHeaderCell">
-                <Setter Property="Template">
-                  <Setter.Value>
-                    <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                      <Border PreviewMouseDown="RemovePetMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                          <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
-                        </Grid>
-                      </Border>
-                    </ControlTemplate>
-                  </Setter.Value>
-                </Setter>
-              </Style>
-            </syncfusion:SfDataGrid.Resources>
             <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name"/>
+              <syncfusion:GridTemplateColumn Width="145" HeaderText="Name">
+                <syncfusion:GridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePetMouseDown">
+                        <fa:ImageAwesome.LayoutTransform>
+                          <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
+                        </fa:ImageAwesome.LayoutTransform>
+                      </fa:ImageAwesome>
+                      <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </syncfusion:GridTemplateColumn.CellTemplate>
+              </syncfusion:GridTemplateColumn>
             </syncfusion:SfDataGrid.Columns>
           </syncfusion:SfDataGrid>
         </ContentControl>

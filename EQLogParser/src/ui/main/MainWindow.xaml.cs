@@ -1182,10 +1182,10 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border { DataContext: ExpandoObject sortable })
-      {
-        PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
-      }
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
+        return;
+
+      PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
     }
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
