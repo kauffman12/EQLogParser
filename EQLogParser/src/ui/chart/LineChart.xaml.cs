@@ -30,9 +30,10 @@ namespace EQLogParser
     private readonly Dictionary<string, List<DataPoint>> _raidValues = [];
     private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = [];
     private string _currentChoice;
-    private string _currentPetOrPlayerOption;
+    private string _currentViewOption;
     private int _currentTopCount = 5;
     private List<PlayerStats> _lastSelected;
+    private ViewOptionRegistry? _viewOptions;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
     {
@@ -45,17 +46,21 @@ namespace EQLogParser
       numLabel.FontSize = MainActions.CurrentFontSize;
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
+      _viewOptions = new ViewOptionRegistry();
       if (includePets)
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.RaidOption };
+        _viewOptions.AddOption(Labels.PetPlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.PetOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.RaidOption, OnViewOptionChanged);
       }
       else
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PlayerOption, Labels.RaidOption };
+        _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.RaidOption, OnViewOptionChanged);
       }
-
+      petOrPlayerList.ItemsSource = _viewOptions.GetDisplayNames();
       petOrPlayerList.SelectedIndex = 0;
-      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
 
       // Load saved top count setting or default to 5
       _currentTopCount = ConfigUtil.GetSettingAsInteger($"Line{this.GetType().Name}TopCount", 5);
@@ -221,7 +226,8 @@ namespace EQLogParser
 
       var selectedLabel = "Selected Player(s)";
       var nonSelectedLabel = " Player(s)";
-      switch (_currentPetOrPlayerOption)
+      var selectedName = _viewOptions?.GetSelectedOptionName();
+      switch (selectedName)
       {
         case Labels.PetPlayerOption:
           workingData = _playerPetValues;
@@ -246,7 +252,7 @@ namespace EQLogParser
 
       string label;
       List<List<DataPoint>> sortedValues;
-      if (_currentPetOrPlayerOption == Labels.RaidOption)
+      if (selectedName == Labels.RaidOption)
       {
         sortedValues = [.. workingData.Values];
         label = sortedValues.Count > 0 ? "Raid" : Labels.NoData;
@@ -263,16 +269,16 @@ namespace EQLogParser
         {
           var pass = false;
           var first = values.First();
-          if (_currentPetOrPlayerOption == Labels.PetPlayerOption)
+          if (selectedName == Labels.PetPlayerOption)
           {
             pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
             names.FirstOrDefault(name => _hasPets[first.Name].ContainsKey(name)) != null);
           }
-          else if (_currentPetOrPlayerOption == Labels.PlayerOption)
+          else if (selectedName == Labels.PlayerOption)
           {
             pass = names.Contains(first.Name);
           }
-          else if (_currentPetOrPlayerOption == Labels.PetOption)
+          else if (selectedName == Labels.PetOption)
           {
             pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
@@ -351,7 +357,7 @@ namespace EQLogParser
       foreach (var value in CollectionsMarshal.AsSpan(sortedValues))
       {
         var name = value.First().Name;
-        name = ((_currentPetOrPlayerOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
+        name = ((_currentViewOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
         var series = new FastLineSeries
         {
           Label = name,
@@ -395,12 +401,21 @@ namespace EQLogParser
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       _currentChoice = choicesList.SelectedValue as string;
-      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+      _currentViewOption = petOrPlayerList.SelectedValue as string ?? "";
+      if (_viewOptions != null)
+      {
+        _viewOptions.OnSelectionChanged(petOrPlayerList.SelectedIndex);
+      }
 
       if (_playerPetValues.Count == 0)
         return;
 
       Plot(_lastSelected);
+    }
+
+    private void OnViewOptionChanged(int index)
+    {
+      _currentViewOption = _viewOptions?.GetSelectedOptionName() ?? "";
     }
 
     private void TopCountSelectionChanged(object sender, SelectionChangedEventArgs e)

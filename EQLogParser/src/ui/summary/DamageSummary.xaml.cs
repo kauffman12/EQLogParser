@@ -17,12 +17,10 @@ namespace EQLogParser
   public partial class DamageSummary : IDocumentContent
   {
     public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-    private const int DEFAULT_VIEW = 1;
-    private const int GROUP_VIEW = 0;
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
-    private int _currentPetOrPlayerOption;
     private bool _ready;
+    private ViewOptionRegistry? _viewOptions;
 
     // Group view tracking for incremental updates
     private List<GroupEntry> _groupEntries;
@@ -31,15 +29,14 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
-      petOrPlayerList.ItemsSource = new List<string>
-      {
-        Labels.ByGroupOption,     // 0: By Group (NEW)
-        Labels.PetPlayerOption,   // 1: Players + Pets
-        Labels.PlayerOption,      // 2: Players
-        Labels.PetOption,         // 3: Pets
-        Labels.AllOption,         // 4: Uncategorized
-      };
 
+      _viewOptions = new ViewOptionRegistry();
+      _viewOptions.AddOption(Labels.ByGroupOption, OnViewOptionChanged);
+      _viewOptions.AddOption(Labels.PetPlayerOption, OnViewOptionChanged);
+      _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
+      _viewOptions.AddOption(Labels.PetOption, OnViewOptionChanged);
+      _viewOptions.AddOption(Labels.AllOption, OnViewOptionChanged);
+      petOrPlayerList.ItemsSource = _viewOptions.GetDisplayNames();
       petOrPlayerList.SelectedIndex = 1;
 
       CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
@@ -141,7 +138,7 @@ namespace EQLogParser
     }
 
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.DamageParse);
-    internal override bool IsPetsCombined() => _currentPetOrPlayerOption == DEFAULT_VIEW;
+    internal override bool IsPetsCombined() => _viewOptions?.GetSelectedOptionName() == Labels.PetPlayerOption;
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void CreatePetOwnerMenu()
@@ -169,13 +166,15 @@ namespace EQLogParser
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var needUpdate = _currentPetOrPlayerOption != petOrPlayerList.SelectedIndex;
-      _currentPetOrPlayerOption = petOrPlayerList.SelectedIndex;
-
-      if (needUpdate)
+      if (_viewOptions != null)
       {
-        UpdateList();
+        _viewOptions.OnSelectionChanged(petOrPlayerList.SelectedIndex);
       }
+    }
+
+    private void OnViewOptionChanged(int index)
+    {
+      UpdateList();
     }
 
     private void UpdateList()
@@ -184,19 +183,20 @@ namespace EQLogParser
       {
         var beforeList = dataGrid.ItemsSource;
 
-        switch (_currentPetOrPlayerOption)
+        var selectedName = _viewOptions?.GetSelectedOptionName();
+        switch (selectedName)
         {
-          case 0: // NEW: By Group
+          case Labels.ByGroupOption:
             InitializeGroupTracking();
             var groupedPlayers = BuildGroupedPlayers();
             dataGrid.ItemsSource = UpdateRankGrouped(groupedPlayers);
             break;
-          case 1: // Players + Pets
+          case Labels.PetPlayerOption:
             dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
             break;
-          case 2: // Players
-          case 3: // Pets
-          case 4: // Uncategorized
+          case Labels.PlayerOption:
+          case Labels.PetOption:
+          case Labels.AllOption:
             dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
             break;
         }
@@ -363,7 +363,7 @@ namespace EQLogParser
       _currentEditPlayer.AssignedGroup = combo.SelectedIndex;
 
       // If we're in Group View, use incremental update with progress indicator
-      if (_currentPetOrPlayerOption == GROUP_VIEW)
+      if (_viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
@@ -522,7 +522,7 @@ namespace EQLogParser
 
     private void EventsClearedActiveData(bool cleared)
     {
-      if (cleared && _currentPetOrPlayerOption == GROUP_VIEW)
+      if (cleared && _viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
         CleanupGroupTracking();
       }
@@ -631,11 +631,11 @@ namespace EQLogParser
 
           var classMatches = SelectedClasses.Count == 16 || (className != null && SelectedClasses.Contains(className));
 
-          return _currentPetOrPlayerOption switch
+          return _viewOptions?.GetSelectedOptionName() switch
           {
-            2 => !isPet && classMatches,
-            3 => isPet && classMatches,
-            0 => true,  // Group View - pre-filtered in BuildGroupedPlayers
+            Labels.PlayerOption => !isPet && classMatches,
+            Labels.PetOption => isPet && classMatches,
+            Labels.ByGroupOption => true,  // Group View - pre-filtered in BuildGroupedPlayers
             _ => classMatches
           };
         };
@@ -775,7 +775,7 @@ namespace EQLogParser
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
 
-      if (_currentPetOrPlayerOption == GROUP_VIEW)
+      if (_viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
         CleanupGroupTracking();
       }
