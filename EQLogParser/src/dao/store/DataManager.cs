@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -67,11 +67,27 @@ namespace EQLogParser
     public const string Invulnerable = "Invulnerable";
   }
 
-  internal class DataManager
+  internal interface IDataManager
+  {
+    SpellData GetDamagingSpellByName(string name);
+    bool IsOldSpell(string name);
+    string AbbreviateSpellName(string spell);
+    SpellData GetSpellByAbbrv(string abbrv);
+    void RemoveActiveFight(string name);
+    void ClearActiveAdps();
+    Fight GetFight(string name);
+  }
+
+  internal class DataManager : IDataManager
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    internal static DataManager Instance = new();
+    private static DataManager _instance;
+    internal static DataManager Instance
+    {
+      get => _instance ??= new();
+      set => _instance = value;
+    }
     internal event EventHandler<string> EventsRemovedFight;
     internal event EventHandler<Fight> EventsNewFight;
     internal event EventHandler<Fight> EventsNewNonTankingFight;
@@ -121,7 +137,7 @@ namespace EQLogParser
     private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled
 );
 
-    private DataManager()
+    internal DataManager()
     {
       var spellList = new List<SpellData>();
 
@@ -131,6 +147,7 @@ namespace EQLogParser
       };
 
       // populate ClassNames from SpellClass enum and resource table
+      var wpfAvailable = Type.GetType("System.Windows.Media.SolidColorBrush, PresentationCore") != null;
       foreach (var item in Enum.GetValues<SpellClass>())
       {
         if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
@@ -143,7 +160,7 @@ namespace EQLogParser
           }
 
           var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
-          if (!string.IsNullOrEmpty(color))
+          if (!string.IsNullOrEmpty(color) && wpfAvailable)
           {
             try
             {
@@ -361,7 +378,7 @@ namespace EQLogParser
     }
 
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
-    internal bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
+    public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
     internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
@@ -372,7 +389,7 @@ namespace EQLogParser
     internal int GetClassListCount() => _classListCount;
     internal bool IsValidClassName(string className) => !string.IsNullOrEmpty(className) && _classesByName.ContainsKey(className);
 
-    internal string AbbreviateSpellName(string spell)
+    public string AbbreviateSpellName(string spell)
     {
       if (_spellAbbrvCache.TryGetValue(spell, out var cached))
         return cached;
@@ -498,7 +515,7 @@ namespace EQLogParser
       return null;
     }
 
-    internal SpellData GetSpellByAbbrv(string abbrv)
+    public SpellData GetSpellByAbbrv(string abbrv)
     {
       if (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.Unassigned && _spellsAbbrvDb.TryGetValue(abbrv, out var value))
       {
@@ -508,7 +525,7 @@ namespace EQLogParser
       return null;
     }
 
-    internal Fight GetFight(string name)
+    public Fight GetFight(string name)
     {
       Fight result = null;
       if (!string.IsNullOrEmpty(name))
@@ -534,7 +551,7 @@ namespace EQLogParser
       return spellData;
     }
 
-    internal SpellData GetDamagingSpellByName(string name)
+    public SpellData GetDamagingSpellByName(string name)
     {
       SpellData spellData = null;
       if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
@@ -846,7 +863,7 @@ namespace EQLogParser
       return result;
     }
 
-    internal void RemoveActiveFight(string name)
+    public void RemoveActiveFight(string name)
     {
       if (_activeFights.TryRemove(name, out var fight))
       {
@@ -927,7 +944,7 @@ namespace EQLogParser
       EventsClearedActiveData?.Invoke(true);
     }
 
-    internal void ClearActiveAdps()
+    public void ClearActiveAdps()
     {
       lock (_adpsLock)
       {

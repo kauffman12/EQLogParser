@@ -21,6 +21,7 @@ namespace EQLogParser
     private static double _slainTime = double.NaN;
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
+    internal static IDataManager DataManager;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -72,7 +73,7 @@ namespace EQLogParser
         {
           foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
           {
-            DataManager.Instance.RemoveActiveFight(slain);
+            (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).RemoveActiveFight(slain);
           }
 
           SlainQueue.Clear();
@@ -472,7 +473,7 @@ namespace EQLogParser
         {
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-          var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
+          var spellData = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
@@ -586,11 +587,11 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
           string type;
-          var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
+          var spellData = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
 
           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-          if (spellData == null && DataManager.Instance.IsOldSpell(attacker))
+          if (spellData == null && (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -621,7 +622,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OtherDmg;
-        if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData)
+        if ((DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -1059,7 +1060,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          DataManager.Instance.ClearActiveAdps();
+          (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).ClearActiveAdps();
         }
 
         var currentTime = lineData.BeginTime;
@@ -1071,7 +1072,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = ToUpper(slain);
-            if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;
@@ -1205,8 +1206,8 @@ namespace EQLogParser
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-          var spellName = DataManager.Instance.AbbreviateSpellName(name);
-          var data = DataManager.Instance.GetSpellByAbbrv(spellName);
+          var spellName = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).AbbreviateSpellName(name);
+          var data = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetSpellByAbbrv(spellName);
           if (data != null)
           {
             if (data.Damaging == 2)

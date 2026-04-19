@@ -1,3 +1,4 @@
+using Moq;
 using EQLogParser;
 
 namespace EQLogParserTest
@@ -5,6 +6,22 @@ namespace EQLogParserTest
   [TestClass]
   public class DamageLineParserTest
   {
+    private Mock<IDataManager> _mockManager;
+
+    [TestInitialize]
+    public void Setup()
+    {
+      _mockManager = new Mock<IDataManager>();
+      _mockManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
+      _mockManager.Setup(m => m.IsOldSpell(It.IsAny<string>())).Returns(false);
+      _mockManager.Setup(m => m.AbbreviateSpellName(It.IsAny<string>())).Returns((string name) => name);
+      _mockManager.Setup(m => m.GetSpellByAbbrv(It.IsAny<string>())).Returns((string name) => null);
+      _mockManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
+      _mockManager.Setup(m => m.ClearActiveAdps());
+      _mockManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
+      DamageLineParser.DataManager = _mockManager.Object;
+    }
+
     private static DamageRecord ParseAction(string action)
     {
       return DamageLineParser.ParseLine(action);
@@ -19,7 +36,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Astralx", record.Attacker);
       Assert.AreEqual("Sontalak", record.Defender);
-      Assert.AreEqual(126225, record.Total);
+      Assert.AreEqual((uint)126225, record.Total);
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
     }
@@ -31,7 +48,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Useless", record.Attacker);
       Assert.AreEqual("an abyssal terror", record.Defender);
-      Assert.AreEqual(9022, record.Total);
+      Assert.AreEqual((uint)9022, record.Total);
     }
 
     [TestMethod]
@@ -41,7 +58,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Susarrak the Crusader", record.Attacker);
       Assert.AreEqual("Villette", record.Defender);
-      Assert.AreEqual(27699, record.Total);
+      Assert.AreEqual((uint)27699, record.Total);
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsRampage(record.ModifiersMask));
     }
@@ -53,7 +70,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Attacker);
       Assert.AreEqual("Ogna, Artisan of War", record.Defender);
-      Assert.AreEqual(20581, record.Total);
+      Assert.AreEqual((uint)20581, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
@@ -65,7 +82,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(101810, record.Total);
+      Assert.AreEqual((uint)101810, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
     }
 
@@ -76,7 +93,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(672875, record.Total);
+      Assert.AreEqual((uint)672875, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
@@ -88,7 +105,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("An ice giant", record.Defender);
       Assert.AreEqual("Shmid", record.Attacker);
-      Assert.AreEqual(39969, record.Total);
+      Assert.AreEqual((uint)39969, record.Total);
       Assert.IsTrue(LineModifiersParser.IsRiposte(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
     }
@@ -118,7 +135,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Sonozen", record.Attacker);
       Assert.AreEqual("Jortreva the Crusader", record.Defender);
-      Assert.AreEqual(38948, record.Total);
+      Assert.AreEqual((uint)38948, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsTwincast(record.ModifiersMask));
@@ -131,7 +148,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Piemastaj", record.Attacker);
       Assert.AreEqual("Boss", record.Defender);
-      Assert.AreEqual(176000, record.Total);
+      Assert.AreEqual((uint)176000, record.Total);
     }
 
     [TestMethod]
@@ -141,7 +158,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Attacker);
       Assert.AreEqual("a treant", record.Defender);
-      Assert.AreEqual(1633489, record.Total);
+      Assert.AreEqual((uint)1633489, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
@@ -153,7 +170,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Lobekn", record.Attacker);
       Assert.AreEqual("a wan ghoul knight", record.Defender);
-      Assert.AreEqual(311, record.Total);
+      Assert.AreEqual((uint)311, record.Total);
     }
 
     #endregion
@@ -167,7 +184,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Tolzol", record.Attacker);
       Assert.AreEqual("Tantor", record.Defender);
-      Assert.AreEqual(6718, record.Total);
+      Assert.AreEqual((uint)6718, record.Total);
     }
 
     [TestMethod]
@@ -177,7 +194,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Reisil", record.Attacker);
       Assert.AreEqual("Honvar", record.Defender);
-      Assert.AreEqual(7809, record.Total);
+      Assert.AreEqual((uint)7809, record.Total);
     }
 
     [TestMethod]
@@ -187,7 +204,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Attacker);
       Assert.AreEqual("A failed reclaimer", record.Defender);
-      Assert.AreEqual(193, record.Total);
+      Assert.AreEqual((uint)193, record.Total);
     }
 
     [TestMethod]
@@ -197,7 +214,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Attacker);
       Assert.AreEqual("Test One Hundred Three", record.Defender);
-      Assert.AreEqual(5224, record.Total);
+      Assert.AreEqual((uint)5224, record.Total);
     }
 
     [TestMethod]
@@ -206,7 +223,7 @@ namespace EQLogParserTest
       var record = ParseAction("A dendridic shard was chilled to the bone for 410 points of non-melee damage.");
       Assert.IsNotNull(record);
       Assert.AreEqual("A dendridic shard", record.Defender);
-      Assert.AreEqual(410, record.Total);
+      Assert.AreEqual((uint)410, record.Total);
     }
 
     [TestMethod]
@@ -215,7 +232,7 @@ namespace EQLogParserTest
       var record = ParseAction("YOU are chilled to the bone for 2700 points of non-melee damage!");
       Assert.IsNotNull(record);
       Assert.AreEqual("YOU", record.Defender);
-      Assert.AreEqual(2700, record.Total);
+      Assert.AreEqual((uint)2700, record.Total);
     }
 
     [TestMethod]
@@ -224,7 +241,7 @@ namespace EQLogParserTest
       var record = ParseAction("Demonstrated Depletion was hit by non-melee for 6734 points of damage.");
       Assert.IsNotNull(record);
       Assert.AreEqual("Demonstrated Depletion", record.Defender);
-      Assert.AreEqual(6734, record.Total);
+      Assert.AreEqual((uint)6734, record.Total);
     }
 
     [TestMethod]
@@ -233,7 +250,7 @@ namespace EQLogParserTest
       var record = ParseAction("You were hit by non-melee for 16 damage");
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Defender);
-      Assert.AreEqual(16, record.Total);
+      Assert.AreEqual((uint)16, record.Total);
     }
 
     #endregion
@@ -247,7 +264,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Grendish the Crusader", record.Attacker);
       Assert.AreEqual("Dovhesi", record.Defender);
-      Assert.AreEqual(173674, record.Total);
+      Assert.AreEqual((uint)173674, record.Total);
     }
 
     [TestMethod]
@@ -257,7 +274,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Atvar", record.Attacker);
       Assert.AreEqual("Grendish the Crusader", record.Defender);
-      Assert.AreEqual(1003231, record.Total);
+      Assert.AreEqual((uint)1003231, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
@@ -269,7 +286,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Commander Gartik", record.Attacker);
       Assert.AreEqual("You", record.Defender);
-      Assert.AreEqual(4852, record.Total);
+      Assert.AreEqual((uint)4852, record.Total);
     }
 
     [TestMethod]
@@ -279,7 +296,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Attacker);
       Assert.AreEqual("A gnoll", record.Defender);
-      Assert.AreEqual(108790, record.Total);
+      Assert.AreEqual((uint)108790, record.Total);
     }
 
     [TestMethod]
@@ -288,7 +305,7 @@ namespace EQLogParserTest
       var record = ParseAction("You have taken 2354 damage from Flashbroil Singe III.");
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Defender);
-      Assert.AreEqual(2354, record.Total);
+      Assert.AreEqual((uint)2354, record.Total);
     }
 
     [TestMethod]
@@ -297,7 +314,7 @@ namespace EQLogParserTest
       var record = ParseAction("Goratoar has taken 18724 damage from Slicing Energy by .");
       Assert.IsNotNull(record);
       Assert.AreEqual("Goratoar", record.Defender);
-      Assert.AreEqual(18724, record.Total);
+      Assert.AreEqual((uint)18724, record.Total);
     }
 
     [TestMethod]
@@ -307,7 +324,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Tuyen`s Chant of Fire", record.Attacker);
       Assert.AreEqual("Pixtt Invi Mal", record.Defender);
-      Assert.AreEqual(189, record.Total);
+      Assert.AreEqual((uint)189, record.Total);
     }
 
     [TestMethod]
@@ -317,7 +334,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("a bonecrawler hatchling", record.Attacker);
       Assert.AreEqual("You", record.Defender);
-      Assert.AreEqual(1, record.Total);
+      Assert.AreEqual((uint)1, record.Total);
     }
 
     [TestMethod]
@@ -326,7 +343,7 @@ namespace EQLogParserTest
       var record = ParseAction("Lawlstryke has taken 216717 damage by Wisp Explosion.");
       Assert.IsNotNull(record);
       Assert.AreEqual("Lawlstryke", record.Defender);
-      Assert.AreEqual(216717, record.Total);
+      Assert.AreEqual((uint)216717, record.Total);
     }
 
     #endregion
@@ -340,7 +357,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Jaun", record.Attacker);
       Assert.AreEqual("Pixtt Invi Mal", record.Defender);
-      Assert.AreEqual(150, record.Total);
+      Assert.AreEqual((uint)150, record.Total);
     }
 
     #endregion
@@ -356,7 +373,7 @@ namespace EQLogParserTest
 
       var record2 = ParseAction("Vorgash hits a target for 780 points of damage.");
       Assert.IsNotNull(record2);
-      Assert.AreEqual(780, record2.Total);
+      Assert.AreEqual((uint)780, record2.Total);
     }
 
     [TestMethod]
@@ -494,7 +511,7 @@ namespace EQLogParserTest
       var record = ParseAction("Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)");
       Assert.IsNotNull(record);
       Assert.AreEqual("Gaber", record.Defender);
-      Assert.AreEqual(116, record.Total);
+      Assert.AreEqual((uint)116, record.Total);
     }
 
     [TestMethod]
@@ -503,7 +520,7 @@ namespace EQLogParserTest
       var record = ParseAction("Leela has shielded herself from 658 points of damage. (Manaskin)");
       Assert.IsNotNull(record);
       Assert.AreEqual("Leela", record.Defender);
-      Assert.AreEqual(658, record.Total);
+      Assert.AreEqual((uint)658, record.Total);
     }
 
     #endregion
@@ -639,7 +656,7 @@ namespace EQLogParserTest
       var record = ParseAction("You are immolated by raging energy.  You have taken 179 points of damage.");
       Assert.IsNotNull(record);
       Assert.AreEqual("You", record.Defender);
-      Assert.AreEqual(179, record.Total);
+      Assert.AreEqual((uint)179, record.Total);
     }
 
     #endregion
@@ -653,7 +670,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(55114, record.Total);
+      Assert.AreEqual((uint)55114, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsFlurry(record.ModifiersMask));
@@ -666,7 +683,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(156037, record.Total);
+      Assert.AreEqual((uint)156037, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsFlurry(record.ModifiersMask));
@@ -679,7 +696,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(21076, record.Total);
+      Assert.AreEqual((uint)21076, record.Total);
       Assert.IsTrue(LineModifiersParser.IsFlurry(record.ModifiersMask));
       Assert.IsFalse(LineModifiersParser.IsCrit(record.ModifiersMask));
     }
@@ -691,7 +708,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("An ice giant", record.Attacker);
       Assert.AreEqual("Shmid", record.Defender);
-      Assert.AreEqual(172275, record.Total);
+      Assert.AreEqual((uint)172275, record.Total);
       Assert.IsTrue(LineModifiersParser.IsRiposte(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
     }
@@ -703,7 +720,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("An ice giant", record.Attacker);
       Assert.AreEqual("Shmid", record.Defender);
-      Assert.AreEqual(39969, record.Total);
+      Assert.AreEqual((uint)39969, record.Total);
       Assert.IsTrue(LineModifiersParser.IsRiposte(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
     }
@@ -715,7 +732,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Hacket", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(303431, record.Total);
+      Assert.AreEqual((uint)303431, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
@@ -727,7 +744,7 @@ namespace EQLogParserTest
       Assert.IsNotNull(record);
       Assert.AreEqual("Nniki", record.Attacker);
       Assert.AreEqual("an ice giant", record.Defender);
-      Assert.AreEqual(148792, record.Total);
+      Assert.AreEqual((uint)148792, record.Total);
       Assert.IsTrue(LineModifiersParser.IsCrit(record.ModifiersMask));
       Assert.IsTrue(LineModifiersParser.IsLucky(record.ModifiersMask));
     }
