@@ -51,7 +51,7 @@ namespace EQLogParser
     public const string RaidTotals = "Totals";
     public const string Riposte = "Riposte";
     public const string AllOption = "Uncategorized";
-    public const string ByGroupOption = "Group View";
+    public const string ByGroupOption = "By Group";
     public const string Unassigned = "Unknown Pet Owner";
     public const string Unk = "Unknown";
     public const string UnkSpell = "Unknown Spell";

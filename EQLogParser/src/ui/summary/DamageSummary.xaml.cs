@@ -18,8 +18,8 @@ namespace EQLogParser
   {
     public static readonly List<int> GroupNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-    private const int DEFAULT_VIEW = 1;
-    private const int GROUP_VIEW = 0;
+    private const int DEFAULT_VIEW = 0;
+    private const int GROUP_VIEW = 4;
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private int _currentPetOrPlayerOption;
@@ -33,14 +33,14 @@ namespace EQLogParser
       InitializeComponent();
       petOrPlayerList.ItemsSource = new List<string>
       {
-        Labels.ByGroupOption,     // 0: By Group (NEW)
-        Labels.PetPlayerOption,   // 1: Players + Pets
-        Labels.PlayerOption,      // 2: Players
-        Labels.PetOption,         // 3: Pets
-        Labels.AllOption,         // 4: Uncategorized
+        Labels.PetPlayerOption,   // 0: Players + Pets
+        Labels.PlayerOption,      // 1: Players
+        Labels.PetOption,         // 2: Pets
+        Labels.AllOption,         // 3: Uncategorized
+        Labels.ByGroupOption      // 4: By Group (NEW)
       };
 
-      petOrPlayerList.SelectedIndex = 1;
+      petOrPlayerList.SelectedIndex = 0;
 
       CreateSpellCountMenuItems(menuItemShowSpellCounts, DataGridSpellCountsByClassClick, DataGridShowSpellCountsClick);
       CreateClassMenuItems(menuItemShowSpellCasts, DataGridSpellCastsByClassClick, false, DataGridShowSpellCastsClick);
@@ -186,18 +186,18 @@ namespace EQLogParser
 
         switch (_currentPetOrPlayerOption)
         {
-          case 0: // NEW: By Group
+          case 0: // Players + Pets
+            dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
+            break;
+          case 1: // Players
+          case 2: // Pets
+          case 3: // Uncategorized
+            dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
+            break;
+          case 4: // NEW: By Group
             InitializeGroupTracking();
             var groupedPlayers = BuildGroupedPlayers();
             dataGrid.ItemsSource = UpdateRankGrouped(groupedPlayers);
-            break;
-          case 1: // Players + Pets
-            dataGrid.ItemsSource = UpdateRank(CurrentStats.StatsList);
-            break;
-          case 2: // Players
-          case 3: // Pets
-          case 4: // Uncategorized
-            dataGrid.ItemsSource = UpdateRank(CurrentStats.ExpandedStatsList);
             break;
         }
 
@@ -608,9 +608,9 @@ namespace EQLogParser
 
           return _currentPetOrPlayerOption switch
           {
-            2 => !isPet && classMatches,
-            3 => isPet && classMatches,
-            0 => true,  // Group View - pre-filtered in BuildGroupedPlayers
+            1 => !isPet && classMatches,
+            2 => isPet && classMatches,
+            4 => true,  // Group View - pre-filtered in BuildGroupedPlayers
             _ => classMatches
           };
         };
