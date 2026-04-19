@@ -260,12 +260,12 @@ namespace EQLogParser
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = [.. workingData.Values.OrderByDescending(values => values.Last().Total).Take(_currentTopCount)];
+        sortedValues = [.. workingData.Values.OrderByDescending(values => values[^1].Total).Take(_currentTopCount)];
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NoData;
       }
       else
       {
-        var names = selected.Select(stats => stats.OrigName).ToList();
+        var names = selected.Select(stats => stats.OrigName).ToHashSet();
         sortedValues = workingData.Values.Where(values =>
         {
           var pass = false;
