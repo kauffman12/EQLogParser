@@ -19,8 +19,8 @@ namespace EQLogParser
     public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
+    private readonly ViewOptionRegistry _viewOptions;
     private bool _ready;
-    private ViewOptionRegistry? _viewOptions;
 
     // Group view tracking for incremental updates
     private List<GroupEntry> _groupEntries;
@@ -272,7 +272,7 @@ namespace EQLogParser
 
     private static string GetGroupName(int groupId)
     {
-      return groupId < 1 ? "Unassigned Group" : $"Group {groupId}";
+      return groupId < 1 ? "Unassigned Group" : $"Raid Group {groupId}";
     }
 
     private void InitializeGroupTracking()

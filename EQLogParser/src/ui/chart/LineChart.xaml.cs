@@ -33,7 +33,7 @@ namespace EQLogParser
     private string _currentViewOption;
     private int _currentTopCount = 5;
     private List<PlayerStats> _lastSelected;
-    private ViewOptionRegistry? _viewOptions;
+    private readonly ViewOptionRegistry _viewOptions;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
     {
