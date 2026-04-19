@@ -21,7 +21,6 @@
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <Grid>
     <StackPanel Orientation="Horizontal" Grid.Row="0">
       <Label x:Name="title" Style="{StaticResource EQTitleStyle}"/>
     </StackPanel>
@@ -205,8 +204,8 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-<TextBlock Grid.Column="0" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup, Converter={StaticResource GroupNumberConverter}}" />
-                <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonDown="EditGroupMouseLeftButtonDown"/>
+                <TextBlock Grid.Column="0" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup, Converter={StaticResource GroupNumberConverter}}" />
+                <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="EditGroupMouseLeftButton"/>
               </Grid>
             </DataTemplate>
           </syncfusion:TreeGridTemplateColumn.CellTemplate>
@@ -231,15 +230,13 @@
         <syncfusion:TreeGridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>
-  </Grid>
-
-  <Popup x:Name="groupEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
-    <ComboBox x:Name="groupEditComboBox"
+    <Popup x:Name="groupEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
+      <ComboBox x:Name="groupEditComboBox"
               HorizontalContentAlignment="Stretch"
               ItemsSource="{x:Static local:DamageSummary.GroupNumbers}"
               SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
               SelectionChanged="GroupSelectionChanged"
               Style="{DynamicResource EQComboBoxStyle}" />
-  </Popup>
+    </Popup>
   </Grid>
 </local:SummaryTable>

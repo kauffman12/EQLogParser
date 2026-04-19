@@ -14,23 +14,10 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
- public partial class DamageSummary : IDocumentContent
-   {
-public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-
-   private static int ParseGroupId(object value)
-     {
-       if (value is string s)
-       {
-         if (string.IsNullOrWhiteSpace(s))
-           return 0;
-         if (int.TryParse(s, out var result))
-           return result;
-       }
-       return 0;
-     }
-
-     private const int DEFAULT_VIEW = 1;
+  public partial class DamageSummary : IDocumentContent
+  {
+    public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+    private const int DEFAULT_VIEW = 1;
     private const int GROUP_VIEW = 0;
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
@@ -283,10 +270,10 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
       return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
     }
 
-  private static string GetGroupName(int groupId)
-   {
-     return groupId == 0 ? string.Empty : $"Group {groupId}";
-   }
+    private static string GetGroupName(int groupId)
+    {
+      return groupId < 1 ? "Unassigned Group" : $"Group {groupId}";
+    }
 
     private void InitializeGroupTracking()
     {
@@ -330,20 +317,50 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
       _groupEntries?.Clear();
     }
 
-    private void GroupSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void EventsDamageSummaryOptionsChanged(string option = null)
     {
-      if (sender is not ComboBox combo || combo.SelectedValue is not string groupName || string.IsNullOrEmpty(groupName))
+      var statOptions = new GenerateStatsOptions
+      {
+        MinSeconds = (long)minTimeChooser.Value,
+        MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
+      };
+
+      if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
+      {
+        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(statOptions));
+      }
+    }
+
+    private void EditGroupMouseLeftButton(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ImageAwesome ia || ia.DataContext is not PlayerStats stats)
         return;
 
-      var newGroupId = ParseGroupId(groupName);
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is null)
+        return;
 
-      if (_currentEditPlayer == null || _currentEditPlayer.AssignedGroup == newGroupId)
+      _currentEditPlayer = stats;
+      groupEditComboBox.SelectedItem = _currentEditPlayer?.AssignedGroup > 0 ? $"{_currentEditPlayer.AssignedGroup}" : "";
+      UiElementUtil.OpenCellPopup(groupEditPopup, groupEditComboBox, cell, () =>
+      {
+        _currentEditPlayer = null;
+        groupEditComboBox.SetValue(ComboBox.SelectedValueProperty, null);
+      });
+    }
+
+    private void GroupSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedIndex == -1)
+        return;
+
+      if (_currentEditPlayer == null || _currentEditPlayer.AssignedGroup == combo.SelectedIndex)
         return;
 
       var oldGroupId = _currentEditPlayer.AssignedGroup;
 
       // IMMEDIATELY persist the change to player object BEFORE any rebuild
-      _currentEditPlayer.AssignedGroup = newGroupId;
+      _currentEditPlayer.AssignedGroup = combo.SelectedIndex;
 
       // If we're in Group View, use incremental update with progress indicator
       if (_currentPetOrPlayerOption == GROUP_VIEW)
@@ -352,6 +369,7 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
 
+        var newGroupId = combo.SelectedIndex;
         Task.Run(() =>
         {
           // Background work: Update group membership and time segments
@@ -728,20 +746,6 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
       });
     }
 
-    private void EventsDamageSummaryOptionsChanged(string option = null)
-    {
-      var statOptions = new GenerateStatsOptions
-      {
-        MinSeconds = (long)minTimeChooser.Value,
-        MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
-      };
-
-      if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
-      {
-        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(statOptions));
-      }
-    }
-
     private void ContentLoaded(object sender, RoutedEventArgs e)
     {
       if (VisualParent != null && !_ready)
@@ -784,24 +788,6 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
       }
 
       _ready = false;
-    }
-
-    private void EditGroupMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ImageAwesome ia)
-        return;
-
-      var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is not GridCell gridCell)
-        return;
-
-      _currentEditPlayer = ia.DataContext as PlayerStats;
-      groupEditComboBox.SelectedValue = ParseGroupId(_currentEditPlayer.AssignedGroup);
-      UiElementUtil.OpenCellPopup(groupEditPopup, groupEditComboBox, gridCell, () =>
-      {
-        _currentEditPlayer = null;
-        groupEditComboBox.SelectedValue = null;
-      });
     }
   }
 }

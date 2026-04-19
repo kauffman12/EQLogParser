@@ -3,7 +3,6 @@ using log4net;
 using log4net.Appender;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
-using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -15,7 +14,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -899,13 +897,13 @@ namespace EQLogParser
         return;
 
       var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is not GridCell gridCell)
+      if (cell is null)
         return;
 
       _currentEditMapping = mapping;
-      // value is the string, item is the expando object
+      // value is the string, item is the expand-o object
       ownerEditComboBox.SelectedValue = mapping.Owner;
-      OpenCellPopup(ownerEditPopup, ownerEditComboBox, gridCell, () =>
+      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
       {
         _currentEditPlayerClass = null;
         classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
@@ -918,21 +916,16 @@ namespace EQLogParser
         return;
 
       var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is not GridCell gridCell)
+      if (cell is null)
         return;
 
       _currentEditPlayerClass = obj;
       classEditComboBox.SelectedItem = _currentEditPlayerClass.PlayerClass;
-      OpenCellPopup(classEditPopup, classEditComboBox, gridCell, () =>
+      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
       {
         _currentEditMapping = null;
         ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
       });
-    }
-
-    private void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onClosed)
-    {
-      UiElementUtil.OpenCellPopup(popup, comboBox, cell, onClosed);
     }
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)

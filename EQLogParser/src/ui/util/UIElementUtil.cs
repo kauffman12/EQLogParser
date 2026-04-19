@@ -1,4 +1,6 @@
 using log4net;
+using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Syncfusion.UI.Xaml.Grid;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -441,15 +442,15 @@ namespace EQLogParser
       return Math.Round(totalWidth);
     }
 
-    internal static GridCell FindGridCell(DependencyObject source)
+    internal static FrameworkElement FindGridCell(DependencyObject source)
     {
-      DependencyObject current = source;
-      while (current != null && current is not GridCell)
+      var current = source;
+      while (current != null && current is not GridCell && current is not TreeGridCell)
         current = VisualTreeHelper.GetParent(current);
-      return current as GridCell;
+      return current as FrameworkElement;
     }
 
-    internal static void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onClosed)
+    internal static void OpenCellPopup(Popup popup, ComboBox comboBox, FrameworkElement cell, Action onClosed)
     {
       popup.PlacementTarget = cell;
       popup.Placement = PlacementMode.Relative;
