@@ -29,7 +29,6 @@ namespace EQLogParser
       TheDataGrid = gridBase;
       TheColumnsCombo = columnsCombo;
       TheClassesCombo = classesCombo;
-      TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "GroupIdSort", SortDirection = ListSortDirection.Ascending });
       TheDataGrid.SortColumnDescriptions.Add(new SortColumnDescription { ColumnName = "Total", SortDirection = ListSortDirection.Descending });
       TheTitle = title;
       TheTitle.Content = Labels.NoNpcs;
