@@ -411,7 +411,7 @@ namespace EQLogParser
     {
       var export = DataGridUtil.BuildExportData(dataGrid);
       var result = TextUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
-      UiUtil.SetClipboardDataWithFallback(result, "EQ Log Parser Error: Failed to create BBCode\r\n");
+      UiUtil.SetClipboardText(result);
     }
 
     private void RemoveSelectedRowsClick(object sender, RoutedEventArgs e)

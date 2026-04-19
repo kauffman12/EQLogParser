@@ -98,7 +98,7 @@ namespace EQLogParser
     {
       var export = BuildExportData(gridBase);
       var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
-      UiUtil.SetClipboardDataWithFallback(result, "EQ Log Parser Error: Failed to create CSV\r\n");
+      UiUtil.SetClipboardText(result);
     }
 
     internal static (List<string>, List<List<object>>) BuildExportData(SfGridBase gridBase)

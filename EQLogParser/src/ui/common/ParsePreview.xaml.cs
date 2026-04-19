@@ -68,7 +68,7 @@ namespace EQLogParser
         parseList.SelectedItem = type;
       }
 
-      UiUtil.SetClipboardDataWithFallback(playerParseTextBox.Text, "");
+      UiUtil.SetClipboardText(playerParseTextBox.Text);
     }
 
     internal void AddParse(string type, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)

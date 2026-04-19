@@ -495,7 +495,7 @@ namespace EQLogParser
           }
         }
 
-        UiUtil.SetClipboardDataWithFallback(TextUtils.BuildTsv(header, data, titleLabel.Content as string), "");
+        UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
       }
     }
 

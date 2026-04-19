@@ -4,15 +4,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.IO;
 using System.Security;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -54,6 +52,10 @@ namespace EQLogParser
             Log.Error($"Failed to set Clipboard Text: {ex.Message}");
           }
         }, DispatcherPriority.DataBind);
+      }
+      else
+      {
+        Log.Warn("Attempted to set Clipboard Text to null");
       }
     }
 
@@ -233,30 +235,6 @@ namespace EQLogParser
       public int Compare(object x, object y)
       {
         return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
-      }
-    }
-
-    internal static void SetClipboardDataWithFallback(object data, string fallback)
-    {
-      try
-      {
-        Clipboard.SetDataObject(data);
-      }
-      catch (ArgumentNullException)
-      {
-        _ = InvokeAsync(() =>
-        {
-          try { Clipboard.SetDataObject(fallback); }
-          catch (Exception ex) { Log.Error($"Failed to set clipboard fallback: {ex.Message}"); }
-        }, DispatcherPriority.DataBind);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error($"Clipboard busy or unavailable: {ex.Message}");
-      }
-      catch (InvalidOperationException ex)
-      {
-        Log.Error($"Invalid clipboard operation: {ex.Message}");
       }
     }
 

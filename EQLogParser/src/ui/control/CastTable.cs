@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -65,7 +64,7 @@ namespace EQLogParser
     {
       var export = DataGridUtil.BuildExportData(_theDataGrid);
       var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, _theTitleLabel.Content as string);
-      UiUtil.SetClipboardDataWithFallback(result, "EQLogParser Error: Failed to create BBCode\r\n");
+      UiUtil.SetClipboardText(result);
     }
 
     protected bool UpdateSelectedCastTypes(ComboBox selected)

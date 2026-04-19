@@ -65,7 +65,7 @@ namespace EQLogParser
         data.Add([column.XLongValue, column.Y, column.Diff]);
       }
 
-      UiUtil.SetClipboardDataWithFallback(TextUtils.BuildTsv(header, data), "");
+      UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data));
     }
 
     private void EventsThemeChanged(string _)
