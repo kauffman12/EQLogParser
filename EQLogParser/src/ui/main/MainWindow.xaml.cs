@@ -1234,6 +1234,7 @@ namespace EQLogParser
       verifiedPlayersGrid?.Dispose();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
+      SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)

@@ -911,6 +911,7 @@ namespace EQLogParser
         _config = null;
         MainActions.EventsThemeChanged -= EventsThemeChanged;
         TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        _filterTimer?.Stop();
         logBox.Dispose();
         contextBox.Dispose();
         tabControl.Dispose();
