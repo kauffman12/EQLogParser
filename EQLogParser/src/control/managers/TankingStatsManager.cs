@@ -1,4 +1,4 @@
-﻿
+
 using log4net;
 using System;
 using System.Collections.Concurrent;
@@ -211,7 +211,7 @@ namespace EQLogParser
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
               {
-                foreach (var action in block.Actions.ToArray())
+                foreach (var action in block.Actions)
                 {
                   if (action is DamageRecord record)
                   {
