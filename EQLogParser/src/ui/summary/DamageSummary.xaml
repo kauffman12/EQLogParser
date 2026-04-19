@@ -15,6 +15,7 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:ZeroConverter x:Key="ZeroConverter" />
       <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+      <local:GroupNumberConverter x:Key="GroupNumberConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
@@ -203,9 +204,9 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup}" />
+                <TextBlock Grid.Column="0" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding AssignedGroup, Converter={StaticResource GroupNumberConverter}}" />
                 <fa:ImageAwesome Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonDown="EditGroupMouseLeftButtonDown"/>
-                <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" SelectedItem="{Binding AssignedGroup, Mode=OneWay}"
+                <ComboBox Grid.ColumnSpan="2" ItemsSource="{x:Static local:DamageSummary.GroupNumbers}" SelectedItem="{Binding AssignedGroup, Mode=TwoWay, Converter={StaticResource GroupNumberConverter}}"
                     SelectionChanged="PlayerGroupSelectionChanged" HorizontalAlignment="Stretch" Margin="2" Style="{DynamicResource EQComboBoxStyle}"
                     Visibility="Collapsed" />
               </Grid>

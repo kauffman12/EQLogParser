@@ -14,11 +14,23 @@ using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventA
 
 namespace EQLogParser
 {
-  public partial class DamageSummary : IDocumentContent
-  {
-    public static readonly List<int> GroupNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+ public partial class DamageSummary : IDocumentContent
+   {
+public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
-    private const int DEFAULT_VIEW = 1;
+   private static int ParseGroupId(object value)
+     {
+       if (value is string s)
+       {
+         if (string.IsNullOrWhiteSpace(s))
+           return 0;
+         if (int.TryParse(s, out var result))
+           return result;
+       }
+       return 0;
+     }
+
+     private const int DEFAULT_VIEW = 1;
     private const int GROUP_VIEW = 0;
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
@@ -270,10 +282,10 @@ namespace EQLogParser
       return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
     }
 
-    private static string GetGroupName(int groupId)
-    {
-      return groupId == 0 ? "Unassigned Group" : $"Group {groupId}";
-    }
+  private static string GetGroupName(int groupId)
+   {
+     return groupId == 0 ? string.Empty : $"Group {groupId}";
+   }
 
     private void InitializeGroupTracking()
     {
@@ -324,7 +336,7 @@ namespace EQLogParser
       var player = (sender as ComboBox)?.DataContext as PlayerStats;
       if (player == null) return;
 
-      var newGroupId = (int)e.AddedItems[0];
+      var newGroupId = ParseGroupId(e.AddedItems[0]);
 
       // If we're in Group View, use incremental update with progress indicator
       if (_currentPetOrPlayerOption == GROUP_VIEW)
