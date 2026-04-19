@@ -1,5 +1,8 @@
-﻿using System.Collections.Concurrent;
+using System;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace EQLogParser
 {
@@ -285,66 +288,98 @@ namespace EQLogParser
     {
       short result = 0;
 
-      var temp = "";
-      foreach (var modifier in modifiers.Split(' '))
+      const int bufferSize = 64;
+      var buffer = ArrayPool<char>.Shared.Rent(bufferSize);
+      var spanPos = 0;
+
+      var span = modifiers.AsSpan();
+      var start = 0;
+      for (var i = 0; i <= span.Length; i++)
       {
-        temp += modifier;
-        if (AllModifiers.ContainsKey(temp))
+        if (i == span.Length || span[i] == ' ')
         {
-          if (CritModifiers.ContainsKey(temp))
+          var wordLen = i - start;
+          if (wordLen > 0)
           {
-            result |= Crit;
+            if (spanPos + wordLen >= buffer.Length)
+            {
+              var newBuffer = ArrayPool<char>.Shared.Rent(Math.Max(buffer.Length * 2, spanPos + wordLen + 16));
+              Buffer.BlockCopy(buffer, 0, newBuffer, 0, spanPos * sizeof(char));
+              ArrayPool<char>.Shared.Return(buffer);
+              buffer = newBuffer;
+            }
+
+            span.Slice(start, wordLen).CopyTo(buffer.AsSpan(spanPos));
+            spanPos += wordLen;
+
+            if (AllModifiers.ContainsKey(buffer.AsSpan(0, spanPos).ToString()))
+            {
+              var key = buffer.AsSpan(0, spanPos).ToString();
+              if (CritModifiers.ContainsKey(key))
+              {
+                result |= Crit;
+              }
+
+              switch (key)
+              {
+                case "Lucky":
+                  result |= Lucky;
+                  break;
+                case "Assassinate":
+                  result |= Assassinate;
+                  break;
+                case "Double Bow Shot":
+                  result |= Doublebow;
+                  break;
+                case "Finishing Blow":
+                  result |= Finishing;
+                  break;
+                case "Flurry":
+                  result |= Flurry;
+                  break;
+                case "Headshot":
+                  result |= Headshot;
+                  break;
+                case "Twincast":
+                  result |= Twincast;
+                  break;
+                case "Rampage":
+                case "Wild Rampage":
+                  result |= Rampage;
+                  break;
+                case "Riposte":
+                  result |= Riposte;
+                  break;
+                case "Strikethrough":
+                  result |= Strikethrough;
+                  break;
+                case "Slay Undead":
+                  result |= Slay;
+                  break;
+                case "Locked":
+                  break;
+              }
+
+              spanPos = 0;
+            }
+            else
+            {
+              if (spanPos >= buffer.Length)
+              {
+                var newBuffer = ArrayPool<char>.Shared.Rent(buffer.Length * 2);
+                Buffer.BlockCopy(buffer, 0, newBuffer, 0, spanPos * sizeof(char));
+                ArrayPool<char>.Shared.Return(buffer);
+                buffer = newBuffer;
+              }
+              buffer[spanPos++] = ' ';
+            }
           }
 
-          switch (temp)
-          {
-            case "Lucky":
-              result |= Lucky;
-              break;
-            case "Assassinate":
-              result |= Assassinate;
-              break;
-            case "Double Bow Shot":
-              result |= Doublebow;
-              break;
-            case "Finishing Blow":
-              result |= Finishing;
-              break;
-            case "Flurry":
-              result |= Flurry;
-              break;
-            case "Headshot":
-              result |= Headshot;
-              break;
-            case "Twincast":
-              result |= Twincast;
-              break;
-            case "Rampage":
-            case "Wild Rampage":
-              result |= Rampage;
-              break;
-            case "Riposte":
-              result |= Riposte;
-              break;
-            case "Strikethrough":
-              result |= Strikethrough;
-              break;
-            case "Slay Undead":
-              result |= Slay;
-              break;
-            case "Locked":
-              // do nothing for now
-              break;
-          }
-
-          temp = ""; // reset
-        }
-        else
-        {
-          temp += " ";
+          start = i + 1;
         }
       }
 
+      ArrayPool<char>.Shared.Return(buffer);
       return result;
     }
   }

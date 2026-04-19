@@ -192,27 +192,28 @@ namespace EQLogParser
     {
       foreach (var points in data.Values)
       {
-        for (var i = 0; i < points.Count; i++)
-        {
-          var count = 0;
-          var total = 0L;
-          var beginTime = points[i].CurrentTime;
-          for (var j = i; j >= 0; j--)
-          {
-            if ((beginTime - points[j].CurrentTime) > 5)
-            {
-              break;
-            }
+        var count = points.Count;
+        if (count == 0)
+          continue;
 
-            count++;
-            total += points[j].TotalPerSecond;
+        var left = 0;
+        var windowTotal = 0L;
+
+        for (var right = 0; right < count; right++)
+        {
+          windowTotal += points[right].TotalPerSecond;
+
+          while (left < right && (points[right].CurrentTime - points[left].CurrentTime) > 5)
+          {
+            windowTotal -= points[left].TotalPerSecond;
+            left++;
           }
 
-          points[i].RollingTotal = total;
-
-          if (count > 0)
+          var windowCount = right - left + 1;
+          points[right].RollingTotal = windowTotal;
+          if (windowCount > 0)
           {
-            points[i].RollingDps = total / count;
+            points[right].RollingDps = windowTotal / windowCount;
           }
         }
       }

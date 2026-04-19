@@ -1,4 +1,4 @@
-﻿using DotLiquid;
+using DotLiquid;
 using log4net;
 using Microsoft.VisualBasic.FileIO;
 using System;
@@ -38,8 +38,18 @@ namespace EQLogParser
 
     internal static string ToUpper(string name, CultureInfo culture = null)
     {
+      if (string.IsNullOrEmpty(name))
+        return name;
+
       culture ??= CultureInfo.InvariantCulture;
-      return string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0], culture) + (name.Length > 1 ? name[1..] : ""));
+
+      var chars = new char[name.Length];
+      chars[0] = char.ToUpper(name[0], culture);
+      for (var i = 1; i < name.Length; i++)
+      {
+        chars[i] = name[i];
+      }
+      return new string(chars);
     }
 
     internal static string BuildTsv(List<string> header, List<List<object>> data, string title = null)
