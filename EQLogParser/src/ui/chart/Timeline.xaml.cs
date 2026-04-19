@@ -654,6 +654,8 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Center,
         Icon = EFontAwesomeIcon.Solid_Times,
+        Cursor = Cursors.Hand,
+        LayoutTransform = new ScaleTransform { ScaleX = 0.9, ScaleY = 0.9 }
       };
 
       image.SetResourceReference(HeightProperty, "EQContentSize");

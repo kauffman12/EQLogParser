@@ -50,9 +50,7 @@ namespace EQLogParser
     private readonly DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
     private PetMapping _currentEditMapping;
-    private bool _isPopupOpen;
     private dynamic _currentEditPlayerClass;
-    private bool _isClassPopupOpen;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
@@ -63,34 +61,6 @@ namespace EQLogParser
     private bool _resetWindowState;
     private bool _isStarting;
     private bool _appLoadingComplete;
-
-    public bool IsPopupOpen
-    {
-      get => _isPopupOpen;
-      set
-      {
-        _isPopupOpen = value;
-        if (!value)
-        {
-          _currentEditMapping = null;
-          ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
-        }
-      }
-    }
-
-    public bool IsClassPopupOpen
-    {
-      get => _isClassPopupOpen;
-      set
-      {
-        _isClassPopupOpen = value;
-        if (!value)
-        {
-          _currentEditPlayerClass = null;
-          classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
-        }
-      }
-    }
 
     public MainWindow()
     {
@@ -933,8 +903,13 @@ namespace EQLogParser
         return;
 
       _currentEditMapping = mapping;
-      ownerEditComboBox.SelectedItem = mapping.Owner;
-      OpenCellPopup(ownerEditPopup, ownerEditComboBox, gridCell, () => _isPopupOpen = true);
+      // value is the string, item is the expando object
+      ownerEditComboBox.SelectedValue = mapping.Owner;
+      OpenCellPopup(ownerEditPopup, ownerEditComboBox, gridCell, () =>
+      {
+        _currentEditPlayerClass = null;
+        classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+      });
     }
 
     private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -948,10 +923,14 @@ namespace EQLogParser
 
       _currentEditPlayerClass = obj;
       classEditComboBox.SelectedItem = _currentEditPlayerClass.PlayerClass;
-      OpenCellPopup(classEditPopup, classEditComboBox, gridCell, () => _isClassPopupOpen = true);
+      OpenCellPopup(classEditPopup, classEditComboBox, gridCell, () =>
+      {
+        _currentEditMapping = null;
+        ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+      });
     }
 
-    private void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onOpened)
+    private void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onClosed)
     {
       popup.PlacementTarget = cell;
       popup.Placement = PlacementMode.Relative;
@@ -960,11 +939,18 @@ namespace EQLogParser
 
       void OnPopupOpen(object s, EventArgs args)
       {
+        comboBox.IsDropDownOpen = true;
+        popup.Closed += OnPopupClose;
         popup.Opened -= OnPopupOpen;
         popup.Width = cell.ActualWidth;
         popup.Height = cell.ActualHeight;
         comboBox.Width = cell.ActualWidth;
-        onOpened();
+      }
+
+      void OnPopupClose(object s, EventArgs args)
+      {
+        popup.Closed -= OnPopupClose;
+        onClosed();
       }
 
       popup.Opened += OnPopupOpen;

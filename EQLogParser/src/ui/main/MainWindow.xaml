@@ -529,7 +529,7 @@
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEditMouseLeftButtonUp"/>
+                      <fa:ImageAwesome Margin="8,1,8,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="OwnerEditMouseLeftButtonUp"/>
                       <TextBlock VerticalAlignment="Center" Text="{Binding Owner}" />
                     </StackPanel>
                   </DataTemplate>
@@ -556,7 +556,7 @@
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePlayerMouseDown">
+                      <fa:ImageAwesome Margin="8,1,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePlayerMouseDown">
                         <fa:ImageAwesome.LayoutTransform>
                           <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
                         </fa:ImageAwesome.LayoutTransform>
@@ -570,7 +570,7 @@
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="ClassEditMouseLeftButtonUp" />
+                      <fa:ImageAwesome Margin="8,1,8,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="ClassEditMouseLeftButtonUp" />
                       <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}" />
                     </StackPanel>
                   </DataTemplate>
@@ -597,7 +597,7 @@
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                      <fa:ImageAwesome Margin="8,2,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePetMouseDown">
+                      <fa:ImageAwesome Margin="8,1,8,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Times" Cursor="Hand" PreviewMouseDown="RemovePetMouseDown">
                         <fa:ImageAwesome.LayoutTransform>
                           <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
                         </fa:ImageAwesome.LayoutTransform>
@@ -613,8 +613,7 @@
       </syncfusion:DockingManager>
     </Grid>
 
-    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse" 
-            IsOpen="{Binding IsPopupOpen, Mode=TwoWay, RelativeSource={RelativeSource AncestorType=Window}}">
+    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
       <ComboBox x:Name="ownerEditComboBox"
                 HorizontalContentAlignment="Stretch"
                 ItemsSource="{x:Static local:MainActions.VerifiedPlayersView}"
@@ -622,8 +621,7 @@
                 SelectionChanged="OwnerSelectionChanged"
                 Style="{DynamicResource EQComboBoxStyle}" />
     </Popup>
-    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse" 
-            IsOpen="{Binding IsClassPopupOpen, Mode=TwoWay, RelativeSource={RelativeSource AncestorType=Window}}">
+    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
       <ComboBox x:Name="classEditComboBox"
                 HorizontalContentAlignment="Stretch"
                 ItemsSource="{x:Static local:MainActions.ClassList}"

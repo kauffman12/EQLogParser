@@ -82,7 +82,7 @@ namespace EQLogParser
       stackPanel.SetValue(StackPanel.HorizontalAlignmentProperty, HorizontalAlignment.Left);
 
       var icon = new FrameworkElementFactory(typeof(ImageAwesome));
-      icon.SetValue(ImageAwesome.MarginProperty, new Thickness(8, 2, 8, 0));
+      icon.SetValue(ImageAwesome.MarginProperty, new Thickness(8, 1, 8, 0));
       icon.SetValue(ImageAwesome.StyleProperty, (Style)Application.Current.Resources["EQIconStyle"]);
       icon.SetValue(ImageAwesome.IconProperty, EFontAwesomeIcon.Solid_Times);
       icon.SetValue(ImageAwesome.CursorProperty, Cursors.Hand);
