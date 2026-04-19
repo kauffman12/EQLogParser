@@ -409,21 +409,9 @@ namespace EQLogParser
 
     private void CopyGamparseClick(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        var export = DataGridUtil.BuildExportData(dataGrid);
-        var result = TextUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create BBCode\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      var export = DataGridUtil.BuildExportData(dataGrid);
+      var result = TextUtils.BuildGamparseList(export.Item1, export.Item2, titleLabel.Content as string);
+      UiUtil.SetClipboardDataWithFallback(result, "EQ Log Parser Error: Failed to create BBCode\r\n");
     }
 
     private void RemoveSelectedRowsClick(object sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -63,21 +63,9 @@ namespace EQLogParser
 
     protected void CopyBbCodeClick(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        var export = DataGridUtil.BuildExportData(_theDataGrid);
-        var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, _theTitleLabel.Content as string);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQLogParser Error: Failed to create BBCode\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      var export = DataGridUtil.BuildExportData(_theDataGrid);
+      var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, _theTitleLabel.Content as string);
+      UiUtil.SetClipboardDataWithFallback(result, "EQLogParser Error: Failed to create BBCode\r\n");
     }
 
     protected bool UpdateSelectedCastTypes(ComboBox selected)

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
@@ -431,77 +431,71 @@ namespace EQLogParser
     {
       if (sfLineChart.Series.Count > 0)
       {
-        try
+        var data = new List<List<object>>();
+        var header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
+
+        foreach (var series in sfLineChart.Series)
         {
-          var data = new List<List<object>>();
-          var header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
-
-          foreach (var series in sfLineChart.Series)
+          if (series.ItemsSource is List<DataPoint> dataPoints)
           {
-            if (series.ItemsSource is List<DataPoint> dataPoints)
+            for (var i = 0; i < dataPoints.Count; i++)
             {
-              foreach (var chartData in CollectionsMarshal.AsSpan(dataPoints))
+              var chartData = dataPoints[i];
+              double chartValue = 0;
+              switch (_currentChoice)
               {
-                double chartValue = 0;
-                switch (_currentChoice)
-                {
-                  case "Aggregate DPS":
-                  case "Aggregate HPS":
-                    chartValue = chartData.ValuePerSecond;
-                    break;
-                  case "Aggregate Damage":
-                  case "Aggregate Damaged":
-                  case "Aggregate Healing":
-                    chartValue = chartData.Total;
-                    break;
-                  case "Aggregate Av Hit":
-                  case "Aggregate Av Heal":
-                    chartValue = chartData.Avg;
-                    break;
-                  case "Aggregate Crit Rate":
-                    chartValue = chartData.CritRate;
-                    break;
-                  case "Aggregate Twincast Rate":
-                    chartValue = chartData.TcRate;
-                    break;
-                  case "DPS":
-                  case "HPS":
-                    chartValue = chartData.TotalPerSecond;
-                    break;
-                  case "Rolling DPS":
-                  case "Rolling HPS":
-                    chartValue = chartData.RollingDps;
-                    break;
-                  case "Rolling Damage":
-                  case "Rolling Healing":
-                    chartValue = chartData.RollingTotal;
-                    break;
-                  case "# Attempts":
-                    chartValue = chartData.AttemptsPerSecond;
-                    break;
-                  case "# Crits":
-                    chartValue = chartData.CritsPerSecond;
-                    break;
-                  case "# Hits":
-                  case "# Heals":
-                    chartValue = chartData.HitsPerSecond;
-                    break;
-                  case "# Twincasts":
-                    chartValue = chartData.TcPerSecond;
-                    break;
-                }
-
-                data.Add([chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name]);
+                case "Aggregate DPS":
+                case "Aggregate HPS":
+                  chartValue = chartData.ValuePerSecond;
+                  break;
+                case "Aggregate Damage":
+                case "Aggregate Damaged":
+                case "Aggregate Healing":
+                  chartValue = chartData.Total;
+                  break;
+                case "Aggregate Av Hit":
+                case "Aggregate Av Heal":
+                  chartValue = chartData.Avg;
+                  break;
+                case "Aggregate Crit Rate":
+                  chartValue = chartData.CritRate;
+                  break;
+                case "Aggregate Twincast Rate":
+                  chartValue = chartData.TcRate;
+                  break;
+                case "DPS":
+                case "HPS":
+                  chartValue = chartData.TotalPerSecond;
+                  break;
+                case "Rolling DPS":
+                case "Rolling HPS":
+                  chartValue = chartData.RollingDps;
+                  break;
+                case "Rolling Damage":
+                case "Rolling Healing":
+                  chartValue = chartData.RollingTotal;
+                  break;
+                case "# Attempts":
+                  chartValue = chartData.AttemptsPerSecond;
+                  break;
+                case "# Crits":
+                  chartValue = chartData.CritsPerSecond;
+                  break;
+                case "# Hits":
+                case "# Heals":
+                  chartValue = chartData.HitsPerSecond;
+                  break;
+                case "# Twincasts":
+                  chartValue = chartData.TcPerSecond;
+                  break;
               }
+
+              data.Add([chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name]);
             }
           }
+        }
 
-          Clipboard.SetDataObject(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
-        }
-        catch (ExternalException ex)
-        {
-          Log.Error(ex);
-        }
+        UiUtil.SetClipboardDataWithFallback(TextUtils.BuildTsv(header, data, titleLabel.Content as string), "");
       }
     }
 

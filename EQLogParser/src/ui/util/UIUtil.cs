@@ -6,9 +6,13 @@ using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using System.IO;
+using System.Security;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -229,6 +233,54 @@ namespace EQLogParser
       public int Compare(object x, object y)
       {
         return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
+      }
+    }
+
+    internal static void SetClipboardDataWithFallback(object data, string fallback)
+    {
+      try
+      {
+        Clipboard.SetDataObject(data);
+      }
+      catch (ArgumentNullException)
+      {
+        _ = InvokeAsync(() =>
+        {
+          try { Clipboard.SetDataObject(fallback); }
+          catch (Exception ex) { Log.Error($"Failed to set clipboard fallback: {ex.Message}"); }
+        }, DispatcherPriority.DataBind);
+      }
+      catch (ExternalException ex)
+      {
+        Log.Error($"Clipboard busy or unavailable: {ex.Message}");
+      }
+      catch (InvalidOperationException ex)
+      {
+        Log.Error($"Invalid clipboard operation: {ex.Message}");
+      }
+    }
+
+    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
+    {
+      try
+      {
+        File.WriteAllLines(path, lines);
+      }
+      catch (IOException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (UnauthorizedAccessException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (SecurityException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (ArgumentNullException ex)
+      {
+        Log.Error(ex);
       }
     }
   }

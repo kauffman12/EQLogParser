@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
@@ -56,22 +56,16 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        var header = new List<string> { "Hit Value", "Frequency", "Difference" };
+      var header = new List<string> { "Hit Value", "Frequency", "Difference" };
 
-        var data = new List<List<object>>();
-        foreach (var column in CollectionsMarshal.AsSpan(_columns))
-        {
-          data.Add([column.XLongValue, column.Y, column.Diff]);
-        }
-
-        Clipboard.SetDataObject(TextUtils.BuildTsv(header, data));
-      }
-      catch (ExternalException ex)
+      var data = new List<List<object>>();
+      for (var i = 0; i < _columns.Count; i++)
       {
-        Log.Error(ex);
+        var column = _columns[i];
+        data.Add([column.XLongValue, column.Y, column.Diff]);
       }
+
+      UiUtil.SetClipboardDataWithFallback(TextUtils.BuildTsv(header, data), "");
     }
 
     private void EventsThemeChanged(string _)

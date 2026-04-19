@@ -96,21 +96,9 @@ namespace EQLogParser
 
     internal static void CopyCsvFromTable(SfGridBase gridBase, string title)
     {
-      try
-      {
-        var export = BuildExportData(gridBase);
-        var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create CSV\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      var export = BuildExportData(gridBase);
+      var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
+      UiUtil.SetClipboardDataWithFallback(result, "EQ Log Parser Error: Failed to create CSV\r\n");
     }
 
     internal static (List<string>, List<List<object>>) BuildExportData(SfGridBase gridBase)
