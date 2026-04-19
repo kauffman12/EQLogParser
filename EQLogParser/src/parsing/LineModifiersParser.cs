@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace EQLogParser
 {
@@ -223,7 +222,7 @@ namespace EQLogParser
 
     internal static short ParseDamage(string player, string modifiers, double currentTime, bool isPlayer)
     {
-      var result = Parse(player, modifiers);
+      var result = Parse(modifiers);
 
       if (isPlayer)
       {
@@ -259,7 +258,7 @@ namespace EQLogParser
 
     internal static short ParseHeal(string player, string modifiers, double currentTime)
     {
-      var result = Parse(player, modifiers);
+      var result = Parse(modifiers);
 
       if (IsTwincast(result))
       {
@@ -269,14 +268,14 @@ namespace EQLogParser
       return result;
     }
 
-    private static short Parse(string player, string modifiers)
+    private static short Parse(string modifiers)
     {
       short result = -1;
       if (!string.IsNullOrEmpty(modifiers))
       {
         if (!MaskCache.TryGetValue(modifiers, out result))
         {
-          result = BuildVector(player, modifiers);
+          result = BuildVector(modifiers);
           MaskCache[modifiers] = result;
         }
       }
@@ -284,7 +283,7 @@ namespace EQLogParser
       return result;
     }
 
-    private static short BuildVector(string player, string modifiers)
+    internal static short BuildVector(string modifiers)
     {
       short result = 0;
 
