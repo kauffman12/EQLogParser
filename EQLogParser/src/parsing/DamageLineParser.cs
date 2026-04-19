@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,6 +53,8 @@ namespace EQLogParser
     {
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
+
+    private static readonly string[] SpecialCodeKeys = ["Mana Burn", "Harm Touch", "Life Burn"];
 
     private static OldCritData _lastCrit;
 
@@ -993,10 +995,21 @@ namespace EQLogParser
             var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
             EventsDamageProcessed?.Invoke(damageEvent);
 
-            if (record.Type == Labels.Dd && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
-            record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
+            if (record.Type == Labels.Dd)
             {
-              RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
+              string key = null;
+              foreach (var special in SpecialCodeKeys)
+              {
+                if (!string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special))
+                {
+                  key = special;
+                  break;
+                }
+              }
+              if (!string.IsNullOrEmpty(key))
+              {
+                RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
+              }
             }
           }
         }
