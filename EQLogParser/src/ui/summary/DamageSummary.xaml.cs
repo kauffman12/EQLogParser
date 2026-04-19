@@ -39,6 +39,7 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
 
     // Group view tracking for incremental updates
     private List<GroupEntry> _groupEntries;
+    private PlayerStats _currentEditPlayer = null!;
 
     public DamageSummary()
     {
@@ -329,39 +330,36 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
       _groupEntries?.Clear();
     }
 
-    private async void PlayerGroupSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void GroupSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (e.AddedItems.Count == 0) return;
+      if (sender is not ComboBox combo || combo.SelectedValue is not string groupName || string.IsNullOrEmpty(groupName))
+        return;
 
-      var player = (sender as ComboBox)?.DataContext as PlayerStats;
-      if (player == null) return;
+      var newGroupId = ParseGroupId(groupName);
 
-      var newGroupId = ParseGroupId(e.AddedItems[0]);
+      if (_currentEditPlayer == null || _currentEditPlayer.AssignedGroup == newGroupId)
+        return;
+
+      var oldGroupId = _currentEditPlayer.AssignedGroup;
+
+      // IMMEDIATELY persist the change to player object BEFORE any rebuild
+      _currentEditPlayer.AssignedGroup = newGroupId;
 
       // If we're in Group View, use incremental update with progress indicator
       if (_currentPetOrPlayerOption == GROUP_VIEW)
       {
-        // Skip if value hasn't actually changed
-        if (player.AssignedGroup == newGroupId) return;
-
-        var oldGroupId = player.AssignedGroup;
-        if (oldGroupId == newGroupId) return;
-
-        // IMMEDIATELY persist the change to player object BEFORE any rebuild
-        player.AssignedGroup = newGroupId;
-
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
 
-        await Task.Run(() =>
+        Task.Run(() =>
         {
           // Background work: Update group membership and time segments
-          UpdateGroupMembership(player, oldGroupId, newGroupId);
+          UpdateGroupMembership(_currentEditPlayer, oldGroupId, newGroupId);
         });
 
         // Force full ItemsSource replacement on UI thread
-        await Dispatcher.InvokeAsync(() =>
+        Dispatcher.InvokeAsync(() =>
         {
           try
           {
@@ -408,11 +406,8 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
           }
         });
       }
-      else
-      {
-        // Not in Group View - just update the value directly
-        player.AssignedGroup = newGroupId;
-      }
+
+      groupEditPopup.IsOpen = false;
     }
 
     private void UpdateGroupMembership(PlayerStats player, int oldGroupId, int newGroupId)
@@ -793,42 +788,20 @@ public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5",
 
     private void EditGroupMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is ImageAwesome ia && ia.Parent is Grid grid)
-      {
-        foreach (var child in grid.Children)
-        {
-          if (child is ComboBox combo)
-          {
-            combo.Visibility = Visibility.Visible;
-            combo.DropDownClosed += DropDownClosed;
+      if (sender is not ImageAwesome ia)
+        return;
 
-            Dispatcher.InvokeAsync(() =>
-            {
-              combo.IsDropDownOpen = true;
-            }, DispatcherPriority.Background);
-          }
-          else if (child is FrameworkElement fe)
-          {
-            fe.Visibility = Visibility.Collapsed;
-          }
-        }
-      }
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is not GridCell gridCell)
+        return;
 
-      void DropDownClosed(object s, EventArgs argss)
+      _currentEditPlayer = ia.DataContext as PlayerStats;
+      groupEditComboBox.SelectedValue = ParseGroupId(_currentEditPlayer.AssignedGroup);
+      UiElementUtil.OpenCellPopup(groupEditPopup, groupEditComboBox, gridCell, () =>
       {
-        foreach (var child in grid.Children)
-        {
-          if (child is ComboBox combo)
-          {
-            combo.DropDownClosed -= DropDownClosed;
-            combo.Visibility = Visibility.Collapsed;
-          }
-          else if (child is FrameworkElement fe)
-          {
-            fe.Visibility = Visibility.Visible;
-          }
-        }
-      }
+        _currentEditPlayer = null;
+        groupEditComboBox.SelectedValue = null;
+      });
     }
   }
 }

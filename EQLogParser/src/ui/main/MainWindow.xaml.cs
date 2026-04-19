@@ -932,29 +932,7 @@ namespace EQLogParser
 
     private void OpenCellPopup(Popup popup, ComboBox comboBox, GridCell cell, Action onClosed)
     {
-      popup.PlacementTarget = cell;
-      popup.Placement = PlacementMode.Relative;
-      popup.HorizontalOffset = 0;
-      popup.VerticalOffset = 0;
-
-      void OnPopupOpen(object s, EventArgs args)
-      {
-        comboBox.IsDropDownOpen = true;
-        popup.Closed += OnPopupClose;
-        popup.Opened -= OnPopupOpen;
-        popup.Width = cell.ActualWidth;
-        popup.Height = cell.ActualHeight;
-        comboBox.Width = cell.ActualWidth;
-      }
-
-      void OnPopupClose(object s, EventArgs args)
-      {
-        popup.Closed -= OnPopupClose;
-        onClosed();
-      }
-
-      popup.Opened += OnPopupOpen;
-      popup.IsOpen = true;
+      UiElementUtil.OpenCellPopup(popup, comboBox, cell, onClosed);
     }
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
