@@ -667,6 +667,8 @@ namespace EQLogParser
         }
       }
     }
+
+    public virtual int GroupIdSort => 0;
   }
 
   /// <summary>
@@ -676,6 +678,7 @@ namespace EQLogParser
   internal class GroupEntry : PlayerStats
   {
     public int GroupId { get; set; }
+    public override int GroupIdSort => GroupId == 0 ? int.MaxValue : GroupId;
     public List<PlayerStats> Members { get; set; } = [];
     public List<TimeSegment> TimeSegments { get; set; } = [];
     public List<PlayerStats> Children { get; set; } = [];
