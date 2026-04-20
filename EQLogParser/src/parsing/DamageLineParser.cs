@@ -475,9 +475,9 @@ namespace EQLogParser
         if (isExtra)
         {
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
-var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-           var spellData = DM.GetDamagingSpellByName(spell);
-           resist = spellData?.Resist ?? SpellResist.Undefined;
+          var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
+          var spellData = DM.GetDamagingSpellByName(spell);
+          resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Bane, spell);
@@ -589,12 +589,12 @@ var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
 
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
-string type;
-           var spellData = DM.GetDamagingSpellByName(spell);
+          string type;
+          var spellData = DM.GetDamagingSpellByName(spell);
 
-           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
-           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-           if (spellData == null && DM.IsOldSpell(attacker))
+          // Old (eqemu) if attacker is actually a spell then swap attacker and spell
+          // Spells don't change on eqemu servers so this should always be a spell even with old spell data
+          if (spellData == null && DM.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -1212,8 +1212,8 @@ string type;
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-var spellName = DM.AbbreviateSpellName(name);
-           var data = DM.GetSpellByAbbrv(spellName);
+          var spellName = DM.AbbreviateSpellName(name);
+          var data = DM.GetSpellByAbbrv(spellName);
           if (data != null)
           {
             if (data.Damaging == 2)
