@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using Syncfusion.UI.Xaml.Charts;
 using System;
@@ -7,7 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -655,6 +654,8 @@ namespace EQLogParser
         HorizontalAlignment = HorizontalAlignment.Left,
         VerticalAlignment = VerticalAlignment.Center,
         Icon = EFontAwesomeIcon.Solid_Times,
+        Cursor = Cursors.Hand,
+        LayoutTransform = new ScaleTransform { ScaleX = 0.9, ScaleY = 0.9 }
       };
 
       image.SetResourceReference(HeightProperty, "EQContentSize");
@@ -979,70 +980,63 @@ namespace EQLogParser
 
     private void CopyCsvClick(object sender, RoutedEventArgs e)
     {
-      try
+      var labels = new List<string>();
+      foreach (var visual in labelStackPanel.Children)
       {
-        var labels = new List<string>();
-        foreach (var visual in labelStackPanel.Children)
+        if (visual is StackPanel { Children.Count: > 0 } leftPanel)
         {
-          if (visual is StackPanel { Children.Count: > 0 } leftPanel)
+          foreach (var child in leftPanel.Children)
           {
-            foreach (var child in leftPanel.Children)
+            if (child is TextBlock block)
             {
-              if (child is TextBlock block)
-              {
-                labels.Add(block.Text);
-              }
+              labels.Add(block.Text);
             }
           }
         }
+      }
 
-        var playerData = new List<List<object>>();
-        foreach (var label in labels)
+      var playerData = new List<List<object>>();
+      foreach (var label in labels)
+      {
+        if (!string.IsNullOrEmpty(label) && _spellRanges.TryGetValue(label, out var value))
         {
-          if (!string.IsNullOrEmpty(label) && _spellRanges.TryGetValue(label, out var value))
+          foreach (var top in value.TopRanges)
           {
-            foreach (var top in value.TopRanges)
-            {
-              playerData.Add(
-              [
-                label,
-                _selectedStats[0].OrigName,
-                top.BeginSeconds,
-                label == "Player Death" ? 1 : top.Duration
-              ]);
-            }
+            playerData.Add(
+            [
+              label,
+              _selectedStats[0].OrigName,
+              top.BeginSeconds,
+              label == "Player Death" ? 1 : top.Duration
+            ]);
+          }
 
-            foreach (var bottom in value.BottomRanges)
-            {
-              playerData.Add(
-              [
-                label,
-                _selectedStats[1].OrigName,
-                bottom.BeginSeconds,
-                label == "Player Death" ? 1 : bottom.Duration
-              ]);
-            }
+          foreach (var bottom in value.BottomRanges)
+          {
+            playerData.Add(
+            [
+              label,
+              _selectedStats[1].OrigName,
+              bottom.BeginSeconds,
+              label == "Player Death" ? 1 : bottom.Duration
+            ]);
           }
         }
-
-        string title;
-        if (string.IsNullOrEmpty(titleLabel2.Content as string))
-        {
-          title = titleLabel1.Content?.ToString();
-        }
-        else
-        {
-          title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string,
-            titleLabel2.Content as string, titleLabel3.Content as string);
-        }
-
-        var header = new List<string> { "Adps", "Player", "Start", "End" };
-        Clipboard.SetDataObject(TextUtils.BuildTsv(header, playerData, title));
       }
-      catch (ExternalException ex)
+
+      string title;
+      if (string.IsNullOrEmpty(titleLabel2.Content as string))
       {
-        Log.Error(ex);
+        title = titleLabel1.Content?.ToString();
       }
+      else
+      {
+        title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string,
+          titleLabel2.Content as string, titleLabel3.Content as string);
+      }
+
+      var header = new List<string> { "Adps", "Player", "Start", "End" };
+      UiUtil.SetClipboardText(TextUtils.BuildTsv(header, playerData, title));
     }
 
     private void ScrollViewerOnScrollChanged(object sender, ScrollChangedEventArgs e)

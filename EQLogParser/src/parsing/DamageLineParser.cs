@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +21,9 @@ namespace EQLogParser
     private static double _slainTime = double.NaN;
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
+    internal static IDataManager DataManager;
+
+    private static IDataManager DM => DataManager ?? EQLogParser.DataManager.Instance;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -54,6 +57,8 @@ namespace EQLogParser
       { "Mana Burn", "M" }, { "Harm Touch", "H" }, { "Life Burn", "L" }
     };
 
+    private static readonly string[] SpecialCodeKeys = ["Mana Burn", "Harm Touch", "Life Burn"];
+
     private static OldCritData _lastCrit;
 
     static DamageLineParser()
@@ -70,7 +75,7 @@ namespace EQLogParser
         {
           foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
           {
-            DataManager.Instance.RemoveActiveFight(slain);
+            DM.RemoveActiveFight(slain);
           }
 
           SlainQueue.Clear();
@@ -244,6 +249,7 @@ namespace EQLogParser
               }
               break;
             case "damage.":
+            case "damage":
               if (i == stop)
               {
                 endDamage = i;
@@ -470,7 +476,7 @@ namespace EQLogParser
         {
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-          var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
+          var spellData = DM.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
@@ -584,11 +590,11 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
           string type;
-          var spellData = DataManager.Instance.GetDamagingSpellByName(spell);
+          var spellData = DM.GetDamagingSpellByName(spell);
 
           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-          if (spellData == null && DataManager.Instance.IsOldSpell(attacker))
+          if (spellData == null && DM.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -619,7 +625,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OtherDmg;
-        if (DataManager.Instance.GetDamagingSpellByName(spell) is { } spellData)
+        if (DM.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -699,6 +705,7 @@ namespace EQLogParser
       // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
       else if (MainWindow.IsEmuParsingEnabled && forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
       {
+        string attackerOwner = null;
         if (emuPetIndex > -1)
         {
           attacker = string.Join(" ", split, 0, emuPetIndex);
@@ -708,6 +715,7 @@ namespace EQLogParser
             PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
             PlayerManager.Instance.AddVerifiedPet(attacker);
             PlayerManager.Instance.AddPetToPlayer(attacker, player);
+            attackerOwner = player;
           }
         }
         else
@@ -730,6 +738,7 @@ namespace EQLogParser
         }
 
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
+        record.AttackerOwner = record.AttackerOwner ?? attackerOwner;
 
         // handle old style crits for eqemu
         if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
@@ -993,10 +1002,21 @@ namespace EQLogParser
             var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
             EventsDamageProcessed?.Invoke(damageEvent);
 
-            if (record.Type == Labels.Dd && SpecialCodes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(record.SubType) &&
-            record.SubType.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
+            if (record.Type == Labels.Dd)
             {
-              RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
+              string key = null;
+              foreach (var special in SpecialCodeKeys)
+              {
+                if (!string.IsNullOrEmpty(record.SubType) && record.SubType.Contains(special))
+                {
+                  key = special;
+                  break;
+                }
+              }
+              if (!string.IsNullOrEmpty(key))
+              {
+                RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
+              }
             }
           }
         }
@@ -1046,7 +1066,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          DataManager.Instance.ClearActiveAdps();
+          DM.ClearActiveAdps();
         }
 
         var currentTime = lineData.BeginTime;
@@ -1058,7 +1078,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = ToUpper(slain);
-            if (!SlainQueue.Contains(slain) && DataManager.Instance.GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && DM.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;
@@ -1192,8 +1212,8 @@ namespace EQLogParser
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-          var spellName = DataManager.Instance.AbbreviateSpellName(name);
-          var data = DataManager.Instance.GetSpellByAbbrv(spellName);
+          var spellName = DM.AbbreviateSpellName(name);
+          var data = DM.GetSpellByAbbrv(spellName);
           if (data != null)
           {
             if (data.Damaging == 2)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -68,7 +68,7 @@ namespace EQLogParser
         parseList.SelectedItem = type;
       }
 
-      Clipboard.SetDataObject(playerParseTextBox.Text);
+      UiUtil.SetClipboardText(playerParseTextBox.Text);
     }
 
     internal void AddParse(string type, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)

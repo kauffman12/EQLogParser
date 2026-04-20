@@ -1,11 +1,10 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.SfSkinManager;
 using Syncfusion.Themes.MaterialDarkCustom.WPF;
 using Syncfusion.Themes.MaterialLight.WPF;
-using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -66,6 +65,7 @@ namespace EQLogParser
     internal static double CurrentNameWidth;
     internal static double CurrentSpellWidth;
     internal static double CurrentShortWidth;
+    internal static double CurrentShortestWidth;
     internal static double CurrentMediumWidth;
     internal static DropShadowEffect OverlayTextEffect;
 
@@ -73,9 +73,10 @@ namespace EQLogParser
     private const string PetsListTitle = "Verified Pets";
     private const string PlayerListTitle = "Verified Players";
     private const string PetOwnersTitle = "Pet Owners";
-    private static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
-    private static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
-    private static readonly ObservableCollection<PetMapping> PetPlayersView = [];
+    public static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
+    public static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    public static readonly List<string> ClassList = [];
+    public static readonly ObservableCollection<PetMapping> PetPlayersView = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static readonly JsonSerializerOptions VersionCheckSerializationOptions = new() { PropertyNameCaseInsensitive = true };
@@ -498,11 +499,8 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitPetOwners(MainWindow main, SfDataGrid petMappingGrid, GridComboBoxColumn ownerList, ContentControl petMappingWindow)
+    internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
     {
-      // pet -> players
-      petMappingGrid.ItemsSource = PetPlayersView;
-      ownerList.ItemsSource = VerifiedPlayersView;
       PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -516,14 +514,11 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitVerifiedPlayers(MainWindow main, SfDataGrid playersGrid, GridComboBoxColumn classList,
-      ContentControl playersWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPlayers(ContentControl playersWindow, ContentControl petMappingWindow)
     {
-      // verified player table
-      playersGrid.ItemsSource = VerifiedPlayersView;
-      var list = DataManager.Instance.GetClassList();
-      list.Insert(0, ""); // insert null case
-      classList.ItemsSource = list;
+      ClassList.Clear();
+      ClassList.Add("");
+      ClassList.AddRange(DataManager.Instance.GetClassList());
       PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -564,16 +559,14 @@ namespace EQLogParser
               DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
-            main.CheckComputeStats();
+            _mainWindow?.CheckComputeStats();
           }
         }, DispatcherPriority.DataBind);
       };
     }
 
-    internal static void InitVerifiedPets(MainWindow main, SfDataGrid petsGrid, ContentControl petsWindow, ContentControl petMappingWindow)
+    internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
     {
-      // verified pets table
-      petsGrid.ItemsSource = VerifiedPetsView;
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -1012,6 +1005,7 @@ namespace EQLogParser
       CurrentSpellWidth = (10.0 * CurrentFontSize) + 90;
       CurrentItemWidth = (15.0 * CurrentFontSize) + 115;
       CurrentShortWidth = 5.0 * CurrentFontSize;
+      CurrentShortestWidth = 4.0 * CurrentFontSize;
       CurrentMediumWidth = 6.5 * CurrentFontSize;
       Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);

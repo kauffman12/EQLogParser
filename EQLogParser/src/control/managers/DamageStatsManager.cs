@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -230,7 +230,7 @@ namespace EQLogParser
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
               {
-                foreach (var action in block.Actions.ToArray())
+                foreach (var action in block.Actions)
                 {
                   if (action is DamageRecord record)
                   {
@@ -318,6 +318,8 @@ namespace EQLogParser
                     if (_playerTimeRanges.TryGetValue(child.Name, out var range))
                     {
                       timeRange.Add(range.TimeSegments);
+                      // Store time segments on player for Group View and other view modes
+                      child.Ranges = new TimeRange(range.TimeSegments);
                     }
 
                     expandedStats.Add(child);
@@ -343,6 +345,11 @@ namespace EQLogParser
                 {
                   expandedStats.Add(stats);
                   StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
+                  // Store time segments on player for Group View and other view modes
+                  if (_playerTimeRanges.TryGetValue(stats.Name, out var range))
+                  {
+                    stats.Ranges = new TimeRange(range.TimeSegments);
+                  }
                 }
 
                 _raidTotals.ResistCounts.TryGetValue(stats.Name, out var resists);

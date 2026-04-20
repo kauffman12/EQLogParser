@@ -10,17 +10,17 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test -> Test2:");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.Receiver, "Test2");
-      Assert.AreEqual(chatType.TextStart, 40);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual("Test2", chatType.Receiver);
+      Assert.AreEqual(40, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test -> Test2: hello");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.Receiver, "Test2");
-      Assert.AreEqual(chatType.TextStart, 40);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual("Test2", chatType.Receiver);
+      Assert.AreEqual(40, chatType.TextStart);
     }
 
     [TestMethod]
@@ -28,27 +28,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test auctions, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 43);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(43, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test auctions, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 43);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(43, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test auctions,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 44);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(44, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test auctions, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 65);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(65, chatType.TextStart);
     }
 
     [TestMethod]
@@ -56,27 +56,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 39);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(39, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 39);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(39, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 40);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(40, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 61);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(61, chatType.TextStart);
     }
 
     [TestMethod]
@@ -84,21 +84,21 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says out of character, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 56);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(56, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says out of character, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 56);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(56, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says out of character,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 57);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(57, chatType.TextStart);
     }
 
     [TestMethod]
@@ -107,9 +107,9 @@ namespace EQLogParserTest
       // EMU pet leader
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test says 'My leader is hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 38);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(38, chatType.TextStart);
     }
 
     [TestMethod]
@@ -117,27 +117,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the fellowship, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 55);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(55, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the fellowship, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 55);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(55, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the fellowship,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 56);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(56, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the fellowship, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 77);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(77, chatType.TextStart);
     }
 
     [TestMethod]
@@ -145,27 +145,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the group, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the group, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the group,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the group, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 72);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(72, chatType.TextStart);
     }
 
     [TestMethod]
@@ -173,27 +173,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the guild, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the guild, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the guild,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the guild, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 72);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(72, chatType.TextStart);
     }
 
     [TestMethod]
@@ -201,27 +201,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the raid, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 49);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(49, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the raid, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 49);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(49, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the raid,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells the raid, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 71);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(71, chatType.TextStart);
     }
 
     [TestMethod]
@@ -229,21 +229,21 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells Test.test:34, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 53);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(53, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells Test.test:34, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 53);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(53, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells Test.test:34, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 75);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(75, chatType.TextStart);
     }
 
     [TestMethod]
@@ -251,45 +251,45 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells you, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 44);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(44, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells you, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 44);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(44, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test tells you, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 66);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(66, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test.test2 tells you, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "test2");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("test2", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test.test2 tells you, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "test2");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("test2", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(50, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test.test2 tells you, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "test2");
-      Assert.AreEqual(chatType.Receiver, "You");
-      Assert.AreEqual(chatType.TextStart, 72);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("test2", chatType.Sender);
+      Assert.AreEqual("You", chatType.Receiver);
+      Assert.AreEqual(72, chatType.TextStart);
     }
 
     [TestMethod]
@@ -297,15 +297,15 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test.Test told you, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(48, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test.Test told you, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(48, chatType.TextStart);
     }
 
     [TestMethod]
@@ -313,27 +313,27 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test shouts, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 41);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(41, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test shouts, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 41);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(41, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test shouts,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 42);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(42, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] Test shouts, in an unknown tongue, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, "Test");
-      Assert.AreEqual(chatType.TextStart, 63);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual("Test", chatType.Sender);
+      Assert.AreEqual(63, chatType.TextStart);
     }
 
     [TestMethod]
@@ -341,21 +341,21 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You auction, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 41);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(41, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You auction, 'test'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 41);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(41, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You auction,  'test'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Auction);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 42);
+      Assert.AreEqual(ChatChannels.Auction, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(42, chatType.TextStart);
     }
 
     [TestMethod]
@@ -363,15 +363,15 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 37);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(37, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Say);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 37);
+      Assert.AreEqual(ChatChannels.Say, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(37, chatType.TextStart);
     }
 
     [TestMethod]
@@ -379,22 +379,22 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your guild, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your guild, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your guild,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Guild);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 52);
+      Assert.AreEqual(ChatChannels.Guild, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(52, chatType.TextStart);
     }
 
     [TestMethod]
@@ -402,22 +402,22 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your fellowship, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 56);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(56, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your fellowship, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 56);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(56, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say to your fellowship,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Fellowship);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 57);
+      Assert.AreEqual(ChatChannels.Fellowship, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(57, chatType.TextStart);
     }
 
     [TestMethod]
@@ -425,22 +425,22 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say out of character, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 54);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(54, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say out of character, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 54);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(54, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You say out of character,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Ooc);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 55);
+      Assert.AreEqual(ChatChannels.Ooc, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(55, chatType.TextStart);
     }
 
     [TestMethod]
@@ -448,21 +448,21 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You shout, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 39);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(39, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You shout, 'test'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 39);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(39, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You shout,  'test'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Shout);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 40);
+      Assert.AreEqual(ChatChannels.Shout, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(40, chatType.TextStart);
     }
 
     [TestMethod]
@@ -470,34 +470,34 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell test, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test");
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 43);
+      Assert.AreEqual("test", chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(43, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell test:22, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test");
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 46);
+      Assert.AreEqual("test", chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(46, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell Test.test:34, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell Test.test:34, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 51);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(51, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell Test.test:34,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, "test.test");
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 52);
+      Assert.AreEqual("test.test", chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(52, chatType.TextStart);
     }
 
     [TestMethod]
@@ -505,22 +505,22 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your party, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 49);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(49, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your party, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 49);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(49, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your party,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Group);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 50);
+      Assert.AreEqual(ChatChannels.Group, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(50, chatType.TextStart);
     }
 
     [TestMethod]
@@ -528,22 +528,22 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your raid, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(48, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your raid, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(48, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You tell your raid,  'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Raid);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.TextStart, 49);
+      Assert.AreEqual(ChatChannels.Raid, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual(49, chatType.TextStart);
     }
 
     [TestMethod]
@@ -551,57 +551,57 @@ namespace EQLogParserTest
     {
       var chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told test, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 43);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(43, chatType.TextStart);
 
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told test, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 43);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(43, chatType.TextStart);
 
       // in queue (text start is a little early but that's ok)
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told test '[queued], test'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 42);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(42, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told test ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 42);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(42, chatType.TextStart);
 
       // with server name
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told Test.test, ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(48, chatType.TextStart);
 
       // with server name
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told Test.test, 'hello'");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 48);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(48, chatType.TextStart);
 
       // old/bad message
       chatType = ParseText("[Sun Oct 08 20:07:10 2023] You told Test.test ''");
       Assert.IsNotNull(chatType);
-      Assert.AreEqual(chatType.Channel, ChatChannels.Tell);
-      Assert.AreEqual(chatType.Sender, ChatType.You);
-      Assert.AreEqual(chatType.Receiver, "test");
-      Assert.AreEqual(chatType.TextStart, 47);
+      Assert.AreEqual(ChatChannels.Tell, chatType.Channel);
+      Assert.AreEqual(ChatType.You, chatType.Sender);
+      Assert.AreEqual("test", chatType.Receiver);
+      Assert.AreEqual(47, chatType.TextStart);
     }
 
     private static ChatType ParseText(string line)

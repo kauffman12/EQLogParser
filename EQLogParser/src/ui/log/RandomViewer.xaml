@@ -43,7 +43,6 @@
                            IsReadOnly="True"
                            ItemsSource="{Binding RandomData}"
                            LiveNodeUpdateMode="AllowDataShaping"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False"

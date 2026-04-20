@@ -42,7 +42,6 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False">

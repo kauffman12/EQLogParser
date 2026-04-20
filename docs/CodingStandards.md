@@ -1,5 +1,10 @@
 # EQLogParser C# Coding Standards
 
+## File Encoding
+
+- All `.cs` files must be saved as **UTF-8 without BOM** (Byte Order Mark)
+- Configure your editor to enforce this; BOM characters cause issues with git diffs and some tooling
+
 ## Indentation and Formatting
 
 - **2-space indentation** throughout all files
@@ -21,6 +26,7 @@
 - Async suffix: `Async` for asynchronous methods
 
 ### Variables
+- prefer use of var over naming the type when possible
 - camelCase (e.g., `_assassinateEnabled`, `_mainWindow`)
 - Short, meaningful names (e.g., `wrapper`, `lineData`, `matches`)
 - Descriptive names for complex data (e.g., `dynamicDuration`, `swTime`)
@@ -32,6 +38,11 @@
 
 ### Constants
 - PascalCase (e.g., `Twincast`, `LogTimeCode`)
+
+### Enums
+- Use `enum` for fixed sets of related values (view types, option lists, states, modes) instead of `int` constants or magic numbers
+- Enums make switch expressions self-documenting and the compiler catches missing cases
+- When an enum value is added, all switch expressions and filter logic referencing the underlying type must be updated together in the same commit
 
 ### Events
 - PascalCase with "Events" prefix (e.g., `EventsChartOpened`, `EventsGenerationStatus`)
@@ -45,6 +56,7 @@
 ## Code Organization
 
 - XML documentation comments are used for public members
+- **Remove unused `using` statements** — run `dotnet format` or your IDE's cleanup to auto-remove them before committing
 - Methods are ordered by visibility (public first, then internal, then private)
 - Related methods are grouped together
 - Lifecycle methods grouped together
@@ -64,6 +76,7 @@
 
 ### Implementation Patterns
 - **Null Safety**: When updating UI elements based on a loaded object, always wrap the updates inside the `null` check that validated the object to avoid `NullReferenceException`.
+- **Nullable Checks**: When checking nullable return values from helper methods, prefer `is null` / `is not null` over `is not SomeType` to make the intent clear — the method is returning a nullable result, not a different type.
 - **Visual Feedback**:
     - Use `MessageWindow.IconType.Warn` for non-critical errors that do not stop the application from functioning.
     - Use `MessageWindow.IconType.Question` for confirmation dialogs.
@@ -91,9 +104,18 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 - **Layout**: Prefer `Grid` and `StackPanel` over absolute positioning to ensure the UI scales correctly across different resolutions.
 - **Interaction**: Use `IsHitTestVisible="False"` for overlay elements (like placeholders) to ensure they do not interfere with user interaction with the underlying controls.
 
+### UI Helpers
+- Reusable UI logic belongs in `*Util` classes (e.g., `UIElementUtil`, `UiUtil`), not in code-behind files
+- If a helper method is used in more than one code-behind file, extract it to the appropriate Util class
+
 ### View-Logic Communication
 - Use `ItemTemplates` for rendering lists of data objects to keep the UI definition separate from the data model.
 - Handle complex interaction logic in the code-behind via event handlers, ensuring that UI updates are performed on the Dispatcher thread.
+
+### Binding Type Consistency
+- Match model property types to binding requirements — avoid `IValueConverter` when the model type can match directly
+- Decide the source property type early in a feature and stick with it; changing a property from `int` to `string` (or vice versa) mid-feature requires updating all switch/filter logic, converters, and binding references
+- If a `string` representation is needed for the UI, use a computed property or view model rather than changing the model type
 
 ## Performance Guidelines
 

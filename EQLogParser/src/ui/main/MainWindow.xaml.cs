@@ -1,9 +1,8 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using log4net.Appender;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
-using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -21,6 +20,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
 using Application = System.Windows.Application;
+using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
 namespace EQLogParser
 {
@@ -47,6 +47,8 @@ namespace EQLogParser
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
     private readonly NpcDamageManager _npcDamageManager = new();
+    private PetMapping _currentEditMapping;
+    private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
@@ -183,9 +185,9 @@ namespace EQLogParser
       MainActions.AddDocumentWindows(dockSite);
 
       // populate windows that need data
-      MainActions.InitPetOwners(this, petMappingGrid, ownerList, petMappingWindow);
-      MainActions.InitVerifiedPlayers(this, verifiedPlayersGrid, classList, verifiedPlayersWindow, petMappingWindow);
-      MainActions.InitVerifiedPets(this, verifiedPetsGrid, verifiedPetsWindow, petMappingWindow);
+      MainActions.InitPetOwners(this, petMappingWindow);
+      MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
+      MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
 
       // add notify icon
       // this attaches to state change events so do toward the end
@@ -234,6 +236,7 @@ namespace EQLogParser
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
         MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
+        MainActions.EventsThemeChanged += _ => DataGridUtil.RefreshTableColumns(petMappingGrid);
         _computeStatsTimer = UiUtil.CreateTimer(ComputeStatsTick, 500, false);
 
         // give some time for dock state to load
@@ -545,7 +548,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseEnterRed(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = _redHoverBrush;
       }
@@ -553,7 +556,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseEnter(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = _hoverBrush;
       }
@@ -561,7 +564,7 @@ namespace EQLogParser
 
     private void ButtonBorderMouseLeave(object sender, MouseEventArgs e)
     {
-      if (sender is Border { } border)
+      if (sender is Border border)
       {
         border.Background = Brushes.Transparent;
       }
@@ -888,22 +891,65 @@ namespace EQLogParser
       }, DispatcherPriority.DataBind);
     }
 
-    private void PlayerClassDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+    private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is ExpandoObject obj)
+      if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping mapping)
+        return;
+
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is null)
+        return;
+
+      _currentEditMapping = mapping;
+      // value is the string, item is the expand-o object
+      ownerEditComboBox.SelectedValue = mapping.Owner;
+      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
       {
-        dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.SetDefaultPlayerClass(((dynamic)obj).Name, ((dynamic)obj).PlayerClass);
-      }
+        _currentEditPlayerClass = null;
+        classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+      });
     }
 
-    private void PetMappingDropDownSelectionChanged(object sender, CurrentCellDropDownSelectionChangedEventArgs e)
+    private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      if (sender is SfDataGrid dataGrid && e.RowColumnIndex.RowIndex > 0 && dataGrid.View.GetRecordAt(e.RowColumnIndex.RowIndex - 1).Data is PetMapping mapping)
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject obj)
+        return;
+
+      var cell = UiElementUtil.FindGridCell(ia);
+      if (cell is null)
+        return;
+
+      _currentEditPlayerClass = obj;
+      classEditComboBox.SelectedItem = _currentEditPlayerClass.PlayerClass;
+      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
       {
-        dataGrid.SelectionController.CurrentCellManager.EndEdit();
-        PlayerManager.Instance.AddPetToPlayer(mapping.Pet, mapping.Owner);
-      }
+        _currentEditMapping = null;
+        ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
+      });
+    }
+
+    private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedValue is not string name || string.IsNullOrEmpty(name))
+        return;
+
+      if (_currentEditMapping == null || _currentEditMapping.Owner == name)
+        return;
+
+      PlayerManager.Instance.AddPetToPlayer(_currentEditMapping.Pet, name);
+      ownerEditPopup.IsOpen = false;
+    }
+
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedValue is not string className || string.IsNullOrEmpty(className))
+        return;
+
+      if (_currentEditPlayerClass == null || _currentEditPlayerClass.PlayerClass == className)
+        return;
+
+      PlayerManager.Instance.SetDefaultPlayerClass(_currentEditPlayerClass.Name, className);
+      classEditPopup.IsOpen = false;
     }
 
     private void OpenLogFile(string previousFile, int lastMins)
@@ -1069,7 +1115,7 @@ namespace EQLogParser
     {
       if (sender is FrameworkElement icon)
       {
-        if (icon.Tag is string name)
+        if (icon.Tag is string name && !string.IsNullOrEmpty(name))
         {
           var opened = SyncFusionUtil.GetOpenWindows(dockSite);
           if (opened.TryGetValue(name, out var control))
@@ -1094,18 +1140,18 @@ namespace EQLogParser
 
     private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border { DataContext: ExpandoObject sortable })
-      {
-        PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
-      }
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
+        return;
+
+      PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
     }
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
     {
-      if (sender is Border { DataContext: ExpandoObject sortable })
-      {
-        PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
-      }
+      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
+        return;
+
+      PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "It's a callback function")]
@@ -1188,6 +1234,7 @@ namespace EQLogParser
       verifiedPlayersGrid?.Dispose();
       RecordManager.Instance.Stop();
       ChatManager.Instance.Stop();
+      SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode
       if (Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -275,22 +275,7 @@ namespace EQLogParser
 
     internal static void SaveList(string fileName, List<string> list)
     {
-      try
-      {
-        File.WriteAllLines(fileName, list);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
+      UiUtil.SafeWriteAllLines(fileName, list);
     }
 
     internal static void RemoveFileIfExists(string fileName)
@@ -326,28 +311,13 @@ namespace EQLogParser
 
     private static void SaveProperties(string fileName, IEnumerable<KeyValuePair<string, string>> enumeration)
     {
-      try
+      var lines = new List<string>();
+      foreach (var keypair in enumeration)
       {
-        var lines = new List<string>();
-        foreach (var keypair in enumeration)
-        {
-          lines.Add(keypair.Key + "=" + keypair.Value);
-        }
+        lines.Add(keypair.Key + "=" + keypair.Value);
+      }
 
-        File.WriteAllLines(fileName, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
+      UiUtil.SafeWriteAllLines(fileName, lines);
     }
   }
 }

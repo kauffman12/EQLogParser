@@ -44,7 +44,6 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSourceChanged="ItemsSourceChanged"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RequestTreeItems="RequestTreeItems"
                            SelectionMode="Extended"

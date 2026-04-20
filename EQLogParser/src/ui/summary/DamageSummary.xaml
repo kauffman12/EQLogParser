@@ -1,4 +1,4 @@
-﻿<local:SummaryTable x:Class="EQLogParser.DamageSummary"
+<local:SummaryTable x:Class="EQLogParser.DamageSummary"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -14,6 +14,8 @@
     <Grid.Resources>
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
       <local:ZeroConverter x:Key="ZeroConverter" />
+      <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+      <local:GroupNumberConverter x:Key="GroupNumberConverter" />
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
@@ -58,30 +60,30 @@
                 DropDownClosed="SelectDataGridColumns" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <syncfusion:SfTreeGrid x:Name="dataGrid"
-                           AllowAutoSizingExpanderColumn="False"
-                           AllowDraggingColumns="True"
-                           AllowResizingColumns="True"
-                           AllowSelectionOnPointerPressed="True"
-                           AllowSorting="True"
-                           AutoExpandMode="None"
-                           AutoGenerateColumns="False"
-                           ChildPropertyName="Children"
-                           CurrentCellBorderThickness="0"
-                           ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
-                           FrozenColumnCount="1"
-                           Grid.Row="1"
-                           GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
-                           GridLinesVisibility="Horizontal"
-                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                           RequestTreeItems="RequestTreeItems"
-                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
-                           RowHeight="{DynamicResource EQTableRowHeight}"
-                           IsReadOnly="True"
-                           ItemsSourceChanged="ItemsSourceChanged"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
-                           SelectionMode="Extended"
-                           SelectionChanged="DataGridSelectionChanged"
-                           ShowRowHeader="True">
+                            AllowAutoSizingExpanderColumn="False"
+                            AllowDraggingColumns="True"
+                            AllowResizingColumns="True"
+                            AllowSelectionOnPointerPressed="True"
+                            AllowSorting="True"
+                            AutoExpandMode="None"
+                            AutoGenerateColumns="False"
+                            ChildPropertyName="Children"
+                            CurrentCellBorderThickness="0"
+                            ExpandStateMappingName="IsExpanded"
+                            ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
+                            FrozenColumnCount="1"
+                            Grid.Row="1"
+                            GridCopyOption="CopyData,IncludeFormat,IncludeHeaders"
+                            GridLinesVisibility="Horizontal"
+                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                            RequestTreeItems="RequestTreeItems"
+                            RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
+                            RowHeight="{DynamicResource EQTableRowHeight}"
+                            IsReadOnly="True"
+                            ItemsSourceChanged="ItemsSourceChanged"
+                            SelectionMode="Extended"
+                            SelectionChanged="DataGridSelectionChanged"
+                            ShowRowHeader="True">
       <syncfusion:SfTreeGrid.Resources>
         <Style TargetType="syncfusion:TreeGridRowHeaderCell">
           <Setter Property="Template">
@@ -194,6 +196,20 @@
       </syncfusion:SfTreeGrid.ContextMenu>
       <syncfusion:SfTreeGrid.Columns>
         <syncfusion:TreeGridTextColumn MappingName="Name" HeaderText="Name" />
+        <syncfusion:TreeGridTemplateColumn x:Name="groupColumn" MappingName="AssignedGroup" HeaderText="Group">
+          <syncfusion:TreeGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Grid Visibility="{Binding Path=IsGroupHeader, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <fa:ImageAwesome Grid.Column="0" Margin="0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand" MouseLeftButtonUp="EditGroupMouseLeftButton"/>
+                <TextBlock Grid.Column="1" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AssignedGroup, Converter={StaticResource GroupNumberConverter}}" />
+              </Grid>
+            </DataTemplate>
+          </syncfusion:TreeGridTemplateColumn.CellTemplate>
+        </syncfusion:TreeGridTemplateColumn>
         <syncfusion:TreeGridTextColumn MappingName="PercentOfRaid" DisplayBinding="{Binding Path=PercentOfRaid, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderTotalTemplateToolTip}" TextAlignment="Right" HeaderText="% Total" />
         <syncfusion:TreeGridNumericColumn MappingName="Total" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Damage" />
         <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
@@ -214,5 +230,13 @@
         <syncfusion:TreeGridTextColumn MappingName="ClassName" HeaderText="Class" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>
+    <Popup x:Name="groupEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
+      <ComboBox x:Name="groupEditComboBox"
+              HorizontalContentAlignment="Stretch"
+              ItemsSource="{x:Static local:DamageSummary.GroupNumbers}"
+              SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
+              SelectionChanged="GroupSelectionChanged"
+              Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
   </Grid>
 </local:SummaryTable>

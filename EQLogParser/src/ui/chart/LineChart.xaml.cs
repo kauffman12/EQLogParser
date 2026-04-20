@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
@@ -30,9 +30,10 @@ namespace EQLogParser
     private readonly Dictionary<string, List<DataPoint>> _raidValues = [];
     private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = [];
     private string _currentChoice;
-    private string _currentPetOrPlayerOption;
+    private string _currentViewOption;
     private int _currentTopCount = 5;
     private List<PlayerStats> _lastSelected;
+    private readonly ViewOptionRegistry _viewOptions;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
     {
@@ -45,17 +46,21 @@ namespace EQLogParser
       numLabel.FontSize = MainActions.CurrentFontSize;
       MainActions.EventsThemeChanged += EventsThemeChanged;
 
+      _viewOptions = new ViewOptionRegistry();
       if (includePets)
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PetPlayerOption, Labels.PlayerOption, Labels.PetOption, Labels.RaidOption };
+        _viewOptions.AddOption(Labels.PetPlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.PetOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.RaidOption, OnViewOptionChanged);
       }
       else
       {
-        petOrPlayerList.ItemsSource = new List<string> { Labels.PlayerOption, Labels.RaidOption };
+        _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
+        _viewOptions.AddOption(Labels.RaidOption, OnViewOptionChanged);
       }
-
+      petOrPlayerList.ItemsSource = _viewOptions.GetDisplayNames();
       petOrPlayerList.SelectedIndex = 0;
-      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
 
       // Load saved top count setting or default to 5
       _currentTopCount = ConfigUtil.GetSettingAsInteger($"Line{this.GetType().Name}TopCount", 5);
@@ -187,27 +192,28 @@ namespace EQLogParser
     {
       foreach (var points in data.Values)
       {
-        for (var i = 0; i < points.Count; i++)
-        {
-          var count = 0;
-          var total = 0L;
-          var beginTime = points[i].CurrentTime;
-          for (var j = i; j >= 0; j--)
-          {
-            if ((beginTime - points[j].CurrentTime) > 5)
-            {
-              break;
-            }
+        var count = points.Count;
+        if (count == 0)
+          continue;
 
-            count++;
-            total += points[j].TotalPerSecond;
+        var left = 0;
+        var windowTotal = 0L;
+
+        for (var right = 0; right < count; right++)
+        {
+          windowTotal += points[right].TotalPerSecond;
+
+          while (left < right && (points[right].CurrentTime - points[left].CurrentTime) > 5)
+          {
+            windowTotal -= points[left].TotalPerSecond;
+            left++;
           }
 
-          points[i].RollingTotal = total;
-
-          if (count > 0)
+          var windowCount = right - left + 1;
+          points[right].RollingTotal = windowTotal;
+          if (windowCount > 0)
           {
-            points[i].RollingDps = total / count;
+            points[right].RollingDps = windowTotal / windowCount;
           }
         }
       }
@@ -221,7 +227,8 @@ namespace EQLogParser
 
       var selectedLabel = "Selected Player(s)";
       var nonSelectedLabel = " Player(s)";
-      switch (_currentPetOrPlayerOption)
+      var selectedName = _viewOptions?.GetSelectedOptionName();
+      switch (selectedName)
       {
         case Labels.PetPlayerOption:
           workingData = _playerPetValues;
@@ -246,33 +253,33 @@ namespace EQLogParser
 
       string label;
       List<List<DataPoint>> sortedValues;
-      if (_currentPetOrPlayerOption == Labels.RaidOption)
+      if (selectedName == Labels.RaidOption)
       {
         sortedValues = [.. workingData.Values];
         label = sortedValues.Count > 0 ? "Raid" : Labels.NoData;
       }
       else if (selected == null || selected.Count == 0)
       {
-        sortedValues = [.. workingData.Values.OrderByDescending(values => values.Last().Total).Take(_currentTopCount)];
+        sortedValues = [.. workingData.Values.OrderByDescending(values => values[^1].Total).Take(_currentTopCount)];
         label = sortedValues.Count > 0 ? "Top " + sortedValues.Count + nonSelectedLabel : Labels.NoData;
       }
       else
       {
-        var names = selected.Select(stats => stats.OrigName).ToList();
+        var names = selected.Select(stats => stats.OrigName).ToHashSet();
         sortedValues = workingData.Values.Where(values =>
         {
           var pass = false;
           var first = values.First();
-          if (_currentPetOrPlayerOption == Labels.PetPlayerOption)
+          if (selectedName == Labels.PetPlayerOption)
           {
             pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
             names.FirstOrDefault(name => _hasPets[first.Name].ContainsKey(name)) != null);
           }
-          else if (_currentPetOrPlayerOption == Labels.PlayerOption)
+          else if (selectedName == Labels.PlayerOption)
           {
             pass = names.Contains(first.Name);
           }
-          else if (_currentPetOrPlayerOption == Labels.PetOption)
+          else if (selectedName == Labels.PetOption)
           {
             pass = names.Contains(first.Name) || names.Contains(first.PlayerName);
           }
@@ -351,7 +358,7 @@ namespace EQLogParser
       foreach (var value in CollectionsMarshal.AsSpan(sortedValues))
       {
         var name = value.First().Name;
-        name = ((_currentPetOrPlayerOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
+        name = ((_currentViewOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
         var series = new FastLineSeries
         {
           Label = name,
@@ -395,12 +402,21 @@ namespace EQLogParser
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       _currentChoice = choicesList.SelectedValue as string;
-      _currentPetOrPlayerOption = petOrPlayerList.SelectedValue as string;
+      _currentViewOption = petOrPlayerList.SelectedValue as string ?? "";
+      if (_viewOptions != null)
+      {
+        _viewOptions.OnSelectionChanged(petOrPlayerList.SelectedIndex);
+      }
 
       if (_playerPetValues.Count == 0)
         return;
 
       Plot(_lastSelected);
+    }
+
+    private void OnViewOptionChanged(int index)
+    {
+      _currentViewOption = _viewOptions?.GetSelectedOptionName() ?? "";
     }
 
     private void TopCountSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -431,77 +447,71 @@ namespace EQLogParser
     {
       if (sfLineChart.Series.Count > 0)
       {
-        try
+        var data = new List<List<object>>();
+        var header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
+
+        foreach (var series in sfLineChart.Series)
         {
-          var data = new List<List<object>>();
-          var header = new List<string> { "Seconds", choicesList.SelectedValue as string, "Name" };
-
-          foreach (var series in sfLineChart.Series)
+          if (series.ItemsSource is List<DataPoint> dataPoints)
           {
-            if (series.ItemsSource is List<DataPoint> dataPoints)
+            for (var i = 0; i < dataPoints.Count; i++)
             {
-              foreach (var chartData in CollectionsMarshal.AsSpan(dataPoints))
+              var chartData = dataPoints[i];
+              double chartValue = 0;
+              switch (_currentChoice)
               {
-                double chartValue = 0;
-                switch (_currentChoice)
-                {
-                  case "Aggregate DPS":
-                  case "Aggregate HPS":
-                    chartValue = chartData.ValuePerSecond;
-                    break;
-                  case "Aggregate Damage":
-                  case "Aggregate Damaged":
-                  case "Aggregate Healing":
-                    chartValue = chartData.Total;
-                    break;
-                  case "Aggregate Av Hit":
-                  case "Aggregate Av Heal":
-                    chartValue = chartData.Avg;
-                    break;
-                  case "Aggregate Crit Rate":
-                    chartValue = chartData.CritRate;
-                    break;
-                  case "Aggregate Twincast Rate":
-                    chartValue = chartData.TcRate;
-                    break;
-                  case "DPS":
-                  case "HPS":
-                    chartValue = chartData.TotalPerSecond;
-                    break;
-                  case "Rolling DPS":
-                  case "Rolling HPS":
-                    chartValue = chartData.RollingDps;
-                    break;
-                  case "Rolling Damage":
-                  case "Rolling Healing":
-                    chartValue = chartData.RollingTotal;
-                    break;
-                  case "# Attempts":
-                    chartValue = chartData.AttemptsPerSecond;
-                    break;
-                  case "# Crits":
-                    chartValue = chartData.CritsPerSecond;
-                    break;
-                  case "# Hits":
-                  case "# Heals":
-                    chartValue = chartData.HitsPerSecond;
-                    break;
-                  case "# Twincasts":
-                    chartValue = chartData.TcPerSecond;
-                    break;
-                }
-
-                data.Add([chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name]);
+                case "Aggregate DPS":
+                case "Aggregate HPS":
+                  chartValue = chartData.ValuePerSecond;
+                  break;
+                case "Aggregate Damage":
+                case "Aggregate Damaged":
+                case "Aggregate Healing":
+                  chartValue = chartData.Total;
+                  break;
+                case "Aggregate Av Hit":
+                case "Aggregate Av Heal":
+                  chartValue = chartData.Avg;
+                  break;
+                case "Aggregate Crit Rate":
+                  chartValue = chartData.CritRate;
+                  break;
+                case "Aggregate Twincast Rate":
+                  chartValue = chartData.TcRate;
+                  break;
+                case "DPS":
+                case "HPS":
+                  chartValue = chartData.TotalPerSecond;
+                  break;
+                case "Rolling DPS":
+                case "Rolling HPS":
+                  chartValue = chartData.RollingDps;
+                  break;
+                case "Rolling Damage":
+                case "Rolling Healing":
+                  chartValue = chartData.RollingTotal;
+                  break;
+                case "# Attempts":
+                  chartValue = chartData.AttemptsPerSecond;
+                  break;
+                case "# Crits":
+                  chartValue = chartData.CritsPerSecond;
+                  break;
+                case "# Hits":
+                case "# Heals":
+                  chartValue = chartData.HitsPerSecond;
+                  break;
+                case "# Twincasts":
+                  chartValue = chartData.TcPerSecond;
+                  break;
               }
+
+              data.Add([chartData.CurrentTime, Math.Round(chartValue, 2), chartData.Name]);
             }
           }
+        }
 
-          Clipboard.SetDataObject(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
-        }
-        catch (ExternalException ex)
-        {
-          Log.Error(ex);
-        }
+        UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
       }
     }
 

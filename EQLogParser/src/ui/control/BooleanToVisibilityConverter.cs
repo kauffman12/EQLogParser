@@ -9,13 +9,28 @@ namespace EQLogParser
   {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      var flag = (bool)value;
+      var flag = value is bool b && b;
+
+      if (parameter is string s &&
+          s.Equals("Invert", StringComparison.OrdinalIgnoreCase))
+      {
+        flag = !flag;
+      }
+
       return flag ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      return (Visibility)value == Visibility.Visible;
+      var isVisible = value is Visibility visibility && visibility == Visibility.Visible;
+
+      if (parameter is string s &&
+          s.Equals("Invert", StringComparison.OrdinalIgnoreCase))
+      {
+        isVisible = !isVisible;
+      }
+
+      return isVisible;
     }
   }
 }

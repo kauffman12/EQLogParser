@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -79,7 +78,6 @@ namespace EQLogParser
     internal async void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetSelectedStats());
     internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(TheClassesCombo, sender);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, bool enabled, Action<object, RoutedEventArgs> selectedHandler = null)
@@ -181,7 +179,7 @@ namespace EQLogParser
       return headers;
     }
 
-    internal List<PlayerStats> GetSelectedStats()
+    internal virtual List<PlayerStats> GetSelectedStats()
     {
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
@@ -212,6 +210,10 @@ namespace EQLogParser
           if (CurrentStats.Children.TryGetValue(stats.Name, out var child))
           {
             results.AddRange(child);
+          }
+          else if (stats is GroupEntry groupEntry)
+          {
+            results.AddRange(groupEntry.Children);
           }
         }
         return results;

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -23,7 +22,6 @@ namespace EQLogParser
   internal static class DataGridUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static int _startRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
@@ -98,21 +96,9 @@ namespace EQLogParser
 
     internal static void CopyCsvFromTable(SfGridBase gridBase, string title)
     {
-      try
-      {
-        var export = BuildExportData(gridBase);
-        var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create CSV\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      var export = BuildExportData(gridBase);
+      var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
+      UiUtil.SetClipboardText(result);
     }
 
     internal static (List<string>, List<List<object>>) BuildExportData(SfGridBase gridBase)
@@ -331,18 +317,6 @@ namespace EQLogParser
       }
     }
 
-    internal static void EnableMouseSelection(object sender, MouseButtonEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-      {
-        _startRow = row;
-        // Left click happened, current item is selected, now listen for mouse movement and release of left button
-        treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove += MouseMove;
-      }
-    }
-
     internal static void RefreshTableColumns(SfGridBase gridBase)
     {
       try
@@ -480,58 +454,6 @@ namespace EQLogParser
       return allData ? width : Math.Min(width, gridBase.ActualWidth);
     }
 
-    private static void PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is SfTreeGrid treeGrid)
-      {
-        // remove listeners if left button released
-        treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove -= MouseMove;
-      }
-    }
-
-    private static void MouseMove(object sender, MouseEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid)
-      {
-        if (e.LeftButton == MouseButtonState.Released)
-        {
-          // remove listeners if left button released
-          treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-          treeGrid.PreviewMouseMove -= MouseMove;
-        }
-        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-        {
-          if (treeGrid.CurrentItem != stats)
-          {
-            if (!treeGrid.SelectionController.SelectedRows.Contains(row))
-            {
-              treeGrid.SelectRows(_startRow, row);
-            }
-            else
-            {
-              treeGrid.SelectionController.ClearSelections(false);
-              var direction = 0;
-              if (_startRow < row)
-              {
-                direction = -1;
-              }
-              else if (_startRow > row)
-              {
-                direction = 1;
-              }
-
-              treeGrid.SelectRows(_startRow, row + direction);
-            }
-
-            treeGrid.CurrentItem = stats;
-            CallSelectionChanged(treeGrid.Parent);
-          }
-        }
-      }
-    }
-
     internal static void RestoreAllTableColumns()
     {
       ConfigUtil.RemoveSetting("DamageSummaryColumns");
@@ -652,7 +574,7 @@ namespace EQLogParser
         return MainActions.CurrentNpcWidth;
       }
 
-      if (mappingName is "Name")
+      if (mappingName is "Name" or "Pet")
       {
         return MainActions.CurrentNameWidth;
       }
@@ -672,6 +594,13 @@ namespace EQLogParser
         return MainActions.CurrentItemWidth;
       }
 
+      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
+          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
+          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      {
+        return MainActions.CurrentMediumWidth;
+      }
+
       if (mappingName is "TimeSince" or "Hits" or "Lucky" or "Critical" or "Twincast" or
           "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "CritRate" or
           "LuckRate" or "ExtraRate" or "BaneHits" or "MeleeAccRate" or "MeleeHitRate" or
@@ -680,11 +609,9 @@ namespace EQLogParser
         return MainActions.CurrentShortWidth;
       }
 
-      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
-          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
-          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      if (mappingName is "AssignedGroup")
       {
-        return MainActions.CurrentMediumWidth;
+        return MainActions.CurrentShortWidth;
       }
 
       if (!string.IsNullOrEmpty(text))

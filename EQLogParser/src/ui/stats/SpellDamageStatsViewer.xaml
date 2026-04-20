@@ -61,7 +61,6 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
-
       <syncfusion:SfDataGrid.SortColumnDescriptions>
         <syncfusion:SortColumnDescription ColumnName="Avg" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>

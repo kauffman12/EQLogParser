@@ -19,6 +19,7 @@ namespace EQLogParser
     private readonly Columns _checkBoxColumns = [];
     private readonly Columns _textColumns = [];
     private readonly List<string> _columnIds = ["Hits", "Critical", "Lucky", "Twincast", "Rampage", "Riposte", "Strikethrough"];
+    private readonly List<string> _defaultDescending = ["Total", "OverTotal"];
 
     private string _actedOption = Labels.Unk;
     private List<List<ActionGroup>> _currentGroups;
@@ -132,14 +133,19 @@ namespace EQLogParser
 
       dataGrid.Columns = _textColumns;
 
-      // default these columns to descending
-      var desc = _columnIds.ToList();
-      desc.Add("Total");
-      desc.Add("OverTotal");
-
-      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+      dataGrid.SortColumnsChanging += SortColumnsChanging;
+      dataGrid.SortColumnsChanged += SortColumnsChanged;
       MainActions.EventsThemeChanged += EventsThemeChanged;
+    }
+
+    private void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e)
+    {
+      DataGridUtil.SortColumnsChanging(sender, e, _defaultDescending);
+    }
+
+    private void SortColumnsChanged(object sender, GridSortColumnsChangedEventArgs e)
+    {
+      DataGridUtil.SortColumnsChanged(sender, e, _defaultDescending);
     }
 
     private void AddColumn(GridColumn column)
@@ -527,6 +533,8 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         MainActions.EventsThemeChanged -= EventsThemeChanged;
+        dataGrid.SortColumnsChanging -= SortColumnsChanging;
+        dataGrid.SortColumnsChanged -= SortColumnsChanged;
         dataGrid?.Dispose();
         _disposedValue = true;
       }

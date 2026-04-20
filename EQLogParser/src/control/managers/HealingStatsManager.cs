@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -202,7 +202,7 @@ namespace EQLogParser
               foreach (var heal in CollectionsMarshal.AsSpan(filtered))
               {
                 var updatedHeal = new ActionGroup { BeginTime = heal.BeginTime };
-                foreach (var action in heal.Actions.ToArray())
+                foreach (var action in heal.Actions)
                 {
                   if (action is HealRecord record)
                   {
@@ -315,7 +315,7 @@ namespace EQLogParser
             if ((double.IsNaN(raidTotals.MinBeginTime) || block.BeginTime >= raidTotals.MinBeginTime)
               && (double.IsNaN(raidTotals.MaxBeginTime) || block.BeginTime <= raidTotals.MaxBeginTime))
             {
-              foreach (var action in block.Actions.ToArray())
+              foreach (var action in block.Actions)
               {
                 if (action is HealRecord record)
                 {
@@ -461,7 +461,7 @@ namespace EQLogParser
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
               {
-                foreach (var action in block.Actions.ToArray())
+                foreach (var action in block.Actions)
                 {
                   if (action is HealRecord record)
                   {
