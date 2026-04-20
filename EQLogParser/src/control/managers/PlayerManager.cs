@@ -1,12 +1,10 @@
-﻿using log4net;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -14,8 +12,6 @@ namespace EQLogParser
 {
   class PlayerManager
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewVerifiedPet;
     internal event EventHandler<string> EventsNewVerifiedPlayer;
@@ -24,23 +20,23 @@ namespace EQLogParser
     internal event EventHandler<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
     internal static PlayerManager Instance = new();
-    internal static readonly BitmapImage BerIcon = new(new Uri(@"pack://application:,,,/icons/Ber.png"));
-    internal static readonly BitmapImage BrdIcon = new(new Uri(@"pack://application:,,,/icons/Brd.png"));
-    internal static readonly BitmapImage BstIcon = new(new Uri(@"pack://application:,,,/icons/Bst.png"));
-    internal static readonly BitmapImage ClrIcon = new(new Uri(@"pack://application:,,,/icons/Clr.png"));
-    internal static readonly BitmapImage DruIcon = new(new Uri(@"pack://application:,,,/icons/Dru.png"));
-    internal static readonly BitmapImage EncIcon = new(new Uri(@"pack://application:,,,/icons/Enc.png"));
-    internal static readonly BitmapImage MagIcon = new(new Uri(@"pack://application:,,,/icons/Mag.png"));
-    internal static readonly BitmapImage MnkIcon = new(new Uri(@"pack://application:,,,/icons/Mnk.png"));
-    internal static readonly BitmapImage NecIcon = new(new Uri(@"pack://application:,,,/icons/Nec.png"));
-    internal static readonly BitmapImage PalIcon = new(new Uri(@"pack://application:,,,/icons/Pal.png"));
-    internal static readonly BitmapImage RngIcon = new(new Uri(@"pack://application:,,,/icons/Rng.png"));
-    internal static readonly BitmapImage RogIcon = new(new Uri(@"pack://application:,,,/icons/Rog.png"));
-    internal static readonly BitmapImage ShdIcon = new(new Uri(@"pack://application:,,,/icons/Shd.png"));
-    internal static readonly BitmapImage UnkIcon = new(new Uri(@"pack://application:,,,/icons/Unk.png"));
-    internal static readonly BitmapImage ShmIcon = new(new Uri(@"pack://application:,,,/icons/Shm.png"));
-    internal static readonly BitmapImage WarIcon = new(new Uri(@"pack://application:,,,/icons/War.png"));
-    internal static readonly BitmapImage WizIcon = new(new Uri(@"pack://application:,,,/icons/Wiz.png"));
+    internal static readonly BitmapImage BerIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Ber.png");
+    internal static readonly BitmapImage BrdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Brd.png");
+    internal static readonly BitmapImage BstIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Bst.png");
+    internal static readonly BitmapImage ClrIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Clr.png");
+    internal static readonly BitmapImage DruIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Dru.png");
+    internal static readonly BitmapImage EncIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Enc.png");
+    internal static readonly BitmapImage MagIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Mag.png");
+    internal static readonly BitmapImage MnkIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Mnk.png");
+    internal static readonly BitmapImage NecIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Nec.png");
+    internal static readonly BitmapImage PalIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Pal.png");
+    internal static readonly BitmapImage RngIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Rng.png");
+    internal static readonly BitmapImage RogIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Rog.png");
+    internal static readonly BitmapImage ShdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Shd.png");
+    internal static readonly BitmapImage UnkIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Unk.png");
+    internal static readonly BitmapImage ShmIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Shm.png");
+    internal static readonly BitmapImage WarIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/War.png");
+    internal static readonly BitmapImage WizIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Wiz.png");
 
     // static data
     private const int LowConfidenceThreshold = 8;

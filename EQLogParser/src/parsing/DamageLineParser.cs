@@ -73,7 +73,7 @@ namespace EQLogParser
         {
           foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
           {
-            (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).RemoveActiveFight(slain);
+            (DataManager ?? EQLogParser.DataManager.Instance).RemoveActiveFight(slain);
           }
 
           SlainQueue.Clear();
@@ -247,6 +247,7 @@ namespace EQLogParser
               }
               break;
             case "damage.":
+            case "damage":
               if (i == stop)
               {
                 endDamage = i;
@@ -473,7 +474,7 @@ namespace EQLogParser
         {
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
           var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-          var spellData = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
+          var spellData = (DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
@@ -587,11 +588,11 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
           string type;
-          var spellData = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
+          var spellData = (DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
 
           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-          if (spellData == null && (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).IsOldSpell(attacker))
+          if (spellData == null && (DataManager ?? EQLogParser.DataManager.Instance).IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -622,7 +623,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OtherDmg;
-        if ((DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell) is { } spellData)
+        if ((DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -702,6 +703,7 @@ namespace EQLogParser
       // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
       else if (MainWindow.IsEmuParsingEnabled && forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
       {
+        string attackerOwner = null;
         if (emuPetIndex > -1)
         {
           attacker = string.Join(" ", split, 0, emuPetIndex);
@@ -711,6 +713,7 @@ namespace EQLogParser
             PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
             PlayerManager.Instance.AddVerifiedPet(attacker);
             PlayerManager.Instance.AddPetToPlayer(attacker, player);
+            attackerOwner = player;
           }
         }
         else
@@ -733,6 +736,7 @@ namespace EQLogParser
         }
 
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
+        record.AttackerOwner = record.AttackerOwner ?? attackerOwner;
 
         // handle old style crits for eqemu
         if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
@@ -1060,7 +1064,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).ClearActiveAdps();
+          (DataManager ?? EQLogParser.DataManager.Instance).ClearActiveAdps();
         }
 
         var currentTime = lineData.BeginTime;
@@ -1072,7 +1076,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = ToUpper(slain);
-            if (!SlainQueue.Contains(slain) && (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && (DataManager ?? EQLogParser.DataManager.Instance).GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;
@@ -1206,8 +1210,8 @@ namespace EQLogParser
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-          var spellName = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).AbbreviateSpellName(name);
-          var data = (DataManager ?? (IDataManager)global::EQLogParser.DataManager.Instance).GetSpellByAbbrv(spellName);
+          var spellName = (DataManager ?? EQLogParser.DataManager.Instance).AbbreviateSpellName(name);
+          var data = (DataManager ?? EQLogParser.DataManager.Instance).GetSpellByAbbrv(spellName);
           if (data != null)
           {
             if (data.Damaging == 2)

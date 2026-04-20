@@ -29,6 +29,18 @@ namespace EQLogParser
       "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
 
+    internal static BitmapImage CreateBitmapFromInternalUri(string uri)
+    {
+      try
+      {
+        return new BitmapImage(new Uri(uri));
+      }
+      catch (Exception)
+      {
+        return null;
+      }
+    }
+
     internal static BitmapImage CreateBitmap(string path)
     {
       if (string.IsNullOrEmpty(path))
