@@ -69,10 +69,12 @@ namespace EQLogParser
             // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
             // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
             // [Wed Jan 26 22:41:48 2022] [65 Overlord (Warrior)] Jenfo (Halfling)
-            // [Mon Jan 05 10:03:10 2026]  AFK [67 Dread Lord (Shadow Knight)] Matrim (Iksar) <Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall  
+            // [Mon Jan 05 10:03:10 2026]  AFK [67 Dread Lord (Shadow Knight)] Matrim (Iksar) <Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall 
+            // [Fri Jan 23 19:56:17 2026] [130 Juggernaut (Berserker)] Grudg (Group: 3)
+            // [Fri Jan 23 19:34:53 2026] [130 Bloodreaver (Shadow Knight)] Waaine (Group: None)
             else if (i == 0 &&
-              ((split[0] == "" && split[1] == "AFK" && ParseWho(split, 2, out var who, out var whoClass)) ||
-               (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass))))
+              ((split[0] == "" && split[1] == "AFK" && ParseWho(split, 2, out var who, out var whoClass, out var groupId)) ||
+               (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
               PlayerManager.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
               if (DataManager.Instance.IsValidClassName(whoClass))
@@ -408,9 +410,10 @@ namespace EQLogParser
       return parsed;
     }
 
-    private static bool ParseWho(string[] split, int start, out string player, out string className)
+    private static bool ParseWho(string[] split, int start, out string player, out string className, out int group)
     {
       player = null;
+      group = 0;
       className = null;
 
       if (split[start].StartsWith('[') && split[start].Length > 1 && split.Length > 4)
@@ -442,6 +445,18 @@ namespace EQLogParser
                 }
 
                 player = split[i + 1];
+
+                // Scan for (Group: X) pattern in remaining tokens
+                for (var j = i + 2; j < split.Length - 1; j++)
+                {
+                  if (split[j] == "(Group:" && j + 1 < split.Length)
+                  {
+                    var groupStr = split[j + 1].TrimEnd(')');
+                    group = groupStr == "None" ? 0 : int.TryParse(groupStr, out var g) ? g : 0;
+                    break;
+                  }
+                }
+
                 return true;
               }
             }
