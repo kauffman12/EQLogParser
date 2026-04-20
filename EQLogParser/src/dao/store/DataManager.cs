@@ -89,12 +89,6 @@ namespace EQLogParser
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly HashSet<SpellData> _allSpellData = [];
-    private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
-    private readonly object _adpsLock = new object();
-    private readonly Dictionary<string, Dictionary<string, uint>> _adpsValues = [];
-    private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
-    internal readonly Dictionary<string, HashSet<SpellData>> _adpsLandsOn = [];
-    private readonly Dictionary<string, HashSet<SpellData>> _adpsWearOff = [];
     private readonly Dictionary<string, bool> _oldSpellNamesDb = [];
     private readonly SpellTreeNode _landsOnOtherTree = new();
     private readonly SpellTreeNode _landsOnYouTree = new();
@@ -297,66 +291,8 @@ namespace EQLogParser
         }
       }
 
-      // Load Adps
-      _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = []);
-      _adpsKeys.ForEach(adpsKey => _adpsValues[adpsKey] = []);
-
-      string key = null;
-      foreach (var line in ConfigUtil.ReadList(@"data\adpsMeter.txt"))
-      {
-        if (!string.IsNullOrEmpty(line) && line.Trim() is { Length: > 0 } trimmed)
-        {
-          if (trimmed[0] != '#' && !string.IsNullOrEmpty(key))
-          {
-            if (trimmed.Split('|') is { Length: > 0 } multiple)
-            {
-              foreach (var spellLine in multiple)
-              {
-                if (spellLine.Split('=') is { Length: 2 } list && uint.TryParse(list[1], out var rate))
-                {
-                  if (GetAdpsByName(list[0]) is { } spellData)
-                  {
-                    _adpsValues[key][spellData.NameAbbrv] = rate;
-
-                    if (!_adpsWearOff.TryGetValue(spellData.WearOff, out _))
-                    {
-                      _adpsWearOff[spellData.WearOff] = [];
-                    }
-
-                    _adpsWearOff[spellData.WearOff].Add(spellData);
-
-                    if (!_adpsLandsOn.TryGetValue(spellData.LandsOnYou, out _))
-                    {
-                      _adpsLandsOn[spellData.LandsOnYou] = [];
-                    }
-
-                    _adpsLandsOn[spellData.LandsOnYou].Add(spellData);
-                  }
-                }
-              }
-            }
-          }
-          else if (_adpsKeys.Contains(trimmed))
-          {
-            key = trimmed;
-          }
-        }
-      }
-
       return;
-
-      SpellData GetAdpsByName(string name)
-      {
-        if (!_spellsAbbrvDb.TryGetValue(name, out var spellData))
-        {
-          if (_spellsNameDb.TryGetValue(name, out var list))
-          {
-            return list.Find(item => item.Adps > 0);
-          }
-        }
-        return spellData;
-      }
-    }
+     }
 
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
@@ -482,6 +418,15 @@ namespace EQLogParser
       return null;
     }
 
+    internal SpellData GetSpellDataByName(string name)
+    {
+      if (_spellsAbbrvDb.TryGetValue(name, out var spellData))
+        return spellData;
+      if (_spellsNameDb.TryGetValue(name, out var list))
+        return list.Find(item => item.Adps > 0);
+      return null;
+    }
+
     internal SpellData GetDetSpellByName(string name)
     {
       SpellData spellData = null;
@@ -569,7 +514,8 @@ namespace EQLogParser
         found.SpellData = FindByLandsOn(ConfigUtil.PlayerName, found.SpellData);
 
         // check Adps
-        if (_adpsLandsOn.TryGetValue(found.SpellData[0].LandsOnYou, out var spellDataSet) && spellDataSet.Count > 0)
+        var spellDataSet = AdpsTracker.Instance.GetLandsOnSpells(found.SpellData[0].LandsOnYou);
+        if (spellDataSet != null)
         {
           var spellData = spellDataSet.Count == 1 ? spellDataSet.First() : FindPreviousCast(ConfigUtil.PlayerName, [.. spellDataSet], true);
 
@@ -578,23 +524,7 @@ namespace EQLogParser
           // need to handle older spells and multiple rate values
           if (spellData != null)
           {
-            var updated = false;
-            lock (_adpsLock)
-            {
-              foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
-              {
-                if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
-                {
-                  _adpsActive[key][spellData.LandsOnYou] = value;
-                  updated = true;
-                }
-              }
-            }
-
-            if (updated)
-            {
-              RecalculateAdps();
-            }
+            AdpsTracker.Instance.UpdateAdps(spellData);
           }
         }
       }
@@ -611,34 +541,11 @@ namespace EQLogParser
         found.SpellData = FindByLandsOn(split[0], found.SpellData);
 
         // check Adps
-        if (_adpsWearOff.TryGetValue(found.SpellData[0].WearOff, out var spellDataSet) && spellDataSet.Count > 0)
+        var spellDataSet = AdpsTracker.Instance.GetWearOffSpells(found.SpellData[0].WearOff);
+        if (spellDataSet != null)
         {
           var spellData = spellDataSet.First();
-          var updated = false;
-
-          lock (_adpsLock)
-          {
-            foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
-            {
-              var dict = _adpsValues[key];
-              if (dict.ContainsKey(spellData.NameAbbrv))
-              {
-                var activeDict = _adpsActive[key];
-                var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.NameAbbrv : spellData.LandsOnYou;
-                var foundKey = activeDict.Keys.FirstOrDefault(k => k.Contains(msg, StringComparison.OrdinalIgnoreCase));
-                if (foundKey != null)
-                {
-                  activeDict.Remove(foundKey);
-                  updated = true;
-                }
-              }
-            }
-          }
-
-          if (updated)
-          {
-            RecalculateAdps();
-          }
+          AdpsTracker.Instance.RemoveWearOff(spellData);
         }
       }
 
@@ -700,16 +607,6 @@ namespace EQLogParser
       return spellData;
     }
 
-    private void RecalculateAdps()
-    {
-      lock (_adpsLock)
-      {
-        var dot = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
-        var nuke = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
-        FightManager.Instance.SetCritRateMods(dot, nuke);
-      }
-    }
-
     private static SpellData FindPreviousCast(string player, IEnumerable<SpellData> output, bool isAdps = false)
     {
       SpellData[] filtered = null;
@@ -766,17 +663,7 @@ namespace EQLogParser
 
     internal void UpdateAdps(SpellData spellData)
     {
-      lock (_adpsLock)
-      {
-        foreach (var key in CollectionsMarshal.AsSpan(_adpsKeys))
-        {
-          if (_adpsValues[key].TryGetValue(spellData.NameAbbrv, out var value))
-          {
-            var msg = string.IsNullOrEmpty(spellData.LandsOnYou) ? spellData.Name : spellData.LandsOnYou;
-            FightManager.Instance.UpdateAdps(key, msg, value);
-          }
-        }
-      }
+      AdpsTracker.Instance.UpdateAdps(spellData);
     }
 
 

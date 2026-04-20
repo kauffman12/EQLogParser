@@ -1068,7 +1068,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          FM.ClearActiveAdps();
+          AdpsTracker.Instance.Clear();
         }
 
         var currentTime = lineData.BeginTime;

@@ -13,6 +13,7 @@ namespace EQLogParserTest
     public void Setup()
     {
       ConfigUtil.PlayerName = "TestPlayer";
+      AdpsTracker.Instance.Clear();
       _mockDataManager = new Mock<IDataManager>();
 #pragma warning disable CS8603 // Possible null reference return.
       _mockDataManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
@@ -24,12 +25,17 @@ namespace EQLogParserTest
 #pragma warning restore CS8603 // Possible null reference return.
       _mockFightManager = new Mock<IFightManager>();
       _mockFightManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
-      _mockFightManager.Setup(m => m.ClearActiveAdps());
 #pragma warning disable CS8603 // Possible null reference return.
       _mockFightManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.
       DamageLineParser.DataManager = _mockDataManager.Object;
       DamageLineParser.FightManager = _mockFightManager.Object;
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+      AdpsTracker.Instance.Clear();
     }
 
     private static DamageRecord ParseAction(string action)

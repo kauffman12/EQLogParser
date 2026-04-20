@@ -8,7 +8,6 @@ namespace EQLogParser
   internal interface IFightManager
   {
     void RemoveActiveFight(string name);
-    void ClearActiveAdps();
     Fight GetFight(string name);
     void CheckExpireFights(double currentTime);
     void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight);
@@ -33,18 +32,11 @@ namespace EQLogParser
 
     internal const int MaxTimeout = 60;
     internal const int FightTimeout = 30;
-    internal uint MyNukeCritRateMod { get; private set; }
-    internal uint MyDoTCritRateMod { get; private set; }
 
     // overlay / active / lifetime fight state
     private readonly ConcurrentDictionary<long, Fight> _overlayFights = new();
     private readonly ConcurrentDictionary<string, Fight> _activeFights = new();
     private readonly ConcurrentDictionary<string, byte> _lifetimeFights = new();
-
-    // ADPS / crit rate state
-    private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
-    private readonly object _adpsLock = new();
-    private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
 
     // NPC damage processing state (merged from NpcDamageManager)
     internal double LastFightProcessTime = double.NaN;
@@ -57,8 +49,6 @@ namespace EQLogParser
 
     internal FightManager()
     {
-      _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = []);
-
       PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
       PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
 
@@ -182,18 +172,8 @@ namespace EQLogParser
       _activeFights.Clear();
       _lifetimeFights.Clear();
       _overlayFights.Clear();
-      ClearActiveAdps();
+      AdpsTracker.Instance.Clear();
       EventsClearedActiveData?.Invoke(true);
-    }
-
-    public void ClearActiveAdps()
-    {
-      lock (_adpsLock)
-      {
-        _adpsKeys.ForEach(key => _adpsActive[key].Clear());
-        MyDoTCritRateMod = 0;
-        MyNukeCritRateMod = 0;
-      }
     }
 
     internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
@@ -202,60 +182,7 @@ namespace EQLogParser
 
     internal void ZoneChanged()
     {
-      var updated = false;
-      lock (_adpsLock)
-      {
-        foreach (var active in _adpsActive)
-        {
-          foreach (var landsOn in active.Value.Keys.ToArray())
-          {
-            if (DataManager.Instance._adpsLandsOn.TryGetValue(landsOn, out var value))
-            {
-              // Need this check since Glyph may be present and there's no
-              // lands on data for it as it's a special cast
-              if (value.Any(spellData => spellData.SongWindow))
-              {
-                _adpsActive[active.Key].Remove(landsOn);
-                updated = true;
-              }
-            }
-          }
-        }
-      }
-
-      if (updated)
-      {
-        RecalculateAdpsInternal();
-      }
-    }
-
-    internal void UpdateAdps(string key, string msg, uint value)
-    {
-      lock (_adpsLock)
-      {
-        _adpsActive[key][msg] = value;
-        RecalculateAdpsInternal();
-      }
-    }
-
-    private void RecalculateAdpsInternal()
-    {
-      lock (_adpsLock)
-      {
-        MyDoTCritRateMod = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
-        MyNukeCritRateMod = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
-      }
-    }
-
-    internal void RecalculateAdps()
-    {
-      RecalculateAdpsInternal();
-    }
-
-    internal void SetCritRateMods(uint dot, uint nuke)
-    {
-      MyDoTCritRateMod = dot;
-      MyNukeCritRateMod = nuke;
+      AdpsTracker.Instance.RemoveSongSpells();
     }
 
     public bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
