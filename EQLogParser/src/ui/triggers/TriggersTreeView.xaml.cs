@@ -87,7 +87,7 @@ namespace EQLogParser
     internal async Task Init(string characterId, Func<bool> isCanceled, bool enable)
     {
       _isCancelSelection = isCanceled;
-      var nodes = await TriggerStateManager.Instance.GetOverlayTreeView();
+      var nodes = await TriggerStateDB.Instance.GetOverlayTreeView();
       overlayTreeView.Nodes.Add(nodes);
       await EnableAndRefreshTriggers(enable, characterId);
     }
@@ -123,8 +123,8 @@ namespace EQLogParser
 
     private async void ClearRecentlyMergedClick(object sender, RoutedEventArgs e)
     {
-      TriggerStateManager.Instance.RecentlyMerged.Clear();
-      TriggerStateManager.Instance.MissingMedia.Clear();
+      TriggerStateDB.Instance.RecentlyMerged.Clear();
+      TriggerStateDB.Instance.MissingMedia.Clear();
       await RefreshTriggers();
     }
 
@@ -144,7 +144,7 @@ namespace EQLogParser
 
     private async void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e)
     {
-      await TriggerStateManager.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
+      await TriggerStateDB.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
     }
 
     private static void SetupDragNDrop(SfTreeView treeView)
@@ -170,7 +170,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(async () =>
         {
           treeView.CollapseAll();
-          await TriggerStateManager.Instance.SetAllExpanded(false);
+          await TriggerStateDB.Instance.SetAllExpanded(false);
         });
       }
     }
@@ -182,7 +182,7 @@ namespace EQLogParser
         Dispatcher.InvokeAsync(async () =>
         {
           treeView.ExpandAll();
-          await TriggerStateManager.Instance.SetAllExpanded(true);
+          await TriggerStateDB.Instance.SetAllExpanded(true);
         });
       }
     }
@@ -224,7 +224,7 @@ namespace EQLogParser
       if (e.Node is TriggerTreeViewNode viewNode)
       {
         var ids = _selectedCharacters?.Select(x => x.Id).ToList() ?? [CurrentCharacterId];
-        await TriggerStateManager.Instance.SetState(ids, viewNode);
+        await TriggerStateDB.Instance.SetState(ids, viewNode);
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -277,7 +277,7 @@ namespace EQLogParser
     private async Task RefreshTriggerNode()
     {
       triggerTreeView?.Nodes?.Clear();
-      var nodes = await TriggerStateManager.Instance.GetTriggerTreeView(CurrentCharacterId);
+      var nodes = await TriggerStateDB.Instance.GetTriggerTreeView(CurrentCharacterId);
       triggerTreeView?.Nodes?.Add(nodes);
     }
 
@@ -286,7 +286,7 @@ namespace EQLogParser
       if (overlayTreeView?.Nodes.Count > 0)
       {
         overlayTreeView.Nodes.Clear();
-        var nodes = await TriggerStateManager.Instance.GetOverlayTreeView();
+        var nodes = await TriggerStateDB.Instance.GetOverlayTreeView();
         overlayTreeView.Nodes.Add(nodes);
       }
     }
@@ -381,7 +381,7 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode { SerializedData.Id: { } id } parent })
       {
-        if (await TriggerStateManager.Instance.CreateFolder(id, LabelNewFolder, CurrentCharacterId) is { } newNode)
+        if (await TriggerStateDB.Instance.CreateFolder(id, LabelNewFolder, CurrentCharacterId) is { } newNode)
         {
           parent.ChildNodes.Add(newNode);
           await SelectNodeAsync(triggerTreeView, newNode.SerializedData.Id);
@@ -395,7 +395,7 @@ namespace EQLogParser
       if (overlayTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
         var label = isTextOverlay ? LabelNewTextOverlay : LabelNewTimerOverlay;
-        if (await TriggerStateManager.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
+        if (await TriggerStateDB.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
           await Dispatcher.InvokeAsync(async () =>
           {
@@ -411,7 +411,7 @@ namespace EQLogParser
     {
       if (triggerTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        if (await TriggerStateManager.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, CurrentCharacterId) is { } newNode)
+        if (await TriggerStateDB.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, CurrentCharacterId) is { } newNode)
         {
           await Dispatcher.InvokeAsync(async () =>
           {
@@ -490,7 +490,7 @@ namespace EQLogParser
             if (copiedNode.SerializedData.Parent != node.SerializedData.Id)
             {
               copiedNode.SerializedData.Parent = node.SerializedData.Id;
-              await TriggerStateManager.Instance.Update(copiedNode.SerializedData, true);
+              await TriggerStateDB.Instance.Update(copiedNode.SerializedData, true);
               await RefreshTriggerNode();
             }
           }
@@ -501,7 +501,7 @@ namespace EQLogParser
               await Delete([copiedNode]);
             }
 
-            await TriggerStateManager.Instance.Copy(copiedNode.SerializedData, node.SerializedData);
+            await TriggerStateDB.Instance.Copy(copiedNode.SerializedData, node.SerializedData);
 
             if (copiedNode.IsTrigger())
             {
@@ -530,7 +530,7 @@ namespace EQLogParser
             parent.IsChecked = false;
           }
 
-          await TriggerStateManager.Instance.Delete(id);
+          await TriggerStateDB.Instance.Delete(id);
 
           if (node.IsOverlay())
           {
@@ -585,11 +585,11 @@ namespace EQLogParser
             {
               node.SerializedData.Parent = target.SerializedData.Id;
               node.SerializedData.Index = i;
-              await TriggerStateManager.Instance.Update(node.SerializedData);
+              await TriggerStateDB.Instance.Update(node.SerializedData);
 
               if (_shiftDown)
               {
-                await TriggerStateManager.Instance.SetStateFromParent(node.SerializedData.Parent, CurrentCharacterId, node);
+                await TriggerStateDB.Instance.SetStateFromParent(node.SerializedData.Parent, CurrentCharacterId, node);
               }
 
               needRefresh = true;
@@ -622,7 +622,7 @@ namespace EQLogParser
           else
           {
             node.SerializedData.Name = node.Content as string;
-            await TriggerStateManager.Instance.Update(node.SerializedData);
+            await TriggerStateDB.Instance.Update(node.SerializedData);
 
             if (node.IsOverlay())
             {
@@ -659,7 +659,7 @@ namespace EQLogParser
         pasteTriggerItem.IsEnabled = false;
       }
 
-      clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateManager.Instance.RecentlyMerged.IsEmpty || !TriggerStateManager.Instance.MissingMedia.IsEmpty;
+      clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateDB.Instance.RecentlyMerged.IsEmpty || !TriggerStateDB.Instance.MissingMedia.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
       shareTriggerMenuItem.IsEnabled = count != 1 || node?.SerializedData?.TriggerData?.Private != true;
 
@@ -724,7 +724,7 @@ namespace EQLogParser
         removeTextOverlaysMenuItem.Items.Clear();
         removeTimerOverlaysMenuItem.Items.Clear();
 
-        foreach (var overlay in await TriggerStateManager.Instance.GetAllOverlays())
+        foreach (var overlay in await TriggerStateDB.Instance.GetAllOverlays())
         {
           var addMenuItem = CreateMenuItem(overlay, AssignOverlayClick);
           var removeMenuItem = CreateMenuItem(overlay, UnassignOverlayClick);
@@ -780,7 +780,7 @@ namespace EQLogParser
     {
       if (sender is MenuItem { Tag: string id })
       {
-        await TriggerStateManager.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
+        await TriggerStateDB.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
       }
     }
 
@@ -793,7 +793,7 @@ namespace EQLogParser
 
         if (!anyFolders)
         {
-          await TriggerStateManager.Instance.AssignPriority(newPriority, [.. selected.Select(treeView => treeView.SerializedData)]);
+          await TriggerStateDB.Instance.AssignPriority(newPriority, [.. selected.Select(treeView => treeView.SerializedData)]);
         }
         else
         {
@@ -804,7 +804,7 @@ namespace EQLogParser
           {
             var nodes = new List<TriggerNode>();
             PopulateAllTriggerNodes(selected, nodes);
-            await TriggerStateManager.Instance.AssignPriority(newPriority, nodes);
+            await TriggerStateDB.Instance.AssignPriority(newPriority, nodes);
           }
         }
 
@@ -830,11 +830,11 @@ namespace EQLogParser
           {
             if (!remove)
             {
-              await TriggerStateManager.Instance.AssignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
+              await TriggerStateDB.Instance.AssignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
             }
             else
             {
-              await TriggerStateManager.Instance.UnassignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
+              await TriggerStateDB.Instance.UnassignOverlay(id, [.. selected.Select(treeView => treeView.SerializedData)]);
             }
           }
           else
@@ -850,11 +850,11 @@ namespace EQLogParser
 
               if (!remove)
               {
-                await TriggerStateManager.Instance.AssignOverlay(id, nodes);
+                await TriggerStateDB.Instance.AssignOverlay(id, nodes);
               }
               else
               {
-                await TriggerStateManager.Instance.UnassignOverlay(id, nodes);
+                await TriggerStateDB.Instance.UnassignOverlay(id, nodes);
               }
             }
           }
@@ -873,7 +873,7 @@ namespace EQLogParser
 
       if (!anyFolders)
       {
-        await TriggerStateManager.Instance.UnassignAllTextOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
+        await TriggerStateDB.Instance.UnassignAllTextOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
       }
       else
       {
@@ -885,7 +885,7 @@ namespace EQLogParser
         {
           var nodes = new List<TriggerNode>();
           PopulateAllTriggerNodes(selected, nodes);
-          await TriggerStateManager.Instance.UnassignAllTextOverlays(nodes);
+          await TriggerStateDB.Instance.UnassignAllTextOverlays(nodes);
         }
       }
 
@@ -901,7 +901,7 @@ namespace EQLogParser
 
       if (!anyFolders)
       {
-        await TriggerStateManager.Instance.UnassignAllTimerOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
+        await TriggerStateDB.Instance.UnassignAllTimerOverlays([.. selected.Select(treeView => treeView.SerializedData)]);
       }
       else
       {
@@ -913,7 +913,7 @@ namespace EQLogParser
         {
           var nodes = new List<TriggerNode>();
           PopulateAllTriggerNodes(selected, nodes);
-          await TriggerStateManager.Instance.UnassignAllTimerOverlays(nodes);
+          await TriggerStateDB.Instance.UnassignAllTimerOverlays(nodes);
         }
       }
 

@@ -249,7 +249,7 @@ namespace EQLogParser
         }
       }
 
-      return TriggerStateManager.DefaultUser;
+      return TriggerStateDB.DefaultUser;
     }
 
     public override void Detach(PropertyViewItem property)

@@ -94,7 +94,7 @@ namespace EQLogParser
 
           if (_raidTotals.Ranges.TimeSegments.Count > 0)
           {
-            var allHeals = RecordManager.Instance.GetAllHeals().ToList();
+            var allHeals = RecordsStore.Instance.GetAllHeals().ToList();
             // calculate totals first since it can modify the ranges
             _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 

@@ -58,7 +58,7 @@ namespace EQLogParser
         var damageAfter = segment.BeginTime - DmgOffset;
         var damageBefore = segment.EndTime;
 
-        foreach (var (beginTime, spell) in RecordManager.Instance.GetSpellsDuring(segment.BeginTime - BuffOffset, segment.EndTime + HalfOffset))
+        foreach (var (beginTime, spell) in RecordsStore.Instance.GetSpellsDuring(segment.BeginTime - BuffOffset, segment.EndTime + HalfOffset))
         {
           if (times != null)
           {

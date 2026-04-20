@@ -42,7 +42,7 @@ namespace EQLogParser
       var desc = new[] { "Quantity", "Time" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
+      RecordsStore.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
       MainActions.EventsThemeChanged += EventsThemeChanged;
       dataGrid.ItemsSource = _individualRecords;
       _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500, false);
@@ -52,7 +52,7 @@ namespace EQLogParser
 
     private void RecordsUpdatedEvent(string type)
     {
-      if (type == RecordManager.LootRecords && !_reloadTimer.IsEnabled)
+      if (type == RecordsStore.LootRecords && !_reloadTimer.IsEnabled)
       {
         _reloadTimer.Start();
       }
@@ -92,7 +92,7 @@ namespace EQLogParser
       };
 
       var i = 0;
-      foreach (var (beginTime, looted) in RecordManager.Instance.GetAllLoot().Reverse())
+      foreach (var (beginTime, looted) in RecordsStore.Instance.GetAllLoot().Reverse())
       {
         var row = new LootRow { BeginTime = beginTime, Record = looted };
         if (_individualRecords.Count > i)
@@ -303,7 +303,7 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
+        RecordsStore.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
         Load();
         _ready = true;
@@ -312,7 +312,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
+      RecordsStore.Instance.RecordsUpdatedEvent -= RecordsUpdatedEvent;
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
       _ready = false;
     }

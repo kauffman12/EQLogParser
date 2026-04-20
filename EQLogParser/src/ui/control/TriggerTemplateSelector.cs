@@ -24,7 +24,7 @@ namespace EQLogParser
           return Application.Current.Resources["TextOverlayFileTemplate"] as DataTemplate;
         }
 
-        if (TriggerStateManager.Overlays.Equals(node.Content?.ToString()))
+        if (TriggerStateDB.Overlays.Equals(node.Content?.ToString()))
         {
           return Application.Current.Resources["OverlayNodeTemplate"] as DataTemplate;
         }

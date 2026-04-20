@@ -457,11 +457,11 @@ namespace EQLogParser
       var enabled = MainActions.ToggleSetting("ChatArchiveEnabled", enableChatArchiveIcon);
       if (enabled)
       {
-        ChatManager.Instance.Init();
+        ChatDB.Instance.Init();
       }
       else
       {
-        ChatManager.Instance.Stop();
+        ChatDB.Instance.Stop();
       }
     }
 
@@ -1057,7 +1057,7 @@ namespace EQLogParser
         CloseDamageOverlay(false);
         DataManager.Instance.Clear();
         FightManager.Instance.Clear();
-        RecordManager.Instance.Clear();
+        RecordsStore.Instance.Clear();
         FightManager.Instance.Reset();
         closeLogFile.IsEnabled = false;
         saveLogFile.IsEnabled = false;
@@ -1232,8 +1232,8 @@ namespace EQLogParser
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
-      RecordManager.Instance.Stop();
-      ChatManager.Instance.Stop();
+      RecordsStore.Instance.Stop();
+      ChatDB.Instance.Stop();
       SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode

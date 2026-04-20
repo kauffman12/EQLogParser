@@ -30,7 +30,7 @@ namespace EQLogParser
     private void ReloadTimerTick(object sender, EventArgs e)
     {
       var found = false;
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllRandoms())
       {
         if (_lastHandled == null || found)
         {
@@ -80,7 +80,7 @@ namespace EQLogParser
 
     private void RecordsUpdated(string type)
     {
-      if (type == RecordManager.RandomRecords && !_reloadTimer.IsEnabled)
+      if (type == RecordsStore.RandomRecords && !_reloadTimer.IsEnabled)
       {
         _reloadTimer.Start();
       }
@@ -100,7 +100,7 @@ namespace EQLogParser
     private void Load()
     {
       RandomData.Clear();
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllRandoms())
       {
         UpdateSection(beginTime, record);
         _lastHandled = record;
@@ -254,7 +254,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-        RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
+        RecordsStore.Instance.RecordsUpdatedEvent += RecordsUpdated;
         Load();
         _ready = true;
       }
@@ -264,7 +264,7 @@ namespace EQLogParser
     {
       _reloadTimer?.Stop();
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-      RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
+      RecordsStore.Instance.RecordsUpdatedEvent -= RecordsUpdated;
       RandomData.Clear();
       _ready = false;
     }

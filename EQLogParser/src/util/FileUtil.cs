@@ -86,7 +86,7 @@ namespace EQLogParser
     internal static async Task<HashSet<string>> GetOpenLogFilesAsync()
     {
       var logFiles = new HashSet<string>();
-      if (await TriggerStateManager.Instance.GetConfig() is var config)
+      if (await TriggerStateDB.Instance.GetConfig() is var config)
       {
         if (MainWindow.CurrentLogFile is { } currentFile)
         {

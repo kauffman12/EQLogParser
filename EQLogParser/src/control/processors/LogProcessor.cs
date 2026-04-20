@@ -22,7 +22,7 @@ namespace EQLogParser
     public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
       // start archive if enabled
-      ChatManager.Instance.Init();
+      ChatDB.Instance.Init();
 
       _readTask = Task.Run(() =>
       {
@@ -54,11 +54,11 @@ namespace EQLogParser
       {
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
-        ChatManager.Instance.Add(chatType);
+        ChatDB.Instance.Add(chatType);
 
         if (!monitor)
         {
-          TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, false, TriggerStateManager.DefaultUser);
+          TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, false, TriggerStateDB.DefaultUser);
         }
       }
       else

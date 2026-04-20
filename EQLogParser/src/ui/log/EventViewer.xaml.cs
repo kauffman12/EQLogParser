@@ -72,7 +72,7 @@ namespace EQLogParser
     private void Load()
     {
       var list = new List<EventRow>();
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllDeaths())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllDeaths())
       {
         if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
         {
@@ -95,12 +95,12 @@ namespace EQLogParser
         }
       }
 
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllMezBreaks())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllMezBreaks())
       {
         list.Add(new EventRow { BeginTime = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MezBreakEvent });
       }
 
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllZoning())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllZoning())
       {
         list.Add(new EventRow { BeginTime = beginTime, Actor = ConfigUtil.PlayerName, Event = ZoneEvent, Target = record.Zone });
       }

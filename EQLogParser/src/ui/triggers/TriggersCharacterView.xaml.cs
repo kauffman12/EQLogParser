@@ -25,7 +25,7 @@ namespace EQLogParser
       };
 
       _statusTimer.Tick += StatusTimerTick;
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       MainActions.EventsWindowStateChanged += EventsWindowStateChanged;
     }
 
@@ -151,7 +151,7 @@ namespace EQLogParser
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
         {
-          await TriggerStateManager.Instance.DeleteCharacter(character.Id);
+          await TriggerStateDB.Instance.DeleteCharacter(character.Id);
         }
       }
     }
@@ -198,7 +198,7 @@ namespace EQLogParser
             RefreshData();
           }
 
-          await TriggerStateManager.Instance.UpdateCharacter(character);
+          await TriggerStateDB.Instance.UpdateCharacter(character);
         }
       }
     }
@@ -222,7 +222,7 @@ namespace EQLogParser
       {
         _statusTimer.Stop();
         _statusTimer.Tick -= StatusTimerTick;
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         MainActions.EventsWindowStateChanged -= EventsWindowStateChanged;
         _disposedValue = true;
         dataGrid?.Dispose();

@@ -25,7 +25,7 @@ namespace EQLogParser
       InitializeComponent();
       Owner = MainActions.GetOwner();
 
-      TriggerStateManager.Instance.GetLexicon().ContinueWith(task =>
+      TriggerStateDB.Instance.GetLexicon().ContinueWith(task =>
       {
         if (task.Result != null)
         {
@@ -65,7 +65,7 @@ namespace EQLogParser
     private async void SaveClicked(object sender, RoutedEventArgs e)
     {
       CleanupTable();
-      await TriggerStateManager.Instance.SaveLexicon([.. _items]);
+      await TriggerStateDB.Instance.SaveLexicon([.. _items]);
       _treeView = null;
       Close();
     }

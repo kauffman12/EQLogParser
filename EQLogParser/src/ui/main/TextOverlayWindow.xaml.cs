@@ -72,7 +72,7 @@ namespace EQLogParser
         _timer = new Timer(DoTick, null, Timeout.Infinite, 150);
       }
 
-      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
     // Keep on UI thread
@@ -334,7 +334,7 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      await TriggerStateManager.Instance.Update(_node);
+      await TriggerStateDB.Instance.Update(_node);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -473,7 +473,7 @@ namespace EQLogParser
         _isClosed = true;
         StopOverlay();
         _timer?.Dispose();
-        TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+        TriggerStateDB.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
         await Task.Delay(750);

@@ -179,12 +179,6 @@ namespace EQLogParser
     internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
     internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
     internal bool HasOverlayFights() => !_overlayFights.IsEmpty;
-
-    internal void ZoneChanged()
-    {
-      AdpsTracker.Instance.RemoveSongSpells();
-    }
-
     public bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
 
     internal void RemoveFight(string name)
@@ -218,39 +212,6 @@ namespace EQLogParser
     {
       var fight = GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
       AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
-    }
-
-    private void TestProcessed(DamageProcessedEvent processed)
-    {
-      Defender found = null;
-      var oldest = processed.BeginTime - FightTimeout;
-      for (var i = _defenders.Count - 1; i >= 0; i--)
-      {
-        if (oldest > _defenders[i].BeginTime)
-        {
-          break;
-        }
-
-        if (_defenders[i].Name == processed.Record.Defender)
-        {
-          found = _defenders[i];
-          found.BeginTime = processed.BeginTime;
-          break;
-        }
-      }
-
-      if (found == null)
-      {
-        found = new Defender
-        {
-          Name = processed.Record.Defender,
-          BeginTime = processed.BeginTime
-        };
-
-        _defenders.Add(found);
-      }
-
-      found.Records.Add(processed.Record);
     }
 
     private void HandleDamageProcessed(DamageProcessedEvent processed)
@@ -340,7 +301,6 @@ namespace EQLogParser
                     stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                     fight.DdDamage[spellKey] = stats;
                   }
-
                   break;
                 }
               case Labels.Dot:
@@ -350,7 +310,6 @@ namespace EQLogParser
                     stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                     fight.DoTDamage[spellKey] = stats;
                   }
-
                   break;
                 }
               case Labels.Proc:
@@ -360,7 +319,6 @@ namespace EQLogParser
                     stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
                     fight.ProcDamage[spellKey] = stats;
                   }
-
                   break;
                 }
             }
@@ -526,12 +484,12 @@ namespace EQLogParser
       return record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
     }
 
-    private bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
+    private static bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
     {
       return (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
     }
 
-    private bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
+    private static bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
     {
       return (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
     }

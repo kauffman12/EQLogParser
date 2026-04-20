@@ -44,7 +44,7 @@ namespace EQLogParser
     private void Load()
     {
       var npcStatsRows = new Dictionary<string, NpcStatsRow>();
-      foreach (var stats in RecordManager.Instance.GetAllNpcResistStats())
+      foreach (var stats in RecordsStore.Instance.GetAllNpcResistStats())
       {
         var upperNpc = TextUtils.ToUpper(stats.Npc);
         if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(stats.Npc) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(upperNpc))

@@ -994,7 +994,7 @@ namespace EQLogParser
           if (resist != SpellResist.Undefined && defender != attacker &&
             (attacker == ConfigUtil.PlayerName || PlayerManager.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
           {
-            RecordManager.Instance.UpdateNpcSpellStats(defender, resist);
+            RecordsStore.Instance.UpdateNpcSpellStats(defender, resist);
           }
 
           if (!double.IsNaN(lineData.BeginTime))
@@ -1017,7 +1017,7 @@ namespace EQLogParser
               }
               if (!string.IsNullOrEmpty(key))
               {
-                RecordManager.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
+                RecordsStore.Instance.Add(new SpecialRecord { Code = SpecialCodes[key], Player = record.Attacker }, lineData.BeginTime);
               }
             }
           }
@@ -1095,7 +1095,7 @@ namespace EQLogParser
             death.Previous = _previousAction;
           }
 
-          RecordManager.Instance.Add(death, currentTime);
+          RecordsStore.Instance.Add(death, currentTime);
         }
       }
     }

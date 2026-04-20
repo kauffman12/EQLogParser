@@ -604,9 +604,9 @@ namespace EQLogParser
       var resistStart = 0;
       var specialStart = 0;
       var deathStart = 0;
-      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : [];
-      var allSpecials = RecordManager.Instance.GetAllSpecials().ToList();
-      var allDeaths = RecordManager.Instance.GetAllDeaths().ToList();
+      var allResists = includeResists ? RecordsStore.Instance.GetAllResists().ToList() : [];
+      var allSpecials = RecordsStore.Instance.GetAllSpecials().ToList();
+      var allDeaths = RecordsStore.Instance.GetAllDeaths().ToList();
       var temp = new HashSet<IAction>();
       var actions = new List<IAction>();
       var usedSpecials = new List<int>();

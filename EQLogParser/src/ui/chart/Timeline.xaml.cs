@@ -89,7 +89,7 @@ namespace EQLogParser
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
-        foreach (var (beginTime, record) in RecordManager.Instance.GetDeathsDuring(startTime, endTime))
+        foreach (var (beginTime, record) in RecordsStore.Instance.GetDeathsDuring(startTime, endTime))
         {
           if (_selectedStats.FindIndex(stats => stats.OrigName == record.Killed) > -1)
           {
@@ -117,7 +117,7 @@ namespace EQLogParser
           }
 
           var castSpells = new List<SpellData>();
-          foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(startTime - StartTimeOffset, endTime))
+          foreach (var (beginTime, action) in RecordsStore.Instance.GetSpellsDuring(startTime - StartTimeOffset, endTime))
           {
             if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.Self, Adps: > 0 }
               && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))

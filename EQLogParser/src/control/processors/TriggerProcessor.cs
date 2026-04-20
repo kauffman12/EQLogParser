@@ -76,8 +76,8 @@ namespace EQLogParser
       _voiceRate = voiceRate;
       _playerVolume = playerVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
-      TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
-      TriggerStateManager.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
+      TriggerStateDB.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+      TriggerStateDB.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
     }
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
@@ -94,8 +94,8 @@ namespace EQLogParser
     internal async Task StartAsync()
     {
       await GetActiveTriggersAsync();
-      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateManager.Instance.GetLexicon());
-      _trustedPlayers = [.. await TriggerStateManager.Instance.GetTrustedPlayers()];
+      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateDB.Instance.GetLexicon());
+      _trustedPlayers = [.. await TriggerStateDB.Instance.GetTrustedPlayers()];
     }
 
     internal async Task<List<string>> GetEnabledTriggersAsync()
@@ -1162,7 +1162,7 @@ namespace EQLogParser
 
       var requiredOverlayIds = new HashSet<string>(StringComparer.Ordinal);
       var activeTriggersById = new Dictionary<string, TriggerWrapper>();
-      var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
+      var enabledTriggers = await TriggerStateDB.Instance.GetEnabledTriggers(CurrentCharacterId);
       long triggerCount = 0;
 
       foreach (var enabled in enabledTriggers)
@@ -1662,8 +1662,8 @@ namespace EQLogParser
       _ready = false;
       await StopTriggersAsync(true).ConfigureAwait(false);
 
-      TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
+      TriggerStateDB.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
+      TriggerStateDB.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
       _triggerLogCollection.CompleteAdding();
       _chatCollection.CompleteAdding();
       _speakCollection.CompleteAdding();

@@ -11,17 +11,17 @@ using System.Timers;
 
 namespace EQLogParser
 {
-  internal class ChatManager
+  internal class ChatDB
   {
     private const int Timeout = 2000;
     private const string ChannelsFile = "channels.txt";
     private const string SelectedChannelsFile = "channels-selected.txt";
     internal const string Index = "index";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Lazy<ChatManager> Lazy = new(() => new ChatManager());
+    private static readonly Lazy<ChatDB> Lazy = new(() => new ChatDB());
     private static readonly object LockObject = new();
     private static readonly ReverseTimedActionComparer RtaComparer = new();
-    internal static ChatManager Instance => Lazy.Value;
+    internal static ChatDB Instance => Lazy.Value;
     internal event Action<string> EventsUpdatePlayer;
     internal event Action<List<string>> EventsNewChannels;
     private readonly Dictionary<string, byte> _channelCache = [];
@@ -42,7 +42,7 @@ namespace EQLogParser
     private bool _currentListModified;
     private bool _running;
 
-    private ChatManager()
+    private ChatDB()
     {
 
     }

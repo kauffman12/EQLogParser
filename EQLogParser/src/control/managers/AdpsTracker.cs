@@ -157,14 +157,6 @@ namespace EQLogParser
       MyNukeCritRateMod = nuke;
     }
 
-    private void Recalculate()
-    {
-      MyDoTCritRateMod = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
-      MyNukeCritRateMod = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
-    }
-
-    private SpellData GetAdpsByName(string name) => DataManager.Instance.GetSpellDataByName(name);
-
     internal IReadOnlyCollection<SpellData> GetLandsOnSpells(string landsOnKey)
     {
       return _adpsLandsOn.TryGetValue(landsOnKey, out var list) && list.Count > 0 ? list : null;
@@ -173,6 +165,17 @@ namespace EQLogParser
     internal IReadOnlyCollection<SpellData> GetWearOffSpells(string wearOffKey)
     {
       return _adpsWearOff.TryGetValue(wearOffKey, out var list) && list.Count > 0 ? list : null;
+    }
+
+    private void Recalculate()
+    {
+      MyDoTCritRateMod = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
+      MyNukeCritRateMod = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
+    }
+
+    private static SpellData GetAdpsByName(string name)
+    {
+      return DataManager.Instance.GetSpellDataByName(name);
     }
   }
 }

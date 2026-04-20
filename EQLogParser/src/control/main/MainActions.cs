@@ -646,7 +646,7 @@ namespace EQLogParser
     internal static void UpdateDeleteChatMenu(MenuItem deleteChat)
     {
       deleteChat.Items.Clear();
-      ChatManager.GetArchivedPlayers().ForEach(player =>
+      ChatDB.GetArchivedPlayers().ForEach(player =>
       {
         var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
@@ -659,7 +659,7 @@ namespace EQLogParser
 
           if (msgDialog.IsYes1Clicked)
           {
-            if (!ChatManager.Instance.DeleteArchivedPlayer(player))
+            if (!ChatDB.Instance.DeleteArchivedPlayer(player))
             {
               deleteChat.Items.Remove(item);
               deleteChat.IsEnabled = deleteChat.Items.Count > 0;
@@ -685,7 +685,7 @@ namespace EQLogParser
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save, null, null, false, true);
         dialog.Show();
 
-        ChatManager.Instance.Stop();
+        ChatDB.Instance.Stop();
         await Task.Delay(250);
 
         var accessError = false;
@@ -700,7 +700,7 @@ namespace EQLogParser
           }
 
           // create checkpoint before backup
-          await TriggerStateManager.Instance.CreateCheckpoint();
+          await TriggerStateDB.Instance.CreateCheckpoint();
           ZipFile.CreateFromDirectory(source, backupFile, CompressionLevel.Optimal, false);
         }
         catch (Exception ex)
@@ -711,7 +711,7 @@ namespace EQLogParser
         finally
         {
           // init if enabled
-          ChatManager.Instance.Init();
+          ChatDB.Instance.Init();
           await UiUtil.InvokeAsync(() =>
           {
             dialog.Close();
