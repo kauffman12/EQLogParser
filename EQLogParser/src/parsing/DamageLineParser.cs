@@ -23,6 +23,8 @@ namespace EQLogParser
     private static DelayRecord _delayCritRecord;
     internal static IDataManager DataManager;
 
+    private static IDataManager DM => DataManager ?? EQLogParser.DataManager.Instance;
+
     private static readonly Dictionary<string, string> HitMap = new()
     {
       { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
@@ -73,7 +75,7 @@ namespace EQLogParser
         {
           foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
           {
-            (DataManager ?? EQLogParser.DataManager.Instance).RemoveActiveFight(slain);
+            DM.RemoveActiveFight(slain);
           }
 
           SlainQueue.Clear();
@@ -473,9 +475,9 @@ namespace EQLogParser
         if (isExtra)
         {
           var damage = StatsUtil.ParseUInt(split[extraIndex + 1]);
-          var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
-          var spellData = (DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
-          resist = spellData?.Resist ?? SpellResist.Undefined;
+var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
+           var spellData = DM.GetDamagingSpellByName(spell);
+           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = UpdateAttacker(attacker, spell);
           defender = UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Bane, spell);
@@ -587,12 +589,12 @@ namespace EQLogParser
 
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
-          string type;
-          var spellData = (DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell);
+string type;
+           var spellData = DM.GetDamagingSpellByName(spell);
 
-          // Old (eqemu) if attacker is actually a spell then swap attacker and spell
-          // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-          if (spellData == null && (DataManager ?? EQLogParser.DataManager.Instance).IsOldSpell(attacker))
+           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
+           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
+           if (spellData == null && DM.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -623,7 +625,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OtherDmg;
-        if ((DataManager ?? EQLogParser.DataManager.Instance).GetDamagingSpellByName(spell) is { } spellData)
+        if (DM.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -1064,7 +1066,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          (DataManager ?? EQLogParser.DataManager.Instance).ClearActiveAdps();
+          DM.ClearActiveAdps();
         }
 
         var currentTime = lineData.BeginTime;
@@ -1076,7 +1078,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = ToUpper(slain);
-            if (!SlainQueue.Contains(slain) && (DataManager ?? EQLogParser.DataManager.Instance).GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && DM.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;
@@ -1210,8 +1212,8 @@ namespace EQLogParser
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-          var spellName = (DataManager ?? EQLogParser.DataManager.Instance).AbbreviateSpellName(name);
-          var data = (DataManager ?? EQLogParser.DataManager.Instance).GetSpellByAbbrv(spellName);
+var spellName = DM.AbbreviateSpellName(name);
+           var data = DM.GetSpellByAbbrv(spellName);
           if (data != null)
           {
             if (data.Damaging == 2)
