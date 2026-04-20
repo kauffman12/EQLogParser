@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -293,7 +293,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
         EventsHealingSummaryOptionsChanged();
@@ -304,7 +304,7 @@ namespace EQLogParser
     public void HideContent()
     {
       HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
 

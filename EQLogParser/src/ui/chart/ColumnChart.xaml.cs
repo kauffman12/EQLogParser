@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -337,7 +337,7 @@ namespace EQLogParser
       {
         SizeChanged += ContentSizeChanged;
         MainActions.EventsThemeChanged += EventsThemeChanged;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         StatsManager.EventsGenerationStatus += EventsGenerationStatus;
 
         // use existing or generate data
@@ -358,7 +358,7 @@ namespace EQLogParser
     {
       SizeChanged -= ContentSizeChanged;
       MainActions.EventsThemeChanged -= EventsThemeChanged;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
       _ready = false;
     }

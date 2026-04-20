@@ -22,8 +22,10 @@ namespace EQLogParser
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
     internal static IDataManager DataManager;
+    internal static IFightManager FightManager;
 
     private static IDataManager DM => DataManager ?? EQLogParser.DataManager.Instance;
+    private static IFightManager FM => FightManager ?? EQLogParser.FightManager.Instance;
 
     private static readonly Dictionary<string, string> HitMap = new()
     {
@@ -75,7 +77,7 @@ namespace EQLogParser
         {
           foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
           {
-            DM.RemoveActiveFight(slain);
+            FM.RemoveActiveFight(slain);
           }
 
           SlainQueue.Clear();
@@ -1066,7 +1068,7 @@ namespace EQLogParser
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
         {
-          DM.ClearActiveAdps();
+          FM.ClearActiveAdps();
         }
 
         var currentTime = lineData.BeginTime;
@@ -1078,7 +1080,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = ToUpper(slain);
-            if (!SlainQueue.Contains(slain) && DM.GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && FM.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;

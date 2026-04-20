@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -431,7 +431,7 @@ namespace EQLogParser
       {
         TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
         HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
         EventsTankingSummaryOptionsChanged();
@@ -448,7 +448,7 @@ namespace EQLogParser
     {
       TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       MainActions.EventsTankingSelectionChanged -= EventsTankingSelectionChanged;
       ClearData();

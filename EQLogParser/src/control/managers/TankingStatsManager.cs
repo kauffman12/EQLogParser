@@ -31,7 +31,7 @@ namespace EQLogParser
     {
       lock (_tankingGroupIds)
       {
-        DataManager.Instance.EventsClearedActiveData += (_) =>
+        FightManager.Instance.EventsClearedActiveData += (_) =>
         {
           Reset();
         };

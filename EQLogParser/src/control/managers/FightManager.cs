@@ -1,22 +1,67 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace EQLogParser
 {
-  internal class NpcDamageManager
+  internal interface IFightManager
   {
+    void RemoveActiveFight(string name);
+    void ClearActiveAdps();
+    Fight GetFight(string name);
+    void CheckExpireFights(double currentTime);
+    void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight);
+    bool IsLifetimeNpc(string name);
+  }
+
+  internal class FightManager : IFightManager
+  {
+    private static FightManager _instance;
+    internal static FightManager Instance
+    {
+      get => _instance ??= new();
+      set => _instance = value;
+    }
+
+    internal event EventHandler<string> EventsRemovedFight;
+    internal event EventHandler<Fight> EventsNewFight;
+    internal event EventHandler<Fight> EventsNewNonTankingFight;
+    internal event EventHandler<Fight> EventsUpdateFight;
+    internal event EventHandler<Fight> EventsNewOverlayFight;
+    internal event Action<bool> EventsClearedActiveData;
+
+    internal const int MaxTimeout = 60;
+    internal const int FightTimeout = 30;
+    internal uint MyNukeCritRateMod { get; private set; }
+    internal uint MyDoTCritRateMod { get; private set; }
+
+    // overlay / active / lifetime fight state
+    private readonly ConcurrentDictionary<long, Fight> _overlayFights = new();
+    private readonly ConcurrentDictionary<string, Fight> _activeFights = new();
+    private readonly ConcurrentDictionary<string, byte> _lifetimeFights = new();
+
+    // ADPS / crit rate state
+    private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
+    private readonly object _adpsLock = new();
+    private readonly Dictionary<string, Dictionary<string, uint>> _adpsActive = [];
+
+    // NPC damage processing state (merged from NpcDamageManager)
     internal double LastFightProcessTime = double.NaN;
     private int _currentNpcId = 1;
     private static readonly Dictionary<string, bool> RecentSpellCache = [];
     private readonly Dictionary<string, bool> _validCombo = [];
     private readonly SimpleObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
-
     private readonly List<Defender> _defenders = [];
 
-    public NpcDamageManager()
+    internal FightManager()
     {
+      _adpsKeys.ForEach(adpsKey => _adpsActive[adpsKey] = []);
+
+      PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
+      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
+
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
       DamageLineParser.EventsNewTaunt += HandleNewTaunt;
     }
@@ -26,20 +71,232 @@ namespace EQLogParser
       LastFightProcessTime = double.NaN;
       RecentSpellCache.Clear();
       _currentNpcId = 1;
-      _damageCache.Clear();
       _validCombo.Clear();
+      _damageCache.Clear();
+      _defenders.Clear();
     }
+
+    public void CheckExpireFights(double currentTime)
+    {
+      var removeActiveKeys = new List<string>();
+      foreach (var kv in _activeFights)
+      {
+        var diff = currentTime - kv.Value.LastTime;
+        if (diff > MaxTimeout || (diff > FightTimeout && kv.Value.DamageBlocks.Count > 0))
+        {
+          removeActiveKeys.Add(kv.Value.CorrectMapKey);
+
+          // cleanup overlay data if overlay isn't actually open
+          if (!MainWindow.IsDamageOverlayOpen)
+          {
+            RemoveOverlayFight(kv.Value.Id);
+          }
+        }
+      }
+
+      removeActiveKeys.ForEach(RemoveActiveFight);
+    }
+
+    public Fight GetFight(string name)
+    {
+      Fight result = null;
+      if (!string.IsNullOrEmpty(name))
+      {
+        _activeFights.TryGetValue(name, out result);
+        // don't think this happens but just in-case
+        if (result?.Dead == true)
+        {
+          _activeFights.TryRemove(name, out _);
+        }
+      }
+      return result;
+    }
+
+    public void RemoveActiveFight(string name)
+    {
+      if (_activeFights.TryRemove(name, out var fight))
+      {
+        fight.Dead = true;
+      }
+    }
+
+    public void UpdateIfNewFightMap(string name, Fight fight, bool isNonTankingFight)
+    {
+      _lifetimeFights[name] = 1;
+
+      if (_activeFights.TryAdd(name, fight))
+      {
+        _activeFights[name] = fight;
+        EventsNewFight?.Invoke(this, fight);
+      }
+      else
+      {
+        EventsUpdateFight?.Invoke(this, fight);
+      }
+
+      // basically an Add use case for only showing Fights with player damage
+      if (isNonTankingFight)
+      {
+        EventsNewNonTankingFight?.Invoke(this, fight);
+      }
+
+      if (fight.DamageHits > 0)
+      {
+        _overlayFights[fight.Id] = fight;
+
+        // don't bother if not configured (lazy optimization)
+        if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+        {
+          EventsNewOverlayFight?.Invoke(this, fight);
+        }
+      }
+    }
+
+    internal void ResetOverlayFights(bool active = false, bool deadAlso = false)
+    {
+      var groupId = (active && !_activeFights.IsEmpty) ? _activeFights.Values.First().GroupId : -1;
+      // active is used after the log as been loaded. the overlay opening is displayed so that
+      // FightTable has time to populate the GroupIds. if for some reason not enough time has
+      // elapsed then the IDs will still be 0 so ignore
+      if (groupId == 0)
+      {
+        groupId = -1;
+      }
+
+      var removeList = new List<long>();
+      foreach (var fight in _overlayFights.Values)
+      {
+        if (fight != null && (groupId == -1 || fight.GroupId != groupId || (deadAlso && fight.Dead)))
+        {
+          fight.PlayerDamageTotals.Clear();
+          fight.PlayerTankTotals.Clear();
+          removeList.Add(fight.Id);
+        }
+      }
+
+      removeList.ForEach(RemoveOverlayFight);
+    }
+
+    internal void Clear()
+    {
+      _activeFights.Clear();
+      _lifetimeFights.Clear();
+      _overlayFights.Clear();
+      ClearActiveAdps();
+      EventsClearedActiveData?.Invoke(true);
+    }
+
+    public void ClearActiveAdps()
+    {
+      lock (_adpsLock)
+      {
+        _adpsKeys.ForEach(key => _adpsActive[key].Clear());
+        MyDoTCritRateMod = 0;
+        MyNukeCritRateMod = 0;
+      }
+    }
+
+    internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
+    internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
+    internal bool HasOverlayFights() => !_overlayFights.IsEmpty;
+
+    internal void ZoneChanged()
+    {
+      var updated = false;
+      lock (_adpsLock)
+      {
+        foreach (var active in _adpsActive)
+        {
+          foreach (var landsOn in active.Value.Keys.ToArray())
+          {
+            if (DataManager.Instance._adpsLandsOn.TryGetValue(landsOn, out var value))
+            {
+              // Need this check since Glyph may be present and there's no
+              // lands on data for it as it's a special cast
+              if (value.Any(spellData => spellData.SongWindow))
+              {
+                _adpsActive[active.Key].Remove(landsOn);
+                updated = true;
+              }
+            }
+          }
+        }
+      }
+
+      if (updated)
+      {
+        RecalculateAdpsInternal();
+      }
+    }
+
+    internal void UpdateAdps(string key, string msg, uint value)
+    {
+      lock (_adpsLock)
+      {
+        _adpsActive[key][msg] = value;
+        RecalculateAdpsInternal();
+      }
+    }
+
+    private void RecalculateAdpsInternal()
+    {
+      lock (_adpsLock)
+      {
+        MyDoTCritRateMod = (uint)_adpsActive[_adpsKeys[0]].Sum(kv => kv.Value);
+        MyNukeCritRateMod = (uint)_adpsActive[_adpsKeys[1]].Sum(kv => kv.Value);
+      }
+    }
+
+    internal void RecalculateAdps()
+    {
+      RecalculateAdpsInternal();
+    }
+
+    internal void SetCritRateMods(uint dot, uint nuke)
+    {
+      MyDoTCritRateMod = dot;
+      MyNukeCritRateMod = nuke;
+    }
+
+    public bool IsLifetimeNpc(string name) => !string.IsNullOrEmpty(name) && _lifetimeFights.ContainsKey(name);
+
+    internal void RemoveFight(string name)
+    {
+      if (!string.IsNullOrEmpty(name))
+      {
+        var removed = _activeFights.TryRemove(name, out _);
+        removed = _lifetimeFights.TryRemove(name, out _) || removed;
+
+        if (removed)
+        {
+          EventsRemovedFight?.Invoke(this, name);
+        }
+
+        var removeOverlayFights = new List<long>();
+        foreach (var fight in _overlayFights.Values)
+        {
+          if (fight.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+          {
+            removeOverlayFights.Add(fight.Id);
+          }
+        }
+
+        removeOverlayFights.ForEach(RemoveOverlayFight);
+      }
+    }
+
+    // ---- NPC Damage Processing (merged from NpcDamageManager) ----
 
     private void HandleNewTaunt(TauntEvent e)
     {
-      var fight = DataManager.Instance.GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
+      var fight = GetFight(e.Record.Npc) ?? Create(e.Record.Npc, e.BeginTime);
       AddAction(fight.TauntBlocks, e.Record, e.BeginTime);
     }
 
     private void TestProcessed(DamageProcessedEvent processed)
     {
       Defender found = null;
-      var oldest = processed.BeginTime - DataManager.FightTimeout;
+      var oldest = processed.BeginTime - FightTimeout;
       for (var i = _defenders.Count - 1; i >= 0; i--)
       {
         if (oldest > _defenders[i].BeginTime)
@@ -77,7 +334,7 @@ namespace EQLogParser
 
       if (!LastFightProcessTime.Equals(beginTime))
       {
-        DataManager.Instance.CheckExpireFights(beginTime);
+        CheckExpireFights(beginTime);
         _validCombo.Clear();
 
         if (beginTime - LastFightProcessTime > RecentSpellTime)
@@ -219,14 +476,14 @@ namespace EQLogParser
         // tooltip
         var ttl = fight.LastTime - fight.BeginTime + 1;
         fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
-        DataManager.Instance.UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
+        UpdateIfNewFightMap(fight.CorrectMapKey, fight, isNonTankingFight);
       }
     }
 
     private Fight Get(DamageRecord record, double currentTime, bool defender)
     {
       var npc = defender ? record.Defender : record.Attacker;
-      return DataManager.Instance.GetFight(npc) ?? Create(npc, currentTime);
+      return GetFight(npc) ?? Create(npc, currentTime);
     }
 
     private Fight Create(string defender, double currentTime)
@@ -263,7 +520,7 @@ namespace EQLogParser
       StatsUtil.UpdateTimeSegments(segments, subSegments, StatsUtil.CreateRecordKey(record.Type, record.SubType), player, time);
     }
 
-    private static bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)
+    private bool IsValidAttack(DamageRecord record, bool isAttackerPlayer, out bool npcDefender)
     {
       npcDefender = false;
 
@@ -291,7 +548,7 @@ namespace EQLogParser
           return isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
         }
 
-        if (DataManager.Instance.GetFight(record.Defender) != null && DataManager.Instance.GetFight(record.Attacker) == null)
+        if (GetFight(record.Defender) != null && GetFight(record.Attacker) == null)
         {
           npcDefender = true;
           return true;
@@ -342,12 +599,12 @@ namespace EQLogParser
       return record.AttackerIsSpell && RecentSpellCache.ContainsKey(record.Attacker);
     }
 
-    private static bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
+    private bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
     {
       return (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
     }
 
-    private static bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
+    private bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
     {
       return (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
     }

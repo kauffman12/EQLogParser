@@ -1,4 +1,4 @@
-﻿using Syncfusion.Data;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using Syncfusion.Windows.Tools.Controls;
@@ -111,11 +111,11 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
-      DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
-      DataManager.Instance.EventsRemovedFight += EventsRemovedFight;
-      DataManager.Instance.EventsNewFight += EventsNewFight;
-      DataManager.Instance.EventsUpdateFight += EventsUpdateFight;
-      DataManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
+      FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+       FightManager.Instance.EventsRemovedFight += EventsRemovedFight;
+       FightManager.Instance.EventsNewFight += EventsNewFight;
+       FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
+       FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 
@@ -148,7 +148,7 @@ namespace EQLogParser
     private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
     private void EventsNewFight(object sender, Fight fight) => ProcessFight(fight);
     private void EventsNewNonTankingFight(object sender, Fight fight) => ProcessNonTankingFight(fight);
-    private void ClearClick(object sender, RoutedEventArgs e) => DataManager.Instance.Clear();
+    private void ClearClick(object sender, RoutedEventArgs e) => FightManager.Instance.Clear();
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void EventsThemeChanged(string _)

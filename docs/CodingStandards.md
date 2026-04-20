@@ -63,6 +63,29 @@
 - Core processing methods grouped together
 - Utility methods grouped together
 
+## Singleton Pattern
+
+Managers and shared services use a singleton pattern with lazy initialization:
+
+```csharp
+private static T _instance;
+internal static T Instance
+{
+  get => _instance ??= new();
+  set => _instance = value;
+}
+```
+
+The setter enables test injection. Consumers access the singleton via `ClassName.Instance`.
+
+## Interface Design
+
+Split large interfaces by responsibility:
+- `IDataManager` — static spell/NPC/class data (lookup methods)
+- `IFightManager` — runtime fight state (active fights, overlays, ADPS)
+
+Each interface has only the methods relevant to its responsibility. Classes that need both inject both interfaces.
+
 ## Error Handling & User Communication
 
 ### General Principles

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -278,7 +278,7 @@ namespace EQLogParser
         RecordManager.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
-          DataManager.Instance.ZoneChanged();
+          FightManager.Instance.ZoneChanged();
           return true;
         }
       }

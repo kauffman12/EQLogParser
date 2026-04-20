@@ -30,7 +30,7 @@ namespace EQLogParser
 
     internal DamageStatsManager()
     {
-      DataManager.Instance.EventsClearedActiveData += (_) =>
+      FightManager.Instance.EventsClearedActiveData += (_) =>
       {
         lock (_damageGroupIds)
         {

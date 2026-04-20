@@ -46,8 +46,7 @@ namespace EQLogParser
     private DamageOverlayWindow _damageOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
-    private readonly NpcDamageManager _npcDamageManager = new();
-    private PetMapping _currentEditMapping;
+      private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -357,7 +356,7 @@ namespace EQLogParser
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
-        if (DataManager.Instance.HasOverlayFights())
+        if (FightManager.Instance.HasOverlayFights())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
@@ -424,16 +423,16 @@ namespace EQLogParser
           _saveTimer?.Stop();
           ConfigUtil.Save();
           await TriggerManager.Instance.StopAsync();
-          DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+          FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay(false);
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
-          DataManager.Instance.ResetOverlayFights(true);
+          FightManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
-          DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+          FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
           break;
       }
     }
@@ -684,7 +683,7 @@ namespace EQLogParser
       {
         // close and clear old data
         CloseDamageOverlay(false);
-        DataManager.Instance.ResetOverlayFights();
+        FightManager.Instance.ResetOverlayFights();
       }
 
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
@@ -877,9 +876,9 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-              DataManager.Instance.ResetOverlayFights(true);
+     FightManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
-              DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+     FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
             }, DispatcherPriority.DataBind);
           }
           else
@@ -1054,11 +1053,12 @@ namespace EQLogParser
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;
-        DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
-        CloseDamageOverlay(false);
-        DataManager.Instance.Clear();
+        FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+         CloseDamageOverlay(false);
+         DataManager.Instance.Clear();
+         FightManager.Instance.Clear();
         RecordManager.Instance.Clear();
-        _npcDamageManager.Reset();
+        FightManager.Instance.Reset();
         closeLogFile.IsEnabled = false;
         saveLogFile.IsEnabled = false;
         MainActions.FireLogLoadingEvent(closedFile, false);
