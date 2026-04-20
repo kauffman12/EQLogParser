@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
@@ -17,7 +16,7 @@ namespace EQLogParser
     internal uint MyNukeCritRateMod { get; private set; }
     internal uint MyDoTCritRateMod { get; private set; }
 
-     internal Dictionary<string, Dictionary<string, uint>> AdpsValues => _adpsValues;
+    internal Dictionary<string, Dictionary<string, uint>> AdpsValues => _adpsValues;
     internal List<string> AdpsKeys => _adpsKeys;
 
     private readonly List<string> _adpsKeys = ["#DoTCritRate", "#NukeCritRate"];
@@ -168,12 +167,12 @@ namespace EQLogParser
 
     internal IReadOnlyCollection<SpellData> GetLandsOnSpells(string landsOnKey)
     {
-        return _adpsLandsOn.TryGetValue(landsOnKey, out var list) && list.Count > 0 ? list : null;
+      return _adpsLandsOn.TryGetValue(landsOnKey, out var list) && list.Count > 0 ? list : null;
     }
 
     internal IReadOnlyCollection<SpellData> GetWearOffSpells(string wearOffKey)
     {
-        return _adpsWearOff.TryGetValue(wearOffKey, out var list) && list.Count > 0 ? list : null;
+      return _adpsWearOff.TryGetValue(wearOffKey, out var list) && list.Count > 0 ? list : null;
     }
   }
 }
