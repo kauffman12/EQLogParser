@@ -103,7 +103,7 @@ namespace EQLogParser
       else if (action is ReceivedSpell { IsWearOff: false } received)
       {
         if (received.SpellData == null && received.Ambiguity.Count > 0 &&
-            DataManager.ResolveSpellAmbiguity(received, endTime, out var replaced))
+            EQDataStore.ResolveSpellAmbiguity(received, endTime, out var replaced))
         {
           received.SpellData = replaced;
         }

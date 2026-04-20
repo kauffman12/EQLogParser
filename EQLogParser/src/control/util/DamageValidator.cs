@@ -1,5 +1,4 @@
-﻿
-namespace EQLogParser
+﻿namespace EQLogParser
 {
   internal class DamageValidator
   {

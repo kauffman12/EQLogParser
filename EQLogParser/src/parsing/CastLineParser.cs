@@ -135,7 +135,7 @@ namespace EQLogParser
                 }
               }
 
-              var spellData = DataManager.Instance.GetSpellByName(spellName);
+              var spellData = EQDataStore.Instance.GetSpellByName(spellName);
 
               if (spellData != null)
               {
@@ -144,20 +144,20 @@ namespace EQLogParser
               else
               {
                 // unknown spell
-                spellData = DataManager.Instance.AddUnknownSpell(spellName);
+                spellData = EQDataStore.Instance.AddUnknownSpell(spellName);
               }
 
               var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
               RecordsStore.Instance.Add(cast, currentTime);
 
-              if (!spellData.IsUnknown && DataManager.Instance.GetSpellClass(spellData.Name) is { } theClass)
+              if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {
                 PlayerManager.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
               }
 
               if (specialKey != null && spellData != null)
               {
-                DataManager.Instance.UpdateAdps(spellData);
+                EQDataStore.Instance.UpdateAdps(spellData);
               }
             }
             else
@@ -209,11 +209,11 @@ namespace EQLogParser
         }
       }
 
-      var searchResult = DataManager.Instance.GetLandsOnYou(split);
+      var searchResult = EQDataStore.Instance.GetLandsOnYou(split);
       if (searchResult.SpellData.Count == 0 || searchResult.DataIndex != 0)
       {
         // WearOff messages can only apply to use so DataIndex has to also be zero meaning that every word was matched
-        searchResult = DataManager.Instance.GetWearOff(split);
+        searchResult = EQDataStore.Instance.GetWearOff(split);
         if (searchResult.SpellData.Count > 0 && searchResult.DataIndex == 0)
         {
           if (!string.IsNullOrEmpty(player))
@@ -233,7 +233,7 @@ namespace EQLogParser
           return true;
         }
 
-        searchResult = DataManager.Instance.GetLandsOnOther(split, out player);
+        searchResult = EQDataStore.Instance.GetLandsOnOther(split, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
           if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerManager.Instance.IsVerifiedPet(player) &&

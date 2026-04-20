@@ -486,12 +486,12 @@ namespace EQLogParser
 
     private static bool IsAttackerNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isAttackerPlayer)
     {
-      return (!isAttackerPlayer && DataManager.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
+      return (!isAttackerPlayer && EQDataStore.Instance.IsKnownNpc(record.Attacker)) || (record.AttackerIsSpell && !isAttackerPlayerSpell);
     }
 
     private static bool IsDefenderNpc(DamageRecord record, bool isAttackerPlayerSpell, bool isDefenderPlayer)
     {
-      return (!isDefenderPlayer && DataManager.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
+      return (!isDefenderPlayer && EQDataStore.Instance.IsKnownNpc(record.Defender)) || isAttackerPlayerSpell;
     }
   }
 }

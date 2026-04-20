@@ -150,7 +150,7 @@ namespace EQLogParser
       {
         var spellData = spell.SpellData;
 
-        if (spellData == null && spell.Ambiguity.Count > 0 && DataManager.ResolveSpellAmbiguity(spell, lastTime, out replaced))
+        if (spellData == null && spell.Ambiguity.Count > 0 && EQDataStore.ResolveSpellAmbiguity(spell, lastTime, out replaced))
         {
           spellData = replaced;
         }

@@ -1055,7 +1055,7 @@ namespace EQLogParser
         ConfigUtil.PlayerName = null;
         FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
         CloseDamageOverlay(false);
-        DataManager.Instance.Clear();
+        EQDataStore.Instance.Clear();
         FightManager.Instance.Clear();
         RecordsStore.Instance.Clear();
         FightManager.Instance.Reset();

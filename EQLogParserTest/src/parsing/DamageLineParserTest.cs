@@ -6,7 +6,7 @@ namespace EQLogParserTest
   [TestClass]
   public class DamageLineParserTest
   {
-    private Mock<IDataManager>? _mockDataManager;
+    private Mock<IEQDataStore>? _mockDataManager;
     private Mock<IFightManager>? _mockFightManager;
 
     [TestInitialize]
@@ -14,7 +14,7 @@ namespace EQLogParserTest
     {
       ConfigUtil.PlayerName = "TestPlayer";
       AdpsTracker.Instance.Clear();
-      _mockDataManager = new Mock<IDataManager>();
+      _mockDataManager = new Mock<IEQDataStore>();
 #pragma warning disable CS8603 // Possible null reference return.
       _mockDataManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.

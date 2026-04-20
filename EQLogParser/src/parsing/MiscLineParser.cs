@@ -77,7 +77,7 @@ namespace EQLogParser
                (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
               PlayerManager.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
-              if (DataManager.Instance.IsValidClassName(whoClass))
+              if (EQDataStore.Instance.IsValidClassName(whoClass))
               {
                 PlayerManager.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
               }
@@ -165,7 +165,7 @@ namespace EQLogParser
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
 
                     // also update npc resist stats
-                    if (DataManager.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
+                    if (EQDataStore.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
                     {
                       RecordsStore.Instance.UpdateNpcSpellStats(record.Defender, spellData.Resist, true);
                     }
@@ -183,7 +183,7 @@ namespace EQLogParser
                   if (split.Length >= 7 && i == 2 && split[^1] == "set." && split[3] == "your" && split[1] == "successfully" && split[0] == "You")
                   {
                     var className = string.Join(" ", split, 4, 1 + (split.Length - 7));
-                    if (DataManager.Instance.IsValidClassName(className))
+                    if (EQDataStore.Instance.IsValidClassName(className))
                     {
                       PlayerManager.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
                     }

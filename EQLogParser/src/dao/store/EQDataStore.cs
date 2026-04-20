@@ -67,7 +67,7 @@ namespace EQLogParser
     public const string Invulnerable = "Invulnerable";
   }
 
-  internal interface IDataManager
+  internal interface IEQDataStore
   {
     SpellData GetDamagingSpellByName(string name);
     bool IsOldSpell(string name);
@@ -75,12 +75,12 @@ namespace EQLogParser
     SpellData GetSpellByAbbrv(string abbrv);
   }
 
-  internal class DataManager : IDataManager
+  internal class EQDataStore : IEQDataStore
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private static DataManager _instance;
-    internal static DataManager Instance
+    private static EQDataStore _instance;
+    internal static EQDataStore Instance
     {
       get => _instance ??= new();
       set => _instance = value;
@@ -114,7 +114,7 @@ namespace EQLogParser
     private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled
 );
 
-    internal DataManager()
+    internal EQDataStore()
     {
       var spellList = new List<SpellData>();
 

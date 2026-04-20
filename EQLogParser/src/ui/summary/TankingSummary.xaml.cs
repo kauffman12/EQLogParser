@@ -40,7 +40,7 @@ namespace EQLogParser
       }
 
       DamageType = damageTypes.SelectedIndex;
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;

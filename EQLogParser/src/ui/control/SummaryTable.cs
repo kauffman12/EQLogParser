@@ -89,7 +89,7 @@ namespace EQLogParser
         parent.Items.Add(selected);
       }
 
-      DataManager.Instance.GetClassList().ForEach(name =>
+      EQDataStore.Instance.GetClassList().ForEach(name =>
       {
         var item = new MenuItem { IsEnabled = enabled, Header = name };
         item.Click += new RoutedEventHandler(classHandler);

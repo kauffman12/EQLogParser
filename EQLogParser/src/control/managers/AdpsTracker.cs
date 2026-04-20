@@ -175,7 +175,7 @@ namespace EQLogParser
 
     private static SpellData GetAdpsByName(string name)
     {
-      return DataManager.Instance.GetSpellDataByName(name);
+      return EQDataStore.Instance.GetSpellDataByName(name);
     }
   }
 }

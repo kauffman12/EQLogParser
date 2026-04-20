@@ -112,7 +112,7 @@ namespace EQLogParser
 
       UpdateDamageMode(_savedDamageMode);
 
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classList.ItemsSource = list;
 
@@ -394,7 +394,7 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
-      var classList = DataManager.Instance.GetClassList();
+      var classList = EQDataStore.Instance.GetClassList();
       for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
         if (damageContent.Children[i] is DamageBar { } bar)

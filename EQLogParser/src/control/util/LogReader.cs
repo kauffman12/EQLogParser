@@ -148,7 +148,7 @@ namespace EQLogParser
             _currentPos = _fs.Position;
             _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
           }
-          else if ((_initSize - bytesRead) < 10000)
+          else if (_initSize - bytesRead < 10000)
           {
             _currentPos = _fs.Position;
           }

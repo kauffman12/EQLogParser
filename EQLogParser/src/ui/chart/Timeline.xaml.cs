@@ -134,7 +134,7 @@ namespace EQLogParser
               {
                 if (!received.IsWearOff)
                 {
-                  if (DataManager.ResolveSpellAmbiguity(received, endTime, out var replaced))
+                  if (EQDataStore.ResolveSpellAmbiguity(received, endTime, out var replaced))
                   {
                     castSpells.Add(replaced);
                     spellData = replaced;

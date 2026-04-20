@@ -9,7 +9,7 @@ namespace EQLogParser
     internal static void PopulateClassesList(ComboBox classesList, List<string> selected)
     {
       // classes combo
-      var playerClasses = DataManager.Instance.GetClassList();
+      var playerClasses = EQDataStore.Instance.GetClassList();
       selected.AddRange(playerClasses);
       var comboList = playerClasses.Select(name => new ComboBoxItemDetails { IsChecked = true, Text = name }).ToList();
       comboList.Insert(0, new ComboBoxItemDetails { IsChecked = false, Text = "Unselect All" });
@@ -41,7 +41,7 @@ namespace EQLogParser
     {
       if (sender is ComboBoxItem { Content: ComboBoxItemDetails details })
       {
-        UiElementUtil.PreviewSelectAllComboBox(classesList, details, DataManager.Instance.GetClassListCount());
+        UiElementUtil.PreviewSelectAllComboBox(classesList, details, EQDataStore.Instance.GetClassListCount());
       }
     }
   }

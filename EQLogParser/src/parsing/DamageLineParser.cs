@@ -21,10 +21,10 @@ namespace EQLogParser
     private static double _slainTime = double.NaN;
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
-    internal static IDataManager DataManager;
+    internal static IEQDataStore DataManager;
     internal static IFightManager FightManager;
 
-    private static IDataManager DM => DataManager ?? EQLogParser.DataManager.Instance;
+    private static IEQDataStore DM => DataManager ?? EQLogParser.EQDataStore.Instance;
     private static IFightManager FM => FightManager ?? EQLogParser.FightManager.Instance;
 
     private static readonly Dictionary<string, string> HitMap = new()
