@@ -86,7 +86,6 @@ namespace EQLogParser
       set => _instance = value;
     }
 
-
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly HashSet<SpellData> _allSpellData = [];
     private readonly Dictionary<string, bool> _oldSpellNamesDb = [];
@@ -96,7 +95,6 @@ namespace EQLogParser
 
     // definitely used in single thread
     private readonly Dictionary<string, string> _titleToClass = [];
-
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
@@ -111,8 +109,7 @@ namespace EQLogParser
 
     // rank abbreviation
     private readonly HashSet<string> RankWords;
-    private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled
-);
+    private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     internal EQDataStore()
     {
@@ -722,7 +719,7 @@ namespace EQLogParser
       if (data[lastIndex] == "'s")
       {
         node.SpellData.Add(spellData);
-        node.SpellData.Sort(DurationCompare);
+        node.SpellData.Sort(EQDataUtil.SpellDurationCompare);
       }
       else
       {
@@ -735,76 +732,13 @@ namespace EQLogParser
         if (lastIndex == 0)
         {
           child.SpellData.Add(spellData);
-          child.SpellData.Sort(DurationCompare);
+          child.SpellData.Sort(EQDataUtil.SpellDurationCompare);
         }
         else
         {
           BuildSpellPath(data, child, spellData, lastIndex - 1);
         }
       }
-    }
-
-    private static int DurationCompare(SpellData a, SpellData b)
-    {
-      if (ReferenceEquals(a, b))
-      {
-        return 0;
-      }
-
-      if (a is null)
-      {
-        return 1;
-      }
-
-      if (b is null)
-      {
-        return -1;
-      }
-
-      var result = b.Duration.CompareTo(a.Duration);
-
-      if (result == 0)
-      {
-        var aHasId = int.TryParse(a.Id, out var aInt);
-        var bHasId = int.TryParse(b.Id, out var bInt);
-
-        if (aHasId && bHasId)
-        {
-          result = bInt.CompareTo(aInt);
-        }
-        else if (aHasId && !bHasId)
-        {
-          result = -1;
-        }
-        else if (!aHasId && bHasId)
-        {
-          result = 1;
-        }
-        else
-        {
-          result = string.Compare(a.Id, b.Id, StringComparison.Ordinal);
-        }
-      }
-
-      return result;
-    }
-
-    private class SpellAbbrvComparer : IEqualityComparer<SpellData>
-    {
-      public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
-      public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
-    }
-
-    internal class SpellTreeNode
-    {
-      public List<SpellData> SpellData { get; set; } = [];
-      public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
-    }
-
-    internal class SpellTreeResult
-    {
-      public List<SpellData> SpellData { get; set; }
-      public int DataIndex { get; set; }
     }
   }
 }

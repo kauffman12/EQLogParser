@@ -518,6 +518,18 @@ namespace EQLogParser
     public Dictionary<string, bool> UniquePlayers { get; set; } = [];
   }
 
+  internal class SpellTreeNode
+  {
+    public List<SpellData> SpellData { get; set; } = [];
+    public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
+  }
+
+  internal class SpellTreeResult
+  {
+    public List<SpellData> SpellData { get; set; }
+    public int DataIndex { get; set; }
+  }
+
   internal class OverlayPlayerTotal
   {
     internal long Damage { get; set; }
