@@ -76,8 +76,8 @@ namespace EQLogParser
       {
         if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
         {
-    var isActorNpc = FightManager.Instance.IsLifetimeNpc(record.Killer) || DataManager.Instance.IsKnownNpc(record.Killer);
-           var isTargetNpc = FightManager.Instance.IsLifetimeNpc(record.Killed) || DataManager.Instance.IsKnownNpc(record.Killed);
+          var isActorNpc = FightManager.Instance.IsLifetimeNpc(record.Killer) || DataManager.Instance.IsKnownNpc(record.Killer);
+          var isTargetNpc = FightManager.Instance.IsLifetimeNpc(record.Killed) || DataManager.Instance.IsKnownNpc(record.Killed);
           var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
           var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
 

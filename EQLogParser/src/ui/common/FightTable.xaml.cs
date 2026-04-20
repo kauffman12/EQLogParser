@@ -112,10 +112,10 @@ namespace EQLogParser
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
 
       FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
-       FightManager.Instance.EventsRemovedFight += EventsRemovedFight;
-       FightManager.Instance.EventsNewFight += EventsNewFight;
-       FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
-       FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
+      FightManager.Instance.EventsRemovedFight += EventsRemovedFight;
+      FightManager.Instance.EventsNewFight += EventsNewFight;
+      FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
+      FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
       MainActions.EventsThemeChanged += EventsThemeChanged;
     }
 

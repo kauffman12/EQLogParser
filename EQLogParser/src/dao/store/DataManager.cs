@@ -85,7 +85,7 @@ namespace EQLogParser
       get => _instance ??= new();
       set => _instance = value;
     }
- 
+
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly HashSet<SpellData> _allSpellData = [];
@@ -103,7 +103,7 @@ namespace EQLogParser
     // definitely used in single thread
     private readonly Dictionary<string, string> _titleToClass = [];
 
-   private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
+    private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
@@ -361,7 +361,7 @@ namespace EQLogParser
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
-  
+
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
     internal List<string> GetClassList() => [.. _sortedClassList];
     internal int GetClassListCount() => _classListCount;
@@ -445,7 +445,7 @@ namespace EQLogParser
       return result;
     }
 
-   internal SolidColorBrush GetClassBrush(string className)
+    internal SolidColorBrush GetClassBrush(string className)
     {
       if (!string.IsNullOrEmpty(className) && _classBrushes.TryGetValue(className, out var brush))
       {
@@ -482,7 +482,7 @@ namespace EQLogParser
       return null;
     }
 
-        internal SpellData GetDetSpellByName(string name)
+    internal SpellData GetDetSpellByName(string name)
     {
       SpellData spellData = null;
       if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
@@ -540,7 +540,7 @@ namespace EQLogParser
       return spellData;
     }
 
-      internal SpellTreeResult GetLandsOnOther(string[] split, out string player)
+    internal SpellTreeResult GetLandsOnOther(string[] split, out string player)
     {
       player = null;
       var found = SearchSpellPath(_landsOnOtherTree, split);
@@ -645,7 +645,7 @@ namespace EQLogParser
       return found;
     }
 
-     internal SpellData ParseCustomSpellData(string line)
+    internal SpellData ParseCustomSpellData(string line)
     {
       SpellData spellData = null;
       if (!string.IsNullOrEmpty(line))
@@ -754,7 +754,7 @@ namespace EQLogParser
 
       return result;
     }
-  internal void Clear()
+    internal void Clear()
     {
       foreach (var spellData in _allSpellData)
       {
@@ -764,7 +764,7 @@ namespace EQLogParser
       FightManager.Instance.Clear();
     }
 
-   internal void UpdateAdps(SpellData spellData)
+    internal void UpdateAdps(SpellData spellData)
     {
       lock (_adpsLock)
       {
@@ -779,9 +779,9 @@ namespace EQLogParser
       }
     }
 
- 
 
-     internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, double currentTime, out SpellData replaced)
+
+    internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, double currentTime, out SpellData replaced)
     {
       replaced = null;
 

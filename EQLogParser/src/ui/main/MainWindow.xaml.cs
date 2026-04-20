@@ -46,7 +46,7 @@ namespace EQLogParser
     private DamageOverlayWindow _damageOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
-      private PetMapping _currentEditMapping;
+    private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
     private readonly List<bool> _logWindows = [];
@@ -876,9 +876,9 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-     FightManager.Instance.ResetOverlayFights(true);
+              FightManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
-     FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+              FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
             }, DispatcherPriority.DataBind);
           }
           else
@@ -1054,9 +1054,9 @@ namespace EQLogParser
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;
         FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
-         CloseDamageOverlay(false);
-         DataManager.Instance.Clear();
-         FightManager.Instance.Clear();
+        CloseDamageOverlay(false);
+        DataManager.Instance.Clear();
+        FightManager.Instance.Clear();
         RecordManager.Instance.Clear();
         FightManager.Instance.Reset();
         closeLogFile.IsEnabled = false;
