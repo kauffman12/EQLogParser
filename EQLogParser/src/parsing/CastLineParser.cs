@@ -152,7 +152,7 @@ namespace EQLogParser
 
               if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {
-                PlayerManager.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
+                PlayerRegistry.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
               }
 
               if (specialKey != null && spellData != null)
@@ -236,21 +236,21 @@ namespace EQLogParser
         searchResult = EQDataStore.Instance.GetLandsOnOther(split, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
-          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerManager.Instance.IsVerifiedPet(player) &&
-          PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
+          PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
           {
             foreach (var spell in PetSpells.Keys)
             {
               if (searchResult.SpellData[0].Name.StartsWith(spell))
               {
-                PlayerManager.Instance.AddVerifiedPet(player);
+                PlayerRegistry.Instance.AddVerifiedPet(player);
               }
             }
           }
-          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerManager.Instance.IsVerifiedPet(player) &&
-            PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
+            PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
           {
-            PlayerManager.Instance.AddVerifiedPet(player);
+            PlayerRegistry.Instance.AddVerifiedPet(player);
           }
         }
       }

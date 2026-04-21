@@ -24,8 +24,8 @@ namespace EQLogParser
           var record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
-            record.Healer = PlayerManager.ReplacePlayer(record.Healer, record.Healed);
-            record.Healed = PlayerManager.ReplacePlayer(record.Healed, record.Healer);
+            record.Healer = PlayerRegistry.ReplacePlayer(record.Healer, record.Healed);
+            record.Healed = PlayerRegistry.ReplacePlayer(record.Healed, record.Healer);
             RecordsStore.Instance.Add(record, lineData.BeginTime);
             return true;
           }
@@ -213,15 +213,15 @@ namespace EQLogParser
           var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
-            if (PlayerManager.Instance.IsVerifiedPlayer(healed[..possessive]))
+            if (PlayerRegistry.Instance.IsVerifiedPlayer(healed[..possessive]))
             {
-              PlayerManager.Instance.AddVerifiedPet(healed);
+              PlayerRegistry.Instance.AddVerifiedPet(healed);
             }
           }
           // found a bst/mag/nec pet
           else if (!string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Mend Companion", StringComparison.Ordinal))
           {
-            PlayerManager.Instance.AddVerifiedPet(healed);
+            PlayerRegistry.Instance.AddVerifiedPet(healed);
           }
           else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase))
           {

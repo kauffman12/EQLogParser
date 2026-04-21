@@ -171,7 +171,7 @@ namespace EQLogParser
               Dps = (long)Math.Round(total.Damage / time, 2),
               TotalSeconds = time,
               Rank = (ushort)rank++,
-              ClassName = PlayerManager.Instance.GetLastKnownPlayerClass(total.Name),
+              ClassName = PlayerRegistry.Instance.GetLastKnownPlayerClass(total.Name),
               OrigName = total.Name
             };
 
@@ -249,7 +249,7 @@ namespace EQLogParser
 
         player = petOwner;
       }
-      else if (PlayerManager.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.Unassigned)
+      else if (PlayerRegistry.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.Unassigned)
       {
         playerHasPet[owner] = true;
 

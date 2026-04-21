@@ -22,7 +22,7 @@ namespace EQLogParser
     private bool _ready;
 
     // ✅ Derived types override these:
-    protected virtual IStatsManager StatsManager => DamageStatsManagerAdapter.Instance;
+    protected virtual IStatsBuilder StatsManager => DamageStatsManagerAdapter.Instance;
 
     protected virtual string ChartTitle => "Players vs Top Performer (Percent of Total Damage)";
 
@@ -118,7 +118,7 @@ namespace EQLogParser
         {
           var isFirst = false;
           var name = stats.OrigName;
-          if (!PlayerManager.Instance.IsVerifiedPlayer(name)) continue;
+          if (!PlayerRegistry.Instance.IsVerifiedPlayer(name)) continue;
 
           if (string.IsNullOrEmpty(theClass) || stats.ClassName != theClass)
           {

@@ -47,7 +47,7 @@ namespace EQLogParser
       foreach (var stats in RecordsStore.Instance.GetAllNpcResistStats())
       {
         var upperNpc = TextUtils.ToUpper(stats.Npc);
-        if (!PlayerManager.Instance.IsPetOrPlayerOrMerc(stats.Npc) && !PlayerManager.Instance.IsPetOrPlayerOrMerc(upperNpc))
+        if (!PlayerRegistry.Instance.IsPetOrPlayerOrMerc(stats.Npc) && !PlayerRegistry.Instance.IsPetOrPlayerOrMerc(upperNpc))
         {
           var count = 0u;
           var reflectedCount = 0u;

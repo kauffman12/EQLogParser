@@ -9,9 +9,9 @@ using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
-  internal class DamageStatsManager
+  internal class DamageStatsBuilder
   {
-    internal static DamageStatsManager Instance = new();
+    internal static DamageStatsBuilder Instance = new();
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
 
@@ -28,7 +28,7 @@ namespace EQLogParser
     private StatsGenerationEvent _lastStatsEvent;
     private string _title;
 
-    internal DamageStatsManager()
+    internal DamageStatsBuilder()
     {
       FightManager.Instance.EventsClearedActiveData += (_) =>
       {
@@ -248,7 +248,7 @@ namespace EQLogParser
                     }
                     else if (isValid)
                     {
-                      var isAttackerPet = PlayerManager.Instance.IsVerifiedPet(record.Attacker);
+                      var isAttackerPet = PlayerRegistry.Instance.IsVerifiedPet(record.Attacker);
                       var isNewFrame = CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
@@ -361,7 +361,7 @@ namespace EQLogParser
                 }
               }
 
-              var playerClass = PlayerManager.Instance.GetPlayerClass(stats.OrigName, lastTime);
+              var playerClass = PlayerRegistry.Instance.GetPlayerClass(stats.OrigName, lastTime);
               stats.ClassName = playerClass;
               playerClasses.TryAdd(stats.OrigName, playerClass);
 
@@ -482,7 +482,7 @@ namespace EQLogParser
 
     private void UpdatePetMapping(DamageRecord damage)
     {
-      var petName = PlayerManager.Instance.GetPlayerFromPet(damage.Attacker);
+      var petName = PlayerRegistry.Instance.GetPlayerFromPet(damage.Attacker);
       if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned) || !string.IsNullOrEmpty(petName = damage.AttackerOwner))
       {
         if (!_playerPets.TryGetValue(petName, out var mapping))

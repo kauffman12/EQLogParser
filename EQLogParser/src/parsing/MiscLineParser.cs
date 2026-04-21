@@ -76,10 +76,10 @@ namespace EQLogParser
               ((split[0] == "" && split[1] == "AFK" && ParseWho(split, 2, out var who, out var whoClass, out var groupId)) ||
                (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
-              PlayerManager.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
+              PlayerRegistry.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
               if (EQDataStore.Instance.IsValidClassName(whoClass))
               {
-                PlayerManager.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
+                PlayerRegistry.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
               }
               handled = true;
             }
@@ -185,7 +185,7 @@ namespace EQLogParser
                     var className = string.Join(" ", split, 4, 1 + (split.Length - 7));
                     if (EQDataStore.Instance.IsValidClassName(className))
                     {
-                      PlayerManager.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
+                      PlayerRegistry.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
                     }
                     handled = true;
                   }
@@ -201,7 +201,7 @@ namespace EQLogParser
                   {
                     looter = split[0].Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split[0];
                     var item = string.Join(" ", split, itemsIndex + 1, i - itemsIndex - 1);
-                    PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                    PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                     var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
@@ -258,7 +258,7 @@ namespace EQLogParser
 
                     if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
                     {
-                      PlayerManager.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
                       var record = new LootRecord { Item = item, Player = name, Quantity = count, IsCurrency = true };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
@@ -274,7 +274,7 @@ namespace EQLogParser
 
                     if (count > 0 && count != ushort.MaxValue)
                     {
-                      PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       var record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
@@ -298,7 +298,7 @@ namespace EQLogParser
                     {
                       looter = player[..^1];
                       looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
-                      PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       var item = string.Join(" ", split, 1, i - 2);
                       var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
@@ -342,7 +342,7 @@ namespace EQLogParser
                 var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
-                  PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                  PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = "" };
                   RecordsStore.Instance.Add(record, lineData.BeginTime);
                   handled = true;

@@ -268,7 +268,7 @@ namespace EQLogParser
           {
             if (chatType.Channel is ChatChannels.Guild or ChatChannels.Raid or ChatChannels.Fellowship)
             {
-              PlayerManager.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
+              PlayerRegistry.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
             }
             else if (chatType.Channel is ChatChannels.Say)
             {
@@ -279,14 +279,14 @@ namespace EQLogParser
                 if (span.IndexOf(".") is var found and > 2)
                 {
                   var player = span[..found].ToString();
-                  PlayerManager.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
-                  PlayerManager.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
+                  PlayerRegistry.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
+                  PlayerRegistry.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
                 }
                 else
                 {
                   var player = span.ToString();
-                  PlayerManager.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
-                  PlayerManager.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
+                  PlayerRegistry.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
+                  PlayerRegistry.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
                 }
               }
             }
@@ -385,7 +385,7 @@ namespace EQLogParser
             if (_playerCacheUpdated)
             {
               ConfigUtil.SaveList(_playerDir + @"\players.txt", _playerCache.Keys.OrderBy(player => player)
-                .Where(player => !PlayerManager.Instance.IsVerifiedPet(player)).ToList());
+                .Where(player => !PlayerRegistry.Instance.IsVerifiedPet(player)).ToList());
               _playerCacheUpdated = false;
             }
 
@@ -625,7 +625,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(value))
       {
         var player = value.ToLower(CultureInfo.CurrentCulture);
-        if (!_playerCache.ContainsKey(player) && !PlayerManager.Instance.IsVerifiedPet(player) && PlayerManager.IsPossiblePlayerName(player))
+        if (!_playerCache.ContainsKey(player) && !PlayerRegistry.Instance.IsVerifiedPet(player) && PlayerRegistry.IsPossiblePlayerName(player))
         {
           _playerCache[player] = 1;
           _playerCacheUpdated = true;

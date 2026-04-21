@@ -20,7 +20,7 @@ namespace EQLogParser
       {
         if (action is SpellCast { SpellData: not null } cast)
         {
-          if ((playerList != null && playerList.Contains(cast.Caster)) || (playerList == null && PlayerManager.Instance.IsVerifiedPlayer(cast.Caster)))
+          if ((playerList != null && playerList.Contains(cast.Caster)) || (playerList == null && PlayerRegistry.Instance.IsVerifiedPlayer(cast.Caster)))
           {
             UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts,
               result.UniqueSpells, cast.Interrupted);
@@ -34,7 +34,7 @@ namespace EQLogParser
         // don't include detrimental received spells since they're mostly things like being nuked
         if (action is ReceivedSpell { SpellData: not null, IsWearOff: false } received)
         {
-          if ((playerList != null && playerList.Contains(received.Receiver)) || (playerList == null && PlayerManager.Instance.IsVerifiedPlayer(received.Receiver)))
+          if ((playerList != null && playerList.Contains(received.Receiver)) || (playerList == null && PlayerRegistry.Instance.IsVerifiedPlayer(received.Receiver)))
           {
             UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
             result.UniquePlayers[received.Receiver] = true;

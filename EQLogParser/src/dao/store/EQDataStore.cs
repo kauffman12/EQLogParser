@@ -669,7 +669,7 @@ namespace EQLogParser
     {
       replaced = null;
 
-      var className = PlayerManager.Instance.GetPlayerClass(spell.Receiver, currentTime);
+      var className = PlayerRegistry.Instance.GetPlayerClass(spell.Receiver, currentTime);
       var spellClass = (int)Instance.GetClassEnum(className);
       var subset = spell.Ambiguity.FindAll(test => test.Target == (int)SpellTarget.Self && spellClass != 0 && (test.ClassMask & spellClass) == spellClass);
       var distinct = subset.Distinct(AbbrvComparer).ToList();

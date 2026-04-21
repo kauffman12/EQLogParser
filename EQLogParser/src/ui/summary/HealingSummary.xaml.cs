@@ -84,7 +84,7 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
             selectedName = playerStats.OrigName;
           }
@@ -259,7 +259,7 @@ namespace EQLogParser
       if (name == "Healing")
       {
         var selected = GetSelectedStats();
-        HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
+        HealingStatsBuilder.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
@@ -284,7 +284,7 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(statOptions));
+        Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(statOptions));
       }
     }
 
@@ -292,7 +292,7 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
         FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
@@ -303,13 +303,13 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
 
       // healing always rebuilds and doesn't have a simple way to reset to all data
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
+      Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(new GenerateStatsOptions()));
       _ready = false;
     }
   }

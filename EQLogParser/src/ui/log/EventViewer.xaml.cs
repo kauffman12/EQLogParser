@@ -74,19 +74,19 @@ namespace EQLogParser
       var list = new List<EventRow>();
       foreach (var (beginTime, record) in RecordsStore.Instance.GetAllDeaths())
       {
-        if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
+        if (!(PlayerRegistry.Instance.IsVerifiedPet(record.Killed) && !PlayerRegistry.IsPossiblePlayerName(record.Killed)))
         {
           var isActorNpc = FightManager.Instance.IsLifetimeNpc(record.Killer) || EQDataStore.Instance.IsKnownNpc(record.Killer);
           var isTargetNpc = FightManager.Instance.IsLifetimeNpc(record.Killed) || EQDataStore.Instance.IsKnownNpc(record.Killed);
-          var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
-          var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
+          var isActorPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrSpell(record.Killer);
+          var isTargetPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Killed);
 
           var text = KillShotEvent;
           if (isTargetPlayer && isActorPlayer)
           {
             text = PlayerKillEvent;
           }
-          else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(record.Killed)))
+          else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerRegistry.IsPossiblePlayerName(record.Killed)))
           {
             text = PlayerSlainEvent;
           }

@@ -112,9 +112,9 @@ namespace EQLogParser
 
             if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
             {
-              menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+              menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
               menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-              !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+              !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
               selectedName = playerStats.OrigName;
               menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
             }
@@ -146,7 +146,7 @@ namespace EQLogParser
       menuItemPetOptions.Children.Clear();
       if (CurrentStats != null)
       {
-        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerRegistry.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += AssignOwnerClick;
@@ -159,8 +159,8 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
       {
-        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
-        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
+        PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
@@ -327,7 +327,7 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => DamageStatsManager.Instance.RebuildTotalStats(statOptions));
+        Task.Run(() => DamageStatsBuilder.Instance.RebuildTotalStats(statOptions));
       }
     }
 
@@ -614,11 +614,11 @@ namespace EQLogParser
 
           var name = playerStats.Name;
           var className = playerStats.ClassName;
-          var isPet = PlayerManager.Instance.IsVerifiedPet(name);
+          var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
 
           if (isPet)
           {
-            var ownerName = PlayerManager.Instance.GetPlayerFromPet(name);
+            var ownerName = PlayerRegistry.Instance.GetPlayerFromPet(name);
             if (!string.IsNullOrEmpty(ownerName) && ownerName != Labels.Unassigned)
             {
               var owner = CurrentStats?.ExpandedStatsList.FirstOrDefault(s => s.Name == ownerName);
@@ -704,7 +704,7 @@ namespace EQLogParser
       if (name == "Damage")
       {
         var selected = GetSelectedStats();
-        DamageStatsManager.Instance.FireChartEvent("UPDATE", selected);
+        DamageStatsBuilder.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
@@ -750,12 +750,12 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
         FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
 
-        if (DamageStatsManager.Instance.GetLastStats() is { } stats)
+        if (DamageStatsBuilder.Instance.GetLastStats() is { } stats)
         {
           EventsGenerationStatus(stats);
         }
@@ -770,7 +770,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      DamageStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      DamageStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
@@ -784,7 +784,7 @@ namespace EQLogParser
 
       if ((long)minTimeChooser.Value != 0 || (long)maxTimeChooser.Value != (long)maxTimeChooser.MaxValue)
       {
-        DamageStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions(), true);
+        DamageStatsBuilder.Instance.RebuildTotalStats(new GenerateStatsOptions(), true);
       }
 
       _ready = false;

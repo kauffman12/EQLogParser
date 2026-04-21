@@ -209,8 +209,8 @@ namespace EQLogParser
       {
         var name = npc.Name;
         await Task.Delay(120);
-        PlayerManager.Instance.AddVerifiedPet(name);
-        PlayerManager.Instance.AddPetToPlayer(name, Labels.Unassigned);
+        PlayerRegistry.Instance.AddVerifiedPet(name);
+        PlayerRegistry.Instance.AddPetToPlayer(name, Labels.Unassigned);
         RemoveFight(name); // force in case already in the pet list for some reason
       }
     }
@@ -222,7 +222,7 @@ namespace EQLogParser
         var name = npc.Name;
         var dateTime = DateUtil.ToDouble(DateTime.Now);
         await Task.Delay(120);
-        PlayerManager.Instance.AddVerifiedPlayer(name, dateTime);
+        PlayerRegistry.Instance.AddVerifiedPlayer(name, dateTime);
         RemoveFight(name); // force in case already in the player list for some reason
       }
     }
@@ -378,7 +378,7 @@ namespace EQLogParser
       var selected = dataGrid.SelectedItem as Fight;
       menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false;
       menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false &&
-        PlayerManager.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
+        PlayerRegistry.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
       menuItemRefresh.IsEnabled = dataGrid.SelectedItems.Count > 0;
     }
 

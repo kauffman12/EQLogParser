@@ -10,7 +10,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  class PlayerManager
+  class PlayerRegistry
   {
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewVerifiedPet;
@@ -19,7 +19,7 @@ namespace EQLogParser
     internal event EventHandler<string> EventsRemoveVerifiedPlayer;
     internal event EventHandler<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
-    internal static PlayerManager Instance = new();
+    internal static PlayerRegistry Instance = new();
     internal static readonly BitmapImage BerIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Ber.png");
     internal static readonly BitmapImage BrdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Brd.png");
     internal static readonly BitmapImage BstIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Bst.png");
@@ -56,7 +56,7 @@ namespace EQLogParser
     private volatile bool _petMappingUpdated;
     private volatile bool _playersUpdated;
 
-    private PlayerManager()
+    private PlayerRegistry()
     {
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);

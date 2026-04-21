@@ -501,7 +501,7 @@ namespace EQLogParser
     // should already run on the UI thread
     internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
     {
-      PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -519,7 +519,7 @@ namespace EQLogParser
       ClassList.Clear();
       ClassList.Add("");
       ClassList.AddRange(EQDataStore.Instance.GetClassList());
-      PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
+      PlayerRegistry.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -528,7 +528,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerManager.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -542,7 +542,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerManager.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -567,7 +567,7 @@ namespace EQLogParser
 
     internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
     {
-      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
+      PlayerRegistry.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -576,7 +576,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       });
 
-      PlayerManager.Instance.EventsRemoveVerifiedPet += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPet += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {

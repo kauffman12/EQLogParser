@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  internal static class SelectedParseBuilder
+  internal static class StatsFormatter
   {
     internal static readonly string[] separator = [" @"];
 

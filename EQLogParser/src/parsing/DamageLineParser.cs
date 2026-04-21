@@ -528,7 +528,7 @@ namespace EQLogParser
           // extra way to check for pets
           if (spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
           {
-            PlayerManager.Instance.AddVerifiedPet(defender);
+            PlayerRegistry.Instance.AddVerifiedPet(defender);
           }
 
           attacker = UpdateAttacker(attacker, spell);
@@ -714,9 +714,9 @@ namespace EQLogParser
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
             var player = split[emuPetIndex + 1][..^1];
-            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-            PlayerManager.Instance.AddVerifiedPet(attacker);
-            PlayerManager.Instance.AddPetToPlayer(attacker, player);
+            PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerRegistry.Instance.AddVerifiedPet(attacker);
+            PlayerRegistry.Instance.AddPetToPlayer(attacker, player);
             attackerOwner = player;
           }
         }
@@ -775,9 +775,9 @@ namespace EQLogParser
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
             var player = split[emuPetIndex + 1][..^1];
-            PlayerManager.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-            PlayerManager.Instance.AddVerifiedPet(defender);
-            PlayerManager.Instance.AddPetToPlayer(defender, player);
+            PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
+            PlayerRegistry.Instance.AddVerifiedPet(defender);
+            PlayerRegistry.Instance.AddPetToPlayer(defender, player);
           }
         }
         else
@@ -992,7 +992,7 @@ namespace EQLogParser
         if (!checkLineType && !InIgnoreList(defender))
         {
           if (resist != SpellResist.Undefined && defender != attacker &&
-            (attacker == ConfigUtil.PlayerName || PlayerManager.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
+            (attacker == ConfigUtil.PlayerName || PlayerRegistry.Instance.GetPlayerFromPet(attacker) == ConfigUtil.PlayerName))
           {
             RecordsStore.Instance.UpdateNpcSpellStats(defender, resist);
           }
@@ -1062,8 +1062,8 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(slain) && killer != null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
       {
-        killer = killer.Length > 2 ? PlayerManager.ReplacePlayer(killer, killer) : killer;
-        slain = PlayerManager.ReplacePlayer(slain, slain);
+        killer = killer.Length > 2 ? PlayerRegistry.ReplacePlayer(killer, killer) : killer;
+        slain = PlayerRegistry.ReplacePlayer(slain, slain);
 
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
@@ -1153,7 +1153,7 @@ namespace EQLogParser
       else
       {
         // Needed to replace 'You' and 'you', etc
-        attacker = PlayerManager.ReplacePlayer(attacker, attacker);
+        attacker = PlayerRegistry.ReplacePlayer(attacker, attacker);
       }
 
       attacker = ToUpper(attacker);
@@ -1163,7 +1163,7 @@ namespace EQLogParser
     private static string UpdateDefender(string defender, string attacker)
     {
       // Needed to replace 'You' and 'you', etc
-      var updated = PlayerManager.ReplacePlayer(defender, attacker);
+      var updated = PlayerRegistry.ReplacePlayer(defender, attacker);
       return ToUpper(updated);
     }
 
@@ -1175,14 +1175,14 @@ namespace EQLogParser
         var pIndex = name.IndexOf("`s ", StringComparison.Ordinal);
         if ((pIndex > -1 && IsPetOrMount(name, pIndex + 3, out _)) || (pIndex = name.LastIndexOf(" pet", StringComparison.Ordinal)) > -1)
         {
-          var verifiedPet = PlayerManager.Instance.IsVerifiedPet(name);
-          if (verifiedPet || PlayerManager.IsPossiblePlayerName(name, pIndex))
+          var verifiedPet = PlayerRegistry.Instance.IsVerifiedPet(name);
+          if (verifiedPet || PlayerRegistry.IsPossiblePlayerName(name, pIndex))
           {
             owner = name[..pIndex];
-            if (!verifiedPet && PlayerManager.Instance.IsVerifiedPlayer(owner))
+            if (!verifiedPet && PlayerRegistry.Instance.IsVerifiedPlayer(owner))
             {
-              PlayerManager.Instance.AddVerifiedPet(name);
-              PlayerManager.Instance.AddPetToPlayer(name, owner);
+              PlayerRegistry.Instance.AddVerifiedPet(name);
+              PlayerRegistry.Instance.AddPetToPlayer(name, owner);
             }
           }
         }

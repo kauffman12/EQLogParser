@@ -128,7 +128,7 @@ namespace EQLogParser
         var selected = GetSelectedStats().FirstOrDefault();
         if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
         {
-          PlayerManager.Instance.SetDefaultPlayerClass(selected.OrigName, className);
+          PlayerRegistry.Instance.SetDefaultPlayerClass(selected.OrigName, className);
           selected.ClassName = className;
           DataGridUtil.RefreshTable(TheDataGrid);
         }

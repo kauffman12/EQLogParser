@@ -78,7 +78,7 @@ namespace EQLogParser
       {
         foreach (var kv in fight.DdDamage)
         {
-          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
+          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
           {
             if (!playerDdTotals.TryGetValue(kv.Key, out var ddStats))
             {
@@ -96,7 +96,7 @@ namespace EQLogParser
 
         foreach (var kv in fight.DoTDamage)
         {
-          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
+          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
           {
             if (!playerDoTTotals.TryGetValue(kv.Key, out var dotStats))
             {
@@ -114,7 +114,7 @@ namespace EQLogParser
 
         foreach (var kv in fight.ProcDamage)
         {
-          if (!isPlayerOnly || PlayerManager.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerManager.Instance.IsMerc(kv.Value.Caster))
+          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
           {
             if (!playerProcTotals.TryGetValue(kv.Key, out var procStats))
             {
@@ -168,8 +168,8 @@ namespace EQLogParser
           var pass = false;
           if (item is SpellDamageRow row)
           {
-            pass = !_currentShowPlayers || PlayerManager.Instance.IsVerifiedPlayer(row.Caster) ||
-                   PlayerManager.Instance.IsMerc(row.Caster);
+            pass = !_currentShowPlayers || PlayerRegistry.Instance.IsVerifiedPlayer(row.Caster) ||
+                   PlayerRegistry.Instance.IsMerc(row.Caster);
             pass = pass && (_currentType == null || _currentType.Equals(row.Type)) && (_currentSpell == null ||
               _currentSpell.Equals(row.Spell)) && (_currentPlayer == null || _currentPlayer.Equals(row.Caster));
           }

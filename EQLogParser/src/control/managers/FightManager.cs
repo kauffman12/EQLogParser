@@ -49,8 +49,8 @@ namespace EQLogParser
 
     internal FightManager()
     {
-      PlayerManager.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
-      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
+      PlayerRegistry.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
+      PlayerRegistry.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
 
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
       DamageLineParser.EventsNewTaunt += HandleNewTaunt;
@@ -232,7 +232,7 @@ namespace EQLogParser
       }
 
       // cache recent player spells to help determine who the caster was
-      var isAttackerPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Attacker) || record.Attacker == Labels.Rs;
+      var isAttackerPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Attacker) || record.Attacker == Labels.Rs;
       if (isAttackerPlayer && record.Type is Labels.Dd or Labels.Dot or Labels.Proc)
       {
         RecentSpellCache[record.SubType] = true;
@@ -248,7 +248,7 @@ namespace EQLogParser
         if (record.AttackerIsSpell && defender)
         {
           // check if it's really a player being hit
-          defender = !PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
+          defender = !PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Defender);
 
           if (defender)
           {
@@ -416,7 +416,7 @@ namespace EQLogParser
 
       var isAttackerPlayerSpell = IsAttackerPlayerSpell(record);
       isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
-      var isDefenderPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Defender);
+      var isDefenderPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Defender);
       var isAttackerNpc = IsAttackerNpc(record, isAttackerPlayerSpell, isAttackerPlayer);
       var isDefenderNpc = IsDefenderNpc(record, isAttackerPlayerSpell, isDefenderPlayer) || isAttackerPlayer;
 
@@ -430,7 +430,7 @@ namespace EQLogParser
         if (!isAttackerNpc)
         {
           npcDefender = true;
-          return isAttackerPlayer || PlayerManager.IsPossiblePlayerName(record.Attacker);
+          return isAttackerPlayer || PlayerRegistry.IsPossiblePlayerName(record.Attacker);
         }
 
         if (GetFight(record.Defender) != null && GetFight(record.Attacker) == null)
@@ -443,7 +443,7 @@ namespace EQLogParser
       {
         if (isAttackerNpc)
         {
-          return isDefenderPlayer || PlayerManager.IsPossiblePlayerName(record.Defender);
+          return isDefenderPlayer || PlayerRegistry.IsPossiblePlayerName(record.Defender);
         }
 
         if (isDefenderPlayer)
@@ -457,13 +457,13 @@ namespace EQLogParser
           return true;
         }
 
-        if (!PlayerManager.IsPossiblePlayerName(record.Defender))
+        if (!PlayerRegistry.IsPossiblePlayerName(record.Defender))
         {
           npcDefender = true;
           return true;
         }
 
-        if (!PlayerManager.IsPossiblePlayerName(record.Attacker))
+        if (!PlayerRegistry.IsPossiblePlayerName(record.Attacker))
         {
           return true;
         }
