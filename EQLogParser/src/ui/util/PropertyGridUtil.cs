@@ -11,12 +11,10 @@ namespace EQLogParser
     {
       foreach (var item in propertyGrid.Items)
       {
-        var categoryName = item.CategoryName as string;
-        if (string.IsNullOrEmpty(categoryName))
+        if (string.IsNullOrEmpty(item.CategoryName))
           continue;
 
-        var found = settings.FirstOrDefault(setting => setting.Name == categoryName);
-        if (found != null)
+        if (settings.FirstOrDefault(setting => setting.Name == item.CategoryName) is { } found)
         {
           item.Visibility = found.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
