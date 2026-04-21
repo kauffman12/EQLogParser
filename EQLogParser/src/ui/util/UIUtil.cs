@@ -127,7 +127,7 @@ namespace EQLogParser
 
       for (var i = dest.Count - 1; i >= index; i--)
       {
-        dest.RemoveAt(index);
+        dest.RemoveAt(i);
       }
     }
 
