@@ -89,7 +89,7 @@ namespace EQLogParser
 
       if (isPlayer)
       {
-        entry.PlayerClass = PlayerManager.Instance.GetDefaultPlayerClass(name);
+        entry.PlayerClass = PlayerRegistry.Instance.GetDefaultPlayerClass(name);
       }
 
       return entry;
@@ -127,7 +127,7 @@ namespace EQLogParser
 
       for (var i = dest.Count - 1; i >= index; i--)
       {
-        dest.RemoveAt(index);
+        dest.RemoveAt(i);
       }
     }
 
@@ -238,28 +238,5 @@ namespace EQLogParser
       }
     }
 
-    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
-    {
-      try
-      {
-        File.WriteAllLines(path, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (SecurityException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (ArgumentNullException ex)
-      {
-        Log.Error(ex);
-      }
-    }
   }
 }

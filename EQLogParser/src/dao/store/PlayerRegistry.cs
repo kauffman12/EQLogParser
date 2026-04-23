@@ -10,7 +10,7 @@ using System.Windows.Threading;
 
 namespace EQLogParser
 {
-  class PlayerManager
+  class PlayerRegistry
   {
     internal event EventHandler<PetMapping> EventsNewPetMapping;
     internal event EventHandler<string> EventsNewVerifiedPet;
@@ -19,7 +19,7 @@ namespace EQLogParser
     internal event EventHandler<string> EventsRemoveVerifiedPlayer;
     internal event EventHandler<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
-    internal static PlayerManager Instance = new();
+    internal static PlayerRegistry Instance = new();
     internal static readonly BitmapImage BerIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Ber.png");
     internal static readonly BitmapImage BrdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Brd.png");
     internal static readonly BitmapImage BstIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Bst.png");
@@ -56,7 +56,7 @@ namespace EQLogParser
     private volatile bool _petMappingUpdated;
     private volatile bool _playersUpdated;
 
-    private PlayerManager()
+    private PlayerRegistry()
     {
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
@@ -66,7 +66,7 @@ namespace EQLogParser
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name)
       || ThirdPerson.Contains(name) || _verifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
-    internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || DataManager.Instance.IsPlayerSpell(name);
+    internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || EQDataStore.Instance.IsPlayerSpell(name);
     internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
@@ -411,7 +411,7 @@ namespace EQLogParser
 
     internal void SetActivePlayerClass(string name, string className, byte confidence, double beginTime)
     {
-      if (string.IsNullOrEmpty(name) || !DataManager.Instance.IsValidClassName(className) || confidence is < 1 or > 2)
+      if (string.IsNullOrEmpty(name) || !EQDataStore.Instance.IsValidClassName(className) || confidence is < 1 or > 2)
         return;
 
       var active = _activePlayerClass.GetOrAdd(name, _ => new ActivePlayerClass());
@@ -507,7 +507,7 @@ namespace EQLogParser
     // only do this from user interaction
     internal void SetDefaultPlayerClass(string name, string className, bool init = false)
     {
-      if (!string.IsNullOrEmpty(name) && DataManager.Instance.IsValidClassName(className))
+      if (!string.IsNullOrEmpty(name) && EQDataStore.Instance.IsValidClassName(className))
       {
         _defaultPlayerClass[name] = className;
 
@@ -525,7 +525,7 @@ namespace EQLogParser
     internal static BitmapImage GetPlayerIcon(string className)
     {
       var icon = UnkIcon;
-      if (DataManager.Instance.GetClassEnum(className) is { } theClass)
+      if (EQDataStore.Instance.GetClassEnum(className) is { } theClass)
       {
         icon = theClass switch
         {

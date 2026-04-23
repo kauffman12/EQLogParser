@@ -160,7 +160,7 @@ namespace EQLogParser
       };
 
       var count = 0;
-      foreach (var channel in ChatManager.Instance.GetChannels(playerAndServer))
+      foreach (var channel in ChatDB.Instance.GetChannels(playerAndServer))
       {
         count += channel.IsChecked ? 1 : 0;
         items.Add(channel);
@@ -177,7 +177,7 @@ namespace EQLogParser
         var orig = players.ItemsSource as List<string>;
         if (updatedPlayer == null || orig?.Contains(updatedPlayer) == false)
         {
-          var playerList = ChatManager.GetArchivedPlayers();
+          var playerList = ChatDB.GetArchivedPlayers();
           if (playerList.Count > 0)
           {
             players.ItemsSource = playerList;
@@ -255,7 +255,7 @@ namespace EQLogParser
 
             if (changed)
             {
-              ChatManager.SaveSelectedChannels(name, channelList);
+              ChatDB.SaveSelectedChannels(name, channelList);
             }
 
             chatBox.Text = "";
@@ -514,7 +514,7 @@ namespace EQLogParser
       if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
         LoadChannels(players.SelectedItem as string);
-        _playerAutoCompleteList = ChatManager.GetPlayers(name);
+        _playerAutoCompleteList = ChatDB.GetPlayers(name);
         ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 
         if (_ready)
@@ -528,8 +528,8 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        ChatManager.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
-        ChatManager.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
+        ChatDB.Instance.EventsUpdatePlayer += ChatManagerEventsUpdatePlayer;
+        ChatDB.Instance.EventsNewChannels += ChatManagerEventsNewChannels;
         LoadPlayers();
         await ChangeSearchAsync();
         _ready = true;
@@ -538,8 +538,8 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      ChatManager.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
-      ChatManager.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
+      ChatDB.Instance.EventsUpdatePlayer -= ChatManagerEventsUpdatePlayer;
+      ChatDB.Instance.EventsNewChannels -= ChatManagerEventsNewChannels;
       _ready = false;
     }
   }

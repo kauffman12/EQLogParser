@@ -40,7 +40,7 @@ namespace EQLogParser
       {
         foreach (var stats in CollectionsMarshal.AsSpan(selectedStats))
         {
-          if (!pets && !(PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name)))
+          if (!pets && !(PlayerRegistry.IsPossiblePlayerName(stats.Name) && !PlayerRegistry.Instance.IsVerifiedPet(stats.Name)))
           {
             pets = true;
           }
@@ -161,7 +161,7 @@ namespace EQLogParser
           var result = true;
           if (value is PlayerStats stats)
           {
-            result = _currentShowPets || (PlayerManager.IsPossiblePlayerName(stats.Name) && !PlayerManager.Instance.IsVerifiedPet(stats.Name));
+            result = _currentShowPets || (PlayerRegistry.IsPossiblePlayerName(stats.Name) && !PlayerRegistry.Instance.IsVerifiedPet(stats.Name));
           }
           return result;
         };

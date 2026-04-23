@@ -42,17 +42,17 @@ namespace EQLogParser
               BeginTime = dateTime,
               Key = fullKey,
               From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
+              To = (to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser) ? processorName : TextUtils.ToUpper(to),
               IsMine = chatType.SenderIsYou,
               Type = "GINA"
             };
 
-            RecordManager.Instance.Add(record);
+            RecordsStore.Instance.Add(record);
 
             // don't handle immediately unless enabled
             if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
                   or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
-                !RecordManager.Instance.IsQuickShareMine(fullKey))
+                !RecordsStore.Instance.IsQuickShareMine(fullKey))
             {
               // ignore if we're still processing a bunch
               if (GinaCache.Count > 5)
@@ -128,7 +128,7 @@ namespace EQLogParser
           {
             if (autoMerge)
             {
-              await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+              await TriggerStateDB.Instance.ImportTriggers("", nodes, characterIds);
             }
             else
             {
@@ -144,13 +144,13 @@ namespace EQLogParser
 
               if (msgDialog.IsYes2Clicked)
               {
-                await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+                await TriggerStateDB.Instance.ImportTriggers("", nodes, characterIds);
               }
               if (msgDialog.IsYes1Clicked)
               {
                 var folderName = (player == null) ? "New Folder" : "From " + player;
                 folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-                await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, characterIds);
+                await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, characterIds);
               }
             }
           }

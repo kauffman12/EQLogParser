@@ -24,9 +24,9 @@ namespace EQLogParser
           var record = HandleHealed(action, index, lineData.BeginTime);
           if (record != null)
           {
-            record.Healer = PlayerManager.ReplacePlayer(record.Healer, record.Healed);
-            record.Healed = PlayerManager.ReplacePlayer(record.Healed, record.Healer);
-            RecordManager.Instance.Add(record, lineData.BeginTime);
+            record.Healer = PlayerRegistry.ReplacePlayer(record.Healer, record.Healed);
+            record.Healed = PlayerRegistry.ReplacePlayer(record.Healed, record.Healer);
+            RecordsStore.Instance.Add(record, lineData.BeginTime);
             return true;
           }
         }
@@ -169,7 +169,7 @@ namespace EQLogParser
           var amountEnd = part.IndexOf(' ', amountIndex);
           if (amountEnd > -1)
           {
-            var value = StatsUtil.ParseUInt(part[amountIndex..amountEnd]);
+            var value = TextUtils.ParseUInt(part[amountIndex..amountEnd]);
             if (value != uint.MaxValue)
             {
               heal = value;
@@ -181,7 +181,7 @@ namespace EQLogParser
               overEnd = part.IndexOf(')', amountEnd + 2);
               if (overEnd > -1)
               {
-                var value2 = StatsUtil.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
+                var value2 = TextUtils.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
                 if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;
@@ -213,15 +213,15 @@ namespace EQLogParser
           var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
           if (possessive > -1)
           {
-            if (PlayerManager.Instance.IsVerifiedPlayer(healed[..possessive]))
+            if (PlayerRegistry.Instance.IsVerifiedPlayer(healed[..possessive]))
             {
-              PlayerManager.Instance.AddVerifiedPet(healed);
+              PlayerRegistry.Instance.AddVerifiedPet(healed);
             }
           }
           // found a bst/mag/nec pet
           else if (!string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Mend Companion", StringComparison.Ordinal))
           {
-            PlayerManager.Instance.AddVerifiedPet(healed);
+            PlayerRegistry.Instance.AddVerifiedPet(healed);
           }
           else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase))
           {

@@ -8,11 +8,11 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class RecordManager
+  internal class RecordsStore
   {
     internal event Action<string> RecordsUpdatedEvent;
-    private static readonly Lazy<RecordManager> Lazy = new(() => new RecordManager());
-    internal static RecordManager Instance => Lazy.Value; // instance
+    private static readonly Lazy<RecordsStore> Lazy = new(() => new RecordsStore());
+    internal static RecordsStore Instance => Lazy.Value; // instance
     // records
     public const string DeathRecords = "DeathRecords";
     public const string HealRecords = "HealRecords";
@@ -48,7 +48,7 @@ namespace EQLogParser
       ZoneRecords
     ];
 
-    private RecordManager()
+    private RecordsStore()
     {
       BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, _collectionLock);
 

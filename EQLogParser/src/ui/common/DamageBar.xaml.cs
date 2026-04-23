@@ -70,7 +70,7 @@ namespace EQLogParser
         Visibility = Visibility.Visible;
       }
 
-      classImage.Source = PlayerManager.GetPlayerIcon(className);
+      classImage.Source = PlayerRegistry.GetPlayerIcon(className);
       player.Text = playerName;
       damage.Text = damageValue;
       dps.Text = dpsValue;

@@ -199,14 +199,14 @@ namespace EQLogParser
       try
       {
         // basic mode uses current file
-        if (id == TriggerStateManager.DefaultUser && GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
+        if (id == TriggerStateDB.DefaultUser && GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
         {
           eqFolderList?.Add(currentFolder);
           return;
         }
 
         // all advanced mode characters
-        var config = await TriggerStateManager.Instance.GetConfig();
+        var config = await TriggerStateDB.Instance.GetConfig();
         foreach (var character in config?.Characters ?? [])
         {
           if (character.Id == id && GetEqFolderFromPath(character.FilePath) is { } characterFolder)

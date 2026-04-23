@@ -315,7 +315,7 @@ namespace EQLogParser
         {
           Icon = awesome,
           Style = (Style)Application.Current.Resources["EQIconStyle"],
-          Visibility = (name == CurrentFontFamily) ? Visibility.Visible : Visibility.Hidden
+          Visibility = name == CurrentFontFamily ? Visibility.Visible : Visibility.Hidden
         };
 
         var menuItem = new MenuItem { Header = name };
@@ -383,7 +383,7 @@ namespace EQLogParser
       {
         if (item is MenuItem { Icon: ImageAwesome image } menuItem)
         {
-          image.Visibility = (menuItem == selectedItem) ? Visibility.Visible : Visibility.Hidden;
+          image.Visibility = menuItem == selectedItem ? Visibility.Visible : Visibility.Hidden;
         }
       }
     }
@@ -501,7 +501,7 @@ namespace EQLogParser
     // should already run on the UI thread
     internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
     {
-      PlayerManager.Instance.EventsNewPetMapping += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsNewPetMapping += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -518,8 +518,8 @@ namespace EQLogParser
     {
       ClassList.Clear();
       ClassList.Add("");
-      ClassList.AddRange(DataManager.Instance.GetClassList());
-      PlayerManager.Instance.EventsNewVerifiedPlayer += async (_, name) =>
+      ClassList.AddRange(EQDataStore.Instance.GetClassList());
+      PlayerRegistry.Instance.EventsNewVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -528,7 +528,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerManager.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -542,7 +542,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerManager.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -567,7 +567,7 @@ namespace EQLogParser
 
     internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
     {
-      PlayerManager.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
+      PlayerRegistry.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -576,7 +576,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       });
 
-      PlayerManager.Instance.EventsRemoveVerifiedPet += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPet += async (_, name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -646,7 +646,7 @@ namespace EQLogParser
     internal static void UpdateDeleteChatMenu(MenuItem deleteChat)
     {
       deleteChat.Items.Clear();
-      ChatManager.GetArchivedPlayers().ForEach(player =>
+      ChatDB.GetArchivedPlayers().ForEach(player =>
       {
         var item = new MenuItem { IsEnabled = true, Header = player };
         deleteChat.Items.Add(item);
@@ -659,7 +659,7 @@ namespace EQLogParser
 
           if (msgDialog.IsYes1Clicked)
           {
-            if (!ChatManager.Instance.DeleteArchivedPlayer(player))
+            if (!ChatDB.Instance.DeleteArchivedPlayer(player))
             {
               deleteChat.Items.Remove(item);
               deleteChat.IsEnabled = deleteChat.Items.Count > 0;
@@ -685,7 +685,7 @@ namespace EQLogParser
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save, null, null, false, true);
         dialog.Show();
 
-        ChatManager.Instance.Stop();
+        ChatDB.Instance.Stop();
         await Task.Delay(250);
 
         var accessError = false;
@@ -700,7 +700,7 @@ namespace EQLogParser
           }
 
           // create checkpoint before backup
-          await TriggerStateManager.Instance.CreateCheckpoint();
+          await TriggerStateDB.Instance.CreateCheckpoint();
           ZipFile.CreateFromDirectory(source, backupFile, CompressionLevel.Optimal, false);
         }
         catch (Exception ex)
@@ -711,7 +711,7 @@ namespace EQLogParser
         finally
         {
           // init if enabled
-          ChatManager.Instance.Init();
+          ChatDB.Instance.Init();
           await UiUtil.InvokeAsync(() =>
           {
             dialog.Close();
@@ -999,18 +999,18 @@ namespace EQLogParser
 
     private static void SetThemeFontSizes()
     {
-      CurrentNameWidth = (10.0 * CurrentFontSize) + 25;
-      CurrentNpcWidth = (10.0 * CurrentFontSize) + 50;
-      CurrentDateTimeWidth = (10.0 * CurrentFontSize) - 10;
-      CurrentSpellWidth = (10.0 * CurrentFontSize) + 90;
-      CurrentItemWidth = (15.0 * CurrentFontSize) + 115;
+      CurrentNameWidth = 10.0 * CurrentFontSize + 25;
+      CurrentNpcWidth = 10.0 * CurrentFontSize + 50;
+      CurrentDateTimeWidth = 10.0 * CurrentFontSize - 10;
+      CurrentSpellWidth = 10.0 * CurrentFontSize + 90;
+      CurrentItemWidth = 15.0 * CurrentFontSize + 115;
       CurrentShortWidth = 5.0 * CurrentFontSize;
       CurrentShortestWidth = 4.0 * CurrentFontSize;
       CurrentMediumWidth = 6.5 * CurrentFontSize;
       Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
       Application.Current.Resources["EQFightGridTitleHeight"] = new GridLength(21 + CurrentFontSize);
-      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + (CurrentFontSize * 4));
+      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + CurrentFontSize * 4);
       Application.Current.Resources["EQGridWindowTitleHeight"] = new GridLength(14 + CurrentFontSize);
       Application.Current.Resources["EQWindowTitleHeight"] = 14 + CurrentFontSize;
       Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
@@ -1026,17 +1026,17 @@ namespace EQLogParser
       Application.Current.Resources["EQTabHeaderHeight"] = CurrentFontSize + 12;
       Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
       Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
-      Application.Current.Resources["EQTableSixRowHeight"] = ((CurrentFontSize + 12) * 6) + (CurrentFontSize + 14);
-      Application.Current.Resources["EQTableTenRowHeight"] = ((CurrentFontSize + 12) * 10) + (CurrentFontSize + 14);
-      Application.Current.Resources["EQTableFifteenRowHeight"] = ((CurrentFontSize + 12) * 15) + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableSixRowHeight"] = (CurrentFontSize + 12) * 6 + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableTenRowHeight"] = (CurrentFontSize + 12) * 10 + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableFifteenRowHeight"] = (CurrentFontSize + 12) * 15 + (CurrentFontSize + 14);
       Application.Current.Resources["EQIconButtonHeight"] = CurrentFontSize + 6;
-      Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + ((CurrentFontSize - 10) * 2);
-      Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + ((CurrentFontSize - 10) * 2);
-      Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + ((CurrentFontSize - 10) * 2);
-      Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
-      SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + (10.0 * CurrentFontSize), _mainWindow.petMappingWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + (10.0 * CurrentFontSize), _mainWindow.verifiedPlayersWindow);
+      Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + (CurrentFontSize - 10) * 2;
+      Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + (CurrentFontSize - 10) * 2;
+      Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + (CurrentFontSize - 10) * 2;
+      Application.Current.Resources["EQCheckBoxScale"] = 0.9 + (CurrentFontSize - 10) * 0.06;
+      SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + 14.0 * CurrentFontSize, _mainWindow.npcWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + 10.0 * CurrentFontSize, _mainWindow.petMappingWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + 10.0 * CurrentFontSize, _mainWindow.verifiedPlayersWindow);
       SyncFusionUtil.SetDesiredHeight("EQParseWindowHeight", 10.0 * (CurrentFontSize + 2), _mainWindow.playerParseTextWindow);
     }
 

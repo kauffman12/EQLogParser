@@ -327,11 +327,11 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+        TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
         MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
         theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
 
-        if (await TriggerStateManager.Instance.GetConfig() is { } config)
+        if (await TriggerStateDB.Instance.GetConfig() is { } config)
         {
           UpdateCharacterList(config);
         }

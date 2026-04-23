@@ -1,4 +1,4 @@
-﻿using Syncfusion.Data;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -72,21 +72,21 @@ namespace EQLogParser
     private void Load()
     {
       var list = new List<EventRow>();
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllDeaths())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllDeaths())
       {
-        if (!(PlayerManager.Instance.IsVerifiedPet(record.Killed) && !PlayerManager.IsPossiblePlayerName(record.Killed)))
+        if (!(PlayerRegistry.Instance.IsVerifiedPet(record.Killed) && !PlayerRegistry.IsPossiblePlayerName(record.Killed)))
         {
-          var isActorNpc = DataManager.Instance.IsLifetimeNpc(record.Killer) || DataManager.Instance.IsKnownNpc(record.Killer);
-          var isTargetNpc = DataManager.Instance.IsLifetimeNpc(record.Killed) || DataManager.Instance.IsKnownNpc(record.Killed);
-          var isActorPlayer = PlayerManager.Instance.IsPetOrPlayerOrSpell(record.Killer);
-          var isTargetPlayer = PlayerManager.Instance.IsPetOrPlayerOrMerc(record.Killed);
+          var isActorNpc = FightManager.Instance.IsLifetimeNpc(record.Killer) || EQDataStore.Instance.IsKnownNpc(record.Killer);
+          var isTargetNpc = FightManager.Instance.IsLifetimeNpc(record.Killed) || EQDataStore.Instance.IsKnownNpc(record.Killed);
+          var isActorPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrSpell(record.Killer);
+          var isTargetPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Killed);
 
           var text = KillShotEvent;
           if (isTargetPlayer && isActorPlayer)
           {
             text = PlayerKillEvent;
           }
-          else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerManager.IsPossiblePlayerName(record.Killed)))
+          else if (isTargetPlayer || (isActorNpc && !isTargetNpc && PlayerRegistry.IsPossiblePlayerName(record.Killed)))
           {
             text = PlayerSlainEvent;
           }
@@ -95,12 +95,12 @@ namespace EQLogParser
         }
       }
 
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllMezBreaks())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllMezBreaks())
       {
         list.Add(new EventRow { BeginTime = beginTime, Actor = record.Breaker, Target = record.Awakened, Event = MezBreakEvent });
       }
 
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllZoning())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllZoning())
       {
         list.Add(new EventRow { BeginTime = beginTime, Actor = ConfigUtil.PlayerName, Event = ZoneEvent, Target = record.Zone });
       }

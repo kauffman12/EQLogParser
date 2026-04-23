@@ -128,12 +128,12 @@ namespace EQLogParser
 
       if (split.Length == 1)
       {
-        s = StatsUtil.ParseUInt(split[0], 0);
+        s = TextUtils.ParseUInt(split[0], 0);
       }
       else if (split.Length == 2)
       {
-        m = StatsUtil.ParseUInt(split[0], 0);
-        s = StatsUtil.ParseUInt(split[1], 0);
+        m = TextUtils.ParseUInt(split[0], 0);
+        s = TextUtils.ParseUInt(split[1], 0);
 
         if (s > 59 || m > 59)
         {
@@ -142,9 +142,9 @@ namespace EQLogParser
       }
       else if (split.Length == 3)
       {
-        h = StatsUtil.ParseUInt(split[0], 0);
-        m = StatsUtil.ParseUInt(split[1], 0);
-        s = StatsUtil.ParseUInt(split[2], 0);
+        h = TextUtils.ParseUInt(split[0], 0);
+        m = TextUtils.ParseUInt(split[1], 0);
+        s = TextUtils.ParseUInt(split[2], 0);
 
         if (s > 59 || m > 59 || h > 23)
         {

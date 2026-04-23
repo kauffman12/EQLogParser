@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class TankingStatsManager
+  internal class TankingStatsBuilder
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    internal static TankingStatsManager Instance = new();
+    internal static TankingStatsBuilder Instance = new();
     internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
     private readonly Dictionary<int, byte> _tankingGroupIds = [];
@@ -27,11 +27,11 @@ namespace EQLogParser
     private List<Fight> _selected;
     private string _title;
 
-    internal TankingStatsManager()
+    internal TankingStatsBuilder()
     {
       lock (_tankingGroupIds)
       {
-        DataManager.Instance.EventsClearedActiveData += (_) =>
+        FightManager.Instance.EventsClearedActiveData += (_) =>
         {
           Reset();
         };
@@ -264,7 +264,7 @@ namespace EQLogParser
               var filteredTimeRange = StatsUtil.FilterTimeRange(timeRange, startTime, stopTime);
               stats.TotalSeconds = filteredTimeRange.GetTotal();
 
-              var playerClass = PlayerManager.Instance.GetPlayerClass(stats.OrigName, lastTime);
+              var playerClass = PlayerRegistry.Instance.GetPlayerClass(stats.OrigName, lastTime);
               stats.ClassName = playerClass;
               playerClasses.TryAdd(stats.OrigName, playerClass);
 

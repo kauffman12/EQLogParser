@@ -26,10 +26,10 @@ namespace EQLogParser
     {
       _configUpdateTimer = UiUtil.CreateTimer(ConfigDoUpdate, 500, false);
       _triggerUpdateTimer = UiUtil.CreateTimer(TriggersDoUpdate, 1000, false);
-      TriggerStateManager.Instance.OverlayImportEvent += OverlayImportEvent;
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
-      TriggerStateManager.Instance.TriggerImportEvent += TriggerImportEvent;
+      TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateDB.Instance.TriggerImportEvent += TriggerImportEvent;
     }
 
     internal void Select(TriggerLogEntry entry) => EventsSelectTrigger?.Invoke(entry);
@@ -92,7 +92,7 @@ namespace EQLogParser
 
     internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<LogReaderItem> collection)
     {
-      await InitTestProcessor(TriggerStateManager.DefaultUser, $"Trigger Tester ({TriggerStateManager.DefaultUser})", ConfigUtil.PlayerName,
+      await InitTestProcessor(TriggerStateDB.DefaultUser, $"Trigger Tester ({TriggerStateDB.DefaultUser})", ConfigUtil.PlayerName,
         config.Voice, config.VoiceRate, -1, null, null, null, null, collection);
     }
 
@@ -122,7 +122,7 @@ namespace EQLogParser
     private async void TriggerUpdateEvent(TriggerNode node)
     {
       // reload triggers if current one is enabled by anyone
-      if (await TriggerStateManager.Instance.IsAnyEnabled(node.Id))
+      if (await TriggerStateDB.Instance.IsAnyEnabled(node.Id))
       {
         TriggersUpdated();
       }
@@ -130,7 +130,7 @@ namespace EQLogParser
 
     private async void TriggerManagerEventsLogLoadingComplete(string file, bool open)
     {
-      if (await TriggerStateManager.Instance.GetConfig() is { IsAdvanced: false })
+      if (await TriggerStateDB.Instance.GetConfig() is { IsAdvanced: false })
       {
         ConfigDoUpdate(this, null);
       }
@@ -161,7 +161,7 @@ namespace EQLogParser
     {
       _configUpdateTimer.Stop();
 
-      if (await TriggerStateManager.Instance.GetConfig() is { } config)
+      if (await TriggerStateDB.Instance.GetConfig() is { } config)
       {
         await _logReadersSemaphore.WaitAsync();
 
@@ -188,7 +188,7 @@ namespace EQLogParser
     private async Task HandleAdvancedConfig(TriggerConfig config)
     {
       // if Default User is being used then we switched from basic so clear all
-      if (_logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser }))
+      if (_logReaders.Any(reader => reader.GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateDB.DefaultUser }))
       {
         _logReaders.ForEach(item => item.Dispose());
         _logReaders.Clear();
@@ -253,7 +253,7 @@ namespace EQLogParser
 
       if (_logReaders.Count > 0)
       {
-        if (config.IsEnabled && _logReaders[0].GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateManager.DefaultUser } p
+        if (config.IsEnabled && _logReaders[0].GetProcessor() is TriggerProcessor { CurrentCharacterId: TriggerStateDB.DefaultUser } p
           && !string.IsNullOrEmpty(currentFile) && _logReaders[0].FileName == currentFile)
         {
           defReader = _logReaders[0];
@@ -270,7 +270,7 @@ namespace EQLogParser
       {
         if (defReader == null || defProcessor == null)
         {
-          var processor = new TriggerProcessor(TriggerStateManager.DefaultUser, TriggerStateManager.DefaultUser, ConfigUtil.PlayerName, config.Voice,
+          var processor = new TriggerProcessor(TriggerStateDB.DefaultUser, TriggerStateDB.DefaultUser, ConfigUtil.PlayerName, config.Voice,
             config.VoiceRate, -1, null, null, null, null);
           await processor.StartAsync();
           var reader = new LogReader(processor, currentFile);

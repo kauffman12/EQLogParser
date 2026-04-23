@@ -15,7 +15,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace EQLogParser
 {
-  internal class TriggerStateManager
+  internal class TriggerStateDB
   {
     internal event Action<string> DeleteEvent;
     internal event Action<bool> OverlayImportEvent;
@@ -40,13 +40,13 @@ namespace EQLogParser
     private const string BadVersionCol = "Version";
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Lazy<TriggerStateManager> Lazy = new(() => new TriggerStateManager());
+    private static readonly Lazy<TriggerStateDB> Lazy = new(() => new TriggerStateDB());
     private static readonly JsonSerializerOptions SerializerOptions = new() { IncludeFields = true };
-    internal static TriggerStateManager Instance => Lazy.Value; // instance
+    internal static TriggerStateDB Instance => Lazy.Value; // instance
     private readonly LiteDbTaskQueue _taskQueue;
     private readonly LiteDatabase _db;
 
-    private TriggerStateManager()
+    private TriggerStateDB()
     {
       var path = ConfigUtil.GetTriggersDbFile();
       if (!string.IsNullOrEmpty(path))

@@ -540,7 +540,7 @@ namespace EQLogParser
       }
 
       var diff = diffs[aggregate.Name];
-      if (diff > DataManager.FightTimeout)
+      if (diff > FightManager.FightTimeout)
       {
         value.Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
         Insert(aggregate, theValues, timeRanges);

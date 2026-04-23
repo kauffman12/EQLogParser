@@ -129,25 +129,6 @@ namespace EQLogParser
       return result;
     }
 
-    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
-
-    internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
-    {
-      uint y = 0;
-
-      foreach (var c in span)
-      {
-        if (!char.IsDigit(c))
-        {
-          return defValue;
-        }
-
-        y = (y * 10) + (uint)(c - '0');
-      }
-
-      return y;
-    }
-
     internal static void UpdateMinMaxTimes(PlayerStats raidTotals, GenerateStatsOptions options, out double startTime, out double stopTime)
     {
       startTime = double.NaN;
@@ -604,9 +585,9 @@ namespace EQLogParser
       var resistStart = 0;
       var specialStart = 0;
       var deathStart = 0;
-      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : [];
-      var allSpecials = RecordManager.Instance.GetAllSpecials().ToList();
-      var allDeaths = RecordManager.Instance.GetAllDeaths().ToList();
+      var allResists = includeResists ? RecordsStore.Instance.GetAllResists().ToList() : [];
+      var allSpecials = RecordsStore.Instance.GetAllSpecials().ToList();
+      var allDeaths = RecordsStore.Instance.GetAllDeaths().ToList();
       var temp = new HashSet<IAction>();
       var actions = new List<IAction>();
       var usedSpecials = new List<int>();

@@ -63,6 +63,29 @@
 - Core processing methods grouped together
 - Utility methods grouped together
 
+## Singleton Pattern
+
+Managers and shared services use a singleton pattern with lazy initialization:
+
+```csharp
+private static T _instance;
+internal static T Instance
+{
+  get => _instance ??= new();
+  set => _instance = value;
+}
+```
+
+The setter enables test injection. Consumers access the singleton via `ClassName.Instance`.
+
+## Interface Design
+
+Split large interfaces by responsibility:
+- `IDataManager` — static spell/NPC/class data (lookup methods)
+- `IFightManager` — runtime fight state (active fights, overlays, ADPS)
+
+Each interface has only the methods relevant to its responsibility. Classes that need both inject both interfaces.
+
 ## Error Handling & User Communication
 
 ### General Principles
@@ -135,6 +158,45 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 - **The Golden Rule**: Perform heavy processing (log parsing, file I/O) on a background thread to keep the UI responsive.
 - **UI Updates**: Use the `Dispatcher` to marshal updates back to the UI thread.
 - Use `Volatile` fields or `Interlocked` operations for frequently accessed shared state to avoid expensive locking where possible.
+
+## Modern C# Syntax
+
+### Pattern Matching
+- Prefer pattern matching over explicit null checks: `if (expr is { } found)` instead of `var found = expr; if (found != null)`
+- Combine type checking and null checking in one expression: `if (prop is PropertyItem item && item.Name == name)` instead of separate checks
+- Use pattern matching to avoid intermediate variables
+
+### Collection Operations
+- Use `FirstOrDefault()` instead of `ToList().Find()` - avoids allocating an extra list
+- Prefer `FirstOrDefault(predicate)` over `First(predicate)` when the item might not exist (avoids exception)
+
+### Variable Declarations
+- Remove unnecessary intermediate variables - inline expressions when they are only used once or twice
+- Prefer `var` when the type is obvious from the right-hand side
+
+### Example Transformations
+
+Before:
+```csharp
+var categoryName = item.CategoryName as string;
+if (string.IsNullOrEmpty(categoryName))
+    continue;
+var found = settings.FirstOrDefault(setting => setting.Name == categoryName);
+if (found != null)
+{
+    // use found
+}
+```
+
+After:
+```csharp
+if (string.IsNullOrEmpty(item.CategoryName))
+    continue;
+if (settings.FirstOrDefault(setting => setting.Name == item.CategoryName) is { } found)
+{
+    // use found
+}
+```
 
 ## Documentation
 

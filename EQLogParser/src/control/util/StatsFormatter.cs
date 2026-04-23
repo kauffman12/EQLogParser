@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace EQLogParser
 {
-  internal static class SelectedParseBuilder
+  internal static class StatsFormatter
   {
     internal static readonly string[] separator = [" @"];
 
@@ -96,7 +96,7 @@ namespace EQLogParser
             var rank = 1;
             details = FormatDetails([.. topHeals.SubStats.OrderByDescending(p => p.Total).Take(10)], opts, p =>
               {
-                var abbr = DataManager.Instance.AbbreviateSpellName(p.Name);
+                var abbr = EQDataStore.Instance.AbbreviateSpellName(p.Name);
                 var namePart = opts.RankPlayers ? string.Format(CultureInfo.CurrentCulture, StatsUtil.PlayerRankFormat, rank, abbr)
                   : string.Format(CultureInfo.CurrentCulture, StatsUtil.PlayerFormat, abbr);
                 var healPart = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalOnlyFormat, StatsUtil.FormatTotals(p.Total));

@@ -111,7 +111,7 @@ namespace EQLogParser
     protected override async void OnExit(ExitEventArgs e)
     {
       await TriggerManager.Instance.StopAsync();
-      await TriggerStateManager.Instance.Dispose();
+      await TriggerStateDB.Instance.Dispose();
 
       AudioManager.Instance.Dispose();
       AppCache.Dispose();
@@ -244,7 +244,7 @@ namespace EQLogParser
         main.ConnectLocationChanged();
 
         // Start archive schedule if configured
-        FileUtil.SetArchiveSchedule();
+        LogArchiveManager.SetArchiveSchedule();
         ConfigUtil.UpdateStatus("Done");
 
         await Task.Run(async () =>

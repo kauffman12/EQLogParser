@@ -89,7 +89,7 @@ namespace EQLogParser
         parent.Items.Add(selected);
       }
 
-      DataManager.Instance.GetClassList().ForEach(name =>
+      EQDataStore.Instance.GetClassList().ForEach(name =>
       {
         var item = new MenuItem { IsEnabled = enabled, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
@@ -128,7 +128,7 @@ namespace EQLogParser
         var selected = GetSelectedStats().FirstOrDefault();
         if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
         {
-          PlayerManager.Instance.SetDefaultPlayerClass(selected.OrigName, className);
+          PlayerRegistry.Instance.SetDefaultPlayerClass(selected.OrigName, className);
           selected.ClassName = className;
           DataGridUtil.RefreshTable(TheDataGrid);
         }

@@ -76,10 +76,10 @@ namespace EQLogParser
               ((split[0] == "" && split[1] == "AFK" && ParseWho(split, 2, out var who, out var whoClass, out var groupId)) ||
                (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
-              PlayerManager.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
-              if (DataManager.Instance.IsValidClassName(whoClass))
+              PlayerRegistry.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
+              if (EQDataStore.Instance.IsValidClassName(whoClass))
               {
-                PlayerManager.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
+                PlayerRegistry.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
               }
               handled = true;
             }
@@ -98,7 +98,7 @@ namespace EQLogParser
                       if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                       {
                         var record = new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber };
-                        RecordManager.Instance.Add(record, lineData.BeginTime);
+                        RecordsStore.Instance.Add(record, lineData.BeginTime);
                         handled = true;
                       }
                     }
@@ -119,7 +119,7 @@ namespace EQLogParser
                     if (int.TryParse(split[7], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                     {
                       var record = new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -162,12 +162,12 @@ namespace EQLogParser
                       spell = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('!');
                     }
                     var record = new ResistRecord { Attacker = attacker, Defender = npc, Spell = spell };
-                    RecordManager.Instance.Add(record, lineData.BeginTime);
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
 
                     // also update npc resist stats
-                    if (DataManager.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
+                    if (EQDataStore.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
                     {
-                      RecordManager.Instance.UpdateNpcSpellStats(record.Defender, spellData.Resist, true);
+                      RecordsStore.Instance.UpdateNpcSpellStats(record.Defender, spellData.Resist, true);
                     }
                     handled = true;
                   }
@@ -183,9 +183,9 @@ namespace EQLogParser
                   if (split.Length >= 7 && i == 2 && split[^1] == "set." && split[3] == "your" && split[1] == "successfully" && split[0] == "You")
                   {
                     var className = string.Join(" ", split, 4, 1 + (split.Length - 7));
-                    if (DataManager.Instance.IsValidClassName(className))
+                    if (EQDataStore.Instance.IsValidClassName(className))
                     {
-                      PlayerManager.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
+                      PlayerRegistry.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
                     }
                     handled = true;
                   }
@@ -201,9 +201,9 @@ namespace EQLogParser
                   {
                     looter = split[0].Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split[0];
                     var item = string.Join(" ", split, itemsIndex + 1, i - itemsIndex - 1);
-                    PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                    PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                     var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Won Roll (Not Looted)" };
-                    RecordManager.Instance.Add(record, lineData.BeginTime);
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
                   break;
@@ -214,7 +214,7 @@ namespace EQLogParser
                     // var spell = string.Join(" ", split, 1, i - 4);
                     var npc = string.Join(" ", split, i + 2, split.Length - i - 2).TrimEnd('.');
                     npc = TextUtils.ToUpper(npc);
-                    RecordManager.Instance.UpdateNpcSpellStats(npc, SpellResist.Reflected, true);
+                    RecordsStore.Instance.UpdateNpcSpellStats(npc, SpellResist.Reflected, true);
                     handled = true;
                   }
                   break;
@@ -225,7 +225,7 @@ namespace EQLogParser
                     awakened = TextUtils.ToUpper(awakened);
                     var breaker = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd('.');
                     breaker = TextUtils.ToUpper(breaker);
-                    RecordManager.Instance.Add(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, lineData.BeginTime);
+                    RecordsStore.Instance.Add(new MezBreakRecord { Breaker = breaker, Awakened = awakened }, lineData.BeginTime);
                     handled = true;
                   }
                   else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i - 1]))
@@ -242,7 +242,7 @@ namespace EQLogParser
                     var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
                     npc = TextUtils.ToUpper(npc);
                     var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = $"{npc} (Left on Chest)" };
-                    RecordManager.Instance.Add(record, lineData.BeginTime);
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
                   break;
@@ -258,25 +258,25 @@ namespace EQLogParser
 
                     if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
                     {
-                      PlayerManager.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
                       var record = new LootRecord { Item = item, Player = name, Quantity = count, IsCurrency = true };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
                   else if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
                   {
                     // covers "a" or "an"
-                    var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]);
+                    var count = split[3][0] == 'a' ? 1 : TextUtils.ParseUInt(split[3]);
                     var item = string.Join(" ", split, 4, i - 4);
                     var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
                     npc = TextUtils.ToUpper(npc);
 
                     if (count > 0 && count != ushort.MaxValue)
                     {
-                      PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       var record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = npc };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -285,7 +285,7 @@ namespace EQLogParser
                     if (ParseCurrency(split, 2, i, out var item, out var count))
                     {
                       var record = new LootRecord { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -298,10 +298,10 @@ namespace EQLogParser
                     {
                       looter = player[..^1];
                       looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
-                      PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                       var item = string.Join(" ", split, 1, i - 2);
                       var record = new LootRecord { Item = item, Player = looter, Quantity = 0, IsCurrency = false, Npc = "Given (Not Looted)" };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -313,7 +313,7 @@ namespace EQLogParser
                     if (ParseCurrency(split, 2, i - 2, out var item, out var count))
                     {
                       var record = new LootRecord { Item = item, Player = ConfigUtil.PlayerName, Quantity = count, IsCurrency = true };
-                      RecordManager.Instance.Add(record, lineData.BeginTime);
+                      RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
@@ -339,12 +339,12 @@ namespace EQLogParser
               if (item.Length > 3 && item.EndsWith(".--", StringComparison.OrdinalIgnoreCase))
               {
                 // covers "a" or "an"
-                var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item[..^3];
+                var count = split[3][0] == 'a' ? 1 : TextUtils.ParseUInt(split[3]); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
-                  PlayerManager.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                  PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = item, Player = looter, Quantity = count, IsCurrency = false, Npc = "" };
-                  RecordManager.Instance.Add(record, lineData.BeginTime);
+                  RecordsStore.Instance.Add(record, lineData.BeginTime);
                   handled = true;
                 }
               }
@@ -387,7 +387,7 @@ namespace EQLogParser
           continue;
         }
 
-        if (StatsUtil.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
+        if (TextUtils.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
           tmp.Add(pieces[i] + " " + type);
           if (Rates.TryGetValue($"{pieces[i + 1][0]}", out var rate))

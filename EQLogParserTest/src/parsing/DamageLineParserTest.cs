@@ -6,27 +6,36 @@ namespace EQLogParserTest
   [TestClass]
   public class DamageLineParserTest
   {
-    private Mock<IDataManager>? _mockManager;
+    private Mock<IEQDataStore>? _mockDataManager;
+    private Mock<IFightManager>? _mockFightManager;
 
     [TestInitialize]
     public void Setup()
     {
       ConfigUtil.PlayerName = "TestPlayer";
-      _mockManager = new Mock<IDataManager>();
+      AdpsTracker.Instance.Clear();
+      _mockDataManager = new Mock<IEQDataStore>();
 #pragma warning disable CS8603 // Possible null reference return.
-      _mockManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
+      _mockDataManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.
-      _mockManager.Setup(m => m.IsOldSpell(It.IsAny<string>())).Returns(false);
-      _mockManager.Setup(m => m.AbbreviateSpellName(It.IsAny<string>())).Returns((string name) => name);
+      _mockDataManager.Setup(m => m.IsOldSpell(It.IsAny<string>())).Returns(false);
+      _mockDataManager.Setup(m => m.AbbreviateSpellName(It.IsAny<string>())).Returns((string name) => name);
 #pragma warning disable CS8603 // Possible null reference return.
-      _mockManager.Setup(m => m.GetSpellByAbbrv(It.IsAny<string>())).Returns((string name) => null);
+      _mockDataManager.Setup(m => m.GetSpellByAbbrv(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.
-      _mockManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
-      _mockManager.Setup(m => m.ClearActiveAdps());
+      _mockFightManager = new Mock<IFightManager>();
+      _mockFightManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
 #pragma warning disable CS8603 // Possible null reference return.
-      _mockManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
+      _mockFightManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.
-      DamageLineParser.DataManager = _mockManager.Object;
+      DamageLineParser.DataManager = _mockDataManager.Object;
+      DamageLineParser.FightManager = _mockFightManager.Object;
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+      AdpsTracker.Instance.Clear();
     }
 
     private static DamageRecord ParseAction(string action)

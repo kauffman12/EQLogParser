@@ -230,26 +230,26 @@ namespace EQLogParser
         string className = null;
         if (IsAssassinate(result))
         {
-          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = "Assassinate";
           className = Resource.ROG;
         }
         else if (IsHeadshot(result) || IsDoubleBowShot(result))
         {
-          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = IsHeadshot(result) ? "Headshot" : "Double Bow Shot";
           className = Resource.RNG;
         }
         else if (IsSlayUndead(result))
         {
-          PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+          PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = "Slay Undead";
           className = Resource.PAL;
         }
 
         if (!string.IsNullOrEmpty(classAbility) && !string.IsNullOrEmpty(className))
         {
-          PlayerManager.Instance.SetActivePlayerClass(player, className, 1, currentTime);
+          PlayerRegistry.Instance.SetActivePlayerClass(player, className, 1, currentTime);
         }
       }
 
@@ -262,7 +262,7 @@ namespace EQLogParser
 
       if (IsTwincast(result))
       {
-        PlayerManager.Instance.AddVerifiedPlayer(player, currentTime);
+        PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
       }
 
       return result;

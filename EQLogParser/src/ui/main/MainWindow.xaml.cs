@@ -46,7 +46,6 @@ namespace EQLogParser
     private DamageOverlayWindow _damageOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
-    private readonly NpcDamageManager _npcDamageManager = new();
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
@@ -229,9 +228,9 @@ namespace EQLogParser
           }
         }
 
-        DamageStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
-        HealingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
-        TankingStatsManager.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
+        DamageStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
+        HealingStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
+        TankingStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
@@ -357,7 +356,7 @@ namespace EQLogParser
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
-        if (DataManager.Instance.HasOverlayFights())
+        if (FightManager.Instance.HasOverlayFights())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
@@ -424,16 +423,16 @@ namespace EQLogParser
           _saveTimer?.Stop();
           ConfigUtil.Save();
           await TriggerManager.Instance.StopAsync();
-          DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+          FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay(false);
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
-          DataManager.Instance.ResetOverlayFights(true);
+          FightManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
-          DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+          FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
           break;
       }
     }
@@ -458,11 +457,11 @@ namespace EQLogParser
       var enabled = MainActions.ToggleSetting("ChatArchiveEnabled", enableChatArchiveIcon);
       if (enabled)
       {
-        ChatManager.Instance.Init();
+        ChatDB.Instance.Init();
       }
       else
       {
-        ChatManager.Instance.Stop();
+        ChatDB.Instance.Stop();
       }
     }
 
@@ -510,13 +509,13 @@ namespace EQLogParser
         damageStatsOptions.Npcs.AddRange(filtered);
         damageStatsOptions.AllRanges = allRanges;
         damageStatsOptions.MinSeconds = 0;
-        Task.Run(() => DamageStatsManager.Instance.BuildTotalStats(damageStatsOptions));
+        Task.Run(() => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions));
 
         GenerateStatsOptions healingStatsOptions = new();
         healingStatsOptions.Npcs.AddRange(filtered);
         healingStatsOptions.AllRanges = allRanges;
         healingStatsOptions.MinSeconds = 0;
-        Task.Run(() => HealingStatsManager.Instance.BuildTotalStats(healingStatsOptions));
+        Task.Run(() => HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions));
 
         GenerateStatsOptions tankingStatsOptions = new();
         tankingStatsOptions.Npcs.AddRange(filtered);
@@ -528,7 +527,7 @@ namespace EQLogParser
           tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
         }
 
-        Task.Run(() => TankingStatsManager.Instance.BuildTotalStats(tankingStatsOptions));
+        Task.Run(() => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions));
       }
     }
 
@@ -684,7 +683,7 @@ namespace EQLogParser
       {
         // close and clear old data
         CloseDamageOverlay(false);
-        DataManager.Instance.ResetOverlayFights();
+        FightManager.Instance.ResetOverlayFights();
       }
 
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";
@@ -765,14 +764,14 @@ namespace EQLogParser
 
     private void DamageSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      DamageStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
+      DamageStatsBuilder.Instance.FireChartEvent("SELECT", data.Selected);
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(Labels.DamageParse, data.Selected);
     }
 
     private void HealingSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      HealingStatsManager.Instance.FireChartEvent("SELECT", data.Selected);
+      HealingStatsBuilder.Instance.FireChartEvent("SELECT", data.Selected);
       var addTopParse = data.Selected?.Count == 1 && data.Selected[0].SubStats?.Count > 0;
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(data, addTopParse, Labels.HealParse, Labels.TopHealParse);
@@ -877,9 +876,9 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-              DataManager.Instance.ResetOverlayFights(true);
+              FightManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
-              DataManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+              FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
             }, DispatcherPriority.DataBind);
           }
           else
@@ -936,7 +935,7 @@ namespace EQLogParser
       if (_currentEditMapping == null || _currentEditMapping.Owner == name)
         return;
 
-      PlayerManager.Instance.AddPetToPlayer(_currentEditMapping.Pet, name);
+      PlayerRegistry.Instance.AddPetToPlayer(_currentEditMapping.Pet, name);
       ownerEditPopup.IsOpen = false;
     }
 
@@ -948,7 +947,7 @@ namespace EQLogParser
       if (_currentEditPlayerClass == null || _currentEditPlayerClass.PlayerClass == className)
         return;
 
-      PlayerManager.Instance.SetDefaultPlayerClass(_currentEditPlayerClass.Name, className);
+      PlayerRegistry.Instance.SetDefaultPlayerClass(_currentEditPlayerClass.Name, className);
       classEditPopup.IsOpen = false;
     }
 
@@ -1004,10 +1003,10 @@ namespace EQLogParser
             if (changed)
             {
               // update pet/player windows all at once
-              PlayerManager.Instance.Init();
-              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerManager.Instance.GetVerifiedPlayers(),
-                PlayerManager.Instance.GetVerifiedPets());
-              MainActions.LoadPetOwners(petMappingWindow, PlayerManager.Instance.GetPetMappings());
+              PlayerRegistry.Instance.Init();
+              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
+                PlayerRegistry.Instance.GetVerifiedPets());
+              MainActions.LoadPetOwners(petMappingWindow, PlayerRegistry.Instance.GetPetMappings());
             }
 
             _recentFiles.Remove(theFile);
@@ -1040,7 +1039,7 @@ namespace EQLogParser
         {
           if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
           {
-            PlayerManager.Instance.Save();
+            PlayerRegistry.Instance.Save();
           }
 
           MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
@@ -1054,11 +1053,12 @@ namespace EQLogParser
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;
-        DataManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+        FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
         CloseDamageOverlay(false);
-        DataManager.Instance.Clear();
-        RecordManager.Instance.Clear();
-        _npcDamageManager.Reset();
+        EQDataStore.Instance.Clear();
+        FightManager.Instance.Clear();
+        RecordsStore.Instance.Clear();
+        FightManager.Instance.Reset();
         closeLogFile.IsEnabled = false;
         saveLogFile.IsEnabled = false;
         MainActions.FireLogLoadingEvent(closedFile, false);
@@ -1143,7 +1143,7 @@ namespace EQLogParser
       if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
         return;
 
-      PlayerManager.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
+      PlayerRegistry.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
     }
 
     private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
@@ -1151,7 +1151,7 @@ namespace EQLogParser
       if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
         return;
 
-      PlayerManager.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
+      PlayerRegistry.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "It's a callback function")]
@@ -1222,18 +1222,18 @@ namespace EQLogParser
         }
 
         ConfigUtil.Save();
-        PlayerManager.Instance?.Save();
+        PlayerRegistry.Instance?.Save();
       }
 
-      PlayerManager.Instance?.Stop();
+      PlayerRegistry.Instance?.Stop();
       _saveTimer?.Stop();
       _eqLogReader?.Dispose();
       _notifyIcon?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
-      RecordManager.Instance.Stop();
-      ChatManager.Instance.Stop();
+      RecordsStore.Instance.Stop();
+      ChatDB.Instance.Stop();
       SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode

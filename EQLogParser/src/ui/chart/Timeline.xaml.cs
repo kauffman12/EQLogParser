@@ -89,7 +89,7 @@ namespace EQLogParser
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
-        foreach (var (beginTime, record) in RecordManager.Instance.GetDeathsDuring(startTime, endTime))
+        foreach (var (beginTime, record) in RecordsStore.Instance.GetDeathsDuring(startTime, endTime))
         {
           if (_selectedStats.FindIndex(stats => stats.OrigName == record.Killed) > -1)
           {
@@ -117,7 +117,7 @@ namespace EQLogParser
           }
 
           var castSpells = new List<SpellData>();
-          foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(startTime - StartTimeOffset, endTime))
+          foreach (var (beginTime, action) in RecordsStore.Instance.GetSpellsDuring(startTime - StartTimeOffset, endTime))
           {
             if (action is SpellCast { Interrupted: false } cast && cast.Caster == player && cast.SpellData is { Target: (int)SpellTarget.Self, Adps: > 0 }
               && (cast.SpellData.MaxHits > 0 || cast.SpellData.Duration <= 1800) && ClassFilter(cast.SpellData))
@@ -134,7 +134,7 @@ namespace EQLogParser
               {
                 if (!received.IsWearOff)
                 {
-                  if (DataManager.ResolveSpellAmbiguity(received, endTime, out var replaced))
+                  if (EQDataStore.ResolveSpellAmbiguity(received, endTime, out var replaced))
                   {
                     castSpells.Add(replaced);
                     spellData = replaced;
@@ -1176,7 +1176,7 @@ namespace EQLogParser
             rectTopLeft.Y + (rectangle.ActualHeight / 2));
 
           // Calculate the distance from the mouse to the center of the rectangle
-          var distance = MathUtil.GetDistance(mousePosition, rectCenter);
+          var distance = UiElementUtil.GetDistance(mousePosition, rectCenter);
 
           // Check if this is the closest rectangle so far
           if (distance < closestDistance)

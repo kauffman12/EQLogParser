@@ -22,11 +22,11 @@ namespace EQLogParser
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
-      QuickShareData = RecordManager.Instance.AllQuickShareRecords;
+      QuickShareData = RecordsStore.Instance.AllQuickShareRecords;
       QuickShareData.CollectionChanged += EnableStats;
       DataContext = this;
 
-      TriggerStateManager.Instance.GetTrustedPlayers().ContinueWith(task =>
+      TriggerStateDB.Instance.GetTrustedPlayers().ContinueWith(task =>
       {
         if (task.Result != null)
         {
@@ -82,7 +82,7 @@ namespace EQLogParser
     private async void SaveClicked(object sender, RoutedEventArgs e)
     {
       CleanupTable();
-      await TriggerStateManager.Instance.SaveTrustedPlayers([.. _items]);
+      await TriggerStateDB.Instance.SaveTrustedPlayers([.. _items]);
       ConfigUtil.SetSetting("TriggersWatchForQuickShare", watchQuickShare?.IsChecked == true);
       Close();
     }

@@ -79,7 +79,7 @@ namespace EQLogParser
         IsHitTestVisible = false;
       }
 
-      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
     }
 
     internal void DoPreview()
@@ -796,7 +796,7 @@ namespace EQLogParser
       saveButton.IsEnabled = false;
       cancelButton.IsEnabled = false;
       closeButton.IsEnabled = true;
-      await TriggerStateManager.Instance.Update(_node);
+      await TriggerStateDB.Instance.Update(_node);
     }
 
     private void CancelClick(object sender, RoutedEventArgs e)
@@ -907,7 +907,7 @@ namespace EQLogParser
         _isRendering = false;
         _newData = false;
         _newShortTickData = false;
-        TriggerStateManager.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+        TriggerStateDB.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
         _previewWindows?.Remove(_node.Id);
         _previewWindows = null;
         await Task.Delay(750);

@@ -1,4 +1,4 @@
-﻿using Syncfusion.Windows.PropertyGrid;
+using Syncfusion.Windows.PropertyGrid;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -11,8 +11,10 @@ namespace EQLogParser
     {
       foreach (var item in propertyGrid.Items)
       {
-        var found = settings.ToList().Find(setting => setting.Name == item.CategoryName);
-        if (found != null)
+        if (string.IsNullOrEmpty(item.CategoryName))
+          continue;
+
+        if (settings.FirstOrDefault(setting => setting.Name == item.CategoryName) is { } found)
         {
           item.Visibility = found.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -25,14 +27,12 @@ namespace EQLogParser
     {
       foreach (var prop in list)
       {
-        if (prop is PropertyItem item)
+        if (prop is PropertyItem item && item.Name == name)
         {
-          if (item.Name == name)
-          {
-            return item;
-          }
+          return item;
         }
-        else if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is { } found)
+
+        if (prop is PropertyCategoryViewItemCollection sub && FindProperty(sub.Properties.ToList(), name) is { } found)
         {
           return found;
         }

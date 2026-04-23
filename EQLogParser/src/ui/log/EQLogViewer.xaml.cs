@@ -52,7 +52,7 @@ namespace EQLogParser
 
       logSearchTime.ItemsSource = Times;
 
-      TriggerStateManager.Instance.GetConfig().ContinueWith(task => LoadPlaces(task.Result));
+      TriggerStateDB.Instance.GetConfig().ContinueWith(task => LoadPlaces(task.Result));
 
       var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -108,7 +108,7 @@ namespace EQLogParser
       };
 
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
 
       _ready = true;
     }
@@ -910,7 +910,7 @@ namespace EQLogParser
       {
         _config = null;
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         _filterTimer?.Stop();
         logBox.Dispose();
         contextBox.Dispose();

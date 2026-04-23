@@ -40,9 +40,9 @@ namespace EQLogParser
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
 
       // this window is either hidden or visible and doesn't need to implement dispose
-      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
       _titleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       _titleTimer.Tick += (_, _) =>
@@ -145,7 +145,7 @@ namespace EQLogParser
         var combined = value.CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
         var opts = GetSummaryOptions();
-        var summary = SelectedParseBuilder.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
+        var summary = StatsFormatter.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
 
         if (summary != null)
         {

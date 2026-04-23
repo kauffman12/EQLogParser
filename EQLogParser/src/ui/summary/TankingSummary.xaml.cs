@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -40,7 +40,7 @@ namespace EQLogParser
       }
 
       DamageType = damageTypes.SelectedIndex;
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -125,9 +125,9 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-            !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+            !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
@@ -159,7 +159,7 @@ namespace EQLogParser
       menuItemPetOptions.Children.Clear();
       if (CurrentStats != null)
       {
-        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerRegistry.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += AssignOwnerClick;
@@ -172,8 +172,8 @@ namespace EQLogParser
     {
       if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
       {
-        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
-        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
+        PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
@@ -247,7 +247,7 @@ namespace EQLogParser
         {
           if (CurrentStats != null)
           {
-            HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+            HealingStatsBuilder.Instance.PopulateHealing(CurrentStats);
             dataGrid.SelectedItems.Clear();
             dataGrid.View?.RefreshFilter();
 
@@ -294,7 +294,7 @@ namespace EQLogParser
                 minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
 
                 title.Content = CurrentStats.FullTitle;
-                isHealingLimited = HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+                isHealingLimited = HealingStatsBuilder.Instance.PopulateHealing(CurrentStats);
                 dataGrid.ItemsSource = CurrentStats.StatsList;
               }
 
@@ -339,7 +339,7 @@ namespace EQLogParser
             className = playerStats.ClassName;
           }
 
-          var isPet = PlayerManager.Instance.IsVerifiedPet(name);
+          var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
           if (isPet && _currentPetValue == false)
           {
             return false;
@@ -385,7 +385,7 @@ namespace EQLogParser
         if (needRequery)
         {
           var tankingOptions = new GenerateStatsOptions { DamageType = DamageType, MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
-          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+          Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(tankingOptions));
         }
       }
     }
@@ -395,7 +395,7 @@ namespace EQLogParser
       if (name == "Tanking")
       {
         var selected = GetSelectedStats();
-        TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, selected);
+        TankingStatsBuilder.Instance.FireChartEvent("UPDATE", DamageType, selected);
       }
     }
 
@@ -421,7 +421,7 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(statOptions));
+        Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(statOptions));
       }
     }
 
@@ -429,9 +429,9 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
         EventsTankingSummaryOptionsChanged();
@@ -441,20 +441,20 @@ namespace EQLogParser
 
     private void EventsTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      TankingStatsManager.Instance.FireChartEvent("SELECT", DamageType, data.Selected);
+      TankingStatsBuilder.Instance.FireChartEvent("SELECT", DamageType, data.Selected);
     }
 
     public void HideContent()
     {
-      TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      TankingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       MainActions.EventsTankingSelectionChanged -= EventsTankingSelectionChanged;
       ClearData();
 
       // window is close so reset
-      TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, null, true);
+      TankingStatsBuilder.Instance.FireChartEvent("UPDATE", DamageType, null, true);
       _ready = false;
     }
   }

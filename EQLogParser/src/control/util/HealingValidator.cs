@@ -22,7 +22,7 @@ namespace EQLogParser
       if (!_aoeEnabled)
       {
         SpellData spellData;
-        if (record?.SubType != null && (spellData = DataManager.Instance.GetHealingSpellByName(record.SubType)) != null)
+        if (record?.SubType != null && (spellData = EQDataStore.Instance.GetHealingSpellByName(record.SubType)) != null)
         {
           if (spellData.Target is (byte)SpellTarget.Targetae or (byte)SpellTarget.Nearbyplayersae
               or (byte)SpellTarget.Targetringae or (byte)SpellTarget.Casterpbplayers)

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -135,7 +135,7 @@ namespace EQLogParser
                 }
               }
 
-              var spellData = DataManager.Instance.GetSpellByName(spellName);
+              var spellData = EQDataStore.Instance.GetSpellByName(spellName);
 
               if (spellData != null)
               {
@@ -144,25 +144,25 @@ namespace EQLogParser
               else
               {
                 // unknown spell
-                spellData = DataManager.Instance.AddUnknownSpell(spellName);
+                spellData = EQDataStore.Instance.AddUnknownSpell(spellName);
               }
 
               var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
-              RecordManager.Instance.Add(cast, currentTime);
+              RecordsStore.Instance.Add(cast, currentTime);
 
-              if (!spellData.IsUnknown && DataManager.Instance.GetSpellClass(spellData.Name) is { } theClass)
+              if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {
-                PlayerManager.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
+                PlayerRegistry.Instance.SetActivePlayerClass(player, theClass, 2, currentTime);
               }
 
               if (specialKey != null && spellData != null)
               {
-                DataManager.Instance.UpdateAdps(spellData);
+                EQDataStore.Instance.UpdateAdps(spellData);
               }
             }
             else
             {
-              foreach (var (beginTime, action) in RecordManager.Instance.GetSpellsDuring(currentTime - 10, currentTime, true))
+              foreach (var (beginTime, action) in RecordsStore.Instance.GetSpellsDuring(currentTime - 10, currentTime, true))
               {
                 if (action is SpellCast sc && sc.Spell == spellName && sc.Caster == player)
                 {
@@ -209,11 +209,11 @@ namespace EQLogParser
         }
       }
 
-      var searchResult = DataManager.Instance.GetLandsOnYou(split);
+      var searchResult = EQDataStore.Instance.GetLandsOnYou(split);
       if (searchResult.SpellData.Count == 0 || searchResult.DataIndex != 0)
       {
         // WearOff messages can only apply to use so DataIndex has to also be zero meaning that every word was matched
-        searchResult = DataManager.Instance.GetWearOff(split);
+        searchResult = EQDataStore.Instance.GetWearOff(split);
         if (searchResult.SpellData.Count > 0 && searchResult.DataIndex == 0)
         {
           if (!string.IsNullOrEmpty(player))
@@ -228,29 +228,29 @@ namespace EQLogParser
               newSpell.Ambiguity.AddRange(searchResult.SpellData);
             }
 
-            RecordManager.Instance.Add(newSpell, beginTime);
+            RecordsStore.Instance.Add(newSpell, beginTime);
           }
           return true;
         }
 
-        searchResult = DataManager.Instance.GetLandsOnOther(split, out player);
+        searchResult = EQDataStore.Instance.GetLandsOnOther(split, out player);
         if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
         {
-          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerManager.Instance.IsVerifiedPet(player) &&
-          PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
+          PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
           {
             foreach (var spell in PetSpells.Keys)
             {
               if (searchResult.SpellData[0].Name.StartsWith(spell))
               {
-                PlayerManager.Instance.AddVerifiedPet(player);
+                PlayerRegistry.Instance.AddVerifiedPet(player);
               }
             }
           }
-          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerManager.Instance.IsVerifiedPet(player) &&
-            PlayerManager.IsPossiblePlayerName(player) && !PlayerManager.Instance.IsVerifiedPlayer(player))
+          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
+            PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
           {
-            PlayerManager.Instance.AddVerifiedPet(player);
+            PlayerRegistry.Instance.AddVerifiedPet(player);
           }
         }
       }
@@ -267,7 +267,7 @@ namespace EQLogParser
           newSpell.Ambiguity.AddRange(searchResult.SpellData);
         }
 
-        RecordManager.Instance.Add(newSpell, beginTime);
+        RecordsStore.Instance.Add(newSpell, beginTime);
         return true;
       }
 
@@ -275,10 +275,10 @@ namespace EQLogParser
       if (split[1] == "have" && split[2] == "entered")
       {
         var zone = string.Join(" ", [.. split], 3, split.Length - 3).TrimEnd('.');
-        RecordManager.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
+        RecordsStore.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
-          DataManager.Instance.ZoneChanged();
+          AdpsTracker.Instance.RemoveSongSpells();
           return true;
         }
       }
@@ -291,7 +291,7 @@ namespace EQLogParser
       string found = null;
       if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
       {
-        RecordManager.Instance.Add(new SpecialRecord { Code = codes[key], Player = player }, currentTime);
+        RecordsStore.Instance.Add(new SpecialRecord { Code = codes[key], Player = player }, currentTime);
         found = key;
       }
       return found;

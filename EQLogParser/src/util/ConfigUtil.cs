@@ -21,6 +21,7 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
+
     private const string PetMappingFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
     private static string _archiveDir;
@@ -275,7 +276,7 @@ namespace EQLogParser
 
     internal static void SaveList(string fileName, List<string> list)
     {
-      UiUtil.SafeWriteAllLines(fileName, list);
+      FileUtil.SafeWriteAllLines(fileName, list);
     }
 
     internal static void RemoveFileIfExists(string fileName)
@@ -317,7 +318,7 @@ namespace EQLogParser
         lines.Add(keypair.Key + "=" + keypair.Value);
       }
 
-      UiUtil.SafeWriteAllLines(fileName, lines);
+      FileUtil.SafeWriteAllLines(fileName, lines);
     }
   }
 }

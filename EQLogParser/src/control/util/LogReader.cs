@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -43,7 +43,7 @@ namespace EQLogParser
       if (await WhenFileExistsAsync())
       {
         logProcessor.LinkTo(_lines);
-        FileUtil.QueueFileArchiveAsync(this);
+        LogArchiveManager.QueueFileArchiveAsync(this);
       }
 
       try
@@ -148,7 +148,7 @@ namespace EQLogParser
             _currentPos = _fs.Position;
             _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
           }
-          else if ((_initSize - bytesRead) < 10000)
+          else if (_initSize - bytesRead < 10000)
           {
             _currentPos = _fs.Position;
           }
@@ -264,7 +264,7 @@ namespace EQLogParser
           if (rest.StartsWith(LoadingMsg, StringComparison.OrdinalIgnoreCase) ||
               rest.StartsWith(WelcomeMsg, StringComparison.OrdinalIgnoreCase))
           {
-            FileUtil.QueueFileArchiveAsync(this);
+            LogArchiveManager.QueueFileArchiveAsync(this);
           }
         }
 
