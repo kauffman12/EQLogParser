@@ -169,7 +169,7 @@ namespace EQLogParser
           var amountEnd = part.IndexOf(' ', amountIndex);
           if (amountEnd > -1)
           {
-            var value = StatsUtil.ParseUInt(part[amountIndex..amountEnd]);
+            var value = TextUtils.ParseUInt(part[amountIndex..amountEnd]);
             if (value != uint.MaxValue)
             {
               heal = value;
@@ -181,7 +181,7 @@ namespace EQLogParser
               overEnd = part.IndexOf(')', amountEnd + 2);
               if (overEnd > -1)
               {
-                var value2 = StatsUtil.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
+                var value2 = TextUtils.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
                 if (value2 != uint.MaxValue)
                 {
                   overHeal = value2;

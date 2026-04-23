@@ -238,28 +238,5 @@ namespace EQLogParser
       }
     }
 
-    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
-    {
-      try
-      {
-        File.WriteAllLines(path, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (SecurityException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (ArgumentNullException ex)
-      {
-        Log.Error(ex);
-      }
-    }
   }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.WindowsAPICodePack.Dialogs;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,12 +10,7 @@ namespace EQLogParser
 {
   public partial class LogManagementWindow
   {
-    public static string CompressNo => "No";
-    public static string CompressYes => "Yes";
-    public static string TypeActivity => "Activity";
-    public static string TypeSchedule => "Selected Day/Time";
-    public static string OrganizeInFiles => "Individual Files";
-    public static string OrganizeInFolders => "Server and Character Folders";
+    internal const string CompressNo = "No";
     private readonly bool _ready;
 
     internal LogManagementWindow()
@@ -38,9 +33,9 @@ namespace EQLogParser
       // read saved settings
       UpdateComboBox(fileSizes, "LogManagementMinFileSize", "500M");
       UpdateComboBox(fileAges, "LogManagementMinFileAge", "1 Week");
-      UpdateComboBox(compress, "LogManagementCompressArchive", CompressYes);
-      UpdateComboBox(organize, "LogManagementOrganize", OrganizeInFiles);
-      UpdateComboBox(type, "LogManagementType", TypeActivity);
+      UpdateComboBox(compress, "LogManagementCompressArchive", LogArchiveManager.CompressYes);
+      UpdateComboBox(organize, "LogManagementOrganize", LogArchiveManager.OrganizeInFiles);
+      UpdateComboBox(type, "LogManagementType", LogArchiveManager.TypeActivity);
       UpdateComboBox(day, "LogManagementScheduleDay", "Sunday");
       UpdateComboBox(hour, "LogManagementScheduleHour", "12");
       UpdateComboBox(min, "LogManagementScheduleMinute", "00");
@@ -131,7 +126,7 @@ namespace EQLogParser
         ConfigUtil.SetSetting("LogManagementType", item9.Content.ToString());
       }
 
-      FileUtil.SetArchiveSchedule();
+      LogArchiveManager.SetArchiveSchedule();
       Close();
     }
 
@@ -177,7 +172,7 @@ namespace EQLogParser
         return;
       }
 
-      var logFiles = await FileUtil.GetOpenLogFilesAsync();
+      var logFiles = await LogArchiveManager.GetOpenLogFilesAsync();
 
       if (logFiles.Count > 0)
       {
@@ -194,7 +189,7 @@ namespace EQLogParser
 
             // need time to display message
             await Task.Delay(1000);
-            await FileUtil.ArchiveNowAsync(logFiles);
+            await LogArchiveManager.ArchiveNowAsync(logFiles);
 
             _ = Dispatcher.InvokeAsync(() =>
             {

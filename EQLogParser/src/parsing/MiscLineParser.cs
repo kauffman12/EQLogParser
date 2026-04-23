@@ -267,7 +267,7 @@ namespace EQLogParser
                   else if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
                   {
                     // covers "a" or "an"
-                    var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]);
+                    var count = split[3][0] == 'a' ? 1 : TextUtils.ParseUInt(split[3]);
                     var item = string.Join(" ", split, 4, i - 4);
                     var npc = string.Join(" ", split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
                     npc = TextUtils.ToUpper(npc);
@@ -339,7 +339,7 @@ namespace EQLogParser
               if (item.Length > 3 && item.EndsWith(".--", StringComparison.OrdinalIgnoreCase))
               {
                 // covers "a" or "an"
-                var count = split[3][0] == 'a' ? 1 : StatsUtil.ParseUInt(split[3]); item = item[..^3];
+                var count = split[3][0] == 'a' ? 1 : TextUtils.ParseUInt(split[3]); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
                   PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
@@ -387,7 +387,7 @@ namespace EQLogParser
           continue;
         }
 
-        if (StatsUtil.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
+        if (TextUtils.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
           tmp.Add(pieces[i] + " " + type);
           if (Rates.TryGetValue($"{pieces[i + 1][0]}", out var rate))

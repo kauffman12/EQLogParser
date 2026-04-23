@@ -1176,7 +1176,7 @@ namespace EQLogParser
             rectTopLeft.Y + (rectangle.ActualHeight / 2));
 
           // Calculate the distance from the mouse to the center of the rectangle
-          var distance = MathUtil.GetDistance(mousePosition, rectCenter);
+          var distance = UiElementUtil.GetDistance(mousePosition, rectCenter);
 
           // Check if this is the closest rectangle so far
           if (distance < closestDistance)

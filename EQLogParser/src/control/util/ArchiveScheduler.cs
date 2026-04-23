@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -105,8 +105,8 @@ namespace EQLogParser
         {
           if (_enabled)
           {
-            var logFiles = await FileUtil.GetOpenLogFilesAsync();
-            await FileUtil.ArchiveNowAsync(logFiles);
+            var logFiles = await LogArchiveManager.GetOpenLogFilesAsync();
+            await LogArchiveManager.ArchiveNowAsync(logFiles);
           }
         }
         finally

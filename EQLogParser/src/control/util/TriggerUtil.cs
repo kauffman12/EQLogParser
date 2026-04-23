@@ -429,7 +429,7 @@ namespace EQLogParser
           {
             if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
             {
-              if (StatsUtil.ParseUInt(groupValue) is var value && value != uint.MaxValue)
+              if (TextUtils.ParseUInt(groupValue) is var value && value != uint.MaxValue)
               {
                 switch (option.Op)
                 {
