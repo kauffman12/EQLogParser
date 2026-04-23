@@ -244,7 +244,7 @@ namespace EQLogParser
         main.ConnectLocationChanged();
 
         // Start archive schedule if configured
-        FileUtil.SetArchiveSchedule();
+        LogArchiveManager.SetArchiveSchedule();
         ConfigUtil.UpdateStatus("Done");
 
         await Task.Run(async () =>
