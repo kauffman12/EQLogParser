@@ -200,7 +200,7 @@ namespace EQLogParser
       }
     }
 
-   [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.(txt|log)(?:\.gz)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^eqlog_([a-zA-Z]+)_([a-zA-Z]+).*\.(txt|log)(?:\.gz)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex TheServerFileNameRegex();
 
     [GeneratedRegex(@"^eqlog_(?<player>[^_]+)_(?<server>[^_]+)_(?<datetime>\d{8}(?:\d{4})?)_\d+\.txt(?:\.gz)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

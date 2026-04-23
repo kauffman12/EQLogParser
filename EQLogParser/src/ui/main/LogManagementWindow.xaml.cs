@@ -10,7 +10,6 @@ namespace EQLogParser
 {
   public partial class LogManagementWindow
   {
-    internal const string CompressNo = "No";
     private readonly bool _ready;
 
     internal LogManagementWindow()

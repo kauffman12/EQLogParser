@@ -14,13 +14,14 @@ namespace EQLogParser
 {
   internal static partial class LogArchiveManager
   {
-    private const long M = 1000000;
-    internal const string CompressYes = "Yes";
-    internal const string TypeActivity = "Activity";
-    internal const string TypeSchedule = "Selected Day/Time";
-    internal const string OrganizeInFiles = "Individual Files";
-    internal const string OrganizeInFolders = "Server and Character Folders";
+    public static readonly string CompressNo = "No";
+    public static readonly string CompressYes = "Yes";
+    public static readonly string TypeActivity = "Activity";
+    public static readonly string TypeSchedule = "Selected Day/Time";
+    public static readonly string OrganizeInFiles = "Individual Files";
+    public static readonly string OrganizeInFolders = "Server and Character Folders";
 
+    private const long M = 1000000;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex FileNameToArchiveRegex = TheFileNameToArchiveRegex();
     private static readonly object LockObject = new();
