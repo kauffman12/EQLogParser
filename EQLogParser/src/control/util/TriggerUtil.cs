@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EQLogParser.Audio;
+using log4net;
 using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;

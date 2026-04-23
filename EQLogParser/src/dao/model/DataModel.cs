@@ -14,19 +14,6 @@ namespace EQLogParser
     public void HideContent();
   }
 
-  internal class PiperVoice
-  {
-    public string Name { get; set; }
-    public string Model { get; set; }
-    public string Config { get; set; }
-    public int Sample { get; set; }
-  }
-
-  internal class PiperVoiceData
-  {
-    public List<PiperVoice> Voices { get; set; }
-  }
-
   internal class LexiconItem : INotifyPropertyChanged
   {
     public event PropertyChangedEventHandler PropertyChanged;

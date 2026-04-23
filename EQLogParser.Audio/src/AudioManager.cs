@@ -15,17 +15,20 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using Windows.Media.SpeechSynthesis;
 using Windows.Storage.Streams;
 
-namespace EQLogParser
+namespace EQLogParser.Audio
 {
-  internal partial class AudioManager : IDisposable
+  /// <summary>
+  /// Manages all audio playback: device selection, TTS synthesis, file playback,
+  /// per-player audio queues, volume/tempo control, and caching.
+  /// </summary>
+  public partial class AudioManager : IAudioManager, IDisposable
   {
     public const string AudioCacheKey = "audio-cache:";
-    internal event Action<bool> DeviceListChanged;
-    internal static AudioManager Instance => Lazy.Value;
+    public event Action<bool> DeviceListChanged;
+    public static AudioManager Instance => Lazy.Value;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
@@ -34,7 +37,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> _isRenderDevice = new();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
-    private readonly DispatcherTimer _updateTimer;
     private readonly object _deviceLock = new();
     private readonly bool _usePiper;
     private readonly List<VoiceInformation> _validVoices = [];
@@ -43,12 +45,23 @@ namespace EQLogParser
     private bool _disposed;
     private volatile float _appVolume = 1.0f;
     private volatile bool _initialized;
+    private readonly Timer _deviceUpdateTimer;
+
+    // Dependencies injected by host application
+    private static IMemoryCache _cache;
+    private static Action<string> _showError;
+
+    /// <summary>Call once at app startup to inject dependencies.</summary>
+    public static void Initialize(IMemoryCache cache, Action<string> showError = null)
+    {
+      _cache = cache;
+      _showError = showError;
+    }
 
     private AudioManager()
     {
-      _updateTimer = new DispatcherTimer(DispatcherPriority.Loaded);
-      _updateTimer.Tick += DoUpdateDeviceList;
-      _updateTimer.Interval = new TimeSpan(0, 0, 0, 1, 500);
+      // Use System.Threading.Timer instead of DispatcherTimer to avoid WPF dependency
+      _deviceUpdateTimer = new Timer(DoUpdateDeviceList, null, Timeout.Infinite, Timeout.Infinite);
       _ = InitAudio();
 
       if (PiperTts.Initialize())
@@ -58,10 +71,15 @@ namespace EQLogParser
       }
     }
 
-    internal int GetVolume() => (int)(_appVolume * 100.0f);
-    internal void SetVolume(int volume) => _appVolume = volume / 100.0f;
+    private static void ShowAudioError()
+    {
+      _showError?.Invoke("Unable to Play sound. No audio device?");
+    }
 
-    internal async Task LoadValidVoicesAsync()
+    public int GetVolume() => (int)(_appVolume * 100.0f);
+    public void SetVolume(int volume) => _appVolume = volume / 100.0f;
+
+    public async Task LoadValidVoicesAsync()
     {
       if (!PiperTts.Initialize() && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
       {
@@ -104,7 +122,7 @@ namespace EQLogParser
       }
     }
 
-    internal List<string> GetVoiceList()
+    public List<string> GetVoiceList()
     {
       if (_usePiper) return PiperTts.GetVoiceList();
       var list = new List<string>();
@@ -141,7 +159,7 @@ namespace EQLogParser
       return list;
     }
 
-    internal string GetDefaultVoice()
+    public string GetDefaultVoice()
     {
       if (_usePiper) return PiperTts.GetDefaultVoice();
 
@@ -153,7 +171,7 @@ namespace EQLogParser
       return string.Empty;
     }
 
-    internal void SelectDevice(string id)
+    public void SelectDevice(string id)
     {
       var device = GetDeviceOrDefault(id);
       lock (_deviceLock)
@@ -162,7 +180,7 @@ namespace EQLogParser
       }
     }
 
-    internal void SetVoice(string id, string voice)
+    public void SetVoice(string id, string voice)
     {
       if (!string.IsNullOrEmpty(voice) && _playerAudios.TryGetValue(id, out var playerAudio))
       {
@@ -173,7 +191,7 @@ namespace EQLogParser
       }
     }
 
-    internal void Add(string id, string voice)
+    public void Add(string id, string voice)
     {
       var audio = new PlayerAudio();
       LoadVoice(id, voice, audio);
@@ -181,7 +199,7 @@ namespace EQLogParser
 
     }
 
-    internal void Start(string id)
+    public void StartAudio(string id)
     {
       if (_playerAudios.TryGetValue(id, out var playerAudio))
       {
@@ -202,7 +220,7 @@ namespace EQLogParser
       }
     }
 
-    internal void Stop(string id, bool remove = false)
+    public void StopAudio(string id, bool remove = false)
     {
       if (!string.IsNullOrEmpty(id) && _playerAudios.TryGetValue(id, out var playerAudio))
       {
@@ -272,7 +290,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void TestSpeakFileAsync(string filePath, int adjustedVolume = 4)
+    public async void TestSpeakFileAsync(string filePath, int adjustedVolume = 4)
     {
       await using var reader = new AudioFileReader(filePath);
       if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
@@ -280,12 +298,12 @@ namespace EQLogParser
         var volume = ConvertVolume(_appVolume, adjustedVolume);
         if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), volume, 0))
         {
-          new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
+          ShowAudioError();
         }
       }
     }
 
-    internal async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4)
+    public async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4)
     {
       if (!string.IsNullOrEmpty(tts))
       {
@@ -298,13 +316,13 @@ namespace EQLogParser
           var volume = ConvertVolume(appVolume, adjustedVolume);
           if (!PlayAudioData(audio, waveFormat, GetDevice(), volume, rate))
           {
-            new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
+            ShowAudioError();
           }
         }
       }
     }
 
-    internal async void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null)
+    public async void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null)
     {
       if (!string.IsNullOrEmpty(tts))
       {
@@ -319,7 +337,7 @@ namespace EQLogParser
             var device = GetDeviceOrDefault(id);
             if (!PlayAudioData(audio, waveFormat, device, specificVolume, rate))
             {
-              new MessageWindow("Unable to Play sound. No audio device?", Resource.AUDIO_ERROR).ShowDialog();
+              ShowAudioError();
             }
           }
           else
@@ -350,7 +368,7 @@ namespace EQLogParser
             catch (Exception ex)
             {
               Log.Error("Error Exporting WAV", ex);
-              new MessageWindow("Failed to Export wav file. Check the Error Log for Details.", Resource.EXPORT_ERROR).ShowDialog();
+              _showError?.Invoke("Failed to Export wav file. Check the Error Log for Details.");
             }
             finally
             {
@@ -369,14 +387,14 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakFileAsync(string id, string filePath, long priority, int playerVolume, int adjustedVolume = 4)
+    public async void SpeakFileAsync(string id, string filePath, long priority, int playerVolume, int adjustedVolume = 4)
     {
-      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath) && _cache != null)
       {
         try
         {
           var cacheKey = $"{AudioCacheKey}{Path.GetFullPath(filePath).ToLowerInvariant()}";
-          var cachedAudio = await App.AppCache.GetOrCreateAsync(cacheKey, async entry =>
+          var cachedAudio = await _cache.GetOrCreateAsync(cacheKey, async entry =>
           {
             await using var reader = new AudioFileReader(filePath);
             if (await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
@@ -406,7 +424,7 @@ namespace EQLogParser
       }
     }
 
-    internal async void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
+    public async void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(tts))
       {
@@ -461,7 +479,7 @@ namespace EQLogParser
       }
     }
 
-    internal static (List<string> idList, List<string> nameList) GetDeviceList()
+    public static (List<string> idList, List<string> nameList) GetDeviceList()
     {
       List<string> idList = [Guid.Empty.ToString()];
       List<string> nameList = ["Default Audio"];
@@ -485,10 +503,8 @@ namespace EQLogParser
       return (idList, nameList);
     }
 
-    private async void DoUpdateDeviceList(object sender, EventArgs e)
+    private async void DoUpdateDeviceList(object state)
     {
-      _updateTimer.Stop();
-
       try
       {
         Guid selected;
@@ -530,8 +546,7 @@ namespace EQLogParser
 
     protected void UpdateDeviceList()
     {
-      _updateTimer.Stop();
-      _updateTimer.Start();
+      _deviceUpdateTimer?.Change(1500, Timeout.Infinite);
     }
 
     private async Task InitAudio()
@@ -1095,6 +1110,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(name))
         {
           // do not pass null for culture
+#pragma warning disable CA1304 // Specify CultureInfo
           foreach (var voice in synth.GetInstalledVoices())
           {
             if (!string.IsNullOrEmpty(name) && name.Contains(voice.VoiceInfo.Name, StringComparison.OrdinalIgnoreCase))
@@ -1103,6 +1119,7 @@ namespace EQLogParser
               break;
             }
           }
+#pragma warning restore CA1304 // Specify CultureInfo
         }
       }
       catch (Exception)
@@ -1312,14 +1329,14 @@ namespace EQLogParser
       _disposed = true;
     }
 
-    private class CachedAudio
+    private sealed class CachedAudio
     {
       internal byte[] Data { get; init; }
       internal WaveFormat WaveFormat { get; init; }
       internal double Seconds { get; init; }
     }
 
-    private class PlayerAudio
+    private sealed class PlayerAudio
     {
       internal List<PlaybackEvent> Events { get; set; } = [];
       internal PlaybackEvent CurrentEvent { get; set; }
@@ -1330,7 +1347,7 @@ namespace EQLogParser
       internal bool PlayerRequestStop { get; set; }
     }
 
-    private class PlaybackEvent
+    private sealed class PlaybackEvent
     {
       internal long Priority { get; init; } = -1;
       internal int Rate { get; init; }
@@ -1340,7 +1357,7 @@ namespace EQLogParser
       internal double Seconds { get; init; }
     }
 
-    private class AudioDeviceNotificationClient : IMMNotificationClient
+    private sealed class AudioDeviceNotificationClient : IMMNotificationClient
     {
       public void OnDeviceStateChanged(string deviceId, DeviceState newState)
       {

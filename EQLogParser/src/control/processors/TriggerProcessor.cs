@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EQLogParser.Audio;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -119,7 +120,7 @@ namespace EQLogParser
 
       try
       {
-        AudioManager.Instance.Stop(CurrentCharacterId, remove);
+        AudioManager.Instance.StopAudio(CurrentCharacterId, remove);
 
         foreach (var kv in _timerLists)
         {
@@ -143,7 +144,7 @@ namespace EQLogParser
     public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
       // delay start until log is ready
-      AudioManager.Instance.Start(CurrentCharacterId);
+      AudioManager.Instance.StartAudio(CurrentCharacterId);
 
       _chatTask = Task.Run(() =>
       {

@@ -999,18 +999,18 @@ namespace EQLogParser
 
     private static void SetThemeFontSizes()
     {
-      CurrentNameWidth = 10.0 * CurrentFontSize + 25;
-      CurrentNpcWidth = 10.0 * CurrentFontSize + 50;
-      CurrentDateTimeWidth = 10.0 * CurrentFontSize - 10;
-      CurrentSpellWidth = 10.0 * CurrentFontSize + 90;
-      CurrentItemWidth = 15.0 * CurrentFontSize + 115;
+      CurrentNameWidth = (10.0 * CurrentFontSize) + 25;
+      CurrentNpcWidth = (10.0 * CurrentFontSize) + 50;
+      CurrentDateTimeWidth = (10.0 * CurrentFontSize) - 10;
+      CurrentSpellWidth = (10.0 * CurrentFontSize) + 90;
+      CurrentItemWidth = (15.0 * CurrentFontSize) + 115;
       CurrentShortWidth = 5.0 * CurrentFontSize;
       CurrentShortestWidth = 4.0 * CurrentFontSize;
       CurrentMediumWidth = 6.5 * CurrentFontSize;
       Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
       Application.Current.Resources["EQFightGridTitleHeight"] = new GridLength(21 + CurrentFontSize);
-      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + CurrentFontSize * 4);
+      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + (CurrentFontSize * 4));
       Application.Current.Resources["EQGridWindowTitleHeight"] = new GridLength(14 + CurrentFontSize);
       Application.Current.Resources["EQWindowTitleHeight"] = 14 + CurrentFontSize;
       Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
@@ -1026,17 +1026,17 @@ namespace EQLogParser
       Application.Current.Resources["EQTabHeaderHeight"] = CurrentFontSize + 12;
       Application.Current.Resources["EQTableHeaderRowHeight"] = CurrentFontSize + 14;
       Application.Current.Resources["EQTableRowHeight"] = CurrentFontSize + 12;
-      Application.Current.Resources["EQTableSixRowHeight"] = (CurrentFontSize + 12) * 6 + (CurrentFontSize + 14);
-      Application.Current.Resources["EQTableTenRowHeight"] = (CurrentFontSize + 12) * 10 + (CurrentFontSize + 14);
-      Application.Current.Resources["EQTableFifteenRowHeight"] = (CurrentFontSize + 12) * 15 + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableSixRowHeight"] = ((CurrentFontSize + 12) * 6) + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableTenRowHeight"] = ((CurrentFontSize + 12) * 10) + (CurrentFontSize + 14);
+      Application.Current.Resources["EQTableFifteenRowHeight"] = ((CurrentFontSize + 12) * 15) + (CurrentFontSize + 14);
       Application.Current.Resources["EQIconButtonHeight"] = CurrentFontSize + 6;
-      Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + (CurrentFontSize - 10) * 2;
-      Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + (CurrentFontSize - 10) * 2;
-      Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + (CurrentFontSize - 10) * 2;
-      Application.Current.Resources["EQCheckBoxScale"] = 0.9 + (CurrentFontSize - 10) * 0.06;
-      SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + 14.0 * CurrentFontSize, _mainWindow.npcWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + 10.0 * CurrentFontSize, _mainWindow.petMappingWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + 10.0 * CurrentFontSize, _mainWindow.verifiedPlayersWindow);
+      Application.Current.Resources["EQTableRowHeaderWidth"] = 32 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQTableShortRowHeaderWidth"] = 20 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + ((CurrentFontSize - 10) * 2);
+      Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
+      SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + (10.0 * CurrentFontSize), _mainWindow.petMappingWindow);
+      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + (10.0 * CurrentFontSize), _mainWindow.verifiedPlayersWindow);
       SyncFusionUtil.SetDesiredHeight("EQParseWindowHeight", 10.0 * (CurrentFontSize + 2), _mainWindow.playerParseTextWindow);
     }
 

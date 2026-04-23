@@ -1,3 +1,4 @@
+using EQLogParser.Audio;
 using log4net;
 using log4net.Appender;
 using log4net.Config;
@@ -97,6 +98,7 @@ namespace EQLogParser
         ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
         ConfigUtil.UpdateStatus("Validating Installed Voices");
+        EQLogParser.Audio.AudioManager.Initialize(AppCache);
         await LoadVoicesSafe();
 
         await ShowMain();

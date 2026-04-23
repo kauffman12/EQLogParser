@@ -1,8 +1,7 @@
-﻿using log4net;
+using EQLogParser.Audio;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -10,7 +9,6 @@ namespace EQLogParser
 {
   public partial class WavCreatorWindow
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly List<string> _deviceIdList;
     private readonly List<string> _deviceNameList;
 
@@ -30,7 +28,7 @@ namespace EQLogParser
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
     private void OptionsChanged(object sender, RoutedEventArgs e) => HandleChanged();
-    private void TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => HandleChanged();
+    private void TextChanged(object sender, TextChangedEventArgs e) => HandleChanged();
 
     private void VolumeButtonClick(object sender, RoutedEventArgs e)
     {

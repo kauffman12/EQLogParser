@@ -7,14 +7,14 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace EQLogParser
+namespace EQLogParser.Audio
 {
-  internal class PiperTts
+  internal sealed class PiperTts
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private static PiperVoiceData _voiceData;
-    private static readonly object _voiceDataLock = new object();
+    private static readonly object _voiceDataLock = new();
     private static readonly string PiperTtsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper-tts");
 
     private PiperTts() { }
@@ -34,7 +34,7 @@ namespace EQLogParser
               _voiceData = voiceData;
             }
 
-            if (!NativeMethods.SetDllDirectory(PiperTtsPath))
+            if (!PiperInterop.SetDllDirectory(PiperTtsPath))
             {
               Log.Error($"SetDllDirectory failed: {Marshal.GetLastWin32Error()}");
             }
@@ -132,22 +132,25 @@ namespace EQLogParser
 
   public static class PiperInterop
   {
-    [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void initialize([MarshalAs(UnmanagedType.LPStr)] string espeakDataPath);
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    internal static extern bool SetDllDirectory(string lpPathName);
 
     [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void release();
+    internal static extern void initialize([MarshalAs(UnmanagedType.LPStr)] string espeakDataPath);
 
     [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int loadVoice([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string modelPath, [MarshalAs(UnmanagedType.LPStr)] string configPath);
+    internal static extern void release();
 
     [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern int removeVoice([MarshalAs(UnmanagedType.LPStr)] string id);
+    internal static extern int loadVoice([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string modelPath, [MarshalAs(UnmanagedType.LPStr)] string configPath);
 
     [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern long synthesize([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string text, out IntPtr audioBuffer);
+    internal static extern int removeVoice([MarshalAs(UnmanagedType.LPStr)] string id);
 
     [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void freeAudioData(IntPtr buffer);
+    internal static extern long synthesize([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string text, out IntPtr audioBuffer);
+
+    [DllImport("piperApi.dll", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void freeAudioData(IntPtr buffer);
   }
 }

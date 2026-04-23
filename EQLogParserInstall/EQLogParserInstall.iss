@@ -6,7 +6,7 @@
 #endif
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.50"
+#define MyAppVersion "2.3.51"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
@@ -65,6 +65,7 @@ Source: "{#MyReleaseDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#MyReleaseDir}\DotLiquid.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.deps.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\EQLogParser.Audio.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\FontAwesome5.dll"; DestDir: "{app}"; Flags: ignoreversion
