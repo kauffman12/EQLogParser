@@ -1,3 +1,12 @@
+**Note that Windows 7/8 support will end by Septermber this year**
+
+# 2.3.51 | 04/29/26
+1. Added New Feature **Group View** to the **Damage Summary** to allow players to be grouped together and combine their damage statistics. In addition, the '/who all raid' information is parsed and available in a dropdown so that you can assign groups from it. Switch to **Group View** by using the existing dropdown that shows **Player +Pets** as an option.
+2. Add a **Best Sec** column to the **Tank Summary**.
+3. Made improvements to determining pets automatically.
+4. Fixed some recent issues with parsing received spells.
+5. Lots of re-org and code cleanup so expect some bugs.
+
 # 2.3.50 | 04/11/26
 1. There are **Major** UI changes in **Trigger Manager** when editing **Triggers** and **Overlays**. Some properties were moved to their own tab, categories were renamed, and some labels updated. All to make room for additional features in the future.
 2. Added options for **Custom Idle Color** and **Custom Reset Color** to Trigger properties as well as the character settings when using Advanced mode. These work just like the previous option for **Custom Active Color**.
