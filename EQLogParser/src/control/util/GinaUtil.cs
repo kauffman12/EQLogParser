@@ -149,7 +149,7 @@ namespace EQLogParser
               if (msgDialog.IsYes1Clicked)
               {
                 var folderName = (player == null) ? "New Folder" : "From " + player;
-                folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+                folderName += " (" + DateUtil.FormatDotNetDateSeconds(DateUtil.ToDotNetSeconds(DateTime.Now)) + ")";
                 await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, characterIds);
               }
             }

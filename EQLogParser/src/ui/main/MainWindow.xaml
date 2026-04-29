@@ -525,7 +525,7 @@
                                 SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
               <syncfusion:GridTextColumn MappingName="Pet" HeaderText="Pet" IsReadOnly="True" AllowEditing="False"/>
-              <syncfusion:GridTemplateColumn x:Name="ownerList" HeaderText="Owner" ColumnSizer="AutoWithLastColumnFill">
+              <syncfusion:GridTemplateColumn x:Name="ownerList" HeaderText="Owner" MappingName="Owner" ColumnSizer="AutoWithLastColumnFill">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -552,7 +552,7 @@
                                   GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                   SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridTemplateColumn Width="160" HeaderText="Name">
+              <syncfusion:GridTemplateColumn Width="160" HeaderText="Name" MappingName="Name">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -566,7 +566,7 @@
                   </DataTemplate>
                 </syncfusion:GridTemplateColumn.CellTemplate>
               </syncfusion:GridTemplateColumn>
-              <syncfusion:GridTemplateColumn HeaderText="Default Class">
+              <syncfusion:GridTemplateColumn HeaderText="Default Class" MappingName="PlayerClass">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -593,7 +593,7 @@
                                 GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                                 SelectionMode="Extended">
             <syncfusion:SfDataGrid.Columns>
-              <syncfusion:GridTemplateColumn HeaderText="Name">
+              <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name">
                 <syncfusion:GridTemplateColumn.CellTemplate>
                   <DataTemplate>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">

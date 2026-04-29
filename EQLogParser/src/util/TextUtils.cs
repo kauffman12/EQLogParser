@@ -32,7 +32,7 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
-    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
+    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).Equals(test, StringComparison.OrdinalIgnoreCase);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
     internal static string ToLower(string name) => string.IsNullOrEmpty(name) ? "" : name.ToLower(CultureInfo.InvariantCulture);
 
@@ -336,19 +336,25 @@ namespace EQLogParser
 
     internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
     {
-      uint y = 0;
+      if (span.IsEmpty)
+        return defValue;
+
+      uint value = 0;
 
       foreach (var c in span)
       {
-        if (!char.IsDigit(c))
-        {
-          return defValue;
-        }
+        var digit = (uint)(c - '0');
 
-        y = (y * 10) + (uint)(c - '0');
+        if (digit > 9)
+          return defValue;
+
+        if (value > 429496729u || (value == 429496729u && digit > 5))
+          return defValue;
+
+        value = (value * 10) + digit;
       }
 
-      return y;
+      return value;
     }
 
     internal static string ReplaceWholeWords(string input, IReadOnlyDictionary<string, string> replacements)

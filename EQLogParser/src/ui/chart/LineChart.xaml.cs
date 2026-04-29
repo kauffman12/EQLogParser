@@ -620,7 +620,7 @@ namespace EQLogParser
         AttemptsPerSecond = aggregate.AttemptsPerSecond,
         HitsPerSecond = aggregate.HitsPerSecond,
         TotalPerSecond = aggregate.TotalPerSecond,
-        DateTime = DateUtil.FromDouble(aggregate.CurrentTime)
+        DateTime = DateUtil.FromDotNetSeconds(aggregate.CurrentTime)
       };
 
       var totalSeconds = timeRanges[aggregate.Name].GetTotal();

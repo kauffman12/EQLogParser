@@ -513,7 +513,7 @@ namespace EQLogParser
     {
       if (players.SelectedItem is string { Length: > 0 } name && !name.StartsWith("No ", StringComparison.Ordinal))
       {
-        LoadChannels(players.SelectedItem as string);
+        LoadChannels(name);
         _playerAutoCompleteList = ChatDB.GetPlayers(name);
         ConfigUtil.SetSetting("ChatSelectedPlayer", name);
 

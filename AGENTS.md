@@ -11,6 +11,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 proj
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
 
+## Post-Implementation Checklist
+After completing work, verify:
+- **Method visibility ordering**: public → internal → private (per CodingStandards.md)
+- **Pattern matching**: use `is not T` / `is T var` instead of `as T` + null check (per CodingStandards.md)
+- **Unused usings**: no leftover or unnecessary `using` statements
+
 ## Agent Behavior
 - **Ask for Clarification**: If a feature requirement is ambiguous, ask before implementing.
 - **Read the Syncfusion PDF files**: If there's a question about Syncfusion APIs look under syncfusion-wpf for info.

@@ -13,7 +13,7 @@ namespace EQLogParser
         var doubleValue = System.Convert.ToDouble(value, CultureInfo.CurrentCulture);
         if (doubleValue > 0)
         {
-          return DateUtil.FormatSimpleDate(doubleValue);
+          return DateUtil.FormatDotNetDateSeconds(doubleValue);
         }
       }
       return string.Empty;

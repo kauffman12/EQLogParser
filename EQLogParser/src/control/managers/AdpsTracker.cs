@@ -6,16 +6,11 @@ namespace EQLogParser
 {
   internal class AdpsTracker
   {
-    private static AdpsTracker _instance;
-    internal static AdpsTracker Instance
-    {
-      get => _instance ??= new();
-      set => _instance = value;
-    }
+    // singleton
+    internal static AdpsTracker Instance { get; } = new();
 
     internal uint MyNukeCritRateMod { get; private set; }
     internal uint MyDoTCritRateMod { get; private set; }
-
     internal Dictionary<string, Dictionary<string, uint>> AdpsValues => _adpsValues;
     internal List<string> AdpsKeys => _adpsKeys;
 

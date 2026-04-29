@@ -12,11 +12,13 @@ namespace EQLogParser
   internal class DamageStatsBuilder
   {
     internal static DamageStatsBuilder Instance = new();
-    internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal event Action<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    private readonly object _lock = new();
     private readonly Dictionary<int, byte> _damageGroupIds = [];
+    private readonly ConcurrentDictionary<string, int> _playerGroupAssignments = new();
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _playerPets = new();
@@ -30,20 +32,40 @@ namespace EQLogParser
 
     internal DamageStatsBuilder()
     {
-      FightManager.Instance.EventsClearedActiveData += (_) =>
+      FightManager.Instance.EventsClearedActiveData += (bool serverChanged) =>
       {
-        lock (_damageGroupIds)
+        lock (_lock)
         {
           Reset();
+
+          if (serverChanged)
+          {
+            _playerGroupAssignments.Clear();
+          }
         }
       };
     }
 
     internal StatsGenerationEvent GetLastStats()
     {
-      lock (_damageGroupIds)
+      lock (_lock)
       {
         return _lastStatsEvent;
+      }
+    }
+
+    internal void SetPlayerAssignedGroup(string playerName, int assignedGroup)
+    {
+      if (string.IsNullOrEmpty(playerName))
+        return;
+
+      if (assignedGroup >= 0 && assignedGroup <= 12)
+      {
+        _playerGroupAssignments[playerName] = assignedGroup;
+      }
+      else
+      {
+        _playerGroupAssignments.TryRemove(playerName, out _);
       }
     }
 
@@ -51,7 +73,7 @@ namespace EQLogParser
     {
       if (EventsGenerationStatus?.GetInvocationList().Length > 0)
       {
-        lock (_damageGroupIds)
+        lock (_lock)
         {
           if (reset)
           {
@@ -69,7 +91,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (_damageGroupIds)
+      lock (_lock)
       {
         try
         {
@@ -130,7 +152,10 @@ namespace EQLogParser
               }
 
               // update pet mapping
-              block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
+              foreach (var action in block.Actions.OfType<DamageRecord>())
+              {
+                UpdatePetMapping(action);
+              }
               lastTime = block.BeginTime;
             }
 
@@ -155,7 +180,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(string action, List<PlayerStats> selected = null)
     {
-      lock (_damageGroupIds)
+      lock (_lock)
       {
         // send update
         var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
@@ -165,13 +190,13 @@ namespace EQLogParser
           de.Selected.AddRange(selected);
         }
 
-        EventsUpdateDataPoint?.Invoke(_damageGroups, de);
+        EventsUpdateDataPoint?.Invoke(de);
       }
     }
 
     private void ComputeDamageStats(GenerateStatsOptions options)
     {
-      lock (_damageGroupIds)
+      lock (_lock)
       {
         _lastStatsEvent = null;
         if (_raidTotals != null)
@@ -249,7 +274,7 @@ namespace EQLogParser
                     else if (isValid)
                     {
                       var isAttackerPet = PlayerRegistry.Instance.IsVerifiedPet(record.Attacker);
-                      var isNewFrame = CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
+                      var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
                       StatsUtil.UpdateStats(stats, record, isNewFrame, isAttackerPet);
@@ -264,7 +289,7 @@ namespace EQLogParser
                       {
                         var origName = player ?? record.Attacker;
                         var aggregateName = origName + " +Pets";
-                        isNewFrame = CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
+                        isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
 
                         var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
                         StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
@@ -305,6 +330,11 @@ namespace EQLogParser
             var playerClasses = new ConcurrentDictionary<string, string>();
             foreach (var stats in individualStats.Values)
             {
+              if (_playerGroupAssignments.TryGetValue(stats.OrigName, out var cachedGroup))
+              {
+                stats.AssignedGroup = cachedGroup;
+              }
+
               if (topLevelStats.ContainsKey(stats.Name))
               {
                 if (childrenStats.TryGetValue(stats.Name, out var children))
@@ -433,24 +463,6 @@ namespace EQLogParser
           dict[key] += amount;
         }
       }
-    }
-
-    private static bool CheckNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
-    {
-      if (!prevPlayerTimes.TryGetValue(name, out var prevTime))
-      {
-        prevPlayerTimes[name] = beginTime;
-        prevTime = beginTime;
-      }
-
-      var newFrame = beginTime > prevTime;
-
-      if (newFrame)
-      {
-        prevPlayerTimes[name] = beginTime;
-      }
-
-      return newFrame;
     }
 
     private void FireNewStatsEvent()

@@ -21,7 +21,6 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
-
     private const string PetMappingFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
     private static string _archiveDir;
@@ -173,18 +172,26 @@ namespace EQLogParser
       return ReadList(fileName);
     }
 
-    internal static void SavePlayers(List<string> list)
+    // pass server name to avoid issue where it was changed before save completes
+    internal static void SavePlayers(List<string> list, string serverName)
     {
-      var playerDir = ConfigDir + @"\" + ServerName;
+      if (string.IsNullOrEmpty(serverName))
+        return;
+
+      var playerDir = ConfigDir + @"\" + serverName;
       Directory.CreateDirectory(playerDir);
       SaveList(playerDir + @"\" + PlayersFile, list);
     }
 
-    internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
+    // pass server name to avoid issue where it was changed before save completes
+    internal static void SavePetMapping(List<KeyValuePair<string, string>> list, string serverName)
     {
-      var petDir = ConfigDir + @"\" + ServerName;
+      if (string.IsNullOrEmpty(serverName))
+        return;
+
+      var petDir = ConfigDir + @"\" + serverName;
       Directory.CreateDirectory(petDir);
-      SaveProperties(petDir + @"\" + PetMappingFile, enumeration);
+      SaveProperties(petDir + @"\" + PetMappingFile, list);
     }
 
     internal static void Save()

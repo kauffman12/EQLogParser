@@ -49,9 +49,9 @@ namespace EQLogParser
       {
         _titleTimer.Stop();
 
-        if (parseList.SelectedIndex > -1)
+        if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type)
         {
-          SetParseTextByType(parseList.SelectedItem as string);
+          SetParseTextByType(type);
         }
       };
 
@@ -226,9 +226,9 @@ namespace EQLogParser
 
     private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type2)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type2);
       }
 
       // don't call these until after init/load
@@ -246,17 +246,17 @@ namespace EQLogParser
 
     private void ParseListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type3)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type3);
       }
     }
 
     private void ParseFormatSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type4)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type4);
       }
 
       if (_initialized)

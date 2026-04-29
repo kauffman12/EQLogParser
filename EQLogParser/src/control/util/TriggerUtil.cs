@@ -759,7 +759,7 @@ namespace EQLogParser
 
               var record = new QuickShareRecord
               {
-                BeginTime = DateUtil.ToDouble(DateTime.Now),
+                BeginTime = DateUtil.ToDotNetSeconds(DateTime.Now),
                 Key = withKey,
                 From = "You",
                 IsMine = true,
@@ -972,7 +972,7 @@ namespace EQLogParser
                 if (msgDialog.IsYes1Clicked)
                 {
                   var folderName = (player == null) ? "New Folder" : "From " + player;
-                  folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
+                  folderName += " (" + DateUtil.FormatDotNetDateSeconds(DateUtil.ToDotNetSeconds(DateTime.Now)) + ")";
                   await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, mergeIds);
                 }
               }

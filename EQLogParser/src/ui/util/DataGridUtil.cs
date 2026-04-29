@@ -282,17 +282,17 @@ namespace EQLogParser
 
     internal static void SelectAll(FrameworkElement sender)
     {
-      if (sender?.Parent is ContextMenu menu)
+      if (sender?.Parent is ContextMenu { PlacementTarget: SfDataGrid grid })
       {
-        (menu.PlacementTarget as SfDataGrid)?.SelectAll();
+        grid.SelectAll();
       }
     }
 
     internal static void UnselectAll(FrameworkElement sender)
     {
-      if (sender?.Parent is ContextMenu menu)
+      if (sender?.Parent is ContextMenu { PlacementTarget: SfDataGrid grid2 })
       {
-        (menu.PlacementTarget as SfDataGrid)?.SelectedItems.Clear();
+        grid2.SelectedItems.Clear();
       }
     }
 
@@ -476,7 +476,7 @@ namespace EQLogParser
 
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
     {
-      HashSet<string> visible = null;
+      List<string> visible = null;
       var visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag.ToString());
 
       if (!string.IsNullOrEmpty(visibleSetting))
@@ -498,8 +498,8 @@ namespace EQLogParser
       }
 
       var oldFormat = false;
-      var found = new Dictionary<string, bool>();
-      var displayOrder = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
+      var found = new List<string>();
+      var displayOrder = ConfigUtil.GetSetting(columnCombo.Tag.ToString() + "DisplayIndex");
 
       if (displayOrder != null)
       {
@@ -522,7 +522,7 @@ namespace EQLogParser
             // Eventually (remove the HeaderText check)
             if (columns[i].MappingName == name || columns[i].HeaderText == name)
             {
-              found[columns[i].MappingName] = true;
+              found.Add(columns[i].MappingName);
               updated.Add(columns[i]);
               columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
               break;
@@ -532,10 +532,18 @@ namespace EQLogParser
       }
 
       // check for new columns that didn't exist when preferences were saved
+      dynamic addAssignedGroupColumn = null;
       for (var i = 0; columns != null && i < columns.Count; i++)
       {
-        if (!found.ContainsKey(columns[i].MappingName))
+        if (!found.Contains(columns[i].MappingName))
         {
+          // AssignedGroup should always be visible when it's the new column
+          if (columns[i].MappingName == "AssignedGroup")
+          {
+            addAssignedGroupColumn = columns[i];
+            continue;
+          }
+
           updated.Add(columns[i]);
           columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
         }
@@ -546,6 +554,24 @@ namespace EQLogParser
         {
           columns[i].IsHidden = false;
         }
+      }
+
+      if (addAssignedGroupColumn != null)
+      {
+        // default to 2nd column
+        updated.Insert(Math.Min(1, updated.Count), addAssignedGroupColumn);
+
+        if (visible != null)
+        {
+          visible.Insert(Math.Min(1, visible.Count), addAssignedGroupColumn.MappingName);
+        }
+        else
+        {
+          visible = [addAssignedGroupColumn.MappingName];
+        }
+
+        SaveDisplayIndex(columnCombo, gridBase);
+        SaveIndex(columnCombo, visible);
       }
 
       columns = SetColumns(columnCombo, gridBase, updated);
@@ -631,8 +657,7 @@ namespace EQLogParser
       {
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid grid)
         {
-          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
-          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+          SaveDisplayIndex(columnCombo, grid);
         }
       };
 
@@ -650,15 +675,14 @@ namespace EQLogParser
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid grid)
         {
           SetTreeExpander(grid, grid.Columns);
-          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
-          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+          SaveDisplayIndex(columnCombo, grid);
         }
       };
 
       return treeGrid.Columns;
     }
 
-    private static bool IsColumnVisible(IReadOnlySet<string> visible, dynamic columns, int i)
+    private static bool IsColumnVisible(List<string> visible, dynamic columns, int i)
     {
       var show = true;
       if (visible != null)
@@ -682,7 +706,7 @@ namespace EQLogParser
 
     internal static void SetHiddenColumns(ComboBox columnCombo, dynamic gridBase)
     {
-      var visible = new HashSet<string>();
+      var visible = new List<string>();
 
       if (columnCombo?.Items.Count > 0)
       {
@@ -720,10 +744,33 @@ namespace EQLogParser
           }
         }
 
-        if (!string.IsNullOrEmpty(columnCombo.Tag.ToString()))
-        {
-          ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
-        }
+        SaveIndex(columnCombo, visible);
+      }
+    }
+
+    private static void SaveDisplayIndex(FrameworkElement columnCombo, dynamic gridBase)
+    {
+      IEnumerable<string> columnNames = null;
+      if (gridBase is SfDataGrid grid)
+      {
+        columnNames = grid.Columns.ToList().Select(column => column.MappingName);
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        columnNames = treeGrid.Columns.ToList().Select(column => column.MappingName);
+      }
+
+      if (columnNames != null)
+      {
+        ConfigUtil.SetSetting(columnCombo.Tag.ToString() + "DisplayIndex", string.Join(",", columnNames));
+      }
+    }
+
+    private static void SaveIndex(FrameworkElement columnCombo, List<string> visible)
+    {
+      if (visible != null && !string.IsNullOrEmpty(columnCombo.Tag.ToString()))
+      {
+        ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
       }
     }
   }

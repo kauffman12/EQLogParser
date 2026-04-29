@@ -2,12 +2,12 @@
 {
   internal class DamageValidator
   {
-    private readonly bool _assassinateEnabled = MainWindow.IsAssassinateDamageEnabled;
-    private readonly bool _baneEnabled = MainWindow.IsBaneDamageEnabled;
-    private readonly bool _dsEnabled = MainWindow.IsDamageShieldDamageEnabled;
-    private readonly bool _finishingBlowEnabled = MainWindow.IsFinishingBlowDamageEnabled;
-    private readonly bool _headshotEnabled = MainWindow.IsHeadshotDamageEnabled;
-    private readonly bool _slayUndeadEnabled = MainWindow.IsSlayUndeadDamageEnabled;
+    private readonly bool _assassinateEnabled = AppSettings.IsAssassinateDamageEnabled;
+    private readonly bool _baneEnabled = AppSettings.IsBaneDamageEnabled;
+    private readonly bool _dsEnabled = AppSettings.IsDamageShieldDamageEnabled;
+    private readonly bool _finishingBlowEnabled = AppSettings.IsFinishingBlowDamageEnabled;
+    private readonly bool _headshotEnabled = AppSettings.IsHeadshotDamageEnabled;
+    private readonly bool _slayUndeadEnabled = AppSettings.IsSlayUndeadDamageEnabled;
 
     // save this up front. we work with a constant state for their values
 

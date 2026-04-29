@@ -145,7 +145,10 @@ namespace EQLogParser
 
     private async void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e)
     {
-      await TriggerStateDB.Instance.SetExpanded(e.Node as TriggerTreeViewNode);
+      if (e.Node is TriggerTreeViewNode node)
+      {
+        await TriggerStateDB.Instance.SetExpanded(node);
+      }
     }
 
     private static void SetupDragNDrop(SfTreeView treeView)
@@ -810,7 +813,10 @@ namespace EQLogParser
         }
 
         await RefreshTriggerNode();
-        await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+        if (triggerTreeView.SelectedItem is TriggerTreeViewNode selectedItem)
+        {
+          await SelectionChanged(selectedItem);
+        }
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -862,7 +868,10 @@ namespace EQLogParser
         }
 
         await RefreshTriggerNode();
-        await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+        if (triggerTreeView.SelectedItem is TriggerTreeViewNode selectedItem2)
+        {
+          await SelectionChanged(selectedItem2);
+        }
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -891,7 +900,10 @@ namespace EQLogParser
       }
 
       await RefreshTriggerNode();
-      await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+      if (triggerTreeView.SelectedItem is TriggerTreeViewNode selectedItem3)
+      {
+        await SelectionChanged(selectedItem3);
+      }
       TriggerManager.Instance.TriggersUpdated();
     }
 
@@ -919,7 +931,10 @@ namespace EQLogParser
       }
 
       await RefreshTriggerNode();
-      await SelectionChanged(triggerTreeView.SelectedItem as TriggerTreeViewNode);
+      if (triggerTreeView.SelectedItem is TriggerTreeViewNode selectedItem4)
+      {
+        await SelectionChanged(selectedItem4);
+      }
       TriggerManager.Instance.TriggersUpdated();
     }
 

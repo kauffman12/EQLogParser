@@ -202,60 +202,72 @@ namespace EQLogParser
           }
         }
 
-        if (!string.IsNullOrEmpty(healed))
+        // verify heal actually parsed
+        if (heal == uint.MaxValue)
+          return null;
+
+        if (string.IsNullOrEmpty(healed))
+          return null;
+
+        // fix healed
+        if ("You".Equals(healed, StringComparison.OrdinalIgnoreCase))
         {
-          if ("You".Equals(healed, StringComparison.OrdinalIgnoreCase))
-          {
-            healed = ConfigUtil.PlayerName;
-          }
+          healed = ConfigUtil.PlayerName;
+        }
+        // fix healer
+        if (string.IsNullOrEmpty(healer) && spell?.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase) == true)
+        {
+          healer = Labels.Unk;
+        }
 
-          // check for pets
-          var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
-          if (possessive > -1)
-          {
-            if (PlayerRegistry.Instance.IsVerifiedPlayer(healed[..possessive]))
-            {
-              PlayerRegistry.Instance.AddVerifiedPet(healed);
-            }
-          }
-          // found a bst/mag/nec pet
-          else if (!string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Mend Companion", StringComparison.Ordinal))
-          {
-            PlayerRegistry.Instance.AddVerifiedPet(healed);
-          }
-          else if (string.IsNullOrEmpty(healer) && !string.IsNullOrEmpty(spell) && spell.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase))
-          {
-            healer = Labels.Unk;
-          }
+        // verify healer parsed properly
+        if (string.IsNullOrEmpty(healer) || healer.Length > 64)
+          return null;
 
-          if (!string.IsNullOrEmpty(healer) && heal != uint.MaxValue && healer.Length <= 64)
+        // check for pets
+        var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
+        if (possessive > -1 && PlayerRegistry.Instance.IsVerifiedPlayer(healed[..possessive]))
+        {
+          PlayerRegistry.Instance.AddVerifiedPet(healed);
+        }
+
+        // found a bst/mag/nec pet
+        if (spell?.StartsWith("Mend Companion", StringComparison.Ordinal) == true || spell?.StartsWith("Warder's Shielding", StringComparison.Ordinal) == true ||
+          spell?.StartsWith("Might of the Wild Spirits", StringComparison.Ordinal) == true)
+        {
+          PlayerRegistry.Instance.AddVerifiedPet(healed);
+          if (PlayerRegistry.IsPossiblePlayerName(healer))
           {
-            if (subType == null)
-            {
-              subType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell);
-            }
+            PlayerRegistry.Instance.AddVerifiedPlayer(healer, beginTime);
+            PlayerRegistry.Instance.AddPetToPlayer(healed, healer);
+          }
+        }
 
-            record = new HealRecord
-            {
-              Total = heal,
-              OverTotal = overHeal,
-              Healer = string.Intern(healer),
-              Healed = string.Intern(healed),
-              Type = string.Intern(type),
-              ModifiersMask = -1,
-              SubType = subType
-            };
+        // fix subtype
+        if (subType == null)
+        {
+          subType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell);
+        }
 
-            if (part[^1] == ')')
-            {
-              // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
-              var firstParen = part.LastIndexOf('(', part.Length - 4);
-              if (firstParen > -1)
-              {
-                record.ModifiersMask = LineModifiersParser.ParseHeal(record.Healer,
-                  part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
-              }
-            }
+        record = new HealRecord
+        {
+          Total = heal,
+          OverTotal = overHeal,
+          Healer = string.Intern(healer),
+          Healed = string.Intern(healed),
+          Type = string.Intern(type),
+          ModifiersMask = -1,
+          SubType = subType
+        };
+
+        if (part[^1] == ')')
+        {
+          // using 4 here since the shortest modifier should at least be 3 even in the future. probably.
+          var firstParen = part.LastIndexOf('(', part.Length - 4);
+          if (firstParen > -1)
+          {
+            record.ModifiersMask = LineModifiersParser.ParseHeal(record.Healer,
+              part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
           }
         }
       }

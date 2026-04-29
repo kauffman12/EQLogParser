@@ -76,7 +76,7 @@ namespace EQLogParser
 
           if (DateUtil.ParseStandardDate(doubleLine) is var newDate && newDate != DateTime.MinValue)
           {
-            extraDouble = DateUtil.ToDouble(newDate);
+            extraDouble = DateUtil.ToDotNetSeconds(newDate);
           }
         }
 

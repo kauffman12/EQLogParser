@@ -135,7 +135,7 @@ namespace EQLogParser
               X = name,
               TotalString = StatsUtil.FormatTotals(stats.Total, 1),
               ClassName = theClass,
-              ColorBrush = EQDataStore.Instance.GetClassBrush(theClass),
+              ColorBrush = UiUtil.GetBrush(EQDataStore.Instance.GetClassColor(theClass)),
               IsFirst = isFirst,
               HasPets = stats.Name.Contains(" +Pets")
             });

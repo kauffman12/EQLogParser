@@ -1,10 +1,13 @@
 using FontAwesome5;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,7 +19,9 @@ namespace EQLogParser
 {
   public partial class DamageSummary : IDocumentContent
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+    private static readonly List<string> NoRostersList = ["No Raid Rosters Found"];
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private readonly ViewOptionRegistry _viewOptions;
@@ -47,6 +52,7 @@ namespace EQLogParser
       // call after everything else is initialized
       InitSummaryTable(title, dataGrid, selectedColumns, classesList);
       dataGrid.CopyContent += DataGridCopyContent;
+      PopulateRosterSelector();
 
       _selectionTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 500) };
       _selectionTimer.Tick += (_, _) =>
@@ -157,9 +163,9 @@ namespace EQLogParser
 
     private void AssignOwnerClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
+      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
       {
-        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
+        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, header);
         PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
@@ -174,7 +180,98 @@ namespace EQLogParser
 
     private void OnViewOptionChanged(int index)
     {
+      // Show/hide roster selector based on view option
+      rosterSelector.Visibility = _viewOptions.GetSelectedOptionName() == Labels.ByGroupOption
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
       UpdateList();
+    }
+
+    private void OnRosterUpdated()
+    {
+      Dispatcher.InvokeAsync(() => PopulateRosterSelector());
+    }
+
+    private void PopulateRosterSelector()
+    {
+      var rosters = RaidRosterStore.Instance.GetRosterRecords();
+
+      if (rosters.Count == 0)
+      {
+        rosterSelector.ItemsSource = NoRostersList;
+        rosterSelector.SelectedIndex = 0;
+        rosterSelector.IsEnabled = false;
+        rosterSelector.FontStyle = FontStyles.Italic;
+        return;
+      }
+
+      rosterSelector.IsEnabled = true;
+      rosterSelector.FontStyle = FontStyles.Normal;
+
+      // currently selected
+      var selectedTag = (rosterSelector.SelectedItem is ComboBoxItem { Tag: string val }) ? val : null;
+
+      // Build display items: formatted time string
+      var displayItems = rosters.Select(r => new ComboBoxItem
+      {
+        Content = DateUtil.FormatDotNetDateSeconds(DateUtil.TicksToDotNetSeconds(r.BeginTicks)),
+        Tag = $"{r.BeginTicks}"
+      }).ToList();
+
+      displayItems.Insert(0, new ComboBoxItem { Content = "Select Raid Roster", Tag = "" });
+      rosterSelector.ItemsSource = displayItems;
+
+      // Restore selection
+      if (selectedTag != null)
+      {
+        rosterSelector.SelectedIndex = displayItems.FindIndex(i => i.Tag?.ToString() == selectedTag);
+      }
+      else
+      {
+        rosterSelector.SelectedIndex = 0;
+      }
+    }
+
+    private void RosterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedIndex < 1 || CurrentStats?.StatsList == null ||
+        combo.SelectedItem is not ComboBoxItem selectedItem ||
+        !long.TryParse(selectedItem.Tag?.ToString(), CultureInfo.InvariantCulture, out var ticks))
+        return;
+
+      // Get the roster record
+      var rosters = RaidRosterStore.Instance.GetRosterRecords();
+      var roster = rosters.FirstOrDefault(r => r.BeginTicks == ticks);
+      if (roster?.Players == null)
+        return;
+
+      // Apply roster assignments to players
+      var changed = false;
+      foreach (var stats in CurrentStats.StatsList)
+      {
+        stats.AssignedGroup = 0;
+        if (stats?.OrigName == null)
+          continue;
+
+        if (roster.Players.TryGetValue(stats.OrigName, out var groupId))
+        {
+          if (stats.AssignedGroup != groupId)
+          {
+            stats.AssignedGroup = groupId;
+            DamageStatsBuilder.Instance.SetPlayerAssignedGroup(stats.OrigName, groupId);
+            changed = true;
+          }
+        }
+      }
+
+      // Refresh grid only if changes were made
+      if (changed)
+      {
+        var expandedGroups = CaptureExpandedGroups();
+        UpdateList();
+        RestoreExpandedGroups(expandedGroups);
+      }
     }
 
     private void UpdateList()
@@ -182,8 +279,9 @@ namespace EQLogParser
       if (CurrentStats != null)
       {
         var beforeList = dataGrid.ItemsSource;
-
         var selectedName = _viewOptions?.GetSelectedOptionName();
+        _groupEntries = [];
+
         switch (selectedName)
         {
           case Labels.ByGroupOption:
@@ -277,8 +375,6 @@ namespace EQLogParser
 
     private void InitializeGroupTracking()
     {
-      _groupEntries = [];
-
       // Create group entries for each group ID
       for (var i = 0; i <= 12; i++)
       {
@@ -327,7 +423,8 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => DamageStatsBuilder.Instance.RebuildTotalStats(statOptions));
+        _ = Task.Run(() => DamageStatsBuilder.Instance.RebuildTotalStats(statOptions)).ContinueWith(t =>
+          Log.Error("Problem building damage stats.", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
     }
 
@@ -336,8 +433,7 @@ namespace EQLogParser
       if (sender is not ImageAwesome ia || ia.DataContext is not PlayerStats stats)
         return;
 
-      var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is null)
+      if (UiElementUtil.FindGridCell(ia) is not { } cell)
         return;
 
       _currentEditPlayer = stats;
@@ -349,7 +445,7 @@ namespace EQLogParser
       });
     }
 
-    private void GroupSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void GroupSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (sender is not ComboBox combo || combo.SelectedIndex == -1)
         return;
@@ -361,6 +457,7 @@ namespace EQLogParser
 
       // IMMEDIATELY persist the change to player object BEFORE any rebuild
       _currentEditPlayer.AssignedGroup = combo.SelectedIndex;
+      DamageStatsBuilder.Instance.SetPlayerAssignedGroup(_currentEditPlayer.OrigName, combo.SelectedIndex);
 
       // If we're in Group View, use incremental update with progress indicator
       if (_viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
@@ -368,61 +465,23 @@ namespace EQLogParser
         // Show progress indicator
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
+        await Dispatcher.Yield(DispatcherPriority.Render);
 
-        var newGroupId = combo.SelectedIndex;
-        Task.Run(() =>
+        try
         {
-          // Background work: Update group membership and time segments
-          UpdateGroupMembership(_currentEditPlayer, oldGroupId, newGroupId);
-        });
+          var expandedGroups = CaptureExpandedGroups();
+          UpdateGroupMembership(_currentEditPlayer, oldGroupId, combo.SelectedIndex);
 
-        // Force full ItemsSource replacement on UI thread
-        Dispatcher.InvokeAsync(() =>
+          var newList = BuildGroupedPlayers();
+          dataGrid.ItemsSource = null;
+          dataGrid.ItemsSource = UpdateRankGrouped(newList);
+          RestoreExpandedGroups(expandedGroups);
+        }
+        finally
         {
-          try
-          {
-            // 1. CAPTURE current expanded group names BEFORE changing ItemsSource
-            var expandedGroups = new List<int>();
-            if (dataGrid.View?.Nodes != null)
-            {
-              foreach (var node in dataGrid.View.Nodes)
-              {
-                var dataItem = node.Item as GroupEntry;
-                if (dataItem?.IsExpanded == true)
-                {
-                  expandedGroups.Add(dataItem.GroupId);
-                }
-              }
-            }
-
-            // 2. DO THE ItemsSource replacement
-            var newList = BuildGroupedPlayers();
-            dataGrid.ItemsSource = null;
-            dataGrid.ItemsSource = UpdateRankGrouped(newList);
-
-            // 3. RESTORE expansion state after rebuild
-            if (dataGrid.View?.Nodes != null)
-            {
-              foreach (var groupId in expandedGroups)
-              {
-                var entry = _groupEntries.FirstOrDefault(e => e.GroupId == groupId);
-                if (entry != null)
-                {
-                  var node = dataGrid.View.Nodes.GetNode(entry);
-                  if (node != null)
-                  {
-                    dataGrid.ExpandNode(node);
-                  }
-                }
-              }
-            }
-          }
-          finally
-          {
-            prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
-            prog.Visibility = Visibility.Hidden;
-          }
-        });
+          prog.Icon = EFontAwesomeIcon.Solid_HourglassEnd;
+          prog.Visibility = Visibility.Hidden;
+        }
       }
 
       groupEditPopup.IsOpen = false;
@@ -469,7 +528,7 @@ namespace EQLogParser
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {
-      if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      if (AppSettings.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
         CopyToEqClick(sender, null);
@@ -526,7 +585,51 @@ namespace EQLogParser
       {
         CleanupGroupTracking();
       }
+
       ClearData();
+    }
+
+    /// <summary>
+    /// Captures the GroupIds of currently expanded nodes in the tree grid.
+    /// </summary>
+    private List<int> CaptureExpandedGroups()
+    {
+      var expandedGroups = new List<int>();
+      if (dataGrid.View?.Nodes != null)
+      {
+        foreach (var node in dataGrid.View.Nodes)
+        {
+          var dataItem = node.Item as GroupEntry;
+          if (dataItem?.IsExpanded == true)
+          {
+            expandedGroups.Add(dataItem.GroupId);
+          }
+        }
+      }
+
+      return expandedGroups;
+    }
+
+    /// <summary>
+    /// Re-expands tree grid nodes for the given group IDs after an ItemsSource rebuild.
+    /// </summary>
+    private void RestoreExpandedGroups(List<int> expandedGroups)
+    {
+      if (dataGrid.View?.Nodes != null)
+      {
+        foreach (var groupId in expandedGroups)
+        {
+          var entry = _groupEntries.FirstOrDefault(e => e.GroupId == groupId);
+          if (entry != null)
+          {
+            var node = dataGrid.View.Nodes.GetNode(entry);
+            if (node != null)
+            {
+              dataGrid.ExpandNode(node);
+            }
+          }
+        }
+      }
     }
 
     private void ClearData()
@@ -534,6 +637,7 @@ namespace EQLogParser
       CurrentStats = null;
       dataGrid.ItemsSource = NoResultsList;
       title.Content = Labels.NoNpcs;
+      PopulateRosterSelector();
     }
 
     private void EventsGenerationStatus(StatsGenerationEvent e)
@@ -580,6 +684,7 @@ namespace EQLogParser
 
             CreatePetOwnerMenu();
             UpdateDataGridMenuItems();
+            PopulateRosterSelector();
             break;
           case "NONPC":
           case "NODATA":
@@ -589,6 +694,7 @@ namespace EQLogParser
             title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
             CreatePetOwnerMenu();
             UpdateDataGridMenuItems();
+            PopulateRosterSelector();
             break;
         }
 
@@ -610,7 +716,7 @@ namespace EQLogParser
             return true;
           }
 
-          if (!(stats is PlayerStats playerStats)) return false;
+          if (stats is not PlayerStats playerStats) return false;
 
           var name = playerStats.Name;
           var className = playerStats.ClassName;
@@ -754,6 +860,7 @@ namespace EQLogParser
         FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
+        RaidRosterStore.EventsRosterUpdated += OnRosterUpdated;
 
         if (DamageStatsBuilder.Instance.GetLastStats() is { } stats)
         {
@@ -774,6 +881,7 @@ namespace EQLogParser
       FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
+      RaidRosterStore.EventsRosterUpdated -= OnRosterUpdated;
 
       if (_viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {

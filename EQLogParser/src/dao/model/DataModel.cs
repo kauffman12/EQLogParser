@@ -197,6 +197,12 @@ namespace EQLogParser
     public int From { get; set; }
   }
 
+  internal class WhoRosterRecord
+  {
+    public long BeginTicks { get; set; }
+    public Dictionary<string, int> Players { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+  }
+
   public class HitRecord : IAction
   {
     public uint Total { get; set; }

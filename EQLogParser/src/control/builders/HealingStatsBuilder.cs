@@ -15,8 +15,9 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static HealingStatsBuilder Instance = new();
-    internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal event Action<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
+    private readonly object _lock = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedByHealerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedBySpellTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healedByHealerSpellTimeRanges = new();
@@ -40,7 +41,7 @@ namespace EQLogParser
     {
       FightManager.Instance.EventsClearedActiveData += (_) =>
       {
-        lock (_healingGroups)
+        lock (_lock)
         {
           Reset(true);
         }
@@ -49,7 +50,7 @@ namespace EQLogParser
 
     internal StatsGenerationEvent GetLastStats()
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         return _lastStatsEvent;
       }
@@ -57,7 +58,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         if (_healingGroups.Count != 0)
         {
@@ -70,7 +71,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         try
         {
@@ -288,7 +289,7 @@ namespace EQLogParser
 
     internal bool PopulateHealing(CombinedStats combined)
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         var raidTotals = combined.RaidStats;
         var playerStats = combined.StatsList;
@@ -416,7 +417,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(string action, List<PlayerStats> selected = null)
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         // send update
         var de = new DataPointEvent { Action = action, Iterator = new HealGroupCollection(_healingGroups) };
@@ -426,7 +427,7 @@ namespace EQLogParser
           de.Selected.AddRange(selected);
         }
 
-        EventsUpdateDataPoint?.Invoke(_healingGroups, de);
+        EventsUpdateDataPoint?.Invoke(de);
       }
     }
 
@@ -445,7 +446,7 @@ namespace EQLogParser
 
     private void ComputeHealingStats(GenerateStatsOptions options)
     {
-      lock (_healingGroups)
+      lock (_lock)
       {
         _lastStatsEvent = null;
         if (_raidTotals != null)

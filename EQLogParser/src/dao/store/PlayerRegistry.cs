@@ -5,38 +5,25 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using System.Threading;
 
 namespace EQLogParser
 {
-  class PlayerRegistry
+  class PlayerRegistry : ILifecycle
   {
-    internal event EventHandler<PetMapping> EventsNewPetMapping;
-    internal event EventHandler<string> EventsNewVerifiedPet;
-    internal event EventHandler<string> EventsNewVerifiedPlayer;
-    internal event EventHandler<string> EventsRemoveVerifiedPet;
-    internal event EventHandler<string> EventsRemoveVerifiedPlayer;
-    internal event EventHandler<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
+    internal event Action<PetMapping> EventsNewPetMapping;
+    internal event Action<string> EventsNewVerifiedPet;
+    internal event Action<string> EventsNewVerifiedPlayer;
+    internal event Action<string> EventsRemoveVerifiedPet;
+    internal event Action<string> EventsRemoveVerifiedPlayer;
+    internal event Action<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
-    internal static PlayerRegistry Instance = new();
-    internal static readonly BitmapImage BerIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Ber.png");
-    internal static readonly BitmapImage BrdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Brd.png");
-    internal static readonly BitmapImage BstIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Bst.png");
-    internal static readonly BitmapImage ClrIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Clr.png");
-    internal static readonly BitmapImage DruIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Dru.png");
-    internal static readonly BitmapImage EncIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Enc.png");
-    internal static readonly BitmapImage MagIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Mag.png");
-    internal static readonly BitmapImage MnkIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Mnk.png");
-    internal static readonly BitmapImage NecIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Nec.png");
-    internal static readonly BitmapImage PalIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Pal.png");
-    internal static readonly BitmapImage RngIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Rng.png");
-    internal static readonly BitmapImage RogIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Rog.png");
-    internal static readonly BitmapImage ShdIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Shd.png");
-    internal static readonly BitmapImage UnkIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Unk.png");
-    internal static readonly BitmapImage ShmIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Shm.png");
-    internal static readonly BitmapImage WarIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/War.png");
-    internal static readonly BitmapImage WizIcon = UiElementUtil.CreateBitmapFromInternalUri(@"pack://application:,,,/icons/Wiz.png");
+    // singleton
+    internal static PlayerRegistry Instance { get; } = new();
+
+    // Icon file names — resolved to BitmapImage by the UI layer via GetPlayerIconPath()
+    // Only used for default/fallback icon resolution in the core layer
+    internal const string UnkIconName = "Unk.png";
 
     // static data
     private const int LowConfidenceThreshold = 8;
@@ -51,8 +38,9 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
     private readonly ConcurrentDictionary<string, byte> _mercs = new();
-    private readonly DispatcherTimer _saveTimer;
-    private static readonly object LockObject = new();
+    private readonly Timer _saveTimer;
+    private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
+    private readonly object _lock = new();
     private volatile bool _petMappingUpdated;
     private volatile bool _playersUpdated;
 
@@ -60,7 +48,8 @@ namespace EQLogParser
     {
       // Populate generated pets
       ConfigUtil.ReadList(@"data\petnames.txt").ForEach(line => _gameGeneratedPets[line.TrimEnd()] = 1);
-      _saveTimer = UiUtil.CreateTimer(SaveTimerTick, 30000, true, DispatcherPriority.Background);
+      _saveTimer = new Timer(SaveTimerTick, null, _saveInterval, _saveInterval);
+      LifecycleManager.Register(this);
     }
 
     internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name)
@@ -71,96 +60,148 @@ namespace EQLogParser
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
     internal List<PetMapping> GetPetMappings() => [.. _petToPlayer.Select(kv => new PetMapping(kv.Key, kv.Value))];
-    internal void Stop() => _saveTimer?.Stop();
+
+    public void Clear(bool serverChanged = true)
+    {
+      if (serverChanged)
+      {
+        if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
+        {
+          Save();
+        }
+
+        lock (_lock)
+        {
+          _defaultPlayerClass.Clear();
+          _petToPlayer.Clear();
+          _activePlayerClass.Clear();
+          _takenPetOrPlayerAction.Clear();
+          _verifiedPets.Clear();
+          _verifiedPlayers.Clear();
+          _mercs.Clear();
+          _playersUpdated = false;
+          _petMappingUpdated = false;
+        }
+      }
+    }
+
+    public void Shutdown()
+    {
+      Clear();
+      _saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+    }
 
     internal void AddPetToPlayer(string pet, string player, bool init = false)
     {
-      if (!string.IsNullOrEmpty(pet) && !string.IsNullOrEmpty(player))
-      {
-        lock (LockObject)
-        {
-          if ((!_petToPlayer.TryGetValue(pet, out var value) || value != player) && !IsVerifiedPlayer(pet))
-          {
-            _petToPlayer[pet] = player;
+      var needEvent = false;
 
-            if (!init)
-            {
-              EventsNewPetMapping?.Invoke(this, new PetMapping(pet, player));
-              _petMappingUpdated = true;
-            }
-          }
-        }
+      lock (_lock)
+      {
+        needEvent = AddPetToPlayerNoLock(pet, player, init);
+      }
+
+      if (needEvent)
+      {
+        EventsNewPetMapping?.Invoke(new PetMapping(pet, player));
       }
     }
 
     internal void AddMerc(string name)
     {
-      if (!string.IsNullOrEmpty(name))
-      {
-        name = string.Intern(name);
-        _mercs[TextUtils.ToUpper(name)] = 1;
-      }
+      if (string.IsNullOrEmpty(name))
+        return;
+
+      name = string.Intern(TextUtils.ToUpper(name));
+      _mercs[name] = 1;
     }
 
     internal void AddVerifiedPet(string name, bool init = false)
     {
-      if (!string.IsNullOrEmpty(name))
+      if (string.IsNullOrEmpty(name))
+        return;
+
+      var needEvent = false;
+      var petMappingEvent = false;
+      var petMapping = default(PetMapping);
+
+      lock (_lock)
       {
-        lock (LockObject)
+        if (!_verifiedPets.ContainsKey(name))
         {
-          if (!_verifiedPets.ContainsKey(name))
+          name = string.Intern(name);
+
+          if (_verifiedPlayers.TryRemove(name, out _))
           {
-            name = string.Intern(name);
-            if (_verifiedPlayers.TryRemove(name, out _))
-            {
-              _playersUpdated = true;
-            }
+            _playersUpdated = true;
+          }
 
-            if (IsPossiblePlayerName(name) && !_petToPlayer.ContainsKey(name))
-            {
-              AddPetToPlayer(name, Labels.Unassigned, init);
-            }
+          if (IsPossiblePlayerName(name) && !_petToPlayer.ContainsKey(name))
+          {
+            petMappingEvent = AddPetToPlayerNoLock(name, Labels.Unassigned, init);
+            if (petMappingEvent)
+              petMapping = new PetMapping(name, Labels.Unassigned);
+          }
 
-            _takenPetOrPlayerAction.TryRemove(name, out _);
+          _takenPetOrPlayerAction.TryRemove(name, out _);
 
-            if (_verifiedPets.TryAdd(name, 1))
-            {
-              if (!init) EventsNewVerifiedPet?.Invoke(this, name);
-              _playersUpdated = true;
-            }
+          if (_verifiedPets.TryAdd(name, 1) && !init)
+          {
+            _playersUpdated = true;
+            needEvent = true;
           }
         }
       }
+
+      if (petMappingEvent) EventsNewPetMapping?.Invoke(petMapping);
+      if (needEvent) EventsNewVerifiedPet?.Invoke(name);
     }
 
     internal void AddVerifiedPlayer(string name, double playerTime, bool init = false)
     {
-      if (!string.IsNullOrEmpty(name))
+      if (string.IsNullOrEmpty(name))
+        return;
+
+      var needPlayerEvent = false;
+      var needPetEvent = false;
+
+      lock (_lock)
       {
-        lock (LockObject)
+        if (_verifiedPlayers.TryGetValue(name, out var lastTime))
         {
-          name = string.Intern(name);
-          if (_verifiedPlayers.TryGetValue(name, out var lastTime))
-          {
-            if (playerTime > lastTime)
-            {
-              _verifiedPlayers[name] = playerTime;
-            }
-          }
-          else
+          if (playerTime > lastTime)
           {
             _verifiedPlayers[name] = playerTime;
-            if (!init) EventsNewVerifiedPlayer?.Invoke(this, name);
+            _playersUpdated = true;
           }
+        }
+        else
+        {
+          name = string.Intern(name);
+          _verifiedPlayers[name] = playerTime;
 
-          _takenPetOrPlayerAction.TryRemove(name, out _);
-          if (_verifiedPets.TryRemove(name, out _))
+          if (!init)
           {
-            TryRemovePetMapping(name);
-            if (!init) EventsRemoveVerifiedPet?.Invoke(this, name);
+            needPlayerEvent = true;
+            _playersUpdated = true;
+          }
+        }
+
+        _takenPetOrPlayerAction.TryRemove(name, out _);
+
+        if (_verifiedPets.TryRemove(name, out _))
+        {
+          TryRemovePetMappingNoLock(name);
+
+          if (!init)
+          {
+            _playersUpdated = true;
+            needPetEvent = true;
           }
         }
       }
+
+      if (needPlayerEvent) EventsNewVerifiedPlayer?.Invoke(name);
+      if (needPetEvent) EventsRemoveVerifiedPet?.Invoke(name);
     }
 
     internal string GetDefaultPlayerClass(string name)
@@ -250,53 +291,54 @@ namespace EQLogParser
 
     internal void RemoveVerifiedPet(string name)
     {
-      if (!string.IsNullOrEmpty(name))
-      {
-        lock (LockObject)
-        {
-          if (_verifiedPets.TryRemove(name, out _))
-          {
-            TryRemovePetMapping(name);
-          }
+      if (string.IsNullOrEmpty(name))
+        return;
 
-          EventsRemoveVerifiedPet?.Invoke(this, name);
+      var needEvent = false;
+      lock (_lock)
+      {
+        if (_verifiedPets.TryRemove(name, out _))
+        {
+          TryRemovePetMappingNoLock(name);
+          needEvent = true;
         }
       }
+
+      if (needEvent) EventsRemoveVerifiedPet?.Invoke(name);
     }
 
     internal void RemoveVerifiedPlayer(string name)
     {
-      if (!string.IsNullOrEmpty(name))
+      if (string.IsNullOrEmpty(name))
+        return;
+
+      var needEvent = false;
+
+      lock (_lock)
       {
-        lock (LockObject)
+        if (_verifiedPlayers.TryRemove(name, out _))
         {
-          if (_verifiedPlayers.TryRemove(name, out _))
+          var toRemove = new List<string>();
+          foreach (var kv in _petToPlayer)
           {
-            var toRemove = new List<string>();
-            foreach (var kv in _petToPlayer)
-            {
-              if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
-              {
-                toRemove.Add(kv.Key);
-              }
-            }
-
-            foreach (var pet in toRemove)
-            {
-              TryRemovePetMapping(pet);
-            }
-
-            _playersUpdated = true;
+            if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+              toRemove.Add(kv.Key);
           }
 
-          EventsRemoveVerifiedPlayer?.Invoke(this, name);
+          foreach (var pet in toRemove)
+            TryRemovePetMappingNoLock(pet);
+
+          _playersUpdated = true;
+          needEvent = true;
         }
       }
+
+      if (needEvent) EventsRemoveVerifiedPlayer?.Invoke(name);
     }
 
     internal void Init()
     {
-      lock (LockObject)
+      lock (_lock)
       {
         _defaultPlayerClass.Clear();
         _petToPlayer.Clear();
@@ -305,8 +347,10 @@ namespace EQLogParser
         _verifiedPets.Clear();
         _verifiedPlayers.Clear();
         _mercs.Clear();
+        _playersUpdated = false;
+        _petMappingUpdated = false;
 
-        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDouble(DateTime.Now), true);
+        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
 
         ConfigUtil.ReadPlayers().ForEach(player =>
         {
@@ -358,17 +402,21 @@ namespace EQLogParser
 
     internal void Save()
     {
-      if (_playersUpdated)
+      List<string> playerList = null;
+      List<KeyValuePair<string, string>> petList = null;
+      var serverName = ConfigUtil.ServerName;
+
+      lock (_lock)
       {
-        lock (_verifiedPlayers)
+        if (_playersUpdated)
         {
-          var list = new List<string>();
+          playerList = [];
           var now = DateTime.Now;
           foreach (var kv in _verifiedPlayers)
           {
             if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key))
             {
-              if (kv.Value != 0 && (now - DateUtil.FromDouble(kv.Value)).TotalDays < 200)
+              if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays < 200)
               {
                 var output = kv.Key + "=" + Math.Round(kv.Value);
                 if (_defaultPlayerClass.TryGetValue(kv.Key, out var className))
@@ -376,7 +424,7 @@ namespace EQLogParser
                   output += "," + className;
                 }
 
-                list.Add(output);
+                playerList.Add(output);
               }
               else
               {
@@ -385,28 +433,31 @@ namespace EQLogParser
             }
           }
 
-          ConfigUtil.SavePlayers(list);
+          _playersUpdated = false;
         }
 
-        _playersUpdated = false;
-      }
-
-      if (_petMappingUpdated)
-      {
-        lock (_petToPlayer)
+        if (_petMappingUpdated)
         {
           // no generated or unassigned pets but allow for warders
           var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && kv.Value != Labels.Unassigned &&
             (IsPossiblePlayerName(kv.Key) || kv.Key.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase)));
-          ConfigUtil.SavePetMapping(filtered);
+          petList = [.. filtered];
+          _petMappingUpdated = false;
         }
 
-        _petMappingUpdated = false;
+        // if method is called manually then restart the timer
+        _saveTimer?.Change(_saveInterval, _saveInterval);
       }
 
-      // if method is called manually then restart the timer
-      _saveTimer?.Stop();
-      _saveTimer.Start();
+      if (playerList != null)
+      {
+        ConfigUtil.SavePlayers(playerList, serverName);
+      }
+
+      if (petList != null)
+      {
+        ConfigUtil.SavePetMapping(petList, serverName);
+      }
     }
 
     internal void SetActivePlayerClass(string name, string className, byte confidence, double beginTime)
@@ -509,46 +560,53 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && EQDataStore.Instance.IsValidClassName(className))
       {
-        _defaultPlayerClass[name] = className;
+        var needEvent = false;
 
-        if (!init)
+        lock (_lock)
         {
-          // make sure player data is saved
-          _verifiedPlayers[name] = DateUtil.ToDouble(DateTime.Now);
-          EventsUpdateDefaultPlayerClass?.Invoke(this, new PlayerClassMapping { Player = name, ClassName = className });
+          _defaultPlayerClass[name] = className;
+
+          if (!init)
+          {
+            // make sure player data is saved
+            _verifiedPlayers[name] = DateUtil.ToDotNetSeconds(DateTime.Now);
+            _playersUpdated = true;
+            needEvent = true;
+          }
         }
+
+        if (needEvent) EventsUpdateDefaultPlayerClass?.Invoke(new PlayerClassMapping { Player = name, ClassName = className });
       }
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
 
-    internal static BitmapImage GetPlayerIcon(string className)
+    internal static string GetPlayerIconPath(string className)
     {
-      var icon = UnkIcon;
       if (EQDataStore.Instance.GetClassEnum(className) is { } theClass)
       {
-        icon = theClass switch
+        return theClass switch
         {
-          SpellClass.Ber => BerIcon,
-          SpellClass.Brd => BrdIcon,
-          SpellClass.Bst => BstIcon,
-          SpellClass.Clr => ClrIcon,
-          SpellClass.Dru => DruIcon,
-          SpellClass.Enc => EncIcon,
-          SpellClass.Mag => MagIcon,
-          SpellClass.Mnk => MnkIcon,
-          SpellClass.Nec => NecIcon,
-          SpellClass.Pal => PalIcon,
-          SpellClass.Rng => RngIcon,
-          SpellClass.Rog => RogIcon,
-          SpellClass.Shd => ShdIcon,
-          SpellClass.Shm => ShmIcon,
-          SpellClass.War => WarIcon,
-          SpellClass.Wiz => WizIcon,
-          _ => UnkIcon
+          SpellClass.Ber => "Ber.png",
+          SpellClass.Brd => "Brd.png",
+          SpellClass.Bst => "Bst.png",
+          SpellClass.Clr => "Clr.png",
+          SpellClass.Dru => "Dru.png",
+          SpellClass.Enc => "Enc.png",
+          SpellClass.Mag => "Mag.png",
+          SpellClass.Mnk => "Mnk.png",
+          SpellClass.Nec => "Nec.png",
+          SpellClass.Pal => "Pal.png",
+          SpellClass.Rng => "Rng.png",
+          SpellClass.Rog => "Rog.png",
+          SpellClass.Shd => "Shd.png",
+          SpellClass.Shm => "Shm.png",
+          SpellClass.War => "War.png",
+          SpellClass.Wiz => "Wiz.png",
+          _ => UnkIconName
         };
       }
-      return icon;
+      return UnkIconName;
     }
 
     internal static string ReplacePlayer(string name, string alternative)
@@ -612,20 +670,35 @@ namespace EQLogParser
       return -1;
     }
 
-    private void SaveTimerTick(object sender, EventArgs e) => Save();
+    private void SaveTimerTick(object state) => Save();
 
-    private void TryRemovePetMapping(string name)
+    private bool TryRemovePetMappingNoLock(string name)
     {
-      if (!string.IsNullOrEmpty(name))
+      if (!string.IsNullOrEmpty(name) && _petToPlayer.TryRemove(name, out _))
       {
-        lock (LockObject)
-        {
-          if (_petToPlayer.TryRemove(name, out _))
-          {
-            _petMappingUpdated = true;
-          }
-        }
+        _petMappingUpdated = true;
+        return true;
       }
+
+      return false;
+    }
+
+    private bool AddPetToPlayerNoLock(string pet, string player, bool init = false)
+    {
+      if (string.IsNullOrEmpty(pet) || string.IsNullOrEmpty(player))
+        return false;
+
+      if ((!_petToPlayer.TryGetValue(pet, out var value) || value != player) && !IsVerifiedPlayer(pet))
+      {
+        _petToPlayer[pet] = player;
+
+        if (!init)
+          _petMappingUpdated = true;
+
+        return !init;
+      }
+
+      return false;
     }
 
     private static int LowerBoundByBeginTime(List<ClassRecord> records, double time)

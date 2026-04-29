@@ -144,10 +144,10 @@ namespace EQLogParser
       return _allRanges;
     }
 
-    private void EventsUpdateFight(object sender, Fight fight) => _needRefresh = true;
-    private void EventsRemovedFight(object sender, string name) => RemoveFight(name);
-    private void EventsNewFight(object sender, Fight fight) => ProcessFight(fight);
-    private void EventsNewNonTankingFight(object sender, Fight fight) => ProcessNonTankingFight(fight);
+    private void EventsUpdateFight(Fight fight) => _needRefresh = true;
+    private void EventsRemovedFight(string name) => RemoveFight(name);
+    private void EventsNewFight(Fight fight) => ProcessFight(fight);
+    private void EventsNewNonTankingFight(Fight fight) => ProcessNonTankingFight(fight);
     private void ClearClick(object sender, RoutedEventArgs e) => FightManager.Instance.Clear();
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
@@ -220,7 +220,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
       {
         var name = npc.Name;
-        var dateTime = DateUtil.ToDouble(DateTime.Now);
+        var dateTime = DateUtil.ToDotNetSeconds(DateTime.Now);
         await Task.Delay(120);
         PlayerRegistry.Instance.AddVerifiedPlayer(name, dateTime);
         RemoveFight(name); // force in case already in the player list for some reason
@@ -375,10 +375,9 @@ namespace EQLogParser
       var items = dataGrid.View.Records;
       menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
 
-      var selected = dataGrid.SelectedItem as Fight;
-      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false;
-      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && selected?.IsInactivity == false &&
-        PlayerRegistry.IsPossiblePlayerName((dataGrid.SelectedItem as Fight)?.Name);
+      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && dataGrid.SelectedItem is Fight { IsInactivity: false } selected;
+      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && dataGrid.SelectedItem is Fight { IsInactivity: false, Name: var name } &&
+        PlayerRegistry.IsPossiblePlayerName(name);
       menuItemRefresh.IsEnabled = dataGrid.SelectedItems.Count > 0;
     }
 

@@ -15,12 +15,13 @@ namespace EQLogParser
     private double _increment;
 
     // ReSharper disable once PossibleLossOfFraction
-    internal static double ToDouble(DateTime dateTime) => dateTime.Ticks / TimeSpan.TicksPerSecond;
-    internal static DateTime FromDouble(double value) => new((long)value * TimeSpan.TicksPerSecond);
+    internal static double ToDotNetSeconds(DateTime dateTime) => dateTime.Ticks / TimeSpan.TicksPerSecond;
+    internal static double TicksToDotNetSeconds(long ticks) => ticks / TimeSpan.TicksPerSecond;
+    internal static DateTime FromDotNetSeconds(double value) => new((long)value * TimeSpan.TicksPerSecond);
     internal static string GetCurrentDate(string format) => DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
-    internal static string FormatSimpleDate(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
-    internal static string FormatSeconds(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-    internal static double StandardDateToDouble(string source) => ToDouble(ParseStandardDate(source));
+    internal static string FormatDotNetDateSeconds(double seconds) => new DateTime().AddSeconds(seconds).ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static string FormatDotNetTimeSeconds(double seconds) => new DateTime().AddSeconds(seconds).ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    internal static double StandardDateToDotNetSeconds(string source) => ToDotNetSeconds(ParseStandardDate(source));
     internal static DateTime ParseStandardDate(string source) => CustomDateTimeParser("MMM dd HH:mm:ss yyyy", source, 5);
 
     internal enum TimeFormat
@@ -165,7 +166,7 @@ namespace EQLogParser
         var dateTime = CustomDateTimeParser("MMM dd HH:mm:ss", timeString);
         if (dateTime != DateTime.MinValue)
         {
-          result = ToDouble(dateTime);
+          result = ToDotNetSeconds(dateTime);
         }
       }
 
@@ -304,7 +305,7 @@ namespace EQLogParser
       }
       else
       {
-        result = _lastDateTime = ToDouble(dateTime);
+        result = _lastDateTime = ToDotNetSeconds(dateTime);
       }
 
       _lastDateTimeString = timeString;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace EQLogParser
 {
@@ -14,24 +15,19 @@ namespace EQLogParser
     bool IsLifetimeNpc(string name);
   }
 
-  internal class FightManager : IFightManager
+  internal class FightManager : IFightManager, ILifecycle
   {
-    private static FightManager _instance;
-    internal static FightManager Instance
-    {
-      get => _instance ??= new();
-      set => _instance = value;
-    }
-
-    internal event EventHandler<string> EventsRemovedFight;
-    internal event EventHandler<Fight> EventsNewFight;
-    internal event EventHandler<Fight> EventsNewNonTankingFight;
-    internal event EventHandler<Fight> EventsUpdateFight;
-    internal event EventHandler<Fight> EventsNewOverlayFight;
+    internal event Action<string> EventsRemovedFight;
+    internal event Action<Fight> EventsNewFight;
+    internal event Action<Fight> EventsNewNonTankingFight;
+    internal event Action<Fight> EventsUpdateFight;
+    internal event Action<Fight> EventsNewOverlayFight;
     internal event Action<bool> EventsClearedActiveData;
-
     internal const int MaxTimeout = 60;
     internal const int FightTimeout = 30;
+
+    // singleton with set for unit test
+    internal static FightManager Instance { get; set; } = new();
 
     // overlay / active / lifetime fight state
     private readonly ConcurrentDictionary<long, Fight> _overlayFights = new();
@@ -41,29 +37,20 @@ namespace EQLogParser
     // NPC damage processing state (merged from NpcDamageManager)
     internal double LastFightProcessTime = double.NaN;
     private int _currentNpcId = 1;
-    private static readonly Dictionary<string, bool> RecentSpellCache = [];
-    private readonly Dictionary<string, bool> _validCombo = [];
+    private static readonly ConcurrentDictionary<string, bool> RecentSpellCache = [];
+    private readonly ConcurrentDictionary<string, bool> _validCombo = [];
     private readonly SimpleObjectCache<DamageRecord> _damageCache = new();
     private const int RecentSpellTime = 300;
-    private readonly List<Defender> _defenders = [];
 
     internal FightManager()
     {
-      PlayerRegistry.Instance.EventsNewVerifiedPlayer += (_, name) => RemoveFight(name);
-      PlayerRegistry.Instance.EventsNewVerifiedPet += (_, name) => RemoveFight(name);
+      PlayerRegistry.Instance.EventsNewVerifiedPlayer += (name) => RemoveFight(name);
+      PlayerRegistry.Instance.EventsNewVerifiedPet += (name) => RemoveFight(name);
 
       DamageLineParser.EventsDamageProcessed += HandleDamageProcessed;
       DamageLineParser.EventsNewTaunt += HandleNewTaunt;
-    }
 
-    internal void Reset()
-    {
-      LastFightProcessTime = double.NaN;
-      RecentSpellCache.Clear();
-      _currentNpcId = 1;
-      _validCombo.Clear();
-      _damageCache.Clear();
-      _defenders.Clear();
+      LifecycleManager.Register(this);
     }
 
     public void CheckExpireFights(double currentTime)
@@ -77,7 +64,7 @@ namespace EQLogParser
           removeActiveKeys.Add(kv.Value.CorrectMapKey);
 
           // cleanup overlay data if overlay isn't actually open
-          if (!MainWindow.IsDamageOverlayOpen)
+          if (!AppSettings.IsDamageOverlayOpen)
           {
             RemoveOverlayFight(kv.Value.Id);
           }
@@ -117,17 +104,17 @@ namespace EQLogParser
       if (_activeFights.TryAdd(name, fight))
       {
         _activeFights[name] = fight;
-        EventsNewFight?.Invoke(this, fight);
+        EventsNewFight?.Invoke(fight);
       }
       else
       {
-        EventsUpdateFight?.Invoke(this, fight);
+        EventsUpdateFight?.Invoke(fight);
       }
 
       // basically an Add use case for only showing Fights with player damage
       if (isNonTankingFight)
       {
-        EventsNewNonTankingFight?.Invoke(this, fight);
+        EventsNewNonTankingFight?.Invoke(fight);
       }
 
       if (fight.DamageHits > 0)
@@ -137,7 +124,7 @@ namespace EQLogParser
         // don't bother if not configured (lazy optimization)
         if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
         {
-          EventsNewOverlayFight?.Invoke(this, fight);
+          EventsNewOverlayFight?.Invoke(fight);
         }
       }
     }
@@ -167,14 +154,21 @@ namespace EQLogParser
       removeList.ForEach(RemoveOverlayFight);
     }
 
-    internal void Clear()
+    public void Clear(bool serverChanged = true)
     {
+      Volatile.Write(ref LastFightProcessTime, double.NaN);
+      _currentNpcId = 1;
       _activeFights.Clear();
       _lifetimeFights.Clear();
       _overlayFights.Clear();
+      _damageCache.Clear();
+      _validCombo.Clear();
+      RecentSpellCache.Clear();
       AdpsTracker.Instance.Clear();
-      EventsClearedActiveData?.Invoke(true);
+      EventsClearedActiveData?.Invoke(serverChanged);
     }
+
+    public void Shutdown() => Clear();
 
     internal Dictionary<long, Fight> GetOverlayFights() => _overlayFights.ToDictionary(i => i.Key, i => i.Value);
     internal void RemoveOverlayFight(long id) => _overlayFights.Remove(id, out _);
@@ -190,7 +184,7 @@ namespace EQLogParser
 
         if (removed)
         {
-          EventsRemovedFight?.Invoke(this, name);
+          EventsRemovedFight?.Invoke(name);
         }
 
         var removeOverlayFights = new List<long>();
@@ -220,12 +214,12 @@ namespace EQLogParser
       var beginTime = processed.BeginTime;
       var record = _damageCache.Add(processed.Record);
 
-      if (!LastFightProcessTime.Equals(beginTime))
+      if (!Volatile.Read(ref LastFightProcessTime).Equals(beginTime))
       {
         CheckExpireFights(beginTime);
         _validCombo.Clear();
 
-        if (beginTime - LastFightProcessTime > RecentSpellTime)
+        if (beginTime - Volatile.Read(ref LastFightProcessTime) > RecentSpellTime)
         {
           RecentSpellCache.Clear();
         }
@@ -357,7 +351,7 @@ namespace EQLogParser
         }
 
         fight.LastTime = beginTime;
-        LastFightProcessTime = beginTime;
+        Volatile.Write(ref LastFightProcessTime, beginTime);
         // tooltip
         var ttl = fight.LastTime - fight.BeginTime + 1;
         fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
@@ -373,14 +367,14 @@ namespace EQLogParser
 
     private Fight Create(string defender, double currentTime)
     {
-      var timeString = DateUtil.FormatSimpleDate(currentTime);
+      var timeString = DateUtil.FormatDotNetDateSeconds(currentTime);
       return new Fight
       {
         Name = string.Intern(defender),
         BeginTimeString = string.Intern(timeString),
         BeginTime = currentTime,
         LastTime = currentTime,
-        Id = _currentNpcId++,
+        Id = Interlocked.Increment(ref _currentNpcId),
         CorrectMapKey = string.Intern(defender)
       };
     }

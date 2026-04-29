@@ -170,7 +170,7 @@ namespace EQLogParser
       try
       {
         // basic mode uses current file
-        if (GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
+        if (GetEqFolderFromPath(AppSettings.CurrentLogFile) is { } currentFolder)
         {
           eqFolderList?.Add(currentFolder);
         }
@@ -199,7 +199,7 @@ namespace EQLogParser
       try
       {
         // basic mode uses current file
-        if (id == TriggerStateDB.DefaultUser && GetEqFolderFromPath(MainWindow.CurrentLogFile) is { } currentFolder)
+        if (id == TriggerStateDB.DefaultUser && GetEqFolderFromPath(AppSettings.CurrentLogFile) is { } currentFolder)
         {
           eqFolderList?.Add(currentFolder);
           return;

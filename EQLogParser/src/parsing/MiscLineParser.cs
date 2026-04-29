@@ -81,6 +81,13 @@ namespace EQLogParser
               {
                 PlayerRegistry.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
               }
+
+              // Capture WHO raid roster lines
+              if (!string.IsNullOrEmpty(who) && groupId > -1)
+              {
+                RaidRosterStore.Instance.CapturePlayer(who, groupId, lineData.BeginTime);
+              }
+
               handled = true;
             }
             else
@@ -318,6 +325,14 @@ namespace EQLogParser
                     }
                   }
                   break;
+                case "There":
+                  if (i == 0 && split.Length >= 5 && split[1] == "are" && split[3] == "players" &&
+                      split[4] == "in" && split[5] == "your" && split[6] == "raid.")
+                  {
+                    RaidRosterStore.Instance.FlushCurrentGroup();
+                    handled = true;
+                  }
+                  break;
               }
             }
 
@@ -413,7 +428,7 @@ namespace EQLogParser
     private static bool ParseWho(string[] split, int start, out string player, out string className, out int group)
     {
       player = null;
-      group = 0;
+      group = -1;
       className = null;
 
       if (split[start].StartsWith('[') && split[start].Length > 1 && split.Length > 4)

@@ -72,7 +72,7 @@ namespace EQLogParser
             DateTime.TryParseExact(match.Groups["datetime"].Value, formats, CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out var fileDate))
         {
-          if (start == 0 || DateUtil.ToDouble(fileDate) >= start)
+          if (start == 0 || DateUtil.ToDotNetSeconds(fileDate) >= start)
           {
             matchingFiles.Add((file, fileDate));
           }

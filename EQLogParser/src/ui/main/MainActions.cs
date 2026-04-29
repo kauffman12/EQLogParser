@@ -24,6 +24,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
@@ -77,10 +78,20 @@ namespace EQLogParser
     public static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
     public static readonly List<string> ClassList = [];
     public static readonly ObservableCollection<PetMapping> PetPlayersView = [];
+    private static readonly object VerifiedPlayersViewLock = new();
+    private static readonly object VerifiedPetsViewLock = new();
+    private static readonly object PetPlayersViewLock = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static readonly JsonSerializerOptions VersionCheckSerializationOptions = new() { PropertyNameCaseInsensitive = true };
     private static MainWindow _mainWindow;
+
+    static MainActions()
+    {
+      BindingOperations.EnableCollectionSynchronization(VerifiedPlayersView, VerifiedPlayersViewLock);
+      BindingOperations.EnableCollectionSynchronization(VerifiedPetsView, VerifiedPetsViewLock);
+      BindingOperations.EnableCollectionSynchronization(PetPlayersView, PetPlayersViewLock);
+    }
 
     internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
     internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
@@ -501,7 +512,7 @@ namespace EQLogParser
     // should already run on the UI thread
     internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
     {
-      PlayerRegistry.Instance.EventsNewPetMapping += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsNewPetMapping += async (mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -519,7 +530,7 @@ namespace EQLogParser
       ClassList.Clear();
       ClassList.Add("");
       ClassList.AddRange(EQDataStore.Instance.GetClassList());
-      PlayerRegistry.Instance.EventsNewVerifiedPlayer += async (_, name) =>
+      PlayerRegistry.Instance.EventsNewVerifiedPlayer += async (name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -528,7 +539,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerRegistry.Instance.EventsUpdateDefaultPlayerClass += async (_, mapping) =>
+      PlayerRegistry.Instance.EventsUpdateDefaultPlayerClass += async (mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -542,7 +553,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       };
 
-      PlayerRegistry.Instance.EventsRemoveVerifiedPlayer += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPlayer += async (name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -567,7 +578,7 @@ namespace EQLogParser
 
     internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
     {
-      PlayerRegistry.Instance.EventsNewVerifiedPet += (_, name) => main.Dispatcher.InvokeAsync(async () =>
+      PlayerRegistry.Instance.EventsNewVerifiedPet += (name) => main.Dispatcher.InvokeAsync(async () =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -576,7 +587,7 @@ namespace EQLogParser
         }, DispatcherPriority.DataBind);
       });
 
-      PlayerRegistry.Instance.EventsRemoveVerifiedPet += async (_, name) =>
+      PlayerRegistry.Instance.EventsRemoveVerifiedPet += async (name) =>
       {
         await UiUtil.InvokeAsync(() =>
         {
@@ -627,21 +638,9 @@ namespace EQLogParser
       DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
     }
 
-    // keep this on UI thread
-    internal static bool UpdateDamageOption(ImageAwesome icon, string option)
-    {
-      var update = ToggleSetting(option, icon);
-      EventsDamageSummaryOptionsChanged?.Invoke(option);
-      return update;
-    }
+    internal static void FireDamageSummaryOptionsChanged(string option) => EventsDamageSummaryOptionsChanged?.Invoke(option);
 
-    // keep this on UI thread
-    internal static bool UpdateHealingOption(ImageAwesome icon, string option)
-    {
-      var update = ToggleSetting(option, icon);
-      EventsHealingSummaryOptionsChanged?.Invoke(option);
-      return update;
-    }
+    internal static void FireHealingSummaryOptionsChanged(string option) => EventsHealingSummaryOptionsChanged?.Invoke(option);
 
     internal static void UpdateDeleteChatMenu(MenuItem deleteChat)
     {
@@ -862,12 +861,12 @@ namespace EQLogParser
                 while (!s.EndOfStream)
                 {
                   var line = s.ReadLine();
-                  if (string.IsNullOrEmpty(line) || line.Length <= MainWindow.ActionIndex)
+                  if (string.IsNullOrEmpty(line) || line.Length <= AppSettings.ActionIndex)
                   {
                     continue;
                   }
 
-                  var action = line[MainWindow.ActionIndex..];
+                  var action = line[AppSettings.ActionIndex..];
                   if (ChatLineParser.ParseChatType(action) != null)
                   {
                     continue;

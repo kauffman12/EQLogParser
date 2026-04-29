@@ -191,7 +191,7 @@ namespace EQLogParser
       foreach (var section in RandomData)
       {
         section.Highest = string.Join(" + ", section.Winners).Trim();
-        var duration = DateUtil.ToDouble(DateTime.Now) - section.BeginTime;
+        var duration = DateUtil.ToDotNetSeconds(DateTime.Now) - section.BeginTime;
         if (duration < _currentTimeLimit)
         {
           section.Duration = DateUtil.FormatTicks((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond, DateUtil.TimeFormat.HMSCompact);

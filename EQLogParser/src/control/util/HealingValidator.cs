@@ -4,8 +4,8 @@ namespace EQLogParser
 {
   internal class HealingValidator
   {
-    private readonly bool _aoeEnabled = MainWindow.IsAoEHealingEnabled;
-    private readonly bool _swarmPetsEnabled = MainWindow.IsHealingSwarmPetsEnabled;
+    private readonly bool _aoeEnabled = AppSettings.IsAoEHealingEnabled;
+    private readonly bool _swarmPetsEnabled = AppSettings.IsHealingSwarmPetsEnabled;
 
     public bool IsValid(double beginTime, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
       Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts, Dictionary<string, byte> ignoreRecords)

@@ -93,8 +93,8 @@ namespace EQLogParser
         result = EndResult;
         while (result == EndResult && _currentReader.ReadLine() is { } nextLine)
         {
-          var timeString = nextLine[..(MainWindow.ActionIndex - 1)];
-          var action = nextLine[MainWindow.ActionIndex..];
+          var timeString = nextLine[..(AppSettings.ActionIndex - 1)];
+          var action = nextLine[AppSettings.ActionIndex..];
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {

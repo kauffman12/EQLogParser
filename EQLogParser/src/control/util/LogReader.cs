@@ -123,7 +123,7 @@ namespace EQLogParser
         if (minBack > 0)
         {
           minDate = DateTime.Now.AddMinutes(-minBack);
-          beginTime = DateUtil.ToDouble(minDate);
+          beginTime = DateUtil.ToDotNetSeconds(minDate);
         }
 
         _reader = FileUtil.GetStreamReader(_fs, beginTime);
@@ -249,7 +249,7 @@ namespace EQLogParser
             return;
           }
 
-          _lastParsedTime = DateUtil.ToDouble(dateTime);
+          _lastParsedTime = DateUtil.ToDotNetSeconds(dateTime);
         }
 
         if (_cts.Token.IsCancellationRequested)

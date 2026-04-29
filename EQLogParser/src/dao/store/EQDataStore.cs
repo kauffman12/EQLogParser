@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -75,16 +74,12 @@ namespace EQLogParser
     SpellData GetSpellByAbbrv(string abbrv);
   }
 
-  internal class EQDataStore : IEQDataStore
+  internal class EQDataStore : IEQDataStore, ILifecycle
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private static EQDataStore _instance;
-    internal static EQDataStore Instance
-    {
-      get => _instance ??= new();
-      set => _instance = value;
-    }
+    // singleton with set for unit test
+    internal static EQDataStore Instance { get; set; } = new();
 
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly HashSet<SpellData> _allSpellData = [];
@@ -101,7 +96,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
     private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
-    private readonly ConcurrentDictionary<string, SolidColorBrush> _classBrushes = new();
+    private readonly ConcurrentDictionary<string, string> _classColors = new();
     private readonly ConcurrentDictionary<SpellClass, string> _classNames = new();
     private readonly ConcurrentDictionary<string, SpellClass> _classesByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _sortedClassList = [];
@@ -114,6 +109,7 @@ namespace EQLogParser
     internal EQDataStore()
     {
       var spellList = new List<SpellData>();
+      LifecycleManager.Register(this);
 
       RankWords = new(StringComparer.OrdinalIgnoreCase)
       {
@@ -121,7 +117,6 @@ namespace EQLogParser
       };
 
       // populate ClassNames from SpellClass enum and resource table
-      var wpfAvailable = Type.GetType("System.Windows.Media.SolidColorBrush, PresentationCore") != null;
       foreach (var item in Enum.GetValues<SpellClass>())
       {
         if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
@@ -134,16 +129,9 @@ namespace EQLogParser
           }
 
           var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
-          if (!string.IsNullOrEmpty(color) && wpfAvailable)
+          if (!string.IsNullOrEmpty(color))
           {
-            try
-            {
-              _classBrushes[name] = UiUtil.GetBrush(color);
-            }
-            catch (FormatException ex)
-            {
-              Log.Error($"Failed to parse color for class {item}: {ex.Message}");
-            }
+            _classColors[name] = color;
           }
         }
       }
@@ -378,13 +366,13 @@ namespace EQLogParser
       return result;
     }
 
-    internal SolidColorBrush GetClassBrush(string className)
+    internal string GetClassColor(string className)
     {
-      if (!string.IsNullOrEmpty(className) && _classBrushes.TryGetValue(className, out var brush))
+      if (!string.IsNullOrEmpty(className) && _classColors.TryGetValue(className, out var color))
       {
-        return brush;
+        return color;
       }
-      return UiUtil.DefaultBrush;
+      return null;
     }
 
     internal SpellClass? GetClassEnum(string className)
@@ -482,10 +470,10 @@ namespace EQLogParser
       return spellData;
     }
 
-    internal SpellTreeResult GetLandsOnOther(string[] split, out string player)
+    internal bool TryGetLandsOnOther(string[] split, out SpellTreeResult found, out string player)
     {
       player = null;
-      var found = SearchSpellPath(_landsOnOtherTree, split);
+      found = SearchSpellPath(_landsOnOtherTree, split);
 
       if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
@@ -497,14 +485,15 @@ namespace EQLogParser
         }
 
         found.SpellData = FindByLandsOn(player, found.SpellData);
+        return true;
       }
 
-      return found;
+      return false;
     }
 
-    internal SpellTreeResult GetLandsOnYou(string[] split)
+    internal bool TryGetLandsOnYou(string[] split, out SpellTreeResult found)
     {
-      var found = SearchSpellPath(_landsOnYouTree, split);
+      found = SearchSpellPath(_landsOnYouTree, split);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
@@ -524,14 +513,16 @@ namespace EQLogParser
             AdpsTracker.Instance.UpdateAdps(spellData);
           }
         }
+
+        return true;
       }
 
-      return found;
+      return false;
     }
 
-    internal SpellTreeResult GetWearOff(string[] split)
+    internal bool TryGetWearOff(string[] split, out SpellTreeResult found)
     {
-      var found = SearchSpellPath(_wearOffTree, split);
+      found = SearchSpellPath(_wearOffTree, split);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
@@ -544,9 +535,11 @@ namespace EQLogParser
           var spellData = spellDataSet.First();
           AdpsTracker.Instance.RemoveWearOff(spellData);
         }
+
+        return true;
       }
 
-      return found;
+      return false;
     }
 
     internal SpellData ParseCustomSpellData(string line)
@@ -648,22 +641,16 @@ namespace EQLogParser
 
       return result;
     }
-    internal void Clear()
+    public void Clear(bool serverChanged = true)
     {
       foreach (var spellData in _allSpellData)
       {
         spellData.SeenRecently = false;
       }
       _unknownSpellDb.Clear();
-      FightManager.Instance.Clear();
     }
 
-    internal void UpdateAdps(SpellData spellData)
-    {
-      AdpsTracker.Instance.UpdateAdps(spellData);
-    }
-
-
+    public void Shutdown() => Clear();
 
     internal static bool ResolveSpellAmbiguity(ReceivedSpell spell, double currentTime, out SpellData replaced)
     {

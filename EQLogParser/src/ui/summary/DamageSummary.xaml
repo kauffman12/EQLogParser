@@ -47,6 +47,7 @@
           <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
         </syncfusion:UpDown.NumberFormatInfo>
       </syncfusion:UpDown>
+      <ComboBox Margin="0,0,8,2" x:Name="rosterSelector" Visibility="Collapsed" SelectionChanged="RosterSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="petOrPlayerList" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="classesList" 
                 DropDownClosed="ClassSelectionChanged" ItemTemplateSelector="{StaticResource ComboBoxSelector}">

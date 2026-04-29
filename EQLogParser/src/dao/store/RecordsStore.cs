@@ -8,7 +8,7 @@ using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class RecordsStore
+  internal class RecordsStore : ILifecycle
   {
     internal event Action<string> RecordsUpdatedEvent;
     private static readonly Lazy<RecordsStore> Lazy = new(() => new RecordsStore());
@@ -51,6 +51,7 @@ namespace EQLogParser
     private RecordsStore()
     {
       BindingOperations.EnableCollectionSynchronization(AllQuickShareRecords, _collectionLock);
+      LifecycleManager.Register(this);
 
       // initialize dictionaries
       foreach (var type in TimedRecordTypes)
@@ -83,7 +84,37 @@ namespace EQLogParser
       GetDuring(HealRecords, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
       GetDuring(SpellRecords, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
-    internal void Stop() => _eventTimer?.Dispose();
+
+    public void Shutdown()
+    {
+      _eventTimer?.Dispose();
+      Clear();
+    }
+
+    public void Clear(bool serverChanged = true)
+    {
+      foreach (var type in TimedRecordTypes)
+      {
+        _recordDictionaries[type].Clear();
+      }
+
+      _recordNeedsEvent.Clear();
+
+      lock (_playerAmbiguityCastCache)
+      {
+        _playerAmbiguityCastCache.Clear();
+      }
+
+      lock (_collectionLock)
+      {
+        AllQuickShareRecords.Clear();
+      }
+
+      lock (_npcSpellStatsDict)
+      {
+        _npcSpellStatsDict.Clear();
+      }
+    }
 
     internal void Add(LootRecord record, double beginTime)
     {
@@ -162,31 +193,6 @@ namespace EQLogParser
         {
           AllQuickShareRecords.Insert(0, action);
         }
-      }
-    }
-
-    internal void Clear()
-    {
-      foreach (var type in TimedRecordTypes)
-      {
-        _recordDictionaries[type].Clear();
-      }
-
-      _recordNeedsEvent.Clear();
-
-      lock (_playerAmbiguityCastCache)
-      {
-        _playerAmbiguityCastCache.Clear();
-      }
-
-      lock (_collectionLock)
-      {
-        AllQuickShareRecords.Clear();
-      }
-
-      lock (_npcSpellStatsDict)
-      {
-        _npcSpellStatsDict.Clear();
       }
     }
 

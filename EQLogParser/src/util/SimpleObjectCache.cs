@@ -9,6 +9,11 @@ namespace EQLogParser
 
     public T Add(T obj)
     {
+      if (obj == null)
+      {
+        return default!;
+      }
+
       var hashCode = obj.GetHashCode();
 
       if (!_cache.TryGetValue(hashCode, out var value))

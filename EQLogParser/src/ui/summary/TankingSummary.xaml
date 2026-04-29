@@ -208,6 +208,7 @@
         <syncfusion:GridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
         <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
+        <syncfusion:GridNumericColumn MappingName="BestSec" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBestSecondTemplateToolTip}" TextAlignment="Right" HeaderText="Best Sec" />
         <syncfusion:GridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
         <syncfusion:GridTextColumn MappingName="MeleeAccRate" DisplayBinding="{Binding Path=MeleeAccRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAccRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Acc" />
         <syncfusion:GridTextColumn MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />

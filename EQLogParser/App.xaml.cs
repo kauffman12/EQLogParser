@@ -38,6 +38,7 @@ namespace EQLogParser
     {
       // 33.x
       SyncfusionLicenseProvider.RegisterLicense("");
+
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -117,6 +118,7 @@ namespace EQLogParser
 
       AudioManager.Instance.Dispose();
       AppCache.Dispose();
+      LifecycleManager.Shutdown();
       base.OnExit(e);
     }
 

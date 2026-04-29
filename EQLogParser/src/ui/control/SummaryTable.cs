@@ -71,12 +71,36 @@ namespace EQLogParser
     internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImageAsync(TheDataGrid, TheTitle, true);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
-    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetStatsByClass((sender as MenuItem)?.Header as string));
-    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className })
+      {
+        ShowBreakdown(GetStatsByClass(className));
+      }
+    }
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className2 })
+      {
+        ShowBreakdown2(GetStatsByClass(className2));
+      }
+    }
     internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
-    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className3 })
+      {
+        ShowSpellCounts(GetStatsByClass(className3));
+      }
+    }
     internal async void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetSelectedStats());
-    internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className4 })
+      {
+        await ShowSpellCasts(GetStatsByClass(className4));
+      }
+    }
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
     internal void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(TheClassesCombo, sender);
 

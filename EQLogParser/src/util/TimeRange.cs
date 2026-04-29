@@ -150,7 +150,7 @@ namespace EQLogParser
       var pass = false;
       if (!string.IsNullOrEmpty(line) && line.Length > 24)
       {
-        var logTime = DateUtil.StandardDateToDouble(line);
+        var logTime = DateUtil.StandardDateToDotNetSeconds(line);
         if (!double.IsNaN(logTime))
         {
           if (end > -1)
@@ -180,7 +180,7 @@ namespace EQLogParser
       var pass = false;
       if (!string.IsNullOrEmpty(line) && line.Length > 24)
       {
-        var logTime = DateUtil.StandardDateToDouble(line);
+        var logTime = DateUtil.StandardDateToDotNetSeconds(line);
         if (!double.IsNaN(logTime))
         {
           if (range == null)

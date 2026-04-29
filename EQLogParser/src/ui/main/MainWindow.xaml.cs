@@ -26,21 +26,6 @@ namespace EQLogParser
 {
   public partial class MainWindow
   {
-    // global settings
-    internal static string CurrentLogFile;
-    internal static bool IsAoEHealingEnabled = true;
-    internal static bool IsHealingSwarmPetsEnabled = true;
-    internal static bool IsAssassinateDamageEnabled = true;
-    internal static bool IsBaneDamageEnabled = true;
-    internal static bool IsDamageShieldDamageEnabled = true;
-    internal static bool IsFinishingBlowDamageEnabled = true;
-    internal static bool IsHeadshotDamageEnabled = true;
-    internal static bool IsSlayUndeadDamageEnabled = true;
-    internal static bool IsMapSendToEqEnabled;
-    internal static bool IsEmuParsingEnabled;
-    internal static bool IsDamageOverlayOpen;
-    internal const int ActionIndex = 27;
-
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
@@ -56,8 +41,8 @@ namespace EQLogParser
     private readonly SolidColorBrush _hoverBrush = UiUtil.GetBrush("#505050");
     private readonly SolidColorBrush _redHoverBrush = UiUtil.GetBrush("#E81123");
     private bool _resetWindowState;
-    private bool _isStarting;
-    private bool _appLoadingComplete;
+    private volatile bool _isStarting;
+    private volatile bool _appLoadingComplete;
 
     public MainWindow()
     {
@@ -70,36 +55,36 @@ namespace EQLogParser
       versionText.Text = $"v{App.Version}";
 
       // AoE healing
-      IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", IsAoEHealingEnabled);
-      enableAoEHealingIcon.Visibility = IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsAoEHealingEnabled = ConfigUtil.IfSetOrElse("IncludeAoEHealing", AppSettings.IsAoEHealingEnabled);
+      enableAoEHealingIcon.Visibility = AppSettings.IsAoEHealingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Healing Swarm Pets
-      IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", IsHealingSwarmPetsEnabled);
-      enableHealingSwarmPetsIcon.Visibility = IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsHealingSwarmPetsEnabled = ConfigUtil.IfSetOrElse("IncludeHealingSwarmPets", AppSettings.IsHealingSwarmPetsEnabled);
+      enableHealingSwarmPetsIcon.Visibility = AppSettings.IsHealingSwarmPetsEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Assassinate Damage
-      IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", IsAssassinateDamageEnabled);
-      enableAssassinateDamageIcon.Visibility = IsAssassinateDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsAssassinateDamageEnabled = ConfigUtil.IfSetOrElse("IncludeAssassinateDamage", AppSettings.IsAssassinateDamageEnabled);
+      enableAssassinateDamageIcon.Visibility = AppSettings.IsAssassinateDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Bane Damage
-      IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", IsBaneDamageEnabled);
-      enableBaneDamageIcon.Visibility = IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsBaneDamageEnabled = ConfigUtil.IfSetOrElse("IncludeBaneDamage", AppSettings.IsBaneDamageEnabled);
+      enableBaneDamageIcon.Visibility = AppSettings.IsBaneDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Damage Shield Damage
-      IsDamageShieldDamageEnabled = ConfigUtil.IfSetOrElse("IncludeDamageShieldDamage", IsDamageShieldDamageEnabled);
-      enableDamageShieldDamageIcon.Visibility = IsDamageShieldDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsDamageShieldDamageEnabled = ConfigUtil.IfSetOrElse("IncludeDamageShieldDamage", AppSettings.IsDamageShieldDamageEnabled);
+      enableDamageShieldDamageIcon.Visibility = AppSettings.IsDamageShieldDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Finishing Blow Damage
-      IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", IsFinishingBlowDamageEnabled);
-      enableFinishingBlowDamageIcon.Visibility = IsFinishingBlowDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsFinishingBlowDamageEnabled = ConfigUtil.IfSetOrElse("IncludeFinishingBlowDamage", AppSettings.IsFinishingBlowDamageEnabled);
+      enableFinishingBlowDamageIcon.Visibility = AppSettings.IsFinishingBlowDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Headshot Damage
-      IsHeadshotDamageEnabled = ConfigUtil.IfSetOrElse("IncludeHeadshotDamage", IsHeadshotDamageEnabled);
-      enableHeadshotDamageIcon.Visibility = IsHeadshotDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsHeadshotDamageEnabled = ConfigUtil.IfSetOrElse("IncludeHeadshotDamage", AppSettings.IsHeadshotDamageEnabled);
+      enableHeadshotDamageIcon.Visibility = AppSettings.IsHeadshotDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Slay Undead Damage
-      IsSlayUndeadDamageEnabled = ConfigUtil.IfSetOrElse("IncludeSlayUndeadDamage", IsSlayUndeadDamageEnabled);
-      enableSlayUndeadDamageIcon.Visibility = IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsSlayUndeadDamageEnabled = ConfigUtil.IfSetOrElse("IncludeSlayUndeadDamage", AppSettings.IsSlayUndeadDamageEnabled);
+      enableSlayUndeadDamageIcon.Visibility = AppSettings.IsSlayUndeadDamageEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Hide window when minimized
       enableHideOnMinimizeIcon.Visibility = ConfigUtil.IfSet("HideWindowOnMinimize") ? Visibility.Visible : Visibility.Hidden;
@@ -111,8 +96,8 @@ namespace EQLogParser
       enableStartMinimizedIcon.Visibility = ConfigUtil.IfSet("StartWithWindowMinimized") ? Visibility.Visible : Visibility.Hidden;
 
       // Allow Ctrl+C for SendToEQ
-      IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
-      enableMapSendToEQIcon.Visibility = IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsMapSendToEqEnabled = ConfigUtil.IfSet("MapSendToEQAsCtrlC");
+      enableMapSendToEQIcon.Visibility = AppSettings.IsMapSendToEqEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // Chat Archive on/off
       enableChatArchiveIcon.Visibility = ConfigUtil.IfSetOrElse("ChatArchiveEnabled", true) ? Visibility.Visible : Visibility.Hidden;
@@ -134,8 +119,8 @@ namespace EQLogParser
       hardwareAccelIcon.Visibility = ConfigUtil.IfSet("HardwareAcceleration") ? Visibility.Visible : Visibility.Hidden;
 
       // Enable EMU parsing
-      IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
-      emuParsingIcon.Visibility = IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
+      AppSettings.IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
+      emuParsingIcon.Visibility = AppSettings.IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -228,9 +213,9 @@ namespace EQLogParser
           }
         }
 
-        DamageStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
-        HealingStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
-        TankingStatsBuilder.Instance.EventsUpdateDataPoint += (_, data) => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
+        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
+        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
+        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
@@ -319,7 +304,10 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
-        (playerParseTextWindow.Content as ParsePreview)?.CopyToEqClick(type);
+        if (playerParseTextWindow.Content is ParsePreview preview)
+        {
+          preview.CopyToEqClick(type);
+        }
       });
     }
 
@@ -337,7 +325,7 @@ namespace EQLogParser
       {
         _damageOverlay?.Close();
         _damageOverlay = null;
-        IsDamageOverlayOpen = false;
+        AppSettings.IsDamageOverlayOpen = false;
 
         if (reopen)
         {
@@ -364,7 +352,7 @@ namespace EQLogParser
           _damageOverlay.Show();
           _damageOverlay.UpdateLayout();
           _damageOverlay.Opacity = 1.0;
-          IsDamageOverlayOpen = true;
+          AppSettings.IsDamageOverlayOpen = true;
         }
       }
     }
@@ -437,7 +425,7 @@ namespace EQLogParser
       }
     }
 
-    private void EventsNewOverlayFight(object sender, Fight e)
+    private void EventsNewOverlayFight(Fight e)
     {
       // another lazy optimization to avoid extra dispatches
       if (_damageOverlay == null && ConfigUtil.IfSet("IsDamageOverlayEnabled"))
@@ -467,12 +455,12 @@ namespace EQLogParser
 
     private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
     {
-      IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
+      AppSettings.IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
     }
 
     private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
     {
-      IsMapSendToEqEnabled = MainActions.ToggleSetting("MapSendToEQAsCtrlC", enableMapSendToEQIcon);
+      AppSettings.IsMapSendToEqEnabled = MainActions.ToggleSetting("MapSendToEQAsCtrlC", enableMapSendToEQIcon);
     }
 
     private async void CreateBackupClick(object sender, RoutedEventArgs e)
@@ -482,10 +470,10 @@ namespace EQLogParser
 
     private void HandleChartUpdate(string key, DataPointEvent e)
     {
-      var opened = SyncFusionUtil.GetOpenWindows(dockSite);
-      if (opened.TryGetValue(key, out var value))
+      if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
+          value.Content is LineChart chart)
       {
-        (value.Content as LineChart)?.HandleUpdateEvent(e);
+        chart.HandleUpdateEvent(e);
       }
     }
 
@@ -509,13 +497,13 @@ namespace EQLogParser
         damageStatsOptions.Npcs.AddRange(filtered);
         damageStatsOptions.AllRanges = allRanges;
         damageStatsOptions.MinSeconds = 0;
-        Task.Run(() => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions));
+        _ = Task.Run(() => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions)).ContinueWith(t => Log.Error("DamageStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 
         GenerateStatsOptions healingStatsOptions = new();
         healingStatsOptions.Npcs.AddRange(filtered);
         healingStatsOptions.AllRanges = allRanges;
         healingStatsOptions.MinSeconds = 0;
-        Task.Run(() => HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions));
+        _ = Task.Run(() => HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions)).ContinueWith(t => Log.Error("HealingStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 
         GenerateStatsOptions tankingStatsOptions = new();
         tankingStatsOptions.Npcs.AddRange(filtered);
@@ -527,7 +515,7 @@ namespace EQLogParser
           tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
         }
 
-        Task.Run(() => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions));
+        _ = Task.Run(() => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions)).ContinueWith(t => Log.Error("TankingStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
     }
 
@@ -610,13 +598,13 @@ namespace EQLogParser
     {
       var filtered = GetFights(true).OrderBy(npc => npc.Id).ToList();
 
-      if (string.IsNullOrEmpty(CurrentLogFile))
+      if (string.IsNullOrEmpty(AppSettings.CurrentLogFile))
       {
         new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
       else if (filtered.Count > 0)
       {
-        MainActions.ExportFights(CurrentLogFile, filtered);
+        MainActions.ExportFights(AppSettings.CurrentLogFile, filtered);
       }
       else
       {
@@ -699,42 +687,50 @@ namespace EQLogParser
 
     private void ToggleAssassinateDamageClick(object sender, RoutedEventArgs e)
     {
-      IsAssassinateDamageEnabled = MainActions.UpdateDamageOption(enableAssassinateDamageIcon, "IncludeAssassinateDamage");
+      AppSettings.IsAssassinateDamageEnabled = MainActions.ToggleSetting("IncludeAssassinateDamage", enableAssassinateDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeAssassinateDamage");
     }
 
     private void ToggleBaneDamageClick(object sender, RoutedEventArgs e)
     {
-      IsBaneDamageEnabled = MainActions.UpdateDamageOption(enableBaneDamageIcon, "IncludeBaneDamage");
+      AppSettings.IsBaneDamageEnabled = MainActions.ToggleSetting("IncludeBaneDamage", enableBaneDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeBaneDamage");
     }
 
     private void ToggleDamageShieldDamageClick(object sender, RoutedEventArgs e)
     {
-      IsDamageShieldDamageEnabled = MainActions.UpdateDamageOption(enableDamageShieldDamageIcon, "IncludeDamageShieldDamage");
+      AppSettings.IsDamageShieldDamageEnabled = MainActions.ToggleSetting("IncludeDamageShieldDamage", enableDamageShieldDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeDamageShieldDamage");
     }
 
     private void ToggleFinishingBlowDamageClick(object sender, RoutedEventArgs e)
     {
-      IsFinishingBlowDamageEnabled = MainActions.UpdateDamageOption(enableFinishingBlowDamageIcon, "IncludeFinishingBlowDamage");
+      AppSettings.IsFinishingBlowDamageEnabled = MainActions.ToggleSetting("IncludeFinishingBlowDamage", enableFinishingBlowDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeFinishingBlowDamage");
     }
 
     private void ToggleHeadshotDamageClick(object sender, RoutedEventArgs e)
     {
-      IsHeadshotDamageEnabled = MainActions.UpdateDamageOption(enableHeadshotDamageIcon, "IncludeHeadshotDamage");
+      AppSettings.IsHeadshotDamageEnabled = MainActions.ToggleSetting("IncludeHeadshotDamage", enableHeadshotDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeHeadshotDamage");
     }
 
     private void ToggleSlayUndeadDamageClick(object sender, RoutedEventArgs e)
     {
-      IsSlayUndeadDamageEnabled = MainActions.UpdateDamageOption(enableSlayUndeadDamageIcon, "IncludeSlayUndeadDamage");
+      AppSettings.IsSlayUndeadDamageEnabled = MainActions.ToggleSetting("IncludeSlayUndeadDamage", enableSlayUndeadDamageIcon);
+      MainActions.FireDamageSummaryOptionsChanged("IncludeSlayUndeadDamage");
     }
 
     private void ToggleAoEHealingClick(object sender, RoutedEventArgs e)
     {
-      IsAoEHealingEnabled = MainActions.UpdateHealingOption(enableAoEHealingIcon, "IncludeAoEHealing");
+      AppSettings.IsAoEHealingEnabled = MainActions.ToggleSetting("IncludeAoEHealing", enableAoEHealingIcon);
+      MainActions.FireHealingSummaryOptionsChanged("IncludeAoEHealing");
     }
 
     private void ToggleHealingSwarmPetsClick(object sender, RoutedEventArgs e)
     {
-      IsHealingSwarmPetsEnabled = MainActions.UpdateHealingOption(enableHealingSwarmPetsIcon, "IncludeHealingSwarmPets");
+      AppSettings.IsHealingSwarmPetsEnabled = MainActions.ToggleSetting("IncludeHealingSwarmPets", enableHealingSwarmPetsIcon);
+      MainActions.FireHealingSummaryOptionsChanged("IncludeHealingSwarmPets");
     }
 
     // Main Menu
@@ -786,10 +782,10 @@ namespace EQLogParser
 
     private static void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
     {
-      if (sender is MenuItem menuItem)
+      if (sender is MenuItem { Header: string header } menuItem)
       {
         MainActions.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        MainActions.ChangeThemeFontFamily(menuItem.Header as string);
+        MainActions.ChangeThemeFontFamily(header);
       }
     }
 
@@ -865,12 +861,12 @@ namespace EQLogParser
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
             statusText.Text = "Monitoring Log";
 
-            ConfigUtil.SetSetting("LastOpenedFile", CurrentLogFile);
+            ConfigUtil.SetSetting("LastOpenedFile", AppSettings.CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
             ConfigUtil.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(500);
-            MainActions.FireLogLoadingEvent(CurrentLogFile, true);
+            MainActions.FireLogLoadingEvent(AppSettings.CurrentLogFile, true);
             _isStarting = false;
             await Dispatcher.InvokeAsync(() =>
             {
@@ -962,7 +958,7 @@ namespace EQLogParser
         }
         else
         {
-          var initialPath = string.IsNullOrEmpty(CurrentLogFile) ? string.Empty : Path.GetDirectoryName(CurrentLogFile);
+          var initialPath = string.IsNullOrEmpty(AppSettings.CurrentLogFile) ? string.Empty : Path.GetDirectoryName(AppSettings.CurrentLogFile);
 
           var dialog = new CommonOpenFileDialog
           {
@@ -1013,7 +1009,7 @@ namespace EQLogParser
             _recentFiles.Insert(0, theFile);
             ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
-            CurrentLogFile = theFile;
+            AppSettings.CurrentLogFile = theFile;
             _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
             _ = _eqLogReader.StartAsync();
             UpdateLoadingProgress();
@@ -1037,16 +1033,12 @@ namespace EQLogParser
       {
         if (changed)
         {
-          if (!string.IsNullOrEmpty(ConfigUtil.ServerName))
-          {
-            PlayerRegistry.Instance.Save();
-          }
-
           MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
         }
 
-        var closedFile = CurrentLogFile;
-        CurrentLogFile = null;
+        LifecycleManager.Clear(changed);
+        var closedFile = AppSettings.CurrentLogFile;
+        AppSettings.CurrentLogFile = null;
         statusText.Text = string.Empty;
         _eqLogReader?.Dispose();
         _eqLogReader = null;
@@ -1055,10 +1047,6 @@ namespace EQLogParser
         ConfigUtil.PlayerName = null;
         FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
         CloseDamageOverlay(false);
-        EQDataStore.Instance.Clear();
-        FightManager.Instance.Clear();
-        RecordsStore.Instance.Clear();
-        FightManager.Instance.Reset();
         closeLogFile.IsEnabled = false;
         saveLogFile.IsEnabled = false;
         MainActions.FireLogLoadingEvent(closedFile, false);
@@ -1222,18 +1210,16 @@ namespace EQLogParser
         }
 
         ConfigUtil.Save();
-        PlayerRegistry.Instance?.Save();
       }
 
-      PlayerRegistry.Instance?.Stop();
+      ChatDB.Instance.Stop();
+      LifecycleManager.Shutdown();
       _saveTimer?.Stop();
       _eqLogReader?.Dispose();
       _notifyIcon?.Dispose();
       petMappingGrid?.Dispose();
       verifiedPetsGrid?.Dispose();
       verifiedPlayersGrid?.Dispose();
-      RecordsStore.Instance.Stop();
-      ChatDB.Instance.Stop();
       SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode

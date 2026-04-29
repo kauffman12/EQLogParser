@@ -29,6 +29,8 @@ namespace EQLogParser
       "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
 
+    private const string AppIconsUriBase = @"pack://application:,,,/icons/";
+
     internal static BitmapImage CreateBitmapFromInternalUri(string uri)
     {
       try
@@ -36,6 +38,19 @@ namespace EQLogParser
         return new BitmapImage(new Uri(uri));
       }
       catch (Exception)
+      {
+        return null;
+      }
+    }
+
+    internal static BitmapImage CreateAppIcon(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return null;
+      try
+      {
+        return new BitmapImage(new Uri(AppIconsUriBase + name));
+      }
+      catch
       {
         return null;
       }

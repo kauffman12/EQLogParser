@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using static EQLogParser.TextUtils;
 
 namespace EQLogParser
 {
@@ -495,7 +494,7 @@ namespace EQLogParser
         var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
         attacker = string.Join(" ", split, 0, hitTypeIndex);
         defender = string.Join(" ", split, hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
-        subType = ToUpper(subType);
+        subType = TextUtils.ToUpper(subType);
         var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
         attacker = UpdateAttacker(attacker, subType);
         defender = UpdateDefender(defender, attacker);
@@ -529,6 +528,11 @@ namespace EQLogParser
           if (spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
           {
             PlayerRegistry.Instance.AddVerifiedPet(defender);
+            if (PlayerRegistry.IsPossiblePlayerName(attacker))
+            {
+              PlayerRegistry.Instance.AddVerifiedPlayer(attacker, lineData.BeginTime);
+              PlayerRegistry.Instance.AddPetToPlayer(defender, attacker);
+            }
           }
 
           attacker = UpdateAttacker(attacker, spell);
@@ -583,7 +587,7 @@ namespace EQLogParser
           attacker = spell;
         }
 
-        if (MainWindow.IsEmuParsingEnabled)
+        if (AppSettings.IsEmuParsingEnabled)
         {
           // old emu
           (attacker, spell) = (spell, attacker);
@@ -661,7 +665,7 @@ namespace EQLogParser
                byIndex == (nonMeleeIndex - 1) && isIndex > -1 && split[isIndex + 1] == "hit")
       {
         defender = string.Join(" ", split, 0, isIndex);
-        attacker = MainWindow.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
+        attacker = AppSettings.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
         var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
         defender = UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
@@ -705,7 +709,7 @@ namespace EQLogParser
       // EMU specific stuff
       // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
       // Heroes Forge EMU [Sun Dec 08 04:56:54 2024] Lobekn (Owner: Bulron) hit a wan ghoul knight for 311 points of non-melee damage. (Earthquake)
-      else if (MainWindow.IsEmuParsingEnabled && forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
+      else if (AppSettings.IsEmuParsingEnabled && forIndex > -1 && hitTypeIndex > -1 && split[hitTypeIndex] == "hit" && forIndex < pointsOfIndex && nonMeleeIndex > pointsOfIndex)
       {
         string attackerOwner = null;
         if (emuPetIndex > -1)
@@ -736,7 +740,7 @@ namespace EQLogParser
         if (split.Length > end && split[end].StartsWith('(') && string.Join(" ", split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
         {
           subType = oldSpell[1..^1];
-          subType = ToUpper(subType);
+          subType = TextUtils.ToUpper(subType);
         }
 
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
@@ -752,13 +756,13 @@ namespace EQLogParser
         }
       }
       // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
-      else if (MainWindow.IsEmuParsingEnabled && emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
+      else if (AppSettings.IsEmuParsingEnabled && emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
       {
         defender = ConfigUtil.PlayerName;
         record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
       }
       // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
-      else if (MainWindow.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
+      else if (AppSettings.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
       {
         var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
         attacker = Labels.Unk;
@@ -767,7 +771,7 @@ namespace EQLogParser
       }
       // [Sun Dec 08 22:14:14 2024] Gaber (Owner: Claus) has shielded itself from 116 points of damage. (Rune II)
       // Old (eqemu) [Sun Dec 08 21:36:40 2024] Leela has shielded herself from 658 points of damage. (Manaskin)
-      else if (MainWindow.IsEmuParsingEnabled && hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
+      else if (AppSettings.IsEmuParsingEnabled && hasIndex > -1 && (shieldedIndex == (hasIndex + 1)) && pointsOfIndex == (stop - 2))
       {
         if (emuPetIndex > -1 && emuPetIndex < hasIndex)
         {
@@ -790,7 +794,7 @@ namespace EQLogParser
       }
       // [Thu Jan 23 21:36:37 2025] Vorgash scores a critical hit! (780)
       // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)
-      else if (MainWindow.IsEmuParsingEnabled && oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
+      else if (AppSettings.IsEmuParsingEnabled && oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
       {
         var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : TextUtils.ParseUInt(split[stop + 1].AsSpan(1, split[stop + 1].Length - 2));
         if (damage != uint.MaxValue)
@@ -862,7 +866,7 @@ namespace EQLogParser
           {
             defender = defender[..^1];
             attacker = string.Join(" ", split, 0, tryIndex);
-            subType = ToUpper(subType);
+            subType = TextUtils.ToUpper(subType);
             attacker = UpdateAttacker(attacker, subType);
             defender = UpdateDefender(defender, attacker);
             record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, label, subType);
@@ -921,7 +925,7 @@ namespace EQLogParser
         {
           if (attentionIndex == (split.Length - 1) && split.Length > 3 && split[1] == "capture" && ParseNpcName(split, 3, out var npc))
           {
-            var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = ToUpper(npc) };
+            var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = TextUtils.ToUpper(npc) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
@@ -930,7 +934,7 @@ namespace EQLogParser
             {
               Player = ConfigUtil.PlayerName,
               Success = false,
-              Npc = ToUpper(ParseSpellOrNpc(split, 5))
+              Npc = TextUtils.ToUpper(TextUtils.ParseSpellOrNpc(split, 5))
             };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
@@ -943,7 +947,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
-            var taunt = new TauntRecord { Player = name, Success = true, Npc = ToUpper(npc) };
+            var taunt = new TauntRecord { Player = name, Success = true, Npc = TextUtils.ToUpper(npc) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
@@ -955,7 +959,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
-            var taunt = new TauntRecord { Player = name, Success = false, Npc = ToUpper(ParseSpellOrNpc(split, 3 + i)) };
+            var taunt = new TauntRecord { Player = name, Success = false, Npc = TextUtils.ToUpper(TextUtils.ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
@@ -969,7 +973,7 @@ namespace EQLogParser
               {
                 var npc = string.Join(" ", split, 0, j);
                 var taunter = string.Join(" ", split, playerIndex, last - playerIndex);
-                var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = ToUpper(npc) };
+                var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = TextUtils.ToUpper(npc) };
                 EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
             }
@@ -1079,7 +1083,7 @@ namespace EQLogParser
           lock (SlainQueue)
           {
             // we also use upper case now
-            slain = ToUpper(slain);
+            slain = TextUtils.ToUpper(slain);
             if (!SlainQueue.Contains(slain) && FM.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
@@ -1087,7 +1091,7 @@ namespace EQLogParser
             }
           }
 
-          killer = ToUpper(killer);
+          killer = TextUtils.ToUpper(killer);
 
           var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
           if (_previousAction != null)
@@ -1156,7 +1160,7 @@ namespace EQLogParser
         attacker = PlayerRegistry.ReplacePlayer(attacker, attacker);
       }
 
-      attacker = ToUpper(attacker);
+      attacker = TextUtils.ToUpper(attacker);
       return attacker;
     }
 
@@ -1164,7 +1168,7 @@ namespace EQLogParser
     {
       // Needed to replace 'You' and 'you', etc
       var updated = PlayerRegistry.ReplacePlayer(defender, attacker);
-      return ToUpper(updated);
+      return TextUtils.ToUpper(updated);
     }
 
     private static void CheckOwner(string name, out string owner)
@@ -1173,14 +1177,14 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(name))
       {
         var pIndex = name.IndexOf("`s ", StringComparison.Ordinal);
-        if ((pIndex > -1 && IsPetOrMount(name, pIndex + 3, out _)) || (pIndex = name.LastIndexOf(" pet", StringComparison.Ordinal)) > -1)
+        if ((pIndex > -1 && IsPet(name, pIndex + 3, out _)) || (pIndex = name.LastIndexOf(" pet", StringComparison.Ordinal)) > -1)
         {
-          var verifiedPet = PlayerRegistry.Instance.IsVerifiedPet(name);
-          if (verifiedPet || PlayerRegistry.IsPossiblePlayerName(name, pIndex))
+          if (PlayerRegistry.IsPossiblePlayerName(name, pIndex))
           {
-            owner = name[..pIndex];
-            if (!verifiedPet && PlayerRegistry.Instance.IsVerifiedPlayer(owner))
+            var player = name[..pIndex];
+            if (PlayerRegistry.Instance.IsVerifiedPlayer(player))
             {
+              owner = player;
               PlayerRegistry.Instance.AddVerifiedPet(name);
               PlayerRegistry.Instance.AddPetToPlayer(name, owner);
             }
@@ -1189,21 +1193,36 @@ namespace EQLogParser
       }
     }
 
-    private static bool IsPetOrMount(string part, int start, out int len)
+    private static bool IsPet(string part, int start, out int len)
     {
-      var found = false;
       len = -1;
 
-      var end = 2;
-      if ((part.Length >= (start + ++end) && SCompare(part, start, 3, "pet")) ||
-        (part.Length >= (start + ++end) && SCompare(part, start, 4, "ward") && !(part.Length > (start + 5) && part[start + 5] != 'e')) ||
-        (part.Length >= (start + ++end) && SCompare(part, start, 5, "Mount")) ||
-        (part.Length >= (start + ++end) && SCompare(part, start, 6, "warder")) || (part.Length >= (start + end) && SCompare(part, start, 6, "Warder")))
+      if (start < 0 || start >= part.Length)
       {
-        found = true;
-        len = end;
+        return false;
       }
-      return found;
+
+      if (start + 3 <= part.Length && TextUtils.SCompare(part, start, 3, "pet"))
+      {
+        len = 3;
+        return true;
+      }
+
+      if (start + 4 <= part.Length &&
+          TextUtils.SCompare(part, start, 4, "ward") &&
+          !(start + 5 < part.Length && part[start + 5] != 'e'))
+      {
+        len = 4;
+        return true;
+      }
+
+      if (start + 6 <= part.Length && TextUtils.SCompare(part, start, 6, "warder"))
+      {
+        len = 6;
+        return true;
+      }
+
+      return false;
     }
 
     private static string GetTypeFromSpell(string name, string type)
@@ -1240,7 +1259,8 @@ namespace EQLogParser
         return false;
       }
 
-      var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) || ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
+      var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) ||
+        ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
       if (!ignore && CheckEyeRegex.IsMatch(name))
       {
         ignore = !name.EndsWith("Veeshan", StringComparison.OrdinalIgnoreCase)

@@ -16,8 +16,9 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     internal static TankingStatsBuilder Instance = new();
-    internal event EventHandler<DataPointEvent> EventsUpdateDataPoint;
+    internal event Action<DataPointEvent> EventsUpdateDataPoint;
     internal event Action<StatsGenerationEvent> EventsGenerationStatus;
+    private readonly object _lock = new();
     private readonly Dictionary<int, byte> _tankingGroupIds = [];
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
@@ -29,7 +30,7 @@ namespace EQLogParser
 
     internal TankingStatsBuilder()
     {
-      lock (_tankingGroupIds)
+      lock (_lock)
       {
         FightManager.Instance.EventsClearedActiveData += (_) =>
         {
@@ -40,7 +41,7 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      lock (_tankingGroupIds)
+      lock (_lock)
       {
         if (_tankingGroups.Count > 0)
         {
@@ -52,7 +53,7 @@ namespace EQLogParser
 
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      lock (_tankingGroupIds)
+      lock (_lock)
       {
         try
         {
@@ -135,7 +136,7 @@ namespace EQLogParser
 
     internal void FireChartEvent(string action, int damageType, List<PlayerStats> selected = null, bool reset = false)
     {
-      lock (_tankingGroupIds)
+      lock (_lock)
       {
         // this happens when summary window is hidden so reset any time interval
         if (reset)
@@ -151,13 +152,13 @@ namespace EQLogParser
           de.Selected.AddRange(selected);
         }
 
-        EventsUpdateDataPoint?.Invoke(_tankingGroups, de);
+        EventsUpdateDataPoint?.Invoke(de);
       }
     }
 
     private void ComputeTankingStats(GenerateStatsOptions options)
     {
-      lock (_tankingGroupIds)
+      lock (_lock)
       {
         var individualStats = new Dictionary<string, PlayerStats>();
 
@@ -207,6 +208,7 @@ namespace EQLogParser
             }
 
             var lastTime = double.NaN;
+            var prevPlayerTimes = new Dictionary<string, double>();
             foreach (var group in CollectionsMarshal.AsSpan(_tankingGroups))
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
@@ -219,11 +221,12 @@ namespace EQLogParser
                     {
                       _raidTotals.Total += record.Total;
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
-                      StatsUtil.UpdateStats(stats, record);
+                      var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
+                      StatsUtil.UpdateStats(stats, record, isNewFrame);
                       var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
 
                       var critHits = subStats.CritHits;
-                      StatsUtil.UpdateStats(subStats, record);
+                      StatsUtil.UpdateStats(subStats, record, false);
 
                       // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)

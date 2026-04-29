@@ -112,7 +112,10 @@ namespace EQLogParser
           }
         }
 
-        (window.Content as IDisposable)?.Dispose();
+        if (window.Content is IDisposable content)
+        {
+          content.Dispose();
+        }
       }
       else
       {

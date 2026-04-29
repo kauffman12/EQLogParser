@@ -60,7 +60,7 @@ namespace EQLogParser
       var logFiles = new HashSet<string>();
       if (await TriggerStateDB.Instance.GetConfig() is var config)
       {
-        if (MainWindow.CurrentLogFile is { } currentFile)
+        if (AppSettings.CurrentLogFile is { } currentFile)
         {
           logFiles.Add(currentFile);
         }

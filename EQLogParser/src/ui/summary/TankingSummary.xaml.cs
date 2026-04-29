@@ -1,8 +1,10 @@
 using FontAwesome5;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +15,7 @@ namespace EQLogParser
 {
   public partial class TankingSummary : IDocumentContent
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     // Made property since it's used outside this class
     public int DamageType { get; set; }
 
@@ -170,16 +173,16 @@ namespace EQLogParser
 
     private void AssignOwnerClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
+      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
       {
-        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
+        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, header);
         PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {
-      if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      if (AppSettings.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
         CopyToEqClick(sender, null);
@@ -385,7 +388,8 @@ namespace EQLogParser
         if (needRequery)
         {
           var tankingOptions = new GenerateStatsOptions { DamageType = DamageType, MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
-          Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(tankingOptions));
+          _ = Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(tankingOptions)).ContinueWith(t =>
+            Log.Error("Problem building tanking stats", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
         }
       }
     }
@@ -421,7 +425,8 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(statOptions));
+        _ = Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(statOptions)).ContinueWith(t =>
+          Log.Error("Problem building tanking stats.", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
     }
 

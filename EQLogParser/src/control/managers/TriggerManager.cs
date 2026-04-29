@@ -247,7 +247,7 @@ namespace EQLogParser
 
     private async Task HandleBasicConfig(TriggerConfig config)
     {
-      var currentFile = MainWindow.CurrentLogFile;
+      var currentFile = AppSettings.CurrentLogFile;
       LogReader defReader = null;
       TriggerProcessor defProcessor = null;
 

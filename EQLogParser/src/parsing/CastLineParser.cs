@@ -1,7 +1,6 @@
 using log4net;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace EQLogParser
@@ -11,23 +10,24 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly char[] OldSpellChars = ['<', '>'];
 
-    private static readonly Dictionary<string, string> SpecialCastCodes = new()
+    private static readonly Dictionary<string, string> SpecialCastCodes = new(StringComparer.OrdinalIgnoreCase)
     {
       { "Glyph of Ultimate Power", "G" }, { "Glyph of Destruction", "G" }, { "Glyph of Dragon", "D" },
       { "Intensity of the Resolute", "7" }, { "Staunch Recovery", "6" }, { "Glyph of Arcane Secrets", "S" }
     };
 
-    private static readonly Dictionary<string, bool> PetSpells = new()
-    {
-      { "Fortify Companion", true }, { "Zeal of the Elements", true }, { "Frenzied Burnout", true }, { "Frenzy of the Dead", true }
-    };
+    private static readonly List<string> PetSpells =
+    [
+      "Companion Relocation", "Fortify Companion", "Bestial Bloodrage", "Frenzied Burnout", "Frenzy of the Dead", "Empowered Minion",
+      "Companion's Aegis", "Second Wind Ward", "Zeal of the Elements"
+    ];
 
     public static bool Process(LineData lineData)
     {
       try
       {
         var split = lineData.Split;
-        if (split.Length > 1 && !split[0].Contains('.') && !split.Last().EndsWith(')') && !CheckLandsOnMessages(split, lineData.BeginTime))
+        if (split.Length > 1 && !split[0].Contains('.') && !split[^1].EndsWith(')') && !CheckLandsOnMessages(split, lineData.BeginTime))
         {
           string player = null;
           string spellName = null;
@@ -157,7 +157,7 @@ namespace EQLogParser
 
               if (specialKey != null && spellData != null)
               {
-                EQDataStore.Instance.UpdateAdps(spellData);
+                AdpsTracker.Instance.UpdateAdps(spellData);
               }
             }
             else
@@ -186,8 +186,17 @@ namespace EQLogParser
 
     private static bool CheckLandsOnMessages(string[] split, double beginTime)
     {
-      // LandsOnYou messages also require DataIndex of zero
-      var player = ConfigUtil.PlayerName;
+      // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
+      if (split.Length > 3 && split[1] == "have" && split[2] == "entered")
+      {
+        var zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
+        RecordsStore.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
+        if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
+        {
+          AdpsTracker.Instance.RemoveSongSpells();
+          return true;
+        }
+      }
 
       // old logs sometimes had received messages on the same line as a heal
       // [Sun Aug 04 23:39:56 2019] You are generously healed. You healed Kizant for 35830 (500745) hit points by Staunch Recovery.
@@ -197,90 +206,70 @@ namespace EQLogParser
         {
           // if it's a spell
           var lastIndex = split.Length - 1;
-          if (lastIndex != i && split[i].Equals("Rk."))
+          if (lastIndex != i && split[i].Equals("Rk.", StringComparison.Ordinal))
           {
             return false;
           }
 
           if (i < lastIndex)
           {
-            split = split.Take(i + 1).ToArray();
+            split = split[..(i + 1)];
           }
         }
       }
 
-      var searchResult = EQDataStore.Instance.GetLandsOnYou(split);
-      if (searchResult.SpellData.Count == 0 || searchResult.DataIndex != 0)
+      // lands on you
+      if (EQDataStore.Instance.TryGetLandsOnYou(split, out var searchResult))
       {
-        // WearOff messages can only apply to use so DataIndex has to also be zero meaning that every word was matched
-        searchResult = EQDataStore.Instance.GetWearOff(split);
-        if (searchResult.SpellData.Count > 0 && searchResult.DataIndex == 0)
-        {
-          if (!string.IsNullOrEmpty(player))
-          {
-            var newSpell = new ReceivedSpell { Receiver = string.Intern(player), IsWearOff = true };
-            if (searchResult.SpellData.Count == 1)
-            {
-              newSpell.SpellData = searchResult.SpellData.First();
-            }
-            else
-            {
-              newSpell.Ambiguity.AddRange(searchResult.SpellData);
-            }
-
-            RecordsStore.Instance.Add(newSpell, beginTime);
-          }
-          return true;
-        }
-
-        searchResult = EQDataStore.Instance.GetLandsOnOther(split, out player);
-        if (searchResult.SpellData.Count == 1 && !string.IsNullOrEmpty(player))
-        {
-          if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
-          PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
-          {
-            foreach (var spell in PetSpells.Keys)
-            {
-              if (searchResult.SpellData[0].Name.StartsWith(spell))
-              {
-                PlayerRegistry.Instance.AddVerifiedPet(player);
-              }
-            }
-          }
-          else if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet2 && !PlayerRegistry.Instance.IsVerifiedPet(player) &&
-            PlayerRegistry.IsPossiblePlayerName(player) && !PlayerRegistry.Instance.IsVerifiedPlayer(player))
-          {
-            PlayerRegistry.Instance.AddVerifiedPet(player);
-          }
-        }
-      }
-
-      if (searchResult.SpellData.Count > 0 && !string.IsNullOrEmpty(player))
-      {
-        var newSpell = new ReceivedSpell { Receiver = string.Intern(player) };
-        if (searchResult.SpellData.Count == 1)
-        {
-          newSpell.SpellData = searchResult.SpellData.First();
-        }
-        else
-        {
-          newSpell.Ambiguity.AddRange(searchResult.SpellData);
-        }
-
-        RecordsStore.Instance.Add(newSpell, beginTime);
+        AddReceived(ConfigUtil.PlayerName, searchResult);
         return true;
       }
 
-      // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
-      if (split[1] == "have" && split[2] == "entered")
+      // wear off you
+      if (EQDataStore.Instance.TryGetWearOff(split, out searchResult))
       {
-        var zone = string.Join(" ", [.. split], 3, split.Length - 3).TrimEnd('.');
-        RecordsStore.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
-        if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
+        AddReceived(ConfigUtil.PlayerName, searchResult, true);
+        return true;
+      }
+
+      // lands on other
+      if (EQDataStore.Instance.TryGetLandsOnOther(split, out searchResult, out var target))
+      {
+        AddReceived(target, searchResult);
+
+        // if it's a pet spell, add the pet to the registry so we can track it better
+        if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet || searchResult.SpellData[0].Target == (int)SpellTarget.Pet2)
         {
-          AdpsTracker.Instance.RemoveSongSpells();
-          return true;
+          // dont change a pet into a player by accident
+          if (searchResult.SpellData.Count == 1 && !PlayerRegistry.Instance.IsVerifiedPet(target) && !PlayerRegistry.Instance.IsVerifiedPlayer(target))
+          {
+            foreach (var spell in PetSpells)
+            {
+              if (searchResult.SpellData[0].Name?.StartsWith(spell, StringComparison.OrdinalIgnoreCase) == true)
+              {
+                PlayerRegistry.Instance.AddVerifiedPet(target);
+                break;
+              }
+            }
+          }
         }
+
+        return true;
+      }
+
+      void AddReceived(string receiver, SpellTreeResult result, bool isWearOff = false)
+      {
+        var newSpell = new ReceivedSpell { Receiver = string.Intern(receiver), IsWearOff = isWearOff };
+        if (result.SpellData.Count == 1)
+        {
+          newSpell.SpellData = result.SpellData[0];
+        }
+        else
+        {
+          newSpell.Ambiguity.AddRange(result.SpellData);
+        }
+
+        RecordsStore.Instance.Add(newSpell, beginTime);
       }
 
       return false;
@@ -289,10 +278,17 @@ namespace EQLogParser
     private static string CheckForSpecial(Dictionary<string, string> codes, string spellName, string player, double currentTime)
     {
       string found = null;
-      if (codes.Keys.FirstOrDefault(special => !string.IsNullOrEmpty(spellName) && spellName.Contains(special)) is { } key && !string.IsNullOrEmpty(key))
+      if (!string.IsNullOrEmpty(spellName))
       {
-        RecordsStore.Instance.Add(new SpecialRecord { Code = codes[key], Player = player }, currentTime);
-        found = key;
+        foreach (var (special, code) in codes)
+        {
+          if (spellName.Contains(special, StringComparison.OrdinalIgnoreCase))
+          {
+            RecordsStore.Instance.Add(new SpecialRecord { Code = code, Player = player }, currentTime);
+            found = special;
+            break;
+          }
+        }
       }
       return found;
     }

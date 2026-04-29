@@ -45,9 +45,9 @@ namespace EQLogParserTest
 
     private static DamageRecord ParseEmuAction(string action)
     {
-      MainWindow.IsEmuParsingEnabled = true;
+      AppSettings.IsEmuParsingEnabled = true;
       var result = DamageLineParser.ParseLine(action);
-      MainWindow.IsEmuParsingEnabled = false;
+      AppSettings.IsEmuParsingEnabled = false;
       return result;
     }
 

@@ -10,6 +10,7 @@
 - **2-space indentation** throughout all files
 - Braces on same line for class/method declarations
 - Braces on new line for control structures (if/else/for/while)
+- **Never use single-line try/catch blocks** — always use multi-line brace style, even for simple bodies
 - Consistent spacing around operators and after commas
 - Logical grouping of related methods with blank lines
 - Line length limited to ~120 characters
@@ -65,15 +66,11 @@
 
 ## Singleton Pattern
 
-Managers and shared services use a singleton pattern with lazy initialization:
+Managers and shared services use a singleton pattern with simple initialization unless the
+singleton is expensive and not always used:
 
 ```csharp
-private static T _instance;
-internal static T Instance
-{
-  get => _instance ??= new();
-  set => _instance = value;
-}
+internal static T Instance { get; } = new();
 ```
 
 The setter enables test injection. Consumers access the singleton via `ClassName.Instance`.
@@ -163,16 +160,41 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 
 ### Pattern Matching
 - Prefer pattern matching over explicit null checks: `if (expr is { } found)` instead of `var found = expr; if (found != null)`
+- Prefer `is not null` over `!= null`
 - Combine type checking and null checking in one expression: `if (prop is PropertyItem item && item.Name == name)` instead of separate checks
-- Use pattern matching to avoid intermediate variables
+- Use property patterns for nested casts: `if (sender is MenuItem { Header: string header })` instead of `(sender as MenuItem)?.Header as string`
+- Extract variable once in pattern match, then reuse — avoid redundant `as` casts after the match
+- Prefer `switch` expressions over `switch` statements
+- Use `OfType<T>()` for filtering collections instead of `ForEach(x as Type)`
+
+**Anti-patterns to avoid:**
+
+```csharp
+// Bad: redundant as cast after pattern matching already extracted the variable
+if (players.SelectedItem is string { Length: > 0 } name)
+{
+    LoadChannels(players.SelectedItem as string); // reuse `name` instead
+}
+
+// Bad: nested as casts
+GetStatsByClass((sender as MenuItem)?.Header as string); // expand to block with property pattern
+```
 
 ### Collection Operations
 - Use `FirstOrDefault()` instead of `ToList().Find()` - avoids allocating an extra list
 - Prefer `FirstOrDefault(predicate)` over `First(predicate)` when the item might not exist (avoids exception)
+- Use `OfType<T>()` with `foreach` to filter and process: `foreach (var x in items.OfType<T>())` instead of `items.ForEach(x => Process(x as T))`
 
 ### Variable Declarations
 - Remove unnecessary intermediate variables - inline expressions when they are only used once or twice
 - Prefer `var` when the type is obvious from the right-hand side
+
+### When to Skip Modernization
+
+Not every `as` cast needs to be converted to pattern matching. Leave `as` + null-conditional as-is when:
+- It is already concise on a single line (e.g., `(obj as Type)?.Property`)
+- The consuming method accepts `null` gracefully (e.g., `BuildTsv(title: label.Content as string)`)
+- The result is immediately passed to a method and no further use of the variable is needed
 
 ### Example Transformations
 
@@ -195,6 +217,51 @@ if (string.IsNullOrEmpty(item.CategoryName))
 if (settings.FirstOrDefault(setting => setting.Name == item.CategoryName) is { } found)
 {
     // use found
+}
+```
+
+Before:
+```csharp
+if (sender is MenuItem item)
+{
+    ChangeThemeFontFamily(item.Header as string);
+}
+```
+
+After:
+```csharp
+if (sender is MenuItem { Header: string header })
+{
+    ChangeThemeFontFamily(header);
+}
+```
+
+Before:
+```csharp
+if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
+{
+    AddPetToPlayer(stats.OrigName, item.Header as string);
+}
+```
+
+After:
+```csharp
+if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
+{
+    AddPetToPlayer(stats.OrigName, header);
+}
+```
+
+Before:
+```csharp
+block.Actions.ForEach(action => UpdatePetMapping(action as DamageRecord));
+```
+
+After:
+```csharp
+foreach (var action in block.Actions.OfType<DamageRecord>())
+{
+    UpdatePetMapping(action);
 }
 ```
 

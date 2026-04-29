@@ -29,6 +29,24 @@ namespace EQLogParser
       return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte or Labels.Absorb;
     }
 
+    internal static bool CheckNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
+    {
+      if (!prevPlayerTimes.TryGetValue(name, out var prevTime))
+      {
+        prevPlayerTimes[name] = beginTime;
+        prevTime = beginTime;
+      }
+
+      var newFrame = beginTime > prevTime;
+
+      if (newFrame)
+      {
+        prevPlayerTimes[name] = beginTime;
+      }
+
+      return newFrame;
+    }
+
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
     {
       PlayerStats stats;

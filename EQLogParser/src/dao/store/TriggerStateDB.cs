@@ -238,7 +238,7 @@ namespace EQLogParser
       {
         if (dst?.Id is { } parentId && src.Clone() is { } copied)
         {
-          if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+          if (GetCol<TriggerNode>(TreeCol) is { } tree)
           {
             copied.Id = Guid.NewGuid().ToString();
             copied.Name = (tree.FindOne(n => n.Parent == parentId && n.Name == src.Name) != null) ? $"Copied {src.Name}" : src.Name;
@@ -267,7 +267,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (treeView?.SerializedData is { } node && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        if (treeView?.SerializedData is { } node && GetCol<TriggerState>(StatesCol) is { } states)
         {
           var fromState = states.FindOne(s => s.Id == from);
           var toState = states.FindOne(s => s.Id == to);
@@ -327,11 +327,11 @@ namespace EQLogParser
         var removed = new HashSet<string>();
         var removedOverlays = new HashSet<string>();
 
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           Delete(tree, tree.FindOne(n => n.Id == id), removed, removedOverlays);
 
-          if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
+          if (GetCol<TriggerState>(StatesCol) is { } states)
           {
             foreach (var state in states.FindAll().ToArray())
             {
@@ -385,11 +385,11 @@ namespace EQLogParser
         await _taskQueue.EnqueueTransaction(() =>
         {
           config.Characters.Remove(existing);
-          _db?.GetCollection<TriggerConfig>(ConfigCol)?.Update(config);
+          GetCol<TriggerConfig>(ConfigCol)?.Update(config);
 
           if (GetPlayerState(id) is { } state)
           {
-            _db?.GetCollection<TriggerState>(StatesCol)?.Delete(state.Id);
+            GetCol<TriggerState>(StatesCol)?.Delete(state.Id);
           }
 
           return Task.CompletedTask;
@@ -404,7 +404,7 @@ namespace EQLogParser
       return await _taskQueue.Enqueue(() =>
       {
         IEnumerable<OtData> result = null;
-        if (_db?.GetCollection<TriggerNode>(TreeCol)?.FindAll() is { } all)
+        if (GetCol<TriggerNode>(TreeCol)?.FindAll() is { } all)
         {
           result = all.Where(n => n.OverlayData != null).Select(n => new OtData { Name = n.Name, Id = n.Id, OverlayData = n.OverlayData });
         }
@@ -416,7 +416,7 @@ namespace EQLogParser
     {
       return _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
+        if (GetCol<TriggerConfig>(ConfigCol) is { } configs)
         {
           if (configs.Count() == 0)
           {
@@ -435,7 +435,7 @@ namespace EQLogParser
       return await _taskQueue.Enqueue(() =>
       {
         TriggerNode result = null;
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           if (isTextOverlay)
           {
@@ -479,17 +479,17 @@ namespace EQLogParser
 
     internal async Task<List<LexiconItem>> GetLexicon()
     {
-      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<LexiconItem>(LexiconCol)?.FindAll()?.ToList() ?? []));
+      return await _taskQueue.Enqueue(() => Task.FromResult(GetCol<LexiconItem>(LexiconCol)?.FindAll()?.ToList() ?? []));
     }
 
     internal async Task<List<TrustedPlayer>> GetTrustedPlayers()
     {
-      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TrustedPlayer>(TrustedPlayersCol)?.FindAll()?.ToList() ?? []));
+      return await _taskQueue.Enqueue(() => Task.FromResult(GetCol<TrustedPlayer>(TrustedPlayersCol)?.FindAll()?.ToList() ?? []));
     }
 
     internal async Task<TriggerNode> GetOverlayById(string id)
     {
-      return await _taskQueue.Enqueue(() => Task.FromResult(_db?.GetCollection<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
+      return await _taskQueue.Enqueue(() => Task.FromResult(GetCol<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
     }
 
     // from GINA or Quick Share
@@ -497,7 +497,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           // Overlays only have the one root node
           var root = tree.FindOne(n => n.Parent == null && n.Name == Overlays);
@@ -524,7 +524,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
           var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
@@ -541,7 +541,7 @@ namespace EQLogParser
     {
       return await _taskQueue.Enqueue(() =>
       {
-        if (triggerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+        if (triggerId != null && GetCol<TriggerState>(StatesCol) is { } states)
         {
           foreach (var state in states.FindAll().ToArray())
           {
@@ -559,7 +559,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<LexiconItem>(LexiconCol) is { } lexicon)
+        if (GetCol<LexiconItem>(LexiconCol) is { } lexicon)
         {
           lexicon.DeleteAll();
           lexicon.InsertBulk(list);
@@ -575,7 +575,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<TrustedPlayer>(TrustedPlayersCol) is { } trustedPlayers)
+        if (GetCol<TrustedPlayer>(TrustedPlayersCol) is { } trustedPlayers)
         {
           trustedPlayers.DeleteAll();
           trustedPlayers.InsertBulk(list);
@@ -614,7 +614,7 @@ namespace EQLogParser
       await _taskQueue.EnqueueTransaction(() =>
       {
         if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
-            _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+            GetCol<TriggerState>(StatesCol) is { } states)
         {
           foreach (var playerId in playerIds)
           {
@@ -643,7 +643,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        AssignOverlay(_db?.GetCollection<TriggerNode>(TreeCol), id, nodes);
+        AssignOverlay(GetCol<TriggerNode>(TreeCol), id, nodes);
         return Task.CompletedTask;
       });
     }
@@ -652,7 +652,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        AssignPriority(_db?.GetCollection<TriggerNode>(TreeCol), pri, nodes);
+        AssignPriority(GetCol<TriggerNode>(TreeCol), pri, nodes);
         return Task.CompletedTask;
       });
     }
@@ -661,7 +661,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), [id], nodes);
+        UnassignOverlays(GetCol<TriggerNode>(TreeCol), [id], nodes);
         return Task.CompletedTask;
       });
     }
@@ -671,7 +671,7 @@ namespace EQLogParser
       var ids = (await GetAllOverlays()).Where(overlay => overlay.OverlayData.IsTextOverlay).Select(overlay => overlay.Id).ToList();
       await _taskQueue.EnqueueTransaction(() =>
       {
-        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), ids, nodes);
+        UnassignOverlays(GetCol<TriggerNode>(TreeCol), ids, nodes);
         return Task.CompletedTask;
       });
     }
@@ -682,7 +682,7 @@ namespace EQLogParser
       // one set of updates per transaction
       await _taskQueue.EnqueueTransaction(() =>
       {
-        UnassignOverlays(_db?.GetCollection<TriggerNode>(TreeCol), ids, nodes);
+        UnassignOverlays(GetCol<TriggerNode>(TreeCol), ids, nodes);
         return Task.CompletedTask;
       });
     }
@@ -694,7 +694,7 @@ namespace EQLogParser
 
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           if (updateIndex)
           {
@@ -748,7 +748,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        _db?.GetCollection<TriggerConfig>(ConfigCol)?.Update(config);
+        GetCol<TriggerConfig>(ConfigCol)?.Update(config);
         return Task.CompletedTask;
       });
 
@@ -759,7 +759,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (id is not null && _db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (id is not null && GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
           {
@@ -838,7 +838,7 @@ namespace EQLogParser
         toState.Enabled.Remove(node.Id);
       }
 
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      if (GetCol<TriggerNode>(TreeCol) is { } tree)
       {
         foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToArray())
         {
@@ -850,7 +850,7 @@ namespace EQLogParser
     private TriggerTreeViewNode CreateNode(string parentId, string name, string type = null, bool isTextOverlay = false)
     {
       TriggerTreeViewNode viewNode = null;
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      if (GetCol<TriggerNode>(TreeCol) is { } tree)
       {
         var newNode = new TriggerNode
         {
@@ -916,11 +916,11 @@ namespace EQLogParser
 
     private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
-      if (parent?.Id is not { } parentId || imported == null || _db?.GetCollection<TriggerNode>(TreeCol) is not { } tree) return;
+      if (parent?.Id is not { } parentId || imported == null || GetCol<TriggerNode>(TreeCol) is not { } tree) return;
 
       // get character state if needed (here so we can search once)
       List<TriggerState> characterStates = null;
-      if (characterIds?.Count > 0 && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      if (characterIds?.Count > 0 && GetCol<TriggerState>(StatesCol) is { } states)
       {
         characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
       }
@@ -1040,7 +1040,7 @@ namespace EQLogParser
         {
           RecentlyMerged[enableId] = true;
 
-          if (characterStates != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+          if (characterStates != null && GetCol<TriggerState>(StatesCol) is { } states)
           {
             foreach (var state in characterStates)
             {
@@ -1080,7 +1080,7 @@ namespace EQLogParser
         {
           // get direct config reference as we are within a transaction
           TriggerConfig config = null;
-          if (_db?.GetCollection<TriggerConfig>(ConfigCol) is { } configs)
+          if (GetCol<TriggerConfig>(ConfigCol) is { } configs)
           {
             config = configs.FindAll().FirstOrDefault();
           }
@@ -1128,7 +1128,7 @@ namespace EQLogParser
 
     private void SetStateFromParentInternal(string parentId, string playerId, TriggerTreeViewNode node)
     {
-      if (_db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      if (GetCol<TriggerState>(StatesCol) is { } states)
       {
         foreach (var state in states.FindAll().ToArray())
         {
@@ -1155,7 +1155,7 @@ namespace EQLogParser
       return await _taskQueue.EnqueueTransaction(() =>
       {
         TriggerTreeViewNode root = null;
-        if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+        if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           TriggerState state = null;
           if (name == Triggers)
@@ -1176,7 +1176,7 @@ namespace EQLogParser
 
             if (needUpdate)
             {
-              _db?.GetCollection<TriggerState>(StatesCol)?.Update(state);
+              GetCol<TriggerState>(StatesCol)?.Update(state);
             }
           }
         }
@@ -1188,7 +1188,7 @@ namespace EQLogParser
     private TriggerState GetPlayerState(string playerId)
     {
       TriggerState state = null;
-      if (playerId != null && _db?.GetCollection<TriggerState>(StatesCol) is { } states)
+      if (playerId != null && GetCol<TriggerState>(StatesCol) is { } states)
       {
         state = states.FindOne(s => s.Id == playerId);
 
@@ -1239,7 +1239,7 @@ namespace EQLogParser
 
     private List<string> ValidateOverlays(IEnumerable<string> existing)
     {
-      if (_db?.GetCollection<TriggerNode>(TreeCol) is { } tree)
+      if (GetCol<TriggerNode>(TreeCol) is { } tree)
       {
         var allOverlays = tree.Find(node => node.OverlayData != null).ToList();
         return existing?.Where(id => tree.FindOne(node => node.Id == id) != null).ToList() ?? [];
@@ -1360,14 +1360,14 @@ namespace EQLogParser
 
       if (defaultEnabled.Count > 0)
       {
-        var states = _db?.GetCollection<TriggerState>(StatesCol);
+        var states = GetCol<TriggerState>(StatesCol);
         states?.Insert(new TriggerState { Id = DefaultUser, Enabled = defaultEnabled });
       }
 
       if (ConfigUtil.IfSetOrElse("TriggersEnabled"))
       {
         var config = new TriggerConfig { IsEnabled = true, Id = Guid.NewGuid().ToString() };
-        _db?.GetCollection<TriggerConfig>(ConfigCol)?.Insert(config);
+        GetCol<TriggerConfig>(ConfigCol)?.Insert(config);
       }
 
       _db?.Checkpoint();
@@ -1443,7 +1443,7 @@ namespace EQLogParser
         }
       }
 
-      _db?.GetCollection<TriggerNode>(TreeCol)?.Insert(newNode);
+      GetCol<TriggerNode>(TreeCol)?.Insert(newNode);
 
       if (old.Nodes != null)
       {
@@ -1467,6 +1467,8 @@ namespace EQLogParser
 
       return value;
     }
+
+    private ILiteCollection<T> GetCol<T>(string colName) => _db?.GetCollection<T>(colName);
 
     private class VersionData
     {

@@ -103,7 +103,10 @@ namespace EQLogParser
 
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      UpdateTestButton(dataGrid.SelectedItem as LexiconItem);
+      if (dataGrid.SelectedItem is LexiconItem item)
+      {
+        UpdateTestButton(item);
+      }
       CleanupTable();
     }
 
