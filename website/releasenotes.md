@@ -1,4 +1,4 @@
-**Note that Windows 7/8 support will end by Septermber this year**
+**Note that Windows 7/8 support will end by September this year**
 
 # 2.3.51 | 04/29/26
 1. Added New Feature **Group View** to the **Damage Summary** to allow players to be grouped together and combine their damage statistics. In addition, the '/who all raid' information is parsed and available in a dropdown so that you can assign groups from it. Switch to **Group View** by using the existing dropdown that shows **Player +Pets** as an option.
