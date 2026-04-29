@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 
 namespace EQLogParser
 {
@@ -72,14 +71,37 @@ namespace EQLogParser
     internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImageAsync(TheDataGrid, TheTitle, true);
     internal void DataGridShowBreakdownClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetSelectedStats());
     internal void DataGridShowBreakdown2Click(object sender, RoutedEventArgs e) => ShowBreakdown2(GetSelectedStats());
-    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown(GetStatsByClass((sender as MenuItem)?.Header as string));
-    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e) => ShowBreakdown2(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridShowBreakdownByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className })
+      {
+        ShowBreakdown(GetStatsByClass(className));
+      }
+    }
+    internal void DataGridShowBreakdown2ByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className2 })
+      {
+        ShowBreakdown2(GetStatsByClass(className2));
+      }
+    }
     internal void DataGridShowSpellCountsClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetSelectedStats());
-    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e) => ShowSpellCounts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal void DataGridSpellCountsByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className3 })
+      {
+        ShowSpellCounts(GetStatsByClass(className3));
+      }
+    }
     internal async void DataGridShowSpellCastsClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetSelectedStats());
-    internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e) => await ShowSpellCasts(GetStatsByClass((sender as MenuItem)?.Header as string));
+    internal async void DataGridSpellCastsByClassClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is MenuItem { Header: string className4 })
+      {
+        await ShowSpellCasts(GetStatsByClass(className4));
+      }
+    }
     internal void SelectDataGridColumns(object sender, EventArgs e) => DataGridUtil.SetHiddenColumns(TheColumnsCombo, TheDataGrid);
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     internal void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(TheClassesCombo, sender);
 
     internal static void CreateClassMenuItems(MenuItem parent, Action<object, RoutedEventArgs> classHandler, bool enabled, Action<object, RoutedEventArgs> selectedHandler = null)
@@ -91,7 +113,7 @@ namespace EQLogParser
         parent.Items.Add(selected);
       }
 
-      DataManager.Instance.GetClassList().ForEach(name =>
+      EQDataStore.Instance.GetClassList().ForEach(name =>
       {
         var item = new MenuItem { IsEnabled = enabled, Header = name };
         item.Click += new RoutedEventHandler(classHandler);
@@ -130,7 +152,7 @@ namespace EQLogParser
         var selected = GetSelectedStats().FirstOrDefault();
         if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
         {
-          PlayerManager.Instance.SetDefaultPlayerClass(selected.OrigName, className);
+          PlayerRegistry.Instance.SetDefaultPlayerClass(selected.OrigName, className);
           selected.ClassName = className;
           DataGridUtil.RefreshTable(TheDataGrid);
         }
@@ -181,7 +203,7 @@ namespace EQLogParser
       return headers;
     }
 
-    internal List<PlayerStats> GetSelectedStats()
+    internal virtual List<PlayerStats> GetSelectedStats()
     {
       if (TheDataGrid is SfTreeGrid treeGrid)
       {
@@ -212,6 +234,10 @@ namespace EQLogParser
           if (CurrentStats.Children.TryGetValue(stats.Name, out var child))
           {
             results.AddRange(child);
+          }
+          else if (stats is GroupEntry groupEntry)
+          {
+            results.AddRange(groupEntry.Children);
           }
         }
         return results;

@@ -1,4 +1,4 @@
-﻿<local:CastTable x:Class="EQLogParser.SpellCountTable"
+<local:CastTable x:Class="EQLogParser.SpellCountTable"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -29,22 +29,20 @@
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
-                           AllowResizingColumns="True"
-                           AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           CurrentCellBorderThickness="0"
-                           FrozenColumnCount="1"
-                           Grid.Row="1"
-                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                           GridLinesVisibility="Both"
-                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                           IsReadOnly="True"
-                           RowHeaderWidth="{DynamicResource EQTableShortRowHeaderWidth}"
-                           RowHeight="{DynamicResource EQTableRowHeight}"
-                           ScrollViewer.CanContentScroll="False"
-                           ShowRowHeader="True"
-                           SelectionMode="Extended">
-      <syncfusion:SfDataGrid.ContextMenu>
+                            AllowResizingColumns="True"
+                            AllowSorting="True"
+                            AutoGenerateColumns="False"
+                            CurrentCellBorderThickness="0"
+                            FrozenColumnCount="1"
+                            Grid.Row="1"
+                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                            GridLinesVisibility="Both"
+                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                            IsReadOnly="True"
+                            RowHeight="{DynamicResource EQTableRowHeight}"
+                            ScrollViewer.CanContentScroll="False"
+                            SelectionMode="Extended">
+       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}" 
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
@@ -108,21 +106,6 @@
           </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
-      <syncfusion:SfDataGrid.Resources>
-        <Style TargetType="syncfusion:GridRowHeaderCell">
-          <Setter Property="Template">
-            <Setter.Value>
-              <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-                <Border PreviewMouseDown="RemoveSpellMouseDown" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                  <Grid>
-                    <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
-                  </Grid>
-                </Border>
-              </ControlTemplate>
-            </Setter.Value>
-          </Setter>
-        </Style>
-      </syncfusion:SfDataGrid.Resources>
     </syncfusion:SfDataGrid>
   </Grid>
 </local:CastTable>

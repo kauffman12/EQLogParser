@@ -43,7 +43,6 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RequestTreeItems="DataGridRequestTreeItems"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"

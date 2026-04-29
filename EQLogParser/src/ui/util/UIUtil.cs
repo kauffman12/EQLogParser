@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -51,6 +51,10 @@ namespace EQLogParser
           }
         }, DispatcherPriority.DataBind);
       }
+      else
+      {
+        Log.Warn("Attempted to set Clipboard Text to null");
+      }
     }
 
     internal static DispatcherTimer CreateTimer(EventHandler tickHandler, int interval, bool start, DispatcherPriority priority = DispatcherPriority.Normal)
@@ -65,19 +69,25 @@ namespace EQLogParser
       var entry = new ExpandoObject() as dynamic;
       entry.Name = name;
 
-      var index = collection.ToList().BinarySearch(entry, TheSortableNameComparer);
+      bool hasSentinel = collection.Count > 0 &&
+        ((dynamic)collection[0])?.Name == Labels.Unassigned;
+
+      var searchStart = hasSentinel ? 1 : 0;
+      var searchList = collection.Skip(searchStart).ToList();
+      var index = searchList.BinarySearch(entry, TheSortableNameComparer);
+
       if (index < 0)
       {
-        collection.Insert(~index, entry);
+        collection.Insert(searchStart + ~index, entry);
       }
       else
       {
-        entry = collection[index];
+        entry = collection[searchStart + index];
       }
 
       if (isPlayer)
       {
-        entry.PlayerClass = PlayerManager.Instance.GetDefaultPlayerClass(name);
+        entry.PlayerClass = PlayerRegistry.Instance.GetDefaultPlayerClass(name);
       }
 
       return entry;
@@ -115,7 +125,7 @@ namespace EQLogParser
 
       for (var i = dest.Count - 1; i >= index; i--)
       {
-        dest.RemoveAt(index);
+        dest.RemoveAt(i);
       }
     }
 
@@ -214,7 +224,7 @@ namespace EQLogParser
     {
       public int Compare(PetMapping x, PetMapping y)
       {
-        return string.CompareOrdinal(x?.Owner, y?.Owner);
+        return string.CompareOrdinal(x?.Pet, y?.Pet);
       }
     }
 
@@ -225,5 +235,6 @@ namespace EQLogParser
         return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
       }
     }
+
   }
 }

@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EQLogParser.Audio;
+using log4net;
 using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
@@ -290,7 +291,7 @@ namespace EQLogParser
 
     internal static async Task LoadOverlayStyles()
     {
-      foreach (var od in await TriggerStateManager.Instance.GetAllOverlays())
+      foreach (var od in await TriggerStateDB.Instance.GetAllOverlays())
       {
         var node = new TriggerNode { Name = od.Name, Id = od.Id, OverlayData = od.OverlayData };
         await LoadOverlayStyle(node, od.OverlayData);
@@ -328,7 +329,7 @@ namespace EQLogParser
       var text = new ObservableCollection<ComboBoxItemDetails>();
       var timer = new ObservableCollection<ComboBoxItemDetails>();
 
-      foreach (var data in await TriggerStateManager.Instance.GetAllOverlays())
+      foreach (var data in await TriggerStateDB.Instance.GetAllOverlays())
       {
         var isChecked = overlayIds?.Contains(data.Id) ?? false;
         var details = new ComboBoxItemDetails { IsChecked = isChecked, Text = data.Name, Value = data.Id };
@@ -429,7 +430,7 @@ namespace EQLogParser
           {
             if (groupName == option.Key && !string.IsNullOrEmpty(option.Op))
             {
-              if (StatsUtil.ParseUInt(groupValue) is var value && value != uint.MaxValue)
+              if (TextUtils.ParseUInt(groupValue) is var value && value != uint.MaxValue)
               {
                 switch (option.Op)
                 {
@@ -588,7 +589,7 @@ namespace EQLogParser
         {
           if (exportList.Count > 0)
           {
-            var isTriggers = exportList[0].Name == TriggerStateManager.Triggers;
+            var isTriggers = exportList[0].Name == TriggerStateDB.Triggers;
             var result = JsonSerializer.Serialize(exportList);
             var saveFileDialog = new SaveFileDialog();
             var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
@@ -655,18 +656,18 @@ namespace EQLogParser
         BeginTime = dateTime,
         Key = fullKey,
         From = chatType.Sender,
-        To = (to == "You" && processorName != null && characterId != TriggerStateManager.DefaultUser) ? processorName : TextUtils.ToUpper(to),
+        To = (to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser) ? processorName : TextUtils.ToUpper(to),
         IsMine = chatType.SenderIsYou,
         Type = type
       };
 
-      RecordManager.Instance.Add(record);
+      RecordsStore.Instance.Add(record);
 
       if (doImport)
       {
         // don't handle immediately unless enabled
         if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
-              ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordManager.Instance.IsQuickShareMine(fullKey))
+              ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordsStore.Instance.IsQuickShareMine(fullKey))
         {
           // ignore if we're still processing a bunch
           if (QuickShareCache.Count > 5)
@@ -758,7 +759,7 @@ namespace EQLogParser
 
               var record = new QuickShareRecord
               {
-                BeginTime = DateUtil.ToDouble(DateTime.Now),
+                BeginTime = DateUtil.ToDotNetSeconds(DateTime.Now),
                 Key = withKey,
                 From = "You",
                 IsMine = true,
@@ -766,7 +767,7 @@ namespace EQLogParser
                 Type = type
               };
 
-              RecordManager.Instance.Add(record);
+              RecordsStore.Instance.Add(record);
 
               Task action() => OpenQuickShareStatusAsync(shareLink);
               new MessageWindow($"Share Key: {withKey}", Resource.SHARE_MESSAGE, withKey, "View Quick Share Stats", action).ShowDialog();
@@ -796,7 +797,7 @@ namespace EQLogParser
     internal static async Task OpenQuickShareStatusAsync(string selected)
     {
       List<string> keys = [];
-      foreach (var share in RecordManager.Instance.AllQuickShareRecords)
+      foreach (var share in RecordsStore.Instance.AllQuickShareRecords)
       {
         if (MatchQuickShare(share.Key) is { } match)
         {
@@ -942,11 +943,11 @@ namespace EQLogParser
             {
               if (quickShareData.IsTrigger)
               {
-                await TriggerStateManager.Instance.ImportTriggers("", nodes, characterIds);
+                await TriggerStateDB.Instance.ImportTriggers("", nodes, characterIds);
               }
               else
               {
-                await TriggerStateManager.Instance.ImportOverlays(nodes);
+                await TriggerStateDB.Instance.ImportOverlays(nodes);
               }
             }
             else
@@ -966,13 +967,13 @@ namespace EQLogParser
                 var mergeIds = msgDialog.MergeOption ? characterIds : null;
                 if (msgDialog.IsYes2Clicked)
                 {
-                  await TriggerStateManager.Instance.ImportTriggers("", nodes, mergeIds);
+                  await TriggerStateDB.Instance.ImportTriggers("", nodes, mergeIds);
                 }
                 if (msgDialog.IsYes1Clicked)
                 {
                   var folderName = (player == null) ? "New Folder" : "From " + player;
-                  folderName += " (" + DateUtil.FormatSimpleDate(DateUtil.ToDouble(DateTime.Now)) + ")";
-                  await TriggerStateManager.Instance.ImportTriggers(folderName, nodes, mergeIds);
+                  folderName += " (" + DateUtil.FormatDotNetDateSeconds(DateUtil.ToDotNetSeconds(DateTime.Now)) + ")";
+                  await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, mergeIds);
                 }
               }
               else
@@ -988,7 +989,7 @@ namespace EQLogParser
 
                 if (msgDialog.IsYes1Clicked)
                 {
-                  await TriggerStateManager.Instance.ImportOverlays(nodes);
+                  await TriggerStateDB.Instance.ImportOverlays(nodes);
                 }
               }
             }
@@ -1051,11 +1052,11 @@ namespace EQLogParser
               var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, SerializationOptions);
               if (triggers)
               {
-                await TriggerStateManager.Instance.ImportTriggers(parent, data);
+                await TriggerStateDB.Instance.ImportTriggers(parent, data);
               }
               else
               {
-                await TriggerStateManager.Instance.ImportOverlays(data);
+                await TriggerStateDB.Instance.ImportOverlays(data);
               }
             }
             else if (dialog.FileName.EndsWith(".gtp", StringComparison.InvariantCulture))
@@ -1065,7 +1066,7 @@ namespace EQLogParser
               if (read > 0)
               {
                 var imported = GinaUtil.CovertToTriggerNodes(data);
-                await TriggerStateManager.Instance.ImportTriggers(parent, imported);
+                await TriggerStateDB.Instance.ImportTriggers(parent, imported);
               }
             }
           }

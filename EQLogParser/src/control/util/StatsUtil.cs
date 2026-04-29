@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,6 +27,24 @@ namespace EQLogParser
     internal static bool IsMelee(DamageRecord record)
     {
       return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte or Labels.Absorb;
+    }
+
+    internal static bool CheckNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
+    {
+      if (!prevPlayerTimes.TryGetValue(name, out var prevTime))
+      {
+        prevPlayerTimes[name] = beginTime;
+        prevTime = beginTime;
+      }
+
+      var newFrame = beginTime > prevTime;
+
+      if (newFrame)
+      {
+        prevPlayerTimes[name] = beginTime;
+      }
+
+      return newFrame;
     }
 
     internal static PlayerStats CreatePlayerStats(Dictionary<string, PlayerStats> individualStats, string key, string origName = null)
@@ -127,25 +145,6 @@ namespace EQLogParser
       }
 
       return result;
-    }
-
-    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
-
-    internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
-    {
-      uint y = 0;
-
-      foreach (var c in span)
-      {
-        if (!char.IsDigit(c))
-        {
-          return defValue;
-        }
-
-        y = (y * 10) + (uint)(c - '0');
-      }
-
-      return y;
     }
 
     internal static void UpdateMinMaxTimes(PlayerStats raidTotals, GenerateStatsOptions options, out double startTime, out double stopTime)
@@ -544,6 +543,14 @@ namespace EQLogParser
       }
     }
 
+    internal static void CalculatePercentOfRaid(PlayerSubStats stats, PlayerStats raidTotals)
+    {
+      if (raidTotals.Total > 0)
+      {
+        stats.PercentOfRaid = (float)Math.Round((float)stats.Total / raidTotals.Total * 100, 2);
+      }
+    }
+
     internal static void UpdateCalculations(PlayerSubStats stats, PlayerStats raidTotals,
       ConcurrentDictionary<string, int> resistCounts = null, PlayerStats superStats = null)
     {
@@ -557,11 +564,7 @@ namespace EQLogParser
 
       CalculateRates(stats, raidTotals, superStats);
 
-      // total percents
-      if (raidTotals.Total > 0)
-      {
-        stats.PercentOfRaid = (float)Math.Round((float)stats.Total / raidTotals.Total * 100, 2);
-      }
+      CalculatePercentOfRaid(stats, raidTotals);
 
       // remaining amount
       if (stats.BestSecTemp > 0)
@@ -600,9 +603,9 @@ namespace EQLogParser
       var resistStart = 0;
       var specialStart = 0;
       var deathStart = 0;
-      var allResists = includeResists ? RecordManager.Instance.GetAllResists().ToList() : [];
-      var allSpecials = RecordManager.Instance.GetAllSpecials().ToList();
-      var allDeaths = RecordManager.Instance.GetAllDeaths().ToList();
+      var allResists = includeResists ? RecordsStore.Instance.GetAllResists().ToList() : [];
+      var allSpecials = RecordsStore.Instance.GetAllSpecials().ToList();
+      var allDeaths = RecordsStore.Instance.GetAllDeaths().ToList();
       var temp = new HashSet<IAction>();
       var actions = new List<IAction>();
       var usedSpecials = new List<int>();
@@ -794,6 +797,55 @@ namespace EQLogParser
       }
 
       return Math.Min(to, from);
+    }
+
+    internal static void ResetPlayerStats(PlayerStats stats)
+    {
+      stats.Total = 0;
+      stats.Hits = 0;
+      stats.Max = 0;
+      stats.Min = 0;
+      stats.TotalSeconds = 0;
+      stats.Dps = 0;
+      stats.Sdps = 0;
+      stats.Pdps = 0;
+      stats.CritHits = 0;
+      stats.LuckyHits = 0;
+      stats.DoubleBowHits = 0;
+      stats.FinishingHits = 0;
+      stats.FlurryHits = 0;
+      stats.HeadHits = 0;
+      stats.RampageHits = 0;
+      stats.RegularMeleeHits = 0;
+      stats.RiposteHits = 0;
+      stats.SlayHits = 0;
+      stats.StrikethroughHits = 0;
+      stats.TwincastHits = 0;
+      stats.BaneHits = 0;
+      stats.AssHits = 0;
+      stats.NonTwincastCritHits = 0;
+      stats.NonTwincastLuckyHits = 0;
+      stats.Absorbs = 0;
+      stats.Blocks = 0;
+      stats.Dodges = 0;
+      stats.Misses = 0;
+      stats.Parries = 0;
+      stats.Invulnerable = 0;
+      stats.MeleeAttempts = 0;
+      stats.MeleeHits = 0;
+      stats.SpellHits = 0;
+      stats.Resists = 0;
+      stats.Extra = 0;
+      stats.TotalAss = 0;
+      stats.TotalCrit = 0;
+      stats.TotalFinishing = 0;
+      stats.TotalHead = 0;
+      stats.TotalLucky = 0;
+      stats.TotalNonTwincast = 0;
+      stats.TotalNonTwincastCrit = 0;
+      stats.TotalNonTwincastLucky = 0;
+      stats.TotalRiposte = 0;
+      stats.TotalSlay = 0;
     }
   }
 }

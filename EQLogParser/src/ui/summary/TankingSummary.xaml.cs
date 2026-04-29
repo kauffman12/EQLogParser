@@ -1,8 +1,10 @@
-﻿using FontAwesome5;
+using FontAwesome5;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +15,7 @@ namespace EQLogParser
 {
   public partial class TankingSummary : IDocumentContent
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     // Made property since it's used outside this class
     public int DamageType { get; set; }
 
@@ -40,7 +43,7 @@ namespace EQLogParser
       }
 
       DamageType = damageTypes.SelectedIndex;
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -125,9 +128,9 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-            !PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerManager.Instance.IsMerc(playerStats.OrigName);
+            !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
@@ -159,7 +162,7 @@ namespace EQLogParser
       menuItemPetOptions.Children.Clear();
       if (CurrentStats != null)
       {
-        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerManager.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerRegistry.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += AssignOwnerClick;
@@ -170,16 +173,16 @@ namespace EQLogParser
 
     private void AssignOwnerClick(object sender, RoutedEventArgs e)
     {
-      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem item)
+      if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
       {
-        PlayerManager.Instance.AddPetToPlayer(stats.OrigName, item.Header as string);
-        PlayerManager.Instance.AddVerifiedPet(stats.OrigName);
+        PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, header);
+        PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {
-      if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      if (AppSettings.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
         CopyToEqClick(sender, null);
@@ -247,7 +250,7 @@ namespace EQLogParser
         {
           if (CurrentStats != null)
           {
-            HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+            HealingStatsBuilder.Instance.PopulateHealing(CurrentStats);
             dataGrid.SelectedItems.Clear();
             dataGrid.View?.RefreshFilter();
 
@@ -294,7 +297,7 @@ namespace EQLogParser
                 minTimeChooser.Value = Convert.ToInt64(CurrentStats.RaidStats.MinTime);
 
                 title.Content = CurrentStats.FullTitle;
-                isHealingLimited = HealingStatsManager.Instance.PopulateHealing(CurrentStats);
+                isHealingLimited = HealingStatsBuilder.Instance.PopulateHealing(CurrentStats);
                 dataGrid.ItemsSource = CurrentStats.StatsList;
               }
 
@@ -339,7 +342,7 @@ namespace EQLogParser
             className = playerStats.ClassName;
           }
 
-          var isPet = PlayerManager.Instance.IsVerifiedPet(name);
+          var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
           if (isPet && _currentPetValue == false)
           {
             return false;
@@ -385,7 +388,8 @@ namespace EQLogParser
         if (needRequery)
         {
           var tankingOptions = new GenerateStatsOptions { DamageType = DamageType, MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
-          Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(tankingOptions));
+          _ = Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(tankingOptions)).ContinueWith(t =>
+            Log.Error("Problem building tanking stats", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
         }
       }
     }
@@ -395,7 +399,7 @@ namespace EQLogParser
       if (name == "Tanking")
       {
         var selected = GetSelectedStats();
-        TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, selected);
+        TankingStatsBuilder.Instance.FireChartEvent("UPDATE", DamageType, selected);
       }
     }
 
@@ -421,7 +425,8 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => TankingStatsManager.Instance.RebuildTotalStats(statOptions));
+        _ = Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(statOptions)).ContinueWith(t =>
+          Log.Error("Problem building tanking stats.", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
     }
 
@@ -429,9 +434,9 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
         EventsTankingSummaryOptionsChanged();
@@ -441,20 +446,20 @@ namespace EQLogParser
 
     private void EventsTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      TankingStatsManager.Instance.FireChartEvent("SELECT", DamageType, data.Selected);
+      TankingStatsBuilder.Instance.FireChartEvent("SELECT", DamageType, data.Selected);
     }
 
     public void HideContent()
     {
-      TankingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      TankingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       MainActions.EventsTankingSelectionChanged -= EventsTankingSelectionChanged;
       ClearData();
 
       // window is close so reset
-      TankingStatsManager.Instance.FireChartEvent("UPDATE", DamageType, null, true);
+      TankingStatsBuilder.Instance.FireChartEvent("UPDATE", DamageType, null, true);
       _ready = false;
     }
   }

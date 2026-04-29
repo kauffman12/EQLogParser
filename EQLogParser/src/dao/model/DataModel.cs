@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -12,19 +12,6 @@ namespace EQLogParser
   internal interface IDocumentContent
   {
     public void HideContent();
-  }
-
-  internal class PiperVoice
-  {
-    public string Name { get; set; }
-    public string Model { get; set; }
-    public string Config { get; set; }
-    public int Sample { get; set; }
-  }
-
-  internal class PiperVoiceData
-  {
-    public List<PiperVoice> Voices { get; set; }
   }
 
   internal class LexiconItem : INotifyPropertyChanged
@@ -208,6 +195,12 @@ namespace EQLogParser
     public int Rolled { get; set; }
     public int To { get; set; }
     public int From { get; set; }
+  }
+
+  internal class WhoRosterRecord
+  {
+    public long BeginTicks { get; set; }
+    public Dictionary<string, int> Players { get; set; } = new(StringComparer.OrdinalIgnoreCase);
   }
 
   public class HitRecord : IAction
@@ -518,6 +511,18 @@ namespace EQLogParser
     public Dictionary<string, bool> UniquePlayers { get; set; } = [];
   }
 
+  internal class SpellTreeNode
+  {
+    public List<SpellData> SpellData { get; set; } = [];
+    public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
+  }
+
+  internal class SpellTreeResult
+  {
+    public List<SpellData> SpellData { get; set; }
+    public int DataIndex { get; set; }
+  }
+
   internal class OverlayPlayerTotal
   {
     internal long Damage { get; set; }
@@ -592,7 +597,7 @@ namespace EQLogParser
     public uint MeleeUndefended { get; set; }
     public string ClassName { get; set; }
     public string Key { get; set; }
-    public TimeRange Ranges { get; } = new();
+    public TimeRange Ranges { get; set; } = new();
     public TimeRange AllRanges { get; set; } = new();
     public List<PlayerSubStats> SubSubStats { get; } = [];
   }
@@ -602,8 +607,15 @@ namespace EQLogParser
     public List<PlayerSubStats> Children { get; set; } = [];
   }
 
-  internal class PlayerStats : PlayerSubStats
+  internal class PlayerStats : PlayerSubStats, System.ComponentModel.INotifyPropertyChanged
   {
+    public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+    protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
+    }
+
     public List<DeathEvent> Deaths { get; } = [];
     public ConcurrentDictionary<string, string> Specials { get; } = new();
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
@@ -616,6 +628,61 @@ namespace EQLogParser
     public double MinTime { get; set; }
     public double MaxBeginTime { get; set; }
     public double MinBeginTime { get; set; }
+
+    private int _assignedGroup;
+    public int AssignedGroup
+    {
+      get => _assignedGroup;
+      set
+      {
+        if (_assignedGroup != value)
+        {
+          _assignedGroup = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    // For Syncfusion TreeGrid expansion state preservation
+    private bool _isExpanded;
+    public bool IsExpanded
+    {
+      get => _isExpanded;
+      set
+      {
+        if (_isExpanded != value)
+        {
+          _isExpanded = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    // For identifying group header rows (used to hide ComboBox in Group View)
+    private bool _isGroupHeader;
+    public bool IsGroupHeader
+    {
+      get => _isGroupHeader;
+      set
+      {
+        if (_isGroupHeader != value)
+        {
+          _isGroupHeader = value;
+          OnPropertyChanged();
+        }
+      }
+    }
   }
 
+  /// <summary>
+  /// Represents a group header entry in the DamageSummary group view.
+  /// Self-contained with its own members, time segments, and children for the TreeGrid.
+  /// </summary>
+  internal class GroupEntry : PlayerStats
+  {
+    public int GroupId { get; set; }
+    public List<PlayerStats> Members { get; set; } = [];
+    public List<TimeSegment> TimeSegments { get; set; } = [];
+    public List<PlayerStats> Children { get; set; } = [];
+  }
 }

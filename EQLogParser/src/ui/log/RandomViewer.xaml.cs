@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -31,7 +30,7 @@ namespace EQLogParser
     private void ReloadTimerTick(object sender, EventArgs e)
     {
       var found = false;
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllRandoms())
       {
         if (_lastHandled == null || found)
         {
@@ -81,13 +80,12 @@ namespace EQLogParser
 
     private void RecordsUpdated(string type)
     {
-      if (type == RecordManager.RandomRecords && !_reloadTimer.IsEnabled)
+      if (type == RecordsStore.RandomRecords && !_reloadTimer.IsEnabled)
       {
         _reloadTimer.Start();
       }
     }
 
-    internal void TreeGridPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DataGridUtil.EnableMouseSelection(sender, e);
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await DataGridUtil.CreateImageAsync(dataGrid, titleLabel);
     private void LogLoadingComplete(string file, bool open) => Load();
@@ -102,7 +100,7 @@ namespace EQLogParser
     private void Load()
     {
       RandomData.Clear();
-      foreach (var (beginTime, record) in RecordManager.Instance.GetAllRandoms())
+      foreach (var (beginTime, record) in RecordsStore.Instance.GetAllRandoms())
       {
         UpdateSection(beginTime, record);
         _lastHandled = record;
@@ -193,7 +191,7 @@ namespace EQLogParser
       foreach (var section in RandomData)
       {
         section.Highest = string.Join(" + ", section.Winners).Trim();
-        var duration = DateUtil.ToDouble(DateTime.Now) - section.BeginTime;
+        var duration = DateUtil.ToDotNetSeconds(DateTime.Now) - section.BeginTime;
         if (duration < _currentTimeLimit)
         {
           section.Duration = DateUtil.FormatTicks((long)(_currentTimeLimit - duration) * TimeSpan.TicksPerSecond, DateUtil.TimeFormat.HMSCompact);
@@ -256,7 +254,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-        RecordManager.Instance.RecordsUpdatedEvent += RecordsUpdated;
+        RecordsStore.Instance.RecordsUpdatedEvent += RecordsUpdated;
         Load();
         _ready = true;
       }
@@ -266,7 +264,7 @@ namespace EQLogParser
     {
       _reloadTimer?.Stop();
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-      RecordManager.Instance.RecordsUpdatedEvent -= RecordsUpdated;
+      RecordsStore.Instance.RecordsUpdatedEvent -= RecordsUpdated;
       RandomData.Clear();
       _ready = false;
     }

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +22,7 @@ namespace EQLogParser
     private bool _ready;
 
     // ✅ Derived types override these:
-    protected virtual IStatsManager StatsManager => DamageStatsManagerAdapter.Instance;
+    protected virtual IStatsBuilder StatsManager => DamageStatsManagerAdapter.Instance;
 
     protected virtual string ChartTitle => "Players vs Top Performer (Percent of Total Damage)";
 
@@ -118,7 +118,7 @@ namespace EQLogParser
         {
           var isFirst = false;
           var name = stats.OrigName;
-          if (!PlayerManager.Instance.IsVerifiedPlayer(name)) continue;
+          if (!PlayerRegistry.Instance.IsVerifiedPlayer(name)) continue;
 
           if (string.IsNullOrEmpty(theClass) || stats.ClassName != theClass)
           {
@@ -135,7 +135,7 @@ namespace EQLogParser
               X = name,
               TotalString = StatsUtil.FormatTotals(stats.Total, 1),
               ClassName = theClass,
-              ColorBrush = DataManager.Instance.GetClassBrush(theClass),
+              ColorBrush = UiUtil.GetBrush(EQDataStore.Instance.GetClassColor(theClass)),
               IsFirst = isFirst,
               HasPets = stats.Name.Contains(" +Pets")
             });
@@ -337,7 +337,7 @@ namespace EQLogParser
       {
         SizeChanged += ContentSizeChanged;
         MainActions.EventsThemeChanged += EventsThemeChanged;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         StatsManager.EventsGenerationStatus += EventsGenerationStatus;
 
         // use existing or generate data
@@ -358,7 +358,7 @@ namespace EQLogParser
     {
       SizeChanged -= ContentSizeChanged;
       MainActions.EventsThemeChanged -= EventsThemeChanged;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
       _ready = false;
     }

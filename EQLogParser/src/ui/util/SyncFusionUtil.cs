@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -14,23 +14,13 @@ namespace EQLogParser
 
     internal static void AddDocument(DockingManager dockSite, Type type, string name, string title, bool show = false)
     {
-      var control = new ContentControl
-      {
-        Name = name,
-        HorizontalAlignment = HorizontalAlignment.Stretch,
-        VerticalContentAlignment = VerticalAlignment.Stretch,
-      };
-
-      var instance = Activator.CreateInstance(type);
-      control.Content = instance;
-      DockingManager.SetHeader(control, title);
-      DockingManager.SetState(control, DockState.Document);
+      var control = _CreateControl(dockSite, type, name, title);
+      control.HorizontalAlignment = HorizontalAlignment.Stretch;
+      control.VerticalContentAlignment = VerticalAlignment.Stretch;
       DockingManager.SetSideInDockedMode(control, DockSide.Tabbed);
-      DockingManager.SetCanDock(control, false);
       DockingManager.SetCanResizeHeightInFloatState(control, true);
       DockingManager.SetCanResizeWidthInFloatState(control, true);
       DockingManager.SetCanResizeInFloatState(control, true);
-      dockSite.Children.Add(control);
 
       if (!show)
       {
@@ -122,7 +112,10 @@ namespace EQLogParser
           }
         }
 
-        (window.Content as IDisposable)?.Dispose();
+        if (window.Content is IDisposable content)
+        {
+          content.Dispose();
+        }
       }
       else
       {
@@ -187,12 +180,7 @@ namespace EQLogParser
       var dockSite = MainActions.GetDockSite();
       if (type != null)
       {
-        var instance = Activator.CreateInstance(type);
-        window = new ContentControl { Name = key };
-        DockingManager.SetHeader(window, title);
-        DockingManager.SetState(window, DockState.Document);
-        DockingManager.SetCanDock(window, false);
-        window.Content = instance;
+        window = _CreateControl(dockSite, type, key, title);
         dockSite.BeginInit();
         dockSite.Children.Add(window);
         dockSite.EndInit();
@@ -200,6 +188,17 @@ namespace EQLogParser
       }
 
       return nowOpen;
+    }
+
+    private static ContentControl _CreateControl(DockingManager dockSite, Type type, string name, string title)
+    {
+      var control = new ContentControl { Name = name };
+      control.Content = Activator.CreateInstance(type);
+      DockingManager.SetHeader(control, title);
+      DockingManager.SetState(control, DockState.Document);
+      DockingManager.SetCanDock(control, false);
+      dockSite.Children.Add(control);
+      return control;
     }
   }
 }

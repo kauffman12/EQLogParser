@@ -1,4 +1,5 @@
-﻿using Microsoft.WindowsAPICodePack.Dialogs;
+﻿using EQLogParser.Audio;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -137,11 +138,11 @@ namespace EQLogParser
 
       if (_theCharacter == null)
       {
-        await TriggerStateManager.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
+        await TriggerStateDB.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
       }
       else
       {
-        await TriggerStateManager.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
+        await TriggerStateDB.Instance.UpdateCharacter(_theCharacter.Id, characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
       }
 
       Close();

@@ -24,7 +24,7 @@ namespace EQLogParser
       if (wrapper?.Record is DamageRecord record)
       {
         string origName = null;
-        var petName = PlayerManager.Instance.GetPlayerFromPet(record.Attacker);
+        var petName = PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker);
         if (petName != null || (!string.IsNullOrEmpty(record.AttackerOwner) && !string.IsNullOrEmpty(petName = record.AttackerOwner)))
         {
           origName = petName;

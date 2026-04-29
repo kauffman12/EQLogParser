@@ -1,4 +1,6 @@
-﻿using log4net;
+using log4net;
+using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,6 +12,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -25,6 +28,33 @@ namespace EQLogParser
       "Arial", "Calibri", "Cambria", "Century Gothic", "Georgia", "Helvetica", "Lucida Sans",
       "Open Sans", "Segoe UI", "Roboto", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana"
     ];
+
+    private const string AppIconsUriBase = @"pack://application:,,,/icons/";
+
+    internal static BitmapImage CreateBitmapFromInternalUri(string uri)
+    {
+      try
+      {
+        return new BitmapImage(new Uri(uri));
+      }
+      catch (Exception)
+      {
+        return null;
+      }
+    }
+
+    internal static BitmapImage CreateAppIcon(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return null;
+      try
+      {
+        return new BitmapImage(new Uri(AppIconsUriBase + name));
+      }
+      catch
+      {
+        return null;
+      }
+    }
 
     internal static BitmapImage CreateBitmap(string path)
     {
@@ -437,6 +467,46 @@ namespace EQLogParser
       var totalWidth = textWidth + (padding?.Left ?? 0) + (padding?.Right ?? 0) + (borderThickness?.Left ?? 0) + (borderThickness?.Right ?? 0);
 
       return Math.Round(totalWidth);
+    }
+
+    internal static FrameworkElement FindGridCell(DependencyObject source)
+    {
+      var current = source;
+      while (current != null && current is not GridCell && current is not TreeGridCell)
+        current = VisualTreeHelper.GetParent(current);
+      return current as FrameworkElement;
+    }
+
+    internal static void OpenCellPopup(Popup popup, ComboBox comboBox, FrameworkElement cell, Action onClosed)
+    {
+      popup.PlacementTarget = cell;
+      popup.Placement = PlacementMode.Relative;
+      popup.HorizontalOffset = 0;
+      popup.VerticalOffset = 0;
+
+      void OnPopupOpen(object s, EventArgs args)
+      {
+        comboBox.IsDropDownOpen = true;
+        popup.Closed += OnPopupClose;
+        popup.Opened -= OnPopupOpen;
+        popup.Width = cell.ActualWidth;
+        popup.Height = cell.ActualHeight;
+        comboBox.Width = cell.ActualWidth;
+      }
+
+      void OnPopupClose(object s, EventArgs args)
+      {
+        popup.Closed -= OnPopupClose;
+        onClosed();
+      }
+
+      popup.Opened += OnPopupOpen;
+      popup.IsOpen = true;
+    }
+
+    internal static double GetDistance(Point p1, Point p2)
+    {
+      return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
     }
 
     internal static Style CloneStyle(Style originalStyle)

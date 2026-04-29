@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -30,7 +30,7 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.FireChartOpened("Tanking");
         _ready = true;
       }
@@ -38,7 +38,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       _ready = false;
     }
   }

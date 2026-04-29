@@ -1,9 +1,13 @@
-﻿using log4net.Config;
+using log4net.Config;
 using System.Reflection;
 using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Windows;
+
+[assembly: InternalsVisibleTo("EQLogParser.Test")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
@@ -53,7 +57,7 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.3.50")]
-[assembly: AssemblyFileVersion("2.3.50")]
+[assembly: AssemblyVersion("2.3.51")]
+[assembly: AssemblyFileVersion("2.3.51")]
 [assembly: XmlConfigurator(Watch = true)]
 [assembly: SupportedOSPlatform("windows10.0")]

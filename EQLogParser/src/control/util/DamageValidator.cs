@@ -1,0 +1,60 @@
+﻿namespace EQLogParser
+{
+  internal class DamageValidator
+  {
+    private readonly bool _assassinateEnabled = AppSettings.IsAssassinateDamageEnabled;
+    private readonly bool _baneEnabled = AppSettings.IsBaneDamageEnabled;
+    private readonly bool _dsEnabled = AppSettings.IsDamageShieldDamageEnabled;
+    private readonly bool _finishingBlowEnabled = AppSettings.IsFinishingBlowDamageEnabled;
+    private readonly bool _headshotEnabled = AppSettings.IsHeadshotDamageEnabled;
+    private readonly bool _slayUndeadEnabled = AppSettings.IsSlayUndeadDamageEnabled;
+
+    // save this up front. we work with a constant state for their values
+
+    /// <summary>
+    /// Validates if the damage record should be processed based on current settings.
+    /// </summary>
+    public bool IsValid(DamageRecord record)
+    {
+      if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
+      {
+        return false;
+      }
+
+      if (record.Type == Labels.Bane && !_baneEnabled)
+      {
+        return false;
+      }
+
+      if (record.Type == Labels.Ds && !_dsEnabled)
+      {
+        return false;
+      }
+
+      if (LineModifiersParser.IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
+      {
+        return false;
+      }
+
+      if (LineModifiersParser.IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
+      {
+        return false;
+      }
+
+      if (LineModifiersParser.IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    /// <summary>
+    /// Checks if any damage types are currently filtered out.
+    /// </summary>
+    public bool IsDamageLimited()
+    {
+      return !_dsEnabled || !_assassinateEnabled || !_baneEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;
+    }
+  }
+}

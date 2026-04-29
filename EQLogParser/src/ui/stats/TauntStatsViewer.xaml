@@ -40,7 +40,6 @@
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            ItemsSource="{Binding TauntData}"
-                           PreviewMouseLeftButtonDown="TreeGridPreviewMouseLeftButtonDown"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            SelectionMode="Extended"
                            ShowRowHeader="False">

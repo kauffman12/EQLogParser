@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -172,18 +172,26 @@ namespace EQLogParser
       return ReadList(fileName);
     }
 
-    internal static void SavePlayers(List<string> list)
+    // pass server name to avoid issue where it was changed before save completes
+    internal static void SavePlayers(List<string> list, string serverName)
     {
-      var playerDir = ConfigDir + @"\" + ServerName;
+      if (string.IsNullOrEmpty(serverName))
+        return;
+
+      var playerDir = ConfigDir + @"\" + serverName;
       Directory.CreateDirectory(playerDir);
       SaveList(playerDir + @"\" + PlayersFile, list);
     }
 
-    internal static void SavePetMapping(IEnumerable<KeyValuePair<string, string>> enumeration)
+    // pass server name to avoid issue where it was changed before save completes
+    internal static void SavePetMapping(List<KeyValuePair<string, string>> list, string serverName)
     {
-      var petDir = ConfigDir + @"\" + ServerName;
+      if (string.IsNullOrEmpty(serverName))
+        return;
+
+      var petDir = ConfigDir + @"\" + serverName;
       Directory.CreateDirectory(petDir);
-      SaveProperties(petDir + @"\" + PetMappingFile, enumeration);
+      SaveProperties(petDir + @"\" + PetMappingFile, list);
     }
 
     internal static void Save()
@@ -275,22 +283,7 @@ namespace EQLogParser
 
     internal static void SaveList(string fileName, List<string> list)
     {
-      try
-      {
-        File.WriteAllLines(fileName, list);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
+      FileUtil.SafeWriteAllLines(fileName, list);
     }
 
     internal static void RemoveFileIfExists(string fileName)
@@ -326,28 +319,13 @@ namespace EQLogParser
 
     private static void SaveProperties(string fileName, IEnumerable<KeyValuePair<string, string>> enumeration)
     {
-      try
+      var lines = new List<string>();
+      foreach (var keypair in enumeration)
       {
-        var lines = new List<string>();
-        foreach (var keypair in enumeration)
-        {
-          lines.Add(keypair.Key + "=" + keypair.Value);
-        }
+        lines.Add(keypair.Key + "=" + keypair.Value);
+      }
 
-        File.WriteAllLines(fileName, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
+      FileUtil.SafeWriteAllLines(fileName, lines);
     }
   }
 }

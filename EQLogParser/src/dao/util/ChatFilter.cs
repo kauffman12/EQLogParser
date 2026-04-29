@@ -37,22 +37,22 @@ namespace EQLogParser
 
     internal bool DuringYear(DateTime year)
     {
-      var begin = DateUtil.ToDouble(year);
-      var end = DateUtil.ToDouble(year.AddYears(1));
+      var begin = DateUtil.ToDotNetSeconds(year);
+      var end = DateUtil.ToDotNetSeconds(year.AddYears(1));
       return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
     }
 
     internal bool DuringMonth(DateTime month)
     {
-      var begin = DateUtil.ToDouble(month);
-      var end = DateUtil.ToDouble(month.AddMonths(1));
+      var begin = DateUtil.ToDotNetSeconds(month);
+      var end = DateUtil.ToDotNetSeconds(month.AddMonths(1));
       return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
     }
 
     internal bool DuringDay(DateTime day)
     {
-      var begin = DateUtil.ToDouble(day);
-      var end = DateUtil.ToDouble(day.AddDays(1));
+      var begin = DateUtil.ToDotNetSeconds(day);
+      var end = DateUtil.ToDotNetSeconds(day.AddDays(1));
       return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
     }
 
@@ -72,7 +72,7 @@ namespace EQLogParser
         if (((_to == null || receiverIsTo) && (_from == null || senderIsFrom)) || (senderIsTo && receiverIsFrom) ||
             (_to == _from && ((sender == _player && receiverIsTo) || (receiver == _player && senderIsFrom))))
         {
-          if (chatType.SenderIsYou || (!PlayerManager.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender)))
+          if (chatType.SenderIsYou || (!PlayerRegistry.Instance.IsVerifiedPet(chatType.Sender) && IsPossiblePlayerNameWithServer(chatType.Sender)))
           {
             if (_keyword != null)
             {

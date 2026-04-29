@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EQLogParser.Audio;
+using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -76,8 +77,8 @@ namespace EQLogParser
       _voiceRate = voiceRate;
       _playerVolume = playerVolume;
       AudioManager.Instance.Add(CurrentCharacterId, voice);
-      TriggerStateManager.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
-      TriggerStateManager.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
+      TriggerStateDB.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
+      TriggerStateDB.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
     }
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
@@ -94,8 +95,8 @@ namespace EQLogParser
     internal async Task StartAsync()
     {
       await GetActiveTriggersAsync();
-      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateManager.Instance.GetLexicon());
-      _trustedPlayers = [.. await TriggerStateManager.Instance.GetTrustedPlayers()];
+      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateDB.Instance.GetLexicon());
+      _trustedPlayers = [.. await TriggerStateDB.Instance.GetTrustedPlayers()];
     }
 
     internal async Task<List<string>> GetEnabledTriggersAsync()
@@ -119,7 +120,7 @@ namespace EQLogParser
 
       try
       {
-        AudioManager.Instance.Stop(CurrentCharacterId, remove);
+        AudioManager.Instance.StopAudio(CurrentCharacterId, remove);
 
         foreach (var kv in _timerLists)
         {
@@ -143,7 +144,7 @@ namespace EQLogParser
     public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
       // delay start until log is ready
-      AudioManager.Instance.Start(CurrentCharacterId);
+      AudioManager.Instance.StartAudio(CurrentCharacterId);
 
       _chatTask = Task.Run(() =>
       {
@@ -707,7 +708,7 @@ namespace EQLogParser
 
         if (wrapper.HasLogTimeText)
         {
-          updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
+          updatedDisplayText = updatedDisplayText.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
 
         await AddTextAsync(wrapper.TriggerData, updatedDisplayText);
@@ -730,7 +731,7 @@ namespace EQLogParser
         {
           if (wrapper.HasLogTimeSendToChat)
           {
-            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
+            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
           }
           _ = MainActions.SendDiscordMessage(updatedSendToChatText, wrapper.TriggerData.ChatWebhook);
         }
@@ -854,7 +855,7 @@ namespace EQLogParser
 
       if (wrapper.HasLogTimeTimer)
       {
-        newTimerData.LogTime = DateUtil.FormatSeconds(lineData.BeginTime);
+        newTimerData.LogTime = DateUtil.FormatDotNetTimeSeconds(lineData.BeginTime);
       }
 
       // save line data if repeating timer
@@ -1119,7 +1120,7 @@ namespace EQLogParser
 
             if (speak.Wrapper.HasLogTimeSpeak && speak.BeginTime > 0)
             {
-              tts = tts.Replace(LogTimeCode, DateUtil.FormatSeconds(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
+              tts = tts.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
             }
           }
 
@@ -1162,7 +1163,7 @@ namespace EQLogParser
 
       var requiredOverlayIds = new HashSet<string>(StringComparer.Ordinal);
       var activeTriggersById = new Dictionary<string, TriggerWrapper>();
-      var enabledTriggers = await TriggerStateManager.Instance.GetEnabledTriggers(CurrentCharacterId);
+      var enabledTriggers = await TriggerStateDB.Instance.GetEnabledTriggers(CurrentCharacterId);
       long triggerCount = 0;
 
       foreach (var enabled in enabledTriggers)
@@ -1662,8 +1663,8 @@ namespace EQLogParser
       _ready = false;
       await StopTriggersAsync(true).ConfigureAwait(false);
 
-      TriggerStateManager.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      TriggerStateManager.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
+      TriggerStateDB.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
+      TriggerStateDB.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
       _triggerLogCollection.CompleteAdding();
       _chatCollection.CompleteAdding();
       _speakCollection.CompleteAdding();

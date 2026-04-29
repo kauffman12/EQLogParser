@@ -93,8 +93,8 @@ namespace EQLogParser
         result = EndResult;
         while (result == EndResult && _currentReader.ReadLine() is { } nextLine)
         {
-          var timeString = nextLine[..(MainWindow.ActionIndex - 1)];
-          var action = nextLine[MainWindow.ActionIndex..];
+          var timeString = nextLine[..(AppSettings.ActionIndex - 1)];
+          var action = nextLine[AppSettings.ActionIndex..];
           var chatType = ChatLineParser.ParseChatType(action);
           if (chatType != null)
           {
@@ -158,7 +158,7 @@ namespace EQLogParser
       _currentEntry++;
       if (_currentEntry < _entries.Count)
       {
-        var archive = await ChatManager.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
+        var archive = await ChatDB.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
         if (archive != null)
         {
           var entry = archive.GetEntry(_entries[_currentEntry]);
@@ -188,13 +188,13 @@ namespace EQLogParser
           var monthString = string.Concat(dir, "-", fileName.AsSpan(5, 2));
           if (DateTime.TryParseExact(monthString, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) && _currentChatFilter.DuringMonth(parsed))
           {
-            var archive = await ChatManager.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
+            var archive = await ChatDB.OpenArchiveAsync(_months[_currentMonth], ZipArchiveMode.Read);
             if (archive != null)
             {
               _entries = archive.Entries.Where(entry =>
               {
                 var found = false;
-                if (entry.Name != ChatManager.Index)
+                if (entry.Name != ChatDB.Index)
                 {
                   var dayString = monthString + "-" + entry.Name;
                   if (DateTime.TryParseExact(dayString, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var day) && _currentChatFilter.DuringDay(day))

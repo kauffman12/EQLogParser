@@ -52,7 +52,7 @@ namespace EQLogParser
 
       logSearchTime.ItemsSource = Times;
 
-      TriggerStateManager.Instance.GetConfig().ContinueWith(task => LoadPlaces(task.Result));
+      TriggerStateDB.Instance.GetConfig().ContinueWith(task => LoadPlaces(task.Result));
 
       var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -108,7 +108,7 @@ namespace EQLogParser
       };
 
       MainActions.EventsThemeChanged += EventsThemeChanged;
-      TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
 
       _ready = true;
     }
@@ -196,7 +196,7 @@ namespace EQLogParser
             if (types.Count < _lineTypeCount)
             {
               ChatType chatType = null;
-              var action = line[MainWindow.ActionIndex..];
+              var action = line[AppSettings.ActionIndex..];
               var damageRecord = DamageLineParser.ParseLine(action);
 
               if (damageRecord != null)
@@ -447,34 +447,34 @@ namespace EQLogParser
           switch (logTimeIndex)
           {
             case 0:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60);
               break;
             case 1:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 8);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 8);
               break;
             case 2:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24);
               break;
             case 3:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 2);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 2);
               break;
             case 4:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 7);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 7);
               break;
             case 5:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 14);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 14);
               break;
             case 6:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 30);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 30);
               break;
             case 7:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 90);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 90);
               break;
             case 8:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 180);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 180);
               break;
             case 9:
-              start = DateUtil.ToDouble(DateTime.Now) - (60 * 60 * 24 * 365);
+              start = DateUtil.ToDotNetSeconds(DateTime.Now) - (60 * 60 * 24 * 365);
               break;
             case 10:
               start = 0;
@@ -485,7 +485,7 @@ namespace EQLogParser
         var fileList = new List<string>();
         if (logPlaceIndex < 2)
         {
-          if (MainWindow.CurrentLogFile is { } current)
+          if (AppSettings.CurrentLogFile is { } current)
           {
             fileList.Add(current);
 
@@ -497,9 +497,9 @@ namespace EQLogParser
         }
         else
         {
-          if (_config?.Characters?.Count > 0)
+          if (_config?.Characters?.Count > 0 && logSearchPlace.SelectedItem is string selectedName)
           {
-            var character = _config.Characters.Where(character => character.Name == (logSearchPlace.SelectedItem as string)).FirstOrDefault();
+            var character = _config.Characters.Where(character => character.Name == selectedName).FirstOrDefault();
             if (character?.FilePath != null)
             {
               fileList.Add(character.FilePath);
@@ -910,7 +910,8 @@ namespace EQLogParser
       {
         _config = null;
         MainActions.EventsThemeChanged -= EventsThemeChanged;
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+        _filterTimer?.Stop();
         logBox.Dispose();
         contextBox.Dispose();
         tabControl.Dispose();

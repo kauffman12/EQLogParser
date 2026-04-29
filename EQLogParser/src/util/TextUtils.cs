@@ -1,4 +1,4 @@
-﻿using DotLiquid;
+using DotLiquid;
 using log4net;
 using Microsoft.VisualBasic.FileIO;
 using System;
@@ -32,14 +32,24 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
-    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).SequenceEqual(test);
+    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).Equals(test, StringComparison.OrdinalIgnoreCase);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
     internal static string ToLower(string name) => string.IsNullOrEmpty(name) ? "" : name.ToLower(CultureInfo.InvariantCulture);
 
     internal static string ToUpper(string name, CultureInfo culture = null)
     {
+      if (string.IsNullOrEmpty(name))
+        return name;
+
       culture ??= CultureInfo.InvariantCulture;
-      return string.IsNullOrEmpty(name) ? "" : (char.ToUpper(name[0], culture) + (name.Length > 1 ? name[1..] : ""));
+
+      var chars = new char[name.Length];
+      chars[0] = char.ToUpper(name[0], culture);
+      for (var i = 1; i < name.Length; i++)
+      {
+        chars[i] = name[i];
+      }
+      return new string(chars);
     }
 
     internal static string BuildTsv(List<string> header, List<List<object>> data, string title = null)
@@ -320,6 +330,31 @@ namespace EQLogParser
       }
 
       return success;
+    }
+
+    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
+
+    internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
+    {
+      if (span.IsEmpty)
+        return defValue;
+
+      uint value = 0;
+
+      foreach (var c in span)
+      {
+        var digit = (uint)(c - '0');
+
+        if (digit > 9)
+          return defValue;
+
+        if (value > 429496729u || (value == 429496729u && digit > 5))
+          return defValue;
+
+        value = (value * 10) + digit;
+      }
+
+      return value;
     }
 
     internal static string ReplaceWholeWords(string input, IReadOnlyDictionary<string, string> replacements)

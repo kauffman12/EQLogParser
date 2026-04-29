@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -112,7 +112,7 @@ namespace EQLogParser
 
       UpdateDamageMode(_savedDamageMode);
 
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classList.ItemsSource = list;
 
@@ -301,7 +301,7 @@ namespace EQLogParser
         Visibility = Visibility.Collapsed;
         thePopup.IsOpen = false;
 
-        if (!DataManager.Instance.HasOverlayFights())
+        if (!FightManager.Instance.HasOverlayFights())
         {
           MainActions.CloseDamageOverlay(false);
         }
@@ -341,12 +341,12 @@ namespace EQLogParser
           if (_currentShowCritRate > 0)
           {
             var critMods = new List<string>();
-            if (_currentShowCritRate is 1 or 3 && isMe && DataManager.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
+            if (_currentShowCritRate is 1 or 3 && isMe && AdpsTracker.Instance.MyDoTCritRateMod is var doTCritRate and > 0)
             {
               critMods.Add($"DoT +{doTCritRate}");
             }
 
-            if (_currentShowCritRate is 2 or 3 && isMe && DataManager.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
+            if (_currentShowCritRate is 2 or 3 && isMe && AdpsTracker.Instance.MyNukeCritRateMod is var nukeCritRate and > 0)
             {
               critMods.Add($"Nuke +{nukeCritRate}");
             }
@@ -394,7 +394,7 @@ namespace EQLogParser
 
     private void LoadTestData()
     {
-      var classList = DataManager.Instance.GetClassList();
+      var classList = EQDataStore.Instance.GetClassList();
       for (var i = 0; i < damageContent.Children.Count - 1; i++)
       {
         if (damageContent.Children[i] is DamageBar { } bar)
@@ -1070,7 +1070,7 @@ namespace EQLogParser
       {
         _stats = null;
         _statsBuilder = new();
-        DataManager.Instance.ResetOverlayFights();
+        FightManager.Instance.ResetOverlayFights();
       }
     }
 

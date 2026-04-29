@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -23,7 +22,6 @@ namespace EQLogParser
   internal static class DataGridUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static int _startRow;
 
     internal static Style CreateHighlightForegroundStyle(string name, IValueConverter converter = null)
     {
@@ -98,21 +96,9 @@ namespace EQLogParser
 
     internal static void CopyCsvFromTable(SfGridBase gridBase, string title)
     {
-      try
-      {
-        var export = BuildExportData(gridBase);
-        var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
-        Clipboard.SetDataObject(result);
-      }
-      catch (ArgumentNullException ane)
-      {
-        Clipboard.SetDataObject("EQ Log Parser Error: Failed to create CSV\r\n");
-        Log.Error(ane);
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      var export = BuildExportData(gridBase);
+      var result = TextUtils.BuildTsv(export.Item1, export.Item2, title);
+      UiUtil.SetClipboardText(result);
     }
 
     internal static (List<string>, List<List<object>>) BuildExportData(SfGridBase gridBase)
@@ -296,17 +282,17 @@ namespace EQLogParser
 
     internal static void SelectAll(FrameworkElement sender)
     {
-      if (sender?.Parent is ContextMenu menu)
+      if (sender?.Parent is ContextMenu { PlacementTarget: SfDataGrid grid })
       {
-        (menu.PlacementTarget as SfDataGrid)?.SelectAll();
+        grid.SelectAll();
       }
     }
 
     internal static void UnselectAll(FrameworkElement sender)
     {
-      if (sender?.Parent is ContextMenu menu)
+      if (sender?.Parent is ContextMenu { PlacementTarget: SfDataGrid grid2 })
       {
-        (menu.PlacementTarget as SfDataGrid)?.SelectedItems.Clear();
+        grid2.SelectedItems.Clear();
       }
     }
 
@@ -328,18 +314,6 @@ namespace EQLogParser
         }
 
         obj = obj.Parent;
-      }
-    }
-
-    internal static void EnableMouseSelection(object sender, MouseButtonEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid && elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-      {
-        _startRow = row;
-        // Left click happened, current item is selected, now listen for mouse movement and release of left button
-        treeGrid.PreviewMouseLeftButtonUp += PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove += MouseMove;
       }
     }
 
@@ -480,58 +454,6 @@ namespace EQLogParser
       return allData ? width : Math.Min(width, gridBase.ActualWidth);
     }
 
-    private static void PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is SfTreeGrid treeGrid)
-      {
-        // remove listeners if left button released
-        treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-        treeGrid.PreviewMouseMove -= MouseMove;
-      }
-    }
-
-    private static void MouseMove(object sender, MouseEventArgs e)
-    {
-      dynamic elem = e.OriginalSource;
-      if (sender is SfTreeGrid treeGrid)
-      {
-        if (e.LeftButton == MouseButtonState.Released)
-        {
-          // remove listeners if left button released
-          treeGrid.PreviewMouseLeftButtonUp -= PreviewMouseLeftButtonUp;
-          treeGrid.PreviewMouseMove -= MouseMove;
-        }
-        else if (elem?.DataContext is object stats && treeGrid.ResolveToRowIndex(stats) is var row and > -1)
-        {
-          if (treeGrid.CurrentItem != stats)
-          {
-            if (!treeGrid.SelectionController.SelectedRows.Contains(row))
-            {
-              treeGrid.SelectRows(_startRow, row);
-            }
-            else
-            {
-              treeGrid.SelectionController.ClearSelections(false);
-              var direction = 0;
-              if (_startRow < row)
-              {
-                direction = -1;
-              }
-              else if (_startRow > row)
-              {
-                direction = 1;
-              }
-
-              treeGrid.SelectRows(_startRow, row + direction);
-            }
-
-            treeGrid.CurrentItem = stats;
-            CallSelectionChanged(treeGrid.Parent);
-          }
-        }
-      }
-    }
-
     internal static void RestoreAllTableColumns()
     {
       ConfigUtil.RemoveSetting("DamageSummaryColumns");
@@ -554,7 +476,7 @@ namespace EQLogParser
 
     internal static void LoadColumns(ComboBox columnCombo, dynamic gridBase)
     {
-      HashSet<string> visible = null;
+      List<string> visible = null;
       var visibleSetting = ConfigUtil.GetSetting(columnCombo.Tag.ToString());
 
       if (!string.IsNullOrEmpty(visibleSetting))
@@ -576,8 +498,8 @@ namespace EQLogParser
       }
 
       var oldFormat = false;
-      var found = new Dictionary<string, bool>();
-      var displayOrder = ConfigUtil.GetSetting((columnCombo.Tag as string) + "DisplayIndex");
+      var found = new List<string>();
+      var displayOrder = ConfigUtil.GetSetting(columnCombo.Tag.ToString() + "DisplayIndex");
 
       if (displayOrder != null)
       {
@@ -600,7 +522,7 @@ namespace EQLogParser
             // Eventually (remove the HeaderText check)
             if (columns[i].MappingName == name || columns[i].HeaderText == name)
             {
-              found[columns[i].MappingName] = true;
+              found.Add(columns[i].MappingName);
               updated.Add(columns[i]);
               columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
               break;
@@ -610,10 +532,18 @@ namespace EQLogParser
       }
 
       // check for new columns that didn't exist when preferences were saved
+      dynamic addAssignedGroupColumn = null;
       for (var i = 0; columns != null && i < columns.Count; i++)
       {
-        if (!found.ContainsKey(columns[i].MappingName))
+        if (!found.Contains(columns[i].MappingName))
         {
+          // AssignedGroup should always be visible when it's the new column
+          if (columns[i].MappingName == "AssignedGroup")
+          {
+            addAssignedGroupColumn = columns[i];
+            continue;
+          }
+
           updated.Add(columns[i]);
           columns[i].IsHidden = !IsColumnVisible(visible, columns, i);
         }
@@ -624,6 +554,24 @@ namespace EQLogParser
         {
           columns[i].IsHidden = false;
         }
+      }
+
+      if (addAssignedGroupColumn != null)
+      {
+        // default to 2nd column
+        updated.Insert(Math.Min(1, updated.Count), addAssignedGroupColumn);
+
+        if (visible != null)
+        {
+          visible.Insert(Math.Min(1, visible.Count), addAssignedGroupColumn.MappingName);
+        }
+        else
+        {
+          visible = [addAssignedGroupColumn.MappingName];
+        }
+
+        SaveDisplayIndex(columnCombo, gridBase);
+        SaveIndex(columnCombo, visible);
       }
 
       columns = SetColumns(columnCombo, gridBase, updated);
@@ -652,7 +600,7 @@ namespace EQLogParser
         return MainActions.CurrentNpcWidth;
       }
 
-      if (mappingName is "Name")
+      if (mappingName is "Name" or "Pet")
       {
         return MainActions.CurrentNameWidth;
       }
@@ -672,6 +620,13 @@ namespace EQLogParser
         return MainActions.CurrentItemWidth;
       }
 
+      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
+          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
+          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      {
+        return MainActions.CurrentMediumWidth;
+      }
+
       if (mappingName is "TimeSince" or "Hits" or "Lucky" or "Critical" or "Twincast" or
           "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "CritRate" or
           "LuckRate" or "ExtraRate" or "BaneHits" or "MeleeAccRate" or "MeleeHitRate" or
@@ -680,11 +635,9 @@ namespace EQLogParser
         return MainActions.CurrentShortWidth;
       }
 
-      if (mappingName is "Avg" or "AvgCrit" or "AvgLucky" or "Special" or "Dps" or "Sdps" or
-          "Eval" or "Priority" or "Count" or "From" or "To" or "Rolled" or "MeleeAttempts"
-          or "Min" or "Max" or "BestSec" or "FlurryRate" or "ResistRate")
+      if (mappingName is "AssignedGroup")
       {
-        return MainActions.CurrentMediumWidth;
+        return MainActions.CurrentShortWidth;
       }
 
       if (!string.IsNullOrEmpty(text))
@@ -704,8 +657,7 @@ namespace EQLogParser
       {
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfDataGrid grid)
         {
-          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
-          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+          SaveDisplayIndex(columnCombo, grid);
         }
       };
 
@@ -723,15 +675,14 @@ namespace EQLogParser
         if (e.Reason == QueryColumnDraggingReason.Dropped && sender is SfTreeGrid grid)
         {
           SetTreeExpander(grid, grid.Columns);
-          var columns = grid.Columns.ToList().Select(column => column.MappingName).ToList();
-          ConfigUtil.SetSetting(columnCombo.Tag + "DisplayIndex", string.Join(",", columns));
+          SaveDisplayIndex(columnCombo, grid);
         }
       };
 
       return treeGrid.Columns;
     }
 
-    private static bool IsColumnVisible(IReadOnlySet<string> visible, dynamic columns, int i)
+    private static bool IsColumnVisible(List<string> visible, dynamic columns, int i)
     {
       var show = true;
       if (visible != null)
@@ -755,7 +706,7 @@ namespace EQLogParser
 
     internal static void SetHiddenColumns(ComboBox columnCombo, dynamic gridBase)
     {
-      var visible = new HashSet<string>();
+      var visible = new List<string>();
 
       if (columnCombo?.Items.Count > 0)
       {
@@ -793,10 +744,33 @@ namespace EQLogParser
           }
         }
 
-        if (!string.IsNullOrEmpty(columnCombo.Tag.ToString()))
-        {
-          ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
-        }
+        SaveIndex(columnCombo, visible);
+      }
+    }
+
+    private static void SaveDisplayIndex(FrameworkElement columnCombo, dynamic gridBase)
+    {
+      IEnumerable<string> columnNames = null;
+      if (gridBase is SfDataGrid grid)
+      {
+        columnNames = grid.Columns.ToList().Select(column => column.MappingName);
+      }
+      else if (gridBase is SfTreeGrid treeGrid)
+      {
+        columnNames = treeGrid.Columns.ToList().Select(column => column.MappingName);
+      }
+
+      if (columnNames != null)
+      {
+        ConfigUtil.SetSetting(columnCombo.Tag.ToString() + "DisplayIndex", string.Join(",", columnNames));
+      }
+    }
+
+    private static void SaveIndex(FrameworkElement columnCombo, List<string> visible)
+    {
+      if (visible != null && !string.IsNullOrEmpty(columnCombo.Tag.ToString()))
+      {
+        ConfigUtil.SetSetting(columnCombo.Tag.ToString(), string.Join(",", visible));
       }
     }
   }

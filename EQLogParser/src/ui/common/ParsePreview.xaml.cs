@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -40,18 +40,18 @@ namespace EQLogParser
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
 
       // this window is either hidden or visible and doesn't need to implement dispose
-      DamageStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-      TankingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+      TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
       _titleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       _titleTimer.Tick += (_, _) =>
       {
         _titleTimer.Stop();
 
-        if (parseList.SelectedIndex > -1)
+        if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type)
         {
-          SetParseTextByType(parseList.SelectedItem as string);
+          SetParseTextByType(type);
         }
       };
 
@@ -68,7 +68,7 @@ namespace EQLogParser
         parseList.SelectedItem = type;
       }
 
-      Clipboard.SetDataObject(playerParseTextBox.Text);
+      UiUtil.SetClipboardText(playerParseTextBox.Text);
     }
 
     internal void AddParse(string type, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
@@ -145,7 +145,7 @@ namespace EQLogParser
         var combined = value.CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
         var opts = GetSummaryOptions();
-        var summary = SelectedParseBuilder.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
+        var summary = StatsFormatter.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
 
         if (summary != null)
         {
@@ -226,9 +226,9 @@ namespace EQLogParser
 
     private void PlayerParseTextCheckChange(object sender, RoutedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type2)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type2);
       }
 
       // don't call these until after init/load
@@ -246,17 +246,17 @@ namespace EQLogParser
 
     private void ParseListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type3)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type3);
       }
     }
 
     private void ParseFormatSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (parseList.SelectedIndex > -1)
+      if (parseList.SelectedIndex > -1 && parseList.SelectedItem is string type4)
       {
-        SetParseTextByType(parseList.SelectedItem as string);
+        SetParseTextByType(type4);
       }
 
       if (_initialized)

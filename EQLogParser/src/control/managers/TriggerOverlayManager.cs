@@ -29,8 +29,8 @@ namespace EQLogParser
 
     private TriggerOverlayManager()
     {
-      TriggerStateManager.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
-      TriggerStateManager.Instance.TriggerUpdateEvent += TriggerOverlayUpdateEvent;
+      TriggerStateDB.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerOverlayUpdateEvent;
     }
 
     internal void CheckLine(string action)
@@ -145,7 +145,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(overlayId))
       {
-        var overlay = await TriggerStateManager.Instance.GetOverlayById(overlayId);
+        var overlay = await TriggerStateDB.Instance.GetOverlayById(overlayId);
         if (overlay != null)
         {
           await UiUtil.InvokeAsync(async () =>
@@ -171,7 +171,7 @@ namespace EQLogParser
       await UpdateDefaultOverlaysAsync();
 
       var ids = overlayIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
-      var overlays = await Task.WhenAll(ids.Select(TriggerStateManager.Instance.GetOverlayById));
+      var overlays = await Task.WhenAll(ids.Select(TriggerStateDB.Instance.GetOverlayById));
 
       Dictionary<string, TriggerNode> needRegexUpdate = null;
       TriggerNode defaultTextOverlay = null;
@@ -371,8 +371,8 @@ namespace EQLogParser
 
     private async Task UpdateDefaultOverlaysAsync()
     {
-      var defaultTextOverlay = await TriggerStateManager.Instance.GetDefaultTextOverlay();
-      var defaultTimerOverlay = await TriggerStateManager.Instance.GetDefaultTimerOverlay();
+      var defaultTextOverlay = await TriggerStateDB.Instance.GetDefaultTextOverlay();
+      var defaultTimerOverlay = await TriggerStateDB.Instance.GetDefaultTimerOverlay();
 
       await UiUtil.InvokeAsync(() =>
       {

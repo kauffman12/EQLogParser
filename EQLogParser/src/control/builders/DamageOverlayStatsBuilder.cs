@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -20,7 +20,7 @@ namespace EQLogParser
 
       foreach (var id in deadFights)
       {
-        DataManager.Instance.RemoveOverlayFight(id);
+        FightManager.Instance.RemoveOverlayFight(id);
       }
 
       var result = (damage == null && tank == null) ? null : new DamageOverlayStats { DamageStats = damage, TankStats = tank };
@@ -28,7 +28,7 @@ namespace EQLogParser
       if (result == null)
       {
         // make sure stale data is removed
-        DataManager.Instance.ResetOverlayFights();
+        FightManager.Instance.ResetOverlayFights();
       }
 
       return result;
@@ -38,7 +38,7 @@ namespace EQLogParser
       int maxRows, string selectedClass, HashSet<long> deadFights)
     {
       CombinedStats combined = null;
-      var timeout = mode == 0 ? DataManager.FightTimeout : mode;
+      var timeout = mode == 0 ? FightManager.FightTimeout : mode;
       var now = DateTime.Now;
 
       if (reset)
@@ -51,7 +51,7 @@ namespace EQLogParser
         data.FightName = null;
         data.DeadFightCount = 0;
         // remove anything not active and also anything that is dead
-        DataManager.Instance.ResetOverlayFights(true, true);
+        FightManager.Instance.ResetOverlayFights(true, true);
       }
 
       var allDamage = data.DeadTotalDamage;
@@ -84,7 +84,7 @@ namespace EQLogParser
       var oldestTime = data.UpdateTime;
       Fight oldestFight = null;
 
-      foreach (var (id, fight) in DataManager.Instance.GetOverlayFights())
+      foreach (var (id, fight) in FightManager.Instance.GetOverlayFights())
       {
         if (!fight.Dead || mode > 0)
         {
@@ -162,7 +162,7 @@ namespace EQLogParser
         foreach (var total in playerTotals.Values.OrderByDescending(total => total.Damage))
         {
           var time = total.Range.GetTotal();
-          if (time > 0 && (now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= DataManager.MaxTimeout)
+          if (time > 0 && (now - DateTime.MinValue.AddSeconds(total.UpdateTime)).TotalSeconds <= FightManager.MaxTimeout)
           {
             var playerStats = new PlayerStats
             {
@@ -171,7 +171,7 @@ namespace EQLogParser
               Dps = (long)Math.Round(total.Damage / time, 2),
               TotalSeconds = time,
               Rank = (ushort)rank++,
-              ClassName = PlayerManager.Instance.GetLastKnownPlayerClass(total.Name),
+              ClassName = PlayerRegistry.Instance.GetLastKnownPlayerClass(total.Name),
               OrigName = total.Name
             };
 
@@ -249,7 +249,7 @@ namespace EQLogParser
 
         player = petOwner;
       }
-      else if (PlayerManager.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.Unassigned)
+      else if (PlayerRegistry.Instance.GetPlayerFromPet(player) is { } owner && owner != Labels.Unassigned)
       {
         playerHasPet[owner] = true;
 

@@ -138,7 +138,7 @@ namespace EQLogParser
             }
 
             var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text)
-              && line.Text.Length > MainWindow.ActionIndex).Select(line => line.Text).ToList();
+              && line.Text.Length > AppSettings.ActionIndex).Select(line => line.Text).ToList();
             if (allLines.Count > 0)
             {
               RunTest(allLines);
@@ -166,12 +166,12 @@ namespace EQLogParser
         clearButton.IsEnabled = false;
         foreach (var line in allLines)
         {
-          if (line.Length > MainWindow.ActionIndex)
+          if (line.Length > AppSettings.ActionIndex)
           {
             var dateTime = DateUtil.ParseStandardDate(line);
             if (dateTime != DateTime.MinValue)
             {
-              var beginTime = DateUtil.ToDouble(dateTime);
+              var beginTime = DateUtil.ToDotNetSeconds(dateTime);
               _buffer?.Add(new(line, beginTime, true));
             }
           }
@@ -197,8 +197,8 @@ namespace EQLogParser
               var lastDate = DateUtil.ParseStandardDate(allLines.Last());
               if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
               {
-                var startTime = DateUtil.ToDouble(firstDate);
-                var endTime = DateUtil.ToDouble(lastDate);
+                var startTime = DateUtil.ToDotNetSeconds(firstDate);
+                var endTime = DateUtil.ToDotNetSeconds(lastDate);
                 var range = (int)(endTime - startTime + 1);
                 if (range > 0)
                 {
@@ -210,7 +210,7 @@ namespace EQLogParser
                     var current = DateUtil.ParseStandardDate(line);
                     if (current != DateTime.MinValue)
                     {
-                      var currentTime = DateUtil.ToDouble(current);
+                      var currentTime = DateUtil.ToDotNetSeconds(current);
                       if (currentTime.Equals(startTime))
                       {
                         data[dataIndex].Add(line);
@@ -240,7 +240,7 @@ namespace EQLogParser
                     }
                   }
 
-                  var nowTime = DateUtil.ToDouble(DateTime.Now);
+                  var nowTime = DateUtil.ToDotNetSeconds(DateTime.Now);
                   Dispatcher.Invoke(() =>
                   {
                     testStatus.Text = "| Time Remaining: " + data.Length + " seconds";
@@ -327,11 +327,11 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        TriggerStateManager.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+        TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
         MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
         theBasicLabel.Content = $"Current Player {{C}} " + (string.IsNullOrEmpty(ConfigUtil.PlayerName) ? "is not set" : "set to " + ConfigUtil.PlayerName);
 
-        if (await TriggerStateManager.Instance.GetConfig() is { } config)
+        if (await TriggerStateDB.Instance.GetConfig() is { } config)
         {
           UpdateCharacterList(config);
         }

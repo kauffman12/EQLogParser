@@ -1,8 +1,10 @@
-﻿using FontAwesome5;
+using FontAwesome5;
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -12,6 +14,7 @@ namespace EQLogParser
 {
   public partial class HealingSummary : IDocumentContent
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly DispatcherTimer _selectionTimer;
     private bool _ready;
 
@@ -19,7 +22,7 @@ namespace EQLogParser
     {
       InitializeComponent();
 
-      var list = DataManager.Instance.GetClassList();
+      var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
       classesList.SelectedIndex = 0;
@@ -84,7 +87,7 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerManager.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
             selectedName = playerStats.OrigName;
           }
@@ -110,7 +113,7 @@ namespace EQLogParser
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {
-      if (MainWindow.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
+      if (AppSettings.IsMapSendToEqEnabled && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.IsKeyDown(Key.C))
       {
         e.Handled = true;
         CopyToEqClick(sender, null);
@@ -259,7 +262,7 @@ namespace EQLogParser
       if (name == "Healing")
       {
         var selected = GetSelectedStats();
-        HealingStatsManager.Instance.FireChartEvent("UPDATE", selected);
+        HealingStatsBuilder.Instance.FireChartEvent("UPDATE", selected);
       }
     }
 
@@ -284,7 +287,8 @@ namespace EQLogParser
 
       if (statOptions.MinSeconds < statOptions.MaxSeconds || statOptions.MaxSeconds == -1)
       {
-        Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(statOptions));
+        _ = Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(statOptions)).ContinueWith(t =>
+          Log.Error($"Problem building healing stats.", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
     }
 
@@ -292,8 +296,8 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        HealingStatsManager.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        DataManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
         EventsHealingSummaryOptionsChanged();
@@ -303,13 +307,14 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      HealingStatsManager.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      DataManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
 
       // healing always rebuilds and doesn't have a simple way to reset to all data
-      Task.Run(() => HealingStatsManager.Instance.RebuildTotalStats(new GenerateStatsOptions()));
+      _ = Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(new GenerateStatsOptions())).ContinueWith(t =>
+        Log.Error("Problem building healing stats", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       _ready = false;
     }
   }
