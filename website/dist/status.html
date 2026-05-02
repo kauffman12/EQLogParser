@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>EQLogParser</title>
+<meta content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions. Download link below." name="description"/>
+<meta content="noindex, nofollow, noarchive, nosnippet" name="robots"/>
+<meta content="noindex, nofollow, noarchive, nosnippet" name="googlebot"/>
+<meta content="noindex, nofollow, noarchive, nosnippet" name="bingbot"/>
+<meta content="ca-pub-4428145487599357" name="google-adsense-account">
+<meta content="2.3.51" name="version">
+<meta content="https://github.com/kauffman12/EQLogParser/releases/download/2.3.51/EQLogParser-install-2.3.51.exe" name="download">
+<link href="/favicon.ico" rel="shortcut icon"/>
+<link href="css/style.css?v=7" rel="stylesheet"/>
+<link href="assets/mermaid.min.css" rel="stylesheet"/>
+<script defer="" src="assets/gridjs.umd.js"></script>
+<style>
+    .row-highlight td { background: #fff7cc; }
+    .muted { color:#6b7280; font: 14px system-ui, sans-serif; }
+  </style>
+</meta></meta></meta></head>
+<body>
+<nav class="topbar" id="nav-bar"><nav class="topbar">
+<div class="nav-container">
+<ul class="nav-links">
+<li><a href="index.html">Home</a></li><li><a href="documentation.html">Docs</a></li>
+<li><a href="releasenotes.html">Release Notes</a></li>
+<li><a href="policy.html">Privacy</a></li>
+<li>|</li>
+<li><a href="https://github.com/kauffman12/EQLogParser/discussions" target="_blank">Discussion</a></li>
+<li><a href="https://github.com/kauffman12/EQLogParser/issues" target="_blank">Issues</a></li>
+</ul>
+</div>
+</nav></nav>
+<div class="layout">
+<nav class="toc"></nav>
+<main class="container">
+<div id="status-table"></div>
+<div class="muted" id="status-note"></div>
+</main>
+<script defer="">
+    (() => {
+      const API_BASE   = 'https://share.kizant.net';
+      const REFRESH_MS = 5000;
+
+      const mount = document.getElementById('status-table');
+      const note  = document.getElementById('status-note');
+
+      const params      = new URLSearchParams(location.search);
+      const keys        = params.getAll('k').slice(0, 50);
+      const selectedKey = params.get('select') || '';
+
+      if (!keys.length) { mount.textContent = 'No keys provided.'; return; }
+
+      const buildURL = () => {
+        const qs = new URLSearchParams();
+        keys.forEach(k => qs.append('k', k));
+        return `${API_BASE}/status?` + qs.toString();
+      };
+
+      async function fetchRows() {
+        const res = await fetch(buildURL(), {
+          method: 'GET',
+          credentials: 'omit', // don't send cookies
+          headers: {
+            'EQLogParser': 'kizant-1',
+            'Accept': 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();               // [{key, count}, ...]
+        return data.map(r => [String(r.key), r.count ?? 0]); // rows [Key, Count]
+      }
+
+      // DOM-based highlighter that survives re-renders & sorts
+      function applyHighlight() {
+        if (!selectedKey) return;
+        const tbody = mount.querySelector('tbody');
+        if (!tbody) return;
+        // clear any old
+        tbody.querySelectorAll('tr.row-highlight').forEach(tr => tr.classList.remove('row-highlight'));
+        // find & mark
+        for (const tr of tbody.querySelectorAll('tr')) {
+          const firstCell = tr.querySelector('td');
+          if (firstCell && firstCell.textContent.trim() === selectedKey) {
+            tr.classList.add('row-highlight');
+            break;
+          }
+        }
+      }
+
+      let grid;
+      let inFlight = false;
+
+      async function initialRender() {
+        const rows = await fetchRows();
+        grid = new gridjs.Grid({
+          columns: [
+            { name: 'Quick Share',   width: '70%' },
+            { name: 'Downloads', width: '30%' }
+          ],
+          data: rows,
+          sort: true,
+          search: false,
+          pagination: false,
+          autoWidth: true
+        });
+        grid.render(mount);           // synchronous in Grid.js UMD
+        requestAnimationFrame(applyHighlight);
+        note.textContent = 'Last updated: ' + new Date().toLocaleTimeString() + ' (refresh every 5s)';
+      }
+
+      async function refresh() {
+        if (inFlight || document.hidden) return;
+        inFlight = true;
+        try {
+          const rows = await fetchRows();
+          grid.updateConfig({
+            columns: [
+              { name: 'Quick Share',   width: '70%' },
+              { name: 'Downloads', width: '30%' }
+            ],
+            data: rows
+          }).forceRender(); // no await
+          requestAnimationFrame(applyHighlight);
+          note.textContent = 'Last updated: ' + new Date().toLocaleTimeString() + ' (refresh every 5s)';
+        } catch (e) {
+          console.error('Status refresh failed:', e);
+          note.textContent = 'Failed to refresh (will retry)…';
+        } finally {
+          inFlight = false;
+        }
+      }
+
+      // Re-apply highlight after any DOM churn (e.g., user clicks to sort)
+      const obs = new MutationObserver(() => applyHighlight());
+      obs.observe(mount, { childList: true, subtree: true });
+
+      // Kick off
+      initialRender().then(() => {
+        let timer = setInterval(refresh, REFRESH_MS);
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) { clearInterval(timer); }
+          else { timer = setInterval(refresh, REFRESH_MS); refresh(); }
+        });
+      }).catch(err => {
+        console.error(err);
+        mount.textContent = 'Failed to load status.';
+      });
+    })();
+    </script>
+<nav class="rightad">
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357"></script>
+<ins class="adsbygoogle" data-ad-client="ca-pub-4428145487599357" data-ad-slot="9757256233" style="display:inline-block; width:160px; height:600px"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</nav>
+</div></body>
+</html>

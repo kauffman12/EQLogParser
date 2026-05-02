@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EQLogParser - Documentation</title>
+  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions" />
+  <meta name="robots" content="index, follow" />
+  <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
+  <meta name="version" content="2.3.51" />
+  <meta name="download" content="https://github.com/kauffman12/EQLogParser/releases/download/2.3.51/EQLogParser-install-2.3.51.exe" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
+</head>
+<body>
+  <nav class="topbar">
+<div class="nav-container">
+<ul class="nav-links">
+<li><a href="index.html">Home</a></li><li><a href="documentation.html">Docs</a></li>
+  <li><a href="releasenotes.html">Release Notes</a></li>
+  <li><a href="policy.html">Privacy</a></li>
+  <li>|</li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
+</ul>
+</div>
+</nav>
+  <div class="layout">
+  <nav class="toc">
+<h1>Contents</h1>
+<ul><li><a href="#regex-101">Regex 101</a></li><li><a href="#trigger-variables">Trigger Variables</a></li><li><a href="#linux-support">Linux Support</a></li><li><a href="#f-a-q">F.A.Q</a></li><li><a href="#feedback">Feedback</a></li></ul>
+</nav>
+    <main class="docs-container">
+      <section><h1 id="regex-101">Regex 101</h1>
+<h2><span class="var">🔹 Basics</span></h2>
+<ul>
+<li><strong><code>.</code></strong> — Matches <strong>any single character</strong> (except new line)<br/>
+<em>Example: <code>a.c</code> matches "abc", "axc", "a-c", etc.</em></li>
+<li><strong><code>*</code></strong> — Means "<strong>zero or more</strong>" of the thing before it<br/>
+<em>Example: <code>a*</code> matches "", "a", "aa", "aaa", etc.</em></li>
+<li><strong><code>+</code></strong> — Means "<strong>one or more</strong>" of the thing before it<br/>
+<em>Example: <code>a+</code> matches "a", "aa", "aaa", but not "" (empty)</em></li>
+<li><strong><code>?</code></strong> — Makes the thing before it <strong>optional</strong> (zero or one)<br/>
+<em>Example: <code>colou?r</code> matches "color" or "colour"</em></li>
+<li><strong><code>[...]</code></strong> — Matches <strong>one character</strong> from inside the brackets<br/>
+<em>Example: <code>[abc]</code> matches "a", "b", or "c" (just one of them)</em></li>
+<li><strong><code>[^...]</code></strong> — Matches <strong>one character NOT</strong> in the brackets<br/>
+<em>Example: <code>[^0-9]</code> matches any character that's NOT a number</em></li>
+</ul>
+<h2><span class="var">🔹 Anchors (Position Matchers)</span></h2>
+<ul>
+<li><strong><code>^</code></strong> — The <strong>start</strong> of the line/text<br/>
+<em>Example: <code>^Hello</code> matches only if "Hello" is at the very start</em></li>
+<li><strong><code>$</code></strong> — The <strong>end</strong> of the line/text<br/>
+<em>Example: <code>bye$</code> matches only if "bye" is at the very end</em></li>
+</ul>
+<h2><span class="var">🔹 Shortcuts (Character Types)</span></h2>
+<ul>
+<li><strong><code>\d</code></strong> — Any <strong>digit</strong> (0 to 9)</li>
+<li><strong><code>\w</code></strong> — Any <strong>word character</strong> (letter, digit, or underscore)</li>
+<li><strong><code>\s</code></strong> — Any <strong>whitespace</strong> (space, tab, etc.)</li>
+<li><strong><code>\b</code></strong> — The <strong>edge of a word</strong> (word boundary)</li>
+</ul>
+<h2><span class="var">🔹 Grouping and OR</span></h2>
+<ul>
+<li><strong><code>( ... )</code></strong> — Groups things together<br/>
+<em>Example: <code>(cat|dog)</code> matches "cat" or "dog"</em></li>
+<li><strong><code>|</code></strong> — Means "<strong>or</strong>"<br/>
+<em>Example: <code>yes|no</code> matches "yes" or "no"</em></li>
+</ul>
+<h2><span class="var">🔹 Specials</span></h2>
+<ul>
+<li><strong><code>\</code></strong> — <strong>Escapes</strong> a special character so it’s treated as normal<br/>
+<em>Example: <code>\.</code> matches a real dot, not "any character"</em></li>
+<li><strong>Special Character List:</strong> .   ^   $   *   +   ?   (   )   [   ]   {   }   \   |   /</li>
+</ul>
+<h2><span class="var">🔹 Counts (Repetition)</span></h2>
+<ul>
+<li><strong><code>{n}</code></strong> — <strong>Exactly</strong> n times<br/>
+<em>Example: <code>a{3}</code> matches "aaa" only</em></li>
+<li><strong><code>{n,}</code></strong> — <strong>At least</strong> n times<br/>
+<em>Example: <code>a{2,}</code> matches "aa", "aaa", "aaaa", etc.</em></li>
+<li><strong><code>{n,m}</code></strong> — <strong>Between</strong> n and m times<br/>
+<em>Example: <code>a{2,4}</code> matches "aa", "aaa", or "aaaa"</em></li>
+</ul>
+<h2><span class="var">⚠️ .NET Regex Syntax</span></h2>
+<ul>
+<li><strong>No slashes needed:</strong> Just type your pattern (don’t use <code>/like this/</code>)</li>
+<li><strong>Case-sensitive by default:</strong> "cat" doesn’t match "Cat"</li>
+<li><strong>Spaces and punctuation:</strong> They must match <strong>exactly</strong> as typed</li>
+<li><strong>Named groups are supported:</strong> You can name parts with <code>(?&lt;name&gt;...)</code></li>
+<li><strong>Don’t use <code>$1</code>, <code>$2</code>, etc.:</strong> These are not used as Group references</li>
+</ul>
+<h2><span class="var">🚀 Performance Tips</span></h2>
+<ul>
+<li><strong>Keep patterns simple and specific</strong> for fastest results.</li>
+<li><strong>Avoid <code>.*</code> in the middle</strong> of patterns; use only if necessary.</li>
+<li><strong>Don’t nest lots of parentheses</strong> or use complex patterns.</li>
+<li><strong>Start with a specific word or phrase</strong> (e.g., <code>^You take</code>) instead of wildcards.</li>
+<li><strong>Don’t match entire blocks of text</strong> or paragraphs.</li>
+<li><strong>Avoid long runs of wildcards and optionals</strong> (like <code>(.*a.*)*</code>).</li>
+</ul>
+<h1 id="trigger-variables">Trigger Variables</h1>
+<p>These are special variables or codes that can be used in trigger <code>Pattern</code> fields to capture values so that they can be displayed or spoken.</p>
+<p>None of these trigger variables are case-insensitive. Whether you use <code>{c}</code> or <code>{C}</code> they will do the same thing. Also, if you define one variable as <code>{S}</code> and reference it later as <code>{s}</code> it will still work. The x value in <code>{Sx}</code> or <code>{Nx}</code> is any number from <code>0</code> to <code>9</code> so you can use more than one of these in the same trigger.</p>
+<p>In addition, modifiers may be used with these variables for display purposes. They do not function in any of the <code>Pattern</code> fields but will work in the display fields. These modifiers include <code>.number</code>, <code>.capitalize</code>, <code>.lower</code>, and <code>.upper</code>. Number will format number values based on region. For example, in the U.S., they will be formatted with commas. The other options are self-explanatory.</p>
+<p>Example Usage when using Modifiers: <code>{S1.capitalize}</code> <code>{n.number}</code></p>
+<h2><span class="var">{C}</span></h2>
+<p>Replaced by your character name. Use it in any <code>Pattern</code> field as well as all other fields that display, speak, or share information including timer warnings. Everything.</p>
+<h2><span class="var">{S}, {Sx}</span></h2>
+<p>Acts as a wildcard to capture values in <code>Pattern</code> fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires <code>Regex</code> to be enabled; internally, the parser replaces <code>{s1}</code> with <code>(?&lt;s1&gt;.+)</code>.</p>
+<h2><span class="var">{N}, {Nx}</span></h2>
+<p>Like <code>{S}</code> but captures numbers (no spaces or multiple numbers are allowed). Also, allows the value to be used later in any fields that displays, speaks, or shares information.</p>
+<h2><span class="var">{N&gt;y}, {y&lt;N&lt;z}</span></h2>
+<p>Works like <code>{N}</code> but allows additional checks on the range of numbers that will match the trigger. Use operators like <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, or <code>==</code>. Use <code>|</code> to combine. Example: <code>{100&lt;=N&lt;200}</code> to match numbers between <code>100</code> and <code>200</code>.</p>
+<h2><span class="var">{L}</span></h2>
+<p>Replaced by the line that triggered the event minus the date/time segment. Useful for testing and seeing the full line that matched. Available only in the <code>Text to Display</code>, <code>Text to Speak</code>, and <code>Alternate Timer Name</code> fields.</p>
+<h2><span class="var">{LOGTIME}</span></h2>
+<p>Replaced by the time from the line that triggered the event in the <code>hh:mm:ss</code> format. Useful if you want to know the time the trigger was fired. Available only in the <code>Text to Display</code>, <code>Text to Speak</code>, <code>Text to Send</code>, and <code>Alternate Timer Name</code> fields.</p>
+<h2><span class="var">{REPEATED}</span></h2>
+<p>This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in <code>Text to Display</code>, <code>Text to Speak</code>, and <code>Alternate Timer Name</code>. Example Text to Display: <code>{s1} {repeated}</code>. This will print the count of how many times the trigger is fired with the same value captured by <code>{s1}</code>. The count resets after <code>750ms</code> and this reset time can be configured by setting the <code>Repeated Reset Time</code> of the trigger.</p>
+<h2><span class="var">{COUNTER}</span></h2>
+<p>Similar to <code>{REPEATED}</code> but it counts the number of times the trigger has fired regardless of the variables captured and used in the display or speak information fields. This variable also uses the <code>Repeated Reset Time</code> field to specify the delay used to restart the count.</p>
+<h2><span class="var">{TS}</span></h2>
+<p>Like <code>{S}</code> but used to capture a timestamp in the format <code>hh:mm:ss</code> or any number which will be counted as seconds. Requires <code>Regex</code> to be enabled. Used only to dynamically set the <code>Timer Duration</code>.</p>
+<h2><span class="var">{NULL}</span></h2>
+<p>Used in any field that displays, speaks, or shares information to suppress the message entirely. Useful when overriding <code>Timer End Early</code> behavior. If <code>{NULL}</code> is set then nothing will be displayed or spoken.</p>
+<h2><span class="var">{TIMER-WARN-TIME-VALUE}</span></h2>
+<p>Replaced by the <code>Timer</code> setting for <code>Warn With Time Remaining</code>. This allows your Display/Speak messages to reference this <code>Trigger</code> configuration value if needed. More variables like this could be added in the future where configuration settings are made available when triggers run.</p>
+<h2><span class="var">{EQLP:STOP}</span></h2>
+<p>Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.</p>
+<h2><span class="var">{EQLP:STOP}</span></h2>
+<p>Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.</p>
+<h1 id="linux-support">Linux Support</h1>
+<p>EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required.</p>
+<h2><span class="var">Simplest Install: Flatpak + Bottles</span></h2>
+<p>The easiest way to get EQLogParser running on Linux is using <strong>Flatpak</strong> and <strong>Bottles</strong>. Bottles is a Wine management app that handles all the setup for you, and Flatpak is the recommended way to install it.</p>
+<h3>Step 1 — Install Flatpak and Bottles</h3>
+<p>Open a terminal and run the following commands:</p>
+<pre><code class="language-bash"># Install Flatpak
+sudo apt install flatpak
+
+# Add the Flathub repository (where Bottles is hosted)
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+# Install Bottles
+flatpak install flathub com.usebottles.bottles
+</code></pre>
+<h3>Step 2 — Launch Bottles</h3>
+<p>Start Bottles using the following command. The <code>PERSONAL_INSTALLERS</code> variable tells it where to find the EQLogParser installer:</p>
+<pre><code class="language-bash">PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/programs/refs/heads/main flatpak run com.usebottles.bottles
+</code></pre>
+<blockquote>
+<p><strong>Tip:</strong> You can save this as a shell script or desktop shortcut so you don't have to type it every time.</p>
+</blockquote>
+<h3>Step 3 — Create a New Bottle</h3>
+<p>Once Bottles is open:</p>
+<ol>
+<li>Click <strong>Create a New Bottle</strong></li>
+<li>When prompted for the bottle type, select <strong>Custom</strong></li>
+<li>Make sure the architecture is set to <strong>64-bit</strong></li>
+<li>Change the <strong>Runner</strong> to <strong>Wine</strong></li>
+<li>Click <strong>Create</strong> and wait for Bottles to finish setting up the environment</li>
+</ol>
+<h3>Step 4 — Install EQLogParser</h3>
+<p>After the bottle is created:</p>
+<ol>
+<li>Click the <strong>Install App</strong> button inside your new bottle</li>
+<li>Find and select <strong>EQLogParser</strong> from the list of available apps</li>
+<li>Follow any on-screen prompts to complete the installation</li>
+</ol>
+<h3>Step 5 — Run EQLogParser</h3>
+<p>Once installation is finished, simply click the <strong>Run App</strong> button to launch EQLogParser. That's it — no manual Wine configuration required!</p>
+<hr/>
+<h2><span class="var">Manually installing without Flatpak/Bottles</span></h2>
+<h3>Download <strong>EQLogParser</strong> and the <strong>.Net 8.0 Desktop Runtime x64</strong> found <a href="index.html">here</a>.</h3>
+<p>Use the following steps to install under Linx (tested on Ubuntu/Debian-based systems):</p>
+<pre><code>sudo apt install wine  # (version 10)
+sudo apt install winetricks  # (version 20250102-1)
+winetricks allfonts
+winetricks renderer=gdi
+wine windowsdesktop-runtime-8.0.25-win-x64.exe  # (or latest)
+wine EQLogParser-install-2.3.49.exe  # (or latest)
+</code></pre>
+<h2><span class="var">Known Issues with Linux</span></h2>
+<ol>
+<li>WPF applications are unstable with WINE so hardware acceleration is disabled <ul>
+<li>Note the WINELOADER environment variable is used to detect WINE</li>
+<li>Make sure that variable exists if you notice problems</li>
+<li>The EQLogParser log file should show Software as the RenderMode</li>
+<li>Log file location: ~/.wine/drive_c/users/username/AppData/Roaming/EQLogParser/logs</li>
+</ul>
+</li>
+<li>WINE x64 does not work with any windows text-to-speech engine<ul>
+<li>Piper TTS is provided as an alternative but requires manual Installation</li>
+<li>The bottles install comes with 1 voice pre-loaded</li>
+<li>Follow steps below for all voices</li>
+</ul>
+</li>
+</ol>
+<h2><span class="var">Piper TTS</span></h2>
+<p>Piper TTS is an Open Source <strong>text-to-speech engine</strong> and a custom build is provided for EQLogParser. It is hosted on google drive and may be subject to a limited number of downloads per day/month.</p>
+<ol>
+<li>Download the <a href="https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing" target="_blank">PiperTTS</a> zip file</li>
+<li>Unzip into ~/.wine/drive_c/Program Files/EQLogParser/piper-tts</li>
+<li>Verify it was unzipped properly<ul>
+<li>The piper-tts folder contains dlls and a voices folder</li>
+<li>The piper-tts folder should be directly under the EQLogParser folder</li>
+</ul>
+</li>
+<li>Restart EQLogParser. Note that the log file should tell you that it's using piper-tts</li>
+<li>Test changing voices in the Trigger Manager window</li>
+</ol>
+<h1 id="f-a-q">F.A.Q</h1>
+<h2><span class="var">Why do spells like Gracious Gift of Mana not show up in the spell counts table?</span></h2>
+<ol>
+<li>Some spells do not have messages when they land players and do not appear in the log</li>
+<li>For <strong>Gracious Gift of Mana</strong>, it has a spell message but only you can see it in your log. These spells are hidden by default as the main purpose of the spell count table is to compare your spell counts with other players</li>
+<li>To view hidden spells, use the dropdown at the top as shown below:</li>
+</ol>
+<div style="margin-left: 30px;">
+<img alt="Show All Spells" src="img/show-spells.png"/>
+</div>
+<h2><span class="var">Why does unknown or spell names show in the DPS Summary?</span></h2>
+<ol>
+<li>If a <strong>DoT</strong> is on an <strong>NPC</strong> and the player dies or zones it may stop reporting the player and say unknown instead<ul>
+<li>Check the damage breakdown for the <strong>Unknown</strong> player to get a better idea of the cause</li>
+<li>Unknown is also included to make sure all damage is counted for the group or raid</li>
+</ul>
+</li>
+<li>If a name of a spell is listed in the <strong>DPS Summary</strong> it may be for a similar reason<ul>
+<li>Sometimes if the spell is a proc or other effect related to a <strong>DoT</strong> where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare.</li>
+</ul>
+</li>
+<li>Make sure <strong>Use EMU Server Parsing</strong> is turned off if you're playing on live.</li>
+</ol>
+<h2><span class="var">When using Trigger Log, I would like a quick way to edit the Trigger for the log entry.</span></h2>
+<ol>
+<li>When you select a row in the <strong>Trigger Log</strong> it will select the trigger in the <strong>Trigger Manager</strong> as long as you have it open. If so, just switch back to that tab and check</li>
+<li>The second way to quickly find a trigger is to use the <strong>Trigger Search</strong> box above the folder tree where you create triggers. It searches by name and by the pattern fields</li>
+<li>You may also find it useful to <strong>drag-and-drop</strong> the <strong>Trigger Log</strong> or <strong>Trigger Manager</strong> tabs around so that you can see both at the same time as shown below:</li>
+</ol>
+<p><a href="img/trigger-selection.gif" style="margin-left: 30px;" target="_blank">
+<img alt="Select Trigger from Trigger Log" height="300" src="img/trigger-selection.gif"/>
+</a> </p>
+<h2><span class="var">Why are my Overlays not showing or they use the wrong colors?</span></h2>
+<ol>
+<li>Specify the Overlay in the Trigger settings or verify that <strong>default</strong> is checked in the Overlay.<ul>
+<li>The <strong>default</strong> Overlay is the fallback when no other Overlay is specified.</li>
+</ul>
+</li>
+<li>Preview the Overlay and make sure it is displaying as you're expecting. Remember to <strong>save</strong> changes.</li>
+<li>Check the <strong>Custom Active Color</strong> and <strong>Custom Font Color</strong> in the trigger you are testing with.<ul>
+<li>If these colors are specified they will override what the overlay is configured with.</li>
+<li>Even if they say <strong>Click to Select Custom Color</strong> try clicking and saving with a color as a test.</li>
+<li>Example images will be shown below.</li>
+</ul>
+</li>
+<li>If in advanced mode, check <strong>Overlay Active Color</strong> and <strong>Overlay Font Color</strong> when you modify your character settings.<ul>
+<li>These options are another way to choose custom colors. Sometimes they get set by accident.</li>
+<li>One common issue is that <strong>Transparent</strong> gets selected which makes it look like the timer never displays.</li>
+</ul>
+</li>
+<li>In both cases above, it may help to set a color and see if it does anything. If so go back and reset/clear the value.</li>
+</ol>
+<p><a href="img/trigger-colors.png" style="margin-left: 30px;" target="_blank">
+<img alt="Custom Colors in Trigger Settings" height="200" src="img/trigger-colors.png"/>
+</a>
+<a href="img/character-colors.png" style="margin-left: 30px;" target="_blank">
+<img alt="Custom Colors in Character Settings" height="200" src="img/character-colors.png"/>
+</a></p>
+<h2><span class="var">When using one of the right-click Copy options or sending a Quick Share. Nothing is copied.</span></h2>
+<ol>
+<li>Check the error log for the message below. If you see it then your anti-virus software is blocking access. You'll need to figure out how to add an exception for EQLogParser.exe. This seems to be common with ESET and you may want to look for the HIPS settings and see if you can add the exception there.<ul>
+<li><strong>ERROR EQLogParser.UiUtil - Failed to set Clipboard Text: OpenClipboard Failed (0x800401D0 (CLIPBRD_E_CANT_OPEN))</strong></li>
+</ul>
+</li>
+<li>If you do not see an error and it is only happening with Send Parse to EQ. Keep in mind that Everquest has a limit on how many characters you can paste. If you open the Preview Parse window you'll see a count and warning if you copy too much.</li>
+</ol>
+<h2><span class="var">Why does my Charm Pet or Merc not show up correctly in the Summary table?</span></h2>
+<ol>
+<li>The main reason for this is naming. The parser is not good at handling names that do not look like player names. Player names are all one word</li>
+<li>Charm pets are additionally difficult as there's no way to distinguish the pet from an npc and if you fight an npc with the same name it can't figure out what's going on</li>
+<li>The name problem can be improved upon but it is complicated and something will be worked on in the future</li>
+</ol>
+<h1 id="feedback">Feedback</h1>
+<p>Please use the <strong>Discussion</strong> and <strong>Issues</strong> links at the top right of this page for submitting feedback. They will take you to the Github project for EQLogParser where everything is kept.</p>
+<h2><span class="var">Guidelines</span></h2>
+<ol>
+<li>Create account on <a href="http://github.com" target="_blank">Github</a> if you do not have one already</li>
+<li>Login and post a message in either the Issues or the Discussion section<ul>
+<li>Reading through the existing topics to see if your question has been answered before</li>
+</ul>
+</li>
+<li>Bugs or feature requests should be created as an Issue</li>
+<li>General questions should be created in the Discussion section</li>
+<li>When reporting a bug be as detailed as possible<ul>
+<li>Are you on Live servers or P99?</li>
+<li>What steps were taken to produce the bug?</li>
+<li>What is the result you were expecting?</li>
+<li>What have you already tried to resolve the issue?</li>
+<li>Are you using the latest EQLogParser?</li>
+<li>Have you checked the error log from the Tools menu?</li>
+<li>When checking the error log look for any <strong>exceptions</strong> or <strong>ERROR</strong> statements, etc</li>
+</ul>
+</li>
+<li>If a bug is related to data not being parsed or a trigger not matching<ul>
+<li>Include the line from your log file that has the data </li>
+<li>If trigger related then include the Regex or screenshot of your Trigger settings</li>
+</ul>
+</li>
+</ol></section>
+    </main>
+    <nav class="rightad">
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
+      <ins class="adsbygoogle"
+        style="display:inline-block; width:160px; height:600px"
+        data-ad-client="ca-pub-4428145487599357"
+        data-ad-slot="9757256233"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>     
+    </nav>
+  </div>
+</body>
+</html>

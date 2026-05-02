@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EQLogParser - Release Notes</title>
+  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions" />
+  <meta name="robots" content="index, follow" />
+  <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
+  <meta name="version" content="2.3.51" />
+  <meta name="download" content="https://github.com/kauffman12/EQLogParser/releases/download/2.3.51/EQLogParser-install-2.3.51.exe" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
+</head>
+<body>
+  <nav class="topbar">
+<div class="nav-container">
+<ul class="nav-links">
+<li><a href="index.html">Home</a></li><li><a href="documentation.html">Docs</a></li>
+  <li><a href="releasenotes.html">Release Notes</a></li>
+  <li><a href="policy.html">Privacy</a></li>
+  <li>|</li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Discussion</a></li>
+  <li><a target="_blank" href="https://github.com/kauffman12/EQLogParser/issues">Issues</a></li>
+</ul>
+</div>
+</nav>
+  <div class="layout">
+  <nav class="toc"></nav>
+    <main class="docs-container">
+      <section><p><strong>Note that Windows 7/8 support will end by September this year</strong></p>
+<h1 id="2-3-51-04-29-26">2.3.51 | 04/29/26</h1>
+<ol>
+<li>Added New Feature <strong>Group View</strong> to the <strong>Damage Summary</strong> to allow players to be grouped together and combine their damage statistics. In addition, the '/who all raid' information is parsed and available in a dropdown so that you can assign groups from it. Switch to <strong>Group View</strong> by using the existing dropdown that shows <strong>Player +Pets</strong> as an option.</li>
+<li>Add a <strong>Best Sec</strong> column to the <strong>Tank Summary</strong>.</li>
+<li>Made improvements to determining pets automatically.</li>
+<li>Fixed some recent issues with parsing received spells.</li>
+<li>Lots of re-org and code cleanup so expect some bugs.</li>
+</ol>
+<h1 id="2-3-50-04-11-26">2.3.50 | 04/11/26</h1>
+<ol>
+<li>There are <strong>Major</strong> UI changes in <strong>Trigger Manager</strong> when editing <strong>Triggers</strong> and <strong>Overlays</strong>. Some properties were moved to their own tab, categories were renamed, and some labels updated. All to make room for additional features in the future.</li>
+<li>Added options for <strong>Custom Idle Color</strong> and <strong>Custom Reset Color</strong> to Trigger properties as well as the character settings when using Advanced mode. These work just like the previous option for <strong>Custom Active Color</strong>.</li>
+<li>Added a <strong>Match End Early Pattern #3</strong> option to the <strong>Timer End Early</strong> section now that there is extra room to work with.</li>
+<li>The <strong>Timeline</strong> charts like, <strong>ADPS Timeline</strong>, now support <strong>saving</strong> and <strong>restoring layouts</strong>. Make changes toe the chart, click <strong>Manage Layouts</strong> and create a layout. It will appear in the <strong>Select a Layout</strong> dropdown. The rest should be obvious.</li>
+<li>Updated <strong>Check for Updates</strong> to query github.com APIs to be a little more reliable. Hopefully, auto update still works.</li>
+<li>Fix for the classes dropdown on the <strong>Damage Summary</strong> table not showing child rows for pets when you choose a subset of classes to display.</li>
+<li>Updated spells based on latest from Test server.</li>
+<li>Updated Syncfusion as well as audio and caching libraries to the latest version. Should address some minor bugs.</li>
+<li>Note that previous versios of EQLP will be more reliably available from the releases tab on github.
+https://github.com/kauffman12/EQLogParser/releases</li>
+</ol>
+<h1 id="2-3-49-04-01-26">2.3.49 | 04/01/26</h1>
+<ol>
+<li>Bug fix for some missing Overlay options.</li>
+</ol>
+<h1 id="2-3-48-03-31-26">2.3.48 | 03/31/26</h1>
+<ol>
+<li>Added option to <strong>Trends Chart</strong> for viewing <strong>Top 5</strong> or <strong>Top 10</strong> when no players are selected.</li>
+<li>Added <strong>Import</strong> and <strong>Export</strong> buttons to the <strong>Dictionary</strong> window in Trigger Manager. It uses a simple TSV file format.</li>
+<li>Updated <strong>Timer Overlays</strong> sorting options to include <strong>Timer Name (Natural)</strong>. This will allow numbers in the <strong>Timer Name</strong> to be sorted numerically.</li>
+<li>Added <strong>Show Milliseconds</strong> option to <strong>Timer Overlays</strong>.</li>
+<li>Fixed order of <strong>Timer Overlay</strong> options.</li>
+<li>Included latest Syncfusion and replaced some old libraries.</li>
+</ol>
+<h1 id="2-3-47-03-10-26">2.3.47 | 03/10/26</h1>
+<ol>
+<li>Added <strong>Daily</strong> option to <strong>Log Management</strong> scheduler.</li>
+<li>Updated parsing to handle new <strong>NPC death message</strong> format.</li>
+<li>Bug fixes for <strong>Trigger Tester</strong> displaying random errors in the log.</li>
+<li>Updated to new minor <strong>Syncfusion</strong> version.</li>
+<li>Digitally signed all DLLs/EXEs to work better with Win11 security updates.</li>
+</ol>
+<h1 id="2-3-46-02-08-26">2.3.46 | 02/08/26</h1>
+<ol>
+<li>Fixed missing data in the Healing Breakdown for the new spell info.</li>
+<li>Updated Healing Breakdown to remember the top 3, 5, etc setting.</li>
+</ol>
+<h1 id="2-3-45-02-05-26">2.3.45 | 02/05/26</h1>
+<ol>
+<li>Updated Healing Breakdown to show additional spells info when viewing by the Healer/Healed option.</li>
+<li>More updates to player class selection.</li>
+<li>Updated spell data.</li>
+</ol>
+<h1 id="2-3-44-01-27-26">2.3.44 | 01/27/26</h1>
+<ol>
+<li>Limited some of the procs being counted to detect player class.</li>
+<li>Note that the /who command can be used to help if class isn't shown.</li>
+</ol>
+<h1 id="2-3-43-01-24-26">2.3.43 | 01/24/26</h1>
+<ol>
+<li>Added Player Benchmark chart for healing.</li>
+<li>Updated NPC list.</li>
+<li>Fix for reflected spells causing npcs to be added as players.</li>
+<li>Fix for initial bad window position causing a crash.</li>
+</ol>
+<h1 id="2-3-42-01-21-26">2.3.42 | 01/21/26</h1>
+<ol>
+<li>Implemented a more precise way to identify player class.</li>
+<li>Manually setting player class is used as last resort/default.</li>
+<li>Updated trigger variable to specify number range. New format: <strong>{20&lt;N&lt;100}</strong></li>
+<li>Updated how spells are determined from messages to be more accurate?</li>
+<li>Upgraded to latest Synfusion library to fix some UI bugs.</li>
+<li>Updates to try and lower memory usage.</li>
+</ol>
+<h1 id="2-3-41-12-14-25">2.3.41 | 12/14/25</h1>
+<ol>
+<li>Fixed abbreviated spell names for comparing spell counts.</li>
+<li>Made check to fix off-screen window position more forgiving.</li>
+</ol>
+<h1 id="2-3-40-12-11-25">2.3.40 | 12/11/25</h1>
+<ol>
+<li>Performance improvements for <strong>Trigger Log</strong>.</li>
+<li>Updated spells and procs from live.</li>
+<li>Possible fix for loading currency in older EMU log files.</li>
+</ol>
+<h1 id="2-3-39-11-20-25">2.3.39 | 11/20/25</h1>
+<ol>
+<li>More spells from beta.</li>
+<li>Small update to how player class is saved.</li>
+</ol>
+<h1 id="2-3-38-11-18-25">2.3.38 | 11/18/25</h1>
+<ol>
+<li>Added prompt before deleting from trigger folder tree.</li>
+<li>Fix for wrong audio file being displayed in trigger settings.</li>
+<li>Updated how damage meter crit rate values are checked.</li>
+<li>More spells from beta.</li>
+</ol>
+<h1 id="2-3-37-11-16-25">2.3.37 | 11/16/25</h1>
+<ol>
+<li>Updated spells and proc from beta.</li>
+</ol>
+<h1 id="2-3-36-11-10-25">2.3.36 | 11/10/25</h1>
+<p><strong>!!NOTICE!!</strong> Text Overlays were changed to use <strong>Normal</strong> Font Weight in v2.3.0. You may need to change yours back to <strong>Bold</strong> manually.</p>
+<ol>
+<li>Update <strong>Log Archive</strong> basedon activity to check for login messages.</li>
+<li>Fix for log archive also not running if you never changed settings after scheduling was implemented. It would think logging was turned off.</li>
+<li>Added additional error logging.</li>
+</ol>
+<h1 id="2-3-35-11-08-25">2.3.35 | 11/08/25</h1>
+<ol>
+<li>Added option to disable <strong>Text Drop Shadow</strong> in Overlays.</li>
+<li>Added <strong>Close</strong> menu to clear data and stop monitoring the open log file.</li>
+<li>Fixed Text Overlays not using the full window after saving font changes.</li>
+<li>Fixed Overlays capturing input before first display under Linux.</li>
+<li>Changed minimize/maximize and damage meter button to support Linux.</li>
+<li>Cleanup of damage meter UI.</li>
+<li>Included spell and proc updates from beta.</li>
+</ol>
+<h1 id="2-3-34-11-06-25">2.3.34 | 11/06/25</h1>
+<ol>
+<li>Updated sharing of <strong>Timer Bar Icons</strong>. If the icon can not be found on the receiving system, it will allow you to edit the path manually in the <strong>Trigger</strong> settings. If the icon is a <strong>EQ Icon</strong> it will also attempt to find the file in one of the installed EQ folders and update the <strong>Trigger</strong> to use it automatically.</li>
+<li>Added Trigger setting for <strong>Voice Rate</strong>.</li>
+<li>Fix for damage meter not handling certain off-screen positions.</li>
+<li>Fixed multiple issues involving the <strong>Trigger Manager</strong> folder tree.</li>
+<li>Fix for character specific volume changes not always taking effect.</li>
+<li>More audio updates.</li>
+</ol>
+<h1 id="2-3-32-11-02-25">2.3.32 | 11/02/25</h1>
+<ol>
+<li>Added <strong>EQ Icon Picker</strong>. This new feature was provided by <strong>Herbivour</strong> on Github. The <strong>EQ Icon Picker</strong> allows you to choose EQ Icons from your default or custom UI files and display them with <strong>Timers</strong>. Use <code>Click to Select Timer Bar Icon</code> and you'll be presented with an option for using the EQ Icon Picker.</li>
+<li>Added app icon to all windows and cleaned up the Trigger Manager UI.</li>
+<li>Update spells from beta.</li>
+<li>Fix for hide text overlay not working.</li>
+</ol>
+<h1 id="2-3-30-10-29-25">2.3.30 | 10/29/25</h1>
+<ol>
+<li>Updated to better handle 'new' spell procs.</li>
+<li>Another round of improving <strong>Text Overlays</strong>.</li>
+<li>Cleanup/small performance updates for trigger processing.</li>
+</ol>
+<h1 id="2-3-29-10-26-25">2.3.29 | 10/26/25</h1>
+<ol>
+<li>Bug fixes from previous re-work.</li>
+</ol>
+<h1 id="2-3-28-10-25-25">2.3.28 | 10/25/25</h1>
+<ol>
+<li>Additional rework of <strong>Timer Overlay</strong> windows and processing improvements. May want to do some extra testing/check for bugs...</li>
+<li>Updated <strong>Trigger</strong> properties to show invalid bar icons and audio.</li>
+<li>Updated <strong>Trigger Manager</strong> to highlight invalid bar icons on import.</li>
+<li>Removed borders from all trigger property controls for consistency.</li>
+<li>Fix for not being able to edit an invalid timer bar icon.</li>
+<li>Fix wav dropdown so it will update when files are renamed.</li>
+<li>Fix for loot window dropdowns not resetting when data changes.</li>
+<li>Misc bug fixes with quick share and dictionary windows.</li>
+<li>Updated spells and proc lists from beta.</li>
+</ol>
+<h1 id="2-3-27-10-23-25">2.3.27 | 10/23/25</h1>
+<ol>
+<li>Added indicator in <strong>Trigger Manager</strong> to show triggers reload.</li>
+<li>Fix for dictionary replacing parts of words not just whole words.</li>
+<li>More cleanup in timer and text overlay windows.</li>
+<li>Update NPC list from beta.</li>
+</ol>
+<h1 id="2-3-26-10-19-25">2.3.26 | 10/19/25</h1>
+<ol>
+<li>Fixes for recent <strong>Trigger Processing</strong> cleanup.</li>
+<li>Fix for dynamic timer duration being inconsistent when timer repeated quickly.</li>
+</ol>
+<h1 id="2-3-25-10-18-25">2.3.25 | 10/18/25</h1>
+<ol>
+<li>Updated so audio will finish playing while you're changing trigger settings. Use the stop button or EQLP:STOP or uncheck your character if you need to stop audio.</li>
+<li>Fix for <strong>Quick Shares</strong> not loading when opening a file for parse.</li>
+<li>Fix crash when receiving Quick Share with the QS window open.</li>
+<li>Many more <strong>Trigger Processing</strong> improvements.</li>
+<li>Hopefully a fix for EMU crit parsing.</li>
+</ol>
+<h1 id="2-3-24-10-16-25">2.3.24 | 10/16/25</h1>
+<ol>
+<li>Added the following modifiers that can be used with <strong>Trigger Variables</strong>: number, upper, lower, and capitalize. Number is used to format a number based on the local region (adds commas in the U.S.) and the others should be obvious. <strong>Example Usage: {n1.number} or {s.capitalize}</strong></li>
+<li>Added <strong>Streamer Mode</strong> to Overlays so they show up in OBS. This requires using the Windows 10 Capture Mode setting.</li>
+<li>Reworked <strong>Trigger Processing</strong> to improve performance.</li>
+<li>Fixed log reader to better handle files being renamed.</li>
+<li>Fixed problem where repeating timers could not be turned off.</li>
+<li>Included some spell updates from beta.</li>
+</ol>
+<h1 id="2-3-23-10-13-25">2.3.23 | 10/13/25</h1>
+<ol>
+<li>Fix <strong>Trigger Manager</strong> tree sometimes disappearing after trigger import.</li>
+<li>Fix for timers not stopping when turning off a single character.</li>
+<li>Fixed error while changing default overlay while things are active.</li>
+<li>Possible fix for triggers getting stuck/replayed.</li>
+</ol>
+<h1 id="2-3-22-10-09-25">2.3.22 | 10/09/25</h1>
+<ol>
+<li>Added options to <strong>Log Search</strong> for 6 months and 1 year back.</li>
+<li>Updated <strong>Log Management</strong> to allow archiving on a specific day of the week.</li>
+<li>Included updated spells from AAs and procs from beta.</li>
+</ol>
+<h1 id="2-3-21-09-28-25">2.3.21 | 09/28/25</h1>
+<ol>
+<li>Added <strong>{timer-warn-time-value}</strong> as a new Trigger variable. When specified it will be replaced with the configured timer <strong>warning time</strong> setting in any Display Text/Speak field where it is used.</li>
+<li>Added <strong>Private</strong> setting to Triggers. Prevents accidental sharing via <strong>Quick Share</strong>.</li>
+<li>Added multi-select <strong>Classes</strong> dropdown to <strong>Player Benchmark</strong>.</li>
+<li>Added damage labels to <strong>Player Benchmark</strong>.</li>
+<li>Performance improvements when using <strong>End Early Timers</strong>.</li>
+<li>Updated to latest Syncfusion 31.1.17 libraries.</li>
+</ol>
+<h1 id="2-3-20-09-20-25">2.3.20 | 09/20/25</h1>
+<ol>
+<li>Updated <strong>Classes</strong> dropdowns on Summary Tables to allow multi-select.</li>
+<li>Improved handling of audio devices being added/removed at runtime.</li>
+<li>Fixed bug with TTS playback where audio could sometimes be corrupted.</li>
+</ol>
+<h1 id="2-3-19-09-14-25">2.3.19 | 09/14/25</h1>
+<ol>
+<li>Small update to loading voices during startup.</li>
+</ol>
+<h1 id="2-3-18-09-14-25">2.3.18 | 09/14/25</h1>
+<ol>
+<li>Added new option for <strong>Timer Overlays</strong> called <strong>Hide Dupes</strong>. This tries to hide duplicate timers when you have multiple characters configured to respond to the same exact thing. <strong>Warning</strong> This could potentially slow things down if used during a raid so use with caution. For any timer that has this problem have them go to a special overlay configured with this setting and try to limit the number of timers if possible.</li>
+<li>Added a <strong>Clear Logs</strong> button to the Trigger Log.</li>
+<li>EQLP now hides <strong>Windows TTS Voices</strong> that aren't working on your system.</li>
+<li>Performance update to help when many characters are setup for <strong>Triggers</strong>.</li>
+<li>Fixes for <strong>Log Viewer</strong> related to handling Regex.</li>
+</ol>
+<h1 id="2-3-17-09-02-25">2.3.17 | 09/02/25</h1>
+<ol>
+<li>More fixes for looted items view.</li>
+</ol>
+<h1 id="2-3-16-09-01-25">2.3.16 | 09/01/25</h1>
+<ol>
+<li>Added new <strong>View Quick Share Stats</strong> to the Quick Share window as well as the new Quick Share dialog. When clicked you'll be taken to a web page that displays the Quick Shares your parser currently knows about along with the number of times each key has been used or <strong>Downloaded</strong>. This may help during a raid to see if people have actually merged your new shares.</li>
+<li>Changed <strong>GINA</strong> timer import to no longer select Fast Countdown.</li>
+<li>Improvements to how looted items are recorded.</li>
+<li>Fix for being unable to show a hidden windows task bar when maximized.</li>
+<li>Fix for the top 3 and top 10 options in the <strong>Healing Breakdown</strong> not always showing the correct results.</li>
+</ol>
+<h1 id="2-3-15-08-07-25">2.3.15 | 08/07/25</h1>
+<ol>
+<li>Fixed some window sizing problems when maximized. The app should no longer go under the task bar and won't have weird padding around the window when maximized.</li>
+<li><strong>Note</strong> This may be the last update for a little while.</li>
+</ol>
+<h1 id="2-3-14-08-05-25">2.3.14 | 08/05/25</h1>
+<ol>
+<li>Added the ability to search the <strong>Log Archive</strong> from Log Search based on the selected player or current file and made some small UI improvements. Note that if you point the log archive configuration at a GINA archive folder it will search those existing files even if you don't use the EQLP archive feature.</li>
+<li>Added better error handling for copying things to the clipboard. Hopefully, Quick shares should work now even if access is denied.</li>
+<li>Added option to <strong>Healing Breakdown</strong> to limit players/spells shown.</li>
+<li>Further reduced app start up time and improved splash screen updates.</li>
+<li>Fixed bug where changing healing options didn't auto refresh the summary.</li>
+<li>Fixed bug for <strong>Not All Damage Opts Chosen</strong> not showing for damage shields.</li>
+<li>Updated the proc list with some missing spells.</li>
+</ol>
+<h1 id="2-3-13-08-01-25">2.3.13 | 08/01/25</h1>
+<ol>
+<li><strong>Renamed</strong> windows under the <strong>DPS/Healing/Tanking Menus</strong> and added <strong>Player Benchmark</strong>. It is a new column chart for comparing players and is a work in-progress.</li>
+<li>Updated layout serialization to try and avoid saving the layout if the app never leaves a minimized state. This should prevent the correct saved state from being lost.</li>
+<li>Changed the default <strong>Custom Active</strong> and <strong>Font</strong> colors to white in the Trigger Manager character configuration. This is to help avoid accidentally hiding overlay text.</li>
+<li>Implemented workaround to allow floating windows to be resized.</li>
+<li>Updated option to disable the Damage Meter to also clear all data.</li>
+<li>Fix for missing window border when starting maximized.</li>
+<li>Fix for <strong>Hit Frequency</strong> chart range slider being partially hidden.</li>
+<li>Moved software update check to its own thread to improve startup speed.</li>
+<li>More code cleanup and small performance related improvements.</li>
+</ol>
+<h1 id="2-3-12-07-26-25">2.3.12 | 07/26/25</h1>
+<ol>
+<li>Improved caching of audio files when played by triggers.</li>
+<li><strong>Performance</strong> updates for log search.</li>
+<li>Updated log search to allow searching of configured characters from Trigger Manager if advanced mode is enabled.</li>
+<li>Log search will now use <strong>Regex</strong> automatically based on what is typed into the search box.</li>
+<li>Updated the installer to cleanup unused/old files and to reference the most recent version of the .Net 8 Desktop run-time.</li>
+</ol>
+<h1 id="2-3-11-07-24-25">2.3.11 | 07/24/25</h1>
+<ol>
+<li>Additional <strong>Performance</strong> improvements to lower overall CPU usage when changing tabs and moving around the parser windows.</li>
+<li>Added <strong>Enable Chat Archive</strong> to the Options menu. Uncheck this if you really don't want to use the archived chat feature.</li>
+<li>Modernized the chat archive process with updated timers and async processing to avoid potential performance problems.</li>
+<li>Updated Trigger and Overlay folder tree right-click menu to keep multiple items selected, closer to how it works in Windows, and prevented <strong>Rename</strong> from being enabled when mutliple items are selected.</li>
+<li>Added <strong>Import Warning</strong> as orange highlighting on Triggers in the folder tree when they come from GINA with missing wav files.</li>
+<li>Fix for Trigger Search failing in some cases.</li>
+<li>Updated to latest Syncfusion library version 30.1.41.</li>
+</ol>
+<h1 id="2-3-10-07-22-25">2.3.10 | 07/22/25</h1>
+<ol>
+<li><strong>Performance</strong> made improvements during app startup, most noticeble when auto monitoring log files and loading large verified player lists.</li>
+<li><strong>Performance</strong> updates to retune UI thread activity to try and lower CPU usage and replaced busy indicators on Trigger Manager with simple animated gifs as they used way more CPU than a busy indicator should.</li>
+<li>Fix for <strong>Spell Cast Order</strong> not displaying seconds correctly.</li>
+<li>More <strong>UI updates</strong> to windows that have Save/Close options for consistency and hopefully make things less confusing.</li>
+</ol>
+<h1 id="2-3-9-07-19-25">2.3.9 | 07/19/25</h1>
+<ol>
+<li>Added <strong>Export CSV with Formatted Values</strong> to the Options menu. It is on by default and causes CSV exports from the summary windows to display numbers using your local format. For example, 4,334,220.30. If this option is turned off it will export without formatting: 4334220.30</li>
+<li>Fix for the <strong>Create Backup</strong> dialog not displaying properly.</li>
+<li>Fix for <strong>Clear Chat Archive</strong> not displaying players/servers if the server name was too short. Should only have been impacting some EMU servers.</li>
+<li>Made one last set of tweaks for restoring window position.</li>
+</ol>
+<h1 id="2-3-8-07-18-25">2.3.8 | 07/18/25</h1>
+<ol>
+<li>Added a <strong>Repeated Threshold</strong> to the trigger <strong>Timer End Early Settings</strong>. If you use <code>{repeated}</code> or <code>{counter}</code> to count the number of times a timer has been triggered, you can now end the timer early when the count reaches the specified value. When this happens, the count will also reset to zero even if the <strong>Repeated Reset Time</strong> hasn’t been reached.</li>
+<li>Added <strong>Remove All</strong> option for overlays under the <strong>Update Selected Triggers</strong> menu.</li>
+<li>Fixed a bug when using the <strong>Update Selected Triggers</strong> menu on a folder. It would often require two attempts to work and printed errors in the log file.</li>
+<li>Fix that should help with saving EQLP in a maximized state on a second monitor.</li>
+<li>Updated the description for each trigger property/field.</li>
+</ol>
+<h1 id="2-3-7-07-16-25">2.3.7 | 07/16/25</h1>
+<ol>
+<li>Added right-click menu to the <strong>EQLogParser icon</strong> in the system tray for Exit, Minimize/Restore, and About.</li>
+<li><strong>Removed</strong> the Trigger Variable section from the main Help menu and moved it to a button above where you define triggers so it's harder to miss.</li>
+<li>Added some basic Regex info to the online docs.</li>
+<li>Fixed bug where the parser would start very small instead of the last saved size.</li>
+<li>Fixed some tooltips in Trigger Manager.</li>
+</ol>
+<h1 id="2-3-6-07-15-25">2.3.6 | 07/15/25</h1>
+<ol>
+<li>Updated to save active tab and try to switch to it at startup.</li>
+<li>Updated to save window position when the window is moved and not just resized.</li>
+<li>Added <strong>Raid Time</strong> to Parse Preview and cleaned up the options and labels.</li>
+<li>Added a stop button to Trigger Manager that works the same as sending {EQLP:STOP}.</li>
+<li>Fix for <strong>{EQLP:STOP}</strong> to fully remove active timers from all overlays.</li>
+<li>Renamed <strong>Close Overlays</strong> to <strong>Hide Overlays</strong> as it's only intended to hide them until new data comes in. It does not remove text or timers from your Overlays.</li>
+<li>Fix for the <strong>Auto Enable</strong> checkbox on the receive quick share dialog. If it is not checked then triggers will import as disabled.</li>
+<li>Updated the search icon on the <strong>Log Search</strong> window to have pointer on hover to make it more obvious that it is clickable and to have color that's not usually used for a label or title.</li>
+</ol>
+<h1 id="2-3-5-07-13-25">2.3.5 | 07/13/25</h1>
+<ol>
+<li>Fix for <strong>DPS Summary</strong> loading incorrect times for some players on initial selection.</li>
+<li>Updated List option formatting for sending parses to work better with Discord.</li>
+</ol>
+<h1 id="2-3-4-07-13-25">2.3.4 | 07/13/25</h1>
+<ol>
+<li>Added <strong>Inline and List</strong> options to Parse Preview. If you select <strong>List</strong> the selected parse will display with one player per line instead of one long string. This may be useful for pasting parses in Discord or other areas as it's easier to read. <strong>Inline</strong> is what it's always done.</li>
+<li>Added <strong>Time Interval</strong> to Tanking Summary and Healing Summary similar to DPS Summary. Needed a good amount of re-work so <strong>look out of any issues</strong> when using this.</li>
+<li>Included <strong>Specials</strong> with Healing and Tanking parses if enabled.</li>
+<li>Updated <strong>Non-Melee</strong> Tanking Summary option to not count absorbed as non-melee hits.</li>
+<li>Fix for shared triggers not updating.</li>
+<li>Added note to character trigger config related to active and font color overrides.</li>
+<li>Cleaned up some UI issues with the splash screen.</li>
+</ol>
+<h1 id="2-3-3-07-09-25">2.3.3 | 07/09/25</h1>
+<ol>
+<li>Enabled renaming of <strong>Tabs</strong> so you can organize multiple breakdowns easier. Restarting the app will reset the names. Double click on the tab to rename.</li>
+<li>Fix for receiving <strong>Quick Shares</strong> not working in some cases.</li>
+</ol>
+<h1 id="2-3-2-07-06-25">2.3.2 | 07/06/25</h1>
+<ol>
+<li>Added <strong>Custom Volume</strong> to character configuration when using <strong>Advanced Mode</strong> in Trigger Manager. This value will override the global setting so each character can have their own volume. If triggers are modifying the volume as well the adjustment will be applied to the character volume.</li>
+<li>Fixed bug when turning on/off triggers while they're still being processed could give errors. (may still happen in rare cases)</li>
+</ol>
+<h1 id="2-3-1-07-06-25">2.3.1 | 07/06/25</h1>
+<ol>
+<li>Perfomance improvements that should help with high usage of TTS.</li>
+<li>Added <strong>% Acc</strong> and <strong>% Hit</strong> to the Damage Summary.</li>
+<li>Added <strong>Show Damage Percent</strong> to the Damage Meter. It's just the percent of damage the player has done compared to the total. Where it displays may change.</li>
+<li>Testing new build/release process.</li>
+</ol>
+<h1 id="2-3-0-07-06-25">2.3.0 | 07/06/25</h1>
+<ol>
+<li>Started 2.3.x and updated branding. New official site: <strong>http://eqlogparser.kizant.net</strong></li>
+<li>Releaste Notes and Trigger Variable docs are now hosted on the new site.</li>
+<li>Hardware Acceleration is disabled under <strong>Linux</strong> as it unstable with WPF apps. Note that the WINELOADER environment variable is used to detect WINE.</li>
+<li>Changed <strong>{counter}</strong> to work like GINA version. <strong>{repeated}</strong> remains unchanged. </li>
+<li>Fixed <strong>{repeated}</strong> when used with Alternate Timer Name. It was incorrectly counting when variables were used.</li>
+<li>Added <strong>{logtime}</strong> that can be specified in Text to Display, Text to Speak, Text to Send, and Alt Timer Name fields. It will display the time from the log that caused the trigger to fire in the hh:mm:ss format.</li>
+<li>Added <strong>Font Weight</strong> for Overlays to specify bold, thin, etc.</li>
+<li>Added <strong>Horizontal Alignment</strong> to Text Overlays. Display text on the Left, Center, or Right.</li>
+<li>Added <strong>Close Pattern</strong> to Text Overlays to allow a pattern from the log to close and clear the window. It is very simple and does not support any special variables like trigger patterns.</li>
+<li>Changed <strong>Fade Delay</strong> to Text Overlays to allow values up to 99999 seconds.</li>
+<li>Updated <strong>Close Overlays</strong> button to also clear Text Overlays.</li>
+<li>{EQLP:STOP} is no longer case sensitive.</li>
+<li>Added <strong>Start with Window Minimized</strong> to the Options menu.</li>
+<li>Fixed parsing bug related to npcs names that contain the word hit. (again)</li>
+</ol>
+<h1 id="2-2-x">2.2.x</h1>
+<ul>
+<li>
+<p><strong>Summary and Timelines.</strong> Added a way to manually assign classes. In addition, if a persona change is seen in the log it will attempt to assign the class to the new persona. Timelines now support drag and drop, zooming with Control+ and mouse wheel. Export formats are also now consistent pretty much everywhere.</p>
+</li>
+<li>
+<p><strong>Trigger Manager.</strong> Overlays were re-worked to improve rendering performance and fix some bugs related to timers getting stuck. Many new trigger settings were added including timer icons, font color and active color overrides per trigger or per character, custom volume, matching against previous lines, and discord web hooks are now supported. Continued to improve support for importing from GINA. Implemented <strong>Quick Share</strong> for Overlays and <strong>Trusted Player</strong> list so that things can be auto-merged. Advanced mode now has a status to show if a log is active or missing. Implemented a search function so that you can find triggers based on the trigger name or pattern. Included support for mp3 files and older voices using the windows SAPI implementation may now be used.</p>
+</li>
+<li>
+<p><strong>New Features.</strong> Added Create/Restore Backup so that settings may be saved and restored at a later time. This also includes a <strong>BackupUtil.exe</strong> in the EQLogParser directory so that a backup can be created from the command line. Impemented a <strong>Wav Creator</strong> so that you can generate text to speech using any of the configured voices and save the results to a file. Added a <strong>Splash Screen</strong> to show loading status as well as errors if they happen and a link to open the error log. Implemented better parsing support for <strong>EMU</strong> servers.</p>
+</li>
+<li>
+<p><strong>Linux Support.</strong> EQLogParser now works completely with linux using WINE and I've included an optional text to speech engine that can be used as WINE 64bit does not support windows TTS.</p>
+</li>
+<li>
+<p><strong>.NET 8.0 Desktop Runtime.</strong> Version 8.0.11+ of .NET is now required to run EQLogParser. This includes performance improvements and many features to help with development. It is supported until 2026 but expect a move to .NET 10 toward the end of 2025.</p>
+</li>
+<li>
+<p><strong>Improved Install Process.</strong> Switched to using Inno Setup and an .exe based installer. Desktop icons no longer get moved/replaced and there are no longer problems with some install files not being updated. No longer need to 'repair' the install every so often when it stops working.</p>
+</li>
+</ul>
+<h1 id="2-1-x">2.1.x</h1>
+<ul>
+<li>
+<p><strong>Log Management features.</strong> It is available under Tools -&gt; Log Management. Check the box to enable archiving, choose a folder for the archived files, select options from the two dropdowns. It will attempt to archive files that meet those criteria whenever the parser is started, whenever you add/enable a character's triggers or when you open a file to display a parse. Note that it will not archive randomly during a raid and it will wait for the parse to finish loading before attempting to archive.</p>
+</li>
+<li>
+<p><strong>Restore Open Views.</strong> The parser will remember and re-open many of the application's windows/tabs upon restart. This appliies to everything under the View menu except for log search.</p>
+</li>
+<li>
+<p><strong>Look and Feel Menu Item under Options.</strong> It has settings for Font Size, Font Family, and the previous Themes. Only a limited number of options are available at this time and a number of changes were made throughou the UI for things to adjust sizes better. Hopefully all the current combinations of Font Size/Family work well.</p>
+</li>
+<li>
+<p><strong>Audio Triggers and Text/Timer Overlays are fully supported.</strong></p>
+<ul>
+<li>Look under View -&gt; Triggers. </li>
+<li>Trigger Manager is for creating triggers and overlays. You can also import from GINA trigger files. See the triggerVariables document for differences.</li>
+<li>Triggers can be shared with others via Quick Share where a key can be sent to someone else in game and it will download and install the triggers.</li>
+<li>Added Phonetic Dictionary option to Trigger Manager. It's very simple as the TTS engine doesn't support anything too useful. However, you can specify a word to replace with another word or phrase by adding rows to the dictionary table. Adding too many entries could potentially slow processing so look out for that.</li>
+<li>Quick Share Log is a table of all received quick shares as well as any that it sees in the log file that you load.</li>
+<li>Trigger Log is a table that gets updated when triggers are fired. </li>
+<li>Trigger Tester allows you to paste log lines into a list and Run them as if you were playing. Then your triggers and overlays should fire and display. The real-time option takes timestamps into account and attempts to delay each line by the appropriate amount.</li>
+<li>The Tools menu has an option for Opening the Trigger Sounds folder. You can add new .wav files there and they should show up as options in Trigger Manager.</li>
+<li>If you created triggers in previos versions it's probably best to start over.</li>
+</ul>
+</li>
+<li>
+<p><strong>New Damage Meter.</strong></p>
+<ul>
+<li>It has it's only menu under View -&gt; Damage Meter.</li>
+<li>The UI has been updated with a modern look and feel.</li>
+<li>A Tank tab is available to view similar damage information for Tanks. It does not need to be configured. You can click back and forther between DPS and Tank while it's running.</li>
+<li>There's a new optoin for smaller damage percent bars to allow the Overlay to use a little less space.</li>
+<li>Added a Streamer Mode checkbox to the Damage Meter. If this is checked the meter will show up as a window when you alt-tab and it should also be visible/selectable in OBS</li>
+</ul>
+</li>
+<li>
+<p><strong>Added Help Menu.</strong></p>
+<ul>
+<li>One option allows you to view these release notes.</li>
+<li>Reporting an Issue takes you to the Github page for reporting bugs.</li>
+<li>The About option takes you to the README on Github.</li>
+</ul>
+</li>
+</ul></section>
+    </main>
+    <nav class="rightad">
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
+      <ins class="adsbygoogle"
+        style="display:inline-block; width:160px; height:600px"
+        data-ad-client="ca-pub-4428145487599357"
+        data-ad-slot="9757256233"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>     
+    </nav>
+  </div>
+</body>
+</html>

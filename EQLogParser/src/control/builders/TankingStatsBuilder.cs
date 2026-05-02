@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -60,10 +59,11 @@ namespace EQLogParser
           FireNewStatsEvent();
           Reset();
 
-          _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
-          _title = options.Npcs?.FirstOrDefault()?.Name;
-          var damageBlocks = new List<ActionGroup>();
+          _selected = [.. options.Npcs];
+          _selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+          _title = options?.Npcs.Count > 0 ? options.Npcs[0].Name : null;
 
+          var damageBlocks = new List<ActionGroup>();
           foreach (var fight in CollectionsMarshal.AsSpan(_selected))
           {
             damageBlocks.AddRange(fight.TankingBlocks);
@@ -245,9 +245,9 @@ namespace EQLogParser
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
 
-            var uniqueClasses = new ConcurrentDictionary<string, byte>();
-            var playerClasses = new ConcurrentDictionary<string, string>();
-            Parallel.ForEach(individualStats.Values, stats =>
+            var uniqueClasses = new HashSet<string>();
+            var playerClasses = new Dictionary<string, string>();
+            foreach (var stats in individualStats.Values)
             {
               // update before using _playerTimeRanges
               StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
@@ -273,9 +273,9 @@ namespace EQLogParser
 
               if (!string.IsNullOrEmpty(playerClass))
               {
-                uniqueClasses.TryAdd(playerClass, 1);
+                uniqueClasses.Add(playerClass);
               }
-            });
+            }
 
             var combined = new CombinedStats
             {
@@ -284,13 +284,15 @@ namespace EQLogParser
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
               TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total),
                 " Tanked ", StatsUtil.FormatTotals(_raidTotals.Dps)),
-              PlayerClasses = playerClasses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+              PlayerClasses = playerClasses
             };
 
-            combined.StatsList.AddRange(individualStats.Values.AsParallel().OrderByDescending(item => item.Total));
+            combined.StatsList.AddRange(individualStats.Values);
+            combined.StatsList.Sort(static (a, b) => b.Total.CompareTo(a.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
-            combined.UniqueClasses.AddRange(uniqueClasses.Keys.OrderBy(c => c));
+            combined.UniqueClasses.AddRange(uniqueClasses);
+            combined.UniqueClasses.Sort();
 
             for (var i = 0; i < combined.StatsList.Count; i++)
             {
