@@ -75,9 +75,24 @@ These are special variables or codes that can be used in trigger `Pattern` field
 
 None of these trigger variables are case-insensitive. Whether you use `{c}` or `{C}` they will do the same thing. Also, if you define one variable as `{S}` and reference it later as `{s}` it will still work. The x value in `{Sx}` or `{Nx}` is any number from `0` to `9` so you can use more than one of these in the same trigger.
 
-In addition, modifiers may be used with these variables for display purposes. They do not function in any of the `Pattern` fields but will work in the display fields. These modifiers include `.number`, `.capitalize`, `.lower`, and `.upper`. Number will format number values based on region. For example, in the U.S., they will be formatted with commas. The other options are self-explanatory.
+In addition, modifiers may be used with these variables for display purposes. They do not function in any of the `Pattern` fields but will work in the display fields. These modifiers include `.number`, `.capitalize`, `.lower`, `.upper`, `.padleft`, `.padright`, and `.center`. Number will format number values based on region. For example, in the U.S., they will be formatted with commas. The other options are self-explanatory.
 
 Example Usage when using Modifiers: `{S1.capitalize}`  `{n.number}`
+
+### Padding and Centering Modifiers
+
+The `.padleft`, `.padright`, and `.center` modifiers allow you to format text with padding for aligned display. These require a width argument specified after a colon.
+
+- **`.padleft:width`** - Pads the value with spaces on the left to reach the specified total width
+- **`.padright:width`** - Pads the value with spaces on the right to reach the specified total width
+- **`.center:width`** - Centers the value within the specified width by adding spaces on both sides
+
+Example Usage:
+- `{S1.padleft:20}` - Left-pads the captured value to 20 characters total
+- `{S1.padright:20}` - Right-pads the captured value to 20 characters total
+- `{S1.center:20}` - Centers the captured value within 20 characters
+
+These are useful for creating aligned columns in display text or when formatting output for overlays.
 
 ## `{C}`
 
