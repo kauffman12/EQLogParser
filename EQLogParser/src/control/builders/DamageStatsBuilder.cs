@@ -99,8 +99,10 @@ namespace EQLogParser
           Reset();
 
           _lastStatsEvent = null;
-          _selected = [.. options.Npcs.OrderBy(sel => sel.Id)];
-          _title = options.Npcs?.FirstOrDefault()?.Name;
+          _selected = [.. options.Npcs];
+          _selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+          _title = options?.Npcs.Count > 0 ? options.Npcs[0].Name : null;
+
           var damageBlocks = new List<ActionGroup>();
 
           foreach (var fight in CollectionsMarshal.AsSpan(_selected))
@@ -201,8 +203,8 @@ namespace EQLogParser
         _lastStatsEvent = null;
         if (_raidTotals != null)
         {
-          var childrenStats = new ConcurrentDictionary<string, Dictionary<string, PlayerStats>>();
-          var topLevelStats = new ConcurrentDictionary<string, PlayerStats>();
+          var childrenStats = new Dictionary<string, Dictionary<string, PlayerStats>>();
+          var topLevelStats = new Dictionary<string, PlayerStats>();
           var damageValidator = new DamageValidator();
           var individualStats = new Dictionary<string, PlayerStats>();
 
@@ -295,12 +297,15 @@ namespace EQLogParser
                         StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
-                        if (!childrenStats.TryGetValue(aggregateName, out _))
+                        if (childrenStats.TryGetValue(aggregateName, out var children))
                         {
-                          childrenStats[aggregateName] = [];
+                          children.TryAdd(stats.Name, stats);
+                        }
+                        else
+                        {
+                          childrenStats[aggregateName] = new Dictionary<string, PlayerStats> { { stats.Name, stats } };
                         }
 
-                        childrenStats[aggregateName][stats.Name] = stats;
                         stats.IsTopLevel = false;
                       }
 
@@ -325,9 +330,9 @@ namespace EQLogParser
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals, true);
 
-            var expandedStats = new ConcurrentBag<PlayerStats>();
-            var uniqueClasses = new ConcurrentDictionary<string, byte>();
-            var playerClasses = new ConcurrentDictionary<string, string>();
+            var expandedStats = new List<PlayerStats>();
+            var uniqueClasses = new HashSet<string>();
+            var playerClasses = new Dictionary<string, string>();
             foreach (var stats in individualStats.Values)
             {
               if (_playerGroupAssignments.TryGetValue(stats.OrigName, out var cachedGroup))
@@ -397,7 +402,7 @@ namespace EQLogParser
 
               if (!string.IsNullOrEmpty(playerClass))
               {
-                uniqueClasses.TryAdd(playerClass, 1);
+                uniqueClasses.Add(playerClass);
               }
             }
 
@@ -408,14 +413,17 @@ namespace EQLogParser
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
               TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total),
                 " Damage ", StatsUtil.FormatTotals(_raidTotals.Dps)),
-              PlayerClasses = playerClasses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+              PlayerClasses = playerClasses
             };
 
-            combined.StatsList.AddRange(topLevelStats.Values.AsParallel().OrderByDescending(item => item.Total));
+            combined.StatsList.AddRange(topLevelStats.Values);
+            combined.StatsList.Sort(static (a, b) => b.Total.CompareTo(a.Total));
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
-            combined.ExpandedStatsList.AddRange(expandedStats.AsParallel().OrderByDescending(item => item.Total));
-            combined.UniqueClasses.AddRange(uniqueClasses.Keys.OrderBy(c => c));
+            combined.ExpandedStatsList.AddRange(expandedStats);
+            combined.ExpandedStatsList.Sort(static (a, b) => b.Total.CompareTo(a.Total));
+            combined.UniqueClasses.AddRange(uniqueClasses);
+            combined.UniqueClasses.Sort();
 
             for (var i = 0; i < combined.ExpandedStatsList.Count; i++)
             {
@@ -427,7 +435,9 @@ namespace EQLogParser
 
                 if (childrenStats.TryGetValue(stats.Name, out var children))
                 {
-                  combined.Children.Add(stats.Name, [.. children.Values.OrderByDescending(stats => stats.Total)]);
+                  var sortedChildren = new List<PlayerStats>(children.Values);
+                  sortedChildren.Sort(static (a, b) => b.Total.CompareTo(a.Total));
+                  combined.Children.Add(stats.Name, sortedChildren);
                 }
               }
             }

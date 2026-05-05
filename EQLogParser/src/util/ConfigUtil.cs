@@ -158,9 +158,9 @@ namespace EQLogParser
       }
     }
 
-    internal static ConcurrentDictionary<string, string> ReadPetMapping()
+    internal static Dictionary<string, string> ReadPetMapping()
     {
-      var petMapping = new ConcurrentDictionary<string, string>();
+      var petMapping = new Dictionary<string, string>();
       var fileName = ConfigDir + @"\" + ServerName + @"\" + PetMappingFile;
       LoadProperties(petMapping, ReadList(fileName));
       return petMapping;
@@ -305,16 +305,21 @@ namespace EQLogParser
       }
     }
 
-    private static void LoadProperties(ConcurrentDictionary<string, string> properties, List<string> list)
+    private static void LoadProperties(IDictionary<string, string> properties, List<string> list)
     {
-      list.ForEach(line =>
+      foreach (var line in list)
       {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+          continue;
+        }
+
         var parts = line.Split('=');
         if (parts is { Length: 2 } && parts[0].Length > 0 && parts[1].Length > 0)
         {
           properties[parts[0]] = parts[1];
         }
-      });
+      }
     }
 
     private static void SaveProperties(string fileName, IEnumerable<KeyValuePair<string, string>> enumeration)

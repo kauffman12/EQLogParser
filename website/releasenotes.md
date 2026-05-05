@@ -1,5 +1,11 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.52 | 05/05/26
+1. Added **padleft, padright, center** formatting options to text displayed by triggers. For example, if **Text to Display** contains **{s.padright:20}** then extra spaces will be added to the right of the text up till 20 characters have been accounted for. When used with **fixed width fonts** such as **Consolas** it allows for some cleaner text display.
+2. Fixed bug where trigger cut/paste of a folder to itself could make your triggers disappear.
+3. Fixed bug that would break pet assignment for mages and beastlords.
+4. Cleanup/performance updates for building summary tables.
+
 # 2.3.51 | 04/29/26
 1. Added New Feature **Group View** to the **Damage Summary** to allow players to be grouped together and combine their damage statistics. In addition, the '/who all raid' information is parsed and available in a dropdown so that you can assign groups from it. Switch to **Group View** by using the existing dropdown that shows **Player +Pets** as an option.
 2. Add a **Best Sec** column to the **Tank Summary**.

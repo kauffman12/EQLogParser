@@ -1344,14 +1344,21 @@ namespace EQLogParser
 
       var lastIndex = 0;
       var sb = new StringBuilder(text.Length);
+
       foreach (Match m in matchCollection)
       {
         sb.Append(text, lastIndex, m.Index - lastIndex);
         lastIndex = m.Index + m.Length;
 
-        var name = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[3].Value;
-        var modifier = m.Groups[2].Success ? m.Groups[2].Value :
-                      (m.Groups[4].Success ? m.Groups[4].Value : null);
+        var name = m.Groups["name"].Value;
+
+        var modifierName = m.Groups["modifier"].Success
+          ? m.Groups["modifier"].Value
+          : null;
+
+        var modifierArg = m.Groups["arg"].Success
+          ? m.Groups["arg"].Value
+          : null;
 
         if (!matches.TryGetValue(name, out var value))
         {
@@ -1359,22 +1366,37 @@ namespace EQLogParser
           continue;
         }
 
-        if (!string.IsNullOrEmpty(modifier))
+        if (!string.IsNullOrEmpty(modifierName))
         {
-          switch (modifier.ToLowerInvariant())
+          switch (modifierName.ToLowerInvariant())
           {
+            case "capitalize":
+              value = TextUtils.ToUpper(value, CultureInfo.CurrentCulture);
+              break;
+
+            case "center":
+              value = TextUtils.PadCenter(value, modifierArg);
+              break;
+
             case "number":
               if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
                 value = num.ToString("N0", CultureInfo.CurrentCulture);
               break;
+
             case "upper":
               value = value.ToUpper(CultureInfo.CurrentCulture);
               break;
+
             case "lower":
               value = value.ToLower(CultureInfo.CurrentCulture);
               break;
-            case "capitalize":
-              value = TextUtils.ToUpper(value, CultureInfo.CurrentCulture);
+
+            case "padleft":
+              value = TextUtils.PadLeft(value, modifierArg);
+              break;
+
+            case "padright":
+              value = TextUtils.PadRight(value, modifierArg);
               break;
           }
         }
@@ -1699,7 +1721,7 @@ namespace EQLogParser
     private static partial Regex ReplaceTsRegex();
     [GeneratedRegex(@"[^a-zA-Z0-9 .,!?;:'""-()]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ReplaceBadCharsRegex();
-    [GeneratedRegex(@"\$\{([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?\}|\{([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?\}", RegexOptions.Compiled)]
+    [GeneratedRegex(@"\$?\{(?<name>[a-zA-Z0-9_]+)(?:\.(?<modifier>[a-zA-Z0-9_]+)(?::(?<arg>[^}]*))?)?\}", RegexOptions.Compiled)]
     private static partial Regex MatchesTokenRegex();
   }
 }

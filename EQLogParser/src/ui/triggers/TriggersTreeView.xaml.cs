@@ -491,7 +491,7 @@ namespace EQLogParser
         {
           if (copiedNode.IsDir())
           {
-            if (copiedNode.SerializedData.Parent != node.SerializedData.Id)
+            if (copiedNode != node && copiedNode.SerializedData.Parent != node.SerializedData.Id)
             {
               copiedNode.SerializedData.Parent = node.SerializedData.Id;
               await TriggerStateDB.Instance.Update(copiedNode.SerializedData, true);

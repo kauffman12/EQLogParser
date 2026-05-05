@@ -1212,8 +1212,6 @@ namespace EQLogParser
         ConfigUtil.Save();
       }
 
-      ChatDB.Instance.Stop();
-      LifecycleManager.Shutdown();
       _saveTimer?.Stop();
       _eqLogReader?.Dispose();
       _notifyIcon?.Dispose();

@@ -19,16 +19,11 @@ namespace EQLogParser
       try
       {
         int index;
-        if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1)
+        if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1 &&
+          HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
-          var record = HandleHealed(action, index, lineData.BeginTime);
-          if (record != null)
-          {
-            record.Healer = PlayerRegistry.ReplacePlayer(record.Healer, record.Healed);
-            record.Healed = PlayerRegistry.ReplacePlayer(record.Healed, record.Healer);
-            RecordsStore.Instance.Add(record, lineData.BeginTime);
-            return true;
-          }
+          RecordsStore.Instance.Add(record, lineData.BeginTime);
+          return true;
         }
       }
       catch (ArgumentNullException ne)
@@ -209,11 +204,6 @@ namespace EQLogParser
         if (string.IsNullOrEmpty(healed))
           return null;
 
-        // fix healed
-        if ("You".Equals(healed, StringComparison.OrdinalIgnoreCase))
-        {
-          healed = ConfigUtil.PlayerName;
-        }
         // fix healer
         if (string.IsNullOrEmpty(healer) && spell?.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase) == true)
         {
@@ -223,6 +213,9 @@ namespace EQLogParser
         // verify healer parsed properly
         if (string.IsNullOrEmpty(healer) || healer.Length > 64)
           return null;
+
+        healer = PlayerRegistry.ReplacePlayer(healer, healed);
+        healed = PlayerRegistry.ReplacePlayer(healed, healer);
 
         // check for pets
         var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
