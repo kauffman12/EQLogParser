@@ -354,7 +354,7 @@ namespace EQLogParser
 
         ConfigUtil.ReadPlayers().ForEach(player =>
         {
-          if (!string.IsNullOrEmpty(player) && player.Length > 2)
+          if (!string.IsNullOrEmpty(player) && player.Length > 2 && !"You".Equals(player, StringComparison.OrdinalIgnoreCase))
           {
             var parsed = 0d;
             string name;
@@ -414,7 +414,7 @@ namespace EQLogParser
           var now = DateTime.Now;
           foreach (var kv in _verifiedPlayers)
           {
-            if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key))
+            if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key) && !"You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase))
             {
               if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays < 200)
               {

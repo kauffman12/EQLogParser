@@ -12,8 +12,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Application = System.Windows.Application;
-using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace EQLogParser
 {

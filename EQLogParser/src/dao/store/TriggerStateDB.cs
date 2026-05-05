@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace EQLogParser
 {
@@ -66,6 +65,20 @@ namespace EQLogParser
             CheckpointSize = 10
           };
 
+
+          /* print all data
+          Directory.CreateDirectory(@"r:\dump");
+          foreach (var name in _db.GetCollectionNames())
+          {
+            var safeName = string.Concat(name.Select(c =>
+                Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+
+            var output = Path.Combine(@"r:\dump", $"{safeName}.json");
+
+            _db.Execute($"select $ into $file('{output.Replace("\\", "\\\\")}') from {name}");
+          }
+          */
+
           _taskQueue = new LiteDbTaskQueue(_db);
 
           if (needUpgrade)
@@ -81,6 +94,16 @@ namespace EQLogParser
 
           // create default data
           var tree = _db.GetCollection<TriggerNode>(TreeCol);
+
+          /* fix broken
+          var parent = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
+          var test = tree.FindOne(n => n.Id == n.Parent);
+          if (test != null)
+          {
+            test.Parent = parent?.Id;
+            tree.Update(test);
+          }
+          */
 
           // create overlay node if it doesn't exist
           if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) == null)
@@ -1379,7 +1402,7 @@ namespace EQLogParser
         {
           try
           {
-            if (JsonSerializer.Deserialize<LegacyTriggerNode>(json, SerializerOptions) is { } legacy)
+            if (System.Text.Json.JsonSerializer.Deserialize<LegacyTriggerNode>(json, SerializerOptions) is { } legacy)
             {
               legacy.Name = title;
               UpgradeTree(legacy, overlayIds, defaultEnabled);

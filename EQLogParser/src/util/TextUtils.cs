@@ -32,9 +32,33 @@ namespace EQLogParser
       { 400, "CD" }, { 100, "C" }, { 90, "XC" }, { 50, "L" }, { 40, "XL" }, { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" }
     };
 
-    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).Equals(test, StringComparison.OrdinalIgnoreCase);
+    internal static string PadLeft(string value, string lengthText) => Pad(value, lengthText, true);
+    internal static string PadRight(string value, string lengthText) => Pad(value, lengthText, false);
     internal static string ParseSpellOrNpc(string[] split, int index) => string.Join(" ", split, index, split.Length - index).Trim('.');
+    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
+    internal static bool SCompare(string s, int start, int count, string test) => s.AsSpan(start, count).Equals(test, StringComparison.OrdinalIgnoreCase);
     internal static string ToLower(string name) => string.IsNullOrEmpty(name) ? "" : name.ToLower(CultureInfo.InvariantCulture);
+
+    internal static string PadCenter(string value, string lengthText)
+    {
+      if (string.IsNullOrEmpty(lengthText)) return value;
+
+      if (!int.TryParse(lengthText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var totalWidth))
+      {
+        return value;
+      }
+
+      if (totalWidth <= value.Length)
+      {
+        return value;
+      }
+
+      var totalPadding = totalWidth - value.Length;
+      var leftPadding = totalPadding / 2;
+      var rightPadding = totalPadding - leftPadding;
+
+      return new string(' ', leftPadding) + value + new string(' ', rightPadding);
+    }
 
     internal static string ToUpper(string name, CultureInfo culture = null)
     {
@@ -186,7 +210,7 @@ namespace EQLogParser
         tablechoices.Add(new { type = key, title = tables[key].GetTitle() });
       }
 
-      var headerValue = headerTemplate.Render(Hash.FromAnonymousObject(new { tablechoices }));
+      var headerValue = headerTemplate.Render(Hash.FromAnonymousObject(new { tablechoices }), CultureInfo.CurrentCulture);
       File.WriteAllText(selectedFileName, headerValue);
 
       var contentTemplate = Template.Parse(File.ReadAllText(@"data\html\content.html"));
@@ -231,7 +255,7 @@ namespace EQLogParser
           rows.Add(row);
         }
 
-        var content = contentTemplate.Render(Hash.FromAnonymousObject(new { columns, rows, tableid = key }));
+        var content = contentTemplate.Render(Hash.FromAnonymousObject(new { columns, rows, tableid = key }), CultureInfo.CurrentCulture);
         File.AppendAllText(selectedFileName, content);
       }
 
@@ -332,8 +356,6 @@ namespace EQLogParser
       return success;
     }
 
-    internal static uint ParseUInt(string str, uint defValue = uint.MaxValue) => ParseUInt(str.AsSpan(), defValue);
-
     internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
     {
       if (span.IsEmpty)
@@ -408,14 +430,31 @@ namespace EQLogParser
 
     private static string FormatTsvCell(object item)
     {
-      return item is string s
-        ? $"\"{EscapeTsv(s)}\""
-        : Convert.ToString(item, CultureInfo.CurrentCulture) ?? "";
+      return item is string s ? $"\"{EscapeTsv(s)}\"" : Convert.ToString(item, CultureInfo.CurrentCulture) ?? "";
     }
 
     private static string EscapeTsv(string value)
     {
       return value.Replace("\"", "\"\"");
+    }
+
+    private static string Pad(string value, string lengthText, bool padLeft)
+    {
+      if (string.IsNullOrEmpty(lengthText)) return value;
+
+      if (!int.TryParse(lengthText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var totalWidth))
+      {
+        return value;
+      }
+
+      if (totalWidth <= 0)
+      {
+        return value;
+      }
+
+      return padLeft
+        ? value.PadLeft(totalWidth)
+        : value.PadRight(totalWidth);
     }
   }
 }
