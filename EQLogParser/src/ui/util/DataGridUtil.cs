@@ -538,7 +538,8 @@ namespace EQLogParser
         if (!found.Contains(columns[i].MappingName))
         {
           // AssignedGroup should always be visible when it's the new column
-          if (columns[i].MappingName == "AssignedGroup")
+          // if visible is null then no column data exists
+          if (visible != null && columns[i].MappingName == "AssignedGroup")
           {
             addAssignedGroupColumn = columns[i];
             continue;

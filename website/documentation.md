@@ -174,7 +174,7 @@ flatpak install flathub com.usebottles.bottles
 Start Bottles using the following command. The `PERSONAL_INSTALLERS` variable tells it where to find the EQLogParser installer:
 
 ```bash
-PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/programs/refs/heads/main flatpak run com.usebottles.bottles
+PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/refs/heads/master/bottles flatpak run com.usebottles.bottles
 ```
 
 > **Tip:** You can save this as a shell script or desktop shortcut so you don't have to type it every time.
