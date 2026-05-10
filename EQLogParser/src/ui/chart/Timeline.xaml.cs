@@ -44,14 +44,11 @@ namespace EQLogParser
     private bool _currentShowCasterAdps = true;
     private bool _currentShowMeleeAdps = true;
     private bool _isApplyingLayout;
+    private readonly ComboBoxItem _selectLayoutItem = new() { Content = "Select a Layout", Tag = "" };
+    private static readonly List<string> NoLayoutsList = ["No Layouts Available"];
     private List<string> _availableLayouts;
 
-    public class LayoutItem
-    {
-      public string Name { get; set; } = string.Empty;
-      public bool IsDeletable { get; set; }
-      public override string ToString() => Name;
-    }
+
 
     public Timeline()
     {
@@ -176,33 +173,49 @@ namespace EQLogParser
     private void LoadLayoutsIntoSelector(string selected = null)
     {
       _availableLayouts = TimelineLayoutManager.GetLayoutNames();
-      layoutSelector.Items.Clear();
+      _selectLayoutItem.Content = "Select a Layout";
 
-      if (_availableLayouts.Count > 0)
+      if (_availableLayouts.Count == 0)
       {
-        var index = -1;
-        foreach (var layoutName in _availableLayouts)
+        if (layoutSelector.ItemsSource != NoLayoutsList)
         {
-          layoutSelector.Items.Add(new LayoutItem { Name = layoutName, IsDeletable = true });
-          if (layoutName == selected)
-          {
-            index = layoutSelector.Items.Count - 1;
-          }
+          layoutSelector.ItemsSource = NoLayoutsList;
+          layoutSelector.SelectedIndex = 0;
+          layoutSelector.IsEnabled = false;
+          layoutSelector.FontStyle = FontStyles.Italic;
+          ResetLayout();
         }
-
-        if (index >= 0)
-        {
-          layoutSelector.SelectedIndex = index;
-        }
-
-        layoutSelector.IsEnabled = true;
-        layoutStatus.Text = "Select a Layout";
+        return;
       }
-      else
+
+      layoutSelector.IsEnabled = true;
+      layoutSelector.FontStyle = FontStyles.Normal;
+
+      // Currently selected layout
+      var selectedTag = (layoutSelector.SelectedItem is ComboBoxItem { Tag: string val }) ? val : null;
+
+      // Build display items: layout names
+      var displayItems = _availableLayouts.Select(layoutName => new ComboBoxItem
       {
-        layoutSelector.IsEnabled = false;
-        layoutStatus.Text = "No Layouts Available";
+        Content = layoutName,
+        Tag = layoutName
+      }).ToList();
+
+      displayItems.Insert(0, _selectLayoutItem);
+      layoutSelector.ItemsSource = displayItems;
+
+      // Restore selection or select first layout
+      var index = 0;
+      if (selected != null)
+      {
+        index = displayItems.FindIndex(i => i.Tag?.ToString() == selected);
       }
+      else if (selectedTag != null)
+      {
+        index = displayItems.FindIndex(i => i.Tag?.ToString() == selectedTag);
+      }
+
+      layoutSelector.SelectedIndex = index > -1 ? index : 0;
     }
 
     private void SaveLayout(string layoutName, bool updateList = false)
@@ -262,24 +275,24 @@ namespace EQLogParser
 
     private void SaveLayoutClick(object sender, RoutedEventArgs e)
     {
-      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
+      if (layoutSelector.SelectedItem is ComboBoxItem { Tag: string selectedItemTag })
       {
-        SaveLayout(selectedItem.Name);
+        SaveLayout(selectedItemTag);
       }
     }
 
     private void DeleteLayoutClick(object sender, RoutedEventArgs e)
     {
-      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
+      if (layoutSelector.SelectedItem is ComboBoxItem { Tag: string selectedItemTag })
       {
-        var msgDialog = new MessageWindow($"Are you sure you want to delete {selectedItem.Name}?", "Delete Layout", MessageWindow.IconType.Question, "Delete");
+        var msgDialog = new MessageWindow($"Are you sure you want to delete {selectedItemTag}?", "Delete Layout", MessageWindow.IconType.Question, "Delete");
         msgDialog.ShowDialog();
 
         if (msgDialog.IsYes1Clicked)
         {
           try
           {
-            TimelineLayoutManager.DeleteLayout(selectedItem.Name);
+            TimelineLayoutManager.DeleteLayout(selectedItemTag);
             LoadLayoutsIntoSelector();
           }
           catch (IOException)
@@ -298,46 +311,53 @@ namespace EQLogParser
 
     private void LayoutSelectorSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      // Reset button states
       saveLayoutButton.IsEnabled = false;
       saveLayoutButton.Header = "Save Layout";
       deleteLayoutButton.IsEnabled = false;
       deleteLayoutButton.Header = "Delete Layout";
 
-      if (_isApplyingLayout || layoutSelector.SelectedItem == null)
+      if (_isApplyingLayout || layoutSelector.SelectedItem is not ComboBoxItem selectedItem)
       {
         return;
       }
 
-      if (layoutSelector.SelectedItem is LayoutItem { } selectedItem)
+      // First item is always "Select a Layout" or "Clear Layout"
+      if (layoutSelector.SelectedIndex == 0)
       {
-        var selected = selectedItem.Name;
+        _selectLayoutItem.Content = "Select a Layout";
+        ResetLayout();
+        return;
+      }
 
-        if (_availableLayouts.Contains(selected))
+      _selectLayoutItem.Content = "Clear Layout";
+
+      if (selectedItem.Tag is not string selected || !_availableLayouts.Contains(selected))
+      {
+        return;
+      }
+
+      _isApplyingLayout = true;
+      try
+      {
+        var layout = TimelineLayoutManager.LoadLayout(selected);
+        if (layout != null)
         {
-          _isApplyingLayout = true;
-          try
-          {
-            var layout = TimelineLayoutManager.LoadLayout(selected);
-            if (layout != null)
-            {
-              ApplyLayout(layout);
-              saveLayoutButton.IsEnabled = true;
-              saveLayoutButton.Header = $"Save ({layout.Name})";
-              deleteLayoutButton.IsEnabled = true;
-              deleteLayoutButton.Header = $"Delete ({layout.Name})";
-            }
-            else
-            {
-              var msgDialog = new MessageWindow("Problem loading layout. Check Error Log for details.", "Load Layout", MessageWindow.IconType.Warn);
-              msgDialog.ShowDialog();
-            }
-          }
-          finally
-          {
-            _isApplyingLayout = false;
-          }
-          return;
+          ApplyLayout(layout);
+          saveLayoutButton.IsEnabled = true;
+          saveLayoutButton.Header = $"Save ({layout.Name})";
+          deleteLayoutButton.IsEnabled = true;
+          deleteLayoutButton.Header = $"Delete ({layout.Name})";
         }
+        else
+        {
+          var msgDialog = new MessageWindow("Problem loading layout. Check Error Log for details.", "Load Layout", MessageWindow.IconType.Warn);
+          msgDialog.ShowDialog();
+        }
+      }
+      finally
+      {
+        _isApplyingLayout = false;
       }
     }
 
@@ -352,7 +372,7 @@ namespace EQLogParser
       showCasterAdps.IsChecked = true;
       showMeleeAdps.IsChecked = true;
       Display();
-      layoutSelector.SelectedIndex = -1;
+      LoadLayoutsIntoSelector();
     }
 
     private void ApplyLayout(TimelineLayout layout)

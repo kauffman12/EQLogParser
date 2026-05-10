@@ -46,19 +46,40 @@ namespace EQLogParser
   {
     public static ChatType ParseChatType(string action)
     {
-      if (!string.IsNullOrEmpty(action))
+      if (string.IsNullOrEmpty(action) || action.Length < 5)
       {
-        var span = action.AsSpan();
-        return span.StartsWith("You ") ? CheckYouCriteria(span) : CheckOtherCriteria(span);
+        return null;
       }
 
-      return null;
+      var span = action.AsSpan();
+
+      // Quick prefix check for common chat patterns before expensive scanning
+      if (span.StartsWith("You "))
+      {
+        return CheckYouCriteria(span);
+      }
+
+      // Fast-path: if line doesn't contain any chat keywords, skip scanning entirely
+      if (span.IndexOf(" says") == -1 &&
+          span.IndexOf(" tells ") == -1 &&
+          span.IndexOf(" told ") == -1 &&
+          span.IndexOf(" shouts") == -1 &&
+          span.IndexOf(" auctions") == -1 &&
+          span.IndexOf(" auction") == -1 &&
+          span.IndexOf(" -> ") == -1 &&
+          span.IndexOf("'My leader is") == -1)
+      {
+        return null;
+      }
+
+      return CheckOtherCriteria(span);
     }
 
     public static ChatType CheckOtherCriteria(ReadOnlySpan<char> span)
     {
       var origSpan = span;
-      if (MatchAnyPlayer(span, out var sender) is var end && end == -1)
+      var end = MatchAnyPlayer(span, out var sender);
+      if (end == -1)
       {
         return null;
       }

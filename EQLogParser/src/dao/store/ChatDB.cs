@@ -313,7 +313,7 @@ namespace EQLogParser
       var playerDir = ConfigUtil.GetArchiveDir() + playerAndServer;
       var file = playerDir + @"\" + ChannelsFile;
       var list = ConfigUtil.ReadList(file);
-      return [.. list.ConvertAll(item => item.ToLower(CultureInfo.CurrentCulture)).Distinct().OrderBy(item => item.ToLower(CultureInfo.CurrentCulture))];
+      return [.. list.ConvertAll(item => item.ToLower(CultureInfo.InvariantCulture)).Distinct().OrderBy(item => item.ToLower(CultureInfo.InvariantCulture))];
     }
 
     private async void ArchiveChat(object sender, object e)
@@ -351,9 +351,9 @@ namespace EQLogParser
 
             var chatLine = new ChatLine { Line = t.Text, BeginTime = t.BeginTime + increment };
             var dateTime = DateTime.MinValue.AddSeconds(chatLine.BeginTime);
-            var year = dateTime.ToString("yyyy", CultureInfo.CurrentCulture);
-            var month = dateTime.ToString("MM", CultureInfo.CurrentCulture);
-            var day = dateTime.ToString("dd", CultureInfo.CurrentCulture);
+            var year = dateTime.ToString("yyyy", CultureInfo.InvariantCulture);
+            var month = dateTime.ToString("MM", CultureInfo.InvariantCulture);
+            var day = dateTime.ToString("dd", CultureInfo.InvariantCulture);
             await AddToArchiveAsync(year, month, day, chatLine, t);
             lastTime = t.BeginTime;
           }
@@ -453,22 +453,25 @@ namespace EQLogParser
         }
       }
 
-      if (_currentList != null)
+      lock (LockObject)
       {
-        var index = _currentList.BinarySearch(chatLine, RtaComparer);
+        if (_currentList != null)
+        {
+          var index = _currentList.BinarySearch(chatLine, RtaComparer);
 
-        if (index < 0)
-        {
-          index = Math.Abs(index) - 1;
-          _currentList.Insert(index, chatLine);
-          UpdateCache(day, chatType);
-          _currentListModified = true;
-        }
-        else if (chatLine.Line != _currentList[index].Line)
-        {
-          _currentList.Insert(index, chatLine);
-          UpdateCache(day, chatType);
-          _currentListModified = true;
+          if (index < 0)
+          {
+            index = Math.Abs(index) - 1;
+            _currentList.Insert(index, chatLine);
+            UpdateCache(day, chatType);
+            _currentListModified = true;
+          }
+          else if (chatLine.Line != _currentList[index].Line)
+          {
+            _currentList.Insert(index, chatLine);
+            UpdateCache(day, chatType);
+            _currentListModified = true;
+          }
         }
       }
     }
@@ -498,7 +501,7 @@ namespace EQLogParser
               _channelIndex[temp[0]] = [];
               foreach (var channel in temp[1].Split(','))
               {
-                _channelIndex[temp[0]][channel.ToLower(CultureInfo.CurrentCulture)] = 1;
+                _channelIndex[temp[0]][channel.ToLower(CultureInfo.InvariantCulture)] = 1;
                 UpdateChannelCache(channel); // in case main cache is out of sync with archive
               }
             }
@@ -624,7 +627,7 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(value))
       {
-        var player = value.ToLower(CultureInfo.CurrentCulture);
+        var player = value.ToLower(CultureInfo.InvariantCulture);
         if (!_playerCache.ContainsKey(player) && !PlayerRegistry.Instance.IsVerifiedPet(player) && PlayerRegistry.IsPossiblePlayerName(player))
         {
           _playerCache[player] = 1;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal static class EqUtil
+  internal static class EQUtil
   {
     // EQ Registry Entry
     private const string EqUninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\DGC-EverQuest";

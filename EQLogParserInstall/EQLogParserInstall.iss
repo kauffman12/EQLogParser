@@ -6,7 +6,7 @@
 #endif
 
 #define MyAppName "EQLogParser"
-#define MyAppVersion "2.3.52"
+#define MyAppVersion "2.3.53"
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"

@@ -147,6 +147,7 @@ namespace EQLogParser
   internal class PlayerStatsSelectionChangedEventArgs : EventArgs
   {
     public List<PlayerStats> Selected { get; } = [];
+    public List<GroupEntry> SelectedGroups { get; } = [];
     public CombinedStats CurrentStats { get; set; }
   }
 
@@ -161,6 +162,7 @@ namespace EQLogParser
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
     public List<PlayerStats> Selected { get; } = [];
+    public List<GroupEntry> SelectedGroups { get; } = [];
   }
 
   internal class GenerateStatsOptions

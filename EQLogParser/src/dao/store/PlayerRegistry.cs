@@ -37,7 +37,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
-    private readonly ConcurrentDictionary<string, byte> _mercs = new();
+    private readonly ConcurrentDictionary<string, byte> _mercs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Timer _saveTimer;
     private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
     private readonly object _lock = new();
@@ -56,7 +56,7 @@ namespace EQLogParser
       || ThirdPerson.Contains(name) || _verifiedPlayers.ContainsKey(name));
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || EQDataStore.Instance.IsPlayerSpell(name);
-    internal bool IsMerc(string name) => _mercs.TryGetValue(TextUtils.ToUpper(name), out _);
+    internal bool IsMerc(string name) => _mercs.TryGetValue(StringCache.GetOrAdd(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
     internal List<PetMapping> GetPetMappings() => [.. _petToPlayer.Select(kv => new PetMapping(kv.Key, kv.Value))];
@@ -100,6 +100,9 @@ namespace EQLogParser
         needEvent = AddPetToPlayerNoLock(pet, player, init);
       }
 
+      // make sure it's a pet too
+      AddVerifiedPet(pet);
+
       if (needEvent)
       {
         EventsNewPetMapping?.Invoke(new PetMapping(pet, player));
@@ -111,7 +114,7 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(name))
         return;
 
-      name = string.Intern(TextUtils.ToUpper(name));
+      name = StringCache.GetOrAdd(name);
       _mercs[name] = 1;
     }
 
@@ -128,14 +131,14 @@ namespace EQLogParser
       {
         if (!_verifiedPets.ContainsKey(name))
         {
-          name = string.Intern(name);
+          name = StringCache.GetOrAdd(name);
 
           if (_verifiedPlayers.TryRemove(name, out _))
           {
             _playersUpdated = true;
           }
 
-          if (IsPossiblePlayerName(name) && !_petToPlayer.ContainsKey(name))
+          if (IsPossiblePetName(name) && !_petToPlayer.ContainsKey(name))
           {
             petMappingEvent = AddPetToPlayerNoLock(name, Labels.Unassigned, init);
             if (petMappingEvent)
@@ -181,7 +184,7 @@ namespace EQLogParser
         }
         else
         {
-          name = string.Intern(name);
+          name = StringCache.GetOrAdd(name);
           _verifiedPlayers[name] = playerTime;
 
           if (!init)
@@ -457,8 +460,7 @@ namespace EQLogParser
         if (_petMappingUpdated)
         {
           // no generated or unassigned pets but allow for warders
-          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && kv.Value != Labels.Unassigned &&
-            (IsPossiblePlayerName(kv.Key) || kv.Key.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase)));
+          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && IsPossiblePetName(kv.Key));
           petList = [.. filtered];
           _petMappingUpdated = false;
         }
@@ -598,6 +600,8 @@ namespace EQLogParser
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
+    internal static bool IsPossiblePetName(string name) => !EQDataStore.Instance.IsKnownNpc(name) &&
+      (IsPossiblePlayerName(name) || name?.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) == true);
 
     internal static string GetPlayerIconPath(string className)
     {
@@ -625,22 +629,6 @@ namespace EQLogParser
         };
       }
       return UnkIconName;
-    }
-
-    internal static string ReplacePlayer(string name, string alternative)
-    {
-      var result = name;
-
-      if (ThirdPerson.Contains(name))
-      {
-        result = alternative;
-      }
-      else if (SecondPerson.Contains(name))
-      {
-        result = ConfigUtil.PlayerName;
-      }
-
-      return result;
     }
 
     internal static int FindPossiblePlayerName(string part, out bool isCrossServer, int start = 0, int stop = -1, char end = char.MaxValue)

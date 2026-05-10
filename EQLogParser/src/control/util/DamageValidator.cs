@@ -1,4 +1,4 @@
-﻿namespace EQLogParser
+namespace EQLogParser
 {
   internal class DamageValidator
   {
@@ -46,6 +46,23 @@
         return false;
       }
 
+      return true;
+    }
+
+    /// <summary>
+    /// Static version that takes settings as parameters for inlining at call sites.
+    /// Avoids allocating a DamageValidator instance per call.
+    /// </summary>
+    internal static bool IsDamageValid(short modifiersMask, string type,
+      bool isAssEnabled, bool isBaneEnabled, bool isDsEnabled,
+      bool isFinishingEnabled, bool headshotEnabled, bool isSlayUndeadEnabled)
+    {
+      if (LineModifiersParser.IsAssassinate(modifiersMask) && !isAssEnabled) return false;
+      if (type == Labels.Bane && !isBaneEnabled) return false;
+      if (type == Labels.Ds && !isDsEnabled) return false;
+      if (LineModifiersParser.IsFinishingBlow(modifiersMask) && !isFinishingEnabled) return false;
+      if (LineModifiersParser.IsHeadshot(modifiersMask) && !headshotEnabled) return false;
+      if (LineModifiersParser.IsSlayUndead(modifiersMask) && !isSlayUndeadEnabled) return false;
       return true;
     }
 

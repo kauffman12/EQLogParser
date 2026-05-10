@@ -1,0 +1,29 @@
+Name: EQLogParser
+Description: EQLogParser v2.3.53
+Grade: Gold
+Arch: win64
+
+Dependencies:
+- dotnetcoredesktop8
+- allfonts
+
+Parameters:
+  dxvk: false
+  vkd3d: false
+  sync: wine
+
+Executable:
+  name: EQLogParser
+  file: EQLogParser.exe
+  icon: EQLogParser.ico
+  path: Program Files/EQLogParser/EQLogParser.exe
+
+Steps:
+- action: install_exe
+  file_name: EQLogParser-install-pipertts-2.3.53.exe
+  url: https://github.com/kauffman12/EQLogParser/releases/download/2.3.52/EQLogParser-install-pipertts-2.3.53.exe
+  file_checksum: False
+
+Checks:
+  files:
+    - 'Program Files/EQLogParser/EQLogParser.exe'

@@ -1,6 +1,7 @@
 using log4net;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -12,7 +13,9 @@ namespace EQLogParser
   internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
     : IDisposable
   {
+    private const int BatchSize = 5000;
     private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), 100000);
+    private readonly List<LogReaderItem> _batch = new(BatchSize);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static ReadOnlySpan<char> LoadingMsg => "LOADING, PLEASE WAIT...";
     private static ReadOnlySpan<char> WelcomeMsg => "Welcome to EverQuest!";
@@ -98,6 +101,10 @@ namespace EQLogParser
 
       try
       {
+        // Use FileInfo.Length (GetFileAttributesEx) instead of FileStream.Length (GetFileInformationByHandle)
+        // which is significantly faster for large files
+        _initSize = new FileInfo(FileName).Length;
+
         _fs = new FileStream(
           path: FileName,
           options: new FileStreamOptions
@@ -108,8 +115,6 @@ namespace EQLogParser
             BufferSize = BufferSize,
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
-
-        _initSize = _fs.Length;
         _nextUpdateThreshold = _initSize / 50;
 
         if (minBack == 0)
@@ -152,7 +157,7 @@ namespace EQLogParser
           {
             _currentPos = _fs.Position;
           }
-          else if (_fs.Position == _fs.Length)
+          else if (_fs.Position >= _initSize)
           {
             _currentPos = _fs.Position;
           }
@@ -173,6 +178,8 @@ namespace EQLogParser
         Log.Error($"Error Loading File: {FileName}. Re-open or toggle Triggers to try again.", ex);
         return;
       }
+
+      FlushBatch();
 
       if (Path.GetDirectoryName(FileName) is { } directory)
       {
@@ -222,6 +229,7 @@ namespace EQLogParser
             HandleLine(line, ref previous, true);
           }
 
+          FlushBatch();
           await Task.Delay(200, _cts.Token);
         }
         catch (TaskCanceledException)
@@ -231,6 +239,7 @@ namespace EQLogParser
         }
         catch (Exception)
         {
+          FlushBatch();
           await ReOpenAsync();
         }
       }
@@ -268,9 +277,24 @@ namespace EQLogParser
           }
         }
 
-        _lines.Add(new(theLine, _lastParsedTime, monitor), _cts.Token);
+        _batch.Add(new(theLine, _lastParsedTime, monitor));
+        if (_batch.Count >= BatchSize)
+        {
+          FlushBatch();
+        }
         previous = theLine;
       }
+    }
+
+    private void FlushBatch()
+    {
+      if (_batch.Count == 0) return;
+
+      foreach (var item in _batch)
+      {
+        _lines.Add(item, _cts.Token);
+      }
+      _batch.Clear();
     }
 
     private void SearchLinear(StreamReader reader, DateTime minDate)

@@ -21,7 +21,8 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-    private static readonly List<string> NoRostersList = ["No Raid Rosters Found"];
+    private static readonly List<string> NoRostersList = ["No Rosters Found"];
+    private readonly ComboBoxItem _selectRosterItem = new() { Content = "Select Roster", Tag = "" };
     private readonly DispatcherTimer _selectionTimer;
     private int _currentGroupCount;
     private readonly ViewOptionRegistry _viewOptions;
@@ -166,7 +167,6 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
       {
         PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, header);
-        PlayerRegistry.Instance.AddVerifiedPet(stats.OrigName);
       }
     }
 
@@ -219,35 +219,59 @@ namespace EQLogParser
         Tag = $"{r.BeginTicks}"
       }).ToList();
 
-      displayItems.Insert(0, new ComboBoxItem { Content = "Select Raid Roster", Tag = "" });
+      displayItems.Insert(0, _selectRosterItem);
       rosterSelector.ItemsSource = displayItems;
 
       // Restore selection
-      if (selectedTag != null)
-      {
-        rosterSelector.SelectedIndex = displayItems.FindIndex(i => i.Tag?.ToString() == selectedTag);
-      }
-      else
-      {
-        rosterSelector.SelectedIndex = 0;
-      }
+      rosterSelector.SelectedIndex = (selectedTag != null) ? displayItems.FindIndex(i => i.Tag?.ToString() == selectedTag) : 0;
     }
 
     private void RosterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is not ComboBox combo || combo.SelectedIndex < 1 || CurrentStats?.StatsList == null ||
-        combo.SelectedItem is not ComboBoxItem selectedItem ||
-        !long.TryParse(selectedItem.Tag?.ToString(), CultureInfo.InvariantCulture, out var ticks))
+      var changed = false;
+      if (sender is not ComboBox combo || CurrentStats?.StatsList == null || combo.SelectedItem is not ComboBoxItem selectedItem)
         return;
+
+      if (combo.SelectedIndex == 0)
+      {
+        _selectRosterItem.Content = "Select Roster";
+        if (e.RemovedItems?.Count > 0)
+        {
+          foreach (var stats in CurrentStats.StatsList)
+          {
+            if (AssignGroup(stats, 0))
+            {
+              changed = true;
+            }
+          }
+
+          if (changed)
+          {
+            UpdateList();
+          }
+        }
+
+        return;
+      }
+
+      _selectRosterItem.Content = "Clear Roster";
+
+      if (!long.TryParse(selectedItem.Tag?.ToString(), CultureInfo.InvariantCulture, out var ticks))
+      {
+        Log.Warn($"Roster selected but could not parse time ({selectedItem.Content}).");
+        return;
+      }
 
       // Get the roster record
       var rosters = RaidRosterStore.Instance.GetRosterRecords();
       var roster = rosters.FirstOrDefault(r => r.BeginTicks == ticks);
       if (roster?.Players == null)
+      {
+        Log.Warn($"Roster selected but could not find roster for time ({ticks}).");
         return;
+      }
 
       // Apply roster assignments to players
-      var changed = false;
       foreach (var stats in CurrentStats.StatsList)
       {
         stats.AssignedGroup = 0;
@@ -256,10 +280,8 @@ namespace EQLogParser
 
         if (roster.Players.TryGetValue(stats.OrigName, out var groupId))
         {
-          if (stats.AssignedGroup != groupId)
+          if (AssignGroup(stats, groupId))
           {
-            stats.AssignedGroup = groupId;
-            DamageStatsBuilder.Instance.SetPlayerAssignedGroup(stats.OrigName, groupId);
             changed = true;
           }
         }
@@ -366,6 +388,22 @@ namespace EQLogParser
 
       // Return non-empty groups sorted by aggregate Total descending
       return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
+    }
+
+    private static bool AssignGroup(PlayerStats stats, int groupId)
+    {
+      if (stats.AssignedGroup != groupId)
+      {
+        stats.AssignedGroup = groupId;
+
+        if (!string.IsNullOrEmpty(stats?.OrigName))
+        {
+          DamageStatsBuilder.Instance.SetPlayerAssignedGroup(stats.OrigName, groupId);
+        }
+
+        return true;
+      }
+      return false;
     }
 
     private static string GetGroupName(int groupId)
@@ -810,7 +848,8 @@ namespace EQLogParser
       if (name == "Damage")
       {
         var selected = GetSelectedStats();
-        DamageStatsBuilder.Instance.FireChartEvent("UPDATE", selected);
+        var groups = dataGrid.SelectedItems.Cast<GroupEntry>().ToList();
+        DamageStatsBuilder.Instance.FireChartEvent("UPDATE", selected, groups);
       }
     }
 
@@ -838,7 +877,30 @@ namespace EQLogParser
 
     internal override List<PlayerStats> GetSelectedStats()
     {
-      return base.GetSelectedStats().Where(s => s is not GroupEntry).ToList();
+      var selected = base.GetSelectedStats();
+      var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+      var result = new List<PlayerStats>();
+
+      foreach (var item in selected)
+      {
+        if (item is GroupEntry group)
+        {
+          // Expand group into its member players so charts and other consumers work
+          foreach (var member in group.Members)
+          {
+            if (seen.Add(member.OrigName))
+            {
+              result.Add(member);
+            }
+          }
+        }
+        else if (item is PlayerStats player && seen.Add(player.OrigName))
+        {
+          result.Add(player);
+        }
+      }
+
+      return result;
     }
 
     internal override void FireSelectionChangedEvent(List<PlayerStats> selected)
@@ -848,6 +910,16 @@ namespace EQLogParser
         var selectionChanged = new PlayerStatsSelectionChangedEventArgs();
         selectionChanged.Selected.AddRange(selected);
         selectionChanged.CurrentStats = CurrentStats;
+
+        // Extract GroupEntry objects from the raw grid selection so the chart can aggregate groups
+        foreach (var item in dataGrid.SelectedItems)
+        {
+          if (item is GroupEntry group)
+          {
+            selectionChanged.SelectedGroups.Add(group);
+          }
+        }
+
         MainActions.FireDamageSelectionChanged(selectionChanged);
       });
     }

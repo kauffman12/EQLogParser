@@ -1,23 +1,13 @@
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace EQLogParser
 {
   internal static class LineModifiersParser
   {
-    private static readonly Dictionary<string, byte> AllModifiers = new()
-    {
-      { "Assassinate", 1 }, { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Double Bow Shot", 1 }, { "Finishing Blow", 1 },
-      { "Flurry", 1 }, { "Headshot", 1 }, { "Lucky", 1 }, { "Rampage", 1 }, { "Riposte", 1 }, { "Slay Undead", 1 }, { "Strikethrough", 1 },
-      { "Twincast", 1 }, { "Wild Rampage", 1 },
-    };
-
-    private static readonly Dictionary<string, byte> CritModifiers = new()
-    {
-      { "Crippling Blow", 1 }, { "Critical", 1 }, { "Deadly Strike", 1 }, { "Finishing Blow", 1}
-    };
+    private static bool IsCritKeyword(string key) =>
+      key is "Crippling Blow" or "Critical" or "Deadly Strike" or "Finishing Blow";
 
     public const short None = -1;
     public const short Crit = 2;
@@ -311,10 +301,19 @@ namespace EQLogParser
             span.Slice(start, wordLen).CopyTo(buffer.AsSpan(spanPos));
             spanPos += wordLen;
 
-            if (AllModifiers.ContainsKey(buffer.AsSpan(0, spanPos).ToString()))
+            var key = buffer.AsSpan(0, spanPos).ToString();
+            var known = key switch
             {
-              var key = buffer.AsSpan(0, spanPos).ToString();
-              if (CritModifiers.ContainsKey(key))
+              "Lucky" or "Assassinate" or "Double Bow Shot" or "Finishing Blow" or
+              "Flurry" or "Headshot" or "Twincast" or "Rampage" or "Wild Rampage" or
+              "Riposte" or "Strikethrough" or "Slay Undead" or "Locked" or
+              "Critical" or "Deadly Strike" or "Crippling Blow" => true,
+              _ => false
+            };
+
+            if (known)
+            {
+              if (IsCritKeyword(key))
               {
                 result |= Crit;
               }
@@ -356,6 +355,10 @@ namespace EQLogParser
                   result |= Slay;
                   break;
                 case "Locked":
+                case "Critical":
+                case "Deadly Strike":
+                case "Crippling Blow":
+                  // Already handled by IsCritKeyword or has no additional bit
                   break;
               }
 

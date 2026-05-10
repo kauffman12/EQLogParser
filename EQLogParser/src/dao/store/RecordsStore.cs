@@ -29,6 +29,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> _recordNeedsEvent = new();
     private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = [];
     private readonly List<RecordList> _playerAmbiguityCastCache = [];
+    private readonly ConcurrentDictionary<string, List<CachedCast>> _spellNameIndex = new();
     // observables
     private readonly object _collectionLock = new();
     internal readonly ObservableCollection<QuickShareRecord> AllQuickShareRecords = [];
@@ -104,6 +105,15 @@ namespace EQLogParser
       {
         _playerAmbiguityCastCache.Clear();
       }
+
+      foreach (var list in _spellNameIndex.Values)
+      {
+        lock (list)
+        {
+          list.Clear();
+        }
+      }
+      _spellNameIndex.Clear();
 
       lock (_collectionLock)
       {
@@ -181,6 +191,13 @@ namespace EQLogParser
       lock (_playerAmbiguityCastCache)
       {
         Add(_playerAmbiguityCastCache, spell, beginTime);
+        if (string.IsNullOrEmpty(spell.Spell)) return;
+        var cached = new CachedCast(beginTime, spell);
+        var list = _spellNameIndex.GetOrAdd(spell.Spell, _ => []);
+        lock (list)
+        {
+          list.Add(cached);
+        }
       }
     }
 
@@ -210,26 +227,28 @@ namespace EQLogParser
       }
     }
 
-    internal IEnumerable<(double, SpellCast)> GetSpellsLast(double duration)
+    internal List<CachedCast> GetCastsBySpellName(string spellName, double duration)
     {
-      lock (_playerAmbiguityCastCache)
+      if (!_spellNameIndex.TryGetValue(spellName, out var list))
       {
-        var end = _playerAmbiguityCastCache.Count - 1;
+        return [];
+      }
 
-        if (end <= -1)
-        {
-          yield break;
-        }
+      var end = _playerAmbiguityCastCache.Count - 1;
+      if (end <= -1) return [];
 
-        var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
-        for (var i = end; i >= 0 && _playerAmbiguityCastCache[i].BeginTime >= endTime; i--)
+      var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
+      lock (list)
+      {
+        var result = new List<CachedCast>(list.Count);
+        for (var i = list.Count - 1; i >= 0; i--)
         {
-          var list = _playerAmbiguityCastCache[i];
-          for (var j = list.Records.Count - 1; j >= 0; j--)
+          if (list[i].BeginTime >= endTime)
           {
-            yield return (list.BeginTime, (SpellCast)list.Records[j]);
+            result.Add(list[i]);
           }
         }
+        return result;
       }
     }
 
@@ -463,6 +482,13 @@ namespace EQLogParser
     {
       public double BeginTime { get; init; }
       public List<object> Records { get; init; }
+    }
+
+    internal readonly struct CachedCast
+    {
+      public readonly double BeginTime;
+      public readonly SpellCast Cast;
+      internal CachedCast(double beginTime, SpellCast cast) { BeginTime = beginTime; Cast = cast; }
     }
   }
 }

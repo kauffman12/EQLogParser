@@ -1371,7 +1371,7 @@ namespace EQLogParser
           switch (modifierName.ToLowerInvariant())
           {
             case "capitalize":
-              value = TextUtils.ToUpper(value, CultureInfo.CurrentCulture);
+              value = TextUtils.CapitalizeFirst(value, CultureInfo.CurrentCulture);
               break;
 
             case "center":

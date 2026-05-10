@@ -1110,7 +1110,7 @@ namespace EQLogParser
 
           // validate path/replace value if similar sprite path found in a different EQ folder
           var updated = false;
-          var updatedPath = EqUtil.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
+          var updatedPath = EQUtil.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
           if (updatedPath != null && !Equals(updatedPath, storedNode.TriggerData.IconSource))
           {
             storedNode.TriggerData.IconSource = updatedPath;

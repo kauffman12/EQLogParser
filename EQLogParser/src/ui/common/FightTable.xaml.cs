@@ -19,6 +19,7 @@ namespace EQLogParser
   {
     // time before creating new group
     public const int GroupTimeout = 120;
+    public const bool UseBatchMode = false;
 
     // NPC Search
     private static int _currentFightSearchIndex;
@@ -42,6 +43,7 @@ namespace EQLogParser
     private readonly DispatcherTimer _selectionTimer;
     private readonly DispatcherTimer _searchTextTimer;
     private readonly DispatcherTimer _updateTimer;
+    private bool _batchMode = UseBatchMode;
 
     public FightTable()
     {
@@ -117,6 +119,19 @@ namespace EQLogParser
       FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
       FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
       MainActions.EventsThemeChanged += EventsThemeChanged;
+      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
+    }
+
+    private void EventsLogLoadingComplete(string file, bool open)
+    {
+      if (open)
+      {
+        // Log loading complete — flush all queued fights at once
+        _batchMode = false;
+        _updateTimer.Stop();
+        DoProcessFights(); // process everything in one batch
+        _updateTimer.Start();
+      }
     }
 
     internal List<Fight> GetSelectedFights()
@@ -210,7 +225,6 @@ namespace EQLogParser
         var name = npc.Name;
         await Task.Delay(120);
         PlayerRegistry.Instance.AddVerifiedPet(name);
-        PlayerRegistry.Instance.AddPetToPlayer(name, Labels.Unassigned);
         RemoveFight(name); // force in case already in the pet list for some reason
       }
     }
@@ -239,6 +253,8 @@ namespace EQLogParser
 
     private void DoProcessFights()
     {
+      if (_batchMode) return;
+
       _isEveryOther = !_isEveryOther;
 
       List<Fight> processList = null;
@@ -575,6 +591,7 @@ namespace EQLogParser
 
     private void EventsClearedActiveData(bool cleared)
     {
+      _batchMode = UseBatchMode;
       _nonTankingFights.Clear();
       _nonTankingFightsToProcess.Clear();
       _fights.Clear();

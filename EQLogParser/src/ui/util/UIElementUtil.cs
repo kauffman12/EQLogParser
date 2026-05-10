@@ -64,7 +64,7 @@ namespace EQLogParser
       // Support custom eqsprite URI format: eqsprite://path/to/sheet.tga/col/row
       // This uses standard URI format but we parse it manually since WPF doesn't support custom URI schemes.
       // The format allows us to store sprite references in BitmapImage.UriSource for persistence.
-      if (EqUtil.TryParseEqSpritePath(path, out var parts))
+      if (EQUtil.TryParseEqSpritePath(path, out var parts))
       {
         try
         {

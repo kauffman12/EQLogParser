@@ -39,7 +39,7 @@ namespace EQLogParser
     private int _currentNpcId = 1;
     private static readonly ConcurrentDictionary<string, bool> RecentSpellCache = [];
     private readonly ConcurrentDictionary<string, bool> _validCombo = [];
-    private readonly SimpleObjectCache<DamageRecord> _damageCache = new();
+    private readonly Dictionary<DamageRecord, DamageRecord> _damageCache = [];
     private const int RecentSpellTime = 300;
 
     internal FightManager()
@@ -103,7 +103,6 @@ namespace EQLogParser
 
       if (_activeFights.TryAdd(name, fight))
       {
-        _activeFights[name] = fight;
         EventsNewFight?.Invoke(fight);
       }
       else
@@ -165,6 +164,11 @@ namespace EQLogParser
       _validCombo.Clear();
       RecentSpellCache.Clear();
       AdpsTracker.Instance.Clear();
+      if (serverChanged)
+      {
+        StringCache.Clear();
+      }
+
       EventsClearedActiveData?.Invoke(serverChanged);
     }
 
@@ -212,14 +216,15 @@ namespace EQLogParser
     {
       //TestProcessed(processed);
       var beginTime = processed.BeginTime;
-      var record = _damageCache.Add(processed.Record);
+      var record = GetCachedDamageRecord(processed.Record);
 
-      if (!Volatile.Read(ref LastFightProcessTime).Equals(beginTime))
+      var lastTime = Volatile.Read(ref LastFightProcessTime);
+      if (!lastTime.Equals(beginTime))
       {
         CheckExpireFights(beginTime);
         _validCombo.Clear();
 
-        if (beginTime - Volatile.Read(ref LastFightProcessTime) > RecentSpellTime)
+        if (beginTime - lastTime > RecentSpellTime)
         {
           RecentSpellCache.Clear();
         }
@@ -266,10 +271,13 @@ namespace EQLogParser
             isNonTankingFight = fight.DamageHits == 1;
 
             var attacker = record.AttackerOwner ?? record.Attacker;
-            var validator = new DamageValidator();
+            var isValid = DamageValidator.IsDamageValid(record.ModifiersMask, record.Type,
+              AppSettings.IsAssassinateDamageEnabled, AppSettings.IsBaneDamageEnabled,
+              AppSettings.IsDamageShieldDamageEnabled, AppSettings.IsFinishingBlowDamageEnabled,
+              AppSettings.IsHeadshotDamageEnabled, AppSettings.IsSlayUndeadDamageEnabled);
             if (fight.PlayerDamageTotals.TryGetValue(attacker, out var total))
             {
-              total.Damage += validator.IsValid(record) ? record.Total : 0;
+              total.Damage += isValid ? record.Total : 0;
               total.PetOwner ??= record.AttackerOwner;
               total.UpdateTime = beginTime;
             }
@@ -277,7 +285,7 @@ namespace EQLogParser
             {
               fight.PlayerDamageTotals[attacker] = new FightTotalDamage
               {
-                Damage = validator.IsValid(record) ? record.Total : 0,
+                Damage = isValid ? record.Total : 0,
                 PetOwner = record.AttackerOwner,
                 UpdateTime = beginTime,
                 BeginTime = beginTime
@@ -351,7 +359,11 @@ namespace EQLogParser
         }
 
         fight.LastTime = beginTime;
-        Volatile.Write(ref LastFightProcessTime, beginTime);
+        if (!lastTime.Equals(beginTime))
+        {
+          Volatile.Write(ref LastFightProcessTime, beginTime);
+          lastTime = beginTime;
+        }
         // tooltip
         var ttl = fight.LastTime - fight.BeginTime + 1;
         fight.TooltipText = $"#Hits To Players: {fight.TankHits}, #Hits From Players: {fight.DamageHits}, Time Alive: {ttl}s";
@@ -370,12 +382,12 @@ namespace EQLogParser
       var timeString = DateUtil.FormatDotNetDateSeconds(currentTime);
       return new Fight
       {
-        Name = string.Intern(defender),
-        BeginTimeString = string.Intern(timeString),
+        Name = StringCache.GetOrAdd(defender),
+        BeginTimeString = StringCache.GetOrAdd(timeString),
         BeginTime = currentTime,
         LastTime = currentTime,
         Id = Interlocked.Increment(ref _currentNpcId),
-        CorrectMapKey = string.Intern(defender)
+        CorrectMapKey = StringCache.GetOrAdd(defender)
       };
     }
 
@@ -466,6 +478,33 @@ namespace EQLogParser
       }
 
       return true;
+    }
+
+    private DamageRecord GetCachedDamageRecord(DamageRecord incoming)
+    {
+      if (_damageCache.TryGetValue(incoming, out var cached))
+      {
+        return cached;
+      }
+
+      // Only deduplicate strings for records we are actually keeping.
+      incoming.Attacker = StringCache.GetOrAdd(incoming.Attacker);
+      incoming.Defender = StringCache.GetOrAdd(incoming.Defender);
+      incoming.Type = StringCache.GetOrAdd(incoming.Type);
+      incoming.SubType = StringCache.GetOrAdd(incoming.SubType);
+
+      if (incoming.AttackerOwner != null)
+      {
+        incoming.AttackerOwner = StringCache.GetOrAdd(incoming.AttackerOwner);
+      }
+
+      if (incoming.DefenderOwner != null)
+      {
+        incoming.DefenderOwner = StringCache.GetOrAdd(incoming.DefenderOwner);
+      }
+
+      _damageCache.Add(incoming, incoming);
+      return incoming;
     }
 
     private static bool IsSelfAttack(DamageRecord record)

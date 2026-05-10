@@ -760,7 +760,7 @@ namespace EQLogParser
 
     private void DamageSummarySelectionChanged(PlayerStatsSelectionChangedEventArgs data)
     {
-      DamageStatsBuilder.Instance.FireChartEvent("SELECT", data.Selected);
+      DamageStatsBuilder.Instance.FireChartEvent("SELECT", data.Selected, data.SelectedGroups);
       var preview = playerParseTextWindow.Content as ParsePreview;
       preview?.UpdateParse(Labels.DamageParse, data.Selected);
     }

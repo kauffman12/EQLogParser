@@ -33,6 +33,7 @@ namespace EQLogParser
     private string _currentViewOption;
     private int _currentTopCount = 5;
     private List<PlayerStats> _lastSelected;
+    private List<GroupEntry> _selectedGroups;
     private readonly ViewOptionRegistry _viewOptions;
 
     public LineChart(IEnumerable<string> choices, bool includePets = false)
@@ -49,6 +50,7 @@ namespace EQLogParser
       _viewOptions = new ViewOptionRegistry();
       if (includePets)
       {
+        _viewOptions.AddOption(Labels.ByGroupOption, OnViewOptionChanged);
         _viewOptions.AddOption(Labels.PetPlayerOption, OnViewOptionChanged);
         _viewOptions.AddOption(Labels.PlayerOption, OnViewOptionChanged);
         _viewOptions.AddOption(Labels.PetOption, OnViewOptionChanged);
@@ -76,6 +78,7 @@ namespace EQLogParser
       _petValues.Clear();
       _raidValues.Clear();
       _hasPets.Clear();
+      _selectedGroups = null;
       Reset();
     }
 
@@ -88,11 +91,35 @@ namespace EQLogParser
           break;
         case "UPDATE":
           Clear();
+          _selectedGroups = e.SelectedGroups;
+          AutoSelectViewOption(e.SelectedGroups, e.Selected);
           AddDataPoints(e.Iterator, e.Selected);
           break;
         case "SELECT":
+          _selectedGroups = e.SelectedGroups;
+          AutoSelectViewOption(e.SelectedGroups, e.Selected);
           PlotSelected(e.Selected);
           break;
+      }
+    }
+
+    private void AutoSelectViewOption(List<GroupEntry> selectedGroups, List<PlayerStats> selected)
+    {
+      var hasGroups = selectedGroups != null && selectedGroups.Count > 0;
+      var hasPlayers = selected != null && selected.Count > 0;
+
+      if (hasGroups)
+      {
+        // Groups selected — switch to group view
+        // (selected may also have member players expanded from groups, so check groups first)
+        var idx = _viewOptions.TrySetSelectedByName(Labels.ByGroupOption);
+        if (idx >= 0) petOrPlayerList.SelectedIndex = idx;
+      }
+      else
+      {
+        // No groups — switch to player + pets view (whether players selected or nothing)
+        var idx = _viewOptions.TrySetSelectedByName(Labels.PetPlayerOption);
+        if (idx >= 0) petOrPlayerList.SelectedIndex = idx;
       }
     }
 
@@ -243,6 +270,10 @@ namespace EQLogParser
           selectedLabel = "Selected Pet(s)";
           nonSelectedLabel = " Pet(s)";
           break;
+        case Labels.ByGroupOption:
+          workingData = _playerPetValues;
+          selectedLabel = "Selected Group(s)";
+          break;
         case Labels.RaidOption:
           workingData = _raidValues;
           break;
@@ -257,6 +288,11 @@ namespace EQLogParser
       {
         sortedValues = [.. workingData.Values];
         label = sortedValues.Count > 0 ? "Raid" : Labels.NoData;
+      }
+      else if (selectedName == Labels.ByGroupOption)
+      {
+        sortedValues = AggregateGroups(workingData);
+        label = sortedValues.Count > 0 ? selectedLabel : Labels.NoData;
       }
       else if (selected == null || selected.Count == 0)
       {
@@ -295,11 +331,21 @@ namespace EQLogParser
       }
 
       // Show/hide the top count dropdown based on whether data is selected
-      topCountList.Visibility = (selected == null || selected.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
+      topCountList.Visibility = (selected == null || selected.Count == 0) && selectedName != Labels.ByGroupOption
+        ? Visibility.Visible : Visibility.Collapsed;
 
       Reset();
       titleLabel.Content = label;
       sfLineChart.Series = BuildCollection(sortedValues);
+    }
+
+    /// <summary>
+    /// Aggregates per-player data series into group-level series.
+    /// Each group becomes a single line with values summed across all members at each time tick.
+    /// </summary>
+    private List<List<DataPoint>> AggregateGroups(Dictionary<string, List<DataPoint>> playerData)
+    {
+      return ChartAggregation.AggregateGroups(playerData, _selectedGroups);
     }
 
     private ChartSeriesCollection BuildCollection(List<List<DataPoint>> sortedValues)
@@ -615,6 +661,10 @@ namespace EQLogParser
         PlayerName = aggregate.PlayerName,
         CurrentTime = aggregate.CurrentTime,
         Total = aggregate.Total,
+        FightTotal = aggregate.FightTotal,
+        FightHits = aggregate.FightHits,
+        FightCritHits = aggregate.FightCritHits,
+        FightTcHits = aggregate.FightTcHits,
         CritsPerSecond = aggregate.CritsPerSecond,
         TcPerSecond = aggregate.TcPerSecond,
         AttemptsPerSecond = aggregate.AttemptsPerSecond,

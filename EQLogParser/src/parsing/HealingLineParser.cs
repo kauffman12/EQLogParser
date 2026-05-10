@@ -214,8 +214,8 @@ namespace EQLogParser
         if (string.IsNullOrEmpty(healer) || healer.Length > 64)
           return null;
 
-        healer = PlayerRegistry.ReplacePlayer(healer, healed);
-        healed = PlayerRegistry.ReplacePlayer(healed, healer);
+        healer = ParserUtil.ReplacePlayer(healer, ConfigUtil.PlayerName, healed);
+        healed = ParserUtil.ReplacePlayer(healed, ConfigUtil.PlayerName, healer);
 
         // check for pets
         var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
@@ -225,10 +225,10 @@ namespace EQLogParser
         }
 
         // found a bst/mag/nec pet
-        if (spell?.StartsWith("Mend Companion", StringComparison.Ordinal) == true || spell?.StartsWith("Warder's Shielding", StringComparison.Ordinal) == true ||
-          spell?.StartsWith("Might of the Wild Spirits", StringComparison.Ordinal) == true)
+        if (spell?.StartsWith("Mend Companion", StringComparison.OrdinalIgnoreCase) == true ||
+          spell?.StartsWith("Warder's Shielding", StringComparison.OrdinalIgnoreCase) == true ||
+          spell?.StartsWith("Might of the Wild Spirits", StringComparison.OrdinalIgnoreCase) == true)
         {
-          PlayerRegistry.Instance.AddVerifiedPet(healed);
           if (PlayerRegistry.IsPossiblePlayerName(healer))
           {
             PlayerRegistry.Instance.AddVerifiedPlayer(healer, beginTime);
@@ -239,16 +239,16 @@ namespace EQLogParser
         // fix subtype
         if (subType == null)
         {
-          subType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : string.Intern(spell);
+          subType = string.IsNullOrEmpty(spell) ? Labels.SelfHeal : StringCache.GetOrAdd(spell);
         }
 
         record = new HealRecord
         {
           Total = heal,
           OverTotal = overHeal,
-          Healer = string.Intern(healer),
-          Healed = string.Intern(healed),
-          Type = string.Intern(type),
+          Healer = StringCache.GetOrAdd(healer),
+          Healed = StringCache.GetOrAdd(healed),
+          Type = StringCache.GetOrAdd(type),
           ModifiersMask = -1,
           SubType = subType
         };

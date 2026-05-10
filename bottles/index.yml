@@ -1,0 +1,11 @@
+# Notes:
+# - [Event] not implemented yet
+#   Will be used by Bottles to trigger an installer when the pattern matches
+
+eqlogparser:
+  Arch: win64
+  Name: EQLogParser
+  Description: EQLogParser v2.3.52 
+  Grade: Gold
+  Category: Games
+  Icon: EQLogParser.ico

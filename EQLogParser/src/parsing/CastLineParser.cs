@@ -147,7 +147,7 @@ namespace EQLogParser
                 spellData = EQDataStore.Instance.AddUnknownSpell(spellName);
               }
 
-              var cast = new SpellCast { Caster = string.Intern(player), Spell = string.Intern(spellName), SpellData = spellData };
+              var cast = new SpellCast { Caster = StringCache.GetOrAdd(player), Spell = StringCache.GetOrAdd(spellName), SpellData = spellData };
               RecordsStore.Instance.Add(cast, currentTime);
 
               if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
@@ -189,7 +189,7 @@ namespace EQLogParser
       // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
       if (split.Length > 3 && split[1] == "have" && split[2] == "entered")
       {
-        var zone = string.Join(" ", split, 3, split.Length - 3).TrimEnd('.');
+        var zone = ParserUtil.JoinWords(split, 3, split.Length - 3).TrimEnd('.');
         RecordsStore.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
@@ -259,7 +259,7 @@ namespace EQLogParser
 
       void AddReceived(string receiver, SpellTreeResult result, bool isWearOff = false)
       {
-        var newSpell = new ReceivedSpell { Receiver = string.Intern(receiver), IsWearOff = isWearOff };
+        var newSpell = new ReceivedSpell { Receiver = StringCache.GetOrAdd(receiver), IsWearOff = isWearOff };
         if (result.SpellData.Count == 1)
         {
           newSpell.SpellData = result.SpellData[0];

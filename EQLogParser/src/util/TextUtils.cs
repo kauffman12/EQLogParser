@@ -60,20 +60,24 @@ namespace EQLogParser
       return new string(' ', leftPadding) + value + new string(' ', rightPadding);
     }
 
-    internal static string ToUpper(string name, CultureInfo culture = null)
+    internal static string CapitalizeFirst(string text, CultureInfo culture = null)
     {
-      if (string.IsNullOrEmpty(name))
-        return name;
+      if (string.IsNullOrEmpty(text))
+        return text;
 
       culture ??= CultureInfo.InvariantCulture;
 
-      var chars = new char[name.Length];
-      chars[0] = char.ToUpper(name[0], culture);
-      for (var i = 1; i < name.Length; i++)
+      var first = char.ToUpper(text[0], culture);
+
+      // Avoid allocation if nothing changes.
+      if (first == text[0])
+        return text;
+
+      return string.Create(text.Length, (text, first), static (span, state) =>
       {
-        chars[i] = name[i];
-      }
-      return new string(chars);
+        span[0] = state.first;
+        state.text.AsSpan(1).CopyTo(span[1..]);
+      });
     }
 
     internal static string BuildTsv(List<string> header, List<List<object>> data, string title = null)

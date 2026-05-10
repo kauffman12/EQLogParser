@@ -14,7 +14,6 @@ namespace EQLogParser
     public static event Action<TauntEvent> EventsNewTaunt;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex CheckEyeRegex = EyeRegex();
-    private static readonly Dictionary<string, bool> ReverseHitMap = [];
     private static readonly Dictionary<string, string> SpellTypeCache = [];
     private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
@@ -25,20 +24,6 @@ namespace EQLogParser
 
     private static IEQDataStore DM => DataManager ?? EQLogParser.EQDataStore.Instance;
     private static IFightManager FM => FightManager ?? EQLogParser.FightManager.Instance;
-
-    private static readonly Dictionary<string, string> HitMap = new()
-    {
-      { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" }, { "crush", "crushes" },
-      { "frenzy", "frenzies" }, { "gore", "gores" }, { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" },
-      { "maul", "mauls" }, { "punch", "punches" }, { "pierce", "pierces" }, { "rend", "rends" }, { "shoot", "shoots" },
-      { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" }, { "smash", "smashes" }, { "stab", "stabs" },
-      { "sting", "stings" }, { "strike", "strikes" }, { "sweep", "sweeps" }
-    };
-
-    private static readonly Dictionary<string, string> HitAdditionalMap = new()
-    {
-      { "frenzy", "frenzies" }, { "frenzies", "frenzies" },
-    };
 
     private static readonly List<string> ChestTypes =
     [
@@ -61,11 +46,6 @@ namespace EQLogParser
     private static readonly string[] SpecialCodeKeys = ["Mana Burn", "Harm Touch", "Life Burn"];
 
     private static OldCritData _lastCrit;
-
-    static DamageLineParser()
-    {
-      HitMap.Keys.ToList().ForEach(key => ReverseHitMap[HitMap[key]] = true); // add two-way mapping
-    }
 
     public static void CheckSlainQueue(double currentTime)
     {
@@ -94,10 +74,10 @@ namespace EQLogParser
         var split = lineData.Split;
         if (split is { Length: >= 2 })
         {
-          var stop = FindStop(split);
+          var stop = ParserUtil.FindStop(split);
 
           // see if it's a died message right away
-          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is { } test
+          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && ParserUtil.JoinWords(split, 0, stop) is { } test
             && !string.IsNullOrEmpty(test))
           {
             UpdateSlain(test, "", lineData);
@@ -135,10 +115,10 @@ namespace EQLogParser
           var split = lineData.Action.Split(' ');
           if (split.Length >= 2)
           {
-            var stop = FindStop(split);
+            var stop = ParserUtil.FindStop(split);
 
             // see if it's a died message right away
-            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && string.Join(" ", split, 0, stop) is { } test && !string.IsNullOrEmpty(test)))
+            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && ParserUtil.JoinWords(split, 0, stop) is { } test && !string.IsNullOrEmpty(test)))
             {
               record = ParseLine(true, lineData, split, stop);
             }
@@ -328,8 +308,8 @@ namespace EQLogParser
             case "blast!":
               if (stop == i && i > 3 && split.Length > stop && split[i - 1] == "critical" && split[i - 3] == "delivers")
               {
-                attacker = string.Join(" ", split, 0, i - 3);
-                attacker = UpdateAttacker(attacker, Labels.Dd);
+                attacker = ParserUtil.JoinWords(split, 0, i - 3);
+                attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
                 _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime, Value = split[stop + 1] };
                 return null;
               }
@@ -359,8 +339,8 @@ namespace EQLogParser
             case "Blow!!":
               if (stop == i && i > 3 && split[i - 1] == "Finishing" && split[i - 3] == "scores")
               {
-                attacker = string.Join(" ", split, 0, i - 3);
-                attacker = UpdateAttacker(attacker, Labels.Unk);
+                attacker = ParserUtil.JoinWords(split, 0, i - 3);
+                attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
                 _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime };
                 return null;
               }
@@ -373,34 +353,33 @@ namespace EQLogParser
                   foundType = hitTypeIndex > -1;
                   continue;
                 }
-                else if (HitMap.TryGetValue(split[i], out var sub))
+                else
                 {
-                  hitTypeIndex = i;
-                  subType = sub; // use plural
-                  foundType = true;
-                }
-                else if (ReverseHitMap.ContainsKey(split[i]))
-                {
-                  hitTypeIndex = i;
-                  subType = split[i];
-                  foundType = true;
-                }
+                  var hitType = ParserUtil.GetHitType(split[i]);
 
-                if (foundType)
-                {
-                  if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
-                  {
-                    tryIndex = i - 2;
-                  }
-
-                  if (subType == "hits")
+                  if (hitType is not null)
                   {
                     hitTypeIndex = i;
-                    foundType = false; // may not be correct so let it try again
+                    subType = hitType;
+                    foundType = true;
+                  }
+
+                  if (foundType)
+                  {
+                    if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
+                    {
+                      tryIndex = i - 2;
+                    }
+
+                    if (subType == "hits")
+                    {
+                      hitTypeIndex = i;
+                      foundType = false; // may not be correct so let it try again
+                    }
                   }
                 }
 
-                if (hitTypeIndex > -1 && HitAdditionalMap.ContainsKey(split[i]))
+                if (hitTypeIndex > -1 && ParserUtil.IsHitTypeAddition(split[i]))
                 {
                   hitTypeAdd = i + i;
                 }
@@ -427,7 +406,7 @@ namespace EQLogParser
           }
           else if (split[i].EndsWith("'s", StringComparison.OrdinalIgnoreCase) && (forIndex - byIndex - 2) is var end and > 0)
           {
-            attacker = string.Join(" ", split, byIndex + 1, end);
+            attacker = ParserUtil.JoinWords(split, byIndex + 1, end);
             attacker = attacker[..^2];
             valid = true;
             break;
@@ -436,10 +415,10 @@ namespace EQLogParser
 
         if (valid)
         {
-          defender = string.Join(" ", split, 0, isIndex);
-          var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
-          attacker = UpdateAttacker(attacker, Labels.Ds);
-          defender = UpdateDefender(defender, attacker);
+          defender = ParserUtil.JoinWords(split, 0, isIndex);
+          var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+          attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Ds);
+          defender = ParserUtil.UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
         }
       }
@@ -453,7 +432,7 @@ namespace EQLogParser
         if (attackerSplit.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           attacker = split[fromDamage + 2][..(split[fromDamage + 2].Length - 2)];
-          defender = string.Join(" ", split, 0, takenIndex);
+          defender = ParserUtil.JoinWords(split, 0, takenIndex);
           isExtra = true;
         }
         else if (attackerSplit == "your")
@@ -461,13 +440,13 @@ namespace EQLogParser
           if (harmedIndex > 1 && split[harmedIndex - 2] == "has" && harmedIndex < (takenIndex - 1))
           {
             // parse this because even if it says 'your' at the end it may not be yours
-            attacker = string.Join(" ", split, 0, harmedIndex - 2);
-            defender = string.Join(" ", split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
+            attacker = ParserUtil.JoinWords(split, 0, harmedIndex - 2);
+            defender = ParserUtil.JoinWords(split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
           }
           else
           {
             attacker = ConfigUtil.PlayerName;
-            defender = string.Join(" ", split, 0, takenIndex);
+            defender = ParserUtil.JoinWords(split, 0, takenIndex);
           }
 
           isExtra = true;
@@ -475,12 +454,12 @@ namespace EQLogParser
 
         if (isExtra)
         {
-          var damage = TextUtils.ParseUInt(split[extraIndex + 1]);
-          var spell = string.Join(" ", split, fromDamage + 3, stop - fromDamage - 3);
+          var damage = ParserUtil.ParseUInt(split, extraIndex + 1);
+          var spell = ParserUtil.JoinWords(split, fromDamage + 3, stop - fromDamage - 3);
           var spellData = DM.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
-          attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender, attacker);
+          attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
+          defender = ParserUtil.UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Bane, spell);
         }
       }
@@ -492,12 +471,12 @@ namespace EQLogParser
       else if (!string.IsNullOrEmpty(subType) && isIndex == -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitTypeIndex < forIndex && nonMeleeIndex == -1)
       {
         var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-        attacker = string.Join(" ", split, 0, hitTypeIndex);
-        defender = string.Join(" ", split, hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
-        subType = TextUtils.ToUpper(subType);
-        var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = UpdateAttacker(attacker, subType);
-        defender = UpdateDefender(defender, attacker);
+        attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
+        defender = ParserUtil.JoinWords(split, hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
+        subType = TextUtils.CapitalizeFirst(subType);
+        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
 
         // handle old style crits for eqemu
@@ -514,28 +493,24 @@ namespace EQLogParser
       else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 && hitTypeIndex > 0 &&
         split[hitTypeIndex] == "hit" && hitTypeIndex < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
       {
-        var spell = string.Join(" ", split, byIndex + 1, stop - byIndex);
+        var spell = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell[..^1];
-          attacker = string.Join(" ", split, 0, hitTypeIndex);
-          defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+          attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
+          defender = ParserUtil.JoinWords(split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
           var type = GetTypeFromSpell(spell, Labels.Dd);
-          var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
+          var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
           SpellResistMap.TryGetValue(split[byDamage - 1], out resist);
 
-          attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender, attacker);
+          attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
+          defender = ParserUtil.UpdateDefender(defender, attacker);
 
           // extra way to check for pets
-          if (spell.StartsWith("Elemental Conversion", StringComparison.Ordinal))
+          if (spell.StartsWith("Elemental Conversion", StringComparison.OrdinalIgnoreCase) && PlayerRegistry.IsPossiblePlayerName(attacker))
           {
-            PlayerRegistry.Instance.AddVerifiedPet(defender);
-            if (PlayerRegistry.IsPossiblePlayerName(attacker))
-            {
-              PlayerRegistry.Instance.AddVerifiedPlayer(attacker, lineData.BeginTime);
-              PlayerRegistry.Instance.AddPetToPlayer(defender, attacker);
-            }
+            PlayerRegistry.Instance.AddVerifiedPlayer(attacker, lineData.BeginTime);
+            PlayerRegistry.Instance.AddPetToPlayer(defender, attacker);
           }
 
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell);
@@ -555,8 +530,8 @@ namespace EQLogParser
         var attackerIsSpell = false;
         if (byIndex > -1)
         {
-          spell = string.Join(" ", split, fromDamage + 2, byIndex - fromDamage - 2);
-          attacker = string.Join(" ", split, byIndex + 1, stop - byIndex);
+          spell = ParserUtil.JoinWords(split, fromDamage + 2, byIndex - fromDamage - 2);
+          attacker = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
 
           // died to spell emoted/killed self
           if (attacker == ".")
@@ -578,12 +553,12 @@ namespace EQLogParser
         else if (yourIndex > -1)
         {
           attacker = split[yourIndex];
-          spell = string.Join(" ", split, yourIndex + 1, stop - yourIndex);
+          spell = ParserUtil.JoinWords(split, yourIndex + 1, stop - yourIndex);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : Labels.Dot;
         }
         else if (isYou)
         {
-          spell = string.Join(" ", split, fromDamage + 2, stop - fromDamage - 1);
+          spell = ParserUtil.JoinWords(split, fromDamage + 2, stop - fromDamage - 1);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : spell;
           attacker = spell;
         }
@@ -612,20 +587,20 @@ namespace EQLogParser
             type = spell == attacker ? Labels.OtherDmg : GetTypeFromSpell(spell, Labels.Dot);
           }
 
-          defender = string.Join(" ", split, 0, takenIndex);
-          var damage = TextUtils.ParseUInt(split[fromDamage - 1]);
+          defender = ParserUtil.JoinWords(split, 0, takenIndex);
+          var damage = ParserUtil.ParseUInt(split, fromDamage - 1);
           resist = spellData?.Resist ?? SpellResist.Undefined;
-          attacker = UpdateAttacker(attacker, spell);
-          defender = UpdateDefender(defender, attacker);
+          attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
+          defender = ParserUtil.UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, type, spell, attackerIsSpell);
         }
       }
       // [Mon Apr 26 21:07:21 2021] Lawlstryke has taken 216717 damage by Wisp Explosion.
       else if (byDamage > -1 && takenIndex == (byDamage - 3))
       {
-        defender = string.Join(" ", split, 0, takenIndex);
-        var damage = TextUtils.ParseUInt(split[byDamage - 1]);
-        var spell = string.Join(" ", split, byDamage + 2, stop - byDamage - 1);
+        defender = ParserUtil.JoinWords(split, 0, takenIndex);
+        var damage = ParserUtil.ParseUInt(split, byDamage - 1);
+        var spell = ParserUtil.JoinWords(split, byDamage + 2, stop - byDamage - 1);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell[..^1];
@@ -644,8 +619,8 @@ namespace EQLogParser
           }
         }
 
-        attacker = UpdateAttacker("", spell);
-        defender = UpdateDefender(defender, attacker);
+        attacker = ParserUtil.UpdateAttacker("", ConfigUtil.PlayerName, spell);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, label, spell, true);
       }
       // [Mon May 10 22:18:46 2021] A dendridic shard was chilled to the bone for 410 points of non-melee damage.
@@ -653,10 +628,10 @@ namespace EQLogParser
       else if (isIndex > -1 && byIndex == -1 && (forIndex + 2) == pointsOfIndex && nonMeleeIndex > pointsOfIndex
         && split[stop].StartsWith("damage", StringComparison.OrdinalIgnoreCase))
       {
-        defender = string.Join(" ", split, 0, isIndex);
-        var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
+        defender = ParserUtil.JoinWords(split, 0, isIndex);
+        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
         attacker = Labels.Rs;
-        defender = UpdateDefender(defender, attacker);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
       }
       // Unknown but often from spell recourse like from The Protector's Grasp when the player is dead
@@ -665,16 +640,16 @@ namespace EQLogParser
       else if (forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
                byIndex == (nonMeleeIndex - 1) && isIndex > -1 && split[isIndex + 1] == "hit")
       {
-        defender = string.Join(" ", split, 0, isIndex);
+        defender = ParserUtil.JoinWords(split, 0, isIndex);
         attacker = AppSettings.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
-        var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
-        defender = UpdateDefender(defender, attacker);
+        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // falling damage? [Fri Mar 04 21:28:19 2022] You were hit by non-melee for 16 damage
       else if (isIndex > -1 && nonMeleeIndex == (isIndex + 3) && split[isIndex + 1] == "hit" && endDamage == stop && pointsOfIndex == -1)
       {
-        var damage = TextUtils.ParseUInt(split[endDamage - 1]);
+        var damage = ParserUtil.ParseUInt(split, endDamage - 1);
         attacker = Labels.Unk;
 
         if (isYou)
@@ -683,10 +658,10 @@ namespace EQLogParser
         }
         else
         {
-          defender = string.Join(" ", split, 0, isIndex);
+          defender = ParserUtil.JoinWords(split, 0, isIndex);
         }
 
-        defender = UpdateDefender(defender, attacker);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // [Sat Jan 04 13:21:13 2025] Fllint's magical skin absorbs the damage of Firethorn's thorns.
@@ -695,16 +670,16 @@ namespace EQLogParser
         && split[absorbsIndex + 5] == "of" && split[stop - 1].EndsWith("'s", StringComparison.OrdinalIgnoreCase))
       {
         // absorbsIndex accounts for magical skin
-        defender = string.Join(" ", split, 0, absorbsIndex);
+        defender = ParserUtil.JoinWords(split, 0, absorbsIndex);
         if (defender.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           defender = defender[..^2];
         }
 
-        attacker = string.Join(" ", split, absorbsIndex + 6, stop - absorbsIndex - 6);
+        attacker = ParserUtil.JoinWords(split, absorbsIndex + 6, stop - absorbsIndex - 6);
         attacker = attacker[..^2];
-        attacker = UpdateAttacker(attacker, subType);
-        defender = UpdateDefender(defender, attacker);
+        attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.Absorb, "Hits");
       }
       // EMU specific stuff
@@ -715,33 +690,32 @@ namespace EQLogParser
         string attackerOwner = null;
         if (emuPetIndex > -1)
         {
-          attacker = string.Join(" ", split, 0, emuPetIndex);
+          attacker = ParserUtil.JoinWords(split, 0, emuPetIndex);
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
             var player = split[emuPetIndex + 1][..^1];
             PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-            PlayerRegistry.Instance.AddVerifiedPet(attacker);
             PlayerRegistry.Instance.AddPetToPlayer(attacker, player);
             attackerOwner = player;
           }
         }
         else
         {
-          attacker = string.Join(" ", split, 0, hitTypeIndex);
+          attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
         }
 
-        defender = string.Join(" ", split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
-        var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
-        attacker = UpdateAttacker(attacker, Labels.Dd);
-        defender = UpdateDefender(defender, attacker);
+        defender = ParserUtil.JoinWords(split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
+        defender = ParserUtil.UpdateDefender(defender, attacker);
 
         subType = Labels.Dd;
         var end = stop + 1;
 
-        if (split.Length > end && split[end].StartsWith('(') && string.Join(" ", split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
+        if (split.Length > end && split[end].StartsWith('(') && ParserUtil.JoinWords(split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
         {
           subType = oldSpell[1..^1];
-          subType = TextUtils.ToUpper(subType);
+          subType = TextUtils.CapitalizeFirst(subType);
         }
 
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, subType);
@@ -765,7 +739,7 @@ namespace EQLogParser
       // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
       else if (AppSettings.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
       {
-        var damage = TextUtils.ParseUInt(split[pointsOfIndex - 1]);
+        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
         attacker = Labels.Unk;
         defender = ConfigUtil.PlayerName;
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
@@ -776,21 +750,20 @@ namespace EQLogParser
       {
         if (emuPetIndex > -1 && emuPetIndex < hasIndex)
         {
-          defender = string.Join(" ", split, 0, emuPetIndex);
+          defender = ParserUtil.JoinWords(split, 0, emuPetIndex);
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
             var player = split[emuPetIndex + 1][..^1];
             PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
-            PlayerRegistry.Instance.AddVerifiedPet(defender);
             PlayerRegistry.Instance.AddPetToPlayer(defender, player);
           }
         }
         else
         {
-          defender = string.Join(" ", split, 0, hasIndex);
+          defender = ParserUtil.JoinWords(split, 0, hasIndex);
         }
 
-        defender = UpdateDefender(defender, Labels.Unk);
+        defender = ParserUtil.UpdateDefender(defender, Labels.Unk);
         record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
       }
       // [Thu Jan 23 21:36:37 2025] Vorgash scores a critical hit! (780)
@@ -800,8 +773,8 @@ namespace EQLogParser
         var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : TextUtils.ParseUInt(split[stop + 1].AsSpan(1, split[stop + 1].Length - 2));
         if (damage != uint.MaxValue)
         {
-          attacker = string.Join(" ", split, 0, oldCritIndex);
-          attacker = UpdateAttacker(attacker, Labels.Unk);
+          attacker = ParserUtil.JoinWords(split, 0, oldCritIndex);
+          attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
 
           var damageRecord = CreateDamageRecord(lineData, split, stop, attacker, Labels.Unk, damage, Labels.Melee, "Hits");
           if (damageRecord != null)
@@ -862,14 +835,14 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(label))
         {
           var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-          defender = string.Join(" ", split, hitTypeIndex + hitTypeMod + 1, butIndex - hitTypeIndex - hitTypeMod - 1);
+          defender = ParserUtil.JoinWords(split, hitTypeIndex + hitTypeMod + 1, butIndex - hitTypeIndex - hitTypeMod - 1);
           if (!string.IsNullOrEmpty(defender) && defender[^1] == ',')
           {
             defender = defender[..^1];
-            attacker = string.Join(" ", split, 0, tryIndex);
-            subType = TextUtils.ToUpper(subType);
-            attacker = UpdateAttacker(attacker, subType);
-            defender = UpdateDefender(defender, attacker);
+            attacker = ParserUtil.JoinWords(split, 0, tryIndex);
+            subType = TextUtils.CapitalizeFirst(subType);
+            attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
+            defender = ParserUtil.UpdateDefender(defender, attacker);
             record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, label, subType);
           }
         }
@@ -878,9 +851,9 @@ namespace EQLogParser
       // New slain message for npcs
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && isIndex > 0 && stop > (slainIndex + 1) && split[isIndex] == "was")
       {
-        var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
+        var killer = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
-        var slain = string.Join(" ", split, 0, isIndex);
+        var slain = ParserUtil.JoinWords(split, 0, isIndex);
         UpdateSlain(slain, killer, lineData);
         CheckOwner(slain, out _);
         CheckOwner(killer, out _);
@@ -889,9 +862,9 @@ namespace EQLogParser
       // Older slain message for npcs
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && hasIndex > 0 && stop > (slainIndex + 1) && split[hasIndex + 1] == "been")
       {
-        var killer = string.Join(" ", split, byIndex + 1, stop - byIndex);
+        var killer = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
-        var slain = string.Join(" ", split, 0, hasIndex);
+        var slain = ParserUtil.JoinWords(split, 0, hasIndex);
         UpdateSlain(slain, killer, lineData);
         CheckOwner(slain, out _);
         CheckOwner(killer, out _);
@@ -899,7 +872,7 @@ namespace EQLogParser
       // [Mon Apr 19 02:22:09 2021] You have been slain by an armed flyer!
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")
       {
-        var killer = string.Join(" ", split, 5, stop - 4);
+        var killer = ParserUtil.JoinWords(split, 5, stop - 4);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = ConfigUtil.PlayerName;
         UpdateSlain(slain, killer, lineData);
@@ -908,7 +881,7 @@ namespace EQLogParser
       else if (!checkLineType && slainIndex == 2 && isYou && split[1] == "have")
       {
         var killer = ConfigUtil.PlayerName;
-        var slain = string.Join(" ", split, 3, stop - 2);
+        var slain = ParserUtil.JoinWords(split, 3, stop - 2);
         slain = slain.Length > 1 && slain[^1] == '!' ? slain[..^1] : slain;
         UpdateSlain(slain, killer, lineData);
       }
@@ -926,16 +899,16 @@ namespace EQLogParser
         {
           if (attentionIndex == (split.Length - 1) && split.Length > 3 && split[1] == "capture" && ParseNpcName(split, 3, out var npc))
           {
-            var taunt = new TauntRecord { Player = ConfigUtil.PlayerName, Success = true, Npc = TextUtils.ToUpper(npc) };
+            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Success = true, Npc = StringCache.GetOrAdd(npc) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
           {
             var taunt = new TauntRecord
             {
-              Player = ConfigUtil.PlayerName,
+              Player = StringCache.GetOrAdd(ConfigUtil.PlayerName),
               Success = false,
-              Npc = TextUtils.ToUpper(TextUtils.ParseSpellOrNpc(split, 5))
+              Npc = StringCache.GetOrAdd(TextUtils.ParseSpellOrNpc(split, 5))
             };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
@@ -948,7 +921,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
-            var taunt = new TauntRecord { Player = name, Success = true, Npc = TextUtils.ToUpper(npc) };
+            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = true, Npc = StringCache.GetOrAdd(npc) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
@@ -960,7 +933,7 @@ namespace EQLogParser
           var name = (i == 2) ? split[0] + " " + split[1] : split[0];
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
-            var taunt = new TauntRecord { Player = name, Success = false, Npc = TextUtils.ToUpper(TextUtils.ParseSpellOrNpc(split, 3 + i)) };
+            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(TextUtils.ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
@@ -972,9 +945,9 @@ namespace EQLogParser
               var playerIndex = j + 4;
               if (split[j] == "is" && split[j + 1] == "focused" && split[j + 2] == "on" && split[j + 3] == "attacking" && playerIndex < last)
               {
-                var npc = string.Join(" ", split, 0, j);
-                var taunter = string.Join(" ", split, playerIndex, last - playerIndex);
-                var taunt = new TauntRecord { Player = taunter, Success = true, IsImproved = true, Npc = TextUtils.ToUpper(npc) };
+                var npc = ParserUtil.JoinWords(split, 0, j);
+                var taunter = ParserUtil.JoinWords(split, playerIndex, last - playerIndex);
+                var taunt = new TauntRecord { Player = StringCache.GetOrAdd(taunter), Success = true, IsImproved = true, Npc = StringCache.GetOrAdd(npc) };
                 EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
             }
@@ -1032,24 +1005,6 @@ namespace EQLogParser
       return record;
     }
 
-    private static int FindStop(string[] split)
-    {
-      var stop = split.Length - 1;
-      if (!string.IsNullOrEmpty(split[stop]) && split[stop][^1] == ')')
-      {
-        for (var i = stop; i >= 0 && stop > 2; i--)
-        {
-          if (!string.IsNullOrEmpty(split[i]) && split[i][0] == '(')
-          {
-            stop = i - 1;
-            break;
-          }
-        }
-      }
-
-      return stop;
-    }
-
     private static bool ParseNpcName(string[] parts, int length, out string output)
     {
       output = null;
@@ -1067,8 +1022,8 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(slain) && killer != null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
       {
-        killer = killer.Length > 2 ? PlayerRegistry.ReplacePlayer(killer, killer) : killer;
-        slain = PlayerRegistry.ReplacePlayer(slain, slain);
+        killer = killer.Length > 2 ? ParserUtil.ReplacePlayer(killer, ConfigUtil.PlayerName, killer) : killer;
+        slain = ParserUtil.ReplacePlayer(slain, ConfigUtil.PlayerName, slain);
 
         // clear your ADPS if you died
         if (slain == ConfigUtil.PlayerName)
@@ -1084,7 +1039,7 @@ namespace EQLogParser
           lock (SlainQueue)
           {
             // we also use upper case now
-            slain = TextUtils.ToUpper(slain);
+            slain = TextUtils.CapitalizeFirst(slain);
             if (!SlainQueue.Contains(slain) && FM.GetFight(slain) != null)
             {
               SlainQueue.Add(slain);
@@ -1092,9 +1047,7 @@ namespace EQLogParser
             }
           }
 
-          killer = TextUtils.ToUpper(killer);
-
-          var death = new DeathRecord { Killed = string.Intern(slain), Killer = string.Intern(killer), Message = string.Intern(lineData.Action) };
+          var death = new DeathRecord { Killed = StringCache.GetOrAdd(slain), Killer = StringCache.GetOrAdd(killer), Message = StringCache.GetOrAdd(lineData.Action) };
           if (_previousAction != null)
           {
             death.Previous = _previousAction;
@@ -1117,7 +1070,7 @@ namespace EQLogParser
         if (split.Length > stop + 1)
         {
           // improve this later so maybe the string doesn't have to be re-joined
-          var modifiers = string.Join(" ", split, stop + 1, split.Length - stop - 1);
+          var modifiers = ParserUtil.JoinWords(split, stop + 1, split.Length - stop - 1);
           modifiersMask = LineModifiersParser.ParseDamage(attacker, modifiers[1..^1], currentTime, !attackerIsSpell);
         }
 
@@ -1129,13 +1082,13 @@ namespace EQLogParser
         {
           record = new DamageRecord
           {
-            Attacker = string.Intern(attacker),
-            Defender = string.Intern(defender),
-            Type = string.Intern(type),
-            SubType = string.Intern(subType),
+            Attacker = attacker,
+            Defender = defender,
+            Type = type,
+            SubType = subType,
             Total = damage,
-            AttackerOwner = attackerOwner != null ? string.Intern(attackerOwner) : null,
-            DefenderOwner = defenderOwner != null ? string.Intern(defenderOwner) : null,
+            AttackerOwner = attackerOwner,
+            DefenderOwner = defenderOwner,
             ModifiersMask = modifiersMask,
             AttackerIsSpell = attackerIsSpell
           };
@@ -1143,33 +1096,6 @@ namespace EQLogParser
       }
 
       return record;
-    }
-
-    private static string UpdateAttacker(string attacker, string subType)
-    {
-      if (string.IsNullOrEmpty(attacker))
-      {
-        attacker = subType;
-      }
-      else if (attacker.EndsWith("'s corpse", StringComparison.Ordinal) || attacker.EndsWith("`s corpse", StringComparison.Ordinal))
-      {
-        attacker = attacker[..^9];
-      }
-      else
-      {
-        // Needed to replace 'You' and 'you', etc
-        attacker = PlayerRegistry.ReplacePlayer(attacker, attacker);
-      }
-
-      attacker = TextUtils.ToUpper(attacker);
-      return attacker;
-    }
-
-    private static string UpdateDefender(string defender, string attacker)
-    {
-      // Needed to replace 'You' and 'you', etc
-      var updated = PlayerRegistry.ReplacePlayer(defender, attacker);
-      return TextUtils.ToUpper(updated);
     }
 
     private static void CheckOwner(string name, out string owner)
@@ -1186,7 +1112,6 @@ namespace EQLogParser
             if (PlayerRegistry.Instance.IsVerifiedPlayer(player))
             {
               owner = player;
-              PlayerRegistry.Instance.AddVerifiedPet(name);
               PlayerRegistry.Instance.AddPetToPlayer(name, owner);
             }
           }

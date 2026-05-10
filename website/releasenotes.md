@@ -1,5 +1,12 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.53 | 05/09/26
+1. Updated **Trends Charts** to display **Raid Group** data.
+3. **Performance** improvements for opening large log files.
+4. Changed verified pets to save state even when **Unassigned** in some cases.
+5. Changed **Timeline** layout dropdown to work more like the roster dropdown.
+6. Misc bug fixes and changes to reduce memory usage.
+
 # 2.3.52 | 05/05/26
 1. Added **padleft, padright, center** formatting options to text displayed by triggers. For example, if **Text to Display** contains **{s.padright:20}** then extra spaces will be added to the right of the text up till 20 characters have been accounted for. When used with **fixed width fonts** such as **Consolas** it allows for some cleaner text display.
 2. Fixed bug where trigger cut/paste of a folder to itself could make your triggers disappear.

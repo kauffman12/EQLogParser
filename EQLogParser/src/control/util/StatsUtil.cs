@@ -72,8 +72,8 @@ namespace EQLogParser
 
       return new PlayerStats
       {
-        Name = string.Intern(name),
-        OrigName = string.Intern(origName),
+        Name = StringCache.GetOrAdd(name),
+        OrigName = StringCache.GetOrAdd(origName),
         Percent = 100, // until something says otherwise
       };
     }
@@ -88,7 +88,7 @@ namespace EQLogParser
         stats = individualStats.FirstOrDefault(indStats => indStats.Key == key);
         if (stats == null)
         {
-          stats = new PlayerSubStats { ClassName = "", Name = string.Intern(subType), Type = string.Intern(type), Key = key };
+          stats = new PlayerSubStats { ClassName = "", Name = StringCache.GetOrAdd(subType), Type = StringCache.GetOrAdd(type), Key = key };
           individualStats.Add(stats);
         }
       }

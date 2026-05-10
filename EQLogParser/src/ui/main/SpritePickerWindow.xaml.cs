@@ -35,7 +35,7 @@ namespace EQLogParser
       else
       {
         // else find uifiles to use
-        EqUtil.GetEqUiFolderAsync(characterId).ContinueWith(t =>
+        EQUtil.GetEqUiFolderAsync(characterId).ContinueWith(t =>
         {
           Dispatcher.InvokeAsync(() => LoadDefaultSheets(t.Result));
         });

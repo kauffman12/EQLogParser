@@ -163,7 +163,7 @@ namespace EQLogParser
       ShowImage();
 
       // use folder of existing sprite if possible
-      var picker = new SpritePickerWindow(characterId, EqUtil.GetUiFolderFromSpritePath(_theImagePath.Text));
+      var picker = new SpritePickerWindow(characterId, EQUtil.GetUiFolderFromSpritePath(_theImagePath.Text));
 
       if (picker.ShowDialog() == true)
       {

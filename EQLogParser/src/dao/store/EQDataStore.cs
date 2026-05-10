@@ -74,9 +74,60 @@ namespace EQLogParser
     SpellData GetSpellByAbbrv(string abbrv);
   }
 
+  internal class SpellAbbrvComparer : IEqualityComparer<SpellData>
+  {
+    public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
+    public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
+  }
+
   internal class EQDataStore : IEQDataStore, ILifecycle
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    private static int SpellDurationCompare(SpellData a, SpellData b)
+    {
+      if (ReferenceEquals(a, b))
+      {
+        return 0;
+      }
+
+      if (a is null)
+      {
+        return 1;
+      }
+
+      if (b is null)
+      {
+        return -1;
+      }
+
+      var result = b.Duration.CompareTo(a.Duration);
+
+      if (result == 0)
+      {
+        var aHasId = int.TryParse(a.Id, out var aInt);
+        var bHasId = int.TryParse(b.Id, out var bInt);
+
+        if (aHasId && bHasId)
+        {
+          result = bInt.CompareTo(aInt);
+        }
+        else if (aHasId && !bHasId)
+        {
+          result = -1;
+        }
+        else if (!aHasId && bHasId)
+        {
+          result = 1;
+        }
+        else
+        {
+          result = string.Compare(a.Id, b.Id, StringComparison.Ordinal);
+        }
+      }
+
+      return result;
+    }
 
     // singleton with set for unit test
     internal static EQDataStore Instance { get; set; } = new();
@@ -90,7 +141,7 @@ namespace EQLogParser
 
     // definitely used in single thread
     private readonly Dictionary<string, string> _titleToClass = [];
-    private readonly ConcurrentDictionary<string, byte> _allNpcs = new();
+    private readonly ConcurrentDictionary<string, byte> _allNpcs = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
@@ -124,7 +175,7 @@ namespace EQLogParser
           var name = Resource.ResourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
           if (!string.IsNullOrEmpty(name))
           {
-            _classNames[item] = string.Intern(name);
+            _classNames[item] = StringCache.GetOrAdd(name);
             _classesByName[name] = item;
           }
 
@@ -272,14 +323,14 @@ namespace EQLogParser
       {
         if (line?.Trim() is string trimmed && trimmed.Length > 0)
         {
-          _allNpcs[string.Intern(trimmed)] = 1;
+          _allNpcs[StringCache.GetOrAdd(trimmed)] = 1;
         }
       }
 
       return;
     }
 
-    internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(npc.ToLower(CultureInfo.CurrentCulture));
+    internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
 
@@ -599,18 +650,19 @@ namespace EQLogParser
 
     private static SpellData FindPreviousCast(string player, IEnumerable<SpellData> output, bool isAdps = false)
     {
-      SpellData[] filtered = null;
-      foreach (var (_, cast) in RecordsStore.Instance.GetSpellsLast(8))
+      foreach (var value in output)
       {
-        if (!cast.Interrupted)
+        if (value.Name == null) continue;
+        if (isAdps && value.Adps <= 0) continue;
+
+        var casts = RecordsStore.Instance.GetCastsBySpellName(value.Name, 8);
+        foreach (var cached in casts)
         {
-          filtered ??= [.. output.Where(value => !isAdps || value.Adps > 0)];
-          foreach (var value in filtered)
+          var cast = cached.Cast;
+          if (cast.Interrupted) continue;
+          if (value.Target != (int)SpellTarget.Self || cast.Caster == player)
           {
-            if ((value.Target != (int)SpellTarget.Self || cast.Caster == player) && value.Name == cast.Spell)
-            {
-              return value;
-            }
+            return value;
           }
         }
       }
@@ -706,7 +758,7 @@ namespace EQLogParser
       if (data[lastIndex] == "'s")
       {
         node.SpellData.Add(spellData);
-        node.SpellData.Sort(EQDataUtil.SpellDurationCompare);
+        node.SpellData.Sort(SpellDurationCompare);
       }
       else
       {
@@ -719,7 +771,7 @@ namespace EQLogParser
         if (lastIndex == 0)
         {
           child.SpellData.Add(spellData);
-          child.SpellData.Sort(EQDataUtil.SpellDurationCompare);
+          child.SpellData.Sort(SpellDurationCompare);
         }
         else
         {

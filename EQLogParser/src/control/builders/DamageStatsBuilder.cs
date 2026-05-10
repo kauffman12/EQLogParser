@@ -180,7 +180,7 @@ namespace EQLogParser
       }
     }
 
-    internal void FireChartEvent(string action, List<PlayerStats> selected = null)
+    internal void FireChartEvent(string action, List<PlayerStats> selected = null, List<GroupEntry> selectedGroups = null)
     {
       lock (_lock)
       {
@@ -190,6 +190,11 @@ namespace EQLogParser
         if (selected != null)
         {
           de.Selected.AddRange(selected);
+        }
+
+        if (selectedGroups != null)
+        {
+          de.SelectedGroups.AddRange(selectedGroups);
         }
 
         EventsUpdateDataPoint?.Invoke(de);
