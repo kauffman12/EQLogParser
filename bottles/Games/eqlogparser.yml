@@ -21,7 +21,7 @@ Executable:
 Steps:
 - action: install_exe
   file_name: EQLogParser-install-pipertts-2.3.53.exe
-  url: https://github.com/kauffman12/EQLogParser/releases/download/2.3.52/EQLogParser-install-pipertts-2.3.53.exe
+  url: https://github.com/kauffman12/EQLogParser/releases/download/2.3.53/EQLogParser-install-pipertts-2.3.53.exe
   file_checksum: False
 
 Checks:
