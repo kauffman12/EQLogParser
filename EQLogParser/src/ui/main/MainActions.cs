@@ -131,6 +131,12 @@ namespace EQLogParser
       Application.Current.Resources["EQLogFontFamily"] = new FontFamily("Segoe UI");
     }
 
+    internal static void UpdateStatus(string text)
+    {
+      ConfigUtil.InvokeEventsLoadingText(text);
+      Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+    }
+
     internal static void AddDocumentWindows(DockingManager dockSite)
     {
       SyncFusionUtil.AddDocument(dockSite, typeof(TriggersTester), "triggerTestWindow", "Trigger Tester");

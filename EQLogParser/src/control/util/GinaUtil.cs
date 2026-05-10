@@ -47,12 +47,12 @@ namespace EQLogParser
               Type = "GINA"
             };
 
-            RecordsStore.Instance.Add(record);
+            QuickShareManager.Instance.Add(record);
 
             // don't handle immediately unless enabled
             if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
                   or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
-                !RecordsStore.Instance.IsQuickShareMine(fullKey))
+                !QuickShareManager.Instance.IsMine(fullKey))
             {
               // ignore if we're still processing a bunch
               if (GinaCache.Count > 5)

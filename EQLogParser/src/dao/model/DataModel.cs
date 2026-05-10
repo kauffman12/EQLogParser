@@ -1,5 +1,4 @@
 using LiteDB;
-using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -110,7 +109,7 @@ namespace EQLogParser
     public DateTime DateTime { get; set; }
   }
 
-  internal class ComboBoxItemDetails : NotificationObject
+  internal class ComboBoxItemDetails
   {
     public ComboBoxItemDetails()
     {

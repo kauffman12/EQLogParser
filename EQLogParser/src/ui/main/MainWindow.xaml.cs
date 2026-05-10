@@ -161,7 +161,7 @@ namespace EQLogParser
       ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
       // init theme before loading docs
-      ConfigUtil.UpdateStatus("Loading Themes");
+      MainActions.UpdateStatus("Loading Themes");
       MainActions.InitThemes();
 
       // save active window before adding
@@ -191,7 +191,7 @@ namespace EQLogParser
       }
 
       // workaround to set initial theme properly
-      ConfigUtil.UpdateStatus("Setting " + MainActions.CurrentTheme);
+      MainActions.UpdateStatus("Setting " + MainActions.CurrentTheme);
       MainActions.SetTheme();
     }
 
@@ -863,7 +863,7 @@ namespace EQLogParser
 
             ConfigUtil.SetSetting("LastOpenedFile", AppSettings.CurrentLogFile);
             Log.Info($"Finished Loading Log File in {seconds} seconds.");
-            ConfigUtil.UpdateStatus("Monitoring Last Log");
+            MainActions.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(500);
             MainActions.FireLogLoadingEvent(AppSettings.CurrentLogFile, true);

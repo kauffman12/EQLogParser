@@ -661,13 +661,13 @@ namespace EQLogParser
         Type = type
       };
 
-      RecordsStore.Instance.Add(record);
+      QuickShareManager.Instance.Add(record);
 
       if (doImport)
       {
         // don't handle immediately unless enabled
         if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
-              ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !RecordsStore.Instance.IsQuickShareMine(fullKey))
+              ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !QuickShareManager.Instance.IsMine(fullKey))
         {
           // ignore if we're still processing a bunch
           if (QuickShareCache.Count > 5)
@@ -767,7 +767,7 @@ namespace EQLogParser
                 Type = type
               };
 
-              RecordsStore.Instance.Add(record);
+              QuickShareManager.Instance.Add(record);
 
               Task action() => OpenQuickShareStatusAsync(shareLink);
               new MessageWindow($"Share Key: {withKey}", Resource.SHARE_MESSAGE, withKey, "View Quick Share Stats", action).ShowDialog();
@@ -797,7 +797,7 @@ namespace EQLogParser
     internal static async Task OpenQuickShareStatusAsync(string selected)
     {
       List<string> keys = [];
-      foreach (var share in RecordsStore.Instance.AllQuickShareRecords)
+      foreach (var share in QuickShareManager.Instance.Records)
       {
         if (MatchQuickShare(share.Key) is { } match)
         {

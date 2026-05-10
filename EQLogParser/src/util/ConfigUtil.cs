@@ -6,7 +6,6 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Security;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -16,7 +15,8 @@ namespace EQLogParser
     public static string ServerName;
     public static string LogsDir;
     public static string ConfigDir;
-    internal static event Action<string> EventsLoadingText;
+    public static event Action<string> EventsLoadingText;
+    internal static void InvokeEventsLoadingText(string text) => EventsLoadingText?.Invoke(text);
     internal const string AppData = @"%AppData%\EQLogParser";
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -28,7 +28,6 @@ namespace EQLogParser
     private static string _triggersDbFile;
     private static string _triggersLastDbFile;
     private static bool _settingsUpdated;
-    private static bool _isDone;
 
     internal static string GetArchiveDir() => _archiveDir;
     internal static string GetTriggersDbFile() => _triggersDbFile;
@@ -54,21 +53,7 @@ namespace EQLogParser
       LoadProperties(ApplicationSettings, ReadList(_settingsFile));
     }
 
-    internal static void UpdateStatus(string text)
-    {
-      if (!_isDone)
-      {
-        EventsLoadingText?.Invoke(text);
-      }
 
-      if (text == "Done")
-      {
-        _isDone = true;
-      }
-
-      // allow splash screen to update
-      Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
-    }
 
     internal static bool IfSet(string setting, bool callByDefault = false)
     {

@@ -22,7 +22,7 @@ namespace EQLogParser
       MainActions.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
-      QuickShareData = RecordsStore.Instance.AllQuickShareRecords;
+      QuickShareData = QuickShareManager.Instance.Records;
       QuickShareData.CollectionChanged += EnableStats;
       DataContext = this;
 
@@ -228,15 +228,5 @@ namespace EQLogParser
         }
       }
     }
-  }
-
-  public class QuickShareRecord
-  {
-    public double BeginTime { get; set; }
-    public string Type { get; set; }
-    public string To { get; set; }
-    public string From { get; set; }
-    public string Key { get; set; }
-    public bool IsMine { get; set; }
   }
 }
