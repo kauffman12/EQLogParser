@@ -22,6 +22,7 @@ namespace EQLogParser
     private readonly PatternEditor _closePatternEditor;
     private readonly PatternEditor _patternEditor;
     private readonly PatternEditor _previousPatternEditor;
+    private readonly PatternEditor _windowPatternEditor;
     private readonly PatternEditor _endEarlyPatternEditor;
     private readonly PatternEditor _endEarlyPattern2Editor;
     private readonly PatternEditor _endEarlyPattern3Editor;
@@ -82,6 +83,7 @@ namespace EQLogParser
       _closePatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "ClosePattern");
       _patternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
       _previousPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "PreviousPattern");
+      _windowPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "WindowPattern");
       _endEarlyPatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern");
       _endEarlyPattern2Editor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern2");
       _endEarlyPattern3Editor = (PatternEditor)AddEditorInstance(new PatternEditor(), "EndEarlyPattern3");
@@ -580,6 +582,7 @@ namespace EQLogParser
         var triggerChange = true;
         var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.PreviousUseRegex, trigger.PreviousPattern, _previousPatternEditor);
+        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.WindowUseRegex, trigger.WindowPattern, _windowPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
         isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex3, trigger.EndEarlyPattern3, _endEarlyPattern3Editor);

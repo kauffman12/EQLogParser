@@ -28,6 +28,7 @@ namespace EQLogParser
     public string Action { get; init; }
     public Dictionary<string, string> Matches { get; init; }
     public Dictionary<string, string> Previous { get; init; }
+    public Dictionary<string, string> Window { get; init; }
     public Dictionary<string, string> Original { get; init; }
     public long CounterCount { get; init; }
     public double BeginTime { get; init; }
@@ -70,6 +71,7 @@ namespace EQLogParser
     public List<NumberOptions> EndEarlyRegex3NOptions { get; set; }
     public Dictionary<string, string> OriginalMatches { get; set; }
     public Dictionary<string, string> PreviousMatches { get; set; }
+    public Dictionary<string, string> WindowMatches { get; set; }
     public long CounterCount { get; set; } = -1;
     public long RepeatedCount { get; set; } = -1;
     public string LogTime { get; set; }
@@ -159,10 +161,13 @@ namespace EQLogParser
     public long WorstEvalTime { get; set; } = -1;
     public string Pattern { get; set; }
     public string PreviousPattern { get; set; }
+    public string WindowPattern { get; set; }
+    public int WindowTime { get; set; }
     public long Priority { get; set; } = 3;
     public int TriggerAgainOption { get; set; }
     public bool UseRegex { get; set; }
     public bool PreviousUseRegex { get; set; }
+    public bool WindowUseRegex { get; set; }
     public string ActiveColor { get; set; }
     public string IdleColor { get; set; }
     public string ResetColor { get; set; }
@@ -353,15 +358,27 @@ namespace EQLogParser
     public Trigger TriggerData { get; init; }
     // only the main thread modifies these values
     public string ModifiedPreviousPattern { get; set; }
+    public string ModifiedWindowPattern { get; set; }
     public Regex Regex { get; set; }
     public Regex PreviousRegex { get; set; }
+    public Regex WindowRegex { get; set; }
     public List<NumberOptions> RegexNOptions { get; set; }
     public List<NumberOptions> PreviousRegexNOptions { get; set; }
+    public List<NumberOptions> WindowRegexNOptions { get; set; }
     public bool IsDisabled { get; set; }
     public string ContainsText { get; set; }
     public string PreviousContainsText { get; set; }
     public string StartText { get; set; }
     public string PreviousStartText { get; set; }
     public long LockedOutTicks { get; set; }
+    public string WindowStartText { get; set; }
+    public string WindowContainsText { get; set; }
+    public int WindowTime { get; set; }
+  }
+
+  internal class TriggerWindow
+  {
+    public double Expiration { get; set; }
+    public Dictionary<string, string> Matches { get; set; }
   }
 }

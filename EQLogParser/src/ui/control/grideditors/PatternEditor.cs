@@ -40,6 +40,7 @@ namespace EQLogParser
       {
         "Pattern" => "UseRegex",
         "PreviousPattern" => "PreviousUseRegex",
+        "WindowPattern" => "WindowUseRegex",
         "EndEarlyPattern" => "EndUseRegex",
         "EndEarlyPattern2" => "EndUseRegex2",
         "EndEarlyPattern3" => "EndUseRegex3",
