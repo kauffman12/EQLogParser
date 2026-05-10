@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -16,20 +15,42 @@ namespace EQLogParser
     internal static TriggerManager Instance => Lazy.Value;
 
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
-    private readonly DispatcherTimer _configUpdateTimer;
-    private readonly DispatcherTimer _triggerUpdateTimer;
+
+    private static readonly object _timerLock = new();
+    private Timer _configUpdateTimer;
+    private Timer _triggerUpdateTimer;
     private readonly List<LogReader> _logReaders = [];
     private readonly SemaphoreSlim _logReadersSemaphore = new(1, 1);
     private TriggerProcessor _testProcessor;
 
     public TriggerManager()
     {
-      _configUpdateTimer = UiUtil.CreateTimer(ConfigDoUpdate, 500, false);
-      _triggerUpdateTimer = UiUtil.CreateTimer(TriggersDoUpdate, 1000, false);
+      _configUpdateTimer = new Timer(ConfigDoUpdate, null, Timeout.Infinite, Timeout.Infinite);
+      _triggerUpdateTimer = new Timer(TriggersDoUpdate, null, Timeout.Infinite, Timeout.Infinite);
+      StartTimers();
+
       TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
       TriggerStateDB.Instance.TriggerImportEvent += TriggerImportEvent;
+    }
+
+    private void StartTimers()
+    {
+      lock (_timerLock)
+      {
+        _configUpdateTimer?.Change(500, 500);
+        _triggerUpdateTimer?.Change(1000, 1000);
+      }
+    }
+
+    private void StopTimers()
+    {
+      lock (_timerLock)
+      {
+        _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+      }
     }
 
     internal void Select(TriggerLogEntry entry) => EventsSelectTrigger?.Invoke(entry);
@@ -37,20 +58,23 @@ namespace EQLogParser
     internal void TriggersUpdated()
     {
       EventsUpdatingTriggers?.Invoke(true);
-      _triggerUpdateTimer.Stop();
-      _triggerUpdateTimer.Start();
+      StopTimers();
+      StartTimers();
     }
 
     internal async Task StartAsync()
     {
       await TriggerUtil.LoadOverlayStyles();
       MainActions.EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
+      StartTimers();
       TriggerConfigUpdateEvent(null);
     }
 
     internal async Task StopAsync()
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
+      StopTimers();
+
       await _logReadersSemaphore.WaitAsync();
 
       try
@@ -63,6 +87,12 @@ namespace EQLogParser
       {
         _logReadersSemaphore.Release();
       }
+
+      // Cleanup timer references
+      _configUpdateTimer?.Dispose();
+      _triggerUpdateTimer?.Dispose();
+      _configUpdateTimer = null;
+      _triggerUpdateTimer = null;
     }
 
     internal async Task StopTriggersAsync()
@@ -132,14 +162,14 @@ namespace EQLogParser
     {
       if (await TriggerStateDB.Instance.GetConfig() is { IsAdvanced: false })
       {
-        ConfigDoUpdate(this, null);
+        _ = ConfigDoUpdateWorkAsync();
       }
     }
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
-      _configUpdateTimer.Stop();
-      _configUpdateTimer.Start();
+      StopTimers();
+      StartTimers();
     }
 
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
@@ -157,10 +187,30 @@ namespace EQLogParser
       await FireEventsProcessorsUpdatedAsync();
     }
 
-    private async void ConfigDoUpdate(object sender, EventArgs e)
+    private async void ConfigDoUpdate(object state)
     {
-      _configUpdateTimer.Stop();
+      Timer timer;
+      lock (_timerLock)
+      {
+        timer = _configUpdateTimer;
+      }
 
+      // Stop timer before async work
+      timer?.Change(Timeout.Infinite, Timeout.Infinite);
+
+      try
+      {
+        await ConfigDoUpdateWorkAsync();
+      }
+      finally
+      {
+        // Restart timer after work completes
+        timer?.Change(500, 500);
+      }
+    }
+
+    private async Task ConfigDoUpdateWorkAsync()
+    {
       if (await TriggerStateDB.Instance.GetConfig() is { } config)
       {
         await _logReadersSemaphore.WaitAsync();
@@ -290,10 +340,30 @@ namespace EQLogParser
       }
     }
 
-    private async void TriggersDoUpdate(object sender, EventArgs e)
+    private async void TriggersDoUpdate(object state)
     {
-      _triggerUpdateTimer.Stop();
+      Timer timer;
+      lock (_timerLock)
+      {
+        timer = _triggerUpdateTimer;
+      }
 
+      // Stop timer before async work
+      timer?.Change(Timeout.Infinite, Timeout.Infinite);
+
+      try
+      {
+        await TriggersDoUpdateWorkAsync();
+      }
+      finally
+      {
+        // Restart timer after work completes
+        timer?.Change(1000, 1000);
+      }
+    }
+
+    private async Task TriggersDoUpdateWorkAsync()
+    {
       await Task.Run(async () =>
       {
         var idSet = new HashSet<string>();
