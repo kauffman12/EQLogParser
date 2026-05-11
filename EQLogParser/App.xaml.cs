@@ -96,7 +96,7 @@ namespace EQLogParser
         var urlVersion = Version.Replace(".", "-");
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
 
-        ConfigUtil.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
+        MainActions.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
         AudioManager.Initialize(AppCache);
         await LoadVoicesSafe();
 
@@ -125,7 +125,7 @@ namespace EQLogParser
 
     private static async Task LoadVoicesSafe()
     {
-      ConfigUtil.UpdateStatus("Validating Installed Voices");
+      MainActions.UpdateStatus("Validating Installed Voices");
 
       try
       {
@@ -206,7 +206,7 @@ namespace EQLogParser
       if (!double.IsNaN(top)) main.Top = top;
       if (!double.IsNaN(left)) main.Left = left;
 
-      ConfigUtil.UpdateStatus("Checking Window Position");
+      MainActions.UpdateStatus("Checking Window Position");
       CheckWindowPosition(main);
 
       Log.Info($"Window Pos ({main.Top}, {main.Left}) | Window Size ({main.Width}, {main.Height})");
@@ -215,7 +215,7 @@ namespace EQLogParser
 
       try
       {
-        ConfigUtil.UpdateStatus("Starting Trigger Manager");
+        MainActions.UpdateStatus("Starting Trigger Manager");
         await TriggerManager.Instance.StartAsync();
 
         var savedState = ConfigUtil.GetSetting("WindowState", "Normal") switch
@@ -252,7 +252,7 @@ namespace EQLogParser
 
         // Start archive schedule if configured
         LogArchiveManager.SetArchiveSchedule();
-        ConfigUtil.UpdateStatus("Done");
+        MainActions.UpdateStatus("Done");
 
         await Task.Run(async () =>
         {
@@ -267,7 +267,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        ConfigUtil.UpdateStatus("Done");
+        MainActions.UpdateStatus("Done");
         Log.Error($"ShowAppError: {ex.Message}");
         LogDetails(ex);
         _splash?.SetErrorState();
