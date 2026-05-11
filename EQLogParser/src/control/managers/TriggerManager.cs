@@ -9,7 +9,7 @@ namespace EQLogParser
 {
   internal class TriggerManager
   {
-    internal event Action<List<TriggerLogStore>> EventsProcessorsUpdated;
+    internal event Action EventsProcessorsUpdated;
     internal event Action<bool> EventsUpdatingTriggers;
     internal event Action<TriggerLogEntry> EventsSelectTrigger;
     internal static TriggerManager Instance => Lazy.Value;
@@ -275,6 +275,12 @@ namespace EQLogParser
 
       toRemove.ForEach(remove => _logReaders.Remove(remove));
 
+      // If all readers removed, clear trigger logs
+      if (_logReaders.Count == 0)
+      {
+        TriggerLogManager.Instance.ClearAllOnDisable();
+      }
+
       var startTasks = config.Characters
         .Where(character => character.IsEnabled && !alreadyRunning.Contains(character.Id))
         .Select(async character =>
@@ -292,6 +298,10 @@ namespace EQLogParser
         }).ToList();
 
       await Task.WhenAll(startTasks);
+      if (_logReaders.Count == 0)
+      {
+        TriggerLogManager.Instance.ClearAllOnDisable();
+      }
       MainActions.ShowTriggersEnabled(_logReaders.Count > 0);
     }
 
@@ -337,6 +347,7 @@ namespace EQLogParser
       else
       {
         MainActions.ShowTriggersEnabled(false);
+        TriggerLogManager.Instance.ClearAllOnDisable();
       }
     }
 
@@ -393,10 +404,8 @@ namespace EQLogParser
       {
         var idSet = new HashSet<string>();
         var triggerSet = new HashSet<string>();
-        var triggerLogs = new List<TriggerLogStore>();
         foreach (var processor in await GetProcessorsAsync())
         {
-          triggerLogs.Add(processor.TriggerLog);
           foreach (var id in processor.GetRequiredOverlayIds())
           {
             idSet.Add(id);
@@ -409,7 +418,7 @@ namespace EQLogParser
         }
 
         await TriggerOverlayManager.Instance.UpdateOverlayInfoAsync(idSet, triggerSet);
-        EventsProcessorsUpdated?.Invoke(triggerLogs);
+        EventsProcessorsUpdated?.Invoke();
       });
     }
 
