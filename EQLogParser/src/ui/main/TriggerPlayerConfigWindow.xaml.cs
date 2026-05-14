@@ -19,7 +19,7 @@ namespace EQLogParser
 
     internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
     {
-      ThemeManager.SetCurrentTheme(this);
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
 
       Owner = MainActions.GetOwner();

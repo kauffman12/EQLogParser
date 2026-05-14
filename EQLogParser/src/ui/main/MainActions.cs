@@ -79,8 +79,8 @@ namespace EQLogParser
     {
       _mainWindow = main;
 
-      // init theme and fonts through ThemeManager
-      ThemeManager.Init(main);
+      // init theme and fonts through ThemeConfig
+      ThemeConfig.Init(main);
     }
 
     internal static void UpdateStatus(string text)

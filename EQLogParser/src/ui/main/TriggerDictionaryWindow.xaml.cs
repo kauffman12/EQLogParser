@@ -21,7 +21,7 @@ namespace EQLogParser
 
     public TriggerDictionaryWindow(TriggersTreeView view)
     {
-      ThemeManager.SetCurrentTheme(this);
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
 
@@ -48,7 +48,7 @@ namespace EQLogParser
 
       dataGrid.ItemsSource = _items;
       _treeView = view;
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
@@ -153,7 +153,7 @@ namespace EQLogParser
 
     private void TheWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-      ThemeManager.EventsThemeChanged -= EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
       try
       {

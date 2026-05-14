@@ -152,17 +152,17 @@ namespace EQLogParser
       MainActions.UpdateDeleteChatMenu(deleteChat);
 
       // create font families menu items
-      ThemeManager.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked);
+      ThemeConfig.CreateFontFamiliesMenuItems(appFontFamilies, MenuItemFontFamilyClicked);
 
       // create font sizes menu items
-      ThemeManager.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked);
+      ThemeConfig.CreateFontSizesMenuItems(appFontSizes, MenuItemFontSizeClicked);
 
       // add tabs to the right
       ((DocumentContainer)dockSite.DocContainer).AddTabDocumentAtLast = true;
 
       // init theme before loading docs
       MainActions.UpdateStatus("Loading Themes");
-      ThemeManager.InitThemes();
+      ThemeConfig.InitThemes();
 
       // save active window before adding
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
@@ -191,8 +191,8 @@ namespace EQLogParser
       }
 
       // workaround to set initial theme properly
-      MainActions.UpdateStatus("Setting " + ThemeManager.CurrentTheme);
-      ThemeManager.SetTheme();
+      MainActions.UpdateStatus("Setting " + ThemeConfig.CurrentTheme);
+      ThemeConfig.SetTheme();
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -220,7 +220,7 @@ namespace EQLogParser
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
         MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
-        ThemeManager.EventsThemeChanged += _ => DataGridUtil.RefreshTableColumns(petMappingGrid);
+        ThemeConfig.EventsThemeChanged += _ => DataGridUtil.RefreshTableColumns(petMappingGrid);
         _computeStatsTimer = UiUtil.CreateTimer(ComputeStatsTick, 500, false);
 
         // give some time for dock state to load
@@ -372,8 +372,8 @@ namespace EQLogParser
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);
     private void WindowClose(object sender, EventArgs e) => Close();
-    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => ThemeManager.SetTheme("MaterialDark");
-    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => ThemeManager.SetTheme("MaterialLight");
+    private void ToggleMaterialDarkClick(object sender, RoutedEventArgs e) => ThemeConfig.SetTheme("MaterialDark");
+    private void ToggleMaterialLightClick(object sender, RoutedEventArgs e) => ThemeConfig.SetTheme("MaterialLight");
     private void ToggleStartMinimizedClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("StartWithWindowMinimized", enableStartMinimizedIcon);
     private void ToggleHideSplashScreenClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("HideSplashScreen", enableHideSplashScreenIcon);
     private void ToggleAutoMonitorClick(object sender, RoutedEventArgs e) => MainActions.ToggleSetting("AutoMonitor", enableAutoMonitorIcon);
@@ -784,8 +784,8 @@ namespace EQLogParser
     {
       if (sender is MenuItem { Header: string header } menuItem)
       {
-        ThemeManager.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        ThemeManager.ChangeThemeFontFamily(header);
+        ThemeConfig.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
+        ThemeConfig.ChangeThemeFontFamily(header);
       }
     }
 
@@ -793,8 +793,8 @@ namespace EQLogParser
     {
       if (sender is MenuItem menuItem)
       {
-        ThemeManager.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        ThemeManager.ChangeThemeFontSizes((double)menuItem.Tag);
+        ThemeConfig.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
+        ThemeConfig.ChangeThemeFontSizes((double)menuItem.Tag);
       }
     }
 
@@ -1117,11 +1117,11 @@ namespace EQLogParser
         }
         else if (icon == themeDarkIcon)
         {
-          icon.Visibility = ThemeManager.CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
+          icon.Visibility = ThemeConfig.CurrentTheme == "MaterialDark" ? Visibility.Visible : Visibility.Hidden;
         }
         else if (icon == themeLightIcon)
         {
-          icon.Visibility = ThemeManager.CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
+          icon.Visibility = ThemeConfig.CurrentTheme == "MaterialLight" ? Visibility.Visible : Visibility.Hidden;
         }
       }
     }

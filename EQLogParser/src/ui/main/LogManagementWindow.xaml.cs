@@ -14,7 +14,7 @@ namespace EQLogParser
 
     internal LogManagementWindow()
     {
-      ThemeManager.SetCurrentTheme(this);
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
 

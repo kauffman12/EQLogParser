@@ -17,7 +17,7 @@ namespace EQLogParser
   /// Centralizes all theme, font, and resource logic.
   /// Maintains the current theme state and fires EventsThemeChanged when it changes.
   /// </summary>
-  internal static class ThemeManager
+  internal static class ThemeConfig
   {
     private const string DefaultTheme = "MaterialDark";
 

@@ -53,7 +53,7 @@ namespace EQLogParser
 
       DataGridUtil.RefreshTableColumns(TheDataGrid);
       DataGridUtil.LoadColumns(TheColumnsCombo, TheDataGrid);
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       TheDataGrid.ItemsSource = NoResultsList;

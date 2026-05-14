@@ -70,7 +70,7 @@ namespace EQLogParser
         await ChangeSearchAsync();
       };
 
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
@@ -95,7 +95,7 @@ namespace EQLogParser
       {
         try
         {
-          var colorSetting = "ChatFontFgColor" + ThemeManager.CurrentTheme;
+          var colorSetting = "ChatFontFgColor" + ThemeConfig.CurrentTheme;
           var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString());
           colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
         }
@@ -429,7 +429,7 @@ namespace EQLogParser
       if (chatBox != null)
       {
         chatBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
-        var colorSetting = "ChatFontFgColor" + ThemeManager.CurrentTheme;
+        var colorSetting = "ChatFontFgColor" + ThemeConfig.CurrentTheme;
         ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString(null));
       }
     }

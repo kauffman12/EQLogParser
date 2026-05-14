@@ -171,11 +171,11 @@ namespace EQLogParser
       Grid.SetRow(xAxis, 2);
       elements.Add(xAxis);
 
-      var fontSize = ThemeManager.CurrentFontSize;
-      var largeFontSize = ThemeManager.CurrentFontSize + 10;
-      var columnWidth = 50.0 + ((ThemeManager.CurrentFontSize - 10) * 5);
-      var columnSpacing = 20 + ((ThemeManager.CurrentFontSize - 10) * 1);
-      var yOffset = ThemeManager.CurrentFontSize - 12;
+      var fontSize = ThemeConfig.CurrentFontSize;
+      var largeFontSize = ThemeConfig.CurrentFontSize + 10;
+      var columnWidth = 50.0 + ((ThemeConfig.CurrentFontSize - 10) * 5);
+      var columnSpacing = 20 + ((ThemeConfig.CurrentFontSize - 10) * 1);
+      var yOffset = ThemeConfig.CurrentFontSize - 12;
       // markers are placed center within each row so subtract half the top row height
       var halfRowHeight = yAxisGrid.RowDefinitions[0].ActualHeight / 2;
       var yAxisHeight = yAxisRectangle.ActualHeight - halfRowHeight;
@@ -298,12 +298,12 @@ namespace EQLogParser
         {
           if (Grid.GetRow(textBlock) == 0)
           {
-            var right = 8 + ((ThemeManager.CurrentFontSize - 10) * 2);
+            var right = 8 + ((ThemeConfig.CurrentFontSize - 10) * 2);
             textBlock.Margin = new Thickness(0, -2, right, 0);
           }
           else
           {
-            var right = 8 + (ThemeManager.CurrentFontSize - 10);
+            var right = 8 + (ThemeConfig.CurrentFontSize - 10);
             textBlock.Margin = new Thickness(0, -1, right, 0);
           }
         }
@@ -336,7 +336,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         SizeChanged += ContentSizeChanged;
-        ThemeManager.EventsThemeChanged += EventsThemeChanged;
+        ThemeConfig.EventsThemeChanged += EventsThemeChanged;
         FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
         StatsManager.EventsGenerationStatus += EventsGenerationStatus;
 
@@ -357,7 +357,7 @@ namespace EQLogParser
     public void HideContent()
     {
       SizeChanged -= ContentSizeChanged;
-      ThemeManager.EventsThemeChanged -= EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
       FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
       StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
       _ready = false;

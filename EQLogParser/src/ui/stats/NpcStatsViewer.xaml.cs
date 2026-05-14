@@ -38,7 +38,7 @@ namespace EQLogParser
         });
       }
 
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void Load()
@@ -188,7 +188,7 @@ namespace EQLogParser
     {
       if (e.Column.MappingName == "Npc")
       {
-        e.Column.Width = ThemeManager.CurrentNpcWidth;
+        e.Column.Width = ThemeConfig.CurrentNpcWidth;
       }
       else if (e.Column.MappingName?.EndsWith("Text", StringComparison.OrdinalIgnoreCase) != true)
       {

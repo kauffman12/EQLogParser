@@ -49,7 +49,7 @@ namespace EQLogParser
           },
           TextAlignment = TextAlignment.Center,
           HeaderText = "Time",
-          Width = ThemeManager.CurrentDateTimeWidth
+          Width = ThemeConfig.CurrentDateTimeWidth
         });
 
         // seconds since start

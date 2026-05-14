@@ -43,9 +43,9 @@ namespace EQLogParser
       choicesList.ItemsSource = choices;
       choicesList.SelectedIndex = 0;
       _currentChoice = choicesList.SelectedValue as string;
-      dateLabel.FontSize = ThemeManager.CurrentFontSize - 1;
-      numLabel.FontSize = ThemeManager.CurrentFontSize;
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      dateLabel.FontSize = ThemeConfig.CurrentFontSize - 1;
+      numLabel.FontSize = ThemeConfig.CurrentFontSize;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       _viewOptions = new ViewOptionRegistry();
       if (includePets)
@@ -125,8 +125,8 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _)
     {
-      dateLabel.FontSize = ThemeManager.CurrentFontSize - 1;
-      numLabel.FontSize = ThemeManager.CurrentFontSize;
+      dateLabel.FontSize = ThemeConfig.CurrentFontSize - 1;
+      numLabel.FontSize = ThemeConfig.CurrentFontSize;
     }
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)

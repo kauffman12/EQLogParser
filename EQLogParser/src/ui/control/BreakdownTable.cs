@@ -33,7 +33,7 @@ namespace EQLogParser
       _theDataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       DataGridUtil.RefreshTableColumns(_theDataGrid);
       DataGridUtil.LoadColumns(_theColumnsCombo, _theDataGrid);
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       // workaround to avoid drag/drop failing when grid has no data
       _theDataGrid.ItemsSource = new List<PlayerStats>();
@@ -52,7 +52,7 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
-        ThemeManager.EventsThemeChanged -= EventsThemeChanged;
+        ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
         _theDataGrid.Dispose();
         _disposedValue = true;
       }

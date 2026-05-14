@@ -49,7 +49,7 @@ namespace EQLogParser
 
       selectedOptions.ItemsSource = list;
       UiElementUtil.SetComboBoxTitle(selectedOptions, Resource.EVENT_TYPES_SELECTED);
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       eventFilter.Text = Resource.EVENT_FILTER_TEXT;
       _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
@@ -264,12 +264,12 @@ namespace EQLogParser
           Converter = new DateTimeConverter()
         };
         e.Column.TextAlignment = TextAlignment.Center;
-        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
+        e.Column.Width = ThemeConfig.CurrentDateTimeWidth;
         e.Column.HeaderText = "Time";
       }
       else if (mapping == "Target")
       {
-        e.Column.Width = ThemeManager.CurrentNpcWidth;
+        e.Column.Width = ThemeConfig.CurrentNpcWidth;
       }
       else
       {

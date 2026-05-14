@@ -34,12 +34,12 @@ namespace EQLogParser
         ShowLabel = true,
         ShowMarker = false,
         LabelPosition = AdornmentsLabelPosition.Outer,
-        FontSize = ThemeManager.CurrentFontSize + 4,
+        FontSize = ThemeConfig.CurrentFontSize + 4,
         Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
         Background = UiUtil.GetBrush(Colors.Transparent)
       };
 
-      ThemeManager.EventsThemeChanged += EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Update(PlayerStats playerStats, CombinedStats combined)
@@ -75,13 +75,13 @@ namespace EQLogParser
         if (collection[0] is FastColumnBitmapSeries series)
         {
           // this object doesn't have setResource
-          series.AdornmentsInfo.FontSize = ThemeManager.CurrentFontSize + 4;
+          series.AdornmentsInfo.FontSize = ThemeConfig.CurrentFontSize + 4;
           series.AdornmentsInfo.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
         }
 
         // not sure why dynamic resource wasnt working in xaml
-        catLabel.FontSize = ThemeManager.CurrentFontSize;
-        numLabel.FontSize = ThemeManager.CurrentFontSize;
+        catLabel.FontSize = ThemeConfig.CurrentFontSize;
+        numLabel.FontSize = ThemeConfig.CurrentFontSize;
       }
     }
 
@@ -168,8 +168,8 @@ namespace EQLogParser
           ItemsSource = onePage
         };
 
-        catLabel.FontSize = ThemeManager.CurrentFontSize;
-        numLabel.FontSize = ThemeManager.CurrentFontSize;
+        catLabel.FontSize = ThemeConfig.CurrentFontSize;
+        numLabel.FontSize = ThemeConfig.CurrentFontSize;
         series.AdornmentsInfo = _adornment;
         ChartSeriesBase.SetSpacing(series, 0.5);
         collection.Add(series);
@@ -329,7 +329,7 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
-        ThemeManager.EventsThemeChanged -= EventsThemeChanged;
+        ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
         sfChart?.Dispose();
         _disposedValue = true;
       }
