@@ -109,8 +109,6 @@ namespace EQLogParser
       }
       _spellNameIndex.Clear();
 
-      QuickShareManager.Instance.Shutdown();
-
       lock (_npcSpellStatsDict)
       {
         _npcSpellStatsDict.Clear();
@@ -232,8 +230,6 @@ namespace EQLogParser
         return result;
       }
     }
-
-    internal bool IsQuickShareMine(string key) => QuickShareManager.Instance.IsMine(key);
 
     internal void UpdateNpcSpellStats(string npc, SpellResist resist, bool isResist = false)
     {

@@ -1,11 +1,10 @@
-using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Data;
 
 namespace EQLogParser
 {
-  internal class QuickShareManager : ILifecycle
+  internal class QuickShareManager
   {
     internal static QuickShareManager Instance { get; set; } = new();
 
@@ -15,10 +14,7 @@ namespace EQLogParser
     internal QuickShareManager()
     {
       BindingOperations.EnableCollectionSynchronization(Records, _lock);
-      LifecycleManager.Register(this);
     }
-
-    public void Clear(bool serverChanged) => Shutdown();
 
     internal void Add(QuickShareRecord record)
     {
@@ -37,14 +33,6 @@ namespace EQLogParser
       lock (_lock)
       {
         return Records.FirstOrDefault(r => r.IsMine && r.Key == key) != null;
-      }
-    }
-
-    public void Shutdown()
-    {
-      lock (_lock)
-      {
-        Records.Clear();
       }
     }
   }
