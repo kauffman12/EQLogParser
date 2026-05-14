@@ -23,7 +23,7 @@ namespace EQLogParser
       InitializeComponent();
       RandomData = [];
       DataContext = this;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
       _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500, false);
     }
 
@@ -282,7 +282,7 @@ namespace EQLogParser
             Converter = new DateTimeConverter()
           },
           TextAlignment = TextAlignment.Center,
-          Width = MainActions.CurrentDateTimeWidth,
+          Width = ThemeManager.CurrentDateTimeWidth,
           HeaderText = (mapping == "BeginTime") ? "Start Time" : "Roll Time"
         };
 
@@ -296,7 +296,7 @@ namespace EQLogParser
         }
 
         e.Column.TextAlignment = TextAlignment.Right;
-        e.Column.Width = MainActions.CurrentMediumWidth;
+        e.Column.Width = ThemeManager.CurrentMediumWidth;
       }
       else if (mapping == "Highest")
       {
@@ -321,7 +321,7 @@ namespace EQLogParser
       else if (mapping == "Details")
       {
         e.Column.HeaderText = "Player Details";
-        e.Column.Width = MainActions.CurrentItemWidth;
+        e.Column.Width = ThemeManager.CurrentItemWidth;
       }
       else if (mapping == "Duration")
       {

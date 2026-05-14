@@ -49,7 +49,7 @@ namespace EQLogParser
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
-      MainActions.SetCurrentTheme(this);
+      ThemeManager.SetCurrentTheme(this);
       InitializeComponent();
       dpsButton.Foreground = ActiveBrush;
       tankButton.Foreground = InActiveBrush;

@@ -103,7 +103,7 @@ namespace EQLogParser
         MappingName = "Spell",
         CellTemplate = cellTemplate,
         CellStyle = DataGridUtil.CreateHighlightForegroundStyle("Spell", new ReceivedSpellColorConverter()),
-        Width = MainActions.CurrentSpellWidth
+        Width = ThemeManager.CurrentSpellWidth
       };
 
       dataGrid.Columns.Add(headerCol);

@@ -28,7 +28,7 @@ namespace EQLogParser
       var desc = new[] { "Taunt", "Failed", "Improved", "SuccessRate" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
@@ -150,7 +150,7 @@ namespace EQLogParser
       var mapping = e.Column.MappingName;
       if (mapping == "Name")
       {
-        e.Column.Width = MainActions.CurrentNameWidth;
+        e.Column.Width = ThemeManager.CurrentNameWidth;
       }
       else if (mapping is "Taunt" or "Failed" or "Improved")
       {

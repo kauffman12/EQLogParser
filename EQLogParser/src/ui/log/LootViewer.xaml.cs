@@ -43,7 +43,7 @@ namespace EQLogParser
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
       RecordsStore.Instance.RecordsUpdatedEvent += RecordsUpdatedEvent;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
       dataGrid.ItemsSource = _individualRecords;
       _reloadTimer = UiUtil.CreateTimer(ReloadTimerTick, 1500, false);
     }
@@ -328,7 +328,7 @@ namespace EQLogParser
           Converter = new DateTimeConverter()
         };
         e.Column.TextAlignment = TextAlignment.Center;
-        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
         e.Column.HeaderText = "Time";
       }
       else if (mapping == "Record.Player")
@@ -339,7 +339,7 @@ namespace EQLogParser
       else if (mapping == "Record.Item")
       {
         e.Column.HeaderText = "Item";
-        e.Column.Width = MainActions.CurrentItemWidth;
+        e.Column.Width = ThemeManager.CurrentItemWidth;
       }
       else if (mapping == "Record.Quantity")
       {
@@ -350,7 +350,7 @@ namespace EQLogParser
       else if (mapping == "Record.Npc")
       {
         e.Column.HeaderText = "Npc";
-        e.Column.Width = MainActions.CurrentItemWidth;
+        e.Column.Width = ThemeManager.CurrentItemWidth;
       }
       else if (mapping == "Record.IsCurrency")
       {

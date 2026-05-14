@@ -107,7 +107,7 @@ namespace EQLogParser
         await UpdateUiAsync();
       };
 
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
       TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
 
       _ready = true;
@@ -149,7 +149,7 @@ namespace EQLogParser
 
       try
       {
-        var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
+        var colorSetting = "EQLogViewerFontFgColor" + ThemeManager.CurrentTheme;
         var fgColor = ConfigUtil.GetSetting(colorSetting, defaultColor.ToString(null));
         colorPicker.Color = (Color)ColorConverter.ConvertFromString(fgColor)!;
       }
@@ -775,7 +775,7 @@ namespace EQLogParser
       {
         logBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
         contextBox.Foreground = UiUtil.GetBrush(colorPicker.Color);
-        var colorSetting = "EQLogViewerFontFgColor" + MainActions.CurrentTheme;
+        var colorSetting = "EQLogViewerFontFgColor" + ThemeManager.CurrentTheme;
         ConfigUtil.SetSetting(colorSetting, colorPicker.Color.ToString(null));
       }
     }
@@ -909,7 +909,7 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         _config = null;
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        ThemeManager.EventsThemeChanged -= EventsThemeChanged;
         TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
         _filterTimer?.Stop();
         logBox.Dispose();

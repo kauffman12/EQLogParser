@@ -49,7 +49,7 @@ namespace EQLogParser
           Converter = new DateTimeConverter()
         },
         TextAlignment = TextAlignment.Center,
-        Width = MainActions.CurrentDateTimeWidth,
+        Width = ThemeManager.CurrentDateTimeWidth,
         HeaderText = "Time"
       });
 
@@ -58,7 +58,7 @@ namespace EQLogParser
         MappingName = "TimeSince",
         TextAlignment = TextAlignment.Center,
         HeaderText = "Since",
-        Width = MainActions.CurrentShortWidth
+        Width = ThemeManager.CurrentShortWidth
       });
 
       AddColumn(new GridTextColumn { MappingName = "Type", HeaderText = "Type" });
@@ -66,7 +66,7 @@ namespace EQLogParser
       {
         MappingName = "SubType",
         HeaderText = "Action",
-        Width = MainActions.CurrentSpellWidth
+        Width = ThemeManager.CurrentSpellWidth
       });
 
       AddColumn(new GridNumericColumn
@@ -96,7 +96,7 @@ namespace EQLogParser
           HeaderText = name
         };
 
-        column.Width = name != "Strikethrough" ? MainActions.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
+        column.Width = name != "Strikethrough" ? ThemeManager.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
         _checkBoxColumns.Add(column);
       });
 
@@ -111,7 +111,7 @@ namespace EQLogParser
           Width = DataGridUtil.CalculateMinGridHeaderWidth(name)
         };
 
-        column.Width = name != "Strikethrough" ? MainActions.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
+        column.Width = name != "Strikethrough" ? ThemeManager.CurrentShortWidth : DataGridUtil.CalculateMinGridHeaderWidth(name);
         _textColumns.Add(column);
       });
 
@@ -119,7 +119,7 @@ namespace EQLogParser
       {
         MappingName = "Actor",
         HeaderText = "",
-        Width = MainActions.CurrentNpcWidth
+        Width = ThemeManager.CurrentNpcWidth
       });
 
       AddColumn(new GridTextColumn { MappingName = "ActorClass", HeaderText = "" });
@@ -128,14 +128,14 @@ namespace EQLogParser
       {
         MappingName = "Acted",
         HeaderText = "",
-        Width = MainActions.CurrentNpcWidth
+        Width = ThemeManager.CurrentNpcWidth
       });
 
       dataGrid.Columns = _textColumns;
 
       dataGrid.SortColumnsChanging += SortColumnsChanging;
       dataGrid.SortColumnsChanged += SortColumnsChanged;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void SortColumnsChanging(object sender, GridSortColumnsChangingEventArgs e)
@@ -532,7 +532,7 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        ThemeManager.EventsThemeChanged -= EventsThemeChanged;
         dataGrid.SortColumnsChanging -= SortColumnsChanging;
         dataGrid.SortColumnsChanged -= SortColumnsChanged;
         dataGrid?.Dispose();

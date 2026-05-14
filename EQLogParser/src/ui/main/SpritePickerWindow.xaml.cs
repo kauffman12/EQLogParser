@@ -23,7 +23,7 @@ namespace EQLogParser
 
     internal SpritePickerWindow(string characterId, string currentEqUiFolder)
     {
-      MainActions.SetCurrentTheme(this);
+      ThemeManager.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
 

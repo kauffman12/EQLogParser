@@ -14,7 +14,7 @@ namespace EQLogParser
 
     internal WavCreatorWindow()
     {
-      MainActions.SetCurrentTheme(this);
+      ThemeManager.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();

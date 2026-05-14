@@ -19,7 +19,7 @@ namespace EQLogParser
 
     public QuickShareWindow()
     {
-      MainActions.SetCurrentTheme(this);
+      ThemeManager.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
       QuickShareData = QuickShareManager.Instance.Records;
@@ -50,7 +50,7 @@ namespace EQLogParser
       // enable stats
       EnableStats(null, null);
       trustGrid.ItemsSource = _items;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
       watchQuickShare.IsChecked = ConfigUtil.IfSet("TriggersWatchForQuickShare");
     }
 
@@ -123,7 +123,7 @@ namespace EQLogParser
     private void TheWindowClosing(object sender, CancelEventArgs e)
     {
       QuickShareData.CollectionChanged -= EnableStats;
-      MainActions.EventsThemeChanged -= EventsThemeChanged;
+      ThemeManager.EventsThemeChanged -= EventsThemeChanged;
 
       try
       {
@@ -173,7 +173,7 @@ namespace EQLogParser
         };
         e.Column.TextAlignment = TextAlignment.Center;
         e.Column.HeaderText = "Share Time";
-        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
       }
       else if (mapping == "Type")
       {
@@ -183,7 +183,7 @@ namespace EQLogParser
       else if (mapping == "Key")
       {
         e.Column.HeaderText = "Share Key";
-        e.Column.Width = MainActions.CurrentSpellWidth;
+        e.Column.Width = ThemeManager.CurrentSpellWidth;
       }
       else if (mapping == "IsMine")
       {

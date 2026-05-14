@@ -33,7 +33,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         TriggerManager.Instance.EventsProcessorsUpdated += EventsProcessorsUpdated;
-        MainActions.EventsThemeChanged += EventsThemeChanged;
+        ThemeManager.EventsThemeChanged += EventsThemeChanged;
         _ready = true;
 
         // Trigger EventsProcessorsUpdated to set up selection and subscriptions
@@ -145,7 +145,7 @@ namespace EQLogParser
     public void HideContent()
     {
       TriggerManager.Instance.EventsProcessorsUpdated -= EventsProcessorsUpdated;
-      MainActions.EventsThemeChanged -= EventsThemeChanged;
+      ThemeManager.EventsThemeChanged -= EventsThemeChanged;
       _batchRefresh?.Dispose();
       _ready = false;
     }
@@ -163,11 +163,11 @@ namespace EQLogParser
         };
         e.Column.TextAlignment = TextAlignment.Center;
         e.Column.HeaderText = mapping == "BeginTime" ? "Event Time" : "Log Time";
-        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
       }
       else if (mapping == "Name")
       {
-        e.Column.Width = MainActions.CurrentNameWidth;
+        e.Column.Width = ThemeManager.CurrentNameWidth;
       }
       else if (mapping == "Eval")
       {
@@ -178,7 +178,7 @@ namespace EQLogParser
           HeaderText = "Eval (μs)",
           NumberDecimalDigits = 0,
           NumberGroupSizes = [3],
-          Width = MainActions.CurrentMediumWidth
+          Width = ThemeManager.CurrentMediumWidth
         };
       }
       else if (mapping == "Priority")
@@ -190,7 +190,7 @@ namespace EQLogParser
           HeaderText = mapping,
           NumberDecimalDigits = 0,
           NumberGroupSizes = [3],
-          Width = MainActions.CurrentMediumWidth
+          Width = ThemeManager.CurrentMediumWidth
         };
       }
       else if (mapping == "Line")

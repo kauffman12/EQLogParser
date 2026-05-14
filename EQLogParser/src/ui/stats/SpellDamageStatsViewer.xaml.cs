@@ -38,7 +38,7 @@ namespace EQLogParser
       var desc = new[] { "Avg", "Max", "Total", "Hits" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
     }
 
     private void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(dataGrid, titleLabel.Content.ToString());
@@ -248,7 +248,7 @@ namespace EQLogParser
       var mapping = e.Column.MappingName;
       if (mapping == "Spell")
       {
-        e.Column.Width = MainActions.CurrentSpellWidth;
+        e.Column.Width = ThemeManager.CurrentSpellWidth;
       }
       else if (mapping is "Avg" or "Max" or "Total" or "Hits")
       {

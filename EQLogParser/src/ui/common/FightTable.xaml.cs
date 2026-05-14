@@ -118,7 +118,7 @@ namespace EQLogParser
       FightManager.Instance.EventsNewFight += EventsNewFight;
       FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
       FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
       MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
     }
 
@@ -614,7 +614,7 @@ namespace EQLogParser
         e.Column.ShowToolTip = true;
         e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
         e.Column.HeaderText = "Initial Hit Time";
-        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
       }
       else if (e.Column.MappingName == "DamageTotal")
       {

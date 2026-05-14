@@ -219,7 +219,7 @@ namespace EQLogParser
           Application.Current.Resources["OverlayHorizontalAlignment-" + toModel.Node.Id] = (HorizontalAlignment)toModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toModel.Node.Id] = (VerticalAlignment)toModel.VerticalAlignment;
-          Application.Current.Resources["OverlayTextEffect-" + toModel.Node.Id] = toModel.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
+          Application.Current.Resources["OverlayTextEffect-" + toModel.Node.Id] = toModel.UseTextDropShadow ? ThemeManager.OverlayTextEffect : null;
 
           AssignBrushResource(toModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
           AssignBrushResource(toModel, fromOverlay, "FontColor", "FontBrush", "TimerBarFontColor");
@@ -258,7 +258,7 @@ namespace EQLogParser
           Application.Current.Resources["OverlayHorizontalAlignment-" + toTextModel.Node.Id] = (HorizontalAlignment)toTextModel.HorizontalAlignment;
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toTextModel.Node.Id] = (VerticalAlignment)toTextModel.VerticalAlignment;
-          Application.Current.Resources["OverlayTextEffect-" + toTextModel.Node.Id] = toTextModel.UseTextDropShadow ? MainActions.OverlayTextEffect : null;
+          Application.Current.Resources["OverlayTextEffect-" + toTextModel.Node.Id] = toTextModel.UseTextDropShadow ? ThemeManager.OverlayTextEffect : null;
 
           AssignBrushResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
           AssignBrushResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");

@@ -21,7 +21,7 @@ namespace EQLogParser
       InitializeComponent();
       DeathData = [];
       DataContext = this;
-      MainActions.EventsThemeChanged += EventsThemeChanged;
+      ThemeManager.EventsThemeChanged += EventsThemeChanged;
     }
 
     internal void Init(CombinedStats combined, PlayerStats playerStats)
@@ -279,7 +279,7 @@ namespace EQLogParser
           Converter = new DateTimeConverter()
         };
         e.Column.TextAlignment = TextAlignment.Center;
-        e.Column.Width = MainActions.CurrentDateTimeWidth;
+        e.Column.Width = ThemeManager.CurrentDateTimeWidth;
         e.Column.HeaderText = "Time";
       }
       else if (mapping == "Damage")
@@ -306,7 +306,7 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
-        MainActions.EventsThemeChanged -= EventsThemeChanged;
+        ThemeManager.EventsThemeChanged -= EventsThemeChanged;
         DeathData.Clear();
         dataGrid?.Dispose();
         _disposedValue = true;
