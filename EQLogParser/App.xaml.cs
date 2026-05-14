@@ -257,11 +257,11 @@ namespace EQLogParser
         await Task.Run(async () =>
         {
           // Cleanup downloads
-          MainActions.Cleanup();
+          UpdateChecker.Cleanup();
 
           if (ConfigUtil.IfSet("CheckUpdatesAtStartup"))
           {
-            await MainActions.CheckVersionAsync();
+            await UpdateChecker.CheckVersionAsync();
           }
         });
       }
