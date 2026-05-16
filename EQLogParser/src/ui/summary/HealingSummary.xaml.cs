@@ -84,10 +84,13 @@ namespace EQLogParser
           // default before making check
           menuItemShowDeathLog.IsEnabled = false;
           menuItemSetPlayerClass.IsEnabled = false;
+          menuItemSetAsPlayer.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
             menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            menuItemSetAsPlayer.IsEnabled = !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) &&
+            PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
             selectedName = playerStats.OrigName;
           }
@@ -100,9 +103,10 @@ namespace EQLogParser
         {
           menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
           menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled =
-            menuItemSetPlayerClass.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
+            menuItemSetPlayerClass.IsEnabled = menuItemSetAsPlayer.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
         }
 
+        menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
       });
     }
@@ -110,6 +114,15 @@ namespace EQLogParser
     private void CopyToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.HealParse);
     private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TopHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
+
+    private void SetAsPlayerClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItem is PlayerStats stats)
+      {
+        var name = stats.OrigName;
+        PlayerRegistry.Instance.AddVerifiedPlayer(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+      }
+    }
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {

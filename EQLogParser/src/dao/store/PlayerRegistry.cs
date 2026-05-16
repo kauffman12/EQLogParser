@@ -206,6 +206,12 @@ namespace EQLogParser
             needPetEvent = true;
           }
         }
+
+        // also remove from merc list if it was there
+        if (_mercs.TryRemove(name, out _))
+        {
+          if (!init) _playersUpdated = true;
+        }
       }
 
       if (needPlayerEvent) EventsNewVerifiedPlayer?.Invoke(name);

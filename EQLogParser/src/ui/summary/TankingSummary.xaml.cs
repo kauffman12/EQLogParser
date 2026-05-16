@@ -125,12 +125,15 @@ namespace EQLogParser
           menuItemShowDeathLog.IsEnabled = false;
           menuItemSetPlayerClass.IsEnabled = false;
           menuItemSetAsPet.IsEnabled = false;
+          menuItemSetAsPlayer.IsEnabled = false;
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
             menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
             !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
+            menuItemSetAsPlayer.IsEnabled = !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) &&
+            PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
@@ -143,12 +146,13 @@ namespace EQLogParser
         else
         {
           menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-          menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
+          menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemSetAsPlayer.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled =
           menuItemSetPlayerClass.IsEnabled = menuItemShowDefensiveTimeline.IsEnabled = false;
         }
 
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
+        menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
       });
     }
@@ -176,6 +180,15 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is PlayerStats stats && sender is MenuItem { Header: string header })
       {
         PlayerRegistry.Instance.AddPetToPlayer(stats.OrigName, header);
+      }
+    }
+
+    private void SetAsPlayerClick(object sender, RoutedEventArgs e)
+    {
+      if (dataGrid.SelectedItem is PlayerStats stats)
+      {
+        var name = stats.OrigName;
+        PlayerRegistry.Instance.AddVerifiedPlayer(name, DateUtil.ToDotNetSeconds(DateTime.Now));
       }
     }
 

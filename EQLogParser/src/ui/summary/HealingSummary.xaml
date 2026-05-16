@@ -127,6 +127,11 @@
             </MenuItem>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="menuItemSetAsPlayer" IsEnabled="False" Header="Set as Verified Player" Click="SetAsPlayerClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Default Class for Unknown">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
