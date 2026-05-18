@@ -73,7 +73,17 @@ namespace EQLogParser
     internal async Task StopAsync()
     {
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
-      StopTimers();
+
+      // Stop and dispose timers atomically so no callback can fire between stop and dispose
+      lock (_timerLock)
+      {
+        _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        _configUpdateTimer?.Dispose();
+        _triggerUpdateTimer?.Dispose();
+        _configUpdateTimer = null;
+        _triggerUpdateTimer = null;
+      }
 
       await _logReadersSemaphore.WaitAsync();
 
@@ -86,15 +96,6 @@ namespace EQLogParser
       finally
       {
         _logReadersSemaphore.Release();
-      }
-
-      // Cleanup timer references (under lock to prevent callback race)
-      lock (_timerLock)
-      {
-        _configUpdateTimer?.Dispose();
-        _triggerUpdateTimer?.Dispose();
-        _configUpdateTimer = null;
-        _triggerUpdateTimer = null;
       }
     }
 
