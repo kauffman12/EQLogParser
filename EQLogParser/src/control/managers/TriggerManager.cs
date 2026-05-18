@@ -88,11 +88,14 @@ namespace EQLogParser
         _logReadersSemaphore.Release();
       }
 
-      // Cleanup timer references
-      _configUpdateTimer?.Dispose();
-      _triggerUpdateTimer?.Dispose();
-      _configUpdateTimer = null;
-      _triggerUpdateTimer = null;
+      // Cleanup timer references (under lock to prevent callback race)
+      lock (_timerLock)
+      {
+        _configUpdateTimer?.Dispose();
+        _triggerUpdateTimer?.Dispose();
+        _configUpdateTimer = null;
+        _triggerUpdateTimer = null;
+      }
     }
 
     internal async Task StopTriggersAsync()
@@ -189,14 +192,11 @@ namespace EQLogParser
 
     private async void ConfigDoUpdate(object state)
     {
-      Timer timer;
       lock (_timerLock)
       {
-        timer = _configUpdateTimer;
+        // Stop timer before async work
+        _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
-
-      // Stop timer before async work
-      timer?.Change(Timeout.Infinite, Timeout.Infinite);
 
       try
       {
@@ -204,8 +204,11 @@ namespace EQLogParser
       }
       finally
       {
-        // Restart timer after work completes
-        timer?.Change(500, 500);
+        lock (_timerLock)
+        {
+          // Restart timer after work completes
+          _configUpdateTimer?.Change(500, 500);
+        }
       }
     }
 
@@ -353,14 +356,11 @@ namespace EQLogParser
 
     private async void TriggersDoUpdate(object state)
     {
-      Timer timer;
       lock (_timerLock)
       {
-        timer = _triggerUpdateTimer;
+        // Stop timer before async work
+        _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
-
-      // Stop timer before async work
-      timer?.Change(Timeout.Infinite, Timeout.Infinite);
 
       try
       {
@@ -368,8 +368,11 @@ namespace EQLogParser
       }
       finally
       {
-        // Restart timer after work completes
-        timer?.Change(1000, 1000);
+        lock (_timerLock)
+        {
+          // Restart timer after work completes
+          _triggerUpdateTimer?.Change(1000, 1000);
+        }
       }
     }
 

@@ -109,8 +109,12 @@ namespace EQLogParser
     public DateTime DateTime { get; set; }
   }
 
-  internal class ComboBoxItemDetails
+  internal class ComboBoxItemDetails : INotifyPropertyChanged
   {
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string name = null) =>
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
     public ComboBoxItemDetails()
     {
     }
@@ -123,7 +127,19 @@ namespace EQLogParser
 
     public string Text { get; set; }
     public string SelectedText { get; set; }
-    public bool IsChecked { get; set; }
+
+    private bool _isChecked;
+    public bool IsChecked
+    {
+      get => _isChecked;
+      set
+      {
+        if (_isChecked == value) return;
+        _isChecked = value;
+        OnPropertyChanged();
+      }
+    }
+
     public string Value { get; set; }
   }
 
