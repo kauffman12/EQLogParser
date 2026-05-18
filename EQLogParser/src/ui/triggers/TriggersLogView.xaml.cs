@@ -26,6 +26,8 @@ namespace EQLogParser
       var desc = new[] { "Eval", "BeginTime", "LogTime" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
+
+      Loaded += ContentLoaded;
     }
 
     private void ContentLoaded(object sender, RoutedEventArgs e)
@@ -35,8 +37,6 @@ namespace EQLogParser
         TriggerManager.Instance.EventsProcessorsUpdated += EventsProcessorsUpdated;
         ThemeConfig.EventsThemeChanged += EventsThemeChanged;
         _ready = true;
-
-        // Trigger EventsProcessorsUpdated to set up selection and subscriptions
         EventsProcessorsUpdated();
       }
     }
@@ -146,7 +146,6 @@ namespace EQLogParser
     {
       TriggerManager.Instance.EventsProcessorsUpdated -= EventsProcessorsUpdated;
       ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
-      _batchRefresh?.Dispose();
       _ready = false;
     }
 

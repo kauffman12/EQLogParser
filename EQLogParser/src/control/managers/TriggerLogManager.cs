@@ -100,9 +100,15 @@ namespace EQLogParser
     {
       lock (_globalLock)
       {
-        foreach (var log in _logs.Values)
+        foreach (var kvp in _characterLocks)
         {
-          log.Clear();
+          lock (kvp.Value)
+          {
+            if (_logs.TryGetValue(kvp.Key, out var log))
+            {
+              log.Clear();
+            }
+          }
         }
       }
     }
@@ -115,11 +121,18 @@ namespace EQLogParser
     {
       lock (_globalLock)
       {
-        foreach (var log in _logs.Values)
+        foreach (var kvp in _characterLocks)
         {
-          log.Clear();
+          lock (kvp.Value)
+          {
+            if (_logs.TryGetValue(kvp.Key, out var log))
+            {
+              log.Clear();
+            }
+          }
         }
         _characterLocks.Clear();
+        _logs.Clear();
       }
     }
   }

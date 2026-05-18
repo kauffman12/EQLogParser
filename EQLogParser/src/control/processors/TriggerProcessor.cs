@@ -1622,7 +1622,7 @@ namespace EQLogParser
         });
       }
 
-      TriggerLogManager.Instance.AddRange(CurrentCharacterId, entries);
+      TriggerLogManager.Instance.AddRange(CurrentProcessorName, entries);
     }
 
     private async Task SetActiveTriggersAsync(Dictionary<string, TriggerWrapper> activeTriggersById, HashSet<string> requiredOverlayIds)

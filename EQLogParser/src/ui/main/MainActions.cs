@@ -50,6 +50,7 @@ namespace EQLogParser
     private static readonly object PetPlayersViewLock = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    private static bool _isDone;
     private static MainWindow _mainWindow;
 
     static MainActions()
@@ -85,7 +86,17 @@ namespace EQLogParser
 
     internal static void UpdateStatus(string text)
     {
-      ConfigUtil.InvokeEventsLoadingText(text);
+      if (!_isDone)
+      {
+        ConfigUtil.InvokeEventsLoadingText(text);
+      }
+
+      if (text == "Done")
+      {
+        _isDone = true;
+      }
+
+      // allow splash screen to update
       Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
     }
 
