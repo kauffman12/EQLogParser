@@ -67,13 +67,8 @@ namespace EQLogParser
               logList.SelectedIndex = 0;
             }
           }
-
-          // Subscribe to CollectionChanged for currently selected character
-          if (logList.SelectedItem is string selectedCharacter && logs.TryGetValue(selectedCharacter, out var collection))
-          {
-            collection.CollectionChanged -= TheCollectionChanged;
-            collection.CollectionChanged += TheCollectionChanged;
-          }
+          // Note: SelectionChanged handler above subscribes to CollectionChanged for the selected item.
+          // Do NOT subscribe here again — that was causing a double subscription.
         }
       });
     }

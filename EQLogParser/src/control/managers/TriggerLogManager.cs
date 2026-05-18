@@ -93,46 +93,58 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// Clears all trigger logs. Should only be called from user-initiated clear action
-    /// or when triggers are disabled.
+    /// Clears all trigger logs. Should only be called from user-initiated clear action.
     /// </summary>
     internal void ClearAll()
     {
+      // Snapshot lock entries under global lock, then clear each collection under its own lock
+      List<KeyValuePair<string, object>> entries;
       lock (_globalLock)
       {
-        foreach (var kvp in _characterLocks)
+        entries = new List<KeyValuePair<string, object>>(_characterLocks);
+      }
+
+      foreach (var kvp in entries)
+      {
+        lock (kvp.Value)
         {
-          lock (kvp.Value)
+          if (_logs.TryGetValue(kvp.Key, out var log))
           {
-            if (_logs.TryGetValue(kvp.Key, out var log))
-            {
-              log.Clear();
-            }
+            log.Clear();
           }
         }
       }
     }
 
     /// <summary>
-    /// Clears all trigger logs and removes character lock entries.
+    /// Clears all trigger logs and removes character entries.
     /// Called when triggers are disabled to fully clean up.
     /// </summary>
     internal void ClearAllOnDisable()
     {
+      // Snapshot lock entries under global lock, clear each collection under its own lock,
+      // then wipe the dictionaries so any new AddRange creates fresh collections.
+      List<KeyValuePair<string, object>> entries;
       lock (_globalLock)
       {
-        foreach (var kvp in _characterLocks)
+        entries = new List<KeyValuePair<string, object>>(_characterLocks);
+      }
+
+      foreach (var kvp in entries)
+      {
+        lock (kvp.Value)
         {
-          lock (kvp.Value)
+          if (_logs.TryGetValue(kvp.Key, out var log))
           {
-            if (_logs.TryGetValue(kvp.Key, out var log))
-            {
-              log.Clear();
-            }
+            log.Clear();
           }
         }
-        _characterLocks.Clear();
+      }
+
+      lock (_globalLock)
+      {
         _logs.Clear();
+        _characterLocks.Clear();
       }
     }
   }

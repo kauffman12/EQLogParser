@@ -17,6 +17,8 @@ namespace EQLogParser
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
 
     private static readonly object _timerLock = new();
+    private static readonly object _configWorkLock = new();
+    private bool _configWorkInProgress;
     private Timer _configUpdateTimer;
     private Timer _triggerUpdateTimer;
     private readonly List<LogReader> _logReaders = [];
@@ -166,7 +168,30 @@ namespace EQLogParser
     {
       if (await TriggerStateDB.Instance.GetConfig() is { IsAdvanced: false })
       {
-        _ = ConfigDoUpdateWorkAsync();
+        bool shouldRun = false;
+        lock (_configWorkLock)
+        {
+          if (!_configWorkInProgress)
+          {
+            _configWorkInProgress = true;
+            shouldRun = true;
+          }
+        }
+
+        if (shouldRun)
+        {
+          try
+          {
+            await ConfigDoUpdateWorkAsync();
+          }
+          finally
+          {
+            lock (_configWorkLock)
+            {
+              _configWorkInProgress = false;
+            }
+          }
+        }
       }
     }
 
@@ -199,15 +224,41 @@ namespace EQLogParser
         _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
 
-      try
+      bool shouldRun = false;
+      lock (_configWorkLock)
       {
-        await ConfigDoUpdateWorkAsync();
+        if (!_configWorkInProgress)
+        {
+          _configWorkInProgress = true;
+          shouldRun = true;
+        }
       }
-      finally
+
+      if (shouldRun)
       {
+        try
+        {
+          await ConfigDoUpdateWorkAsync();
+        }
+        finally
+        {
+          lock (_configWorkLock)
+          {
+            _configWorkInProgress = false;
+          }
+
+          lock (_timerLock)
+          {
+            // Restart timer after work completes
+            _configUpdateTimer?.Change(500, 500);
+          }
+        }
+      }
+      else
+      {
+        // Another caller is already running; just restart the timer
         lock (_timerLock)
         {
-          // Restart timer after work completes
           _configUpdateTimer?.Change(500, 500);
         }
       }
