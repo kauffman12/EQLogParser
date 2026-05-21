@@ -44,7 +44,7 @@ namespace EQLogParser
 
       while (Items.Count > _maxSize)
       {
-        Items.RemoveAt(0);
+        Items.RemoveAt(Items.Count - 1);
       }
     }
 

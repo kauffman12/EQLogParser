@@ -606,7 +606,7 @@ namespace EQLogParser
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
-    internal static bool IsPossiblePetName(string name) => !EQDataStore.Instance.IsKnownNpc(name) &&
+    internal static bool IsPossiblePetName(string name) =>
       (IsPossiblePlayerName(name) || name?.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) == true);
 
     internal static string GetPlayerIconPath(string className)

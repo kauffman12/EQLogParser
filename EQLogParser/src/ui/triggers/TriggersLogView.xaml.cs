@@ -2,6 +2,7 @@
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -16,6 +17,7 @@ namespace EQLogParser
   {
     private readonly DelayedAction _batchRefresh;
     private bool _ready;
+    private ObservableCollection<TriggerLogEntry> _currentCollection;
 
     public TriggersLogView()
     {
@@ -77,6 +79,13 @@ namespace EQLogParser
     {
       if (sender is ComboBox combo && dataGrid != null)
       {
+        // Unsubscribe from previous collection
+        if (_currentCollection != null)
+        {
+          _currentCollection.CollectionChanged -= TheCollectionChanged;
+          _currentCollection = null;
+        }
+
         var sorting = dataGrid.SortColumnDescriptions.ToList();
         dataGrid.SortColumnDescriptions.Clear();
         var logs = TriggerLogManager.Instance.GetLogs();
@@ -84,9 +93,10 @@ namespace EQLogParser
         dataGrid.ItemsSource = collection;
         sorting.ForEach(item => dataGrid.SortColumnDescriptions.Add(item));
 
+        // Subscribe to new collection
         if (collection != null)
         {
-          collection.CollectionChanged -= TheCollectionChanged;
+          _currentCollection = collection;
           collection.CollectionChanged += TheCollectionChanged;
         }
       }
@@ -141,6 +151,14 @@ namespace EQLogParser
     {
       TriggerManager.Instance.EventsProcessorsUpdated -= EventsProcessorsUpdated;
       ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
+
+      // Unsubscribe from current collection to prevent memory leaks
+      if (_currentCollection != null)
+      {
+        _currentCollection.CollectionChanged -= TheCollectionChanged;
+        _currentCollection = null;
+      }
+
       _ready = false;
     }
 

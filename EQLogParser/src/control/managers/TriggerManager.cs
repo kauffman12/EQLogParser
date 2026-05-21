@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
+using System.Reflection;
 
 namespace EQLogParser
 {
@@ -15,10 +17,12 @@ namespace EQLogParser
     internal static TriggerManager Instance => Lazy.Value;
 
     private static readonly Lazy<TriggerManager> Lazy = new(() => new TriggerManager());
+    private static readonly ILog Log = LogManager.GetLogger(typeof(TriggerManager));
 
     private static readonly object _timerLock = new();
     private static readonly object _configWorkLock = new();
     private bool _configWorkInProgress;
+    private bool _disposed;
     private Timer _configUpdateTimer;
     private Timer _triggerUpdateTimer;
     private readonly List<LogReader> _logReaders = [];
@@ -79,6 +83,8 @@ namespace EQLogParser
       // Stop and dispose timers atomically so no callback can fire between stop and dispose
       lock (_timerLock)
       {
+        if (_disposed) return; // Already disposed
+        _disposed = true;
         _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         _configUpdateTimer?.Dispose();
@@ -224,6 +230,9 @@ namespace EQLogParser
         _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
 
+      // Check if disposed before proceeding
+      if (_disposed) return;
+
       bool shouldRun = false;
       lock (_configWorkLock)
       {
@@ -240,6 +249,10 @@ namespace EQLogParser
         {
           await ConfigDoUpdateWorkAsync();
         }
+        catch (Exception ex)
+        {
+          Log.Error($"Error in ConfigDoUpdate: {ex}");
+        }
         finally
         {
           lock (_configWorkLock)
@@ -249,8 +262,11 @@ namespace EQLogParser
 
           lock (_timerLock)
           {
-            // Restart timer after work completes
-            _configUpdateTimer?.Change(500, 500);
+            // Restart timer after work completes only if not disposed
+            if (!_disposed)
+            {
+              _configUpdateTimer?.Change(500, 500);
+            }
           }
         }
       }
@@ -259,7 +275,10 @@ namespace EQLogParser
         // Another caller is already running; just restart the timer
         lock (_timerLock)
         {
-          _configUpdateTimer?.Change(500, 500);
+          if (!_disposed)
+          {
+            _configUpdateTimer?.Change(500, 500);
+          }
         }
       }
     }
@@ -414,16 +433,26 @@ namespace EQLogParser
         _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
 
+      // Check if disposed before proceeding
+      if (_disposed) return;
+
       try
       {
         await TriggersDoUpdateWorkAsync();
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Error in TriggersDoUpdate: {ex}");
       }
       finally
       {
         lock (_timerLock)
         {
-          // Restart timer after work completes
-          _triggerUpdateTimer?.Change(1000, 1000);
+          // Restart timer after work completes only if not disposed
+          if (!_disposed)
+          {
+            _triggerUpdateTimer?.Change(1000, 1000);
+          }
         }
       }
     }

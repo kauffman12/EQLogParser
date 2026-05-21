@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
@@ -6,11 +7,12 @@ namespace EQLogParser
 {
   internal class TriggerLogManager
   {
-    internal static TriggerLogManager Instance { get; set; } = new();
+    private static readonly Lazy<TriggerLogManager> Lazy = new(() => new TriggerLogManager());
+    internal static TriggerLogManager Instance => Lazy.Value;
 
     private const int MAX_ENTRIES_PER_CHARACTER = 5000;
 
-    private readonly Dictionary<string, ObservableCollection<TriggerLogEntry>> _logs = new();
+    private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = new();
     private readonly Dictionary<string, object> _characterLocks = new();
     private readonly object _globalLock = new();
 
@@ -40,35 +42,20 @@ namespace EQLogParser
       {
         if (!_logs.TryGetValue(characterId, out var log))
         {
-          log = new ObservableCollection<TriggerLogEntry>();
+          log = new BulkObservableCollection<TriggerLogEntry>(MAX_ENTRIES_PER_CHARACTER);
           BindingOperations.EnableCollectionSynchronization(log, charLock);
           _logs[characterId] = log;
         }
 
-        // Enforce max size before adding new entries
-        int excess = log.Count + entries.Count - MAX_ENTRIES_PER_CHARACTER;
-        if (excess > 0)
-        {
-          // Remove oldest entries (at the end since newest are inserted at 0)
-          for (int i = 0; i < excess; i++)
-          {
-            log.RemoveAt(log.Count - 1);
-          }
-        }
-
-        // Insert new entries at the beginning (newest first)
-        foreach (var entry in entries)
-        {
-          log.Insert(0, entry);
-        }
+        log.AddRange(entries);
       }
     }
 
-    internal IReadOnlyDictionary<string, ObservableCollection<TriggerLogEntry>> GetLogs()
+    internal IReadOnlyDictionary<string, BulkObservableCollection<TriggerLogEntry>> GetLogs()
     {
       lock (_globalLock)
       {
-        return new Dictionary<string, ObservableCollection<TriggerLogEntry>>(_logs);
+        return new Dictionary<string, BulkObservableCollection<TriggerLogEntry>>(_logs);
       }
     }
 

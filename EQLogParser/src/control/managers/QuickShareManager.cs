@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Data;
@@ -8,7 +9,7 @@ namespace EQLogParser
   {
     internal static QuickShareManager Instance { get; set; } = new();
 
-    public ObservableCollection<QuickShareRecord> Records { get; } = [];
+    internal ObservableCollection<QuickShareRecord> Records { get; } = [];
     private readonly object _lock = new();
 
     internal QuickShareManager()
@@ -21,7 +22,7 @@ namespace EQLogParser
       lock (_lock)
       {
         if (Records.Count == 0 || Records[0].Key != record.Key ||
-          !Records[0].BeginTime.Equals(record.BeginTime))
+          Records[0].BeginTime != record.BeginTime)
         {
           Records.Insert(0, record);
         }
