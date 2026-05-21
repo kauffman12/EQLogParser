@@ -605,7 +605,15 @@ namespace EQLogParser
       }
     }
 
-    internal static bool IsPossiblePlayerName(string part, int stop = -1) => FindPossiblePlayerName(part, out var _, 0, stop) > -1;
+    internal static bool IsPossiblePlayerName(string part, int stop = -1)
+    {
+      int len = FindPossiblePlayerName(part, out var _, 0, stop);
+      if (len > 0 && string.Equals(part[..len], Labels.Unk, StringComparison.OrdinalIgnoreCase))
+      {
+        return false;
+      }
+      return len > -1;
+    }
     internal static bool IsPossiblePetName(string name) =>
       (IsPossiblePlayerName(name) || name?.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) == true);
 
