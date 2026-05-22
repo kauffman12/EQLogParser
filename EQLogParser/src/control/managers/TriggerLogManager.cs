@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -11,10 +10,9 @@ namespace EQLogParser
     internal static TriggerLogManager Instance => Lazy.Value;
 
     private const int MAX_ENTRIES_PER_CHARACTER = 5000;
-
     private readonly HashSet<string> _activeProcessors = [];
-    private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = new();
-    private readonly Dictionary<string, object> _characterLocks = new();
+    private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = [];
+    private readonly Dictionary<string, object> _characterLocks = [];
     private readonly object _globalLock = new();
 
     /// <summary>
