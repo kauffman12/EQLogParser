@@ -12,7 +12,6 @@ namespace EQLogParser
     private const int MAX_ENTRIES_PER_CHARACTER = 5000;
     private readonly HashSet<string> _activeProcessors = [];
     private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = [];
-    private readonly Dictionary<string, object> _characterLocks = [];
     private readonly object _globalLock = new();
 
     /// <summary>
@@ -40,26 +39,33 @@ namespace EQLogParser
         return;
       }
 
-      object charLock;
-      lock (_globalLock)
+      // Collection should already exist via EnsureCollection called in TriggerProcessor.StartAsync
+      // This check is defensive in case of future code changes
+      if (!_logs.TryGetValue(characterId, out var log))
       {
-        if (!_characterLocks.TryGetValue(characterId, out charLock))
-        {
-          charLock = new object();
-          _characterLocks[characterId] = charLock;
-        }
+        return;
       }
 
-      lock (charLock)
+      lock (log)
       {
-        if (!_logs.TryGetValue(characterId, out var log))
-        {
-          log = new BulkObservableCollection<TriggerLogEntry>(MAX_ENTRIES_PER_CHARACTER);
-          BindingOperations.EnableCollectionSynchronization(log, charLock);
-          _logs[characterId] = log;
-        }
-
         log.AddRange(entries);
+      }
+    }
+
+    /// <summary>
+    /// Ensures a log collection exists for the given processor/character.
+    /// Called by TriggerProcessor when it starts.
+    /// </summary>
+    internal void EnsureCollection(string processorName)
+    {
+      lock (_globalLock)
+      {
+        if (!_logs.ContainsKey(processorName))
+        {
+          var log = new BulkObservableCollection<TriggerLogEntry>(MAX_ENTRIES_PER_CHARACTER);
+          BindingOperations.EnableCollectionSynchronization(log, _globalLock);
+          _logs[processorName] = log;
+        }
       }
     }
 
@@ -74,21 +80,18 @@ namespace EQLogParser
 
     internal void ClearCharacter(string characterId)
     {
-      object charLock;
+      BulkObservableCollection<TriggerLogEntry> log;
       lock (_globalLock)
       {
-        if (!_characterLocks.TryGetValue(characterId, out charLock))
+        if (!_logs.TryGetValue(characterId, out log))
         {
           return;
         }
       }
 
-      lock (charLock)
+      lock (log)
       {
-        if (_logs.TryGetValue(characterId, out var log))
-        {
-          log.Clear();
-        }
+        log.Clear();
       }
     }
 
@@ -97,21 +100,18 @@ namespace EQLogParser
     /// </summary>
     internal void ClearAll()
     {
-      // Snapshot lock entries under global lock, then clear each collection under its own lock
-      List<KeyValuePair<string, object>> entries;
+      // Snapshot entries under global lock, then clear each collection under its own lock
+      List<KeyValuePair<string, BulkObservableCollection<TriggerLogEntry>>> entries;
       lock (_globalLock)
       {
-        entries = new List<KeyValuePair<string, object>>(_characterLocks);
+        entries = new List<KeyValuePair<string, BulkObservableCollection<TriggerLogEntry>>>(_logs);
       }
 
       foreach (var kvp in entries)
       {
         lock (kvp.Value)
         {
-          if (_logs.TryGetValue(kvp.Key, out var log))
-          {
-            log.Clear();
-          }
+          kvp.Value.Clear();
         }
       }
     }
@@ -122,29 +122,25 @@ namespace EQLogParser
     /// </summary>
     internal void ClearAllOnDisable()
     {
-      // Snapshot lock entries under global lock, clear each collection under its own lock,
-      // then wipe the dictionaries so any new AddRange creates fresh collections.
-      List<KeyValuePair<string, object>> entries;
+      // Snapshot entries under global lock, clear each collection under its own lock,
+      // then wipe the dictionary so any new AddRange creates fresh collections.
+      List<KeyValuePair<string, BulkObservableCollection<TriggerLogEntry>>> entries;
       lock (_globalLock)
       {
-        entries = new List<KeyValuePair<string, object>>(_characterLocks);
+        entries = new List<KeyValuePair<string, BulkObservableCollection<TriggerLogEntry>>>(_logs);
       }
 
       foreach (var kvp in entries)
       {
         lock (kvp.Value)
         {
-          if (_logs.TryGetValue(kvp.Key, out var log))
-          {
-            log.Clear();
-          }
+          kvp.Value.Clear();
         }
       }
 
       lock (_globalLock)
       {
         _logs.Clear();
-        _characterLocks.Clear();
       }
     }
   }

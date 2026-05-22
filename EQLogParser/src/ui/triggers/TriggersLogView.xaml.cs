@@ -51,26 +51,28 @@ namespace EQLogParser
       {
         if (logList != null)
         {
+          // Capture current selection before resetting ItemsSource
+          var currentSelection = logList.SelectedItem as string;
+
           var logs = TriggerLogManager.Instance.GetLogs(out var activeProcessors);
-          var list = new List<string>(activeProcessors);
+          // Sort alphabetically for consistent ordering
+          var list = activeProcessors.OrderBy(x => x).ToList();
 
           logList.ItemsSource = list;
-          // not sure why
           logList.SelectedIndex = -1;
 
           if (list.Count > 0)
           {
-            if (logList.SelectedItem is string selected && list.IndexOf(selected) is var found and > -1)
+            // Try to preserve user's previous selection if it still exists
+            if (!string.IsNullOrEmpty(currentSelection) && list.Contains(currentSelection))
             {
-              logList.SelectedIndex = found;
+              logList.SelectedIndex = list.IndexOf(currentSelection);
             }
             else
             {
               logList.SelectedIndex = 0;
             }
           }
-          // Note: SelectionChanged handler above subscribes to CollectionChanged for the selected item.
-          // Do NOT subscribe here again — that was causing a double subscription.
         }
       });
     }

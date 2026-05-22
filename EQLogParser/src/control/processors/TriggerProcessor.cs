@@ -92,6 +92,9 @@ namespace EQLogParser
 
     internal async Task StartAsync()
     {
+      // Register this processor's log collection before processing any triggers
+      TriggerLogManager.Instance.EnsureCollection(CurrentProcessorName);
+      
       await GetActiveTriggersAsync();
       _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateDB.Instance.GetLexicon());
       _trustedPlayers = [.. await TriggerStateDB.Instance.GetTrustedPlayers()];
