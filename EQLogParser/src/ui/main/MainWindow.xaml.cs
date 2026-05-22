@@ -410,7 +410,7 @@ namespace EQLogParser
           Log.Warn("Suspending");
           _saveTimer?.Stop();
           ConfigUtil.Save();
-          await TriggerManager.Instance.StopAsync();
+          await TriggerManager.Instance.DisposeAsync();
           FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
           CloseDamageOverlay(false);
           break;

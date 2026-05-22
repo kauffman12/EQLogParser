@@ -12,9 +12,9 @@ namespace EQLogParser
       _inner = new DelayedAction<object>(interval, _ => action());
     }
 
-    internal void Invoke()
+    internal void Invoke(bool resetDelay = false)
     {
-      _inner.Invoke(null);
+      _inner.Invoke(null, resetDelay);
     }
 
     public void Dispose()
@@ -34,15 +34,24 @@ namespace EQLogParser
     private bool _disposed;
     private T _pendingValue;
 
-    public void Invoke(T value)
+    public void Invoke(T value, bool resetDelay = false)
     {
       lock (_lock)
       {
-        if (_disposed || _scheduled)
+        if (_disposed)
           return;
 
-        _scheduled = true;
         _pendingValue = value;
+
+        if (_scheduled)
+        {
+          if (resetDelay)
+            _timer?.Change(_interval, Timeout.InfiniteTimeSpan);
+
+          return;
+        }
+
+        _scheduled = true;
         _timer = new Timer(OnTimer, null, _interval, Timeout.InfiniteTimeSpan);
       }
     }
