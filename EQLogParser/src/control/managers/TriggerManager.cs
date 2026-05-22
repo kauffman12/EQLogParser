@@ -45,8 +45,8 @@ namespace EQLogParser
     {
       lock (_timerLock)
       {
-        _configUpdateTimer?.Change(500, 500);
-        _triggerUpdateTimer?.Change(1000, 1000);
+        _configUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        _triggerUpdateTimer?.Change(Timeout.Infinite, Timeout.Infinite);
       }
     }
 
@@ -64,8 +64,10 @@ namespace EQLogParser
     internal void TriggersUpdated()
     {
       EventsUpdatingTriggers?.Invoke(true);
-      StopTimers();
-      StartTimers();
+      lock (_timerLock)
+      {
+        _triggerUpdateTimer?.Change(1000, Timeout.Infinite);
+      }
     }
 
     internal async Task StartAsync()
@@ -203,8 +205,10 @@ namespace EQLogParser
 
     private void TriggerConfigUpdateEvent(TriggerConfig _)
     {
-      StopTimers();
-      StartTimers();
+      lock (_timerLock)
+      {
+        _configUpdateTimer?.Change(500, Timeout.Infinite);
+      }
     }
 
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
@@ -259,25 +263,16 @@ namespace EQLogParser
           {
             _configWorkInProgress = false;
           }
-
-          lock (_timerLock)
-          {
-            // Restart timer after work completes only if not disposed
-            if (!_disposed)
-            {
-              _configUpdateTimer?.Change(500, 500);
-            }
-          }
         }
       }
       else
       {
-        // Another caller is already running; just restart the timer
+        // Another caller is already running; just reschedule the timer to try again
         lock (_timerLock)
         {
           if (!_disposed)
           {
-            _configUpdateTimer?.Change(500, 500);
+            _configUpdateTimer?.Change(500, Timeout.Infinite);
           }
         }
       }
@@ -448,11 +443,7 @@ namespace EQLogParser
       {
         lock (_timerLock)
         {
-          // Restart timer after work completes only if not disposed
-          if (!_disposed)
-          {
-            _triggerUpdateTimer?.Change(1000, 1000);
-          }
+          // Timer is now a one-shot throttle, no restart needed here
         }
       }
     }
