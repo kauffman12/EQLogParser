@@ -248,12 +248,6 @@ namespace EQLogParser
 
       toRemove.ForEach(remove => _logReaders.Remove(remove));
 
-      // If all readers removed, clear trigger logs
-      if (_logReaders.Count == 0)
-      {
-        TriggerLogManager.Instance.ClearAllOnDisable();
-      }
-
       var startTasks = config.Characters
         .Where(character => character.IsEnabled && !alreadyRunning.Contains(character.Id))
         .Select(async character =>
@@ -271,10 +265,6 @@ namespace EQLogParser
         }).ToList();
 
       await Task.WhenAll(startTasks);
-      if (_logReaders.Count == 0)
-      {
-        TriggerLogManager.Instance.ClearAllOnDisable();
-      }
       MainActions.ShowTriggersEnabled(_logReaders.Count > 0);
     }
 
@@ -320,7 +310,6 @@ namespace EQLogParser
       else
       {
         MainActions.ShowTriggersEnabled(false);
-        TriggerLogManager.Instance.ClearAllOnDisable();
       }
     }
 
@@ -368,6 +357,12 @@ namespace EQLogParser
         var processors = await GetProcessorsAsync();
         var processorNames = new HashSet<string>(processors.Select(p => p.CurrentProcessorName));
         TriggerLogManager.Instance.SetActiveProcessors(processorNames);
+
+        // If no active processors, clear trigger logs
+        if (processorNames.Count == 0)
+        {
+          TriggerLogManager.Instance.ClearAllOnDisable();
+        }
 
         var idSet = new HashSet<string>();
         var triggerSet = new HashSet<string>();
