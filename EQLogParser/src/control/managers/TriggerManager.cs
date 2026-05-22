@@ -28,10 +28,7 @@ namespace EQLogParser
 
     public TriggerManager()
     {
-      TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
-      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
-      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
-      TriggerStateDB.Instance.TriggerImportEvent += TriggerImportEvent;
+
     }
 
     internal void Select(TriggerLogEntry entry) => EventsSelectTrigger?.Invoke(entry);
@@ -46,6 +43,10 @@ namespace EQLogParser
     {
       CreateTimers();
       await TriggerUtil.LoadOverlayStyles();
+      TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateDB.Instance.TriggerImportEvent += TriggerImportEvent;
       MainActions.EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
       TriggerConfigUpdateEvent(null);
     }
@@ -410,6 +411,10 @@ namespace EQLogParser
       if (_isDisposed) return;
       _isDisposed = true;
       RemoveTimers();
+      TriggerStateDB.Instance.OverlayImportEvent -= OverlayImportEvent;
+      TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
+      TriggerStateDB.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+      TriggerStateDB.Instance.TriggerImportEvent -= TriggerImportEvent;
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
       await _logReadersSemaphore.WaitAsync();
 

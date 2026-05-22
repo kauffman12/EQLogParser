@@ -38,7 +38,6 @@ namespace EQLogParser
     {
       // 33.x
       SyncfusionLicenseProvider.RegisterLicense("");
-
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -113,7 +112,7 @@ namespace EQLogParser
 
     protected override async void OnExit(ExitEventArgs e)
     {
-      await TriggerManager.Instance.StopAsync();
+      await TriggerManager.Instance.DisposeAsync();
       await TriggerStateDB.Instance.Dispose();
 
       AudioManager.Instance.Dispose();
