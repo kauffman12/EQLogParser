@@ -51,8 +51,8 @@ namespace EQLogParser
       {
         if (logList != null)
         {
-          var logs = TriggerLogManager.Instance.GetLogs();
-          var list = new List<string>(logs.Keys);
+          var logs = TriggerLogManager.Instance.GetLogs(out var activeProcessors);
+          var list = new List<string>(activeProcessors);
 
           logList.ItemsSource = list;
           // not sure why
@@ -88,8 +88,14 @@ namespace EQLogParser
 
         var sorting = dataGrid.SortColumnDescriptions.ToList();
         dataGrid.SortColumnDescriptions.Clear();
-        var logs = TriggerLogManager.Instance.GetLogs();
-        var collection = combo.SelectedIndex >= 0 && logs.TryGetValue(combo.SelectedItem?.ToString() ?? "", out var log) ? log : null;
+
+        BulkObservableCollection<TriggerLogEntry> collection = null;
+        if (combo.SelectedIndex >= 0 && combo.SelectedItem is string selectedName)
+        {
+          var logs = TriggerLogManager.Instance.GetLogs(out _);
+          collection = logs.TryGetValue(selectedName, out var log) ? log : new BulkObservableCollection<TriggerLogEntry>();
+        }
+
         dataGrid.ItemsSource = collection;
         sorting.ForEach(item => dataGrid.SortColumnDescriptions.Add(item));
 

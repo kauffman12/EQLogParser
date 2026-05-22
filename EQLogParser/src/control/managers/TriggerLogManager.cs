@@ -12,9 +12,23 @@ namespace EQLogParser
 
     private const int MAX_ENTRIES_PER_CHARACTER = 5000;
 
+    private readonly HashSet<string> _activeProcessors = [];
     private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = new();
     private readonly Dictionary<string, object> _characterLocks = new();
     private readonly object _globalLock = new();
+
+    /// <summary>
+    /// Registers the set of active processors so GetLogs() knows which names to show,
+    /// even before any triggers fire.
+    /// </summary>
+    internal void SetActiveProcessors(HashSet<string> processorNames)
+    {
+      lock (_globalLock)
+      {
+        _activeProcessors.Clear();
+        _activeProcessors.UnionWith(processorNames);
+      }
+    }
 
     internal void Add(string characterId, TriggerLogEntry entry)
     {
@@ -51,10 +65,11 @@ namespace EQLogParser
       }
     }
 
-    internal IReadOnlyDictionary<string, BulkObservableCollection<TriggerLogEntry>> GetLogs()
+    internal IReadOnlyDictionary<string, BulkObservableCollection<TriggerLogEntry>> GetLogs(out HashSet<string> activeProcessors)
     {
       lock (_globalLock)
       {
+        activeProcessors = new HashSet<string>(_activeProcessors);
         return new Dictionary<string, BulkObservableCollection<TriggerLogEntry>>(_logs);
       }
     }

@@ -365,9 +365,13 @@ namespace EQLogParser
     {
       await Task.Run(async () =>
       {
+        var processors = await GetProcessorsAsync();
+        var processorNames = new HashSet<string>(processors.Select(p => p.CurrentProcessorName));
+        TriggerLogManager.Instance.SetActiveProcessors(processorNames);
+
         var idSet = new HashSet<string>();
         var triggerSet = new HashSet<string>();
-        foreach (var processor in await GetProcessorsAsync())
+        foreach (var processor in processors)
         {
           foreach (var id in processor.GetRequiredOverlayIds())
           {
