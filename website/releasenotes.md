@@ -1,5 +1,13 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.54 | 05/23/26
+1. Added right-click menu option to set a **Verified Player**.
+2. More updates to how pet/player info is saved.
+3. Fixed trigger log ordering when it hits the log limit.
+4. Fixed error open large log file with **Quick Share** window open.
+5. Updated Synfusion and some other libraries and code cleanup.
+6. Updated with latest spell data.
+
 # 2.3.53 | 05/09/26
 1. Updated **Trends Charts** to display **Raid Group** data.
 3. **Performance** improvements for opening large log files.

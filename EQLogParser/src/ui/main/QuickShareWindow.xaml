@@ -109,9 +109,6 @@
           </Setter>
         </Style>
       </syncfusion:SfDataGrid.Resources>
-      <syncfusion:SfDataGrid.SortColumnDescriptions>
-        <syncfusion:SortColumnDescription ColumnName="BeginTime" SortDirection="Descending" />
-      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem IsEnabled="False" x:Name="download" Header="Import" Click="ImportClick">
