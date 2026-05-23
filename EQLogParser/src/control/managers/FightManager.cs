@@ -503,7 +503,7 @@ namespace EQLogParser
         incoming.DefenderOwner = StringCache.GetOrAdd(incoming.DefenderOwner);
       }
 
-      _damageCache.Add(incoming, incoming);
+      _damageCache[incoming] = incoming;
       return incoming;
     }
 
