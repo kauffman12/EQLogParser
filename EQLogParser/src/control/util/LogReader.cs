@@ -292,7 +292,7 @@ namespace EQLogParser
 
       foreach (var item in _batch)
       {
-        _lines.Add(item, _cts.Token);
+        _lines.Add(item, _cts.Token);  // Blocks if queue full, but consumer keeps processing
       }
       _batch.Clear();
     }

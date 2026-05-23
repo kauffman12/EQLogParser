@@ -26,11 +26,11 @@ namespace EQLogParser
       QuickShareData.CollectionChanged += EnableStats;
       DataContext = this;
 
-      TriggerStateDB.Instance.GetTrustedPlayers().ContinueWith(task =>
+      TriggerStateDB.Instance.GetTrustedPlayers().ContinueWith(async task =>
       {
         if (task.Result != null)
         {
-          Dispatcher.Invoke(() =>
+          await UiUtil.InvokeAsync(() =>
           {
             foreach (var item in task.Result)
             {
@@ -61,7 +61,7 @@ namespace EQLogParser
     private void EnableStats(object sender, NotifyCollectionChangedEventArgs e)
     {
       // collection updated in RecordManager often from trigger processing Task
-      Dispatcher.Invoke(() =>
+      _ = UiUtil.InvokeAsync(() =>
       {
         statsButton.IsEnabled = QuickShareData.Count > 0;
       });
