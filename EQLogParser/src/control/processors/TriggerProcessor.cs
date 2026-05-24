@@ -1204,16 +1204,16 @@ namespace EQLogParser
               ModifiedEndEarlyPattern = PreProcessCodes(trigger.EndEarlyPattern, trigger),
               ModifiedEndEarlyPattern2 = PreProcessCodes(trigger.EndEarlyPattern2, trigger),
               ModifiedPattern = !trigger.UseRegex ? pattern : null,
-              HasCounterSpeak = modifiedSpeak?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasCounterText = modifiedDisplay?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasCounterTimer = modifiedTimerName?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasRepeatedSpeak = modifiedSpeak?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasRepeatedText = modifiedDisplay?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasRepeatedTimer = modifiedTimerName?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasLogTimeSpeak = modifiedSpeak?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasLogTimeText = modifiedDisplay?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasLogTimeTimer = modifiedTimerName?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
-              HasLogTimeSendToChat = modifiedSendToChat?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) == true,
+              HasCounterSpeak = modifiedSpeak?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasCounterText = modifiedDisplay?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasCounterTimer = modifiedTimerName?.Contains(CounterCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasRepeatedSpeak = modifiedSpeak?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasRepeatedText = modifiedDisplay?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasRepeatedTimer = modifiedTimerName?.Contains(RepeatedCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasLogTimeSpeak = modifiedSpeak?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasLogTimeText = modifiedDisplay?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasLogTimeTimer = modifiedTimerName?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) is true,
+              HasLogTimeSendToChat = modifiedSendToChat?.Contains(LogTimeCode, StringComparison.OrdinalIgnoreCase) is true,
               TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource),
               ModifiedEndEarlyPattern3 = PreProcessCodes(trigger.EndEarlyPattern3, trigger)
             };
@@ -1313,7 +1313,7 @@ namespace EQLogParser
         }
       }
 
-      if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") == false)
+      if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") is false)
       {
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }

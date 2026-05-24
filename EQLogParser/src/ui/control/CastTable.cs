@@ -63,7 +63,8 @@ namespace EQLogParser
     protected void CopyBbCodeClick(object sender, RoutedEventArgs e)
     {
       var export = DataGridUtil.BuildExportData(_theDataGrid);
-      var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, _theTitleLabel.Content as string);
+      var title = _theTitleLabel.Content as string ?? "";
+      var result = TextUtils.BuildBbCodeTable(export.Item1, export.Item2, title);
       UiUtil.SetClipboardText(result);
     }
 

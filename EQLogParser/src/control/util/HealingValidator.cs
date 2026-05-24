@@ -12,7 +12,7 @@ namespace EQLogParser
     {
       if (!_swarmPetsEnabled)
       {
-        if (record?.Healed?.EndsWith("`s pet") == true || record?.Healed?.EndsWith("`s ward") == true)
+        if (record?.Healed?.EndsWith("`s pet") is true || record?.Healed?.EndsWith("`s ward") is true)
         {
           return false;
         }

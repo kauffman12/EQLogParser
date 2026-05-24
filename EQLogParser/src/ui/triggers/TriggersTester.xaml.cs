@@ -159,7 +159,7 @@ namespace EQLogParser
 
     private async void RunTest(List<string> allLines)
     {
-      if (realTime.IsChecked == false)
+      if (realTime.IsChecked is false)
       {
         characterList.IsEnabled = false;
         realTime.IsEnabled = false;

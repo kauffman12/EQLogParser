@@ -486,7 +486,7 @@ namespace EQLogParser
           var tree = _db.GetCollection<TriggerNode>(TreeCol);
           foreach (var node in tree.FindAll().Where(n => n.TriggerData != null).ToArray())
           {
-            if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value == true)
+            if (node.Id is { } id && state.Enabled.TryGetValue(id, out var value) && value is true)
             {
               // test - now real copies
               var trigCopy = node.TriggerData.Clone();
@@ -568,7 +568,7 @@ namespace EQLogParser
         {
           foreach (var state in states.FindAll().ToArray())
           {
-            if (state.Enabled.TryGetValue(triggerId, out var enabled) && enabled == true)
+            if (state.Enabled.TryGetValue(triggerId, out var enabled) && enabled is true)
             {
               return Task.FromResult(true);
             }
@@ -801,7 +801,7 @@ namespace EQLogParser
 
       foreach (var node in nodes)
       {
-        if (node.TriggerData?.SelectedOverlays?.Contains(id) == false)
+        if (node.TriggerData?.SelectedOverlays?.Contains(id) is false)
         {
           node.TriggerData.SelectedOverlays.Add(id);
           tree.Update(node);
@@ -1162,11 +1162,11 @@ namespace EQLogParser
             {
               UiUtil.InvokeNow(() =>
               {
-                node.IsChecked = currentState == true;
+                node.IsChecked = currentState is true;
               }, DispatcherPriority.DataBind);
             }
 
-            UpdateChildState(state, node, currentState == true);
+            UpdateChildState(state, node, currentState is true);
             states.Update(state);
           }
         }
@@ -1282,8 +1282,8 @@ namespace EQLogParser
           FixEnabledState(child as TriggerTreeViewNode, state, ref needUpdate);
         }
 
-        var checkedCount = viewNode.ChildNodes.Count(c => c.IsChecked == true);
-        var uncheckCount = viewNode.ChildNodes.Count(c => c.IsChecked == false);
+        var checkedCount = viewNode.ChildNodes.Count(c => c.IsChecked is true);
+        var uncheckCount = viewNode.ChildNodes.Count(c => c.IsChecked is false);
         var changed = false;
 
         if (checkedCount == viewNode.ChildNodes.Count)

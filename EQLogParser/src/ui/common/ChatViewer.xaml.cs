@@ -175,7 +175,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         var orig = players.ItemsSource as List<string>;
-        if (updatedPlayer == null || orig?.Contains(updatedPlayer) == false)
+        if (updatedPlayer is null || orig?.Contains(updatedPlayer) is false)
         {
           var playerList = ChatDB.GetArchivedPlayers();
           if (playerList.Count > 0)

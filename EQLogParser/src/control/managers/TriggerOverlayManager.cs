@@ -45,7 +45,7 @@ namespace EQLogParser
           {
             try
             {
-              doClose = kv.Value.Regex?.IsMatch(action) == true;
+              doClose = kv.Value.Regex?.IsMatch(action) is true;
             }
             catch (Exception)
             {

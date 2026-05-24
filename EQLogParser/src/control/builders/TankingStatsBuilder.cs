@@ -147,7 +147,7 @@ namespace EQLogParser
         // send update
         var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(_tankingGroups, damageType) };
 
-        if (selected != null)
+        if (selected is not null)
         {
           de.Selected.AddRange(selected);
         }
@@ -162,7 +162,7 @@ namespace EQLogParser
       {
         var individualStats = new Dictionary<string, PlayerStats>();
 
-        if (_raidTotals != null)
+        if (_raidTotals is not null)
         {
           // always start over
           _raidTotals.Total = 0;

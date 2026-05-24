@@ -127,7 +127,7 @@ namespace EQLogParser
             }
 
             // if nothing rendered then stop and hide window
-            if (Render(now) == false)
+            if (Render(now) is false)
             {
               // defer visibility change so layout can settle
               Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>

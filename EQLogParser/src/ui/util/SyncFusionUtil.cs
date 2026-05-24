@@ -166,7 +166,7 @@ namespace EQLogParser
     {
       // save active window
       if (dockSite.ActiveWindow is ContentControl cc && !string.IsNullOrEmpty(cc.Name) &&
-        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) == false)
+        DockingManager.GetState(cc) == DockState.Document && DockingManager.GetCanDock(cc) is false)
       {
         ConfigUtil.SetSetting("ActiveWindow", cc.Name);
       }

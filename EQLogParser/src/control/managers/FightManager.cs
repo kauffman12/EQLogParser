@@ -81,7 +81,7 @@ namespace EQLogParser
       {
         _activeFights.TryGetValue(name, out result);
         // don't think this happens but just in-case
-        if (result?.Dead == true)
+        if (result?.Dead is true)
         {
           _activeFights.TryRemove(name, out _);
         }

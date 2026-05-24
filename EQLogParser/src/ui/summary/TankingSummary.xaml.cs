@@ -355,7 +355,7 @@ namespace EQLogParser
           }
 
           var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
-          if (isPet && _currentPetValue == false)
+          if (isPet && _currentPetValue is false)
           {
             return false;
           }

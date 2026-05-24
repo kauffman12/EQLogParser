@@ -187,12 +187,12 @@ namespace EQLogParser
         // send update
         var de = new DataPointEvent { Action = action, Iterator = new DamageGroupCollection(_damageGroups) };
 
-        if (selected != null)
+        if (selected is not null)
         {
           de.Selected.AddRange(selected);
         }
 
-        if (selectedGroups != null)
+        if (selectedGroups is not null)
         {
           de.SelectedGroups.AddRange(selectedGroups);
         }
@@ -206,7 +206,7 @@ namespace EQLogParser
       lock (_lock)
       {
         _lastStatsEvent = null;
-        if (_raidTotals != null)
+        if (_raidTotals is not null)
         {
           var childrenStats = new Dictionary<string, Dictionary<string, PlayerStats>>();
           var topLevelStats = new Dictionary<string, PlayerStats>();

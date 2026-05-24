@@ -143,7 +143,7 @@ namespace EQLogParser
         }
       }
 
-      if (oldestFight != null)
+      if (oldestFight is not null)
       {
         data.FightName = oldestFight.Name;
       }
@@ -151,7 +151,7 @@ namespace EQLogParser
       var totalSeconds = allTime.GetTotal();
       var diff = (now - DateTime.MinValue.AddSeconds(data.UpdateTime)).TotalSeconds;
       // added >= 0 check because this broke while testing when clocks moved an hour back in the fall
-      if (data.FightName != null && totalSeconds > 0 && allDamage > 0 && diff >= 0 && diff <= timeout)
+      if (data.FightName is not null && totalSeconds > 0 && allDamage > 0 && diff >= 0 && diff <= timeout)
       {
         var rank = 1;
         var totalDps = (long)Math.Round(allDamage / totalSeconds, 2);

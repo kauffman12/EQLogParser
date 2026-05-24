@@ -264,7 +264,7 @@ namespace EQLogParser
       {
         lock (LockObject)
         {
-          if (chatType.SenderIsYou == false && chatType.Sender != null)
+          if (chatType.SenderIsYou is false && chatType.Sender is not null)
           {
             if (chatType.Channel is ChatChannels.Guild or ChatChannels.Raid or ChatChannels.Fellowship)
             {

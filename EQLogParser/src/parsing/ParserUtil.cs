@@ -128,7 +128,7 @@ namespace EQLogParser
       for (var i = 0; i < count; i++)
       {
         var word = split[start + i];
-        if (word != null && word.Length > 0)
+        if (word is { Length: > 0 })
         {
           totalLength += word.Length;
           wordCount++;
@@ -147,7 +147,7 @@ namespace EQLogParser
         for (var i = 0; i < count; i++)
         {
           var word = split[start + i];
-          if (word != null && word.Length > 0)
+          if (word is { Length: > 0 })
           {
             if (!first)
             {

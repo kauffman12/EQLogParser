@@ -610,10 +610,10 @@ namespace EQLogParser
     {
       if (miniBars.IsChecked != null)
       {
-        if ((Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() == "3" && miniBars.IsChecked == false) ||
-          (Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() != "3" && miniBars.IsChecked == true))
+        if ((Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() == "3" && miniBars.IsChecked is false) ||
+          (Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() != "3" && miniBars.IsChecked is true))
         {
-          UpdateMiniBars(miniBars.IsChecked == true);
+          UpdateMiniBars(miniBars.IsChecked is true);
           DataChanged();
           AdjustHeight();
         }

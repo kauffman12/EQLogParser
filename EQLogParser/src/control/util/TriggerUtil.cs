@@ -301,12 +301,12 @@ namespace EQLogParser
     internal static async Task LoadOverlayStyle(TriggerNode node, Overlay overlay)
     {
       Application.Current.Resources["OverlayText-" + node.Id] = node.Name;
-      if (overlay?.IsTextOverlay == true)
+      if (overlay?.IsTextOverlay is true)
       {
         // workaround to load styles
         await Copy(new TextOverlayPropertyModel { Node = node }, overlay);
       }
-      else if (overlay?.IsTextOverlay == false)
+      else if (overlay?.IsTextOverlay is false)
       {
         // workaround to load styles
         await Copy(new TimerOverlayPropertyModel { Node = node }, overlay);
@@ -679,7 +679,7 @@ namespace EQLogParser
           {
             if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
             {
-              var autoMerge = chatType.Channel != ChatChannels.Tell && trust?.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) == true;
+              var autoMerge = chatType.Channel != ChatChannels.Tell && trust?.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) is true;
               QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge, IsTrigger = type == ShareTrigger };
               QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
               _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
@@ -1007,7 +1007,7 @@ namespace EQLogParser
       {
         foreach (var viewNode in viewNodes)
         {
-          if (hidePrivateTriggers && viewNode?.SerializedData?.TriggerData?.Private == true)
+          if (hidePrivateTriggers && viewNode?.SerializedData?.TriggerData?.Private is true)
           {
             continue;
           }
@@ -1117,7 +1117,7 @@ namespace EQLogParser
       {
         foreach (var childView in viewNode.ChildNodes.Cast<TriggerTreeViewNode>())
         {
-          if (hidePrivateTriggers && childView?.SerializedData?.TriggerData?.Private == true)
+          if (hidePrivateTriggers && childView?.SerializedData?.TriggerData?.Private is true)
           {
             continue;
           }

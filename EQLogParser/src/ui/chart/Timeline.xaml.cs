@@ -1045,14 +1045,15 @@ namespace EQLogParser
       }
 
       string title;
-      if (string.IsNullOrEmpty(titleLabel2.Content as string))
+      if (titleLabel2.Content is string title2 && !string.IsNullOrEmpty(title2))
       {
-        title = titleLabel1.Content?.ToString();
+        var title1 = titleLabel1.Content?.ToString() ?? "";
+        var title3 = titleLabel3.Content?.ToString() ?? "";
+        title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", title1, title2, title3);
       }
       else
       {
-        title = string.Format(CultureInfo.CurrentCulture, "{0} {1} {2}", titleLabel1.Content as string,
-          titleLabel2.Content as string, titleLabel3.Content as string);
+        title = titleLabel1.Content?.ToString();
       }
 
       var header = new List<string> { "Adps", "Player", "Start", "End" };

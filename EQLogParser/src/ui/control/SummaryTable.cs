@@ -65,7 +65,7 @@ namespace EQLogParser
     internal virtual void UpdateDataGridMenuItems() => new object(); // need to override this method
     internal virtual void FireSelectionChangedEvent(List<PlayerStats> stats) => new object(); // need to override this method
     internal string GetTargetTitle() => CurrentStats?.TargetTitle ?? GetTitle();
-    internal string GetTitle() => TheTitle.Content as string;
+    internal string GetTitle() => TheTitle.Content as string ?? "";
     internal void CopyCsvClick(object sender, RoutedEventArgs e) => DataGridUtil.CopyCsvFromTable(TheDataGrid, TheTitle.Content.ToString());
     internal void CreateImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImageAsync(TheDataGrid, TheTitle);
     internal void CreateLargeImageClick(object sender, RoutedEventArgs e) => DataGridUtil.CreateImageAsync(TheDataGrid, TheTitle, true);
@@ -150,10 +150,10 @@ namespace EQLogParser
       if (sender is MenuItem { Header: string className })
       {
         var selected = GetSelectedStats().FirstOrDefault();
-        if (selected != null && !string.IsNullOrEmpty(selected.OrigName))
+        if (selected is { } s && !string.IsNullOrEmpty(s.OrigName))
         {
-          PlayerRegistry.Instance.SetDefaultPlayerClass(selected.OrigName, className);
-          selected.ClassName = className;
+          PlayerRegistry.Instance.SetDefaultPlayerClass(s.OrigName, className);
+          s.ClassName = className;
           DataGridUtil.RefreshTable(TheDataGrid);
         }
       }

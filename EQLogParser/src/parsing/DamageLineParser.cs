@@ -480,7 +480,7 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
 
         // handle old style crits for eqemu
-        if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
+        if (record is not null && _lastCrit is not null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
           (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && string.IsNullOrEmpty(_lastCrit.Value))
         {
           record.ModifiersMask = LineModifiersParser.Crit;
@@ -722,7 +722,7 @@ namespace EQLogParser
         record.AttackerOwner = record.AttackerOwner ?? attackerOwner;
 
         // handle old style crits for eqemu
-        if (record != null && _lastCrit != null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
+        if (record is not null && _lastCrit is not null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
           (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && _lastCrit.Value?.Length > 2 &&
           _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].AsSpan()))
         {
@@ -777,7 +777,7 @@ namespace EQLogParser
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
 
           var damageRecord = CreateDamageRecord(lineData, split, stop, attacker, Labels.Unk, damage, Labels.Melee, "Hits");
-          if (damageRecord != null)
+          if (damageRecord is not null)
           {
             damageRecord.ModifiersMask = LineModifiersParser.Crit;
           }
@@ -955,9 +955,9 @@ namespace EQLogParser
         }
       }
 
-      if (record != null)
+      if (record is not null)
       {
-        if (_delayCritRecord != null && (lineData.BeginTime - _delayCritRecord.BeginTime) <= 1 &&
+        if (_delayCritRecord is not null && (lineData.BeginTime - _delayCritRecord.BeginTime) <= 1 &&
           string.Equals(record.Attacker, _delayCritRecord.Record.Attacker, StringComparison.OrdinalIgnoreCase))
         {
           record.ModifiersMask = _delayCritRecord.Record.ModifiersMask;
@@ -1020,7 +1020,7 @@ namespace EQLogParser
 
     private static void UpdateSlain(string slain, string killer, LineData lineData)
     {
-      if (!string.IsNullOrEmpty(slain) && killer != null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
+      if (!string.IsNullOrEmpty(slain) && killer is not null && !InIgnoreList(slain)) // killer may not be known so empty string is OK
       {
         killer = killer.Length > 2 ? ParserUtil.ReplacePlayer(killer, ConfigUtil.PlayerName, killer) : killer;
         slain = ParserUtil.ReplacePlayer(slain, ConfigUtil.PlayerName, slain);
@@ -1040,7 +1040,7 @@ namespace EQLogParser
           {
             // we also use upper case now
             slain = TextUtils.CapitalizeFirst(slain);
-            if (!SlainQueue.Contains(slain) && FM.GetFight(slain) != null)
+            if (!SlainQueue.Contains(slain) && FM.GetFight(slain) is not null)
             {
               SlainQueue.Add(slain);
               _slainTime = currentTime;
@@ -1048,7 +1048,7 @@ namespace EQLogParser
           }
 
           var death = new DeathRecord { Killed = StringCache.GetOrAdd(slain), Killer = StringCache.GetOrAdd(killer), Message = StringCache.GetOrAdd(lineData.Action) };
-          if (_previousAction != null)
+          if (_previousAction is not null)
           {
             death.Previous = _previousAction;
           }
@@ -1161,7 +1161,7 @@ namespace EQLogParser
         {
           var spellName = DM.AbbreviateSpellName(name);
           var data = DM.GetSpellByAbbrv(spellName);
-          if (data != null)
+          if (data is not null)
           {
             if (data.Damaging == 2)
             {

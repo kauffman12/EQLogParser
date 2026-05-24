@@ -752,7 +752,7 @@ namespace EQLogParser
 
         SyncFusionUtil.OpenWindow(out _, typeof(EqLogViewer), "eqLogWindow", "Log Search " + found);
       }
-      else if (sender as MenuItem is { Icon: ImageAwesome { Tag: string name2 } })
+      else if (sender is MenuItem { Icon: ImageAwesome { Tag: string name2 } })
       {
         SyncFusionUtil.ToggleWindow(dockSite, name2);
       }
@@ -782,19 +782,19 @@ namespace EQLogParser
 
     private static void MenuItemFontFamilyClicked(object sender, RoutedEventArgs e)
     {
-      if (sender is MenuItem { Header: string header } menuItem)
+      if (sender is MenuItem { Header: string header, Parent: MenuItem parent } menuItem)
       {
-        ThemeConfig.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
+        ThemeConfig.UpdateCheckedMenuItem(menuItem, parent.Items);
         ThemeConfig.ChangeThemeFontFamily(header);
       }
     }
 
     private static void MenuItemFontSizeClicked(object sender, RoutedEventArgs e)
     {
-      if (sender is MenuItem menuItem)
+      if (sender is MenuItem { Parent: MenuItem parent, Tag: double tag } menuItem)
       {
-        ThemeConfig.UpdateCheckedMenuItem(menuItem, (menuItem.Parent as MenuItem)?.Items);
-        ThemeConfig.ChangeThemeFontSizes((double)menuItem.Tag);
+        ThemeConfig.UpdateCheckedMenuItem(menuItem, parent.Items);
+        ThemeConfig.ChangeThemeFontSizes(tag);
       }
     }
 
@@ -804,7 +804,7 @@ namespace EQLogParser
       {
         var lastMin = -1;
         string fileName = null;
-        if (!string.IsNullOrEmpty(item.Tag as string))
+        if (item.Tag is string tag && !string.IsNullOrEmpty(tag))
         {
           lastMin = Convert.ToInt32(item.Tag.ToString(), CultureInfo.CurrentCulture) * 60;
         }

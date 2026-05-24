@@ -20,7 +20,7 @@ namespace EQLogParser
       {
         if (action is SpellCast { SpellData: not null } cast)
         {
-          if ((playerList != null && playerList.Contains(cast.Caster)) || (playerList == null && PlayerRegistry.Instance.IsVerifiedPlayer(cast.Caster)))
+          if ((playerList is not null && playerList.Contains(cast.Caster)) || (playerList is null && PlayerRegistry.Instance.IsVerifiedPlayer(cast.Caster)))
           {
             UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts,
               result.UniqueSpells, cast.Interrupted);
@@ -34,7 +34,7 @@ namespace EQLogParser
         // don't include detrimental received spells since they're mostly things like being nuked
         if (action is ReceivedSpell { SpellData: not null, IsWearOff: false } received)
         {
-          if ((playerList != null && playerList.Contains(received.Receiver)) || (playerList == null && PlayerRegistry.Instance.IsVerifiedPlayer(received.Receiver)))
+          if ((playerList is not null && playerList.Contains(received.Receiver)) || (playerList is null && PlayerRegistry.Instance.IsVerifiedPlayer(received.Receiver)))
           {
             UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
             result.UniquePlayers[received.Receiver] = true;
@@ -60,7 +60,7 @@ namespace EQLogParser
 
         foreach (var (beginTime, spell) in RecordsStore.Instance.GetSpellsDuring(segment.BeginTime - BuffOffset, segment.EndTime + HalfOffset))
         {
-          if (times != null)
+          if (times is not null)
           {
             times[spell] = beginTime;
           }
@@ -108,7 +108,7 @@ namespace EQLogParser
           received.SpellData = replaced;
         }
 
-        if (received.SpellData != null)
+        if (received.SpellData is not null)
         {
           Add(beginTime, received.SpellData, received);
         }
@@ -138,7 +138,7 @@ namespace EQLogParser
       counts.TryAdd(theSpell.Id, 0);
       counts[theSpell.Id] += interrupted ? 0u : 1;
 
-      if (interruptedCounts != null)
+      if (interruptedCounts is not null)
       {
         if (!interruptedCounts.TryGetValue(thePlayer, out var interrupts))
         {

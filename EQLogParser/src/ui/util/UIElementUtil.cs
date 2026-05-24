@@ -314,21 +314,21 @@ namespace EQLogParser
     {
       if (updated.Text == "Unselect All")
       {
-        if (updated.IsChecked == false) Toggle("Unselect All", false);
+        if (updated.IsChecked is false) Toggle("Unselect All", false);
       }
       else if (updated.Text == "Select All")
       {
-        if (updated.IsChecked == false) Toggle("Unselect All", true);
+        if (updated.IsChecked is false) Toggle("Unselect All", true);
       }
       else
       {
-        if (updated.IsChecked == true && combo.Items[0] is ComboBoxItemDetails { } selectAll && selectAll.IsChecked == true)
+        if (updated.IsChecked is true && combo.Items[0] is ComboBoxItemDetails { } selectAll && selectAll.IsChecked is true)
         {
           selectAll.IsChecked = false;
           updated.IsChecked = !updated.IsChecked;
           combo.Items.Refresh();
         }
-        else if (updated.IsChecked == false && combo.Items[1] is ComboBoxItemDetails { } unselectAll && unselectAll.IsChecked == true)
+        else if (updated.IsChecked is false && combo.Items[1] is ComboBoxItemDetails { } unselectAll && unselectAll.IsChecked is true)
         {
           unselectAll.IsChecked = false;
           updated.IsChecked = !updated.IsChecked;
@@ -343,12 +343,12 @@ namespace EQLogParser
             {
               if (updated != classItem)
               {
-                if (classItem.IsChecked == true)
+                if (classItem.IsChecked is true)
                 {
                   count++;
                 }
               }
-              else if (updated.IsChecked == false)
+              else if (updated.IsChecked is false)
               {
                 count++;
               }
@@ -357,7 +357,7 @@ namespace EQLogParser
 
           if (count == 0)
           {
-            if (combo.Items[1] is ComboBoxItemDetails { } unselectAll2 && unselectAll2.IsChecked == false)
+            if (combo.Items[1] is ComboBoxItemDetails { } unselectAll2 && unselectAll2.IsChecked is false)
             {
               unselectAll2.IsChecked = true;
               updated.IsChecked = !updated.IsChecked;
@@ -366,7 +366,7 @@ namespace EQLogParser
           }
           else if (count == total)
           {
-            if (combo.Items[0] is ComboBoxItemDetails { } selectAll2 && selectAll2.IsChecked == false)
+            if (combo.Items[0] is ComboBoxItemDetails { } selectAll2 && selectAll2.IsChecked is false)
             {
               selectAll2.IsChecked = true;
               updated.IsChecked = !updated.IsChecked;

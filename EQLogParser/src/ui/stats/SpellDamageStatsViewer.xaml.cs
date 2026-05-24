@@ -60,7 +60,7 @@ namespace EQLogParser
     {
       var selectedSpell = spellList.SelectedItem as string;
       var selectedPlayer = playerList.SelectedItem as string;
-      var isPlayerOnly = showPlayers.IsChecked == true;
+      var isPlayerOnly = showPlayers.IsChecked is true;
 
       _spells.Clear();
       _spells.Add("All Spells");
@@ -192,9 +192,9 @@ namespace EQLogParser
     {
       if (dataGrid is { View: not null })
       {
-        _currentType = typeList.SelectedIndex > 0 ? typeList.SelectedItem as string : null;
-        _currentSpell = spellList.SelectedIndex > 0 ? spellList.SelectedItem as string : null;
-        _currentPlayer = playerList.SelectedIndex > 0 ? playerList.SelectedItem as string : null;
+        _currentType = typeList.SelectedIndex > 0 && typeList.SelectedItem is string type ? type : null;
+        _currentSpell = spellList.SelectedIndex > 0 && spellList.SelectedItem is string spell ? spell : null;
+        _currentPlayer = playerList.SelectedIndex > 0 && playerList.SelectedItem is string player ? player : null;
         _currentShowPlayers = showPlayers.IsChecked == true;
 
         if (ReferenceEquals(sender, fightOption))

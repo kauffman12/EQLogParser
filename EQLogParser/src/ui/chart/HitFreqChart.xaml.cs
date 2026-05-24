@@ -228,7 +228,7 @@ namespace EQLogParser
 
           critTypeList.ItemsSource = playerCritTypes;
           critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-          UpdateSelectedHitTypes((critTypeList?.SelectedItem as string) == NonCritHittype);
+          UpdateSelectedHitTypes(critTypeList?.SelectedItem is string critType && critType == NonCritHittype);
           UserSelectionChanged();
         }
       }
@@ -236,7 +236,7 @@ namespace EQLogParser
 
     private void UpdateSelectedHitTypes(bool useNonCrit)
     {
-      var player = playerList?.SelectedItem as string;
+      var player = playerList?.SelectedItem as string ?? "";
       if (!string.IsNullOrEmpty(player) && _playerData.TryGetValue(player, out var data))
       {
         List<string> hitTypes;

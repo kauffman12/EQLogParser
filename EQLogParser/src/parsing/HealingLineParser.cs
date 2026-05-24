@@ -205,7 +205,7 @@ namespace EQLogParser
           return null;
 
         // fix healer
-        if (string.IsNullOrEmpty(healer) && spell?.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase) == true)
+        if (string.IsNullOrEmpty(healer) && spell?.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase) is true)
         {
           healer = Labels.Unk;
         }
@@ -225,9 +225,9 @@ namespace EQLogParser
         }
 
         // found a bst/mag/nec pet
-        if (spell?.StartsWith("Mend Companion", StringComparison.OrdinalIgnoreCase) == true ||
-          spell?.StartsWith("Warder's Shielding", StringComparison.OrdinalIgnoreCase) == true ||
-          spell?.StartsWith("Might of the Wild Spirits", StringComparison.OrdinalIgnoreCase) == true)
+        if (spell?.StartsWith("Mend Companion", StringComparison.OrdinalIgnoreCase) is true ||
+          spell?.StartsWith("Warder's Shielding", StringComparison.OrdinalIgnoreCase) is true ||
+          spell?.StartsWith("Might of the Wild Spirits", StringComparison.OrdinalIgnoreCase) is true)
         {
           if (PlayerRegistry.IsPossiblePlayerName(healer))
           {

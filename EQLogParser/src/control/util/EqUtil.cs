@@ -73,7 +73,7 @@ namespace EQLogParser
 
       try
       {
-        if (path?.StartsWith("eqsprite://", StringComparison.OrdinalIgnoreCase) == true)
+        if (path?.StartsWith("eqsprite://", StringComparison.OrdinalIgnoreCase) is true)
         {
           // Remove the scheme prefix and split on forward slashes
           var pathWithoutScheme = path["eqsprite://".Length..];

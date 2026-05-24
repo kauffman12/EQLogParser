@@ -177,7 +177,7 @@ namespace EQLogParser
 
     private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
     {
-      dataGrid.View.Filter = item => !(_currentShowBreaks == false && ((Fight)item).IsInactivity);
+      dataGrid.View.Filter = item => !(_currentShowBreaks is false && ((Fight)item).IsInactivity);
     }
 
     private static void RemoveFight(ObservableCollection<Fight> fights, string name)

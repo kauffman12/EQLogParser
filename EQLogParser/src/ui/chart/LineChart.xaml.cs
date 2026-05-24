@@ -557,7 +557,10 @@ namespace EQLogParser
           }
         }
 
-        UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data, titleLabel.Content as string));
+        if (titleLabel.Content is string title)
+        {
+          UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data, title));
+        }
       }
     }
 

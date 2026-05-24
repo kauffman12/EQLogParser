@@ -473,7 +473,7 @@ namespace EQLogParser
         _currentActedFilter = actedList.SelectedIndex == 0 ? null : actedList.SelectedItem as string;
         _currentActionFilter = actionList.SelectedIndex == 0 ? null : actionList.SelectedItem as string;
         _currentTypeFilter = typeList.SelectedIndex == 0 ? null : typeList.SelectedItem as string;
-        _currentShowPetsFilter = showPets.IsChecked == true;
+        _currentShowPetsFilter = showPets.IsChecked is true;
 
         var refresh = _currentGroupActionsFilter == groupHits.IsChecked == true;
         _currentGroupActionsFilter = groupHits.IsChecked == true;
