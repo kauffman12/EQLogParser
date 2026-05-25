@@ -112,13 +112,12 @@ namespace EQLogParser
 
     protected override async void OnExit(ExitEventArgs e)
     {
-      await TriggerManager.Instance.DisposeAsync();
-      await TriggerStateDB.Instance.Dispose();
-
-      AudioManager.Instance.Dispose();
-      AppCache.Dispose();
       LifecycleManager.Shutdown();
       ChatDB.Instance.Stop();
+      AudioManager.Instance.Dispose();
+      AppCache.Dispose();
+      await TriggerManager.Instance.DisposeAsync();
+      await TriggerStateDB.Instance.Dispose();
       base.OnExit(e);
     }
 
