@@ -129,7 +129,7 @@ namespace EQLogParserTest
     {
       string received = "not set";
       using var action = new DelayedAction<string>(TimeSpan.FromMilliseconds(50), v => received = v);
-      action.Invoke(null);
+      action.Invoke((string)null!);
       Thread.Sleep(100);
       Assert.IsNull(received);
     }

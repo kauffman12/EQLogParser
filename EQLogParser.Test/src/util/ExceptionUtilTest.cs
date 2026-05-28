@@ -18,7 +18,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Action_IOException_CatchesAndLogs()
     {
-      Exception caught = null;
+      Exception? caught = null;
       ExceptionUtil.CatchIoExceptions(
         () => throw new IOException("test"),
         ex => caught = ex);
@@ -28,7 +28,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Action_UnauthorizedAccessException_CatchesAndLogs()
     {
-      Exception caught = null;
+      Exception? caught = null;
       ExceptionUtil.CatchIoExceptions(
         () => throw new UnauthorizedAccessException("test"),
         ex => caught = ex);
@@ -168,7 +168,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchSecurityExceptions_Action_IOException_CatchesAndLogs()
     {
-      Exception caught = null;
+      Exception? caught = null;
       ExceptionUtil.CatchSecurityExceptions(
         () => throw new IOException("test"),
         ex => caught = ex);
@@ -178,7 +178,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchSecurityExceptions_Action_UnauthorizedAccessException_CatchesAndLogs()
     {
-      Exception caught = null;
+      Exception? caught = null;
       ExceptionUtil.CatchSecurityExceptions(
         () => throw new UnauthorizedAccessException("test"),
         ex => caught = ex);
@@ -204,7 +204,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchAllExceptions_Action_CatchesAllTypes()
     {
-      Exception caught = null;
+      Exception? caught = null;
       ExceptionUtil.CatchAllExceptions(
         () => throw new DivideByZeroException("math"),
         ex => caught = ex);

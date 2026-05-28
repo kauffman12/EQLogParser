@@ -111,7 +111,7 @@ namespace EQLogParserTest
       bool threw = false;
       try
       {
-        collection.AddRange((IEnumerable<int>)null);
+        collection.AddRange((IEnumerable<int>?)null);
       }
       catch (System.NullReferenceException)
       {

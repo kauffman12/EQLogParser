@@ -100,7 +100,7 @@ namespace EQLogParserTest
     public void Add_NullSegment_Ignored()
     {
       var range = new TimeRange();
-      range.Add((TimeSegment)null);
+      range.Add((TimeSegment?)null);
       Assert.AreEqual(0, range.TimeSegments.Count);
     }
 
@@ -164,7 +164,7 @@ namespace EQLogParserTest
     public void Add_NullList_NoOp()
     {
       var range = new TimeRange();
-      range.Add((List<TimeSegment>)null);
+      range.Add((List<TimeSegment>?)null);
       Assert.AreEqual(0, range.TimeSegments.Count);
     }
 

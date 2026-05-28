@@ -305,7 +305,7 @@ namespace EQLogParser
           }
 
           // this shouldn't be needed in the current implementation
-          if (BinarySearch(list, item => item.BeginTime.CompareTo(beginTime)) is var index)
+          if (CollectionUtil.BinarySearch(list, item => item.BeginTime.CompareTo(beginTime)) is var index)
           {
             if (index > -1)
             {
@@ -365,7 +365,7 @@ namespace EQLogParser
 
         if (reverse)
         {
-          var index = BinarySearch(listCopy, item => item.BeginTime.CompareTo(endTime));
+          var index = CollectionUtil.BinarySearch(listCopy, item => item.BeginTime.CompareTo(endTime));
           index = index < 0 ? Math.Min(~index, listCopy.Count - 1) : index;
           for (var i = index; i >= 0 && i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i--)
           {
@@ -377,7 +377,7 @@ namespace EQLogParser
         }
         else
         {
-          var index = BinarySearch(listCopy, item => item.BeginTime.CompareTo(beginTime));
+          var index = CollectionUtil.BinarySearch(listCopy, item => item.BeginTime.CompareTo(beginTime));
           index = index < 0 ? ~index : index;
           for (var i = index; i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i++)
           {
@@ -424,30 +424,7 @@ namespace EQLogParser
       }
     }
 
-    private static int BinarySearch<T>(IReadOnlyList<T> list, Func<T, int> comparer)
-    {
-      int low = 0, high = list.Count - 1;
 
-      while (low <= high)
-      {
-        var mid = low + ((high - low) / 2);
-        var comparison = comparer(list[mid]);
-
-        switch (comparison)
-        {
-          case 0:
-            return mid;
-          case < 0:
-            low = mid + 1;
-            break;
-          default:
-            high = mid - 1;
-            break;
-        }
-      }
-
-      return ~low;
-    }
 
     private class RecordList
     {
