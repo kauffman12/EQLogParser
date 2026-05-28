@@ -38,7 +38,7 @@ namespace EQLogParser
 
       if (ThirdPerson.Contains(name))
       {
-        return !string.IsNullOrEmpty(attacker) && attacker != "Rs" && attacker != "Unk"
+        return !string.IsNullOrEmpty(attacker) && attacker != Labels.Rs && attacker != Labels.Unk
           ? attacker
           : name;
       }

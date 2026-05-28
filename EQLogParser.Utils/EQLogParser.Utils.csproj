@@ -19,6 +19,7 @@
     <InternalsVisibleTo Include="EQLogParser" />
     <InternalsVisibleTo Include="EQLogParser.Test" />
     <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
 </Project>
