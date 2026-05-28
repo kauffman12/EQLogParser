@@ -8,6 +8,12 @@ using System.Runtime.CompilerServices;
 
 namespace EQLogParser
 {
+  /// <summary>
+  /// Marker interface for combat log action/event records.
+  /// Used for type filtering and polymorphism in the parsing and processing system.
+  /// </summary>
+  internal interface IAction;
+
   internal interface IDocumentContent
   {
     public void HideContent();

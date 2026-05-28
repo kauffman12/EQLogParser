@@ -26,7 +26,7 @@ namespace EQLogParser
       bool assassinateEnabled, bool baneEnabled, bool dsEnabled,
       bool finishingBlowEnabled, bool headshotEnabled, bool slayUndeadEnabled)
     {
-      if (IsAssassinate(modifiersMask) && !assassinateEnabled)
+      if (LineModifiersParser.IsAssassinate(modifiersMask) && !assassinateEnabled)
       {
         return false;
       }
@@ -41,17 +41,17 @@ namespace EQLogParser
         return false;
       }
 
-      if (IsFinishingBlow(modifiersMask) && !finishingBlowEnabled)
+      if (LineModifiersParser.IsFinishingBlow(modifiersMask) && !finishingBlowEnabled)
       {
         return false;
       }
 
-      if (IsHeadshot(modifiersMask) && !headshotEnabled)
+      if (LineModifiersParser.IsHeadshot(modifiersMask) && !headshotEnabled)
       {
         return false;
       }
 
-      if (IsSlayUndead(modifiersMask) && !slayUndeadEnabled)
+      if (LineModifiersParser.IsSlayUndead(modifiersMask) && !slayUndeadEnabled)
       {
         return false;
       }
@@ -69,7 +69,7 @@ namespace EQLogParser
         return false;
       }
 
-      if (IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
+      if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
       {
         return false;
       }
@@ -84,17 +84,17 @@ namespace EQLogParser
         return false;
       }
 
-      if (IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
+      if (LineModifiersParser.IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
       {
         return false;
       }
 
-      if (IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
+      if (LineModifiersParser.IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
       {
         return false;
       }
 
-      if (IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
+      if (LineModifiersParser.IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
       {
         return false;
       }
@@ -110,10 +110,5 @@ namespace EQLogParser
       return !_assassinateEnabled || !_baneEnabled || !_dsEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;
     }
 
-    // Bit-checking helpers (moved from LineModifiersParser to avoid circular dependency)
-    private static bool IsAssassinate(short mask) => mask > -1 && (mask & 64) != 0;
-    private static bool IsFinishingBlow(short mask) => mask > -1 && (mask & 2048) != 0;
-    private static bool IsHeadshot(short mask) => mask > -1 && (mask & 128) != 0;
-    private static bool IsSlayUndead(short mask) => mask > -1 && (mask & 256) != 0;
   }
 }
