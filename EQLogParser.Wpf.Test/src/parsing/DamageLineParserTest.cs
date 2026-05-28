@@ -6,7 +6,7 @@ namespace EQLogParser.Wpf.Test
   [TestClass]
   public class DamageLineParserTest
   {
-    private Mock<IEQDataStore>? _mockDataManager;
+    private EQDataStore? _dataStore;
     private Mock<IFightManager>? _mockFightManager;
 
     [TestInitialize]
@@ -14,21 +14,19 @@ namespace EQLogParser.Wpf.Test
     {
       ConfigUtil.PlayerName = "TestPlayer";
       AdpsTracker.Instance.Clear();
-      _mockDataManager = new Mock<IEQDataStore>();
-#pragma warning disable CS8603 // Possible null reference return.
-      _mockDataManager.Setup(m => m.GetDamagingSpellByName(It.IsAny<string>())).Returns((string name) => null);
-#pragma warning restore CS8603 // Possible null reference return.
-      _mockDataManager.Setup(m => m.IsOldSpell(It.IsAny<string>())).Returns(false);
-      _mockDataManager.Setup(m => m.AbbreviateSpellName(It.IsAny<string>())).Returns((string name) => name);
-#pragma warning disable CS8603 // Possible null reference return.
-      _mockDataManager.Setup(m => m.GetSpellByAbbrv(It.IsAny<string>())).Returns((string name) => null);
-#pragma warning restore CS8603 // Possible null reference return.
+
+      // Set current directory so EQDataStore can find data files (data/spells.txt, etc.)
+      Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+      // Create a fresh data store which loads from data files
+      _dataStore = new EQDataStore();
+      EQDataStore.Instance = _dataStore;
+
       _mockFightManager = new Mock<IFightManager>();
       _mockFightManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
 #pragma warning disable CS8603 // Possible null reference return.
       _mockFightManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
 #pragma warning restore CS8603 // Possible null reference return.
-      DamageLineParser.DataManager = _mockDataManager.Object;
       DamageLineParser.FightManager = _mockFightManager.Object;
     }
 
@@ -36,6 +34,7 @@ namespace EQLogParser.Wpf.Test
     public void Cleanup()
     {
       AdpsTracker.Instance.Clear();
+      _dataStore = null;
     }
 
     private static DamageRecord ParseAction(string action)

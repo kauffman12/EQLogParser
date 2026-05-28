@@ -61,21 +61,13 @@ namespace EQLogParser
     public const string Invulnerable = "Invulnerable";
   }
 
-  internal interface IEQDataStore
-  {
-    SpellData GetDamagingSpellByName(string name);
-    bool IsOldSpell(string name);
-    string AbbreviateSpellName(string spell);
-    SpellData GetSpellByAbbrv(string abbrv);
-  }
-
   internal class SpellAbbrvComparer : IEqualityComparer<SpellData>
   {
     public bool Equals(SpellData x, SpellData y) => x?.NameAbbrv == y?.NameAbbrv;
     public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
   }
 
-  internal class EQDataStore : IEQDataStore, ILifecycle
+  internal class EQDataStore : ILifecycle
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 

@@ -19,10 +19,8 @@ namespace EQLogParser
     private static double _slainTime = double.NaN;
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
-    internal static IEQDataStore DataManager;
     internal static IFightManager FightManager;
 
-    private static IEQDataStore DM => DataManager ?? EQLogParser.EQDataStore.Instance;
     private static IFightManager FM => FightManager ?? EQLogParser.FightManager.Instance;
 
     private static readonly List<string> ChestTypes =
@@ -456,7 +454,7 @@ namespace EQLogParser
         {
           var damage = ParserUtil.ParseUInt(split, extraIndex + 1);
           var spell = ParserUtil.JoinWords(split, fromDamage + 3, stop - fromDamage - 3);
-          var spellData = DM.GetDamagingSpellByName(spell);
+          var spellData = EQDataStore.Instance.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
           defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -572,11 +570,11 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(attacker) && !string.IsNullOrEmpty(spell))
         {
           string type;
-          var spellData = DM.GetDamagingSpellByName(spell);
+          var spellData = EQDataStore.Instance.GetDamagingSpellByName(spell);
 
           // Old (eqemu) if attacker is actually a spell then swap attacker and spell
           // Spells don't change on eqemu servers so this should always be a spell even with old spell data
-          if (spellData == null && DM.IsOldSpell(attacker))
+          if (spellData == null && EQDataStore.Instance.IsOldSpell(attacker))
           {
             // check that we can't find a spell where the player name is
             (attacker, spell) = (spell, attacker);
@@ -607,7 +605,7 @@ namespace EQLogParser
         }
 
         var label = Labels.OtherDmg;
-        if (DM.GetDamagingSpellByName(spell) is { } spellData)
+        if (EQDataStore.Instance.GetDamagingSpellByName(spell) is { } spellData)
         {
           resist = spellData.Resist;
 
@@ -1159,8 +1157,8 @@ namespace EQLogParser
         result = type;
         if (!string.IsNullOrEmpty(key))
         {
-          var spellName = DM.AbbreviateSpellName(name);
-          var data = DM.GetSpellByAbbrv(spellName);
+          var spellName = EQDataStore.Instance.AbbreviateSpellName(name);
+          var data = EQDataStore.Instance.GetSpellByAbbrv(spellName);
           if (data is not null)
           {
             if (data.Damaging == 2)
