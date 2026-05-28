@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -23,7 +22,7 @@ namespace EQLogParser
     /// <summary>
     /// Validates if the heal record should be processed based on current settings.
     /// Note: AOE detection requires EQDataStore lookup which is app-specific.
-    /// This overload handles basic validation (swarm pets, ignore records).
+    /// This overload handles basic validation (swarm pets only).
     /// </summary>
     public bool IsValid(double beginTime, HealRecord record, Dictionary<string, byte> ignoreRecords)
     {
@@ -38,11 +37,6 @@ namespace EQLogParser
         {
           return false;
         }
-      }
-
-      if (ignoreRecords != null && ignoreRecords.ContainsKey(record.SubType))
-      {
-        return false;
       }
 
       return true;
@@ -121,11 +115,6 @@ namespace EQLogParser
             }
           }
         }
-      }
-
-      if (ignoreRecords != null && ignoreRecords.ContainsKey(record.SubType))
-      {
-        return false;
       }
 
       return true;
