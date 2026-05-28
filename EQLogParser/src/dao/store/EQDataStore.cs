@@ -507,7 +507,7 @@ namespace EQLogParser
       SpellData spellData = null;
       if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
-        spellData = spellList.Find(item => item.Damaging < 0);
+        spellData = spellList.Find(item => item.Damaging <= 0);
       }
 
       return spellData;
