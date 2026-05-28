@@ -412,28 +412,6 @@ namespace EQLogParser
       return result;
     }
 
-    /// <summary>
-    /// Adds a spell directly to the store. Used by unit tests to seed test data.
-    /// </summary>
-    internal void AddSpell(SpellData spell)
-    {
-      if (spell is null) return;
-
-      if (_spellsNameDb.TryGetValue(spell.Name, out var list))
-      {
-        list.Add(spell);
-      }
-      else
-      {
-        _spellsNameDb[spell.Name] = [spell];
-      }
-
-      if (!_spellsAbbrvDb.ContainsKey(spell.NameAbbrv))
-      {
-        _spellsAbbrvDb[spell.NameAbbrv] = spell;
-      }
-    }
-
     internal string GetClassColor(string className)
     {
       if (!string.IsNullOrEmpty(className) && _classColors.TryGetValue(className, out var color))
@@ -507,7 +485,7 @@ namespace EQLogParser
       SpellData spellData = null;
       if (!string.IsNullOrEmpty(name) && name != Labels.UnkSpell && _spellsNameDb.TryGetValue(name, out var spellList))
       {
-        spellData = spellList.Find(item => item.Damaging <= 0);
+        spellData = spellList.Find(item => item.Damaging < 0);
       }
 
       return spellData;

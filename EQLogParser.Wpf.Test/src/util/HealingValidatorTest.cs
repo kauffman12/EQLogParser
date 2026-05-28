@@ -54,7 +54,7 @@ namespace EQLogParser.Wpf.Test
     public void IsValid_Full_AoeDisabled_RejectsTargetaeHeals()
     {
       var validator = new HealingValidator(false, true);
-      var heal = new HealRecord { Healer = "Cleric", Healed = "Player", Type = Labels.Heal, SubType = "Wake of Tranquility" };
+      var heal = new HealRecord { Healer = "Cleric", Healed = "Player", Type = Labels.Heal, SubType = "Blessing of Light" };
       Assert.IsFalse(validator.IsValid(0, heal, new(), new(), new()));
     }
 
@@ -62,7 +62,7 @@ namespace EQLogParser.Wpf.Test
     public void IsValid_Full_AoeDisabled_RejectsNearbyplayersaeHeals()
     {
       var validator = new HealingValidator(false, true);
-      var heal = new HealRecord { Healer = "Bard", Healed = "Player", Type = Labels.Heal, SubType = "Mass Elemental Transvergence" };
+      var heal = new HealRecord { Healer = "Bard", Healed = "Player", Type = Labels.Heal, SubType = "Erollisi's Chorus" };
       Assert.IsFalse(validator.IsValid(0, heal, new(), new(), new()));
     }
 
@@ -78,7 +78,7 @@ namespace EQLogParser.Wpf.Test
     public void IsValid_Full_AoeDisabled_RejectsCasterpbplayersHeals()
     {
       var validator = new HealingValidator(false, true);
-      var heal = new HealRecord { Healer = "Bard", Healed = "Player", Type = Labels.Heal, SubType = "Aura of Cleansing IV" };
+      var heal = new HealRecord { Healer = "Bard", Healed = "Player", Type = Labels.Heal, SubType = "Aura of Greater Restoration" };
       Assert.IsFalse(validator.IsValid(0, heal, new(), new(), new()));
     }
 
@@ -86,7 +86,7 @@ namespace EQLogParser.Wpf.Test
     public void IsValid_Full_AoeDisabled_AcceptsSingleTargetHeals()
     {
       var validator = new HealingValidator(false, true);
-      var heal = new HealRecord { Healer = "Cleric", Healed = "Player", Type = Labels.Heal, SubType = "Spirit of Persistence" };
+      var heal = new HealRecord { Healer = "Cleric", Healed = "Player", Type = Labels.Heal, SubType = "Ahnkaul's Mending" };
       Assert.IsTrue(validator.IsValid(0, heal, new(), new(), new()));
     }
 
