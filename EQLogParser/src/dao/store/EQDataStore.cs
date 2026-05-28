@@ -22,11 +22,6 @@ namespace EQLogParser
     Casterpbplayers = 36, Pet2 = 38, Nearbyplayersae = 40, Targetgroup = 41, Directionae = 42, Targetringae = 45
   }
 
-  internal enum SpellResist
-  {
-    Undefined = -2, Reflected = -1, Unresistable = 0, Magic, Fire, Cold, Poison, Disease, Lowest, Average, Physical, Corruption
-  }
-
   internal static class Labels
   {
     public const string Absorb = "Absorb";

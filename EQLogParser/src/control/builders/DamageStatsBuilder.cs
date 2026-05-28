@@ -210,7 +210,9 @@ namespace EQLogParser
         {
           var childrenStats = new Dictionary<string, Dictionary<string, PlayerStats>>();
           var topLevelStats = new Dictionary<string, PlayerStats>();
-          var damageValidator = new DamageValidator();
+          var damageValidator = new DamageValidator(
+            AppSettings.IsAssassinateDamageEnabled, AppSettings.IsBaneDamageEnabled, AppSettings.IsDamageShieldDamageEnabled,
+            AppSettings.IsFinishingBlowDamageEnabled, AppSettings.IsHeadshotDamageEnabled, AppSettings.IsSlayUndeadDamageEnabled);
           var individualStats = new Dictionary<string, PlayerStats>();
 
           // always start over

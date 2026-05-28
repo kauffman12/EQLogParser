@@ -5,7 +5,9 @@ namespace EQLogParser
 {
   internal class DamageGroupCollection : RecordGroupCollection
   {
-    private readonly DamageValidator _damageValidator = new();
+    private readonly DamageValidator _damageValidator = new(
+      AppSettings.IsAssassinateDamageEnabled, AppSettings.IsBaneDamageEnabled, AppSettings.IsDamageShieldDamageEnabled,
+      AppSettings.IsFinishingBlowDamageEnabled, AppSettings.IsHeadshotDamageEnabled, AppSettings.IsSlayUndeadDamageEnabled);
 
     internal DamageGroupCollection(List<List<ActionGroup>> recordGroups) : base(recordGroups)
     {

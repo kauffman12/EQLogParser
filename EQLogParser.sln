@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32519.379
@@ -15,7 +14,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Syncfusion.Themes.MaterialDarkCustom.WPF", "MaterialDarkCustom\Syncfusion.Themes.MaterialDarkCustom.WPF.csproj", "{69DD1083-3143-4CE1-95F8-8C5491B849CA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EQLogParser.Test", "EQLogParser.Test\EQLogParser.Test.csproj", "{66098053-1304-4A12-8F16-3AC568A4EC11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EQLogParser.Utils", "EQLogParser.Utils\EQLogParser.Utils.csproj", "{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EQLogParser.Test", "EQLogParser.Test\EQLogParser.Test.csproj", "{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EQLogParser.Wpf.Test", "EQLogParser.Wpf.Test\EQLogParser.Wpf.Test.csproj", "{66098053-1304-4A12-8F16-3AC568A4EC11}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackupUtil", "BackupUtil\BackupUtil.csproj", "{810F9C30-EBD1-44F7-B5CE-B0DB19429B11}"
 EndProject
@@ -51,6 +54,22 @@ Global
 		{69DD1083-3143-4CE1-95F8-8C5491B849CA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{69DD1083-3143-4CE1-95F8-8C5491B849CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{69DD1083-3143-4CE1-95F8-8C5491B849CA}.Release|x86.Build.0 = Release|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Debug|x86.Build.0 = Debug|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Release|x86.ActiveCfg = Release|Any CPU
+		{F1B9702F-D75C-4C1D-AA14-4358E24CBBCC}.Release|x86.Build.0 = Release|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Debug|x86.Build.0 = Debug|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Release|x86.ActiveCfg = Release|Any CPU
+		{0AACC8C3-8674-4E7F-ADC4-8E9DB2EC1DD3}.Release|x86.Build.0 = Release|Any CPU
 		{66098053-1304-4A12-8F16-3AC568A4EC11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{66098053-1304-4A12-8F16-3AC568A4EC11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66098053-1304-4A12-8F16-3AC568A4EC11}.Debug|x86.ActiveCfg = Debug|Any CPU

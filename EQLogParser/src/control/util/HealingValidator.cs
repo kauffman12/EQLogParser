@@ -1,18 +1,68 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
   internal class HealingValidator
   {
-    private readonly bool _aoeEnabled = AppSettings.IsAoEHealingEnabled;
-    private readonly bool _swarmPetsEnabled = AppSettings.IsHealingSwarmPetsEnabled;
+    private readonly bool _aoeEnabled;
+    private readonly bool _swarmPetsEnabled;
 
+    public HealingValidator()
+    {
+      _aoeEnabled = AppSettings.IsAoEHealingEnabled;
+      _swarmPetsEnabled = AppSettings.IsHealingSwarmPetsEnabled;
+    }
+
+    public HealingValidator(bool aoeEnabled, bool swarmPetsEnabled)
+    {
+      _aoeEnabled = aoeEnabled;
+      _swarmPetsEnabled = swarmPetsEnabled;
+    }
+
+    /// <summary>
+    /// Validates if the heal record should be processed based on current settings.
+    /// Note: AOE detection requires EQDataStore lookup which is app-specific.
+    /// This overload handles basic validation (swarm pets, ignore records).
+    /// </summary>
+    public bool IsValid(double beginTime, HealRecord record, Dictionary<string, byte> ignoreRecords)
+    {
+      if (record is null)
+      {
+        return false;
+      }
+
+      if (!_swarmPetsEnabled)
+      {
+        if (record.Healed?.EndsWith("`s pet") is true || record.Healed?.EndsWith("`s ward") is true)
+        {
+          return false;
+        }
+      }
+
+      if (ignoreRecords != null && ignoreRecords.ContainsKey(record.SubType))
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    /// <summary>
+    /// Full validation with AOE detection. Requires EQDataStore for spell lookups.
+    /// This is the app-specific overload that delegates to the main project's logic.
+    /// </summary>
     public bool IsValid(double beginTime, HealRecord record, Dictionary<string, HashSet<string>> currentSpellCounts,
       Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts, Dictionary<string, byte> ignoreRecords)
     {
+      if (record is null)
+      {
+        return false;
+      }
+
       if (!_swarmPetsEnabled)
       {
-        if (record?.Healed?.EndsWith("`s pet") is true || record?.Healed?.EndsWith("`s ward") is true)
+        if (record.Healed?.EndsWith("`s pet") is true || record.Healed?.EndsWith("`s ward") is true)
         {
           return false;
         }
@@ -22,7 +72,7 @@ namespace EQLogParser
       if (!_aoeEnabled)
       {
         SpellData spellData;
-        if (record?.SubType != null && (spellData = EQDataStore.Instance.GetHealingSpellByName(record.SubType)) != null)
+        if (record.SubType != null && (spellData = EQDataStore.Instance.GetHealingSpellByName(record.SubType)) != null)
         {
           if (spellData.Target is (byte)SpellTarget.Targetae or (byte)SpellTarget.Nearbyplayersae
               or (byte)SpellTarget.Targetringae or (byte)SpellTarget.Casterpbplayers)
@@ -73,9 +123,17 @@ namespace EQLogParser
         }
       }
 
+      if (ignoreRecords != null && ignoreRecords.ContainsKey(record.SubType))
+      {
+        return false;
+      }
+
       return true;
     }
 
+    /// <summary>
+    /// Checks if healing is limited (AOE or swarm pets disabled).
+    /// </summary>
     public bool IsHealingLimited()
     {
       return !_aoeEnabled || !_swarmPetsEnabled;

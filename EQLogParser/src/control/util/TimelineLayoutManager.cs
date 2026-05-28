@@ -22,27 +22,15 @@ namespace EQLogParser
 
     internal static void EnsureDirectoryExists()
     {
-      try
-      {
-        Directory.CreateDirectory(GetLayoutsDirectory());
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
+      ExceptionUtil.CatchIoExceptions(() => Directory.CreateDirectory(GetLayoutsDirectory()), Log.Error);
     }
 
     internal static List<string> GetLayoutNames()
     {
       EnsureDirectoryExists();
-      var names = new List<string>();
-
-      try
+      return ExceptionUtil.CatchIoExceptions(() =>
       {
+        var names = new List<string>();
         var dir = GetLayoutsDirectory();
         if (Directory.Exists(dir))
         {
@@ -54,63 +42,35 @@ namespace EQLogParser
           }
           names.Sort();
         }
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
-
-      return names;
+        return names;
+      }, new List<string>(), Log.Error);
     }
 
     internal static void SaveLayout(string name, TimelineLayout layout)
     {
-      try
-      {
-        EnsureDirectoryExists();
-        var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
-        var json = JsonSerializer.Serialize(layout, SerializerOptions);
-        File.WriteAllText(filePath, json);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-        throw;
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-        throw;
-      }
+      EnsureDirectoryExists();
+      var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
+      var json = JsonSerializer.Serialize(layout, SerializerOptions);
+      ExceptionUtil.CatchIoExceptions(() => File.WriteAllText(filePath, json), Log.Error, true);
     }
 
     internal static TimelineLayout LoadLayout(string name)
     {
+      var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
+      if (!File.Exists(filePath))
+      {
+        return null;
+      }
+
+      var json = ExceptionUtil.CatchIoExceptions(() => File.ReadAllText(filePath), null, Log.Error);
+      if (json == null)
+      {
+        return null;
+      }
+
       try
       {
-        var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
-        if (!File.Exists(filePath))
-        {
-          return null;
-        }
-
-        var json = File.ReadAllText(filePath);
-        var layout = JsonSerializer.Deserialize<TimelineLayout>(json);
-        return layout;
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-        return null;
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-        return null;
+        return JsonSerializer.Deserialize<TimelineLayout>(json);
       }
       catch (JsonException ex)
       {
@@ -121,35 +81,20 @@ namespace EQLogParser
 
     internal static void DeleteLayout(string name)
     {
-      try
+      var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
+      ExceptionUtil.CatchIoExceptions(() =>
       {
-        var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
         if (File.Exists(filePath))
         {
           File.Delete(filePath);
         }
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
+      }, Log.Error);
     }
 
     internal static bool LayoutExists(string name)
     {
-      try
-      {
-        var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
-        return File.Exists(filePath);
-      }
-      catch
-      {
-        return false;
-      }
+      var filePath = Path.Combine(GetLayoutsDirectory(), $"{name}{Extension}");
+      return ExceptionUtil.CatchIoExceptions(() => File.Exists(filePath), false);
     }
   }
 

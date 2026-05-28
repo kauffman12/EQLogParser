@@ -80,7 +80,7 @@ namespace EQLogParser
     public Dictionary<SpellResist, ResistCount> ByResist { get; set; } = new();
   }
 
-  internal interface IAction;
+
 
   internal class DataPoint
   {
@@ -220,44 +220,7 @@ namespace EQLogParser
     public Dictionary<string, int> Players { get; set; } = new(StringComparer.OrdinalIgnoreCase);
   }
 
-  public class HitRecord : IAction
-  {
-    public uint Total { get; set; }
-    public uint OverTotal { get; set; }
-    public string Type { get; set; }
-    public string SubType { get; set; }
-    public short ModifiersMask { get; set; }
-  }
 
-  internal class HealRecord : HitRecord
-  {
-    public string Healer { get; set; }
-    public string Healed { get; set; }
-  }
-
-  [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
-  internal class DamageRecord : HitRecord
-  {
-    public string Attacker { get; set; }
-    public string AttackerOwner { get; set; }
-    public string Defender { get; set; }
-    public string DefenderOwner { get; set; }
-    public bool AttackerIsSpell { get; set; }
-
-    public override bool Equals(object obj)
-    {
-      return obj is DamageRecord other && Attacker == other.Attacker && AttackerOwner == other.AttackerOwner && Defender == other.Defender &&
-        DefenderOwner == other.DefenderOwner && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total &&
-        OverTotal == other.OverTotal && Type == other.Type && SubType == other.SubType && ModifiersMask == other.ModifiersMask;
-    }
-
-    public override int GetHashCode()
-    {
-      var hash1 = HashCode.Combine(Attacker, AttackerOwner, Defender, DefenderOwner, AttackerIsSpell, Total);
-      var hash2 = HashCode.Combine(OverTotal, Type, SubType, ModifiersMask);
-      return HashCode.Combine(hash1, hash2);
-    }
-  }
 
   [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
   internal class LootRecord : IAction
@@ -331,65 +294,12 @@ namespace EQLogParser
     public string Zone { get; set; }
   }
 
-  internal class LineData
-  {
-    public string Action { get; set; }
-    public double BeginTime { get; set; }
-    public long LineNumber { get; set; }
-    public string[] Split { get; set; }
-  }
-
   internal class ActionGroup : TimedAction
   {
     public List<IAction> Actions { get; } = [];
   }
 
-  internal class Attempt
-  {
-    public uint Absorbs { get; set; }
-    public uint Blocks { get; set; }
-    public uint Dodges { get; set; }
-    public uint Misses { get; set; }
-    public uint Parries { get; set; }
-    public uint Invulnerable { get; set; }
-    public uint Max { get; set; }
-    public uint MaxPotentialHit { get; set; }
-    public uint Min { get; set; }
-    public uint BaneHits { get; set; }
-    public uint Hits { get; set; }
-    public uint AssHits { get; set; }
-    public uint CritHits { get; set; }
-    public uint DoubleBowHits { get; set; }
-    public uint FlurryHits { get; set; }
-    public uint BowHits { get; set; }
-    public uint HeadHits { get; set; }
-    public uint FinishingHits { get; set; }
-    public uint LuckyHits { get; set; }
-    public uint MeleeAttempts { get; set; }
-    public uint MeleeHits { get; set; }
-    public uint NonTwincastCritHits { get; set; }
-    public uint NonTwincastLuckyHits { get; set; }
-    public uint SpellHits { get; set; }
-    public uint StrikethroughHits { get; set; }
-    public uint RampageHits { get; set; }
-    public uint RegularMeleeHits { get; set; }
-    public uint RiposteHits { get; set; }
-    public uint SlayHits { get; set; }
-    public uint TwincastHits { get; set; }
-    public long Total { get; set; }
-    public long TotalAss { get; set; }
-    public long TotalCrit { get; set; }
-    public long TotalFinishing { get; set; }
-    public long TotalHead { get; set; }
-    public long TotalLucky { get; set; }
-    public long TotalNonTwincast { get; set; }
-    public long TotalNonTwincastCrit { get; set; }
-    public long TotalNonTwincastLucky { get; set; }
-    public long TotalRiposte { get; set; }
-    public long TotalSlay { get; set; }
-    public Dictionary<long, int> CritFreqValues { get; } = [];
-    public Dictionary<long, int> NonCritFreqValues { get; } = [];
-  }
+
 
   internal class Defender
   {
@@ -491,54 +401,7 @@ namespace EQLogParser
     public bool Interrupted { get; set; }
   }
 
-  internal class SpellData
-  {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string NameAbbrv { get; set; }
-    public ushort Duration { get; set; }
-    public ushort MaxHits { get; set; }
-    public bool IsBeneficial { get; set; }
-    public SpellResist Resist { get; set; }
-    public short Damaging { get; set; }
-    public byte Target { get; set; }
-    public ushort ClassMask { get; set; }
-    public byte Level { get; set; }
-    public bool HasAmbiguity { get; set; }
-    public string LandsOnYou { get; set; }
-    public string LandsOnOther { get; set; }
-    public bool SongWindow { get; set; }
-    public string WearOff { get; set; }
-    public byte Proc { get; set; }
-    public byte Adps { get; set; }
-    public byte Rank { get; set; }
-    public bool Mgb { get; set; }
-    public bool SeenRecently { get; set; }
-    public bool IsUnknown { get; set; }
-  }
 
-  internal class SpellCountData
-  {
-    public Dictionary<string, Dictionary<string, uint>> PlayerCastCounts { get; set; } = [];
-    public Dictionary<string, Dictionary<string, uint>> PlayerInterruptedCounts { get; set; } = [];
-    public Dictionary<string, Dictionary<string, uint>> PlayerReceivedCounts { get; set; } = [];
-    public Dictionary<string, uint> MaxCastCounts { get; set; } = [];
-    public Dictionary<string, uint> MaxReceivedCounts { get; set; } = [];
-    public Dictionary<string, SpellData> UniqueSpells { get; set; } = [];
-    public Dictionary<string, bool> UniquePlayers { get; set; } = [];
-  }
-
-  internal class SpellTreeNode
-  {
-    public List<SpellData> SpellData { get; set; } = [];
-    public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
-  }
-
-  internal class SpellTreeResult
-  {
-    public List<SpellData> SpellData { get; set; }
-    public int DataIndex { get; set; }
-  }
 
   internal class OverlayPlayerTotal
   {

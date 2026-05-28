@@ -7,6 +7,7 @@ using System.Runtime.Versioning;
 using System.Windows;
 
 [assembly: InternalsVisibleTo("EQLogParser.Test")]
+[assembly: InternalsVisibleTo("EQLogParser.Wpf.Test")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 // General Information about an assembly is controlled through the following

@@ -1,12 +1,9 @@
-using log4net;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
-using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -14,7 +11,6 @@ namespace EQLogParser
 {
   public static partial class FileUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex ArchivedFileNameRegex = TheArchivedFileNameRegex();
     private static readonly Regex ServerFileNameRegex = TheServerFileNameRegex();
 
@@ -49,11 +45,10 @@ namespace EQLogParser
       return null;
     }
 
-    internal static List<string> FindArchivedLogFiles(string player, string server, double start)
+    internal static List<string> FindArchivedLogFiles(string archiveFolder, string player, string server, double start)
     {
       var matchingFiles = new List<(string filePath, DateTime date)>();
 
-      var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
       if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
       {
         return [];
@@ -161,42 +156,18 @@ namespace EQLogParser
           f.Seek(pos, SeekOrigin.Begin);
           SetStartingPosition(f, time, left, right, good, count + 1);
         }
-        catch (IOException ioe)
+        catch (IOException ex)
         {
-          Log.Error("Problem searching log file", ioe);
+          ExceptionUtil.GlobalLogError?.Invoke(ex);
         }
-        catch (OutOfMemoryException ome)
+        catch (OutOfMemoryException)
         {
-          Log.Debug("Out of memory", ome);
+          // ignore - recursion will terminate naturally
         }
       }
       else if (f.Position != good)
       {
         f.Seek(good, SeekOrigin.Begin);
-      }
-    }
-
-    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
-    {
-      try
-      {
-        File.WriteAllLines(path, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (SecurityException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (ArgumentNullException ex)
-      {
-        Log.Error(ex);
       }
     }
 

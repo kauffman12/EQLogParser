@@ -624,7 +624,7 @@ namespace EQLogParser
 
         if (saveFileDialog.ShowDialog() == true)
         {
-          TextUtils.SaveHtml(saveFileDialog.FileName, tables);
+          HtmlExport.SaveHtml(saveFileDialog.FileName, tables);
         }
       }
       catch (IOException ex)

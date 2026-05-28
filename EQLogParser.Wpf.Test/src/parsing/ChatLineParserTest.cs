@@ -1,6 +1,6 @@
 using EQLogParser;
 
-namespace EQLogParserTest
+namespace EQLogParser.Wpf.Test
 {
   [TestClass]
   public class ChatLineParserTest

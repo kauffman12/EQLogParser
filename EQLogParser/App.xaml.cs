@@ -53,6 +53,10 @@ namespace EQLogParser
 
         InitializeLogging();
 
+        // Register global logging callbacks for utility code that cannot pass per-call loggers
+        ExceptionUtil.GlobalLogError = Log.Error;
+        ExceptionUtil.GlobalLogDebug = msg => Log.Debug(msg);
+
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           Log.Warn("Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");

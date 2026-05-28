@@ -2,21 +2,74 @@ namespace EQLogParser
 {
   internal class DamageValidator
   {
-    private readonly bool _assassinateEnabled = AppSettings.IsAssassinateDamageEnabled;
-    private readonly bool _baneEnabled = AppSettings.IsBaneDamageEnabled;
-    private readonly bool _dsEnabled = AppSettings.IsDamageShieldDamageEnabled;
-    private readonly bool _finishingBlowEnabled = AppSettings.IsFinishingBlowDamageEnabled;
-    private readonly bool _headshotEnabled = AppSettings.IsHeadshotDamageEnabled;
-    private readonly bool _slayUndeadEnabled = AppSettings.IsSlayUndeadDamageEnabled;
+    private readonly bool _assassinateEnabled;
+    private readonly bool _baneEnabled;
+    private readonly bool _dsEnabled;
+    private readonly bool _finishingBlowEnabled;
+    private readonly bool _headshotEnabled;
+    private readonly bool _slayUndeadEnabled;
 
-    // save this up front. we work with a constant state for their values
+    public DamageValidator(bool assassinateEnabled, bool baneEnabled, bool dsEnabled, bool finishingBlowEnabled, bool headshotEnabled, bool slayUndeadEnabled)
+    {
+      _assassinateEnabled = assassinateEnabled;
+      _baneEnabled = baneEnabled;
+      _dsEnabled = dsEnabled;
+      _finishingBlowEnabled = finishingBlowEnabled;
+      _headshotEnabled = headshotEnabled;
+      _slayUndeadEnabled = slayUndeadEnabled;
+    }
+
+    /// <summary>
+    /// Static helper to check if damage is valid for a specific type.
+    /// </summary>
+    internal static bool IsDamageValid(short modifiersMask, string type,
+      bool assassinateEnabled, bool baneEnabled, bool dsEnabled,
+      bool finishingBlowEnabled, bool headshotEnabled, bool slayUndeadEnabled)
+    {
+      if (IsAssassinate(modifiersMask) && !assassinateEnabled)
+      {
+        return false;
+      }
+
+      if (type == Labels.Bane && !baneEnabled)
+      {
+        return false;
+      }
+
+      if (type == Labels.Ds && !dsEnabled)
+      {
+        return false;
+      }
+
+      if (IsFinishingBlow(modifiersMask) && !finishingBlowEnabled)
+      {
+        return false;
+      }
+
+      if (IsHeadshot(modifiersMask) && !headshotEnabled)
+      {
+        return false;
+      }
+
+      if (IsSlayUndead(modifiersMask) && !slayUndeadEnabled)
+      {
+        return false;
+      }
+
+      return true;
+    }
 
     /// <summary>
     /// Validates if the damage record should be processed based on current settings.
     /// </summary>
-    public bool IsValid(DamageRecord record)
+    internal bool IsValid(DamageRecord record)
     {
-      if (LineModifiersParser.IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
+      if (record is null)
+      {
+        return false;
+      }
+
+      if (IsAssassinate(record.ModifiersMask) && !_assassinateEnabled)
       {
         return false;
       }
@@ -31,17 +84,17 @@ namespace EQLogParser
         return false;
       }
 
-      if (LineModifiersParser.IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
+      if (IsFinishingBlow(record.ModifiersMask) && !_finishingBlowEnabled)
       {
         return false;
       }
 
-      if (LineModifiersParser.IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
+      if (IsHeadshot(record.ModifiersMask) && !_headshotEnabled)
       {
         return false;
       }
 
-      if (LineModifiersParser.IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
+      if (IsSlayUndead(record.ModifiersMask) && !_slayUndeadEnabled)
       {
         return false;
       }
@@ -50,28 +103,17 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// Static version that takes settings as parameters for inlining at call sites.
-    /// Avoids allocating a DamageValidator instance per call.
+    /// Checks if damage validation is limited (any special damage type disabled).
     /// </summary>
-    internal static bool IsDamageValid(short modifiersMask, string type,
-      bool isAssEnabled, bool isBaneEnabled, bool isDsEnabled,
-      bool isFinishingEnabled, bool headshotEnabled, bool isSlayUndeadEnabled)
+    internal bool IsDamageLimited()
     {
-      if (LineModifiersParser.IsAssassinate(modifiersMask) && !isAssEnabled) return false;
-      if (type == Labels.Bane && !isBaneEnabled) return false;
-      if (type == Labels.Ds && !isDsEnabled) return false;
-      if (LineModifiersParser.IsFinishingBlow(modifiersMask) && !isFinishingEnabled) return false;
-      if (LineModifiersParser.IsHeadshot(modifiersMask) && !headshotEnabled) return false;
-      if (LineModifiersParser.IsSlayUndead(modifiersMask) && !isSlayUndeadEnabled) return false;
-      return true;
+      return !_assassinateEnabled || !_baneEnabled || !_dsEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;
     }
 
-    /// <summary>
-    /// Checks if any damage types are currently filtered out.
-    /// </summary>
-    public bool IsDamageLimited()
-    {
-      return !_dsEnabled || !_assassinateEnabled || !_baneEnabled || !_finishingBlowEnabled || !_headshotEnabled || !_slayUndeadEnabled;
-    }
+    // Bit-checking helpers (moved from LineModifiersParser to avoid circular dependency)
+    private static bool IsAssassinate(short mask) => mask > -1 && (mask & 64) != 0;
+    private static bool IsFinishingBlow(short mask) => mask > -1 && (mask & 2048) != 0;
+    private static bool IsHeadshot(short mask) => mask > -1 && (mask & 128) != 0;
+    private static bool IsSlayUndead(short mask) => mask > -1 && (mask & 256) != 0;
   }
 }

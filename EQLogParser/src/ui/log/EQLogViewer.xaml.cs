@@ -489,7 +489,7 @@ namespace EQLogParser
           {
             fileList.Add(current);
 
-            if (includeArchive.IsChecked == true && FileUtil.FindArchivedLogFiles(ConfigUtil.PlayerName, ConfigUtil.ServerName, start) is { } archiveFiles)
+            if (includeArchive.IsChecked == true && FileUtil.FindArchivedLogFiles(ConfigUtil.GetSetting("LogManagementArchiveFolder"), ConfigUtil.PlayerName, ConfigUtil.ServerName, start) is { } archiveFiles)
             {
               fileList.AddRange(archiveFiles);
             }
@@ -505,7 +505,7 @@ namespace EQLogParser
               fileList.Add(character.FilePath);
 
               if (includeArchive.IsChecked == true && FileUtil.ParseFileName(character.FilePath, out var player, out var server) &&
-                FileUtil.FindArchivedLogFiles(player, server, start) is { } archiveFiles)
+                FileUtil.FindArchivedLogFiles(ConfigUtil.GetSetting("LogManagementArchiveFolder"), player, server, start) is { } archiveFiles)
               {
                 fileList.AddRange(archiveFiles);
               }

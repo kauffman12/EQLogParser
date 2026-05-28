@@ -88,13 +88,9 @@ namespace EQLogParser
           GetSavedChannels(_currentPlayer).ForEach(channel => _channelCache[channel] = 1);
           GetPlayers(_currentPlayer).ForEach(channel => _playerCache[channel] = 1);
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ExceptionUtil.IsIoException(ex))
         {
           Log.Error(ex);
-        }
-        catch (UnauthorizedAccessException uax)
-        {
-          Log.Error(uax);
         }
       }
     }
@@ -115,18 +111,7 @@ namespace EQLogParser
       var dir = ConfigUtil.GetArchiveDir() + @"/" + player;
       if (Directory.Exists(dir))
       {
-        try
-        {
-          Directory.Delete(dir, true);
-        }
-        catch (IOException ex)
-        {
-          Log.Error(ex);
-        }
-        catch (UnauthorizedAccessException uax)
-        {
-          Log.Error(uax);
-        }
+        ExceptionUtil.CatchIoExceptions(() => Directory.Delete(dir, true), Log.Error);
       }
 
       if (string.Equals(player, _currentPlayer, StringComparison.OrdinalIgnoreCase))
@@ -143,13 +128,9 @@ namespace EQLogParser
             Directory.CreateDirectory(_playerDir);
           }
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ExceptionUtil.IsIoException(ex))
         {
           Log.Error(ex);
-        }
-        catch (UnauthorizedAccessException uax)
-        {
-          Log.Error(uax);
         }
       }
 
@@ -191,20 +172,12 @@ namespace EQLogParser
 
     internal static void SaveSelectedChannels(string playerAndServer, List<string> channels)
     {
-      try
+      ExceptionUtil.CatchIoExceptions(() =>
       {
         // create config dir if it doesn't exist
         Directory.CreateDirectory(ConfigUtil.GetArchiveDir() + playerAndServer);
         ConfigUtil.SaveList(ConfigUtil.GetArchiveDir() + playerAndServer + @"\" + SelectedChannelsFile, channels);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
+      }, Log.Error);
     }
 
     internal static async Task<ZipArchive> OpenArchiveAsync(string fileName, ZipArchiveMode mode)
@@ -507,13 +480,9 @@ namespace EQLogParser
             }
           }
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ExceptionUtil.IsIoException(ex) || ex is InvalidDataException)
         {
           Log.Error(ex);
-        }
-        catch (InvalidDataException ide)
-        {
-          Log.Error(ide);
         }
       }
     }

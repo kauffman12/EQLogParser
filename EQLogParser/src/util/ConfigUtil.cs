@@ -214,80 +214,36 @@ namespace EQLogParser
     internal static List<string> ReadList(string fileName)
     {
       var result = new List<string>();
-
-      try
+      ExceptionUtil.CatchSecurityExceptions(() =>
       {
         if (File.Exists(fileName))
         {
           result.AddRange(File.ReadAllLines(fileName));
         }
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
-
+      }, Log.Error);
       return result;
     }
 
     internal static string ReadConfigFile(string fileName)
     {
-      string result = null;
       var path = ConfigDir + fileName;
-
-      try
-      {
-        if (File.Exists(path))
-        {
-          result = File.ReadAllText(path);
-        }
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException uax)
-      {
-        Log.Error(uax);
-      }
-      catch (SecurityException se)
-      {
-        Log.Error(se);
-      }
-
-      return result;
+      return ExceptionUtil.CatchSecurityExceptions(() => File.Exists(path) ? File.ReadAllText(path) : null, null, Log.Error);
     }
 
     internal static void SaveList(string fileName, List<string> list)
     {
-      FileUtil.SafeWriteAllLines(fileName, list);
+      SafeWriteAllLines(fileName, list);
     }
 
     internal static void RemoveFileIfExists(string fileName)
     {
-      try
+      ExceptionUtil.CatchIoExceptions(() =>
       {
         if (File.Exists(fileName))
         {
           File.Delete(fileName);
         }
-      }
-      catch (IOException)
-      {
-        // ignore
-      }
-      catch (UnauthorizedAccessException)
-      {
-        // ignore
-      }
+      });
     }
 
     private static void LoadProperties(IDictionary<string, string> properties, List<string> list)
@@ -315,7 +271,31 @@ namespace EQLogParser
         lines.Add(keypair.Key + "=" + keypair.Value);
       }
 
-      FileUtil.SafeWriteAllLines(fileName, lines);
+      SafeWriteAllLines(fileName, lines);
+    }
+
+    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
+    {
+      try
+      {
+        File.WriteAllLines(path, lines);
+      }
+      catch (IOException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (UnauthorizedAccessException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (SecurityException ex)
+      {
+        Log.Error(ex);
+      }
+      catch (ArgumentNullException ex)
+      {
+        Log.Error(ex);
+      }
     }
   }
 }

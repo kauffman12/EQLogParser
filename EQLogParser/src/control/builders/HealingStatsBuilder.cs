@@ -83,7 +83,8 @@ namespace EQLogParser
           _selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
           _title = options?.Npcs.Count > 0 ? options.Npcs[0].Name : null;
 
-          var healingValidator = new HealingValidator();
+          var healingValidator = new HealingValidator(
+            AppSettings.IsAoEHealingEnabled, AppSettings.IsHealingSwarmPetsEnabled);
           _isLimited = healingValidator.IsHealingLimited();
 
           // rebuild of stats after turning off AOE healing, etc is more

@@ -38,7 +38,7 @@ namespace EQLogParser
 
       if (ThirdPerson.Contains(name))
       {
-        return !string.IsNullOrEmpty(attacker) && attacker != Labels.Rs && attacker != Labels.Unk
+        return !string.IsNullOrEmpty(attacker) && attacker != "Rs" && attacker != "Unk"
           ? attacker
           : name;
       }
@@ -79,9 +79,6 @@ namespace EQLogParser
     /// <summary>
     /// Updates the defender name: replaces "You"/"Your" with player name, or third-person with attacker.
     /// </summary>
-    /// <param name="defender">The current defender name</param>
-    /// <param name="attacker">The attacker name (used to replace third-person names)</param>
-    /// <returns>The updated defender name in uppercase</returns>
     internal static string UpdateDefender(string defender, string attacker)
     {
       defender = ReplacePlayer(defender, ConfigUtil.PlayerName, attacker);

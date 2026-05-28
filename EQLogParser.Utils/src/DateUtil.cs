@@ -1,14 +1,10 @@
-using log4net;
 using System;
 using System.Globalization;
-using System.Reflection;
 
 namespace EQLogParser
 {
   internal class DateUtil
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
     // counting this thing is really slow
     private string _lastDateTimeString;
     private double _lastDateTime;
@@ -313,7 +309,7 @@ namespace EQLogParser
 
       if (double.IsNaN(result))
       {
-        Log.Debug("Invalid Date: " + timeString);
+        ExceptionUtil.GlobalLogDebug?.Invoke("Invalid Date: " + timeString);
       }
 
       return result;

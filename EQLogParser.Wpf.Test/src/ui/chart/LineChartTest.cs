@@ -1,7 +1,7 @@
 using EQLogParser;
 using System.Reflection;
 
-namespace EQLogParserTest
+namespace EQLogParser.Wpf.Test
 {
   [TestClass]
   public class LineChartTest

@@ -80,7 +80,7 @@ namespace EQLogParser
           }
         }
 
-        if (PreLineParser.NeedProcessing(lineData))
+        if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, PlayerRegistry.Instance.AddMerc))
         {
           // may as well split once if most things use it
           lineData.Split = lineData.Action.Split(' ');
