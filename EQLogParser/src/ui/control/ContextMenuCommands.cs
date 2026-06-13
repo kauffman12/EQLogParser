@@ -126,7 +126,7 @@ namespace EQLogParser
     {
       if (obj is SfTreeGrid { } treeGrid)
       {
-        treeGrid.ExpandAllNodes(0);
+        treeGrid.ExpandAllNodes(-1);
       }
     }
 
