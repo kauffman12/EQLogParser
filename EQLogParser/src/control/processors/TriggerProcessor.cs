@@ -1589,8 +1589,9 @@ namespace EQLogParser
           {
             if (match.Groups.Count == 2)
             {
-              // This regex pattern matches time in the formats hh:mm:ss, mm:ss, or ss
-              var timePattern = @"(?<" + match.Groups[1].Value + @">(?:\d+[:]?){1,3})";
+              // This regex pattern matches time in the formats dd:hh:mm:ss, hh:mm:ss, mm:ss, ss
+              // Also supports labeled formats like 5d:10h:20m:40s, 4h:20m:53s, 20m:53s, 40s
+              var timePattern = @"(?<" + match.Groups[1].Value + @">(?:\d+[dhms]?:?){1,4})";
               pattern = pattern.Replace(match.Value, timePattern);
             }
           }

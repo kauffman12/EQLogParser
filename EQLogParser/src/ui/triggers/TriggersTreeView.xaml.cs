@@ -348,10 +348,17 @@ namespace EQLogParser
 
     private static IEnumerable<TriggerTreeViewNode> FindNodesByName(SfTreeView treeView, TriggerTreeViewNode node, string name)
     {
+      var trigger = node.SerializedData?.TriggerData;
       if (node.SerializedData?.Name?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
-          node.SerializedData?.TriggerData?.Pattern?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)
+          trigger?.Pattern?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.PreviousPattern?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.EndEarlyPattern?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.EndEarlyPattern2?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.EndEarlyPattern3?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.AltTimerName?.Contains(name, StringComparison.OrdinalIgnoreCase) == true ||
+          trigger?.Comments?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)
       {
-        // Yield the current node if its name contains the search term
+        // Yield the current node if any searchable field contains the search term
         yield return node;
       }
 

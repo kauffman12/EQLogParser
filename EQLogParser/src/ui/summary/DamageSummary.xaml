@@ -192,10 +192,22 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}" 
+          <MenuItem InputGestureText="Ctrl+A" Header="Select All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.SelectAll}}"
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Expand All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.ExpandAll}}"
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_AngleDoubleRight" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Collapse All" Command="{Binding Source={x:Static Member=local:ContextMenuCommands.CollapseAll}}"
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_AngleDoubleLeft" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
