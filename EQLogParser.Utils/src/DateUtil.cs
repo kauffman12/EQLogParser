@@ -24,7 +24,9 @@ namespace EQLogParser
     {
       SecondsMs,     // ss.mmm (seconds and milliseconds)
       HMSCompact,    // mm:ss or hh:mm:ss (omits hours if zero)
-      HMSMsCompact  // mm:ss.mmm or hh:mm:ss.mmm (omits hours if zero)
+      HMSMsCompact,  // mm:ss.mmm or hh:mm:ss.mmm (omits hours if zero)
+      DHMSCompact,   // mm:ss or hh:mm:ss or dd:hh:mm:ss (omits leading zero units)
+      DHMSMsCompact  // mm:ss.mmm or hh:mm:ss.mmm or dd:hh:mm:ss.mmm (omits leading zero units)
     }
 
     internal static string FormatTicks(long ticks, TimeFormat format)
@@ -61,6 +63,37 @@ namespace EQLogParser
             return $"{hoursComplete:D2}:{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
           else
             return $"{minutesComplete:D2}:{secondsComplete:D2}.{millisecondsComplete:D3}";
+
+        case TimeFormat.DHMSCompact:
+          {
+            var totalSecs = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
+            var daysSecs = totalSecs / 86400;
+            var hoursSecs = (totalSecs % 86400) / 3600;
+            var minutesSecs = (totalSecs % 3600) / 60;
+            var secondsSecs = totalSecs % 60;
+
+            if (daysSecs > 0)
+              return $"{daysSecs:D2}:{hoursSecs:D2}:{minutesSecs:D2}:{secondsSecs:D2}";
+            if (hoursSecs > 0)
+              return $"{hoursSecs:D2}:{minutesSecs:D2}:{secondsSecs:D2}";
+            return $"{minutesSecs:D2}:{secondsSecs:D2}";
+          }
+
+        case TimeFormat.DHMSMsCompact:
+          {
+            var totalMs = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
+            var daysMs = totalMs / (86400 * 1000);
+            var hoursMs = (totalMs % (86400 * 1000)) / (3600 * 1000);
+            var minutesMs = (totalMs % (3600 * 1000)) / (60 * 1000);
+            var secondsMs = (totalMs % (60 * 1000)) / 1000;
+            var millisMs = totalMs % 1000;
+
+            if (daysMs > 0)
+              return $"{daysMs:D2}:{hoursMs:D2}:{minutesMs:D2}:{secondsMs:D2}.{millisMs:D3}";
+            if (hoursMs > 0)
+              return $"{hoursMs:D2}:{minutesMs:D2}:{secondsMs:D2}.{millisMs:D3}";
+            return $"{minutesMs:D2}:{secondsMs:D2}.{millisMs:D3}";
+          }
       }
 
       return string.Empty; // Unreachable due to exhaustive enum cases
