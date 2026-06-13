@@ -232,7 +232,7 @@ namespace EQLogParser
 
     internal static void SaveList(string fileName, List<string> list)
     {
-      SafeWriteAllLines(fileName, list);
+      ExceptionUtil.SafeWriteAllLines(fileName, list, Log.Error);
     }
 
     internal static void RemoveFileIfExists(string fileName)
@@ -271,31 +271,7 @@ namespace EQLogParser
         lines.Add(keypair.Key + "=" + keypair.Value);
       }
 
-      SafeWriteAllLines(fileName, lines);
-    }
-
-    internal static void SafeWriteAllLines(string path, IEnumerable<string> lines)
-    {
-      try
-      {
-        File.WriteAllLines(path, lines);
-      }
-      catch (IOException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (UnauthorizedAccessException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (SecurityException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (ArgumentNullException ex)
-      {
-        Log.Error(ex);
-      }
+      ExceptionUtil.SafeWriteAllLines(fileName, lines, Log.Error);
     }
   }
 }

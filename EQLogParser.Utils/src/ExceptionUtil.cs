@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Security;
 
 namespace EQLogParser
 {
@@ -171,5 +173,35 @@ namespace EQLogParser
     /// Checks if an exception is a file I/O related exception (IOException or UnauthorizedAccessException).
     /// </summary>
     public static bool IsIoException(Exception ex) => ex is IOException or UnauthorizedAccessException;
+
+    /// <summary>
+    /// Writes all lines to a file, catching common I/O, security, and argument exceptions.
+    /// </summary>
+    /// <param name="path">The file path to write to.</param>
+    /// <param name="lines">The lines to write.</param>
+    /// <param name="logError">Optional logger to call with caught exceptions. Pass null to silently ignore.</param>
+    public static void SafeWriteAllLines(string path, IEnumerable<string> lines, Action<Exception> logError = null)
+    {
+      try
+      {
+        File.WriteAllLines(path, lines);
+      }
+      catch (IOException ex)
+      {
+        logError?.Invoke(ex);
+      }
+      catch (UnauthorizedAccessException ex)
+      {
+        logError?.Invoke(ex);
+      }
+      catch (SecurityException ex)
+      {
+        logError?.Invoke(ex);
+      }
+      catch (ArgumentNullException ex)
+      {
+        logError?.Invoke(ex);
+      }
+    }
   }
 }
