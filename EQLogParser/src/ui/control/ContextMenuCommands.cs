@@ -9,6 +9,8 @@ namespace EQLogParser
     private static BaseCommand _theCopyCommand;
     private static BaseCommand _theSelectAllCommand;
     private static BaseCommand _theUnselectAllCommand;
+    private static BaseCommand _theExpandAllCommand;
+    private static BaseCommand _theCollapseAllCommand;
 
     public static BaseCommand Copy
     {
@@ -104,6 +106,54 @@ namespace EQLogParser
       }
 
       return false;
+    }
+
+    public static BaseCommand ExpandAll
+    {
+      get
+      {
+        _theExpandAllCommand ??= new BaseCommand(OnExpandAllClicked, CanExpandAll);
+        return _theExpandAllCommand;
+      }
+    }
+
+    private static bool CanExpandAll(object obj)
+    {
+      return obj is SfTreeGrid { View.Nodes.Count: > 0 };
+    }
+
+    private static void OnExpandAllClicked(object obj)
+    {
+      if (obj is SfTreeGrid { } treeGrid)
+      {
+        treeGrid.ExpandAllNodes(0);
+      }
+    }
+
+    public static BaseCommand CollapseAll
+    {
+      get
+      {
+        _theCollapseAllCommand ??= new BaseCommand(OnCollapseAllClicked, CanCollapseAll);
+        return _theCollapseAllCommand;
+      }
+    }
+
+    private static bool CanCollapseAll(object obj)
+    {
+      return obj is SfTreeGrid { View.Nodes.Count: > 0 };
+    }
+
+    private static void OnCollapseAllClicked(object obj)
+    {
+      if (obj is SfTreeGrid { } treeGrid)
+      {
+        var nodes = treeGrid.View.Nodes;
+        for (var i = 0; i < nodes.Count; i++)
+        {
+          treeGrid.CollapseNode(nodes[i]);
+        }
+      }
     }
   }
 }

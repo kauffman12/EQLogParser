@@ -114,14 +114,71 @@ namespace EQLogParser
         return 0;
       }
 
-      uint h = 0, m = 0, s = 0;
-
       var split = source.Split(':');
 
-      if (split.Length is 0 or > 3)
+      if (split.Length is 0 or > 4)
       {
         return 0;
       }
+
+      // Check if any segment has a label (d, h, m, s)
+      bool hasLabel = false;
+      foreach (var segment in split)
+      {
+        if (segment.Length > 0 && char.IsLetter(segment[^1]))
+        {
+          hasLabel = true;
+          break;
+        }
+      }
+
+      uint d = 0, h = 0, m = 0, s = 0;
+
+      if (hasLabel)
+      {
+        // Labeled format: 5d:10h:20m:40s, 4h:20m:53s, 20m:53s, 40s, etc.
+
+        foreach (var segment in split)
+        {
+          if (segment.Length == 0)
+          {
+            return 0;
+          }
+
+          var label = char.ToLower(segment[^1]);
+          var valueStr = segment.Length > 1 ? segment[..^1] : "0";
+          var value = TextUtils.ParseUInt(valueStr, uint.MaxValue);
+
+          if (value == uint.MaxValue)
+          {
+            return 0;
+          }
+
+          switch (label)
+          {
+            case 'd':
+              d = value;
+              break;
+            case 'h':
+              h = value;
+              break;
+            case 'm':
+              m = value;
+              if (m > 59) return 0;
+              break;
+            case 's':
+              s = value;
+              if (s > 59) return 0;
+              break;
+            default:
+              return 0;
+          }
+        }
+
+        return s + (m * 60) + (h * 3600) + (d * 86400);
+      }
+
+      // Unlabeled positional format: ss, mm:ss, hh:mm:ss, dd:hh:mm:ss
 
       if (split.Length == 1)
       {
@@ -148,9 +205,20 @@ namespace EQLogParser
           return 0;
         }
       }
+      else if (split.Length == 4)
+      {
+        d = TextUtils.ParseUInt(split[0], 0);
+        h = TextUtils.ParseUInt(split[1], 0);
+        m = TextUtils.ParseUInt(split[2], 0);
+        s = TextUtils.ParseUInt(split[3], 0);
 
-      // Convert to total seconds
-      return s + (m * 60) + (h * 60 * 60);
+        if (s > 59 || m > 59 || h > 23)
+        {
+          return 0;
+        }
+      }
+
+      return s + (m * 60) + (h * 3600) + (d * 86400);
     }
 
     // This doesn't currently get called so test if ever needed
