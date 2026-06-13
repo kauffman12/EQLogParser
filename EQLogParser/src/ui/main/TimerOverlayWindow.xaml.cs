@@ -954,7 +954,14 @@ namespace EQLogParser
 
     private string FormatTime(long ticks)
     {
-      var format = _showMillis ? DateUtil.TimeFormat.HMSMsCompact : DateUtil.TimeFormat.HMSCompact;
+      var showDays = ticks >= TimeSpan.TicksPerDay;
+      var format = (_showMillis, showDays) switch
+      {
+        (true, true) => DateUtil.TimeFormat.DHMSMsCompact,
+        (true, false) => DateUtil.TimeFormat.HMSMsCompact,
+        (false, true) => DateUtil.TimeFormat.DHMSCompact,
+        (false, false) => DateUtil.TimeFormat.HMSCompact
+      };
       return DateUtil.FormatTicks(ticks, format);
     }
 
