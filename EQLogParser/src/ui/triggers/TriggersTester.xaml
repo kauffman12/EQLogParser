@@ -24,6 +24,10 @@
     <syncfusion:EditControl x:Name="testTriggersBox" Grid.Row="1" IsAutoLineNumberAreaWidthEnabled="False" LineNumberAreaWidth="65" EnableIntellisense="False" IsTrackChangesEnabled="False" 
             ShowFindAndReplace="False" DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" ModifiedLineIndicatorBrush="Transparent" 
             ShowBlockIndicatorLine="False" ShowDefaultContextMenu="False" VerticalContentAlignment="Top" FontSize="{DynamicResource EQTitleSize}" BorderThickness="1" 
-            Text="[Fri Feb 03 20:27:50 2023] Paste lines from your log here and click Run Test."></syncfusion:EditControl>
+            Text="[Fri Feb 03 20:27:50 2023] Paste lines from your log here and click Run Test.">
+      <syncfusion:EditControl.ContextMenu>
+        <ContextMenu Visibility="Collapsed" />
+      </syncfusion:EditControl.ContextMenu>
+    </syncfusion:EditControl>
   </Grid>
 </UserControl>
