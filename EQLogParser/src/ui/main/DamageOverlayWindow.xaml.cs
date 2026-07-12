@@ -17,8 +17,6 @@ namespace EQLogParser
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private static readonly object StatsLock = new();
-    private static readonly SolidColorBrush ActiveBrush = UiUtil.GetBrush("#FE9C1E");
-    private static readonly SolidColorBrush InActiveBrush = UiUtil.GetBrush("#FFF");
     private static DamageOverlayStatsBuilder _statsBuilder = new();
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
@@ -46,13 +44,12 @@ namespace EQLogParser
     private string _savedSelectedClass;
     private string _savedProgressColor;
     private string _savedHighlightColor;
+    private DamageOverlayToolbarWindow _toolbarWindow;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
-      dpsButton.Foreground = ActiveBrush;
-      tankButton.Foreground = InActiveBrush;
       _preview = preview;
 
       if (reset)
@@ -148,9 +145,7 @@ namespace EQLogParser
       _savedStreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
       streamer.IsChecked = _savedStreamerMode;
 
-      _currentShowDps = ConfigUtil.IfSet("OverlayShowingDps");
-      dpsButton.Foreground = _currentShowDps ? ActiveBrush : InActiveBrush;
-      tankButton.Foreground = !_currentShowDps ? ActiveBrush : InActiveBrush;
+      _currentShowDps = ConfigUtil.IfSetOrElse("OverlayShowingDps", true);
 
       _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, false, DispatcherPriority.DataBind);
       _ready = true;
@@ -298,8 +293,8 @@ namespace EQLogParser
         damageContent.Visibility = Visibility.Collapsed;
         tankContent.Visibility = Visibility.Collapsed;
         controlPanel.Visibility = Visibility.Collapsed;
+        HideToolbarWindow();
         Visibility = Visibility.Collapsed;
-        thePopup.IsOpen = false;
 
         if (!FightManager.Instance.HasOverlayFights())
         {
@@ -388,7 +383,7 @@ namespace EQLogParser
       if (controlPanel.Visibility != Visibility.Visible)
       {
         controlPanel.Visibility = Visibility.Visible;
-        thePopup.IsOpen = true;
+        Dispatcher.BeginInvoke(ShowToolbarWindow, DispatcherPriority.Loaded);
       }
     }
 
@@ -900,6 +895,9 @@ namespace EQLogParser
       }
 
       UpdateMiniBars(miniBars.IsChecked == true);
+
+      _toolbarWindow?.UpdateFontSize(fontSize);
+      ScheduleToolbarPosition();
     }
 
     private void AdjustHeight()
@@ -931,16 +929,7 @@ namespace EQLogParser
           titleDamage.FontSize = 11;
           titleDPS.FontSize = 11;
           titleTime.FontSize = 11;
-          dpsButton.FontSize = 11;
-          tankButton.FontSize = 11;
-          configImage.Height = 11;
-          copyImage.Height = 11;
-          resetImage.Height = 11;
-          closeImage.Height = 10;
           controlPanel.Height = 27;
-          thePopup.Height = 25;
-          rect1.Height = 12;
-          rect2.Height = 12;
           break;
         case 12:
           Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
@@ -954,16 +943,7 @@ namespace EQLogParser
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
           titleTime.FontSize = 13;
-          dpsButton.FontSize = 13;
-          tankButton.FontSize = 13;
-          configImage.Height = 13;
-          copyImage.Height = 12;
-          resetImage.Height = 12;
-          closeImage.Height = 11;
           controlPanel.Height = 27;
-          thePopup.Height = 27;
-          rect1.Height = 14;
-          rect2.Height = 14;
           break;
         case 14:
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
@@ -977,16 +957,7 @@ namespace EQLogParser
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
           titleTime.FontSize = 15;
-          dpsButton.FontSize = 15;
-          tankButton.FontSize = 15;
-          configImage.Height = 14;
-          copyImage.Height = 13;
-          resetImage.Height = 13;
-          closeImage.Height = 12;
           controlPanel.Height = 29;
-          thePopup.Height = 29;
-          rect1.Height = 16;
-          rect2.Height = 16;
           break;
         case 16:
           Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
@@ -1000,16 +971,7 @@ namespace EQLogParser
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
           titleTime.FontSize = 17;
-          dpsButton.FontSize = 17;
-          tankButton.FontSize = 17;
-          configImage.Height = 15;
-          copyImage.Height = 14;
-          resetImage.Height = 14;
-          closeImage.Height = 13;
           controlPanel.Height = 31;
-          thePopup.Height = 31;
-          rect1.Height = 18;
-          rect2.Height = 18;
           break;
       }
     }
@@ -1021,6 +983,7 @@ namespace EQLogParser
         _updateTimer.Stop();
       }
 
+      HideToolbarWindow();
       Hide();
       MainActions.CloseDamageOverlay(true);
     }
@@ -1048,18 +1011,16 @@ namespace EQLogParser
 
     private void DpsClick(object sender, RoutedEventArgs e)
     {
-      dpsButton.Foreground = ActiveBrush;
-      tankButton.Foreground = InActiveBrush;
       _currentShowDps = true;
+      _toolbarWindow?.SetShowingDps(true);
       ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       UpdateTimerTick(null, null);
     }
 
     private void TankClick(object sender, RoutedEventArgs e)
     {
-      dpsButton.Foreground = InActiveBrush;
-      tankButton.Foreground = ActiveBrush;
       _currentShowDps = false;
+      _toolbarWindow?.SetShowingDps(false);
       ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       UpdateTimerTick(null, null);
     }
@@ -1083,6 +1044,8 @@ namespace EQLogParser
           DataChanged();
         }
       }
+
+      ScheduleToolbarPosition();
     }
 
     private void WindowClosing(object sender, CancelEventArgs e)
@@ -1090,12 +1053,13 @@ namespace EQLogParser
       _updateTimer?.Stop();
       damageContent.Children.Clear();
       tankContent.Children.Clear();
-    }
 
-    private void BorderSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      thePopup.VerticalOffset += 1;
-      thePopup.VerticalOffset -= 1;
+      if (_toolbarWindow is not null)
+      {
+        _toolbarWindow.Owner = null;
+        _toolbarWindow.Close();
+        _toolbarWindow = null;
+      }
     }
 
     private void DataChanged()
@@ -1117,6 +1081,99 @@ namespace EQLogParser
       }
     }
 
+    private void EnsureToolbarWindow()
+    {
+      if (_preview || _toolbarWindow is not null)
+      {
+        return;
+      }
+
+      _toolbarWindow = new DamageOverlayToolbarWindow { Owner = this };
+
+      _toolbarWindow.ConfigureRequested += (_, _) => ConfigureClick(null, null);
+      _toolbarWindow.CopyRequested += (_, _) => CopyClick(null, null);
+      _toolbarWindow.ResetRequested += (_, _) => FullResetClick(null, null);
+      _toolbarWindow.CloseRequested += (_, _) => CloseClick(null, null);
+      _toolbarWindow.DpsRequested += (_, _) => DpsClick(null, null);
+      _toolbarWindow.TankRequested += (_, _) => TankClick(null, null);
+
+      _toolbarWindow.SetShowingDps(_currentShowDps);
+      _toolbarWindow.UpdateFontSize(_savedFontSize);
+    }
+
+    private void ShowToolbarWindow()
+    {
+      if (_preview || controlPanel.Visibility != Visibility.Visible)
+      {
+        return;
+      }
+
+      EnsureToolbarWindow();
+
+      if (_toolbarWindow is null)
+      {
+        return;
+      }
+
+      if (!_toolbarWindow.IsVisible)
+      {
+        _toolbarWindow.Show();
+      }
+
+      ScheduleToolbarPosition();
+    }
+
+    private void HideToolbarWindow()
+    {
+      if (_toolbarWindow?.IsVisible == true)
+      {
+        _toolbarWindow.Hide();
+      }
+    }
+
+    private void PositionToolbarWindow()
+    {
+      if (_preview ||
+          _toolbarWindow is null ||
+          controlPanel.Visibility != Visibility.Visible ||
+          !IsVisible)
+      {
+        return;
+      }
+
+      if (PresentationSource.FromVisual(_toolbarWindow) is not HwndSource toolbarSource ||
+          toolbarSource.CompositionTarget == null)
+      {
+        return;
+      }
+
+      var screenPixels = controlPanel.PointToScreen(new Point(0, 0));
+
+      var screenDips =
+          toolbarSource.CompositionTarget.TransformFromDevice.Transform(screenPixels);
+
+      _toolbarWindow.Left = screenDips.X;
+      _toolbarWindow.Top = screenDips.Y;
+    }
+
+    private void ScheduleToolbarPosition()
+    {
+      if (_preview)
+      {
+        return;
+      }
+
+      // Background fires after layout + render are complete,
+      // ensuring both windows have settled to their final positions.
+      Dispatcher.BeginInvoke(PositionToolbarWindow, DispatcherPriority.Background);
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+      base.OnLocationChanged(e);
+      ScheduleToolbarPosition();
+    }
+
     // Possible workaround for data area passed to system call is too small
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -1127,11 +1184,11 @@ namespace EQLogParser
         source.AddHook(NativeMethods.BandAidHook); // Make sure this is hooked first. That ensures it runs last
         source.AddHook(NativeMethods.ProblemHook);
 
+        // set to layered and topmost by xaml
+        var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+
         if (!_preview)
         {
-          // set to layered and topmost by xaml
-          var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
-
           // Add transparency and layered styles
           exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExLayered | (int)NativeMethods.ExtendedWindowStyles.WsExTransparent;
 
@@ -1140,9 +1197,13 @@ namespace EQLogParser
             // tool window to not show up in alt-tab
             exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow;
           }
-
-          NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
         }
+        else
+        {
+          exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
+        }
+
+        NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
       }
     }
   }

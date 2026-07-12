@@ -249,13 +249,31 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
   <img src="img/show-spells.png" alt="Show All Spells">
 </div>
 
+## What is "Use EMU Server Parsing" and when should I enable it?
+1. The **Use EMU Server Parsing** option tells the parser which log format to expect
+    - Turn it **ON** if you are playing on an emulator server (P99, Project Quarm, etc.)
+    - Turn it **OFF** if you are playing on live servers (EverQuest, EverQuest Legends)
+2. Having this set incorrectly can cause a variety of issues:
+    - Spell damage not showing up in the DPS Summary
+    - DoT damage missing or under-reported
+    - Classes not being detected correctly
+    - Mob names showing incorrectly or pets confused with NPCs
+
 ## Why does unknown or spell names show in the DPS Summary?
 1. If a **DoT** is on an **NPC** and the player dies or zones it may stop reporting the player and say unknown instead
     - Check the damage breakdown for the **Unknown** player to get a better idea of the cause
     - Unknown is also included to make sure all damage is counted for the group or raid
 2. If a name of a spell is listed in the **DPS Summary** it may be for a similar reason
     - Sometimes if the spell is a proc or other effect related to a **DoT** where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare.
-3. Make sure **Use EMU Server Parsing** is turned off if you're playing on live.
+3. See the [What is Use EMU Server Parsing?](#what-is-use-emu-server-parsing-and-when-should-i-enable-it) FAQ entry below for more information.
+
+## Why don't the Damage Meter values match what I see when selecting fights in the DPS/Tanking Summary?
+1. The **Damage Meter** has a toolbar with two buttons: **DPS** and **Tank**
+    - **DPS** shows damage dealt by players (compare this to the **DPS Summary**)
+    - **Tank** shows damage absorbed by players while tanking (compare this to the **Tanking Summary**)
+2. Make sure the correct button is selected based on which summary you are comparing against
+    - The active button will be highlighted in orange, while the inactive one remains white
+3. If you're comparing to the **DPS Summary**, click the **DPS** button on the Damage Meter toolbar to ensure it is showing damage dealt and not tanking stats
 
 ## When using Trigger Log, I would like a quick way to edit the Trigger for the log entry.
 1. When you select a row in the **Trigger Log** it will select the trigger in the **Trigger Manager** as long as you have it open. If so, just switch back to that tab and check
@@ -265,6 +283,15 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
 <a style="margin-left: 30px;" href="img/trigger-selection.gif" target="_blank">
   <img src="img/trigger-selection.gif" alt="Select Trigger from Trigger Log" height="300">
 </a> 
+
+## My triggers work in the tester but not in-game (or nothing fires at all)
+1. Check that **EQ Chat Filters** are turned off in EverQuest itself
+    - In EQ go to **Options** → **Chat Settings** and look for filters related to DoT, spell, and combat messages
+    - If these filters are enabled, EQ will silently block those messages from being written to the log file before the parser ever sees them
+2. Make sure your trigger pattern exactly matches the actual in-game log line
+    - A common issue is that EQ uses a backtick character **`** instead of an apostrophe **'** in some messages
+    - Another common issue is that the test string is missing words from the actual log line
+    - Open the **Trigger Log** tab after playing and copy the exact log line to verify your pattern matches
 
 ## Why are my Overlays not showing or they use the wrong colors?
 1. Specify the Overlay in the Trigger settings or verify that **default** is checked in the Overlay.
@@ -286,15 +313,47 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
   <img src="img/character-colors.png" alt="Custom Colors in Character Settings" height="200">
 </a>
 
+## How do I get overlays to show in OBS?
+1. Enable **Stream Mode** in the overlay settings within EQLogParser
+    - Open the overlay configuration and check the **Stream Mode** checkbox
+2. In OBS, add a **Window Capture** source (not Game Capture)
+    - Set the **Capture Method** to **Windows 10 or newer** by right-clicking the source → Properties
+3. Select the correct window from the dropdown in OBS
+    - Choose the overlay window itself (e.g. "Damage Meter") and **not** the EverQuest window
+4. If the overlay still does not appear, make sure the trigger has actually fired to create the overlay window first
+
 ## When using one of the right-click Copy options or sending a Quick Share. Nothing is copied.
 1. Check the error log for the message below. If you see it then your anti-virus software is blocking access. You'll need to figure out how to add an exception for EQLogParser.exe. This seems to be common with ESET and you may want to look for the HIPS settings and see if you can add the exception there.
     - **ERROR EQLogParser.UiUtil - Failed to set Clipboard Text: OpenClipboard Failed (0x800401D0 (CLIPBRD_E_CANT_OPEN))**
 2. If you do not see an error and it is only happening with Send Parse to EQ. Keep in mind that Everquest has a limit on how many characters you can paste. If you open the Preview Parse window you'll see a count and warning if you copy too much.
 
 ## Why does my Charm Pet or Merc not show up correctly in the Summary table?
-1. The main reason for this is naming. The parser is not good at handling names that do not look like player names. Player names are all one word
-2. Charm pets are additionally difficult as there's no way to distinguish the pet from an npc and if you fight an npc with the same name it can't figure out what's going on
+1. The main reason for this is naming. The parser is not good at handling names that do not look like player names
+2. Charm pets are extra difficult as there's no way to distinguish the pet from npc if you fight an npc with the same name
 3. The name problem can be improved upon but it is complicated and something will be worked on in the future
+
+## A monster or boss has a wrong name, or my pet shows up as an NPC
+1. EverQuest does not tell the parser which names are players, pets, or NPCs so it has to guess based on context
+    - This can cause confusion when a pet shares a name with an NPC, or when multiple instances of a mob are present
+2. Check and clean the **Verified Players** and **Verified Pets** lists
+    - Open these windows from the **View** menu → **Windows**
+    - Remove any entries that don't make sense (e.g. boss names in the players list, or your pet in the wrong owner)
+3. After cleaning up the lists, reload the log file so the parser can re-evaluate
+4. If a specific mob is misidentified during a fight, right-click it and select **Set As Pet** or **Set As NPC** to correct it
+5. For damage shields, DoTs, and environmental effects showing as monsters in the DPS Summary, try unchecking the **Tanking** checkbox
+    - This hides objects that damage players but are not actively attacking back
+
+## How do I import a trigger package (.tgf.gz or .gtp)?
+1. Open the **Trigger Manager** window
+2. Right-click on the **Triggers** folder (or any sub-folder you want to import into)
+3. Select **Import** from the context menu
+4. In the file dialog, select the **.tgf.gz** or **.gtp** file and click **Open**
+    - The file dialog filters for supported formats, so make sure you have the correct file type selected in the dropdown
+5. Imported triggers will be highlighted to show they were recently added
+    - You can clear the highlighting by right-clicking and selecting **Clear Highlighting**
+6. Overlays are imported the same way but use the **Overlays** folder instead
+    - Overlay packages use the **.ogf.gz** extension
+7. Do no extract the **.tgf.gz** files onto your computer.
 
 # Feedback
 

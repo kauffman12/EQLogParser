@@ -43465,7 +43465,7 @@
 54715^Skyfall^255^0^0^0^2^0^1^0^0^0^0^0^0^1^0^A chunk of stone slams into the ground, shrapnel hits you.^^
 54716^Reactive Power^255^6^0^0^5^0^1^0^0^0^0^0^0^1^0^You are coated with power waiting to be activated.^^
 54717^Final Combination^255^0^0^0^8^0^1^0^0^0^0^0^0^1^0^Magical reagent touches the reactive power on you and explodes.^^
-54718^Stone's Shadow^255^0^0^0^5^0^0^0^0^0^0^0^0^1^0^You fall under the shadow of a falling stone.^^
+54718^Stone's Shadow^255^0^0^0^5^0^0^0^0^0^0^0^0^1^0^You fall under the shadow of a falling stone.^ falls under the shadow of a falling stone.^
 54719^Scorching Mana^255^0^0^0^5^0^1^0^0^0^0^0^0^1^0^The swirling magic of the storm burns you.^^The burning magic wanes.
 5472^Elemental Aura^66^1800^1^0^6^4096^0^0^0^0^4^0^0^0^0^You are wrapped in an elemental aura.^ is wrapped in an elemental aura.^The elemental aura fades.
 54720^Ensorcelled Voice^255^0^0^0^5^0^0^0^0^0^0^0^0^1^0^Swirling magic strangles your voice and mind.^^
@@ -43721,6 +43721,7 @@
 54987^Bite of the Shissar Poison^255^40^1^60^6^0^0^0^0^0^0^0^0^1^1^You poison your weapon with Bite of the Shissar Poison.^ poisons their weapon.^The Bite of the Shissar Poison wears off your weapon.
 54988^Bite of the Shissar Poison Strike^255^0^0^0^5^0^1^0^4^0^0^0^0^0^1^^ is afflicted by poison.^
 5499^Synapsis Spasm^66^75^0^0^5^8192^0^0^1^0^0^0^0^0^0^Your lose control of your muscles.^ loses control of their muscles.^You regain control of your muscles.
+54991^Summon Stone Hive Stinger Mount^255^7200^1^0^6^0^0^0^0^0^0^0^0^0^0^You summon a Stone Hive Stinger mount.^ summons a Stone Hive Stinger mount.^Your mount runs off into the distance.
 55^Cornucopia^21^0^1^0^6^4096^0^0^0^0^0^0^0^0^0^^^
 550^Circle of Karana^25^0^1^0^3^32^0^0^0^0^0^0^0^0^1^^ creates a mystic portal.^The portal shimmers and fades.
 5500^Ethereal Rune^66^720^1^0^6^8192^0^0^0^0^4^0^0^1^1^Gray runes surround your body.^ is surrounded by a shimmer of gray runes.^The shimmer of runes fades.
@@ -57867,9 +57868,9 @@
 70130^Aureate Covariance^125^3^0^6^5^4^0^0^1^1^0^0^1^1^1^You find yourself the subject of a holy alliance.^ is the subject of a holy alliance.^The holy alliance ends.
 70131^Aureate Covariance Rk. II^125^3^0^6^5^4^0^0^1^1^0^0^5^1^1^You find yourself the subject of a holy alliance.^ is the subject of a holy alliance.^The holy alliance ends.
 70132^Aureate Covariance Rk. III^125^3^0^6^5^4^0^0^1^1^0^0^10^1^1^You find yourself the subject of a holy alliance.^ is the subject of a holy alliance.^The holy alliance ends.
-70133^Aureate Convergence^255^0^0^0^5^4^1^0^1^0^0^0^0^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
-70134^Aureate Convergence II^255^0^0^0^5^4^1^0^1^0^0^0^0^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
-70135^Aureate Convergence III^255^0^0^0^5^4^1^0^1^0^0^0^0^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
+70133^Aureate Convergence^255^0^0^0^5^4^1^0^1^0^0^0^1^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
+70134^Aureate Convergence II^255^0^0^0^5^4^1^0^1^0^0^0^5^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
+70135^Aureate Convergence III^255^0^0^0^5^4^1^0^1^0^0^0^10^1^1^A wave of holy power cleanses you!^ is cleansed by a wave of holy power!^
 70136^Arrowflight^122^0^0^0^45^8^0^0^0^0^0^0^1^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
 70137^Arrowflight Rk. II^122^0^0^0^45^8^0^0^0^0^0^0^5^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
 70138^Arrowflight Rk. III^122^0^0^0^45^8^0^0^0^0^0^0^10^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
@@ -57895,13 +57896,13 @@
 70156^Fernstalker's Covariance^123^3^0^12^5^8^0^0^1^1^0^0^1^1^1^You are targeted by a wildstalker's covenant.^ is targeted by a wildstalker's covenant.^The wildstalker's covenant fades.
 70157^Fernstalker's Covariance Rk. II^123^3^0^12^5^8^0^0^1^1^0^0^5^1^1^You are targeted by a wildstalker's covenant.^ is targeted by a wildstalker's covenant.^The wildstalker's covenant fades.
 70158^Fernstalker's Covariance Rk. III^123^3^0^12^5^8^0^0^1^1^0^0^10^1^1^You are targeted by a wildstalker's covenant.^ is targeted by a wildstalker's covenant.^The wildstalker's covenant fades.
-70159^Convergence of Flame V Azia^255^0^0^0^5^8^1^0^2^0^0^0^0^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
+70159^Convergence of Flame V Azia^255^0^0^0^5^8^1^0^2^0^0^0^1^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
 7016^Whip Choke^255^5^0^0^5^0^1^0^6^0^0^0^0^0^0^You cannot breathe!^ is choked by a whip.^
-70160^Convergence of Flame V Beza^255^0^0^0^5^8^1^0^2^0^0^0^0^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
-70161^Convergence of Flame V Caza^255^0^0^0^5^8^1^0^2^0^0^0^0^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
-70162^Convergence of Ice V Azia^255^0^0^0^5^8^1^0^3^0^0^0^0^0^0^^^
-70163^Convergence of Ice V Beza^255^0^0^0^5^8^1^0^3^0^0^0^0^0^0^^^
-70164^Convergence of Ice V Caza^255^0^0^0^5^8^1^0^3^0^0^0^0^0^0^^^
+70160^Convergence of Flame V Beza^255^0^0^0^5^8^1^0^2^0^0^0^5^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
+70161^Convergence of Flame V Caza^255^0^0^0^5^8^1^0^2^0^0^0^10^1^1^You are burned by a covenant of fire and ice.^ is burned by a covenant of fire and ice.^
+70162^Convergence of Ice V Azia^255^0^0^0^5^8^1^0^3^0^0^0^1^0^0^^^
+70163^Convergence of Ice V Beza^255^0^0^0^5^8^1^0^3^0^0^0^5^0^0^^^
+70164^Convergence of Ice V Caza^255^0^0^0^5^8^1^0^3^0^0^0^10^0^0^^^
 70165^Concealed Shot^125^0^0^0^5^8^1^0^8^0^0^0^1^1^1^You are pierced by an arrow from an unseen attacker!^ is pierced by an arrow from an unseen attacker.^
 70166^Concealed Shot Rk. II^125^0^0^0^5^8^1^0^8^0^0^0^5^1^1^You are pierced by an arrow from an unseen attacker!^ is pierced by an arrow from an unseen attacker.^
 70167^Concealed Shot Rk. III^125^0^0^0^5^8^1^0^8^0^0^0^10^1^1^You are pierced by an arrow from an unseen attacker!^ is pierced by an arrow from an unseen attacker.^
@@ -57951,9 +57952,9 @@
 70211^Bloodletting Covariance^124^3^0^4^5^16^0^0^1^1^0^0^1^1^1^You become the target of a bloodletting covenant.^ becomes the target of a bloodletting covenant.^The covenant is no longer upon you.
 70212^Bloodletting Covariance Rk. II^124^3^0^4^5^16^0^0^1^1^0^0^5^1^1^You become the target of a bloodletting covenant.^ becomes the target of a bloodletting covenant.^The covenant is no longer upon you.
 70213^Bloodletting Covariance Rk. III^124^3^0^4^5^16^0^0^1^1^0^0^10^1^1^You become the target of a bloodletting covenant.^ becomes the target of a bloodletting covenant.^The covenant is no longer upon you.
-70214^Bloodletting Convergence V Azia^255^0^0^0^5^16^1^0^1^0^0^0^0^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
-70215^Bloodletting Convergence V Beza^255^0^0^0^5^16^1^0^1^0^0^0^0^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
-70216^Bloodletting Convergence V Caza^255^0^0^0^5^16^1^0^1^0^0^0^0^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
+70214^Bloodletting Convergence V Azia^255^0^0^0^5^16^1^0^1^0^0^0^1^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
+70215^Bloodletting Convergence V Beza^255^0^0^0^5^16^1^0^1^0^0^0^5^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
+70216^Bloodletting Convergence V Caza^255^0^0^0^5^16^1^0^1^0^0^0^10^1^1^The bloodletting covenant is resolved!^'s bloodletting covenant is resolved!^
 70217^Mycelid Assault^124^0^0^0^5^32^1^0^0^0^0^0^1^0^0^^^
 70218^Mycelid Assault Rk. II^124^0^0^0^5^32^1^0^0^0^0^0^5^0^0^^^
 70219^Mycelid Assault Rk. III^124^0^0^0^5^32^1^0^0^0^0^0^10^0^0^^^
@@ -58005,9 +58006,9 @@
 70260^Ferntender's Convergence^255^0^1^0^8^32^-1^0^0^0^0^0^1^1^1^The natural alliance is fulfilled!^'s natural alliance is fulfilled!^
 70261^Ferntender's Convergence II^255^0^1^0^8^32^-1^0^0^0^0^0^5^1^1^The natural alliance is fulfilled!^'s natural alliance is fulfilled!^
 70262^Ferntender's Convergence III^255^0^1^0^8^32^-1^0^0^0^0^0^10^1^1^The natural alliance is fulfilled!^'s natural alliance is fulfilled!^
-70263^Ferntender's Fury^255^12^1^8^5^32^0^0^1^0^0^0^0^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
-70264^Ferntender's Fury II^255^12^1^8^5^32^0^0^1^0^0^0^0^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
-70265^Ferntender's Fury III^255^12^1^8^5^32^0^0^1^0^0^0^0^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
+70263^Ferntender's Fury^255^12^1^8^5^32^0^0^1^0^0^0^1^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
+70264^Ferntender's Fury II^255^12^1^8^5^32^0^0^1^0^0^0^5^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
+70265^Ferntender's Fury III^255^12^1^8^5^32^0^0^1^0^0^0^10^1^1^You are cloaked in brambles.^ is cloaked in brambles.^The brambles fall away.
 70266^Ring of Hodstock^119^0^1^0^6^32^0^0^0^0^0^0^0^0^1^^ fades away.^
 70267^Circle of Hodstock^120^0^1^0^3^32^0^0^0^0^0^0^0^0^1^^ creates a shimmering portal.^The portal shimmers and fades.
 70268^Zephyr: Hodstock^120^0^1^0^5^32^0^0^0^0^0^0^0^0^1^^ fades away.^
@@ -58063,10 +58064,10 @@
 70315^Fatewalker's Soulstrike V Azia^255^0^0^0^5^0^1^0^1^0^0^0^1^1^1^Your soul is struck by a powerful firewalker.^'s soul is struck by a powerful firewalker.^
 70316^Fatewalker's Soulstrike V Beza^255^0^0^0^5^0^1^0^1^0^0^0^5^1^1^Your soul is struck by a powerful firewalker.^'s soul is struck by a powerful firewalker.^
 70317^Fatewalker's Soulstrike V Caza^255^0^0^0^5^0^1^0^1^0^0^0^10^1^1^Your soul is struck by a powerful firewalker.^'s soul is struck by a powerful firewalker.^
-70318^Fatewalker's Convergence V Azia^255^0^0^0^5^64^1^0^1^0^0^0^0^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
-70319^Fatewalker's Convergence V Beza^255^0^0^0^5^64^1^0^1^0^0^0^0^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
+70318^Fatewalker's Convergence V Azia^255^0^0^0^5^64^1^0^1^0^0^0^1^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
+70319^Fatewalker's Convergence V Beza^255^0^0^0^5^64^1^0^1^0^0^0^5^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
 7032^Seizure of Thought^255^0^0^0^8^0^0^0^7^0^0^0^0^1^0^Your mind goes blank.^ looks stunned and mystified.^
-70320^Fatewalker's Convergence V Caza^255^0^0^0^5^64^1^0^1^0^0^0^0^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
+70320^Fatewalker's Convergence V Caza^255^0^0^0^5^64^1^0^1^0^0^0^10^1^1^The firewalker's covenant is resolved!^'s firewalker's covenant is resolved!^
 70321^Fatewalker's Precision Strike^124^0^0^0^5^64^0^1^0^0^0^0^1^1^1^You are pierced by a shuriken.^ is pierced by a shuriken.^
 70322^Fatewalker's Precision Strike Rk. II^124^0^0^0^5^64^0^1^0^0^0^0^5^1^1^You are pierced by a shuriken.^ is pierced by a shuriken.^
 70323^Fatewalker's Precision Strike Rk. III^124^0^0^0^5^64^0^1^0^0^0^0^10^1^1^You are pierced by a shuriken.^ is pierced by a shuriken.^
@@ -58111,9 +58112,9 @@
 70359^Covariance of Sticks and Stones Rk. II^125^3^0^3^5^128^0^0^1^1^0^0^5^1^1^You are targeted by a covenant of sticks and stones.^ is targeted by a covenant of sticks and stones.^The covenant of sticks and stones fades away.
 7036^Cursed Thoughts^255^3^0^0^4^0^1^0^5^0^0^0^0^0^0^Your thoughts begin to erode your mind and body.^ begins to erode before your eyes.^You feel right again.
 70360^Covariance of Sticks and Stones Rk. III^125^3^0^3^5^128^0^0^1^1^0^0^10^1^1^You are targeted by a covenant of sticks and stones.^ is targeted by a covenant of sticks and stones.^The covenant of sticks and stones fades away.
-70361^Convergence of Broken Bones V Azia^255^0^0^0^5^128^1^0^1^0^0^0^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
-70362^Convergence of Broken Bones V Beza^255^0^0^0^5^128^1^0^1^0^0^0^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
-70363^Convergence of Broken Bones V Caza^255^0^0^0^5^128^1^0^1^0^0^0^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
+70361^Convergence of Broken Bones V Azia^255^0^0^0^5^128^1^0^1^0^0^0^1^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
+70362^Convergence of Broken Bones V Beza^255^0^0^0^5^128^1^0^1^0^0^0^5^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
+70363^Convergence of Broken Bones V Caza^255^0^0^0^5^128^1^0^1^0^0^0^10^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
 7037^Tentacled Fright^255^0^0^0^4^0^1^0^6^0^0^0^0^0^1^You feel your life drain.^ is drained of life.^
 70370^Reciprocal Weapons^121^0^1^0^6^256^0^1^0^0^0^0^0^0^0^^^
 70371^Reciprocal Weapon Trigger 1^250^0^1^0^6^256^0^1^0^0^0^0^1^0^0^^^
@@ -58135,13 +58136,13 @@
 70386^Poisonous Covariance^123^0^0^0^5^256^0^1^0^0^0^0^1^0^0^^^
 70387^Poisonous Covariance Rk. II^123^0^0^0^5^256^0^1^0^0^0^0^5^0^0^^^
 70388^Poisonous Covariance Rk. III^123^0^0^0^5^256^0^1^0^0^0^0^10^0^0^^^
-70389^Poisonous Covariance Effect^255^3^0^4^5^256^0^0^4^1^0^0^0^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
+70389^Poisonous Covariance Effect^255^3^0^4^5^256^0^0^4^1^0^0^1^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
 7039^Mastered Mind^255^0^0^0^4^0^1^0^1^0^0^0^0^0^0^Your thoughts are completely torn from you.^ looks completely blank.^
-70390^Poisonous Covariance Effect II^255^3^0^4^5^256^0^0^4^1^0^0^0^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
-70391^Poisonous Covariance Effect III^255^3^0^4^5^256^0^0^4^1^0^0^0^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
-70392^Poisonous Convergence V Azia^255^0^0^0^5^256^1^0^4^0^0^0^0^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
-70393^Poisonous Convergence V Beza^255^0^0^0^5^256^1^0^4^0^0^0^0^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
-70394^Poisonous Convergence V Caza^255^0^0^0^5^256^1^0^4^0^0^0^0^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
+70390^Poisonous Covariance Effect II^255^3^0^4^5^256^0^0^4^1^0^0^5^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
+70391^Poisonous Covariance Effect III^255^3^0^4^5^256^0^0^4^1^0^0^10^1^1^You become the subject of a poisonous covenant.^ is targeted by a poisonous covenant.^The poisonous covenant departs.
+70392^Poisonous Convergence V Azia^255^0^0^0^5^256^1^0^4^0^0^0^1^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
+70393^Poisonous Convergence V Beza^255^0^0^0^5^256^1^0^4^0^0^0^5^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
+70394^Poisonous Convergence V Caza^255^0^0^0^5^256^1^0^4^0^0^0^10^1^1^The poisonous covenant is resolved!^'s poisonous covenant is resolved!^
 70395^Invidious Puncture^124^0^0^0^5^256^0^1^0^0^0^0^1^1^1^You are punctured by an unseen attacker.^ is struck by an unseen attacker.^
 70396^Invidious Puncture Rk. II^124^0^0^0^5^256^0^1^0^0^0^0^5^1^1^You are punctured by an unseen attacker.^ is struck by an unseen attacker.^
 70397^Invidious Puncture Rk. III^124^0^0^0^5^256^0^1^0^0^0^0^10^1^1^You are punctured by an unseen attacker.^ is struck by an unseen attacker.^
@@ -58177,13 +58178,13 @@
 70423^Ancient Covariance^123^40^1^120^5^512^0^0^0^0^0^0^1^1^1^An ancient alliance forms over your spirit.^'s spirit is watched by an ancient alliance.^The ancient alliance leaves you.
 70424^Ancient Covariance Rk. II^123^40^1^120^5^512^0^0^0^0^0^0^5^1^1^An ancient alliance forms over your spirit.^'s spirit is watched by an ancient alliance.^The ancient alliance leaves you.
 70425^Ancient Covariance Rk. III^123^40^1^120^5^512^0^0^0^0^0^0^10^1^1^An ancient alliance forms over your spirit.^'s spirit is watched by an ancient alliance.^The ancient alliance leaves you.
-70426^Blessing of the Ancients III Azia^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^0^You are healed by an ancient alliance.^^
-70427^Blessing of the Ancients III Beza^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^0^You are healed by an ancient alliance.^^
-70428^Blessing of the Ancients III Caza^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^0^You are healed by an ancient alliance.^^
-70429^Blessed Convergence III Azia^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
+70426^Blessing of the Ancients III Azia^255^0^1^0^8^512^-1^0^0^0^0^0^1^1^0^You are healed by an ancient alliance.^^
+70427^Blessing of the Ancients III Beza^255^0^1^0^8^512^-1^0^0^0^0^0^5^1^0^You are healed by an ancient alliance.^^
+70428^Blessing of the Ancients III Caza^255^0^1^0^8^512^-1^0^0^0^0^0^10^1^0^You are healed by an ancient alliance.^^
+70429^Blessed Convergence III Azia^255^0^1^0^8^512^-1^0^0^0^0^0^1^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
 7043^Shiliskin Smite^255^0^0^0^5^0^1^0^4^0^0^0^0^0^0^You are pushed by an unstoppable force.^ is thrown by a powerful force.^
-70430^Blessed Convergence III Beza^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
-70431^Blessed Convergence III Caza^255^0^1^0^8^512^-1^0^0^0^0^0^0^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
+70430^Blessed Convergence III Beza^255^0^1^0^8^512^-1^0^0^0^0^0^5^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
+70431^Blessed Convergence III Caza^255^0^1^0^8^512^-1^0^0^0^0^0^10^1^1^An ancient alliance is fulminated!^ is healed by an ancient fulmination!^
 70438^Remote Sphere of Dissolution^124^0^1^0^45^1024^0^0^0^0^3^0^1^0^0^^^
 70439^Remote Sphere of Dissolution Rk. II^124^0^1^0^45^1024^0^0^0^0^3^0^5^0^0^^^
 7044^Wrenched Vitality^255^30^0^0^4^0^1^0^4^0^0^0^0^0^0^You feel bound to the shiliskin.^ feels bound to the shiliskin.^Your spirit has been freed.
@@ -58206,10 +58207,10 @@
 70455^Malevolent Covariance^122^3^0^4^5^1024^0^0^1^1^0^0^1^1^1^You become the target of a malevolent covenant.^ becomes the target of a malevolent covenant.^The malevolent covenant fades.
 70456^Malevolent Covariance Rk. II^122^3^0^4^5^1024^0^0^1^1^0^0^5^1^1^You become the target of a malevolent covenant.^ becomes the target of a malevolent covenant.^The malevolent covenant fades.
 70457^Malevolent Covariance Rk. III^122^3^0^4^5^1024^0^0^1^1^0^0^10^1^1^You become the target of a malevolent covenant.^ becomes the target of a malevolent covenant.^The malevolent covenant fades.
-70458^Malevolent Convergence V Azia^255^0^0^0^5^1024^1^0^4^0^0^0^0^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
-70459^Malevolent Convergence V Beza^255^0^0^0^5^1024^1^0^4^0^0^0^0^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
+70458^Malevolent Convergence V Azia^255^0^0^0^5^1024^1^0^4^0^0^0^1^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
+70459^Malevolent Convergence V Beza^255^0^0^0^5^1024^1^0^4^0^0^0^5^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
 7046^Death's Beckoning^255^0^0^0^13^0^1^0^5^0^0^0^0^0^0^You feel death beckoning to you.^ feels death's beckoning.^
-70460^Malevolent Convergence V Caza^255^0^0^0^5^1024^1^0^4^0^0^0^0^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
+70460^Malevolent Convergence V Caza^255^0^0^0^5^1024^1^0^4^0^0^0^10^1^1^Your malevolent covenant is resolved!^'s malevolent covenant is resolved.^
 70461^Self-Ignition^124^0^0^0^4^2048^1^0^2^0^0^0^1^1^1^You are burnt by a wizard's blast of self-destruction.^ is burnt by a wizard's blast of self-destruction.^
 70462^Self-Ignition Rk. II^124^0^0^0^4^2048^1^0^2^0^0^0^5^1^1^You are burnt by a wizard's blast of self-destruction.^ is burnt by a wizard's blast of self-destruction.^
 70463^Self-Ignition Rk. III^124^0^0^0^4^2048^1^0^2^0^0^0^10^1^1^You are burnt by a wizard's blast of self-destruction.^ is burnt by a wizard's blast of self-destruction.^
@@ -58245,9 +58246,9 @@
 70490^Frostbound Covariance^122^3^0^8^5^2048^0^0^3^1^0^0^1^1^1^You become the target of a frostbound covenant.^ becomes the target of a frostbound covenant.^The frostbound covenant fades.
 70491^Frostbound Covariance Rk. II^122^3^0^8^5^2048^0^0^3^1^0^0^5^1^1^You become the target of a frostbound covenant.^ becomes the target of a frostbound covenant.^The frostbound covenant fades.
 70492^Frostbound Covariance Rk. III^122^3^0^8^5^2048^0^0^3^1^0^0^10^1^1^You become the target of a frostbound covenant.^ becomes the target of a frostbound covenant.^The frostbound covenant fades.
-70493^Frostbound Convergence V Azia^255^0^0^0^5^2048^1^0^3^0^0^0^0^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
-70494^Frostbound Convergence V Beza^255^0^0^0^5^2048^1^0^3^0^0^0^0^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
-70495^Frostbound Convergence V Caza^255^0^0^0^5^2048^1^0^3^0^0^0^0^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
+70493^Frostbound Convergence V Azia^255^0^0^0^5^2048^1^0^3^0^0^0^1^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
+70494^Frostbound Convergence V Beza^255^0^0^0^5^2048^1^0^3^0^0^0^5^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
+70495^Frostbound Convergence V Caza^255^0^0^0^5^2048^1^0^3^0^0^0^10^1^1^Your frostbound covenant is resolved!^'s frostbound covenant is resolved.^
 70496^Hodstock Gate^119^0^1^0^6^2048^0^0^0^0^0^0^0^0^1^^ fades away.^
 70497^Hodstock Portal^120^0^1^0^3^2048^0^0^0^0^0^0^0^0^1^^ creates a shimmering portal.^The portal shimmers and fades.
 70498^Translocate: Hodstock^120^0^1^0^5^2048^0^0^0^0^0^0^0^0^1^^ fades away.^
@@ -58286,9 +58287,9 @@
 7053^Spirit's Calm^255^0^1^0^5^0^-1^0^6^0^0^0^0^0^0^^ is calmed by a divine grace.^
 70530^Firebound Covariance Rk. II^125^3^0^9^5^4096^0^0^2^1^0^0^5^1^1^You become the target of a firebound covenant.^ becomes the target of a firebound covenant.^The firebound covenant fades.
 70531^Firebound Covariance Rk. III^125^3^0^9^5^4096^0^0^2^1^0^0^10^1^1^You become the target of a firebound covenant.^ becomes the target of a firebound covenant.^The firebound covenant fades.
-70532^Firebound Convergence V Azia^255^0^0^0^5^4096^1^0^2^0^0^0^0^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
-70533^Firebound Convergence V Beza^255^0^0^0^5^4096^1^0^2^0^0^0^0^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
-70534^Firebound Convergence V Caza^255^0^0^0^5^4096^1^0^2^0^0^0^0^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
+70532^Firebound Convergence V Azia^255^0^0^0^5^4096^1^0^2^0^0^0^1^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
+70533^Firebound Convergence V Beza^255^0^0^0^5^4096^1^0^2^0^0^0^5^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
+70534^Firebound Convergence V Caza^255^0^0^0^5^4096^1^0^2^0^0^0^10^1^1^Your firebound covenant is resolved!^'s firebound covenant is resolved.^
 70535^Summon Molten Dacite Orb^125^0^1^0^6^4096^0^0^0^0^0^0^0^1^0^You summon an orb of burning metal.^^
 70536^Activate Molten Dacite Orb^255^0^0^0^5^0^0^0^2^0^0^0^0^0^0^^^
 70537^Grant Visor of Usira^122^0^1^0^5^4096^0^0^0^0^0^0^0^1^0^A visor appears in your hands.^^
@@ -58321,9 +58322,9 @@
 70561^Chromatic Covariance^123^3^0^6^5^8192^0^0^6^1^0^0^1^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 70562^Chromatic Covariance Rk. II^123^3^0^6^5^8192^0^0^6^1^0^0^5^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 70563^Chromatic Covariance Rk. III^123^3^0^6^5^8192^0^0^6^1^0^0^10^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
-70564^Chromatic Convergence V Azia^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
-70565^Chromatic Convergence V Beza^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
-70566^Chromatic Convergence V Caza^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
+70564^Chromatic Convergence V Azia^255^0^0^0^5^8192^1^0^6^0^0^0^1^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
+70565^Chromatic Convergence V Beza^255^0^0^0^5^8192^1^0^6^0^0^0^5^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
+70566^Chromatic Convergence V Caza^255^0^0^0^5^8192^1^0^6^0^0^0^10^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
 70567^Stupefier's Auspice^122^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 70568^Stupefier's Auspice Rk. II^122^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 70569^Stupefier's Auspice Rk. III^122^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
@@ -58349,9 +58350,9 @@
 70592^Venomous Covariance^123^3^0^4^5^16384^0^0^1^1^0^0^1^1^1^You are targeted by a venomous covenant.^ is targeted by a venomous covenant.^The venomous covenant fades.
 70593^Venomous Covariance Rk. II^123^3^0^4^5^16384^0^0^1^1^0^0^5^1^1^You are targeted by a venomous covenant.^ is targeted by a venomous covenant.^The venomous covenant fades.
 70594^Venomous Covariance Rk. III^123^3^0^4^5^16384^0^0^1^1^0^0^10^1^1^You are targeted by a venomous covenant.^ is targeted by a venomous covenant.^The venomous covenant fades.
-70595^Venomous Convergence V Azia^255^0^0^0^5^16384^1^0^4^0^0^0^0^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
-70596^Venomous Convergence V Beza^255^0^0^0^5^16384^1^0^4^0^0^0^0^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
-70597^Venomous Convergence V Caza^255^0^0^0^5^16384^1^0^4^0^0^0^0^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
+70595^Venomous Convergence V Azia^255^0^0^0^5^16384^1^0^4^0^0^0^1^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
+70596^Venomous Convergence V Beza^255^0^0^0^5^16384^1^0^4^0^0^0^5^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
+70597^Venomous Convergence V Caza^255^0^0^0^5^16384^1^0^4^0^0^0^10^1^1^The venomous covenant is resolved!^'s venomous covenant is resolved!^
 70598^Xanathan's Vindication^125^0^1^0^6^16384^0^1^0^0^0^0^1^0^0^^^
 70599^Xanathan's Vindication Rk. II^125^0^1^0^6^16384^0^1^0^0^0^0^5^0^0^^^
 706^Angstlich's Appalling Screech^26^2^0^0^4^128^0^0^1^0^0^0^0^1^1^Your mind snaps in terror.^ flees in terror.^You are no longer terrified.
@@ -58404,9 +58405,9 @@
 70641^Eviscerator's Bladestrike V Azia^255^0^0^0^5^0^1^0^1^0^0^0^1^1^1^You are struck by a mangler's blade.^ is struck by a mangler's blade.^
 70642^Eviscerator's Bladestrike V Beza^255^0^0^0^5^0^1^0^1^0^0^0^5^1^1^You are struck by a mangler's blade.^ is struck by a mangler's blade.^
 70643^Eviscerator's Bladestrike V Caza^255^0^0^0^5^0^1^0^1^0^0^0^10^1^1^You are struck by a mangler's blade.^ is struck by a mangler's blade.^
-70644^Eviscerator's Convergence V Azia^255^0^0^0^5^32768^1^0^1^0^0^0^0^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
-70645^Eviscerator's Convergence V Beza^255^0^0^0^5^32768^1^0^1^0^0^0^0^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
-70646^Eviscerator's Convergence V Caza^255^0^0^0^5^32768^1^0^1^0^0^0^0^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
+70644^Eviscerator's Convergence V Azia^255^0^0^0^5^32768^1^0^1^0^0^0^1^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
+70645^Eviscerator's Convergence V Beza^255^0^0^0^5^32768^1^0^1^0^0^0^5^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
+70646^Eviscerator's Convergence V Caza^255^0^0^0^5^32768^1^0^1^0^0^0^10^1^1^The mangler's covenant is resolved!^'s mangler's covenant is resolved!^
 7065^Spinning Health^255^4^1^0^5^0^-1^0^6^1^0^0^0^0^0^^ regains vitality as a web of health entwines around it.^
 7066^Master's Gift^255^0^1^0^3^0^-1^0^6^0^0^0^0^0^0^^ is healed by the gift of the master.^
 70665^Harmshield XIII^254^3^1^0^6^1040^-1^0^0^1^0^0^13^1^1^You no longer feel pain.^ no longer feels pain.^Your invulnerability fades.
@@ -61105,11 +61106,16 @@
 7321^Polluting Spores^255^5^0^0^4^0^1^0^5^0^0^0^0^0^0^Spores rain down, suffocating you.^ is suffocated by deadly spores.^The spores disperse.
 7322^Grease Fire^255^1^0^0^4^0^1^0^2^0^0^0^0^0^0^You flee as you are splashed by hot grease.^ is splashed by hot grease.^Your skin stops burning.
 73221^Summon Rehydrated Fountain Storm^255^0^1^0^6^0^0^0^0^0^0^0^0^1^1^You summon forth a magic storm.^ is joined by a familiar.^The magic storm fades away.
+73229^Summon Familiar: Cerulean Veilwing^255^0^1^0^6^0^0^0^0^0^0^0^0^1^1^Your familiar joins you.^ is joined by a familiar.^Your familiar flutters away.
 7323^Antraygus' Bellow^255^0^0^0^4^0^1^0^6^0^0^0^0^0^0^You are slammed by Antraygus' bellow.^ is slammed by Antraygus' bellow.^
+73230^Pet Illusion: Cerulean Veilwing^255^1200^1^0^38^0^0^0^0^0^0^0^0^1^0^You alter your pet.^^
+73231^Summon Cobalt Riding Dog^255^7200^1^0^6^0^0^0^0^0^0^0^0^0^0^You summon a cobalt riding dog.^ summons a cobalt riding dog.^Your cobalt riding dog runs off into the distance.
 7324^Will of the Council^255^50^0^0^4^0^0^0^1^0^0^0^0^0^0^You collapse under the will of the council.^ is under the will of the council.^The council's will has been broken.
 7325^Shiliskin Arrow^255^0^0^0^5^0^1^0^6^0^0^0^0^0^0^You are struck by a shiliskin arrow.^ is struck by a shiliskin arrow.^
 7326^Wrath of the Mother^255^150^0^0^33^0^1^0^3^0^0^0^0^0^0^You feel claws race across your soul.^ feels claws race across their soul.^The mother's wrath fades.
 7327^Twenty Lashes^255^0^0^0^5^0^1^0^1^0^0^0^0^0^0^You are lashed by a whip.^ is lashed by a whip.^
+73273^Illusion: Kronowick^255^1200^1^0^6^8192^0^0^0^0^0^0^0^1^1^You feel different.^'s image shimmers.^Your illusion fades.
+73274^Illusion: Kronowick^1^1200^1^0^6^8192^0^0^0^0^0^0^0^1^1^You feel different.^'s image shimmers.^Your illusion fades.
 7328^Corrupted Water^255^6^0^0^5^0^1^0^2^0^0^0^0^0^1^You are sprayed by a caustic liquid.^ is sprayed by a caustic liquid.^
 73286^Summon Familiar: Burdened Pack Pony^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^Your burdened familiar joins you.^ is joined by a burdened familiar.^Your burdened familiar departs.
 73287^Pet Illusion: Burdened Pack Pony^255^1200^1^0^38^0^0^0^0^0^0^0^0^1^0^You alter your pet.^^

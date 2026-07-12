@@ -1,5 +1,10 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.56 | 07/12/26
+1. Reworked the **Damage Meter** controls/menu to display properly on displays with varied DPI settings.
+2. Fixed for DPS not being the default in **Damage Meter**.
+3. Updated spell data.
+
 # 2.3.55 | 06/13/26
 1. Updated Trigger variable **{TS}** to support DZ time format: 3d:10h:00m:10s.
 2. Updated **Trigger Search** to include comments, timer name, and all of the pattern fields.

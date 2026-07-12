@@ -83,11 +83,15 @@ code {
 }
 
 .info-section h2 {
-  margin: 0.2em 0 0 0
+  margin: 0.1em 0 0 0
 }
 
-.info-section ul, p {
-  margin: 0.5rem 0 0 0
+.info-section p {
+  margin: 0
+}
+
+.info-section ul {
+  margin: 0.2rem 0 0 0
 }
 
 .layout {
