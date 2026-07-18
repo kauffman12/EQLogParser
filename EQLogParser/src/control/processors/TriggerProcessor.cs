@@ -44,8 +44,7 @@ namespace EQLogParser
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
     private readonly Dictionary<string, string> _variables = new();
-    private readonly Dictionary<string, long> _counterValues = new(StringComparer.OrdinalIgnoreCase);
-    private List<VariableAction> _counterResetPatterns = [];
+    private readonly Dictionary<string, double> _counterValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<TriggerLogItem> _triggerLogBuffer = [];
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
@@ -299,38 +298,6 @@ namespace EQLogParser
           {
             swTime += previousSwTime;
             await HandleTriggerAsync(wrapper, lineData, matches, previousMatches, dynamicDuration, swTime, beginTicks);
-          }
-        }
-
-        // Evaluate counter reset patterns (global per-line, independent of which trigger fired)
-        var actionLine = lineData.Action;
-        foreach (var va in _counterResetPatterns)
-        {
-          var patternMatched = false;
-          if (va.UseResetRegex)
-          {
-            try
-            {
-              patternMatched = System.Text.RegularExpressions.Regex.IsMatch(actionLine, va.ResetPattern,
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-            }
-            catch
-            {
-              // ignore bad regex patterns
-            }
-          }
-          else if (!string.IsNullOrEmpty(va.ResetPattern))
-          {
-            patternMatched = actionLine.IndexOf(va.ResetPattern, StringComparison.OrdinalIgnoreCase) >= 0;
-          }
-
-          if (patternMatched)
-          {
-            lock (_counterValues)
-            {
-              _counterValues[va.VariableName] = va.InitialValue;
-              _variables[va.VariableName] = va.InitialValue.ToString(CultureInfo.InvariantCulture);
-            }
           }
         }
 
@@ -1357,23 +1324,6 @@ namespace EQLogParser
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
 
-      // Collect counter reset patterns from all triggers
-      var resetPatterns = new List<VariableAction>();
-      foreach (var wrapper in activeTriggersById.Values)
-      {
-        if (wrapper.TriggerData?.VariableActions is { Count: > 0 } actions)
-        {
-          foreach (var va in actions)
-          {
-            if (va.DataType == VariableDataType.Counter && !string.IsNullOrEmpty(va.ResetPattern))
-            {
-              resetPatterns.Add(va);
-            }
-          }
-        }
-      }
-
-      _counterResetPatterns = resetPatterns;
       await SetActiveTriggersAsync(activeTriggersById, requiredOverlayIds);
       _ready = true;
     }
@@ -1394,20 +1344,24 @@ namespace EQLogParser
           {
             case VariableActionType.Set:
               {
-                if (!string.IsNullOrEmpty(va.ValueSource))
+                if (va.DataType == VariableDataType.Counter)
                 {
-                  // Resolve the value source through the same pipeline as display text
-                  var resolved = ProcessMatchesText(va.ValueSource, _variables);
+                  // Counter: increment by Step, starting from InitialValue if new
+                  var key = va.VariableName;
+                  if (!_counterValues.TryGetValue(key, out var current))
+                    current = va.InitialValue;
+                  current += va.Step;
+                  _counterValues[key] = current;
+                  _variables[key] = current.ToString(CultureInfo.InvariantCulture);
+                }
+                else if (!string.IsNullOrEmpty(va.Value))
+                {
+                  // Text: resolve the value through the same pipeline as display text
+                  var resolved = ProcessMatchesText(va.Value, _variables);
                   resolved = ProcessMatchesText(resolved, matches);
                   resolved = ProcessMatchesText(resolved, previousMatches);
                   resolved = ProcessLineCode(resolved, action);
                   _variables[va.VariableName] = resolved;
-
-                  // If this is a counter variable, also update the numeric store
-                  if (va.DataType == VariableDataType.Counter && long.TryParse(resolved, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numericValue))
-                  {
-                    _counterValues[va.VariableName] = numericValue;
-                  }
                 }
                 break;
               }
@@ -1416,44 +1370,6 @@ namespace EQLogParser
               {
                 _variables.Remove(va.VariableName);
                 _counterValues.Remove(va.VariableName);
-                break;
-              }
-
-            case VariableActionType.Increment when va.DataType == VariableDataType.Counter:
-              {
-                var key = va.VariableName;
-                if (!_counterValues.TryGetValue(key, out var current))
-                  current = va.InitialValue;
-                current += va.Step;
-                _counterValues[key] = current;
-                _variables[key] = current.ToString(CultureInfo.InvariantCulture);
-                break;
-              }
-
-            case VariableActionType.Decrement when va.DataType == VariableDataType.Counter:
-              {
-                var key = va.VariableName;
-                if (!_counterValues.TryGetValue(key, out var current))
-                  current = va.InitialValue;
-                current -= va.Step;
-                _counterValues[key] = current;
-                _variables[key] = current.ToString(CultureInfo.InvariantCulture);
-                break;
-              }
-
-            case VariableActionType.Reset:
-              {
-                var key = va.VariableName;
-                if (va.DataType == VariableDataType.Counter)
-                {
-                  _counterValues[key] = va.InitialValue;
-                  _variables[key] = va.InitialValue.ToString(CultureInfo.InvariantCulture);
-                }
-                else
-                {
-                  // For text variables, Reset clears the value
-                  _variables.Remove(key);
-                }
                 break;
               }
           }

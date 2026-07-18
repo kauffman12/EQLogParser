@@ -6,13 +6,13 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
+             xmlns:numberformat="clr-namespace:System.Globalization;assembly=mscorlib"
              Initialized="TriggersViewOnInitialized"
              Loaded="ContentLoaded"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-  <UserControl.Resources>
-    <local:SetActionToVisibilityConverter x:Key="SetActionToVisibilityConverter" />
-  </UserControl.Resources>
+  <UserControl.Resources />
+
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
@@ -230,8 +230,8 @@
                         <ColumnDefinition Width="*"/>
                       </Grid.ColumnDefinitions>
                       <fa:ImageAwesome Grid.Column="0" Icon="Solid_InfoCircle" Foreground="{DynamicResource EQMenuIconBrush}"
-                        VerticalAlignment="Center" Width="16" Height="16" Margin="0,0,8,0" />
-                      <TextBlock Grid.Column="1" Text="When this trigger is activated, the variables below are updated so other triggers can read their values as &#x7B;varName&#x7D;. Use Set to assign a value, Clear to remove it, or Increment/Decrement to maintain counters across multiple triggers."
+                        VerticalAlignment="Center" Width="16" Height="16" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1" Text="Variables let this trigger pass values to other triggers. Set a Variable Name, pick Set Value to store text or a counter, then Clear Value to remove it later. Counters auto-increment by the Step each time this trigger activates. Other triggers read these values using {$varName} in their Sound/Text, Display Text, or Timer fields."
                         TextWrapping="Wrap" VerticalAlignment="Center"
                         FontSize="{DynamicResource EQContentSizePlus}" />
                     </Grid>
@@ -259,11 +259,11 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <!-- #1: Each variable is a card with max width -->
+                      <!-- Each variable is a card with max width -->
                       <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="12" Margin="0,0,8,8" MinWidth="340" MaxWidth="680"
                               Loaded="VariableActionRowLoaded">
                         <StackPanel>
-                          <!-- #9: Visual variable syntax with decorative braces -->
+                          <!-- Visual variable syntax with decorative braces -->
                           <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="Variable Name" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
@@ -278,67 +278,56 @@
                             </Border>
                           </StackPanel>
 
-                          <!-- Action selector (prominent, top of card) -->
-                          <StackPanel Margin="0,0,0,8">
+                          <!-- Action selector -->
+                          <StackPanel Margin="0,2,0,8">
                             <TextBlock Text="Action" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <ComboBox x:Name="actionTypeCombo" />
                           </StackPanel>
 
-                          <!-- Type + Stored Value (visible when Action=Set) -->
-                          <StackPanel x:Name="valueSourcePanel" Visibility="Collapsed" Margin="0,0,0,8">
-                            <Grid>
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                              </Grid.ColumnDefinitions>
-
-                              <!-- Type selector -->
-                              <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                <TextBlock Text="Type" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <ComboBox x:Name="dataTypeCombo" Width="75" />
-                              </StackPanel>
-
-                              <!-- Stored Value -->
-                              <StackPanel Grid.Column="1">
-                                <TextBlock Text="Value to Set" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <ComboBox x:Name="valueSourceCombo" IsEditable="True" IsTextSearchEnabled="False"
-                                  Text="{Binding ValueSource, Mode=TwoWay}" />
-                              </StackPanel>
-                            </Grid>
+                          <!-- Type selector (visible when Action=Set) -->
+                          <StackPanel x:Name="typePanel" Visibility="Collapsed" Margin="0,2,0,8">
+                            <TextBlock Text="Type" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <ComboBox x:Name="dataTypeCombo" />
                           </StackPanel>
 
-                          <!-- Counter Fields (visible when Type=Counter) -->
-                          <StackPanel x:Name="counterFieldsPanel" Visibility="Collapsed" Margin="0,0,0,8">
+                          <!-- Value field (visible when Action=Set and Type=Text) -->
+                          <StackPanel x:Name="valuePanel" Visibility="Collapsed" Margin="0,2,0,8">
+                            <TextBlock x:Name="valueLabel" Text="Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <ComboBox x:Name="valueCombo" IsEditable="True" IsTextSearchEnabled="False"
+                              Text="{Binding Value, Mode=TwoWay}" />
+                          </StackPanel>
+
+                          <!-- Counter fields (visible when Action=Set and Type=Counter) -->
+                          <StackPanel x:Name="counterFieldsPanel" Visibility="Collapsed" Margin="0,2,0,8">
                             <Grid>
                               <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                               </Grid.ColumnDefinitions>
-                              <StackPanel Grid.Column="0" Margin="0,0,4,0">
-                                <TextBlock Text="Step" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <TextBox x:Name="stepBox" Text="{Binding Step, Mode=TwoWay}" />
-                              </StackPanel>
-                              <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                              <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                 <TextBlock Text="Initial Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <TextBox x:Name="initialValueBox" Text="{Binding InitialValue, Mode=TwoWay}" />
+                                <syncfusion:UpDown x:Name="initialValueBox" Value="{Binding InitialValue, Mode=TwoWay}"
+                                  MinValue="-999999" MaxValue="999999" Margin="0,3,0,0">
+                                  <syncfusion:UpDown.NumberFormatInfo>
+                                    <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                  </syncfusion:UpDown.NumberFormatInfo>
+                                </syncfusion:UpDown>
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                                <TextBlock Text="Step" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                                <syncfusion:UpDown x:Name="stepBox" Value="{Binding Step, Mode=TwoWay}"
+                                  MinValue="-999999" MaxValue="999999" Margin="0,3,0,0">
+                                  <syncfusion:UpDown.NumberFormatInfo>
+                                    <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                  </syncfusion:UpDown.NumberFormatInfo>
+                                </syncfusion:UpDown>
                               </StackPanel>
                             </Grid>
-                          </StackPanel>
-
-                          <!-- Reset Pattern (visible when Action=Increment/Decrement and Type=Counter) -->
-                          <StackPanel x:Name="resetPatternPanel" Visibility="Collapsed" Margin="0,0,0,0">
-                            <TextBlock Text="Reset Pattern" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
-                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <TextBlock Text="Counter resets when this text appears in any log line."
-                              FontSize="10" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"
-                              Margin="0,0,0,4" />
-                            <TextBox x:Name="resetPatternBox" Text="{Binding ResetPattern, Mode=TwoWay}" Margin="0,0,0,4" />
-                            <CheckBox x:Name="useResetRegexCheck" Content="Use Regex" IsChecked="{Binding UseResetRegex, Mode=TwoWay}" FontSize="{DynamicResource EQContentSize}" />
                           </StackPanel>
 
                           <!-- Remove button at bottom -->

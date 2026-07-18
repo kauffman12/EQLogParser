@@ -143,10 +143,7 @@ namespace EQLogParser
   internal enum VariableActionType
   {
     Set,
-    Clear,
-    Increment,
-    Decrement,
-    Reset
+    Clear
   }
 
   internal enum VariableDataType
@@ -160,15 +157,13 @@ namespace EQLogParser
     public VariableActionType ActionType { get; set; } = VariableActionType.Set;
     public VariableDataType DataType { get; set; } = VariableDataType.Text;
     public string VariableName { get; set; } = "";
-    // For Set: capture group ref like "{s1}", variable ref "{$varName}", or literal "hello"
-    // For Clear/Increment/Decrement/Reset: empty/null (not used)
-    public string ValueSource { get; set; } = "";
+
+    // For Text: capture group ref like "{s1}", variable ref "{$varName}", or literal text
+    public string Value { get; set; } = "";
 
     // Counter-only fields
-    public int Step { get; set; } = 1;
-    public long InitialValue { get; set; }
-    public string ResetPattern { get; set; } = "";
-    public bool UseResetRegex { get; set; }
+    public double Step { get; set; } = 1;
+    public double InitialValue { get; set; }
   }
 
   internal class Trigger

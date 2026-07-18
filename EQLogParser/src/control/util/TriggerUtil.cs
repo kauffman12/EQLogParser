@@ -119,11 +119,9 @@ namespace EQLogParser
           ActionType = va.ActionType,
           DataType = va.DataType,
           VariableName = va.VariableName,
-          ValueSource = va.ValueSource,
+          Value = va.Value,
           Step = va.Step,
-          InitialValue = va.InitialValue,
-          ResetPattern = va.ResetPattern,
-          UseResetRegex = va.UseResetRegex
+          InitialValue = va.InitialValue
         }).ToList();
 
         if (toTrigger is TriggerPropertyModel toModel)

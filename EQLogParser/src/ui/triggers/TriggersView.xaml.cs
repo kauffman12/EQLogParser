@@ -1,5 +1,6 @@
 ﻿using EQLogParser.Audio;
 using Syncfusion.Windows.PropertyGrid;
+using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -39,9 +40,9 @@ namespace EQLogParser
     private ObservableCollection<VariableAction> _variableActions = [];
 
     // Binding properties for Variable Actions tab
-    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear, VariableActionType.Increment, VariableActionType.Decrement, VariableActionType.Reset];
+    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear];
     // #3: Descriptive display names for actions
-    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value", "Increment Count", "Decrement Count", "Reset Count"];
+    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value"];
     internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
     internal ObservableCollection<string> CaptureGroups { get; } = [];
     internal ObservableCollection<VariableAction> VariableActions => _variableActions;
@@ -857,7 +858,7 @@ namespace EQLogParser
       var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel triggerModel)
       {
-        // Sync variable actions from UI to model before saving (filter out empty/dummy entries)
+        // Sync variable actions from UI to model before saving (filter out entries with no name)
         triggerModel.VariableActions = _variableActions
           .Where(va => !string.IsNullOrWhiteSpace(va.VariableName))
           .ToList();
@@ -1119,7 +1120,6 @@ namespace EQLogParser
       {
         var isCounter = va.DataType == VariableDataType.Counter;
         var isSet = va.ActionType == VariableActionType.Set;
-        var isIncOrDec = va.ActionType is VariableActionType.Increment or VariableActionType.Decrement;
 
         // Set brace text for variable name display (curly braces can't be literal in XAML)
         if (FindChild<TextBlock>(panel, "varBraceLeft") is TextBlock leftBrace)
@@ -1128,31 +1128,45 @@ namespace EQLogParser
           rightBrace.Text = "}";
 
         // Find all controls by name using recursive search
-        var valueSourcePanel = FindChild<StackPanel>(panel, "valueSourcePanel");
+        var typePanel = FindChild<StackPanel>(panel, "typePanel");
+        var valuePanel = FindChild<StackPanel>(panel, "valuePanel");
         var counterFieldsPanel = FindChild<StackPanel>(panel, "counterFieldsPanel");
-        var resetPatternPanel = FindChild<StackPanel>(panel, "resetPatternPanel");
         var actionTypeCombo = FindChild<ComboBox>(panel, "actionTypeCombo");
         var dataTypeCombo = FindChild<ComboBox>(panel, "dataTypeCombo");
-        var valueSourceCombo = FindChild<ComboBox>(panel, "valueSourceCombo");
+        var valueCombo = FindChild<ComboBox>(panel, "valueCombo");
+        var variableNameBox = FindChild<TextBox>(panel, "variableNameBox");
+        var valueLabel = FindChild<TextBlock>(panel, "valueLabel");
 
         // Set visibility for panels
-        if (valueSourcePanel is not null)
+        if (typePanel is not null)
         {
-          valueSourcePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+          typePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (valuePanel is not null)
+        {
+          valuePanel.Visibility = (isSet && !isCounter) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         if (counterFieldsPanel is not null)
         {
-          counterFieldsPanel.Visibility = (isCounter && (isSet || isIncOrDec)) ? Visibility.Visible : Visibility.Collapsed;
+          counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        if (resetPatternPanel is not null)
+        // Set initial value label text
+        if (valueLabel is not null)
         {
-          resetPatternPanel.Visibility = (isCounter && isIncOrDec) ? Visibility.Visible : Visibility.Collapsed;
+          valueLabel.Text = isCounter ? "Counter" : "Text Value";
+        }
+
+        // Variable name text box — mark dirty on change
+        if (variableNameBox is not null)
+        {
+          variableNameBox.TextChanged += (_, _) => EnableSaveCancel();
         }
 
         // Action type combo with descriptive labels, bound to enum via index
-        if (actionTypeCombo != null)
+        if (actionTypeCombo is not null)
         {
           actionTypeCombo.ItemsSource = ActionTypeLabels;
           actionTypeCombo.SelectedIndex = (int)va.ActionType;
@@ -1162,12 +1176,13 @@ namespace EQLogParser
             {
               va.ActionType = ActionTypes[actionTypeCombo.SelectedIndex];
             }
-            UpdateVariablePanelVisibility(va, valueSourcePanel, counterFieldsPanel, resetPatternPanel);
+            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, valueLabel);
+            EnableSaveCancel();
           };
         }
 
         // Data type combo
-        if (dataTypeCombo != null)
+        if (dataTypeCombo is not null)
         {
           dataTypeCombo.ItemsSource = DataTypes;
           dataTypeCombo.SelectedIndex = (int)va.DataType;
@@ -1177,44 +1192,72 @@ namespace EQLogParser
             {
               va.DataType = (VariableDataType)dataTypeCombo.SelectedIndex;
             }
-            UpdateVariablePanelVisibility(va, valueSourcePanel, counterFieldsPanel, resetPatternPanel);
+            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, valueLabel);
+            EnableSaveCancel();
           };
         }
 
-        // Value source combo (capture groups dropdown)
-        if (valueSourceCombo != null)
+        // Value combo (capture groups dropdown)
+        if (valueCombo is not null)
         {
-          valueSourceCombo.ItemsSource = CaptureGroups;
+          valueCombo.ItemsSource = CaptureGroups;
+          valueCombo.SelectionChanged += (_, _) => EnableSaveCancel();
+          // For editable ComboBox, use PreviewTextInput to catch typing
+          valueCombo.PreviewTextInput += (_, _) => EnableSaveCancel();
+        }
+
+        // Counter UpDown controls — mark dirty on value change
+        var initialValueBox = FindChild<UpDown>(panel, "initialValueBox");
+        var stepBox = FindChild<UpDown>(panel, "stepBox");
+
+        if (initialValueBox is not null)
+        {
+          initialValueBox.ValueChanged += (_, _) => EnableSaveCancel();
+        }
+
+        if (stepBox is not null)
+        {
+          stepBox.ValueChanged += (_, _) => EnableSaveCancel();
         }
       }
     }
 
-    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel valueSourcePanel, StackPanel counterFieldsPanel, StackPanel resetPatternPanel)
+    private void EnableSaveCancel()
+    {
+      saveButton.IsEnabled = true;
+      cancelButton.IsEnabled = true;
+    }
+
+    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel typePanel, StackPanel valuePanel, StackPanel counterFieldsPanel, TextBlock valueLabel)
     {
       var isCounter = va.DataType == VariableDataType.Counter;
       var isSet = va.ActionType == VariableActionType.Set;
-      var isIncOrDec = va.ActionType is VariableActionType.Increment or VariableActionType.Decrement;
 
-      if (valueSourcePanel is not null)
+      if (typePanel is not null)
       {
-        valueSourcePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+        typePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      if (valuePanel is not null)
+      {
+        valuePanel.Visibility = (isSet && !isCounter) ? Visibility.Visible : Visibility.Collapsed;
       }
 
       if (counterFieldsPanel is not null)
       {
-        counterFieldsPanel.Visibility = isCounter ? Visibility.Visible : Visibility.Collapsed;
+        counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
       }
 
-      if (resetPatternPanel is not null)
+      if (valueLabel is not null)
       {
-        resetPatternPanel.Visibility = (isCounter && isIncOrDec) ? Visibility.Visible : Visibility.Collapsed;
+        valueLabel.Text = isCounter ? "Counter" : "Text Value";
       }
     }
 
     private void AddVariableActionClick(object sender, RoutedEventArgs e)
     {
       _variableActions.Add(new VariableAction { VariableName = "myVariable" });
-      saveButton.IsEnabled = true;
+      EnableSaveCancel();
       UpdateVariableActionsEmptyState();
     }
 
@@ -1223,7 +1266,7 @@ namespace EQLogParser
       if (sender is Button { Tag: VariableAction action })
       {
         _variableActions.Remove(action);
-        saveButton.IsEnabled = true;
+        EnableSaveCancel();
         UpdateVariableActionsEmptyState();
 
         // If last variable was removed, add a fresh starter card
