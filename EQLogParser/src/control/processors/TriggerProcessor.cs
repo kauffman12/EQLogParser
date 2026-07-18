@@ -43,6 +43,9 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
+    private readonly Dictionary<string, string> _variables = new();
+    private readonly Dictionary<string, long> _counterValues = new(StringComparer.OrdinalIgnoreCase);
+    private List<VariableAction> _counterResetPatterns = [];
     private readonly List<TriggerLogItem> _triggerLogBuffer = [];
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
@@ -299,6 +302,38 @@ namespace EQLogParser
           }
         }
 
+        // Evaluate counter reset patterns (global per-line, independent of which trigger fired)
+        var actionLine = lineData.Action;
+        foreach (var va in _counterResetPatterns)
+        {
+          var patternMatched = false;
+          if (va.UseResetRegex)
+          {
+            try
+            {
+              patternMatched = System.Text.RegularExpressions.Regex.IsMatch(actionLine, va.ResetPattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+            }
+            catch
+            {
+              // ignore bad regex patterns
+            }
+          }
+          else if (!string.IsNullOrEmpty(va.ResetPattern))
+          {
+            patternMatched = actionLine.IndexOf(va.ResetPattern, StringComparison.OrdinalIgnoreCase) >= 0;
+          }
+
+          if (patternMatched)
+          {
+            lock (_counterValues)
+            {
+              _counterValues[va.VariableName] = va.InitialValue;
+              _variables[va.VariableName] = va.InitialValue.ToString(CultureInfo.InvariantCulture);
+            }
+          }
+        }
+
         foreach (var (triggerId, timerList) in _timerLists)
         {
           bool hasAny;
@@ -539,7 +574,7 @@ namespace EQLogParser
           if (!string.IsNullOrEmpty(displayTemplate) && !displayTemplate.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
           {
             // It’s safe/cheap to compute the final string here; we only defer the external AddText call
-            var updatedDisplayText = ProcessDisplayText(displayTemplate, lineData.Action, earlyMatches, timerData.OriginalMatches, timerData.PreviousMatches);
+            var updatedDisplayText = ProcessDisplayText(displayTemplate, lineData.Action, earlyMatches, timerData.OriginalMatches, timerData.PreviousMatches, GetVariablesSnapshot());
             if (!string.IsNullOrEmpty(updatedDisplayText))
             {
               if (overlayTriggers == null)
@@ -653,6 +688,9 @@ namespace EQLogParser
         counterCount = UpdateRepeatedTimes(_counterTimes, wrapper, "trigger-count", beginTicks);
       }
 
+      // Process variable actions (set/clear variables)
+      ProcessVariableActions(wrapper.TriggerData.VariableActions, matches, previousMatches, lineData.Action);
+
       if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } altTimerName)
       {
         altTimerName = ProcessMatchesText(altTimerName, previousMatches);
@@ -694,7 +732,8 @@ namespace EQLogParser
         }
       }
 
-      if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
+      var vars = GetVariablesSnapshot();
+      if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches, vars) is { } updatedDisplayText)
       {
         if (wrapper.HasRepeatedText)
         {
@@ -715,12 +754,12 @@ namespace EQLogParser
         await AddTextAsync(wrapper.TriggerData, updatedDisplayText);
       }
 
-      if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches) is { } updatedShareText)
+      if (ProcessDisplayText(wrapper.ModifiedShare, lineData.Action, matches, null, previousMatches, vars) is { } updatedShareText)
       {
         UiUtil.SetClipboardText(updatedShareText);
       }
 
-      if (ProcessDisplayText(wrapper.ModifiedSendToChat, lineData.Action, matches, null, previousMatches) is { } updatedSendToChatText)
+      if (ProcessDisplayText(wrapper.ModifiedSendToChat, lineData.Action, matches, null, previousMatches, vars) is { } updatedSendToChatText)
       {
         var url = wrapper.TriggerData.ChatWebhook;
         if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
@@ -913,7 +952,7 @@ namespace EQLogParser
             }
           }
 
-          if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches) is { } updatedDisplayText)
+          if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches, GetVariablesSnapshot()) is { } updatedDisplayText)
           {
             await AddTextAsync(trigger, updatedDisplayText);
           }
@@ -1043,7 +1082,7 @@ namespace EQLogParser
             }
           }
 
-          if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches) is { } updatedDisplayText)
+          if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches, GetVariablesSnapshot()) is { } updatedDisplayText)
           {
             await AddTextAsync(trigger, updatedDisplayText);
           }
@@ -1104,7 +1143,7 @@ namespace EQLogParser
         else
         {
           var lexicon = _lexicon;
-          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original);
+          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original, GetVariablesSnapshot());
 
           if (speak.IsPrimary)
           {
@@ -1318,15 +1357,130 @@ namespace EQLogParser
         Log.Warn($"Over {triggerCount} triggers active for one character. To improve performance consider turning off old triggers.");
       }
 
+      // Collect counter reset patterns from all triggers
+      var resetPatterns = new List<VariableAction>();
+      foreach (var wrapper in activeTriggersById.Values)
+      {
+        if (wrapper.TriggerData?.VariableActions is { Count: > 0 } actions)
+        {
+          foreach (var va in actions)
+          {
+            if (va.DataType == VariableDataType.Counter && !string.IsNullOrEmpty(va.ResetPattern))
+            {
+              resetPatterns.Add(va);
+            }
+          }
+        }
+      }
+
+      _counterResetPatterns = resetPatterns;
       await SetActiveTriggersAsync(activeTriggersById, requiredOverlayIds);
       _ready = true;
     }
 
+    private void ProcessVariableActions(List<VariableAction> variableActions, Dictionary<string, string> matches,
+      Dictionary<string, string> previousMatches, string action)
+    {
+      if (variableActions == null) return;
+      if (variableActions.Count == 0) return;
+
+      lock (_variables)
+      {
+        foreach (var va in variableActions)
+        {
+          if (string.IsNullOrEmpty(va.VariableName)) continue;
+
+          switch (va.ActionType)
+          {
+            case VariableActionType.Set:
+              {
+                if (!string.IsNullOrEmpty(va.ValueSource))
+                {
+                  // Resolve the value source through the same pipeline as display text
+                  var resolved = ProcessMatchesText(va.ValueSource, _variables);
+                  resolved = ProcessMatchesText(resolved, matches);
+                  resolved = ProcessMatchesText(resolved, previousMatches);
+                  resolved = ProcessLineCode(resolved, action);
+                  _variables[va.VariableName] = resolved;
+
+                  // If this is a counter variable, also update the numeric store
+                  if (va.DataType == VariableDataType.Counter && long.TryParse(resolved, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numericValue))
+                  {
+                    _counterValues[va.VariableName] = numericValue;
+                  }
+                }
+                break;
+              }
+
+            case VariableActionType.Clear:
+              {
+                _variables.Remove(va.VariableName);
+                _counterValues.Remove(va.VariableName);
+                break;
+              }
+
+            case VariableActionType.Increment when va.DataType == VariableDataType.Counter:
+              {
+                var key = va.VariableName;
+                if (!_counterValues.TryGetValue(key, out var current))
+                  current = va.InitialValue;
+                current += va.Step;
+                _counterValues[key] = current;
+                _variables[key] = current.ToString(CultureInfo.InvariantCulture);
+                break;
+              }
+
+            case VariableActionType.Decrement when va.DataType == VariableDataType.Counter:
+              {
+                var key = va.VariableName;
+                if (!_counterValues.TryGetValue(key, out var current))
+                  current = va.InitialValue;
+                current -= va.Step;
+                _counterValues[key] = current;
+                _variables[key] = current.ToString(CultureInfo.InvariantCulture);
+                break;
+              }
+
+            case VariableActionType.Reset:
+              {
+                var key = va.VariableName;
+                if (va.DataType == VariableDataType.Counter)
+                {
+                  _counterValues[key] = va.InitialValue;
+                  _variables[key] = va.InitialValue.ToString(CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                  // For text variables, Reset clears the value
+                  _variables.Remove(key);
+                }
+                break;
+              }
+          }
+        }
+      }
+    }
+
+    private Dictionary<string, string> GetVariablesSnapshot()
+    {
+      lock (_variables)
+      {
+        return new Dictionary<string, string>(_variables);
+      }
+    }
+
     private static string ProcessDisplayText(string text, string action, Dictionary<string, string> matches,
-      Dictionary<string, string> originalMatches, Dictionary<string, string> previousMatches)
+      Dictionary<string, string> originalMatches, Dictionary<string, string> previousMatches,
+      Dictionary<string, string> variables = null)
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
+        // Resolve user-defined variables first (lowest priority - can be overridden by capture groups)
+        if (variables != null)
+        {
+          text = ProcessMatchesText(text, variables);
+        }
+
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
         text = ProcessMatchesText(text, previousMatches);
@@ -1413,8 +1567,15 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original)
+    private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
+      Dictionary<string, string> variables = null)
     {
+      // Resolve user-defined variables first (lowest priority)
+      if (variables != null)
+      {
+        tts = ProcessMatchesText(tts, variables);
+      }
+
       tts = ProcessMatchesText(tts, original);
       tts = ProcessMatchesText(tts, matches);
       tts = ProcessMatchesText(tts, previous);

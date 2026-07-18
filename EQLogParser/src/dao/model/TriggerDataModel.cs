@@ -91,6 +91,7 @@ namespace EQLogParser
 
   internal class Overlay
   {
+    public string Source { get; set; }
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";
     public string FontWeight { get; set; } = "Normal";
@@ -137,6 +138,37 @@ namespace EQLogParser
     public Window TheWindow { get; set; }
     public long RemoveTicks { get; set; } = -1;
     public bool IsCooldown { get; set; }
+  }
+
+  internal enum VariableActionType
+  {
+    Set,
+    Clear,
+    Increment,
+    Decrement,
+    Reset
+  }
+
+  internal enum VariableDataType
+  {
+    Text,
+    Counter
+  }
+
+  internal class VariableAction
+  {
+    public VariableActionType ActionType { get; set; } = VariableActionType.Set;
+    public VariableDataType DataType { get; set; } = VariableDataType.Text;
+    public string VariableName { get; set; } = "";
+    // For Set: capture group ref like "{s1}", variable ref "{$varName}", or literal "hello"
+    // For Clear/Increment/Decrement/Reset: empty/null (not used)
+    public string ValueSource { get; set; } = "";
+
+    // Counter-only fields
+    public int Step { get; set; } = 1;
+    public long InitialValue { get; set; }
+    public string ResetPattern { get; set; } = "";
+    public bool UseResetRegex { get; set; }
   }
 
   internal class Trigger
@@ -190,6 +222,7 @@ namespace EQLogParser
     public double LockoutTime { get; set; }
     public int VoiceRate { get; set; }  // 0 for system setting
     public int Volume { get; set; } = 4; // no increase
+    public List<VariableAction> VariableActions { get; set; } = [];
   }
 
   internal class TimerOverlayPropertyModel : Overlay

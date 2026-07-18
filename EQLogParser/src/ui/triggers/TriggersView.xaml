@@ -10,6 +10,9 @@
              Loaded="ContentLoaded"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+  <UserControl.Resources>
+    <local:SetActionToVisibilityConverter x:Key="SetActionToVisibilityConverter" />
+  </UserControl.Resources>
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
@@ -90,7 +93,7 @@
           </Border>
         </Grid>
         <syncfusion:TabControlExt Grid.Row="1" x:Name="propertyTabControl" Margin="4,0,0,0" TabStripPlacement="Top" CloseButtonType="Hide" EnableLabelEdit="False" AllowDragDrop="False" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
-          <syncfusion:TabItemExt x:Name="generalPropertyGridTab" Header="Trigger Properties" Height="30" FontSize="{DynamicResource EQTitleSize}">
+          <syncfusion:TabItemExt x:Name="generalPropertyGridTab" Header="Trigger Properties" Height="28" FontSize="{DynamicResource EQTitleSize}">
             <syncfusion:PropertyGrid
               x:Name="generalPropertyGrid"
               BorderBrush="{DynamicResource ContentBackgroundAlt2}"
@@ -166,7 +169,7 @@
               </syncfusion:PropertyGrid.Items>
             </syncfusion:PropertyGrid>
           </syncfusion:TabItemExt>
-          <syncfusion:TabItemExt x:Name="secondaryPropertyGridTab" Header="Trigger Timer Properties" Height="30" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
+          <syncfusion:TabItemExt x:Name="secondaryPropertyGridTab" Header="Trigger Timer Properties" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
             <syncfusion:PropertyGrid
               x:Name="secondaryPropertyGrid"
               BorderBrush="{DynamicResource ContentBackgroundAlt2}"
@@ -215,6 +218,149 @@
                 <syncfusion:PropertyGridItem CategoryName="Timer Warning" PropertyName="WarningTextToDisplay" DisplayName="Warning Text to Display" Description="The Text to Display in a Text Overlay at the Warning Time. See the documentation on Using Trigger Variables for additional information."/>
               </syncfusion:PropertyGrid.Items>
             </syncfusion:PropertyGrid>
+          </syncfusion:TabItemExt>
+          <syncfusion:TabItemExt x:Name="variableActionsTab" Header="Variables" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
+            <ScrollViewer Padding="8" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <!-- #12: Explain variable scope -->
+                <Border Margin="0,0,0,12" BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="8,6">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                      </Grid.ColumnDefinitions>
+                      <fa:ImageAwesome Grid.Column="0" Icon="Solid_InfoCircle" Foreground="{DynamicResource EQMenuIconBrush}"
+                        VerticalAlignment="Center" Width="16" Height="16" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="1" Text="When this trigger is activated, the variables below are updated so other triggers can read their values as &#x7B;varName&#x7D;. Use Set to assign a value, Clear to remove it, or Increment/Decrement to maintain counters across multiple triggers."
+                        TextWrapping="Wrap" VerticalAlignment="Center"
+                        FontSize="{DynamicResource EQContentSizePlus}" />
+                    </Grid>
+                  </Border>
+
+                <!-- Empty State (hidden when starter card is shown) -->
+                <StackPanel x:Name="variableActionsEmptyState" Visibility="Collapsed" Margin="0,24,0,12">
+                  <TextBlock Text="No variables configured."
+                    HorizontalAlignment="Center" FontSize="{DynamicResource EQTitleSize}"
+                    FontWeight="Bold" Margin="0,0,0,8" />
+                  <TextBlock Text="Variables allow this trigger to pass values to other triggers."
+                    HorizontalAlignment="Center" TextWrapping="Wrap"
+                    FontSize="{DynamicResource EQContentSize}" Margin="0,0,0,16" />
+                  <Button Content="+ Add Variable" Click="AddVariableActionClick"
+                    HorizontalAlignment="Center" Padding="24,0,24,0"
+                    Height="{DynamicResource EQButtonHeight}" />
+                </StackPanel>
+
+                <!-- Variable Action Cards: wrap with max-width -->
+                <ItemsControl x:Name="variableActionsList">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <!-- #1: Each variable is a card with max width -->
+                      <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="12" Margin="0,0,8,8" MinWidth="340" MaxWidth="680"
+                              Loaded="VariableActionRowLoaded">
+                        <StackPanel>
+                          <!-- #9: Visual variable syntax with decorative braces -->
+                          <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="Variable Name" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,2">
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="varBraceLeft" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,2,0" />
+                                <TextBox x:Name="variableNameBox" Text="{Binding VariableName, Mode=TwoWay}" Width="160" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" />
+                                <TextBlock x:Name="varBraceRight" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="2,0,0,0" />
+                              </StackPanel>
+                            </Border>
+                          </StackPanel>
+
+                          <!-- Action selector (prominent, top of card) -->
+                          <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="Action" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <ComboBox x:Name="actionTypeCombo" />
+                          </StackPanel>
+
+                          <!-- Type + Stored Value (visible when Action=Set) -->
+                          <StackPanel x:Name="valueSourcePanel" Visibility="Collapsed" Margin="0,0,0,8">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                              </Grid.ColumnDefinitions>
+
+                              <!-- Type selector -->
+                              <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Type" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                                <ComboBox x:Name="dataTypeCombo" Width="75" />
+                              </StackPanel>
+
+                              <!-- Stored Value -->
+                              <StackPanel Grid.Column="1">
+                                <TextBlock Text="Value to Set" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                                <ComboBox x:Name="valueSourceCombo" IsEditable="True" IsTextSearchEnabled="False"
+                                  Text="{Binding ValueSource, Mode=TwoWay}" />
+                              </StackPanel>
+                            </Grid>
+                          </StackPanel>
+
+                          <!-- Counter Fields (visible when Type=Counter) -->
+                          <StackPanel x:Name="counterFieldsPanel" Visibility="Collapsed" Margin="0,0,0,8">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                              </Grid.ColumnDefinitions>
+                              <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                <TextBlock Text="Step" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                                <TextBox x:Name="stepBox" Text="{Binding Step, Mode=TwoWay}" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                                <TextBlock Text="Initial Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                                <TextBox x:Name="initialValueBox" Text="{Binding InitialValue, Mode=TwoWay}" />
+                              </StackPanel>
+                            </Grid>
+                          </StackPanel>
+
+                          <!-- Reset Pattern (visible when Action=Increment/Decrement and Type=Counter) -->
+                          <StackPanel x:Name="resetPatternPanel" Visibility="Collapsed" Margin="0,0,0,0">
+                            <TextBlock Text="Reset Pattern" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <TextBlock Text="Counter resets when this text appears in any log line."
+                              FontSize="10" FontStyle="Italic" Foreground="{DynamicResource EQWarnForegroundBrush}"
+                              Margin="0,0,0,4" />
+                            <TextBox x:Name="resetPatternBox" Text="{Binding ResetPattern, Mode=TwoWay}" Margin="0,0,0,4" />
+                            <CheckBox x:Name="useResetRegexCheck" Content="Use Regex" IsChecked="{Binding UseResetRegex, Mode=TwoWay}" FontSize="{DynamicResource EQContentSize}" />
+                          </StackPanel>
+
+                          <!-- Remove button at bottom -->
+                          <Button Content="Remove"
+                            Click="DeleteVariableActionClick"
+                            Tag="{Binding}"
+                            HorizontalAlignment="Right" Padding="10,0,10,0" Margin="0,8,0,0"
+                            Height="{DynamicResource EQButtonHeight}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Add Variable button under the cards -->
+                <Button x:Name="addVariableButton" Content="+ Add Variable"
+                  Click="AddVariableActionClick"
+                  HorizontalAlignment="Left" Padding="10,0,10,0" Margin="0,8,0,0"
+                  Height="{DynamicResource EQButtonHeight}" />
+
+              </StackPanel>
+            </ScrollViewer>
           </syncfusion:TabItemExt>
         </syncfusion:TabControlExt>
       </Grid>

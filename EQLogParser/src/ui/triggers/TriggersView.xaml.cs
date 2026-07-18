@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,6 +36,15 @@ namespace EQLogParser
     private List<string> _deviceNameList;
     private string _currentCharacterId;
     private bool _ready;
+    private ObservableCollection<VariableAction> _variableActions = [];
+
+    // Binding properties for Variable Actions tab
+    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear, VariableActionType.Increment, VariableActionType.Decrement, VariableActionType.Reset];
+    // #3: Descriptive display names for actions
+    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value", "Increment Count", "Decrement Count", "Reset Count"];
+    internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
+    internal ObservableCollection<string> CaptureGroups { get; } = [];
+    internal ObservableCollection<VariableAction> VariableActions => _variableActions;
 
     public TriggersView()
     {
@@ -847,6 +857,10 @@ namespace EQLogParser
       var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel triggerModel)
       {
+        // Sync variable actions from UI to model before saving (filter out empty/dummy entries)
+        triggerModel.VariableActions = _variableActions
+          .Where(va => !string.IsNullOrWhiteSpace(va.VariableName))
+          .ToList();
         await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
         await TriggerStateDB.Instance.Update(triggerModel.Node);
       }
@@ -897,6 +911,21 @@ namespace EQLogParser
         await TriggerUtil.Copy(model, triggerModel.Node.TriggerData);
         var timerType = triggerModel.Node.TriggerData.TimerType;
         EnableCategories(true, timerType, false, false);
+
+        // Restore variable actions from original data
+        _variableActions.Clear();
+        if (triggerModel.Node.TriggerData?.VariableActions is { Count: > 0 } originalActions)
+        {
+          foreach (var action in originalActions)
+          {
+            _variableActions.Add(action);
+          }
+        }
+        else
+        {
+          // Add a starter variable card so the UI isn't empty
+          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+        }
       }
       else if (model is TimerOverlayPropertyModel timerModel)
       {
@@ -958,9 +987,32 @@ namespace EQLogParser
       {
         var timerType = data.Item1.SerializedData?.TriggerData.TimerType ?? 0;
         EnableCategories(true, timerType, false, false);
+
+        // Initialize variable actions for this trigger
+        var trigger = data.Item1.SerializedData?.TriggerData;
+        _variableActions.Clear();
+        if (trigger?.VariableActions is { Count: > 0 } actions)
+        {
+          foreach (var action in actions)
+          {
+            _variableActions.Add(action);
+          }
+        }
+        else
+        {
+          // Add a starter variable card so the UI isn't empty
+          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+        }
+
+        variableActionsList.ItemsSource = _variableActions;
+        UpdateCaptureGroups(trigger?.Pattern);
+        variableActionsTab.Visibility = Visibility.Visible;
+        UpdateVariableActionsEmptyState();
       }
       else if (data.Item1?.IsOverlay() == true)
       {
+        variableActionsTab.Visibility = Visibility.Collapsed;
+
         if (isTimerOverlay)
         {
           EnableCategories(false, 0, true, isCooldownOverlay);
@@ -1013,6 +1065,200 @@ namespace EQLogParser
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;
       _ready = false;
+    }
+
+    private void UpdateCaptureGroups(string pattern)
+    {
+      CaptureGroups.Clear();
+
+      if (string.IsNullOrEmpty(pattern))
+      {
+        return;
+      }
+
+      // Extract EQLP capture group tokens: {s1}, {s2}... and {n1}, {n2}...
+      // These are converted to named regex groups at runtime by UpdatePattern()
+      foreach (Match m in System.Text.RegularExpressions.Regex.Matches(pattern, @"\{([sn]\d+)\}"))
+      {
+        var token = "{" + m.Groups[1].Value + "}";
+        if (!CaptureGroups.Contains(token))
+        {
+          CaptureGroups.Add(token);
+        }
+      }
+
+      // Also extract standard named regex groups (?<name>...)
+      foreach (Match m in System.Text.RegularExpressions.Regex.Matches(pattern, @"\(\?<([a-zA-Z0-9_]+)>"))
+      {
+        var token = "{" + m.Groups[1].Value + "}";
+        if (!CaptureGroups.Contains(token))
+        {
+          CaptureGroups.Add(token);
+        }
+      }
+
+      // Add default EQLP placeholders if none found
+      if (CaptureGroups.Count == 0)
+      {
+        CaptureGroups.Add("{s1}");
+        CaptureGroups.Add("{n1}");
+      }
+    }
+
+    private void UpdateVariableActionsEmptyState()
+    {
+      var isEmpty = _variableActions.Count == 0;
+      variableActionsEmptyState.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void VariableActionRowLoaded(object sender, RoutedEventArgs e)
+    {
+      // ItemsControl DataTemplates break the visual tree, so RelativeSource bindings
+      // can't reach the parent DataContext. Set ItemsSource directly instead.
+      if (sender is Border border && border.Child is StackPanel panel && border.DataContext is VariableAction va)
+      {
+        var isCounter = va.DataType == VariableDataType.Counter;
+        var isSet = va.ActionType == VariableActionType.Set;
+        var isIncOrDec = va.ActionType is VariableActionType.Increment or VariableActionType.Decrement;
+
+        // Set brace text for variable name display (curly braces can't be literal in XAML)
+        if (FindChild<TextBlock>(panel, "varBraceLeft") is TextBlock leftBrace)
+          leftBrace.Text = "{";
+        if (FindChild<TextBlock>(panel, "varBraceRight") is TextBlock rightBrace)
+          rightBrace.Text = "}";
+
+        // Find all controls by name using recursive search
+        var valueSourcePanel = FindChild<StackPanel>(panel, "valueSourcePanel");
+        var counterFieldsPanel = FindChild<StackPanel>(panel, "counterFieldsPanel");
+        var resetPatternPanel = FindChild<StackPanel>(panel, "resetPatternPanel");
+        var actionTypeCombo = FindChild<ComboBox>(panel, "actionTypeCombo");
+        var dataTypeCombo = FindChild<ComboBox>(panel, "dataTypeCombo");
+        var valueSourceCombo = FindChild<ComboBox>(panel, "valueSourceCombo");
+
+        // Set visibility for panels
+        if (valueSourcePanel is not null)
+        {
+          valueSourcePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (counterFieldsPanel is not null)
+        {
+          counterFieldsPanel.Visibility = (isCounter && (isSet || isIncOrDec)) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (resetPatternPanel is not null)
+        {
+          resetPatternPanel.Visibility = (isCounter && isIncOrDec) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Action type combo with descriptive labels, bound to enum via index
+        if (actionTypeCombo != null)
+        {
+          actionTypeCombo.ItemsSource = ActionTypeLabels;
+          actionTypeCombo.SelectedIndex = (int)va.ActionType;
+          actionTypeCombo.SelectionChanged += (_, _) =>
+          {
+            if (actionTypeCombo.SelectedIndex >= 0 && actionTypeCombo.SelectedIndex < ActionTypes.Count)
+            {
+              va.ActionType = ActionTypes[actionTypeCombo.SelectedIndex];
+            }
+            UpdateVariablePanelVisibility(va, valueSourcePanel, counterFieldsPanel, resetPatternPanel);
+          };
+        }
+
+        // Data type combo
+        if (dataTypeCombo != null)
+        {
+          dataTypeCombo.ItemsSource = DataTypes;
+          dataTypeCombo.SelectedIndex = (int)va.DataType;
+          dataTypeCombo.SelectionChanged += (_, _) =>
+          {
+            if (dataTypeCombo.SelectedIndex >= 0)
+            {
+              va.DataType = (VariableDataType)dataTypeCombo.SelectedIndex;
+            }
+            UpdateVariablePanelVisibility(va, valueSourcePanel, counterFieldsPanel, resetPatternPanel);
+          };
+        }
+
+        // Value source combo (capture groups dropdown)
+        if (valueSourceCombo != null)
+        {
+          valueSourceCombo.ItemsSource = CaptureGroups;
+        }
+      }
+    }
+
+    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel valueSourcePanel, StackPanel counterFieldsPanel, StackPanel resetPatternPanel)
+    {
+      var isCounter = va.DataType == VariableDataType.Counter;
+      var isSet = va.ActionType == VariableActionType.Set;
+      var isIncOrDec = va.ActionType is VariableActionType.Increment or VariableActionType.Decrement;
+
+      if (valueSourcePanel is not null)
+      {
+        valueSourcePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      if (counterFieldsPanel is not null)
+      {
+        counterFieldsPanel.Visibility = isCounter ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      if (resetPatternPanel is not null)
+      {
+        resetPatternPanel.Visibility = (isCounter && isIncOrDec) ? Visibility.Visible : Visibility.Collapsed;
+      }
+    }
+
+    private void AddVariableActionClick(object sender, RoutedEventArgs e)
+    {
+      _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+      saveButton.IsEnabled = true;
+      UpdateVariableActionsEmptyState();
+    }
+
+    private void DeleteVariableActionClick(object sender, RoutedEventArgs e)
+    {
+      if (sender is Button { Tag: VariableAction action })
+      {
+        _variableActions.Remove(action);
+        saveButton.IsEnabled = true;
+        UpdateVariableActionsEmptyState();
+
+        // If last variable was removed, add a fresh starter card
+        if (_variableActions.Count == 0)
+        {
+          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+          UpdateVariableActionsEmptyState();
+        }
+      }
+    }
+
+    // Recursively find a named child element in the visual tree
+    private static T FindChild<T>(DependencyObject parent, string childName) where T : DependencyObject
+    {
+      if (parent is null)
+      {
+        return default;
+      }
+
+      for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+      {
+        var child = VisualTreeHelper.GetChild(parent, i);
+        if (child is T foundChild && string.Equals(child.GetValue(FrameworkElement.NameProperty) as string, childName, StringComparison.Ordinal))
+        {
+          return foundChild;
+        }
+
+        var result = FindChild<T>(child, childName);
+        if (result is not null)
+        {
+          return result;
+        }
+      }
+
+      return default;
     }
   }
 }
