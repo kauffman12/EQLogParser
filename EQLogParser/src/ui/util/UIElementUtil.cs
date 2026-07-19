@@ -554,5 +554,37 @@ namespace EQLogParser
 
       return newStyle;
     }
+
+    /// <summary>
+    /// Recursively finds a named child element in the visual tree.
+    /// </summary>
+    /// <typeparam name="T">The type of element to find.</typeparam>
+    /// <param name="parent">The parent element to search from.</param>
+    /// <param name="childName">The name of the child element to find.</param>
+    /// <returns>The found element, or null if not found.</returns>
+    internal static T FindChild<T>(DependencyObject parent, string childName) where T : DependencyObject
+    {
+      if (parent is null)
+      {
+        return default;
+      }
+
+      for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+      {
+        var child = VisualTreeHelper.GetChild(parent, i);
+        if (child is T foundChild && string.Equals(child.GetValue(FrameworkElement.NameProperty) as string, childName, StringComparison.Ordinal))
+        {
+          return foundChild;
+        }
+
+        var result = FindChild<T>(child, childName);
+        if (result is not null)
+        {
+          return result;
+        }
+      }
+
+      return default;
+    }
   }
 }

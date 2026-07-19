@@ -19,6 +19,13 @@ namespace EQLogParser
 {
   public partial class TriggersView : IDocumentContent
   {
+    // Binding properties for Variable Actions tab (internal before private per CodingStandards.md)
+    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear];
+    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value"];
+    internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
+    internal ObservableCollection<string> CaptureGroups { get; } = [];
+    internal ObservableCollection<VariableAction> VariableActions => _variableActions;
+
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
     private readonly PatternEditor _closePatternEditor;
@@ -37,15 +44,7 @@ namespace EQLogParser
     private List<string> _deviceNameList;
     private string _currentCharacterId;
     private bool _ready;
-    private ObservableCollection<VariableAction> _variableActions = [];
-
-    // Binding properties for Variable Actions tab
-    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear];
-    // #3: Descriptive display names for actions
-    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value"];
-    internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
-    internal ObservableCollection<string> CaptureGroups { get; } = [];
-    internal ObservableCollection<VariableAction> VariableActions => _variableActions;
+    private readonly ObservableCollection<VariableAction> _variableActions = [];
 
     public TriggersView()
     {
@@ -925,7 +924,7 @@ namespace EQLogParser
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
         }
       }
       else if (model is TimerOverlayPropertyModel timerModel)
@@ -1002,7 +1001,7 @@ namespace EQLogParser
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
         }
 
         variableActionsList.ItemsSource = _variableActions;
@@ -1122,20 +1121,21 @@ namespace EQLogParser
         var isSet = va.ActionType == VariableActionType.Set;
 
         // Set brace text for variable name display (curly braces can't be literal in XAML)
-        if (FindChild<TextBlock>(panel, "varBraceLeft") is TextBlock leftBrace)
+        if (UiElementUtil.FindChild<TextBlock>(panel, "varBraceLeft") is TextBlock leftBrace)
           leftBrace.Text = "{";
-        if (FindChild<TextBlock>(panel, "varBraceRight") is TextBlock rightBrace)
+        if (UiElementUtil.FindChild<TextBlock>(panel, "varBraceRight") is TextBlock rightBrace)
           rightBrace.Text = "}";
 
         // Find all controls by name using recursive search
-        var typePanel = FindChild<StackPanel>(panel, "typePanel");
-        var valuePanel = FindChild<StackPanel>(panel, "valuePanel");
-        var counterFieldsPanel = FindChild<StackPanel>(panel, "counterFieldsPanel");
-        var actionTypeCombo = FindChild<ComboBox>(panel, "actionTypeCombo");
-        var dataTypeCombo = FindChild<ComboBox>(panel, "dataTypeCombo");
-        var valueCombo = FindChild<ComboBox>(panel, "valueCombo");
-        var variableNameBox = FindChild<TextBox>(panel, "variableNameBox");
-        var valueLabel = FindChild<TextBlock>(panel, "valueLabel");
+        var typePanel = UiElementUtil.FindChild<StackPanel>(panel, "typePanel");
+        var valuePanel = UiElementUtil.FindChild<StackPanel>(panel, "valuePanel");
+        var counterFieldsPanel = UiElementUtil.FindChild<StackPanel>(panel, "counterFieldsPanel");
+        var ttlPanel = UiElementUtil.FindChild<StackPanel>(panel, "ttlPanel");
+        var actionTypeCombo = UiElementUtil.FindChild<ComboBox>(panel, "actionTypeCombo");
+        var dataTypeCombo = UiElementUtil.FindChild<ComboBox>(panel, "dataTypeCombo");
+        var valueTextBox = UiElementUtil.FindChild<TextBox>(panel, "valueTextBox");
+        var variableNameBox = UiElementUtil.FindChild<TextBox>(panel, "variableNameBox");
+        var valueLabel = UiElementUtil.FindChild<TextBlock>(panel, "valueLabel");
 
         // Set visibility for panels
         if (typePanel is not null)
@@ -1153,16 +1153,31 @@ namespace EQLogParser
           counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        // TTL panel visible when Action=Set (for both Text and Counter)
+        if (ttlPanel is not null)
+        {
+          ttlPanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         // Set initial value label text
         if (valueLabel is not null)
         {
-          valueLabel.Text = isCounter ? "Counter" : "Text Value";
+          valueLabel.Text = isCounter ? "Increment By" : "Text Value";
         }
 
-        // Variable name text box — mark dirty on change
+        // Variable name text box with validation — mark dirty on change
         if (variableNameBox is not null)
         {
-          variableNameBox.TextChanged += (_, _) => EnableSaveCancel();
+          variableNameBox.TextChanged += (_, _) =>
+          {
+            // Validate variable name: must start with letter or underscore, contain only alphanumeric + underscore
+            var isValid = string.IsNullOrWhiteSpace(variableNameBox.Text) ||
+              Regex.IsMatch(variableNameBox.Text, @"^[a-zA-Z_][a-zA-Z0-9_]*$");
+            variableNameBox.Foreground = isValid ?
+              (Brush)FindResource("ContentForeground") :
+              (Brush)FindResource("EQStopForegroundBrush");
+            EnableSaveCancel();
+          };
         }
 
         // Action type combo with descriptive labels, bound to enum via index
@@ -1176,7 +1191,7 @@ namespace EQLogParser
             {
               va.ActionType = ActionTypes[actionTypeCombo.SelectedIndex];
             }
-            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, valueLabel);
+            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, ttlPanel, valueLabel);
             EnableSaveCancel();
           };
         }
@@ -1192,23 +1207,58 @@ namespace EQLogParser
             {
               va.DataType = (VariableDataType)dataTypeCombo.SelectedIndex;
             }
-            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, valueLabel);
+            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, ttlPanel, valueLabel);
             EnableSaveCancel();
           };
         }
 
-        // Value combo (capture groups dropdown)
-        if (valueCombo is not null)
+        // Value TextBox with placeholder functionality for Text type
+        if (valueTextBox is not null)
         {
-          valueCombo.ItemsSource = CaptureGroups;
-          valueCombo.SelectionChanged += (_, _) => EnableSaveCancel();
-          // For editable ComboBox, use PreviewTextInput to catch typing
-          valueCombo.PreviewTextInput += (_, _) => EnableSaveCancel();
+          const string placeholder = "example value {s1}";
+
+          // Initialize placeholder state if Value is empty
+          if (string.IsNullOrWhiteSpace(va.Value))
+          {
+            valueTextBox.Text = placeholder;
+            valueTextBox.Foreground = (Brush)FindResource("PlaceholderForeground");
+            valueTextBox.FontStyle = FontStyles.Italic;
+          }
+
+          // Focus: clear placeholder
+          valueTextBox.GotFocus += (_, _) =>
+          {
+            if (valueTextBox.Text == placeholder)
+            {
+              valueTextBox.Text = "";
+              valueTextBox.Foreground = (Brush)FindResource("ContentForeground");
+              valueTextBox.FontStyle = FontStyles.Normal;
+            }
+          };
+
+          // Lost focus: restore placeholder if empty
+          valueTextBox.LostFocus += (_, _) =>
+          {
+            if (string.IsNullOrWhiteSpace(valueTextBox.Text))
+            {
+              valueTextBox.Text = placeholder;
+              valueTextBox.Foreground = (Brush)FindResource("PlaceholderForeground");
+              valueTextBox.FontStyle = FontStyles.Italic;
+              va.Value = ""; // Clear actual value
+            }
+            else
+            {
+              va.Value = valueTextBox.Text.Trim();
+            }
+          };
+
+          // Text change: mark dirty
+          valueTextBox.TextChanged += (_, _) => EnableSaveCancel();
         }
 
         // Counter UpDown controls — mark dirty on value change
-        var initialValueBox = FindChild<UpDown>(panel, "initialValueBox");
-        var stepBox = FindChild<UpDown>(panel, "stepBox");
+        var initialValueBox = UiElementUtil.FindChild<UpDown>(panel, "initialValueBox");
+        var stepBox = UiElementUtil.FindChild<UpDown>(panel, "stepBox");
 
         if (initialValueBox is not null)
         {
@@ -1219,6 +1269,13 @@ namespace EQLogParser
         {
           stepBox.ValueChanged += (_, _) => EnableSaveCancel();
         }
+
+        // TTL UpDown control — mark dirty on value change
+        var ttlBox = UiElementUtil.FindChild<UpDown>(panel, "ttlBox");
+        if (ttlBox is not null)
+        {
+          ttlBox.ValueChanged += (_, _) => EnableSaveCancel();
+        }
       }
     }
 
@@ -1228,7 +1285,7 @@ namespace EQLogParser
       cancelButton.IsEnabled = true;
     }
 
-    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel typePanel, StackPanel valuePanel, StackPanel counterFieldsPanel, TextBlock valueLabel)
+    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel typePanel, StackPanel valuePanel, StackPanel counterFieldsPanel, StackPanel ttlPanel, TextBlock valueLabel)
     {
       var isCounter = va.DataType == VariableDataType.Counter;
       var isSet = va.ActionType == VariableActionType.Set;
@@ -1248,22 +1305,29 @@ namespace EQLogParser
         counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
       }
 
+      // TTL panel visible for both Text and Counter when Action=Set
+      if (ttlPanel is not null)
+      {
+        ttlPanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
+      }
+
+      // Update label text based on current type
       if (valueLabel is not null)
       {
-        valueLabel.Text = isCounter ? "Counter" : "Text Value";
+        valueLabel.Text = isCounter ? "Increment By" : "Text Value";
       }
     }
 
     private void AddVariableActionClick(object sender, RoutedEventArgs e)
     {
-      _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+      _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
       EnableSaveCancel();
       UpdateVariableActionsEmptyState();
     }
 
     private void DeleteVariableActionClick(object sender, RoutedEventArgs e)
     {
-      if (sender is Button { Tag: VariableAction action })
+      if (sender is Button button && button.Tag is VariableAction action)
       {
         _variableActions.Remove(action);
         EnableSaveCancel();
@@ -1272,36 +1336,11 @@ namespace EQLogParser
         // If last variable was removed, add a fresh starter card
         if (_variableActions.Count == 0)
         {
-          _variableActions.Add(new VariableAction { VariableName = "myVariable" });
+          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
           UpdateVariableActionsEmptyState();
         }
       }
     }
 
-    // Recursively find a named child element in the visual tree
-    private static T FindChild<T>(DependencyObject parent, string childName) where T : DependencyObject
-    {
-      if (parent is null)
-      {
-        return default;
-      }
-
-      for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-      {
-        var child = VisualTreeHelper.GetChild(parent, i);
-        if (child is T foundChild && string.Equals(child.GetValue(FrameworkElement.NameProperty) as string, childName, StringComparison.Ordinal))
-        {
-          return foundChild;
-        }
-
-        var result = FindChild<T>(child, childName);
-        if (result is not null)
-        {
-          return result;
-        }
-      }
-
-      return default;
-    }
   }
 }

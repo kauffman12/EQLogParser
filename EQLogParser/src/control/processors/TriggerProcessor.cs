@@ -45,6 +45,9 @@ namespace EQLogParser
     private readonly object _repeatedLock = new();
     private readonly Dictionary<string, string> _variables = new();
     private readonly Dictionary<string, double> _counterValues = new(StringComparer.OrdinalIgnoreCase);
+    // TTL tracking: stores the tick time when each variable was set
+    private readonly Dictionary<string, long> _variableExpiryTimes = new();
+    private readonly object _variableLock = new();
     private readonly List<TriggerLogItem> _triggerLogBuffer = [];
     private IReadOnlyDictionary<string, string> _lexicon;
     private List<TrustedPlayer> _trustedPlayers;
@@ -1334,7 +1337,7 @@ namespace EQLogParser
       if (variableActions == null) return;
       if (variableActions.Count == 0) return;
 
-      lock (_variables)
+      lock (_variableLock)
       {
         foreach (var va in variableActions)
         {
@@ -1344,10 +1347,13 @@ namespace EQLogParser
           {
             case VariableActionType.Set:
               {
+                var key = va.VariableName;
+                var hasTtl = va.TimeToLiveSeconds > 0;
+                var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(va.TimeToLiveSeconds).Ticks : 0;
+
                 if (va.DataType == VariableDataType.Counter)
                 {
                   // Counter: increment by Step, starting from InitialValue if new
-                  var key = va.VariableName;
                   if (!_counterValues.TryGetValue(key, out var current))
                     current = va.InitialValue;
                   current += va.Step;
@@ -1361,15 +1367,27 @@ namespace EQLogParser
                   resolved = ProcessMatchesText(resolved, matches);
                   resolved = ProcessMatchesText(resolved, previousMatches);
                   resolved = ProcessLineCode(resolved, action);
-                  _variables[va.VariableName] = resolved;
+                  _variables[key] = resolved;
+                }
+
+                // Set TTL if specified
+                if (hasTtl)
+                {
+                  _variableExpiryTimes[key] = expiryTicks;
+                }
+                else
+                {
+                  _variableExpiryTimes.Remove(key);
                 }
                 break;
               }
 
             case VariableActionType.Clear:
               {
-                _variables.Remove(va.VariableName);
-                _counterValues.Remove(va.VariableName);
+                var key = va.VariableName;
+                _variables.Remove(key);
+                _counterValues.Remove(key);
+                _variableExpiryTimes.Remove(key);
                 break;
               }
           }
@@ -1377,10 +1395,42 @@ namespace EQLogParser
       }
     }
 
+    /// <summary>
+    /// Checks for expired variables and removes them based on TTL.
+    /// Must be called with _variableLock held or from a locked context.
+    /// </summary>
+    private void ExpireVariables()
+    {
+      if (_variableExpiryTimes.Count == 0) return;
+
+      var now = DateTime.UtcNow.Ticks;
+      var expiredKeys = new List<string>();
+
+      lock (_variableLock)
+      {
+        foreach (var kvp in _variableExpiryTimes)
+        {
+          if (now >= kvp.Value)
+          {
+            expiredKeys.Add(kvp.Key);
+          }
+        }
+
+        // Remove expired variables
+        foreach (var key in expiredKeys)
+        {
+          _variables.Remove(key);
+          _counterValues.Remove(key);
+          _variableExpiryTimes.Remove(key);
+        }
+      }
+    }
+
     private Dictionary<string, string> GetVariablesSnapshot()
     {
-      lock (_variables)
+      lock (_variableLock)
       {
+        ExpireVariables();
         return new Dictionary<string, string>(_variables);
       }
     }

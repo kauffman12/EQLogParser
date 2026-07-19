@@ -164,6 +164,9 @@ namespace EQLogParser
     // Counter-only fields
     public double Step { get; set; } = 1;
     public double InitialValue { get; set; }
+
+    // TTL field (applies to both Text and Counter)
+    public double TimeToLiveSeconds { get; set; } = 0; // 0 = no expiration
   }
 
   internal class Trigger

@@ -7,11 +7,15 @@
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:numberformat="clr-namespace:System.Globalization;assembly=mscorlib"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              Initialized="TriggersViewOnInitialized"
              Loaded="ContentLoaded"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-  <UserControl.Resources />
+  <UserControl.Resources>
+    <!-- Variable input width - can be themed if needed -->
+    <sys:Double x:Key="VariableInputWidth">160</sys:Double>
+  </UserControl.Resources>
 
   <Grid>
     <Grid.RowDefinitions>
@@ -269,10 +273,10 @@
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,2">
                               <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="varBraceLeft" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
+                                <TextBlock x:Name="varBraceLeft" VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,2,0" />
-                                <TextBox x:Name="variableNameBox" Text="{Binding VariableName, Mode=TwoWay}" Width="160" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" />
-                                <TextBlock x:Name="varBraceRight" VerticalAlignment="Center" FontSize="15" FontWeight="Bold"
+                                <TextBox x:Name="variableNameBox" Text="{Binding VariableName, Mode=TwoWay}" Width="{DynamicResource VariableInputWidth}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" />
+                                <TextBlock x:Name="varBraceRight" VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
                                   Foreground="{DynamicResource ContentForeground}" Margin="2,0,0,0" />
                               </StackPanel>
                             </Border>
@@ -282,22 +286,25 @@
                           <StackPanel Margin="0,2,0,8">
                             <TextBlock Text="Action" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <ComboBox x:Name="actionTypeCombo" />
+                            <ComboBox x:Name="actionTypeCombo" Padding="6,4" />
                           </StackPanel>
 
                           <!-- Type selector (visible when Action=Set) -->
                           <StackPanel x:Name="typePanel" Visibility="Collapsed" Margin="0,2,0,8">
                             <TextBlock Text="Type" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <ComboBox x:Name="dataTypeCombo" />
+                            <ComboBox x:Name="dataTypeCombo" Padding="6,4" />
                           </StackPanel>
 
                           <!-- Value field (visible when Action=Set and Type=Text) -->
                           <StackPanel x:Name="valuePanel" Visibility="Collapsed" Margin="0,2,0,8">
-                            <TextBlock x:Name="valueLabel" Text="Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                            <TextBlock x:Name="valueLabel" Text="Text Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <ComboBox x:Name="valueCombo" IsEditable="True" IsTextSearchEnabled="False"
-                              Text="{Binding Value, Mode=TwoWay}" />
+                            <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
+                              <TextBox x:Name="valueTextBox" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="Enter text or use {s1}, {n1}, ${varName} to reference capture groups or other variables"
+                              BorderThickness="0" Padding="0,4" />
+                            </Border>
                           </StackPanel>
 
                           <!-- Counter fields (visible when Action=Set and Type=Counter) -->
@@ -308,26 +315,45 @@
                                 <ColumnDefinition Width="*"/>
                               </Grid.ColumnDefinitions>
                               <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                <TextBlock Text="Initial Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                <TextBlock Text="Start At" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <syncfusion:UpDown x:Name="initialValueBox" Value="{Binding InitialValue, Mode=TwoWay}"
-                                  MinValue="-999999" MaxValue="999999" Margin="0,3,0,0">
-                                  <syncfusion:UpDown.NumberFormatInfo>
-                                    <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
-                                  </syncfusion:UpDown.NumberFormatInfo>
-                                </syncfusion:UpDown>
+                                <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
+                                  <syncfusion:UpDown x:Name="initialValueBox" Value="{Binding InitialValue, Mode=TwoWay}" Padding="0,2"
+                                  MinValue="-999999" MaxValue="999999" BorderThickness="0"
+                                  ApplyZeroColor="False"  Margin="0">
+                                    <syncfusion:UpDown.NumberFormatInfo>
+                                      <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                    </syncfusion:UpDown.NumberFormatInfo>
+                                  </syncfusion:UpDown>
+                                </Border>
                               </StackPanel>
                               <StackPanel Grid.Column="1" Margin="4,0,0,0">
-                                <TextBlock Text="Step" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                                <TextBlock Text="Increment By" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                                <syncfusion:UpDown x:Name="stepBox" Value="{Binding Step, Mode=TwoWay}"
-                                  MinValue="-999999" MaxValue="999999" Margin="0,3,0,0">
-                                  <syncfusion:UpDown.NumberFormatInfo>
-                                    <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
-                                  </syncfusion:UpDown.NumberFormatInfo>
-                                </syncfusion:UpDown>
+                                <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
+                                  <syncfusion:UpDown x:Name="stepBox" Value="{Binding Step, Mode=TwoWay}" Padding="0,2"
+                                  MinValue="-999999" MaxValue="999999" BorderThickness="0" ApplyZeroColor="False" Margin="0">
+                                    <syncfusion:UpDown.NumberFormatInfo>
+                                      <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                    </syncfusion:UpDown.NumberFormatInfo>
+                                  </syncfusion:UpDown>
+                                </Border>
                               </StackPanel>
                             </Grid>
+                          </StackPanel>
+
+                          <!-- Time to Live field (visible when Action=Set, for both Text and Counter) -->
+                          <StackPanel x:Name="ttlPanel" Visibility="Collapsed" Margin="0,2,0,8">
+                            <TextBlock Text="Time to Live (seconds, 0=never expires)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
+                            <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
+                              <syncfusion:UpDown x:Name="ttlBox" Value="{Binding TimeToLiveSeconds, Mode=TwoWay}" Padding="0,2"
+                              MinValue="0" MaxValue="999999" BorderThickness="0" ApplyZeroColor="False" Margin="0">
+                                <syncfusion:UpDown.NumberFormatInfo>
+                                  <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                </syncfusion:UpDown.NumberFormatInfo>
+                              </syncfusion:UpDown>
+                            </Border>
                           </StackPanel>
 
                           <!-- Remove button at bottom -->
