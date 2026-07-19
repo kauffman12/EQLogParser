@@ -43,7 +43,8 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
-    private readonly Dictionary<string, string> _variables = new(StringComparer.OrdinalIgnoreCase);
+    // Source of truth for variable values — ConcurrentDictionary allows lock-free reads during text processing.
+    private readonly ConcurrentDictionary<string, string> _variables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, double> _counterValues = new(StringComparer.OrdinalIgnoreCase);
     // TTL tracking: stores the tick time when each variable was set
     private readonly Dictionary<string, long> _variableExpiryTimes = new(StringComparer.OrdinalIgnoreCase);
@@ -538,13 +539,16 @@ namespace EQLogParser
             });
           }
 
+          // Expire TTL'd variables before processing timer end-early text
+          ExpireVariablesIfNeeded();
+
           // --- Defer: Overlay text add ---
           var displayTemplate = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
 
           if (!string.IsNullOrEmpty(displayTemplate) && !displayTemplate.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
           {
             // It’s safe/cheap to compute the final string here; we only defer the external AddText call
-            var updatedDisplayText = ProcessDisplayText(displayTemplate, lineData.Action, earlyMatches, timerData.OriginalMatches, timerData.PreviousMatches, GetVariablesSnapshot());
+            var updatedDisplayText = ProcessDisplayText(displayTemplate, lineData.Action, earlyMatches, timerData.OriginalMatches, timerData.PreviousMatches, _variables);
             if (!string.IsNullOrEmpty(updatedDisplayText))
             {
               if (overlayTriggers == null)
@@ -658,6 +662,9 @@ namespace EQLogParser
         counterCount = UpdateRepeatedTimes(_counterTimes, wrapper, "trigger-count", beginTicks);
       }
 
+      // Expire TTL'd variables before processing
+      ExpireVariablesIfNeeded();
+
       // Process variable actions (set/clear variables)
       ProcessVariableActions(wrapper.TriggerData.VariableActions, matches, previousMatches, lineData.Action);
 
@@ -702,7 +709,7 @@ namespace EQLogParser
         }
       }
 
-      var vars = GetVariablesSnapshot();
+      var vars = _variables;
       if (ProcessDisplayText(wrapper.ModifiedDisplay, lineData.Action, matches, null, previousMatches, vars) is { } updatedDisplayText)
       {
         if (wrapper.HasRepeatedText)
@@ -922,7 +929,10 @@ namespace EQLogParser
             }
           }
 
-          if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches, GetVariablesSnapshot()) is { } updatedDisplayText)
+          // Expire TTL'd variables before processing timer warning text
+          ExpireVariablesIfNeeded();
+
+          if (ProcessDisplayText(wrapper.ModifiedWarningDisplay, lineData.Action, matches, null, previousMatches, _variables) is { } updatedDisplayText)
           {
             await AddTextAsync(trigger, updatedDisplayText);
           }
@@ -1052,7 +1062,10 @@ namespace EQLogParser
             }
           }
 
-          if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches, GetVariablesSnapshot()) is { } updatedDisplayText)
+          // Expire TTL'd variables before processing timer end text
+          ExpireVariablesIfNeeded();
+
+          if (ProcessDisplayText(wrapper.ModifiedEndDisplay, lineData.Action, matches, data2.OriginalMatches, data2.PreviousMatches, _variables) is { } updatedDisplayText)
           {
             await AddTextAsync(trigger, updatedDisplayText);
           }
@@ -1113,7 +1126,9 @@ namespace EQLogParser
         else
         {
           var lexicon = _lexicon;
-          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original, GetVariablesSnapshot());
+          // Expire TTL'd variables before processing TTS text
+          ExpireVariablesIfNeeded();
+          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original, _variables);
 
           if (speak.IsPrimary)
           {
@@ -1348,7 +1363,7 @@ namespace EQLogParser
               {
                 var key = va.VariableName;
                 var hasTtl = va.TimeToLiveSeconds > 0;
-                var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(va.TimeToLiveSeconds).Ticks : 0;
+                var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + (long)(va.TimeToLiveSeconds * TimeSpan.TicksPerSecond) : 0;
 
                 if (va.DataType == VariableDataType.Counter)
                 {
@@ -1384,7 +1399,7 @@ namespace EQLogParser
             case VariableActionType.Clear:
               {
                 var key = va.VariableName;
-                _variables.Remove(key);
+                _variables.TryRemove(key, out _);
                 _counterValues.Remove(key);
                 _variableExpiryTimes.Remove(key);
                 break;
@@ -1396,60 +1411,46 @@ namespace EQLogParser
 
     /// <summary>
     /// Checks for expired variables and removes them based on TTL.
-    /// Must be called with _variableLock held or from a locked context.
+    /// Must only be called while the caller holds _variableLock.
     /// </summary>
     private void ExpireVariables()
     {
       if (_variableExpiryTimes.Count == 0) return;
 
       var now = DateTime.UtcNow.Ticks;
-      var expiredKeys = new List<string>();
-
-      lock (_variableLock)
+      foreach (var key in _variableExpiryTimes.Keys.ToArray())
       {
-        foreach (var kvp in _variableExpiryTimes)
+        if (now >= _variableExpiryTimes[key])
         {
-          if (now >= kvp.Value)
-          {
-            expiredKeys.Add(kvp.Key);
-          }
-        }
-
-        // Remove expired variables
-        foreach (var key in expiredKeys)
-        {
-          _variables.Remove(key);
+          _variables.TryRemove(key, out _);
           _counterValues.Remove(key);
           _variableExpiryTimes.Remove(key);
         }
       }
     }
 
-    private Dictionary<string, string> GetVariablesSnapshot()
+    private void ExpireVariablesIfNeeded()
     {
+      // Expire under lock; reads from _variables are lock-free via ConcurrentDictionary.
       lock (_variableLock)
       {
         ExpireVariables();
-        return new Dictionary<string, string>(_variables);
       }
     }
 
     private static string ProcessDisplayText(string text, string action, Dictionary<string, string> matches,
       Dictionary<string, string> originalMatches, Dictionary<string, string> previousMatches,
-      Dictionary<string, string> variables = null)
+      ConcurrentDictionary<string, string> variables)
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
-        // Resolve user-defined variables first (lowest priority - can be overridden by capture groups)
-        if (variables != null)
-        {
-          text = ProcessMatchesText(text, variables);
-        }
-
+        // Capture groups first (highest priority), then variables as fallback
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
         text = ProcessMatchesText(text, previousMatches);
         text = ProcessLineCode(text, action);
+        text = ProcessMatchesText(text, variables);
+
         return text;
       }
       return null;
@@ -1532,19 +1533,93 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
-      Dictionary<string, string> variables = null)
+    private static string ProcessMatchesText(string text, ConcurrentDictionary<string, string> matches)
     {
-      // Resolve user-defined variables first (lowest priority)
-      if (variables != null)
+      if (string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
+
+      var matchCollection = TokenRegex.Matches(text);
+      if (matchCollection.Count == 0) return text;
+
+      var lastIndex = 0;
+      var sb = new StringBuilder(text.Length);
+
+      foreach (Match m in matchCollection)
       {
-        tts = ProcessMatchesText(tts, variables);
+        sb.Append(text, lastIndex, m.Index - lastIndex);
+        lastIndex = m.Index + m.Length;
+
+        var name = m.Groups["name"].Value;
+
+        var modifierName = m.Groups["modifier"].Success
+          ? m.Groups["modifier"].Value
+          : null;
+
+        var modifierArg = m.Groups["arg"].Success
+          ? m.Groups["arg"].Value
+          : null;
+
+        if (!matches.TryGetValue(name, out var value))
+        {
+          sb.Append(m.Value);
+          continue;
+        }
+
+        if (!string.IsNullOrEmpty(modifierName))
+        {
+          switch (modifierName.ToLowerInvariant())
+          {
+            case "capitalize":
+              value = TextUtils.CapitalizeFirst(value, CultureInfo.CurrentCulture);
+              break;
+
+            case "center":
+              value = TextUtils.PadCenter(value, modifierArg);
+              break;
+
+            case "number":
+              if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
+                value = num.ToString("N0", CultureInfo.CurrentCulture);
+              break;
+
+            case "upper":
+              value = value.ToUpper(CultureInfo.CurrentCulture);
+              break;
+
+            case "lower":
+              value = value.ToLower(CultureInfo.CurrentCulture);
+              break;
+
+            case "padleft":
+              value = TextUtils.PadLeft(value, modifierArg);
+              break;
+
+            case "padright":
+              value = TextUtils.PadRight(value, modifierArg);
+              break;
+          }
+        }
+
+        sb.Append(value);
       }
 
+      if (lastIndex < text.Length)
+      {
+        sb.Append(text, lastIndex, text.Length - lastIndex);
+      }
+
+      return sb.ToString();
+    }
+
+    private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
+      ConcurrentDictionary<string, string> variables)
+    {
+      // Capture groups first (highest priority), then variables as fallback
       tts = ProcessMatchesText(tts, original);
       tts = ProcessMatchesText(tts, matches);
       tts = ProcessMatchesText(tts, previous);
       tts = ProcessLineCode(tts, action);
+      tts = ProcessMatchesText(tts, variables);
+
       return tts;
     }
 

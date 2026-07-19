@@ -20,10 +20,7 @@ namespace EQLogParser
 {
   public partial class TriggersView : IDocumentContent
   {
-    // Binding properties for Variable Actions tab (internal before private per CodingStandards.md)
-    internal List<VariableActionType> ActionTypes { get; } = [VariableActionType.Set, VariableActionType.Clear];
-    internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value"];
-    internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
+    // Binding properties for Variable Actions tab
     internal ObservableCollection<string> CaptureGroups { get; } = [];
 
     private readonly Dictionary<string, Window> _previewWindows = [];

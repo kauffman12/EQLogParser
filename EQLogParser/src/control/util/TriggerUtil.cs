@@ -114,16 +114,18 @@ namespace EQLogParser
         toTrigger.IconSource = fromTrigger.IconSource;
         toTrigger.VoiceRate = fromTrigger.VoiceRate;
         toTrigger.Volume = fromTrigger.Volume;
-        toTrigger.VariableActions = fromTrigger.VariableActions?.Select(va => new VariableAction
-        {
-          ActionType = va.ActionType,
-          DataType = va.DataType,
-          VariableName = va.VariableName,
-          Value = va.Value,
-          Step = va.Step,
-          InitialValue = va.InitialValue,
-          TimeToLiveSeconds = va.TimeToLiveSeconds
-        }).ToList();
+        toTrigger.VariableActions = fromTrigger.VariableActions is { Count: > 0 } srcActions
+          ? srcActions.Select(va => new VariableAction
+          {
+            ActionType = va.ActionType,
+            DataType = va.DataType,
+            VariableName = va.VariableName,
+            Value = va.Value,
+            Step = va.Step,
+            InitialValue = va.InitialValue,
+            TimeToLiveSeconds = va.TimeToLiveSeconds
+          }).ToList()
+          : [];
 
         if (toTrigger is TriggerPropertyModel toModel)
         {

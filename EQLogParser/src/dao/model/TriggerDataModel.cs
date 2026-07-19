@@ -143,18 +143,27 @@ namespace EQLogParser
     public bool IsCooldown { get; set; }
   }
 
+  /// <summary>
+  /// The type of variable action to perform.
+  /// </summary>
   internal enum VariableActionType
   {
     Set,
     Clear
   }
 
+  /// <summary>
+  /// The data type stored by a variable.
+  /// </summary>
   internal enum VariableDataType
   {
     Text,
     Counter
   }
 
+  /// <summary>
+  /// Represents a single variable action (set or clear) configured on a trigger.
+  /// </summary>
   internal class VariableAction
   {
     public VariableActionType ActionType { get; set; } = VariableActionType.Set;
@@ -329,9 +338,10 @@ namespace EQLogParser
       get => _value;
       set
       {
-        if (_value != value)
+        var trimmed = value?.Trim();
+        if (_value != trimmed)
         {
-          _value = value;
+          _value = trimmed;
           OnPropertyChanged();
           OnPropertyChanged(nameof(IsValueEmpty));
         }
