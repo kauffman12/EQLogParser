@@ -121,7 +121,8 @@ namespace EQLogParser
           VariableName = va.VariableName,
           Value = va.Value,
           Step = va.Step,
-          InitialValue = va.InitialValue
+          InitialValue = va.InitialValue,
+          TimeToLiveSeconds = va.TimeToLiveSeconds
         }).ToList();
 
         if (toTrigger is TriggerPropertyModel toModel)

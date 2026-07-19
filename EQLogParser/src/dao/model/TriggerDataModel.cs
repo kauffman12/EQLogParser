@@ -3,6 +3,9 @@ using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -167,6 +170,288 @@ namespace EQLogParser
 
     // TTL field (applies to both Text and Counter)
     public double TimeToLiveSeconds { get; set; } = 0; // 0 = no expiration
+  }
+
+  /// <summary>
+  /// ViewModel for VariableAction to support WPF data binding with INotifyPropertyChanged.
+  /// Used exclusively in the Variables tab UI; syncs to/from VariableAction model for persistence.
+  /// </summary>
+  internal class VariableActionViewModel : INotifyPropertyChanged
+  {
+    // Static collections for ComboBox binding - using string display values with conversion
+    private static readonly (VariableActionType Type, string Display)[] s_actionTypes = 
+      [(VariableActionType.Set, "Set Value"), (VariableActionType.Clear, "Clear Value")];
+    private static readonly (VariableDataType Type, string Display)[] s_dataTypes = 
+      [(VariableDataType.Text, "Text"), (VariableDataType.Counter, "Counter")];
+
+    // Instance properties for binding - return display strings
+    public string[] ActionTypes => s_actionTypes.Select(x => x.Display).ToArray();
+    public string[] DataTypes => s_dataTypes.Select(x => x.Display).ToArray();
+
+    // Helper to get enum from selected display string
+    public VariableActionType GetActionTypeFromDisplay(string display) 
+      => s_actionTypes.FirstOrDefault(x => x.Display == display).Type;
+    public VariableDataType GetDataTypeFromDisplay(string display) 
+      => s_dataTypes.FirstOrDefault(x => x.Display == display).Type;
+    public string GetDisplayFromActionType(VariableActionType type) 
+      => s_actionTypes.FirstOrDefault(x => x.Type == type).Display;
+    public string GetDisplayFromDataType(VariableDataType type) 
+      => s_dataTypes.FirstOrDefault(x => x.Type == type).Display;
+
+    private VariableActionType _actionType = VariableActionType.Set;
+    private VariableDataType _dataType = VariableDataType.Text;
+    private string _variableName = "";
+    private string _value = "";
+    private double _initialValue;
+    private double _step = 1;
+    private double _timeToLiveSeconds;
+    private bool _isDirty;
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string name = null)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+      if (name != nameof(IsDirty))
+      {
+        IsDirty = true;
+      }
+    }
+
+    public bool IsDirty
+    {
+      get => _isDirty;
+      set
+      {
+        if (_isDirty != value)
+        {
+          _isDirty = value;
+          PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsDirty)));
+        }
+      }
+    }
+
+    // Computed properties for UI visibility bindings
+    public bool IsSetAction => _actionType == VariableActionType.Set;
+    public bool IsClearAction => _actionType == VariableActionType.Clear;
+    public bool IsTextType => _dataType == VariableDataType.Text;
+    public bool IsCounterType => _dataType == VariableDataType.Counter;
+
+    // Internal backing field for the selected display string
+    private string _actionTypeDisplay => GetDisplayFromActionType(_actionType);
+    private string _dataTypeDisplay => GetDisplayFromDataType(_dataType);
+
+    public VariableActionType ActionType
+    {
+      get => _actionType;
+      set
+      {
+        if (_actionType != value)
+        {
+          _actionType = value;
+          OnPropertyChanged();
+          OnPropertyChanged(nameof(IsSetAction));
+          OnPropertyChanged(nameof(IsClearAction));
+          // Also notify the display property for ComboBox binding
+          OnPropertyChanged(nameof(ActionTypeDisplay));
+        }
+      }
+    }
+
+    // Property for ComboBox SelectedItem binding (string-based)
+    public string ActionTypeDisplay
+    {
+      get => _actionTypeDisplay;
+      set
+      {
+        var newType = GetActionTypeFromDisplay(value);
+        if (_actionType != newType)
+        {
+          _actionType = newType;
+          OnPropertyChanged(nameof(ActionType));
+          OnPropertyChanged(nameof(IsSetAction));
+          OnPropertyChanged(nameof(IsClearAction));
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    public VariableDataType DataType
+    {
+      get => _dataType;
+      set
+      {
+        if (_dataType != value)
+        {
+          _dataType = value;
+          OnPropertyChanged();
+          OnPropertyChanged(nameof(IsTextType));
+          OnPropertyChanged(nameof(IsCounterType));
+          // Also notify the display property for ComboBox binding
+          OnPropertyChanged(nameof(DataTypeDisplay));
+        }
+      }
+    }
+
+    // Property for ComboBox SelectedItem binding (string-based)
+    public string DataTypeDisplay
+    {
+      get => _dataTypeDisplay;
+      set
+      {
+        var newType = GetDataTypeFromDisplay(value);
+        if (_dataType != newType)
+        {
+          _dataType = newType;
+          OnPropertyChanged(nameof(DataType));
+          OnPropertyChanged(nameof(IsTextType));
+          OnPropertyChanged(nameof(IsCounterType));
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    public string VariableName
+    {
+      get => _variableName;
+      set
+      {
+        if (_variableName != value)
+        {
+          _variableName = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    public string Value
+    {
+      get => _value;
+      set
+      {
+        if (_value != value)
+        {
+          _value = value;
+          OnPropertyChanged();
+          OnPropertyChanged(nameof(IsValueEmpty));
+        }
+      }
+    }
+
+    /// <summary>
+    /// Returns true if Value is null, empty, or whitespace. Used for placeholder visibility.
+    /// </summary>
+    public bool IsValueEmpty => string.IsNullOrWhiteSpace(_value);
+
+    public double InitialValue
+    {
+      get => _initialValue;
+      set
+      {
+        if (_initialValue != value)
+        {
+          _initialValue = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    public double Step
+    {
+      get => _step;
+      set
+      {
+        if (_step != value)
+        {
+          _step = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    public double TimeToLiveSeconds
+    {
+      get => _timeToLiveSeconds;
+      set
+      {
+        if (_timeToLiveSeconds != value)
+        {
+          _timeToLiveSeconds = value;
+          OnPropertyChanged();
+        }
+      }
+    }
+
+    /// <summary>
+    /// Syncs this ViewModel's current values to the target model object.
+    /// </summary>
+    public void SyncToModel(VariableAction model)
+    {
+      model.ActionType = ActionType;
+      model.DataType = DataType;
+      model.VariableName = VariableName;
+      model.Value = Value;
+      model.InitialValue = InitialValue;
+      model.Step = Step;
+      model.TimeToLiveSeconds = TimeToLiveSeconds;
+      // Reset dirty flag after successful sync
+      IsDirty = false;
+    }
+
+    /// <summary>
+    /// Creates a ViewModel instance from a model object.
+    /// </summary>
+    public static VariableActionViewModel FromModel(VariableAction model)
+    {
+      return new VariableActionViewModel
+      {
+        ActionType = model.ActionType,
+        DataType = model.DataType,
+        VariableName = model.VariableName,
+        Value = model.Value,
+        InitialValue = model.InitialValue,
+        Step = model.Step,
+        TimeToLiveSeconds = model.TimeToLiveSeconds
+      };
+    }
+
+    /// <summary>
+    /// Creates a ViewModel instance from a model object without firing PropertyChanged events.
+    /// Use this when loading data to avoid triggering UI updates during initialization.
+    /// </summary>
+    internal static VariableActionViewModel FromModelSilent(VariableAction model)
+    {
+      return new VariableActionViewModel
+      {
+        _actionType = model.ActionType,
+        _dataType = model.DataType,
+        _variableName = model.VariableName,
+        _value = model.Value,
+        _initialValue = model.InitialValue,
+        _step = model.Step,
+        _timeToLiveSeconds = model.TimeToLiveSeconds,
+        _isDirty = false
+      };
+    }
+
+    /// <summary>
+    /// Creates a fresh ViewModel with default values without firing PropertyChanged events.
+    /// Use this when adding new variable action cards during initialization.
+    /// </summary>
+    internal static VariableActionViewModel CreateSilent()
+    {
+      return new VariableActionViewModel
+      {
+        _actionType = VariableActionType.Set,
+        _dataType = VariableDataType.Text,
+        _variableName = "gVariable1",
+        _value = "",
+        _initialValue = 0,
+        _step = 1,
+        _timeToLiveSeconds = 0,
+        _isDirty = false
+      };
+    }
   }
 
   internal class Trigger

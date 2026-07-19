@@ -235,7 +235,7 @@
                       </Grid.ColumnDefinitions>
                       <fa:ImageAwesome Grid.Column="0" Icon="Solid_InfoCircle" Foreground="{DynamicResource EQMenuIconBrush}"
                         VerticalAlignment="Center" Width="16" Height="16" Margin="0,0,12,0" />
-                    <TextBlock Grid.Column="1" Text="Variables let this trigger pass values to other triggers. Set a Variable Name, pick Set Value to store text or a counter, then Clear Value to remove it later. Counters auto-increment by the Step each time this trigger activates. Other triggers read these values using {$varName} in their Sound/Text, Display Text, or Timer fields."
+                    <TextBlock Grid.Column="1" Text="Variables let triggers pass values to other triggers. Here you can add multiple variables, each with a different name, and set or clear their values. You can then reference these variables in Sound, Text to Display, and other fields. See the Documentation for more info."
                         TextWrapping="Wrap" VerticalAlignment="Center"
                         FontSize="{DynamicResource EQContentSizePlus}" />
                     </Grid>
@@ -273,11 +273,20 @@
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,2">
                               <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="varBraceLeft" VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,2,0" />
-                                <TextBox x:Name="variableNameBox" Text="{Binding VariableName, Mode=TwoWay}" Width="{DynamicResource VariableInputWidth}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" />
-                                <TextBlock x:Name="varBraceRight" VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="2,0,0,0" />
+                                <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,2,0">
+                                  <TextBlock.Text>
+                                    <sys:String>{</sys:String>
+                                  </TextBlock.Text>
+                                </TextBlock>
+                                <TextBox Width="{DynamicResource VariableInputWidth}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                  Text="{Binding VariableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
+                                  Foreground="{DynamicResource ContentForeground}" Margin="2,0,0,0">
+                                  <TextBlock.Text>
+                                    <sys:String>}</sys:String>
+                                  </TextBlock.Text>
+                                </TextBlock>
                               </StackPanel>
                             </Border>
                           </StackPanel>
@@ -286,29 +295,76 @@
                           <StackPanel Margin="0,2,0,8">
                             <TextBlock Text="Action" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <ComboBox x:Name="actionTypeCombo" Padding="6,4" />
+                            <ComboBox ItemsSource="{Binding ActionTypes}" 
+                              SelectedItem="{Binding ActionTypeDisplay, Mode=TwoWay}" Padding="6,4" />
                           </StackPanel>
 
                           <!-- Type selector (visible when Action=Set) -->
-                          <StackPanel x:Name="typePanel" Visibility="Collapsed" Margin="0,2,0,8">
+                          <StackPanel x:Name="typePanel" Margin="0,2,0,8">
                             <TextBlock Text="Type" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
-                            <ComboBox x:Name="dataTypeCombo" Padding="6,4" />
+                            <ComboBox ItemsSource="{Binding DataTypes}" 
+                              SelectedItem="{Binding DataTypeDisplay, Mode=TwoWay}" Padding="6,4" />
+                            <StackPanel.Style>
+                              <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsSetAction}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </StackPanel.Style>
                           </StackPanel>
 
                           <!-- Value field (visible when Action=Set and Type=Text) -->
-                          <StackPanel x:Name="valuePanel" Visibility="Collapsed" Margin="0,2,0,8">
+                          <StackPanel x:Name="valuePanel" Margin="0,2,0,8">
                             <TextBlock x:Name="valueLabel" Text="Text Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
-                              <TextBox x:Name="valueTextBox" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                              ToolTip="Enter text or use {s1}, {n1}, ${varName} to reference capture groups or other variables"
-                              BorderThickness="0" Padding="0,4" />
+                              <Grid>
+                                <TextBox x:Name="valueTextBox"
+                                  Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="Enter text or use {s1}, {n1}, ${varName} to reference capture groups or other variables"
+                                  BorderThickness="0" Padding="0,4" />
+                                <TextBlock Text="example value {s1}"
+                                  Margin="14,0,0,0"
+                                  VerticalAlignment="Center"
+                                  Foreground="{DynamicResource PlaceholderForeground}"
+                                  FontStyle="Italic"
+                                  IsHitTestVisible="False"
+                                  Panel.ZIndex="1">
+                                  <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                      <Setter Property="Visibility" Value="Collapsed" />
+                                      <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsValueEmpty}" Value="True">
+                                          <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                      </Style.Triggers>
+                                    </Style>
+                                  </TextBlock.Style>
+                                </TextBlock>
+                              </Grid>
                             </Border>
+                            <StackPanel.Style>
+                              <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                      <Condition Binding="{Binding IsSetAction}" Value="True" />
+                                      <Condition Binding="{Binding IsTextType}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                  </MultiDataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </StackPanel.Style>
                           </StackPanel>
 
                           <!-- Counter fields (visible when Action=Set and Type=Counter) -->
-                          <StackPanel x:Name="counterFieldsPanel" Visibility="Collapsed" Margin="0,2,0,8">
+                          <StackPanel x:Name="counterFieldsPanel" Margin="0,2,0,8">
                             <Grid>
                               <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -340,10 +396,26 @@
                                 </Border>
                               </StackPanel>
                             </Grid>
+                            <StackPanel.Style>
+                              <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                      <Condition Binding="{Binding IsSetAction}" Value="True" />
+                                      <Condition Binding="{Binding IsCounterType}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <MultiDataTrigger.Setters>
+                                      <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger.Setters>
+                                  </MultiDataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </StackPanel.Style>
                           </StackPanel>
 
                           <!-- Time to Live field (visible when Action=Set, for both Text and Counter) -->
-                          <StackPanel x:Name="ttlPanel" Visibility="Collapsed" Margin="0,2,0,8">
+                          <StackPanel x:Name="ttlPanel" Margin="0,2,0,8">
                             <TextBlock Text="Time to Live (seconds, 0=never expires)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
@@ -354,6 +426,16 @@
                                 </syncfusion:UpDown.NumberFormatInfo>
                               </syncfusion:UpDown>
                             </Border>
+                            <StackPanel.Style>
+                              <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding IsSetAction}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </StackPanel.Style>
                           </StackPanel>
 
                           <!-- Remove button at bottom -->

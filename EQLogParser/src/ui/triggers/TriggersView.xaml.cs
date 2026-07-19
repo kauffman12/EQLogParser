@@ -4,6 +4,7 @@ using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -24,7 +25,6 @@ namespace EQLogParser
     internal string[] ActionTypeLabels { get; } = ["Set Value", "Clear Value"];
     internal List<VariableDataType> DataTypes { get; } = [VariableDataType.Text, VariableDataType.Counter];
     internal ObservableCollection<string> CaptureGroups { get; } = [];
-    internal ObservableCollection<VariableAction> VariableActions => _variableActions;
 
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
@@ -44,11 +44,36 @@ namespace EQLogParser
     private List<string> _deviceNameList;
     private string _currentCharacterId;
     private bool _ready;
-    private readonly ObservableCollection<VariableAction> _variableActions = [];
+    private readonly ObservableCollection<VariableActionViewModel> _variableActionViewModels = [];
 
     public TriggersView()
     {
       InitializeComponent();
+
+      // Wire up PropertyChanged on existing ViewModels and listen for collection changes
+      _variableActionViewModels.CollectionChanged += (_, e) =>
+      {
+        if (e.OldItems is not null)
+        {
+          foreach (VariableActionViewModel vm in e.OldItems)
+          {
+            vm.PropertyChanged -= OnVariableActionPropertyChanged;
+          }
+        }
+        if (e.NewItems is not null)
+        {
+          foreach (VariableActionViewModel vm in e.NewItems)
+          {
+            vm.PropertyChanged += OnVariableActionPropertyChanged;
+          }
+        }
+      };
+
+      // Wire up existing items
+      foreach (var vm in _variableActionViewModels)
+      {
+        vm.PropertyChanged += OnVariableActionPropertyChanged;
+      }
 
       _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
@@ -857,12 +882,25 @@ namespace EQLogParser
       var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
       if (model is TriggerPropertyModel triggerModel)
       {
-        // Sync variable actions from UI to model before saving (filter out entries with no name)
-        triggerModel.VariableActions = _variableActions
+        // Sync variable actions from ViewModel UI to model before saving (filter out entries with no name)
+        var hasChanges = false;
+        triggerModel.VariableActions = _variableActionViewModels
+          .Select(vm =>
+          {
+            var va = new VariableAction();
+            vm.SyncToModel(va);
+            if (vm.IsDirty) hasChanges = true;
+            return va;
+          })
           .Where(va => !string.IsNullOrWhiteSpace(va.VariableName))
           .ToList();
-        await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
-        await TriggerStateDB.Instance.Update(triggerModel.Node);
+        
+        // Only save if there are actual changes or items exist
+        if (hasChanges || triggerModel.VariableActions.Count > 0)
+        {
+          await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
+          await TriggerStateDB.Instance.Update(triggerModel.Node);
+        }
       }
       else
       {
@@ -913,18 +951,18 @@ namespace EQLogParser
         EnableCategories(true, timerType, false, false);
 
         // Restore variable actions from original data
-        _variableActions.Clear();
+        _variableActionViewModels.Clear();
         if (triggerModel.Node.TriggerData?.VariableActions is { Count: > 0 } originalActions)
         {
           foreach (var action in originalActions)
           {
-            _variableActions.Add(action);
+            _variableActionViewModels.Add(VariableActionViewModel.FromModelSilent(action));
           }
         }
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
+          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent());
         }
       }
       else if (model is TimerOverlayPropertyModel timerModel)
@@ -990,21 +1028,21 @@ namespace EQLogParser
 
         // Initialize variable actions for this trigger
         var trigger = data.Item1.SerializedData?.TriggerData;
-        _variableActions.Clear();
+        _variableActionViewModels.Clear();
         if (trigger?.VariableActions is { Count: > 0 } actions)
         {
           foreach (var action in actions)
           {
-            _variableActions.Add(action);
+            _variableActionViewModels.Add(VariableActionViewModel.FromModelSilent(action));
           }
         }
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
+          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent());
         }
 
-        variableActionsList.ItemsSource = _variableActions;
+        variableActionsList.ItemsSource = _variableActionViewModels;
         UpdateCaptureGroups(trigger?.Pattern);
         variableActionsTab.Visibility = Visibility.Visible;
         UpdateVariableActionsEmptyState();
@@ -1107,174 +1145,28 @@ namespace EQLogParser
 
     private void UpdateVariableActionsEmptyState()
     {
-      var isEmpty = _variableActions.Count == 0;
+      var isEmpty = _variableActionViewModels.Count == 0;
       variableActionsEmptyState.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void VariableActionRowLoaded(object sender, RoutedEventArgs e)
     {
-      // ItemsControl DataTemplates break the visual tree, so RelativeSource bindings
-      // can't reach the parent DataContext. Set ItemsSource directly instead.
-      if (sender is Border border && border.Child is StackPanel panel && border.DataContext is VariableAction va)
+      // Placeholder is handled by XAML overlay TextBlock.
+      // Binding handles all value sync and IsDirty tracking automatically.
+      if (sender is Border border && border.Child is StackPanel panel && border.DataContext is VariableActionViewModel vm)
       {
-        var isCounter = va.DataType == VariableDataType.Counter;
-        var isSet = va.ActionType == VariableActionType.Set;
-
-        // Set brace text for variable name display (curly braces can't be literal in XAML)
-        if (UiElementUtil.FindChild<TextBlock>(panel, "varBraceLeft") is TextBlock leftBrace)
-          leftBrace.Text = "{";
-        if (UiElementUtil.FindChild<TextBlock>(panel, "varBraceRight") is TextBlock rightBrace)
-          rightBrace.Text = "}";
-
-        // Find all controls by name using recursive search
-        var typePanel = UiElementUtil.FindChild<StackPanel>(panel, "typePanel");
-        var valuePanel = UiElementUtil.FindChild<StackPanel>(panel, "valuePanel");
-        var counterFieldsPanel = UiElementUtil.FindChild<StackPanel>(panel, "counterFieldsPanel");
-        var ttlPanel = UiElementUtil.FindChild<StackPanel>(panel, "ttlPanel");
-        var actionTypeCombo = UiElementUtil.FindChild<ComboBox>(panel, "actionTypeCombo");
-        var dataTypeCombo = UiElementUtil.FindChild<ComboBox>(panel, "dataTypeCombo");
         var valueTextBox = UiElementUtil.FindChild<TextBox>(panel, "valueTextBox");
-        var variableNameBox = UiElementUtil.FindChild<TextBox>(panel, "variableNameBox");
-        var valueLabel = UiElementUtil.FindChild<TextBlock>(panel, "valueLabel");
-
-        // Set visibility for panels
-        if (typePanel is not null)
-        {
-          typePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        if (valuePanel is not null)
-        {
-          valuePanel.Visibility = (isSet && !isCounter) ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        if (counterFieldsPanel is not null)
-        {
-          counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        // TTL panel visible when Action=Set (for both Text and Counter)
-        if (ttlPanel is not null)
-        {
-          ttlPanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        // Set initial value label text
-        if (valueLabel is not null)
-        {
-          valueLabel.Text = isCounter ? "Increment By" : "Text Value";
-        }
-
-        // Variable name text box with validation — mark dirty on change
-        if (variableNameBox is not null)
-        {
-          variableNameBox.TextChanged += (_, _) =>
-          {
-            // Validate variable name: must start with letter or underscore, contain only alphanumeric + underscore
-            var isValid = string.IsNullOrWhiteSpace(variableNameBox.Text) ||
-              Regex.IsMatch(variableNameBox.Text, @"^[a-zA-Z_][a-zA-Z0-9_]*$");
-            variableNameBox.Foreground = isValid ?
-              (Brush)FindResource("ContentForeground") :
-              (Brush)FindResource("EQStopForegroundBrush");
-            EnableSaveCancel();
-          };
-        }
-
-        // Action type combo with descriptive labels, bound to enum via index
-        if (actionTypeCombo is not null)
-        {
-          actionTypeCombo.ItemsSource = ActionTypeLabels;
-          actionTypeCombo.SelectedIndex = (int)va.ActionType;
-          actionTypeCombo.SelectionChanged += (_, _) =>
-          {
-            if (actionTypeCombo.SelectedIndex >= 0 && actionTypeCombo.SelectedIndex < ActionTypes.Count)
-            {
-              va.ActionType = ActionTypes[actionTypeCombo.SelectedIndex];
-            }
-            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, ttlPanel, valueLabel);
-            EnableSaveCancel();
-          };
-        }
-
-        // Data type combo
-        if (dataTypeCombo is not null)
-        {
-          dataTypeCombo.ItemsSource = DataTypes;
-          dataTypeCombo.SelectedIndex = (int)va.DataType;
-          dataTypeCombo.SelectionChanged += (_, _) =>
-          {
-            if (dataTypeCombo.SelectedIndex >= 0)
-            {
-              va.DataType = (VariableDataType)dataTypeCombo.SelectedIndex;
-            }
-            UpdateVariablePanelVisibility(va, typePanel, valuePanel, counterFieldsPanel, ttlPanel, valueLabel);
-            EnableSaveCancel();
-          };
-        }
-
-        // Value TextBox with placeholder functionality for Text type
         if (valueTextBox is not null)
         {
-          const string placeholder = "example value {s1}";
-
-          // Initialize placeholder state if Value is empty
-          if (string.IsNullOrWhiteSpace(va.Value))
+          valueTextBox.PreviewKeyDown += (_, e2) =>
           {
-            valueTextBox.Text = placeholder;
-            valueTextBox.Foreground = (Brush)FindResource("PlaceholderForeground");
-            valueTextBox.FontStyle = FontStyles.Italic;
-          }
-
-          // Focus: clear placeholder
-          valueTextBox.GotFocus += (_, _) =>
-          {
-            if (valueTextBox.Text == placeholder)
+            if (e2.Key == Key.Escape)
             {
-              valueTextBox.Text = "";
-              valueTextBox.Foreground = (Brush)FindResource("ContentForeground");
-              valueTextBox.FontStyle = FontStyles.Normal;
+              vm.Value = "";
+              valueTextBox.Focus();
+              e2.Handled = true;
             }
           };
-
-          // Lost focus: restore placeholder if empty
-          valueTextBox.LostFocus += (_, _) =>
-          {
-            if (string.IsNullOrWhiteSpace(valueTextBox.Text))
-            {
-              valueTextBox.Text = placeholder;
-              valueTextBox.Foreground = (Brush)FindResource("PlaceholderForeground");
-              valueTextBox.FontStyle = FontStyles.Italic;
-              va.Value = ""; // Clear actual value
-            }
-            else
-            {
-              va.Value = valueTextBox.Text.Trim();
-            }
-          };
-
-          // Text change: mark dirty
-          valueTextBox.TextChanged += (_, _) => EnableSaveCancel();
-        }
-
-        // Counter UpDown controls — mark dirty on value change
-        var initialValueBox = UiElementUtil.FindChild<UpDown>(panel, "initialValueBox");
-        var stepBox = UiElementUtil.FindChild<UpDown>(panel, "stepBox");
-
-        if (initialValueBox is not null)
-        {
-          initialValueBox.ValueChanged += (_, _) => EnableSaveCancel();
-        }
-
-        if (stepBox is not null)
-        {
-          stepBox.ValueChanged += (_, _) => EnableSaveCancel();
-        }
-
-        // TTL UpDown control — mark dirty on value change
-        var ttlBox = UiElementUtil.FindChild<UpDown>(panel, "ttlBox");
-        if (ttlBox is not null)
-        {
-          ttlBox.ValueChanged += (_, _) => EnableSaveCancel();
         }
       }
     }
@@ -1285,58 +1177,34 @@ namespace EQLogParser
       cancelButton.IsEnabled = true;
     }
 
-    private static void UpdateVariablePanelVisibility(VariableAction va, StackPanel typePanel, StackPanel valuePanel, StackPanel counterFieldsPanel, StackPanel ttlPanel, TextBlock valueLabel)
+    /// <summary>
+    /// Handles property changes on VariableActionViewModels to enable the save button.
+    /// </summary>
+    private void OnVariableActionPropertyChanged(object sender, PropertyChangedEventArgs e)
     {
-      var isCounter = va.DataType == VariableDataType.Counter;
-      var isSet = va.ActionType == VariableActionType.Set;
-
-      if (typePanel is not null)
-      {
-        typePanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
-      }
-
-      if (valuePanel is not null)
-      {
-        valuePanel.Visibility = (isSet && !isCounter) ? Visibility.Visible : Visibility.Collapsed;
-      }
-
-      if (counterFieldsPanel is not null)
-      {
-        counterFieldsPanel.Visibility = (isSet && isCounter) ? Visibility.Visible : Visibility.Collapsed;
-      }
-
-      // TTL panel visible for both Text and Counter when Action=Set
-      if (ttlPanel is not null)
-      {
-        ttlPanel.Visibility = isSet ? Visibility.Visible : Visibility.Collapsed;
-      }
-
-      // Update label text based on current type
-      if (valueLabel is not null)
-      {
-        valueLabel.Text = isCounter ? "Increment By" : "Text Value";
-      }
+      // Any property change on a ViewModel means the user made an edit
+      EnableSaveCancel();
     }
 
     private void AddVariableActionClick(object sender, RoutedEventArgs e)
     {
-      _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
+      _variableActionViewModels.Add(new VariableActionViewModel { VariableName = "gVariable1" });
       EnableSaveCancel();
       UpdateVariableActionsEmptyState();
     }
 
     private void DeleteVariableActionClick(object sender, RoutedEventArgs e)
     {
-      if (sender is Button button && button.Tag is VariableAction action)
+      if (sender is Button button && button.Tag is VariableActionViewModel viewModel)
       {
-        _variableActions.Remove(action);
+        _variableActionViewModels.Remove(viewModel);
         EnableSaveCancel();
         UpdateVariableActionsEmptyState();
 
         // If last variable was removed, add a fresh starter card
-        if (_variableActions.Count == 0)
+        if (_variableActionViewModels.Count == 0)
         {
-          _variableActions.Add(new VariableAction { VariableName = "gVariable1" });
+          _variableActionViewModels.Add(new VariableActionViewModel { VariableName = "gVariable1" });
           UpdateVariableActionsEmptyState();
         }
       }

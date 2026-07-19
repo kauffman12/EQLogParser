@@ -43,10 +43,10 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
-    private readonly Dictionary<string, string> _variables = new();
+    private readonly Dictionary<string, string> _variables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, double> _counterValues = new(StringComparer.OrdinalIgnoreCase);
     // TTL tracking: stores the tick time when each variable was set
-    private readonly Dictionary<string, long> _variableExpiryTimes = new();
+    private readonly Dictionary<string, long> _variableExpiryTimes = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _variableLock = new();
     private readonly List<TriggerLogItem> _triggerLogBuffer = [];
     private IReadOnlyDictionary<string, string> _lexicon;
@@ -1334,8 +1334,7 @@ namespace EQLogParser
     private void ProcessVariableActions(List<VariableAction> variableActions, Dictionary<string, string> matches,
       Dictionary<string, string> previousMatches, string action)
     {
-      if (variableActions == null) return;
-      if (variableActions.Count == 0) return;
+      if (variableActions is not { Count: > 0 }) return;
 
       lock (_variableLock)
       {
