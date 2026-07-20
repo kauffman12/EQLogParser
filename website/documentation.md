@@ -161,7 +161,7 @@ Each row on the Variables tab is called a **variable card**. Every card defines 
 |---|---|
 | **Action Type** | **Set Value** stores a value into the variable. **Clear Value** removes it. |
 | **Variable Name** | A unique name for this variable (e.g. `gCaster`, `gSpellName`). Used in conditions and display text. Names starting with `g` are conventional but not required. |
-| **Data Type** | **Value** stores a static value (text or number). **Counter** stores a number that increments each time the trigger fires. |
+| **Data Type** | **Static** stores a fixed value (text or number). **Counter** stores a number that increments each time the trigger fires. |
 | **Value Source** | What value to store. Can be a capture group (`{s1}`), another variable (`{otherVar}`), or a literal string like `Red Dragon`. Ignored for Clear Value actions. |
 | **Initial Value** | *(Counter only)* Starting number when the counter is first created. Default is `0`. |
 | **Step** | *(Counter only)* How much to add each time the trigger fires. Default is `1`. Use negative values to decrement. |

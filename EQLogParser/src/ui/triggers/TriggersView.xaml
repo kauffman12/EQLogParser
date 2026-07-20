@@ -270,7 +270,7 @@
 
                           <!-- Value field (visible when Action=Set and Type=Value) -->
                           <StackPanel x:Name="valuePanel" Margin="0,2,0,8">
-                            <TextBlock x:Name="valueLabel" Text="Value (text/number)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                            <TextBlock x:Name="valueLabel" Text="Static Value (text/number)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
                               <Grid>

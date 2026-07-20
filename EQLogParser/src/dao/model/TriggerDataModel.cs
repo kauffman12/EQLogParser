@@ -199,7 +199,7 @@ namespace EQLogParser
   {
     // Pre-computed static arrays for ComboBox binding (no per-access allocation)
     private static readonly string[] s_actionTypeDisplays = ["Set Value", "Clear Value"];
-    private static readonly string[] s_dataTypeDisplays = ["Value", "Counter"];
+    private static readonly string[] s_dataTypeDisplays = ["Static", "Counter"];
 
     // Instance properties for binding - return cached display strings
     public string[] ActionTypes => s_actionTypeDisplays;
@@ -213,7 +213,7 @@ namespace EQLogParser
     public string GetDisplayFromActionType(VariableActionType type)
       => type == VariableActionType.Clear ? "Clear Value" : "Set Value";
     public string GetDisplayFromDataType(VariableDataType type)
-      => type == VariableDataType.Counter ? "Counter" : "Value";
+      => type == VariableDataType.Counter ? "Counter" : "Static";
 
     private VariableActionType _actionType = VariableActionType.Set;
     private VariableDataType _dataType = VariableDataType.Value;
@@ -256,7 +256,7 @@ namespace EQLogParser
 
     // Cached display strings — updated only when the underlying enum changes
     private string _actionTypeDisplay = "Set Value";
-    private string _dataTypeDisplay = "Value";
+    private string _dataTypeDisplay = "Static";
 
     public VariableActionType ActionType
     {
@@ -454,7 +454,7 @@ namespace EQLogParser
         _timeToLiveSeconds = model.TimeToLiveSeconds,
         _isDirty = false,
         _actionTypeDisplay = model.ActionType == 1 ? "Clear Value" : "Set Value",
-        _dataTypeDisplay = model.DataType == 1 ? "Counter" : "Value"
+        _dataTypeDisplay = model.DataType == 1 ? "Counter" : "Static"
       };
     }
 
