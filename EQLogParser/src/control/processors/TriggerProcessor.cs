@@ -712,7 +712,7 @@ namespace EQLogParser
             Matches = matches,
             Previous = previousMatches,
             Action = lineData.Action,
-            Variables = new Dictionary<string, string>(_variables),
+            Variables = isSound ? null : new Dictionary<string, string>(_variables),
             CounterCount = counterCount,
             BeginTicks = beginTicks,
             BeginTime = lineData.BeginTime

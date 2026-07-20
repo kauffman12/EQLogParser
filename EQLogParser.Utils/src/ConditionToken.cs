@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser
 {
     /// <summary>Token types for the variable condition expression language.</summary>

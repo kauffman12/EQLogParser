@@ -178,7 +178,7 @@ Each row on the Variables tab is called a **variable card**. Every card defines 
 Once a variable is set by one trigger, other triggers can reference it in two ways:
 
 1. **In Display/Speak Text:** Use `{$variableName}` syntax. For example, if a trigger sets a variable named `gCaster`, another trigger can display `{$gCaster} is casting something!`.
-2. **In Match Variables conditions:** Use `{variableName}` (without the `$`) in condition expressions. See the [Match Variables Field](#match-variables-field) section below.
+2. **In Match Variables conditions:** Use `{variableName}` or `${variableName}` in condition expressions (both syntaxes work identically). See the [Match Variables Field](#match-variables-field) section below.
 
 ### Value Source Examples
 
@@ -236,12 +236,14 @@ A condition expression consists of **variables**, **literals**, **comparison ope
 
 ### Variables
 
-Variables are referenced using curly braces and resolve to their current string value:
+Variables are referenced using curly braces and resolve to their current string value. Both `{name}` and `${name}` syntaxes are supported:
 
 | Syntax | Resolves To |
 |---|---|
 | `{s}` / `{s1}` / `{n2}` | Capture group values from the current Pattern match |
+| `${s}` / `${s1}` | Same as above (dollar-sign prefix is optional) |
 | `{hp}` | A custom variable named `hp` (set via the Variables tab) |
+| `${hp}` | Same as above (dollar-sign prefix is optional) |
 | `{target}` | A named regex capture group or custom variable |
 
 If a variable is **not set** (never assigned a value), it resolves to `null`. In comparisons, `null` behaves as described in the operator table below.
