@@ -571,11 +571,11 @@ namespace EQLogParser
       // Tab 2 header
       if (trigger)
       {
-        secondaryPropertyGridTab.Header = $"{TriggerListOptionLabels.TimerTypes[timerType]} Timer";
+        secondaryPropertyGridTab.Header = $"Timer ({TriggerListOptionLabels.TimerTypes[timerType]})";
       }
       else
       {
-        secondaryPropertyGridTab.Header = "Cooldown Mode";
+        secondaryPropertyGridTab.Header = "Timer (Cooldown)";
       }
 
       PropertyGridUtil.EnableCategories(generalPropertyGrid,
@@ -1017,6 +1017,9 @@ namespace EQLogParser
       secondaryPropertyGrid.SelectedObject = data.Item2;
       secondaryPropertyGrid.IsEnabled = secondaryPropertyGrid.SelectedObject != null;
       secondaryPropertyGrid.DescriptionPanelVisibility = (data.Item1?.IsTrigger() == true || data.Item1?.IsOverlay() == true) ? Visibility.Visible : Visibility.Collapsed;
+
+      // Reset to first tab on trigger selection change
+      propertyTabControl.SelectedItem = generalPropertyGridTab;
 
       if (data.Item1?.IsTrigger() == true)
       {

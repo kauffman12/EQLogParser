@@ -173,57 +173,7 @@
               </syncfusion:PropertyGrid.Items>
             </syncfusion:PropertyGrid>
           </syncfusion:TabItemExt>
-          <syncfusion:TabItemExt x:Name="secondaryPropertyGridTab" Header="Trigger Timer Properties" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
-            <syncfusion:PropertyGrid
-              x:Name="secondaryPropertyGrid"
-              BorderBrush="{DynamicResource ContentBackgroundAlt2}"
-              BorderThickness="0"
-              ButtonPanelVisibility="Collapsed"
-              EnableGrouping="True"
-              DescriptionPanelVisibility="Collapsed"
-              SearchBoxVisibility="Collapsed"
-              IsEnabled="False"
-              PropertyExpandMode="NestedMode"
-              Margin="0"
-              SortDirection="Ascending"
-              EnableToolTip="False"
-              AutoGenerateItems="False"
-              UpdateSourceMode="Immediately"
-              ValueChanged="ValueChanged">
-              <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
-                <GridLength>200</GridLength>
-              </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
-              <syncfusion:PropertyGrid.Items>
-                <!-- Overlay Specific Options -->
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="IdleTimeoutTimeSpan" DisplayName="Idle Timeout" Visibility="Collapsed" Description="If specified the Cooldown Timers will be removed once they have all been idle for the configured time." />
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" x:Name="idleBrushItem" PropertyName="IdleBrush" DisplayName="Idle Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing time waiting for activation." />
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" x:Name="resetBrushItem" PropertyName="ResetBrush" DisplayName="Reset Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the reset time left." />
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowActive" DisplayName="Show Active" Visibility="Collapsed" Description="Show Cooldown Timer when in Active state." />
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowIdle" DisplayName="Show Idle" Visibility="Collapsed" Description="Show Cooldown Timer when in Idle state." />
-                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
-                
-                <!-- Trigger Timer Options -->
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="AltTimerName" DisplayName="Alternate Timer Name"  Visibility="Collapsed" Description="The Name of the Timer defaults to the name of the Trigger. Set this property if an Alternate Name is required. See the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerDurationItem" PropertyName="DurationTimeSpan" DisplayName="Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds after the Trigger has been executed before the Timer completes." />
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerShortDurationItem" PropertyName="DurationSeconds" DisplayName="Duration (0.2s -> 2.0s)" Visibility="Collapsed" Description="Number of Milliseconds after the Trigger has been executed before the Timer completes." />
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="EndSoundOrText" DisplayName="End Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at completion of the Timer. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="EndTextToDisplay" DisplayName="End Text to Display" Description="The Text to Display in a Text Overlay at completion of the Timer. See the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="resetDurationItem" PropertyName="ResetDurationTimeSpan" DisplayName="Reset Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds required for the Timer to fully Reset if using a Timer Overlay configured as Cooldown. This is Primary Trigger Optionsly your cooldown time on an ability. Cooldown Overlays allow for a Timer that cycles through three states. Active, Reset, and and Idle/Waiting where each may have different colors." />
-                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="loopingTimerItem" PropertyName="TimesToLoop" DisplayName="Times to Loop" Visibility="Collapsed" Description="Number of times the Timer should loop or automatically restart." />
-                <syncfusion:PropertyGridItem CategoryName="Timer End Early" x:Name="endEarlyPatternItem" PropertyName="EndEarlyPattern" DisplayName="Match End Early Pattern" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
-                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyPattern2" DisplayName="Match End Early Pattern #2" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
-                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" x:Name="endEarlyPattern3Item" PropertyName="EndEarlyPattern3" DisplayName="Match End Early Pattern #3" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
-                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyRepeatedCount" DisplayName="Repeated Threshold"  Visibility="Collapsed" Description="The Timer will End Early if {repeated} or {counter} are specified in the Alternate Timer Name and they reache the specified value. If those tags are not used or zero is specified then this value will be ignored."/>
-                <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlySoundOrText" DisplayName="Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play if the Timer Ends Early. If no value is specified then the Sound/Text to Speak specified in the Timer End section will be used. If you wish to replace the Timer End message with nothing at all. Use the value {null} in this field. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyTextToDisplay" DisplayName="Text to Display" Description="The Text to Display in a Text Overlay if the Timer Ended Early. If no value is specified then the Text to Display specified in the Timer End section will be used. If you wish to replace the Timer End message with nothing at all. Use the value {null} in this field. See the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Timer Warning" x:Name="warningSecondsItem"  PropertyName="WarningSeconds" DisplayName="Warn With Time Remaining" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text/Sound."/>
-                <syncfusion:PropertyGridItem CategoryName="Timer Warning" PropertyName="WarningSoundOrText" DisplayName="Warning Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at the Warning Time. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Timer Warning" PropertyName="WarningTextToDisplay" DisplayName="Warning Text to Display" Description="The Text to Display in a Text Overlay at the Warning Time. See the documentation on Using Trigger Variables for additional information."/>
-              </syncfusion:PropertyGrid.Items>
-            </syncfusion:PropertyGrid>
-          </syncfusion:TabItemExt>
-          <syncfusion:TabItemExt x:Name="variableActionsTab" Header="Variables" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
+          <syncfusion:TabItemExt x:Name="variableActionsTab" Header="Trigger Variables" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
             <ScrollViewer Padding="8" VerticalScrollBarVisibility="Auto">
               <StackPanel>
                 <!-- #12: Explain variable scope -->
@@ -328,7 +278,7 @@
                                   ToolTip="Enter text or use {s1}, {n1}, ${varName} to reference capture groups or other variables"
                                   BorderThickness="0" Padding="0,4" />
                                 <TextBlock Text="example value {s1}"
-                                  Margin="14,0,0,0"
+                                  Margin="2,0,0,0"
                                   VerticalAlignment="Center"
                                   Foreground="{DynamicResource PlaceholderForeground}"
                                   FontStyle="Italic"
@@ -338,9 +288,13 @@
                                     <Style TargetType="TextBlock">
                                       <Setter Property="Visibility" Value="Collapsed" />
                                       <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsValueEmpty}" Value="True">
+                                        <MultiDataTrigger>
+                                          <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsValueEmpty}" Value="True" />
+                                            <Condition Binding="{Binding ElementName=valueTextBox, Path=IsFocused}" Value="False" />
+                                          </MultiDataTrigger.Conditions>
                                           <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
+                                        </MultiDataTrigger>
                                       </Style.Triggers>
                                     </Style>
                                   </TextBlock.Style>
@@ -458,6 +412,56 @@
 
               </StackPanel>
             </ScrollViewer>
+          </syncfusion:TabItemExt>
+          <syncfusion:TabItemExt x:Name="secondaryPropertyGridTab" Header="Trigger Timer Properties" Height="28" FontSize="{DynamicResource EQTitleSize}" Visibility="Collapsed">
+            <syncfusion:PropertyGrid
+              x:Name="secondaryPropertyGrid"
+              BorderBrush="{DynamicResource ContentBackgroundAlt2}"
+              BorderThickness="0"
+              ButtonPanelVisibility="Collapsed"
+              EnableGrouping="True"
+              DescriptionPanelVisibility="Collapsed"
+              SearchBoxVisibility="Collapsed"
+              IsEnabled="False"
+              PropertyExpandMode="NestedMode"
+              Margin="0"
+              SortDirection="Ascending"
+              EnableToolTip="False"
+              AutoGenerateItems="False"
+              UpdateSourceMode="Immediately"
+              ValueChanged="ValueChanged">
+              <syncfusion:PropertyGrid.PropertyNameColumnDefinition>
+                <GridLength>200</GridLength>
+              </syncfusion:PropertyGrid.PropertyNameColumnDefinition>
+              <syncfusion:PropertyGrid.Items>
+                <!-- Overlay Specific Options -->
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="IdleTimeoutTimeSpan" DisplayName="Idle Timeout" Visibility="Collapsed" Description="If specified the Cooldown Timers will be removed once they have all been idle for the configured time." />
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" x:Name="idleBrushItem" PropertyName="IdleBrush" DisplayName="Idle Color" Visibility="Collapsed" Description="Color used for the Timer Bars representing time waiting for activation." />
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" x:Name="resetBrushItem" PropertyName="ResetBrush" DisplayName="Reset Color" Visibility="Collapsed" Description="Color used for the Timer countdown bars representing the reset time left." />
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowActive" DisplayName="Show Active" Visibility="Collapsed" Description="Show Cooldown Timer when in Active state." />
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowIdle" DisplayName="Show Idle" Visibility="Collapsed" Description="Show Cooldown Timer when in Idle state." />
+                <syncfusion:PropertyGridItem CategoryName="Cooldown Options" PropertyName="ShowReset" DisplayName="Show Reset" Visibility="Collapsed" Description="Show Cooldown Timer when in Reset state." />
+                
+                <!-- Trigger Timer Options -->
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="AltTimerName" DisplayName="Alternate Timer Name"  Visibility="Collapsed" Description="The Name of the Timer defaults to the name of the Trigger. Set this property if an Alternate Name is required. See the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerDurationItem" PropertyName="DurationTimeSpan" DisplayName="Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds after the Trigger has been executed before the Timer completes." />
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerShortDurationItem" PropertyName="DurationSeconds" DisplayName="Duration (0.2s -> 2.0s)" Visibility="Collapsed" Description="Number of Milliseconds after the Trigger has been executed before the Timer completes." />
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="EndSoundOrText" DisplayName="End Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at completion of the Timer. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="EndTextToDisplay" DisplayName="End Text to Display" Description="The Text to Display in a Text Overlay at completion of the Timer. See the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="TriggerAgainOption" DisplayName="If Triggered Again" Visibility="Collapsed" Description="What to do if the Trigger is matched a second time but the original Timer has not completed."/>
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="resetDurationItem" PropertyName="ResetDurationTimeSpan" DisplayName="Reset Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds required for the Timer to fully Reset if using a Timer Overlay configured as Cooldown. This is Primary Trigger Optionsly your cooldown time on an ability. Cooldown Overlays allow for a Timer that cycles through three states. Active, Reset, and and Idle/Waiting where each may have different colors." />
+                <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="loopingTimerItem" PropertyName="TimesToLoop" DisplayName="Times to Loop" Visibility="Collapsed" Description="Number of times the Timer should loop or automatically restart." />
+                <syncfusion:PropertyGridItem CategoryName="Timer End Early" x:Name="endEarlyPatternItem" PropertyName="EndEarlyPattern" DisplayName="Match End Early Pattern" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
+                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyPattern2" DisplayName="Match End Early Pattern #2" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
+                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" x:Name="endEarlyPattern3Item" PropertyName="EndEarlyPattern3" DisplayName="Match End Early Pattern #3" Visibility="Collapsed" Description="If this End Early Pattern is matched it will cause the Timer to end even if there is time remaining. See the documentation on Using Trigger Variables for additional information."/>
+                 <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyRepeatedCount" DisplayName="Repeated Threshold"  Visibility="Collapsed" Description="The Timer will End Early if {repeated} or {counter} are specified in the Alternate Timer Name and they reache the specified value. If those tags are not used or zero is specified then this value will be ignored."/>
+                <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlySoundOrText" DisplayName="Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play if the Timer Ends Early. If no value is specified then the Sound/Text to Speak specified in the Timer End section will be used. If you wish to replace the Timer End message with nothing at all. Use the value {null} in this field. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Timer End Early" PropertyName="EndEarlyTextToDisplay" DisplayName="Text to Display" Description="The Text to Display in a Text Overlay if the Timer Ended Early. If no value is specified then the Text to Display specified in the Timer End section will be used. If you wish to replace the Timer End message with nothing at all. Use the value {null} in this field. See the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Timer Warning" x:Name="warningSecondsItem"  PropertyName="WarningSeconds" DisplayName="Warn With Time Remaining" Visibility="Collapsed" Description="Seconds before Timer ending to warn the user with the Warning Text/Sound."/>
+                <syncfusion:PropertyGridItem CategoryName="Timer Warning" PropertyName="WarningSoundOrText" DisplayName="Warning Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at the Warning Time. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>
+                <syncfusion:PropertyGridItem CategoryName="Timer Warning" PropertyName="WarningTextToDisplay" DisplayName="Warning Text to Display" Description="The Text to Display in a Text Overlay at the Warning Time. See the documentation on Using Trigger Variables for additional information."/>
+              </syncfusion:PropertyGrid.Items>
+            </syncfusion:PropertyGrid>
           </syncfusion:TabItemExt>
         </syncfusion:TabControlExt>
       </Grid>
