@@ -158,7 +158,7 @@ namespace EQLogParser
   /// </summary>
   internal enum VariableDataType
   {
-    Text,
+    Value,
     Counter
   }
 
@@ -168,17 +168,17 @@ namespace EQLogParser
   internal class VariableAction
   {
     public VariableActionType ActionType { get; set; } = VariableActionType.Set;
-    public VariableDataType DataType { get; set; } = VariableDataType.Text;
+    public VariableDataType DataType { get; set; } = VariableDataType.Value;
     public string VariableName { get; set; } = "";
 
-    // For Text: capture group ref like "{s1}", variable ref "{$varName}", or literal text
+    // For Value: capture group ref like "{s1}", variable ref "{varName}" or "${varName}", or literal text
     public string Value { get; set; } = "";
 
     // Counter-only fields
     public double Step { get; set; } = 1;
     public double InitialValue { get; set; }
 
-    // TTL field (applies to both Text and Counter)
+    // TTL field (applies to both Value and Counter)
     public double TimeToLiveSeconds { get; set; } = 0; // 0 = no expiration
   }
 
@@ -190,7 +190,7 @@ namespace EQLogParser
   {
     // Pre-computed static arrays for ComboBox binding (no per-access allocation)
     private static readonly string[] s_actionTypeDisplays = ["Set Value", "Clear Value"];
-    private static readonly string[] s_dataTypeDisplays = ["Text", "Counter"];
+    private static readonly string[] s_dataTypeDisplays = ["Value", "Counter"];
 
     // Instance properties for binding - return cached display strings
     public string[] ActionTypes => s_actionTypeDisplays;
@@ -200,14 +200,14 @@ namespace EQLogParser
     public VariableActionType GetActionTypeFromDisplay(string display)
       => display == "Clear Value" ? VariableActionType.Clear : VariableActionType.Set;
     public VariableDataType GetDataTypeFromDisplay(string display)
-      => display == "Counter" ? VariableDataType.Counter : VariableDataType.Text;
+      => display == "Counter" ? VariableDataType.Counter : VariableDataType.Value;
     public string GetDisplayFromActionType(VariableActionType type)
       => type == VariableActionType.Clear ? "Clear Value" : "Set Value";
     public string GetDisplayFromDataType(VariableDataType type)
-      => type == VariableDataType.Counter ? "Counter" : "Text";
+      => type == VariableDataType.Counter ? "Counter" : "Value";
 
     private VariableActionType _actionType = VariableActionType.Set;
-    private VariableDataType _dataType = VariableDataType.Text;
+    private VariableDataType _dataType = VariableDataType.Value;
     private string _variableName = "";
     private string _value = "";
     private double _initialValue;
@@ -242,12 +242,12 @@ namespace EQLogParser
     // Computed properties for UI visibility bindings
     public bool IsSetAction => _actionType == VariableActionType.Set;
     public bool IsClearAction => _actionType == VariableActionType.Clear;
-    public bool IsTextType => _dataType == VariableDataType.Text;
+    public bool IsTextType => _dataType == VariableDataType.Value;
     public bool IsCounterType => _dataType == VariableDataType.Counter;
 
     // Cached display strings — updated only when the underlying enum changes
     private string _actionTypeDisplay = "Set Value";
-    private string _dataTypeDisplay = "Text";
+    private string _dataTypeDisplay = "Value";
 
     public VariableActionType ActionType
     {
@@ -445,7 +445,7 @@ namespace EQLogParser
         _timeToLiveSeconds = model.TimeToLiveSeconds,
         _isDirty = false,
         _actionTypeDisplay = model.ActionType == VariableActionType.Clear ? "Clear Value" : "Set Value",
-        _dataTypeDisplay = model.DataType == VariableDataType.Counter ? "Counter" : "Text"
+        _dataTypeDisplay = model.DataType == VariableDataType.Counter ? "Counter" : "Value"
       };
     }
 
@@ -458,7 +458,7 @@ namespace EQLogParser
       return new VariableActionViewModel
       {
         _actionType = VariableActionType.Set,
-        _dataType = VariableDataType.Text,
+        _dataType = VariableDataType.Value,
         _variableName = "gVariable1",
         _value = "",
         _initialValue = 0,

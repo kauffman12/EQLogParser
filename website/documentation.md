@@ -161,8 +161,8 @@ Each row on the Variables tab is called a **variable card**. Every card defines 
 |---|---|
 | **Action Type** | **Set Value** stores a value into the variable. **Clear Value** removes it. |
 | **Variable Name** | A unique name for this variable (e.g. `gCaster`, `gSpellName`). Used in conditions and display text. Names starting with `g` are conventional but not required. |
-| **Data Type** | **Text** stores a string value. **Counter** stores a number that increments each time the trigger fires. |
-| **Value Source** | What value to store. Can be a capture group (`{s1}`), another variable (`{$otherVar}`), or a literal string like `Red Dragon`. Ignored for Clear Value actions. |
+| **Data Type** | **Value** stores a static value (text or number). **Counter** stores a number that increments each time the trigger fires. |
+| **Value Source** | What value to store. Can be a capture group (`{s1}`), another variable (`{otherVar}`), or a literal string like `Red Dragon`. Ignored for Clear Value actions. |
 | **Initial Value** | *(Counter only)* Starting number when the counter is first created. Default is `0`. |
 | **Step** | *(Counter only)* How much to add each time the trigger fires. Default is `1`. Use negative values to decrement. |
 | **Time To Live** | *(Optional)* Number of seconds before the variable automatically expires and is cleared. Set to `0` for no expiration (variable persists until explicitly cleared). |
@@ -177,7 +177,7 @@ Each row on the Variables tab is called a **variable card**. Every card defines 
 
 Once a variable is set by one trigger, other triggers can reference it in two ways:
 
-1. **In Display/Speak Text:** Use `{$variableName}` syntax. For example, if a trigger sets a variable named `gCaster`, another trigger can display `{$gCaster} is casting something!`.
+1. **In Display/Speak Text:** Use `{variableName}` syntax. For example, if a trigger sets a variable named `gCaster`, another trigger can display `{gCaster} is casting something!`.
 2. **In Match Variables conditions:** Use `{variableName}` or `${variableName}` in condition expressions (both syntaxes work identically). See the [Match Variables Field](#match-variables-field) section below.
 
 ### Value Source Examples
@@ -186,7 +186,7 @@ Once a variable is set by one trigger, other triggers can reference it in two wa
 |---|---|
 | `{s1}` | Whatever the first capture group matched in the Pattern |
 | `{target}` | A named regex capture group from the Pattern |
-| `{$otherVar}` | The current value of another custom variable |
+| `{otherVar}` | The current value of another custom variable |
 | `Red Dragon` | The literal text "Red Dragon" |
 | `{s1} the Brave` | The captured value with appended text (e.g. "Grok the Brave") |
 
@@ -201,7 +201,7 @@ To track how many times a specific spell was cast:
    - Data Type: **Counter**
    - Initial Value: `0`
    - Step: `1`
-3. In another trigger (e.g. a "spell ended" trigger), display `Fire Storm was cast {$gFireStormCount} times.`
+3. In another trigger (e.g. a "spell ended" trigger), display `Fire Storm was cast {gFireStormCount} times.`
 
 ### Clearing Variables
 

@@ -268,9 +268,9 @@
                             </StackPanel.Style>
                           </StackPanel>
 
-                          <!-- Value field (visible when Action=Set and Type=Text) -->
+                          <!-- Value field (visible when Action=Set and Type=Value) -->
                           <StackPanel x:Name="valuePanel" Margin="0,2,0,8">
-                            <TextBlock x:Name="valueLabel" Text="Text Value" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
+                            <TextBlock x:Name="valueLabel" Text="Value (text/number)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />
                             <Border BorderThickness="1" BorderBrush="{DynamicResource ContentBackgroundAlt2}" Padding="6,0">
                               <Grid>
@@ -369,7 +369,7 @@
                             </StackPanel.Style>
                           </StackPanel>
 
-                          <!-- Time to Live field (visible when Action=Set, for both Text and Counter) -->
+                          <!-- Time to Live field (visible when Action=Set, for both Value and Counter) -->
                           <StackPanel x:Name="ttlPanel" Margin="0,2,0,8">
                             <TextBlock Text="Time to Live (seconds, 0=never expires)" FontWeight="SemiBold" FontSize="{DynamicResource EQContentSize}"
                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4" />

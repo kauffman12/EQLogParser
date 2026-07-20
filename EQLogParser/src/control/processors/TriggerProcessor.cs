@@ -1397,7 +1397,7 @@ namespace EQLogParser
                 }
                 else if (!string.IsNullOrEmpty(va.Value))
                 {
-                  // Text: resolve the value through the same pipeline as display text
+                  // Value: resolve the value through the same pipeline as display text
                   var resolved = ProcessMatchesText(va.Value, _variables);
                   resolved = ProcessMatchesText(resolved, matches);
                   resolved = ProcessMatchesText(resolved, previousMatches);
