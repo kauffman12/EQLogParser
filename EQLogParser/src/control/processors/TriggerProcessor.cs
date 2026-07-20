@@ -300,6 +300,20 @@ namespace EQLogParser
           if (CheckLine(wrapper, lineData, out var matches, out var dynamicDuration, out var swTime) &&
               CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousSwTime))
           {
+            // Evaluate variable condition (after pattern match, before actions)
+            if (wrapper.ConditionAst != null)
+            {
+              string ResolveVariable(string name)
+              {
+                if (matches?.TryGetValue(name, out var m) is true && !string.IsNullOrEmpty(m)) return m;
+                if (previousMatches?.TryGetValue(name, out var pm) is true && !string.IsNullOrEmpty(pm)) return pm;
+                _variables.TryGetValue(name, out var v);
+                return v;
+              }
+              if (!ConditionEvaluator.Evaluate(wrapper.ConditionAst, ResolveVariable))
+                continue; // Condition failed, skip this trigger
+            }
+
             swTime += previousSwTime;
             await HandleTriggerAsync(wrapper, lineData, matches, previousMatches, dynamicDuration, swTime, beginTicks);
           }
@@ -1241,6 +1255,9 @@ namespace EQLogParser
               TimerIcon = UiElementUtil.CreateBitmap(trigger.IconSource),
               ModifiedEndEarlyPattern3 = PreProcessCodes(trigger.EndEarlyPattern3, trigger)
             };
+
+            // Parse variable condition into AST (null = no condition / always passes)
+            wrapper.ConditionAst = ConditionParser.Parse(trigger.MatchVariableCondition);
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)

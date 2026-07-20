@@ -77,6 +77,7 @@ namespace EQLogParser
         toTrigger.DurationSeconds = fromTrigger.DurationSeconds;
         toTrigger.Pattern = TextUtils.Trim(fromTrigger.Pattern);
         toTrigger.PreviousPattern = TextUtils.Trim(fromTrigger.PreviousPattern);
+        toTrigger.MatchVariableCondition = TextUtils.Trim(fromTrigger.MatchVariableCondition);
         toTrigger.EndEarlyPattern = TextUtils.Trim(fromTrigger.EndEarlyPattern);
         toTrigger.EndEarlyPattern2 = TextUtils.Trim(fromTrigger.EndEarlyPattern2);
         toTrigger.EndEarlyPattern3 = TextUtils.Trim(fromTrigger.EndEarlyPattern3);
