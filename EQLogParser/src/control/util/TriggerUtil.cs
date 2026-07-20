@@ -67,6 +67,13 @@ namespace EQLogParser
       return isValid;
     }
 
+    internal static bool TestConditionProperty(string condition, ConditionEditor editor)
+    {
+      var isValid = string.IsNullOrWhiteSpace(condition) || ConditionParser.Parse(condition) != null;
+      editor.SetForeground(isValid ? "ContentForeground" : "EQStopForegroundBrush");
+      return isValid;
+    }
+
     internal static async Task Copy(object to, object from)
     {
       if (to is Trigger toTrigger && from is Trigger fromTrigger)
