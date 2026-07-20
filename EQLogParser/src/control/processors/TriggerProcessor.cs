@@ -295,6 +295,9 @@ namespace EQLogParser
       try
       {
         var beginTicks = DateTime.UtcNow.Ticks;
+        // Expire TTL'd variables before pattern matching and condition evaluation
+        ExpireVariablesIfNeeded();
+
         foreach (var wrapper in _activeTriggersById.Values)
         {
           if (CheckLine(wrapper, lineData, out var matches, out var dynamicDuration, out var swTime) &&
@@ -675,9 +678,6 @@ namespace EQLogParser
       {
         counterCount = UpdateRepeatedTimes(_counterTimes, wrapper, "trigger-count", beginTicks);
       }
-
-      // Expire TTL'd variables before processing
-      ExpireVariablesIfNeeded();
 
       // Process variable actions (set/clear variables)
       ProcessVariableActions(wrapper.TriggerData.VariableActions, matches, previousMatches, lineData.Action);
