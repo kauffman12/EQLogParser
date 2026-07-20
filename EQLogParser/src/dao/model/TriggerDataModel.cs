@@ -338,10 +338,9 @@ namespace EQLogParser
       get => _value;
       set
       {
-        var trimmed = value?.Trim();
-        if (_value != trimmed)
+        if (_value != value)
         {
-          _value = trimmed;
+          _value = value;
           OnPropertyChanged();
           OnPropertyChanged(nameof(IsValueEmpty));
         }
@@ -394,13 +393,14 @@ namespace EQLogParser
 
     /// <summary>
     /// Syncs this ViewModel's current values to the target model object.
+    /// Trims VariableName and Value once at save time to avoid interfering with editing.
     /// </summary>
     public void SyncToModel(VariableAction model)
     {
       model.ActionType = ActionType;
       model.DataType = DataType;
-      model.VariableName = VariableName;
-      model.Value = Value;
+      model.VariableName = VariableName?.Trim();
+      model.Value = Value?.Trim();
       model.InitialValue = InitialValue;
       model.Step = Step;
       model.TimeToLiveSeconds = TimeToLiveSeconds;
