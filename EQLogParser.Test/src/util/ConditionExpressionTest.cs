@@ -1155,5 +1155,200 @@ namespace EQLogParserTest
       var node = ConditionParser.Parse("not not {x}");
       Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "x" ? "yes" : null));
     }
+
+    // ---- Nesting depth limit tests ----
+
+    [TestMethod]
+    public void Parse_NestingDepth_AtLimit_ParsesCorrectly()
+    {
+      // 10 levels of parentheses should be the maximum allowed (at the limit)
+      // Build: ((((((((({a} > 1)))))))))
+      var expr = new string('(', 10) + "{a} > 1" + new string(')', 10);
+      var node = ConditionParser.Parse(expr);
+      Assert.IsNotNull(node);
+      Assert.AreEqual(ConditionNodeType.Binary, node.NodeType);
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_ExceedsLimit_ReturnsNull()
+    {
+      // 11 levels of parentheses should exceed the limit
+      var expr = new string('(', 11) + "{a} > 1" + new string(')', 11);
+      Assert.IsNull(ConditionParser.Parse(expr));
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_FarExceedsLimit_ReturnsNull()
+    {
+      // 20 levels should definitely exceed the limit
+      var expr = new string('(', 20) + "{a} > 1" + new string(')', 20);
+      Assert.IsNull(ConditionParser.Parse(expr));
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_MixedParensAndNot_AtLimit_ParsesCorrectly()
+    {
+      // Mix of parens and not: 8 not + 2 levels of parens = 10 depth (at the limit)
+      var expr = "not not not not not not not not (({a}))";
+      var node = ConditionParser.Parse(expr);
+      Assert.IsNotNull(node);
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_MixedParensAndNot_ExceedsLimit_ReturnsNull()
+    {
+      // not not not (((((((({a}))))))))) — should exceed limit with combined depth
+      var expr = "not not not ((((((((({a}))))))))))";
+      Assert.IsNull(ConditionParser.Parse(expr));
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_ChainedComparisons_DoesNotCountAsNesting()
+    {
+      // Chained comparisons (and/or) don't increase nesting depth
+      var expr = "{a} > 1 and {b} > 2 and {c} > 3 and {d} > 4 and {e} > 5 and {f} > 6 and {g} > 7 and {h} > 8 and {i} > 9 and {j} > 10 and {k} > 11";
+      var node = ConditionParser.Parse(expr);
+      Assert.IsNotNull(node);
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_ComplexExpression_AtLimit_ParsesCorrectly()
+    {
+      // Complex expression at the limit: ((((((((({a} > 1 and {b} < 2)))))))))
+      var expr = new string('(', 10) + "{a} > 1 and {b} < 2" + new string(')', 10);
+      var node = ConditionParser.Parse(expr);
+      Assert.IsNotNull(node);
+      Assert.AreEqual(ConditionNodeType.Binary, node.NodeType);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionTokenType.And, bin.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_OnlyNotOperators_ExceedsLimit_ReturnsNull()
+    {
+      // 11 "not" operators in a row should exceed the limit
+      var expr = "not not not not not not not not not not not {a}";
+      Assert.IsNull(ConditionParser.Parse(expr));
+    }
+
+    [TestMethod]
+    public void Parse_NestingDepth_OnlyNotOperators_AtLimit_ParsesCorrectly()
+    {
+      // 10 "not" operators should be at the limit
+      var expr = "not not not not not not not not not not {a}";
+      var node = ConditionParser.Parse(expr);
+      Assert.IsNotNull(node);
+    }
+
+    // ---- Additional parser edge cases ----
+
+    [TestMethod]
+    public void Parse_NumberWithLeadingZeros_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("{a} > 007");
+      Assert.IsNotNull(node);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual(7.0, ((ConditionLiteralNode)bin.Right).NumberValue);
+    }
+
+    [TestMethod]
+    public void Parse_LargeNumber_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("{a} > 999999999999");
+      Assert.IsNotNull(node);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual(999999999999.0, ((ConditionLiteralNode)bin.Right).NumberValue);
+    }
+
+    [TestMethod]
+    public void Parse_QuotedStringWithSpaces_PreservesSpaces()
+    {
+      var node = ConditionParser.Parse("{a} = \"hello   world\"");
+      Assert.IsNotNull(node);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual("hello   world", ((ConditionLiteralNode)bin.Right).StringValue);
+    }
+
+    [TestMethod]
+    public void Parse_EmptyParenthesizedExpression_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("()"));
+    }
+
+    [TestMethod]
+    public void Parse_MismatchedParens_ReturnsNull()
+    {
+      // Missing closing paren
+      Assert.IsNull(ConditionParser.Parse("(({a} > 5)"));
+      // Extra closing paren (already tested in Parse_ExtraClosingParen_ReturnsNull)
+      Assert.IsNull(ConditionParser.Parse("({a} > 5))"));
+    }
+
+    // ---- Additional evaluator edge cases ----
+
+    [TestMethod]
+    public void Evaluate_VariableToVariableNumericComparison()
+    {
+      var node = ConditionParser.Parse("{a} > {b}");
+      var vars = new Dictionary<string, string> { ["a"] = "10", ["b"] = "5" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
+
+      vars["a"] = "3";
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
+    }
+
+    [TestMethod]
+    public void Evaluate_VariableToVariableContains()
+    {
+      var node = ConditionParser.Parse("{a} contains {b}");
+      var vars = new Dictionary<string, string> { ["a"] = "Red Dragon", ["b"] = "dragon" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
+
+      vars["b"] = "wolf";
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
+    }
+
+    [TestMethod]
+    public void Evaluate_ChainedNotWithParens()
+    {
+      var node = ConditionParser.Parse("not not ({a} > 5)");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "10" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "3" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_StringEqualityCaseInsensitive_BothVariables()
+    {
+      var node = ConditionParser.Parse("{a} = {b}");
+      var vars = new Dictionary<string, string> { ["a"] = "HELLO", ["b"] = "hello" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
+    }
+
+    [TestMethod]
+    public void Evaluate_ComparisonWithZero()
+    {
+      var node = ConditionParser.Parse("{a} > 0");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "1" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "0" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "-1" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NotEquals_Basic()
+    {
+      var node = ConditionParser.Parse("{a} != hello");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "world" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "hello" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "HELLO" : null)); // case insensitive
+    }
+
+    [TestMethod]
+    public void Evaluate_LessEqual_WithZero()
+    {
+      var node = ConditionParser.Parse("{a} <= 0");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "0" : null));
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "-1" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "1" : null));
+    }
   }
 }
