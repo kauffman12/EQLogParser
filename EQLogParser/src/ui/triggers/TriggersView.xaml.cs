@@ -8,7 +8,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,9 +19,7 @@ namespace EQLogParser
 {
   public partial class TriggersView : IDocumentContent
   {
-    // Binding properties for Variable Actions tab
-    internal ObservableCollection<string> CaptureGroups { get; } = [];
-
+    private int _nextVariableIndex;
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
     private readonly PatternEditor _closePatternEditor;
@@ -1043,7 +1040,6 @@ namespace EQLogParser
         }
 
         variableActionsList.ItemsSource = _variableActionViewModels;
-        UpdateCaptureGroups(trigger?.Pattern);
         variableActionsTab.Visibility = Visibility.Visible;
         UpdateVariableActionsEmptyState();
       }
@@ -1105,42 +1101,9 @@ namespace EQLogParser
       _ready = false;
     }
 
-    private void UpdateCaptureGroups(string pattern)
+    private string GenerateVariableName()
     {
-      CaptureGroups.Clear();
-
-      if (string.IsNullOrEmpty(pattern))
-      {
-        return;
-      }
-
-      // Extract EQLP capture group tokens: {s1}, {s2}... and {n1}, {n2}...
-      // These are converted to named regex groups at runtime by UpdatePattern()
-      foreach (Match m in System.Text.RegularExpressions.Regex.Matches(pattern, @"\{([sn]\d+)\}"))
-      {
-        var token = "{" + m.Groups[1].Value + "}";
-        if (!CaptureGroups.Contains(token))
-        {
-          CaptureGroups.Add(token);
-        }
-      }
-
-      // Also extract standard named regex groups (?<name>...)
-      foreach (Match m in System.Text.RegularExpressions.Regex.Matches(pattern, @"\(\?<([a-zA-Z0-9_]+)>"))
-      {
-        var token = "{" + m.Groups[1].Value + "}";
-        if (!CaptureGroups.Contains(token))
-        {
-          CaptureGroups.Add(token);
-        }
-      }
-
-      // Add default EQLP placeholders if none found
-      if (CaptureGroups.Count == 0)
-      {
-        CaptureGroups.Add("{s1}");
-        CaptureGroups.Add("{n1}");
-      }
+      return $"gVariable{_nextVariableIndex++}";
     }
 
     private void UpdateVariableActionsEmptyState()
@@ -1158,15 +1121,36 @@ namespace EQLogParser
         var valueTextBox = UiElementUtil.FindChild<TextBox>(panel, "valueTextBox");
         if (valueTextBox is not null)
         {
-          valueTextBox.PreviewKeyDown += (_, e2) =>
+          // Use Tag to track if handler was already attached, preventing stacking on container reuse
+          if (valueTextBox.Tag is not ValueEscapeHandler handler)
           {
-            if (e2.Key == Key.Escape)
-            {
-              vm.Value = "";
-              valueTextBox.Focus();
-              e2.Handled = true;
-            }
-          };
+            handler = new ValueEscapeHandler(vm, valueTextBox);
+            valueTextBox.Tag = handler;
+            valueTextBox.PreviewKeyDown += handler.OnPreviewKeyDown;
+          }
+        }
+      }
+    }
+
+    /// <summary>Holds a stable delegate reference for the Escape-key handler on variable value TextBoxes.</summary>
+    private sealed class ValueEscapeHandler
+    {
+      private readonly VariableActionViewModel _vm;
+      private readonly TextBox _textBox;
+
+      public ValueEscapeHandler(VariableActionViewModel vm, TextBox textBox)
+      {
+        _vm = vm;
+        _textBox = textBox;
+      }
+
+      public void OnPreviewKeyDown(object sender, KeyEventArgs e)
+      {
+        if (e.Key == Key.Escape)
+        {
+          _vm.Value = "";
+          _textBox.Focus();
+          e.Handled = true;
         }
       }
     }
@@ -1188,7 +1172,7 @@ namespace EQLogParser
 
     private void AddVariableActionClick(object sender, RoutedEventArgs e)
     {
-      _variableActionViewModels.Add(new VariableActionViewModel { VariableName = "gVariable1" });
+      _variableActionViewModels.Add(new VariableActionViewModel { VariableName = GenerateVariableName() });
       EnableSaveCancel();
       UpdateVariableActionsEmptyState();
     }
@@ -1204,7 +1188,7 @@ namespace EQLogParser
         // If last variable was removed, add a fresh starter card
         if (_variableActionViewModels.Count == 0)
         {
-          _variableActionViewModels.Add(new VariableActionViewModel { VariableName = "gVariable1" });
+          _variableActionViewModels.Add(new VariableActionViewModel { VariableName = GenerateVariableName() });
           UpdateVariableActionsEmptyState();
         }
       }

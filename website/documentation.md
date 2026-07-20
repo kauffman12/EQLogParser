@@ -145,6 +145,200 @@ Not a trigger variable. You send this text as a say, to the group, raid, another
 ## {EQLP:STOP}
 Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
 
+---
+
+## Creating Custom Variables (Trigger Variables Tab)
+
+In addition to the built-in variables above, you can create **custom variables** that persist across trigger firings. This lets one trigger capture a value (like a caster name or spell being cast) and other triggers reference it later.
+
+To access this feature, open the **Trigger Manager**, select a trigger, and click the **Variables** tab.
+
+### Variable Cards
+
+Each row on the Variables tab is called a **variable card**. Every card defines one action — either setting or clearing a named variable when the trigger fires.
+
+| Field | Description |
+|---|---|
+| **Action Type** | **Set Value** stores a value into the variable. **Clear Value** removes it. |
+| **Variable Name** | A unique name for this variable (e.g. `gCaster`, `gSpellName`). Used in conditions and display text. Names starting with `g` are conventional but not required. |
+| **Data Type** | **Text** stores a string value. **Counter** stores a number that increments each time the trigger fires. |
+| **Value Source** | What value to store. Can be a capture group (`{s1}`), another variable (`{$otherVar}`), or a literal string like `Red Dragon`. Ignored for Clear Value actions. |
+| **Initial Value** | *(Counter only)* Starting number when the counter is first created. Default is `0`. |
+| **Step** | *(Counter only)* How much to add each time the trigger fires. Default is `1`. Use negative values to decrement. |
+| **Time To Live** | *(Optional)* Number of seconds before the variable automatically expires and is cleared. Set to `0` for no expiration (variable persists until explicitly cleared). |
+
+### Adding and Removing Variables
+
+- Click the **+ Add Variable** button at the bottom of the tab to add a new variable card.
+- Click the **trash icon** on any card to delete it.
+- If all cards are deleted, a blank starter card is automatically added back.
+
+### Referencing Custom Variables
+
+Once a variable is set by one trigger, other triggers can reference it in two ways:
+
+1. **In Display/Speak Text:** Use `{$variableName}` syntax. For example, if a trigger sets a variable named `gCaster`, another trigger can display `{$gCaster} is casting something!`.
+2. **In Match Variables conditions:** Use `{variableName}` (without the `$`) in condition expressions. See the [Match Variables Field](#match-variables-field) section below.
+
+### Value Source Examples
+
+| Value Source | What Gets Stored |
+|---|---|
+| `{s1}` | Whatever the first capture group matched in the Pattern |
+| `{target}` | A named regex capture group from the Pattern |
+| `{$otherVar}` | The current value of another custom variable |
+| `Red Dragon` | The literal text "Red Dragon" |
+| `{s1} the Brave` | The captured value with appended text (e.g. "Grok the Brave") |
+
+### Counter Example
+
+To track how many times a specific spell was cast:
+
+1. Create a trigger with Pattern matching the spell cast log line.
+2. On the Variables tab, add a card:
+   - Action Type: **Set Value**
+   - Variable Name: `gFireStormCount`
+   - Data Type: **Counter**
+   - Initial Value: `0`
+   - Step: `1`
+3. In another trigger (e.g. a "spell ended" trigger), display `Fire Storm was cast {$gFireStormCount} times.`
+
+### Clearing Variables
+
+Use **Clear Value** actions to remove a variable when a condition ends. For example:
+
+- Trigger A matches "Player begins casting" → **Set** `gCasting = true`
+- Trigger B matches "Player stops casting" → **Clear** `gCasting`
+
+Other triggers can check `{gCasting}` in their Match Variables field to only fire while the player is actively casting.
+
+---
+
+## Match Variables Field
+
+The **Match Variables** field (found under *Basic Trigger Options*) lets you add an extra gate on top of the Pattern match. Even if the Pattern matches, the trigger will **only fire** if the condition expression evaluates to `true`.
+
+This is useful for situations like:
+- Only fire when a captured HP value is above 50
+- Only fire when a custom variable set by another trigger has a specific value
+- Combine multiple checks with `and` / `or` logic
+
+### Syntax Overview
+
+A condition expression consists of **variables**, **literals**, **comparison operators**, and **boolean operators**:
+
+```
+{s} = hello
+{hp} > 50
+{name} contains dragon
+({hp} > 50 and {mana} > 10) or {godmode} = true
+```
+
+### Variables
+
+Variables are referenced using curly braces and resolve to their current string value:
+
+| Syntax | Resolves To |
+|---|---|
+| `{s}` / `{s1}` / `{n2}` | Capture group values from the current Pattern match |
+| `{hp}` | A custom variable named `hp` (set via the Variables tab) |
+| `{target}` | A named regex capture group or custom variable |
+
+If a variable is **not set** (never assigned a value), it resolves to `null`. In comparisons, `null` behaves as described in the operator table below.
+
+### Comparison Operators
+
+All comparison operators are **case-insensitive**.
+
+| Operator | Aliases | Description | Example |
+|---|---|---|---|
+| `=` or `==` | `eq` | Equal to | `{name} = grok` |
+| `!=` | `<>`, `neq` | Not equal to | `{class} != druid` |
+| `>` | `gt` | Greater than (numeric) | `{hp} > 50` |
+| `>=` | `ge`, `gte` | Greater than or equal | `{level} >= 20` |
+| `<` | `lt` | Less than (numeric) | `{mana} < 100` |
+| `<=` | `le`, `lte` | Less than or equal | `{damage} <= 999` |
+| `contains` | — | Contains substring (case-insensitive) | `{name} contains dragon` |
+
+**Important notes:**
+- Numeric comparisons (`>`, `<`, `>=`, `<=`) attempt to parse both sides as numbers. If either side cannot be parsed as a number, the comparison returns `false`.
+- `contains` is case-insensitive. If the right-hand side resolves to `null` (unset variable), the result is `false`.
+- `=` and `==` treat `null` values correctly: `{unsetVar} = null` is `true`, `{setVar} = null` is `false`.
+
+### Boolean Operators
+
+Combine multiple conditions using boolean logic:
+
+| Operator | Aliases | Description |
+|---|---|---|
+| `and` | `&&` | Both sides must be true |
+| `or` | `\|\|` | At least one side must be true |
+| `not` | `!` | Negates the following expression |
+| `(` ... `)` | — | Groups expressions for precedence |
+
+**Operator precedence** (highest to lowest): `not` → `and` → `or`. Use parentheses to override.
+
+### Literals
+
+You can compare variables against literal values:
+
+| Type | Syntax | Example |
+|---|---|---|
+| **String (bareword)** | `hello` | `{name} = grok` |
+| **String (quoted)** | `"hello world"` or `'hello world'` | `{name} = "red dragon"` |
+| **Number** | `42`, `-10`, `3.14` | `{hp} > 50` |
+| **Boolean** | `true`, `false` | `{enabled} = true` |
+| **Null** | `null` | `{target} != null` |
+| **Empty string** | `""` or `''` | `{name} = ""` |
+
+Quoted strings preserve spaces. Barewords cannot contain spaces.
+
+### Standalone Variables
+
+A variable by itself (no comparison) is treated as a boolean check:
+- `{enabled}` → `true` if the variable is set and non-empty, `false` otherwise
+- `not {disabled}` → `true` if `disabled` is unset or empty
+
+### Examples
+
+```
+# Fire only if captured HP is above 50
+{hp} > 50
+
+# Fire only if the mob name contains "dragon"
+{name} contains dragon
+
+# Fire if HP is between 100 and 500
+{hp} >= 100 and {hp} <= 500
+
+# Fire if either HP or mana is low
+{hp} < 100 or {mana} < 200
+
+# Fire only when the custom variable gCasting is set
+gCasting
+
+# Fire only when gCasting is NOT set
+not {gCasting}
+
+# Complex multi-condition with grouping
+({hp} > 50 and {mana} > 10) or {godmode} = true
+
+# Check if a capture group equals a specific quoted string
+{s1} = "Rise, Servant"
+
+# Ensure a variable is not null
+{target} != null
+```
+
+### Error Handling
+
+If the Match Variables field contains a syntax error (unclosed braces, unknown operators, mismatched parentheses), the condition is treated as **always true** — meaning the trigger fires whenever the Pattern matches. A warning is logged to the EQLogParser error log.
+
+Common mistakes:
+- `{hp > 50` — Missing closing brace on variable
+- `{name} = "hello` — Unclosed quote
+- `({hp} > 50` — Missing closing parenthesis
+- `{a} @ {b}` — Unknown operator symbol
 
 # Linux Support
 

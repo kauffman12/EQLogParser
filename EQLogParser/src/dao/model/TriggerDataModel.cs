@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -187,25 +186,23 @@ namespace EQLogParser
   /// </summary>
   internal class VariableActionViewModel : INotifyPropertyChanged
   {
-    // Static collections for ComboBox binding - using string display values with conversion
-    private static readonly (VariableActionType Type, string Display)[] s_actionTypes = 
-      [(VariableActionType.Set, "Set Value"), (VariableActionType.Clear, "Clear Value")];
-    private static readonly (VariableDataType Type, string Display)[] s_dataTypes = 
-      [(VariableDataType.Text, "Text"), (VariableDataType.Counter, "Counter")];
+    // Pre-computed static arrays for ComboBox binding (no per-access allocation)
+    private static readonly string[] s_actionTypeDisplays = ["Set Value", "Clear Value"];
+    private static readonly string[] s_dataTypeDisplays = ["Text", "Counter"];
 
-    // Instance properties for binding - return display strings
-    public string[] ActionTypes => s_actionTypes.Select(x => x.Display).ToArray();
-    public string[] DataTypes => s_dataTypes.Select(x => x.Display).ToArray();
+    // Instance properties for binding - return cached display strings
+    public string[] ActionTypes => s_actionTypeDisplays;
+    public string[] DataTypes => s_dataTypeDisplays;
 
     // Helper to get enum from selected display string
-    public VariableActionType GetActionTypeFromDisplay(string display) 
-      => s_actionTypes.FirstOrDefault(x => x.Display == display).Type;
-    public VariableDataType GetDataTypeFromDisplay(string display) 
-      => s_dataTypes.FirstOrDefault(x => x.Display == display).Type;
-    public string GetDisplayFromActionType(VariableActionType type) 
-      => s_actionTypes.FirstOrDefault(x => x.Type == type).Display;
-    public string GetDisplayFromDataType(VariableDataType type) 
-      => s_dataTypes.FirstOrDefault(x => x.Type == type).Display;
+    public VariableActionType GetActionTypeFromDisplay(string display)
+      => display == "Clear Value" ? VariableActionType.Clear : VariableActionType.Set;
+    public VariableDataType GetDataTypeFromDisplay(string display)
+      => display == "Counter" ? VariableDataType.Counter : VariableDataType.Text;
+    public string GetDisplayFromActionType(VariableActionType type)
+      => type == VariableActionType.Clear ? "Clear Value" : "Set Value";
+    public string GetDisplayFromDataType(VariableDataType type)
+      => type == VariableDataType.Counter ? "Counter" : "Text";
 
     private VariableActionType _actionType = VariableActionType.Set;
     private VariableDataType _dataType = VariableDataType.Text;
@@ -246,9 +243,9 @@ namespace EQLogParser
     public bool IsTextType => _dataType == VariableDataType.Text;
     public bool IsCounterType => _dataType == VariableDataType.Counter;
 
-    // Internal backing field for the selected display string
-    private string _actionTypeDisplay => GetDisplayFromActionType(_actionType);
-    private string _dataTypeDisplay => GetDisplayFromDataType(_dataType);
+    // Cached display strings — updated only when the underlying enum changes
+    private string _actionTypeDisplay = "Set Value";
+    private string _dataTypeDisplay = "Text";
 
     public VariableActionType ActionType
     {
@@ -258,6 +255,7 @@ namespace EQLogParser
         if (_actionType != value)
         {
           _actionType = value;
+          _actionTypeDisplay = GetDisplayFromActionType(value);
           OnPropertyChanged();
           OnPropertyChanged(nameof(IsSetAction));
           OnPropertyChanged(nameof(IsClearAction));
@@ -277,6 +275,7 @@ namespace EQLogParser
         if (_actionType != newType)
         {
           _actionType = newType;
+          _actionTypeDisplay = value;
           OnPropertyChanged(nameof(ActionType));
           OnPropertyChanged(nameof(IsSetAction));
           OnPropertyChanged(nameof(IsClearAction));
@@ -293,6 +292,7 @@ namespace EQLogParser
         if (_dataType != value)
         {
           _dataType = value;
+          _dataTypeDisplay = GetDisplayFromDataType(value);
           OnPropertyChanged();
           OnPropertyChanged(nameof(IsTextType));
           OnPropertyChanged(nameof(IsCounterType));
@@ -312,6 +312,7 @@ namespace EQLogParser
         if (_dataType != newType)
         {
           _dataType = newType;
+          _dataTypeDisplay = value;
           OnPropertyChanged(nameof(DataType));
           OnPropertyChanged(nameof(IsTextType));
           OnPropertyChanged(nameof(IsCounterType));

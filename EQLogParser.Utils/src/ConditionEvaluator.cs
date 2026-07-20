@@ -111,9 +111,9 @@ namespace EQLogParser
             if (op == ConditionTokenType.NotEquals)
                 return !Equals(left, right);
 
-            // Contains (case-insensitive)
+            // Contains (case-insensitive) — null right-hand side is falsy
             if (op == ConditionTokenType.Contains)
-                return left?.Contains(right ?? "", StringComparison.OrdinalIgnoreCase) ?? false;
+                return right != null && (left?.Contains(right, StringComparison.OrdinalIgnoreCase) ?? false);
 
             // Numeric comparisons: try to parse both sides as doubles
             if (!double.TryParse(left, out var lVal))

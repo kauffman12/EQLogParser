@@ -6,7 +6,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
-             xmlns:numberformat="clr-namespace:System.Globalization;assembly=mscorlib"
+             xmlns:NumberFormat="clr-namespace:System.Globalization;assembly=mscorlib"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              Initialized="TriggersViewOnInitialized"
              Loaded="ContentLoaded"
@@ -333,7 +333,7 @@
                                   MinValue="-999999" MaxValue="999999" BorderThickness="0"
                                   ApplyZeroColor="False"  Margin="0">
                                     <syncfusion:UpDown.NumberFormatInfo>
-                                      <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                      <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
                                     </syncfusion:UpDown.NumberFormatInfo>
                                   </syncfusion:UpDown>
                                 </Border>
@@ -345,7 +345,7 @@
                                   <syncfusion:UpDown x:Name="stepBox" Value="{Binding Step, Mode=TwoWay}" Padding="0,2"
                                   MinValue="-999999" MaxValue="999999" BorderThickness="0" ApplyZeroColor="False" Margin="0">
                                     <syncfusion:UpDown.NumberFormatInfo>
-                                      <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                      <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
                                     </syncfusion:UpDown.NumberFormatInfo>
                                   </syncfusion:UpDown>
                                 </Border>
@@ -377,7 +377,7 @@
                               <syncfusion:UpDown x:Name="ttlBox" Value="{Binding TimeToLiveSeconds, Mode=TwoWay}" Padding="0,2"
                               MinValue="0" MaxValue="999999" BorderThickness="0" ApplyZeroColor="False" Margin="0">
                                 <syncfusion:UpDown.NumberFormatInfo>
-                                  <numberformat:NumberFormatInfo NumberDecimalDigits="0" />
+                                  <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
                                 </syncfusion:UpDown.NumberFormatInfo>
                               </syncfusion:UpDown>
                             </Border>

@@ -504,5 +504,101 @@ namespace EQLogParserTest
       Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "s" ? "testing" : null));
       Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "s" ? "other" : null));
     }
+
+    // ---- Bug fix regression tests ----
+
+    [TestMethod]
+    public void Evaluate_ContainsWithNullRightSide_ReturnsFalse()
+    {
+      // Regression: {name} contains {unsetVar} should NOT match everything
+      var node = ConditionParser.Parse("{name} contains {target}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "Red Dragon" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_ContainsWithNullLeftSide_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{name} contains dragon");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_ContainsWithBothNonNull_ReturnsExpected()
+    {
+      var node = ConditionParser.Parse("{name} contains dragon");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "Red Dragon" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "wolf pack" : null));
+    }
+
+    [TestMethod]
+    public void Parse_ValidCondition_ReturnsNonNullOrphan()
+    {
+      Assert.IsNotNull(ConditionParser.Parse("{hp} > 50"));
+      Assert.IsNotNull(ConditionParser.Parse("{a} = {b}"));
+      Assert.IsNotNull(ConditionParser.Parse("not {x}"));
+      Assert.IsNotNull(ConditionParser.Parse("{a} contains test"));
+    }
+
+    [TestMethod]
+    public void Parse_InvalidConditions_ReturnNull()
+    {
+      // Unclosed braces
+      Assert.IsNull(ConditionParser.Parse("{hp > 50"));
+      // Unclosed quotes
+      Assert.IsNull(ConditionParser.Parse("{s} = \"hello"));
+      // Missing closing paren
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50"));
+      // Unknown operator symbol
+      Assert.IsNull(ConditionParser.Parse("{a} @ {b}"));
+      // Trailing garbage token after valid expression
+      Assert.IsNull(ConditionParser.Parse("{a} = 1 foo bar baz"));
+    }
+
+    [TestMethod]
+    public void Evaluate_NullNode_AlwaysReturnsTrue()
+    {
+      // Simulates a trigger with no condition set (or parse failure treated as no-op)
+      Assert.IsTrue(ConditionEvaluator.Evaluate(null!, name => "anything"));
+    }
+
+    [TestMethod]
+    public void Evaluate_ChainedAndShortCircuitsCorrectly()
+    {
+      // Left side false should not evaluate right side
+      var evalCount = 0;
+      var node = ConditionParser.Parse("{a} = 1 and {b} = 2");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name =>
+      {
+        if (name == "b") evalCount++;
+        return name == "a" ? "99" : "2"; // a=99 makes left side false
+      }));
+      // b should never be resolved due to short-circuit
+      Assert.AreEqual(0, evalCount);
+    }
+
+    [TestMethod]
+    public void Evaluate_ChainedOrShortCircuitsCorrectly()
+    {
+      // Left side true should not evaluate right side
+      var evalCount = 0;
+      var node = ConditionParser.Parse("{a} = 1 or {b} = 2");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name =>
+      {
+        if (name == "b") evalCount++;
+        return name == "a" ? "1" : "99"; // a=1 makes left side true
+      }));
+      // b should never be resolved due to short-circuit
+      Assert.AreEqual(0, evalCount);
+    }
+
+    [TestMethod]
+    public void Evaluate_EmptyStringVsNull_DistinguishesCorrectly()
+    {
+      var eqNode = ConditionParser.Parse("{s} = \"\"");
+      // Empty string equals empty string literal
+      Assert.IsTrue(ConditionEvaluator.Evaluate(eqNode!, name => name == "s" ? "" : null));
+      // Null does NOT equal empty string literal
+      Assert.IsFalse(ConditionEvaluator.Evaluate(eqNode!, name => null));
+    }
   }
 }

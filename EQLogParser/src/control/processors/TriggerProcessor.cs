@@ -1257,7 +1257,12 @@ namespace EQLogParser
             };
 
             // Parse variable condition into AST (null = no condition / always passes)
-            wrapper.ConditionAst = ConditionParser.Parse(trigger.MatchVariableCondition);
+            var conditionAst = ConditionParser.Parse(trigger.MatchVariableCondition);
+            if (conditionAst == null && !string.IsNullOrWhiteSpace(trigger.MatchVariableCondition))
+            {
+              Log.Warn($"Invalid variable condition for trigger '{enabled.Name}': {trigger.MatchVariableCondition}");
+            }
+            wrapper.ConditionAst = conditionAst;
 
             // temp
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
@@ -1372,7 +1377,7 @@ namespace EQLogParser
       {
         foreach (var va in variableActions)
         {
-          if (string.IsNullOrEmpty(va.VariableName)) continue;
+          if (string.IsNullOrWhiteSpace(va.VariableName)) continue;
 
           switch (va.ActionType)
           {
@@ -1435,14 +1440,19 @@ namespace EQLogParser
       if (_variableExpiryTimes.Count == 0) return;
 
       var now = DateTime.UtcNow.Ticks;
-      foreach (var key in _variableExpiryTimes.Keys.ToArray())
+      // Collect expired keys first to avoid modifying dictionary during iteration
+      var keysToRemove = new List<string>(_variableExpiryTimes.Count);
+      foreach (var kvp in _variableExpiryTimes)
       {
-        if (now >= _variableExpiryTimes[key])
-        {
-          _variables.TryRemove(key, out _);
-          _counterValues.Remove(key);
-          _variableExpiryTimes.Remove(key);
-        }
+        if (now >= kvp.Value)
+          keysToRemove.Add(kvp.Key);
+      }
+
+      foreach (var key in keysToRemove)
+      {
+        _variables.TryRemove(key, out _);
+        _counterValues.Remove(key);
+        _variableExpiryTimes.Remove(key);
       }
     }
 
@@ -1473,6 +1483,26 @@ namespace EQLogParser
       return null;
     }
 
+    /// <summary>Apply a named modifier (e.g. upper, number) to a resolved value string.</summary>
+    private static string ApplyModifier(string value, string modifierName, string modifierArg)
+    {
+      if (string.IsNullOrEmpty(modifierName))
+        return value;
+
+      return modifierName.ToLowerInvariant() switch
+      {
+        "capitalize" => TextUtils.CapitalizeFirst(value, CultureInfo.CurrentCulture),
+        "center" => TextUtils.PadCenter(value, modifierArg),
+        "number" => double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num)
+          ? num.ToString("N0", CultureInfo.CurrentCulture) : value,
+        "upper" => value.ToUpper(CultureInfo.CurrentCulture),
+        "lower" => value.ToLower(CultureInfo.CurrentCulture),
+        "padleft" => TextUtils.PadLeft(value, modifierArg),
+        "padright" => TextUtils.PadRight(value, modifierArg),
+        _ => value,
+      };
+    }
+
     private static string ProcessMatchesText(string text, Dictionary<string, string> matches)
     {
       if (matches == null || string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
@@ -1480,74 +1510,7 @@ namespace EQLogParser
       var matchCollection = TokenRegex.Matches(text);
       if (matchCollection.Count == 0) return text;
 
-      var lastIndex = 0;
-      var sb = new StringBuilder(text.Length);
-
-      foreach (Match m in matchCollection)
-      {
-        sb.Append(text, lastIndex, m.Index - lastIndex);
-        lastIndex = m.Index + m.Length;
-
-        var name = m.Groups["name"].Value;
-
-        var modifierName = m.Groups["modifier"].Success
-          ? m.Groups["modifier"].Value
-          : null;
-
-        var modifierArg = m.Groups["arg"].Success
-          ? m.Groups["arg"].Value
-          : null;
-
-        if (!matches.TryGetValue(name, out var value))
-        {
-          sb.Append(m.Value);
-          continue;
-        }
-
-        if (!string.IsNullOrEmpty(modifierName))
-        {
-          switch (modifierName.ToLowerInvariant())
-          {
-            case "capitalize":
-              value = TextUtils.CapitalizeFirst(value, CultureInfo.CurrentCulture);
-              break;
-
-            case "center":
-              value = TextUtils.PadCenter(value, modifierArg);
-              break;
-
-            case "number":
-              if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
-                value = num.ToString("N0", CultureInfo.CurrentCulture);
-              break;
-
-            case "upper":
-              value = value.ToUpper(CultureInfo.CurrentCulture);
-              break;
-
-            case "lower":
-              value = value.ToLower(CultureInfo.CurrentCulture);
-              break;
-
-            case "padleft":
-              value = TextUtils.PadLeft(value, modifierArg);
-              break;
-
-            case "padright":
-              value = TextUtils.PadRight(value, modifierArg);
-              break;
-          }
-        }
-
-        sb.Append(value);
-      }
-
-      if (lastIndex < text.Length)
-      {
-        sb.Append(text, lastIndex, text.Length - lastIndex);
-      }
-
-      return sb.ToString();
+      return BuildReplacedText(text, matchCollection, name => matches.TryGetValue(name, out var v) ? v : null);
     }
 
     private static string ProcessMatchesText(string text, ConcurrentDictionary<string, string> matches)
@@ -1557,6 +1520,13 @@ namespace EQLogParser
       var matchCollection = TokenRegex.Matches(text);
       if (matchCollection.Count == 0) return text;
 
+      return BuildReplacedText(text, matchCollection, name => matches.TryGetValue(name, out var v) ? v : null);
+    }
+
+    /// <summary>Core token replacement loop — resolves names via a delegate and applies modifiers.</summary>
+    private static string BuildReplacedText(string text, MatchCollection matchCollection,
+      Func<string, string> resolveValue)
+    {
       var lastIndex = 0;
       var sb = new StringBuilder(text.Length);
 
@@ -1575,48 +1545,14 @@ namespace EQLogParser
           ? m.Groups["arg"].Value
           : null;
 
-        if (!matches.TryGetValue(name, out var value))
+        var value = resolveValue(name);
+        if (value == null)
         {
           sb.Append(m.Value);
           continue;
         }
 
-        if (!string.IsNullOrEmpty(modifierName))
-        {
-          switch (modifierName.ToLowerInvariant())
-          {
-            case "capitalize":
-              value = TextUtils.CapitalizeFirst(value, CultureInfo.CurrentCulture);
-              break;
-
-            case "center":
-              value = TextUtils.PadCenter(value, modifierArg);
-              break;
-
-            case "number":
-              if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var num))
-                value = num.ToString("N0", CultureInfo.CurrentCulture);
-              break;
-
-            case "upper":
-              value = value.ToUpper(CultureInfo.CurrentCulture);
-              break;
-
-            case "lower":
-              value = value.ToLower(CultureInfo.CurrentCulture);
-              break;
-
-            case "padleft":
-              value = TextUtils.PadLeft(value, modifierArg);
-              break;
-
-            case "padright":
-              value = TextUtils.PadRight(value, modifierArg);
-              break;
-          }
-        }
-
-        sb.Append(value);
+        sb.Append(ApplyModifier(value, modifierName, modifierArg));
       }
 
       if (lastIndex < text.Length)
