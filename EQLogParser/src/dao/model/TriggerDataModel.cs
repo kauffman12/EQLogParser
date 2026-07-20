@@ -31,6 +31,8 @@ namespace EQLogParser
     public Dictionary<string, string> Matches { get; init; }
     public Dictionary<string, string> Previous { get; init; }
     public Dictionary<string, string> Original { get; init; }
+    /// <summary>Snapshot of _variables at enqueue time so TTL expiration doesn't affect TTS resolution.</summary>
+    public Dictionary<string, string> Variables { get; init; } = new();
     public long CounterCount { get; init; }
     public double BeginTime { get; init; }
     public long BeginTicks { get; init; }

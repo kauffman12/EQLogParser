@@ -712,6 +712,7 @@ namespace EQLogParser
             Matches = matches,
             Previous = previousMatches,
             Action = lineData.Action,
+            Variables = new Dictionary<string, string>(_variables),
             CounterCount = counterCount,
             BeginTicks = beginTicks,
             BeginTime = lineData.BeginTime
@@ -1140,9 +1141,7 @@ namespace EQLogParser
         else
         {
           var lexicon = _lexicon;
-          // Expire TTL'd variables before processing TTS text
-          ExpireVariablesIfNeeded();
-          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original, _variables);
+          var tts = ProcessTts(speak.TtsOrSound, speak.Action, speak.Matches, speak.Previous, speak.Original, speak.Variables);
 
           if (speak.IsPrimary)
           {
@@ -1564,7 +1563,7 @@ namespace EQLogParser
     }
 
     private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
-      ConcurrentDictionary<string, string> variables)
+      Dictionary<string, string> variables)
     {
       // Capture groups first (highest priority), then variables as fallback
       tts = ProcessMatchesText(tts, original);
