@@ -159,6 +159,7 @@ namespace EQLogParser
   internal enum VariableDataType
   {
     Value,
+    Text = 0, // Deprecated alias — kept for backward compatibility with existing saved data
     Counter
   }
 
@@ -167,8 +168,16 @@ namespace EQLogParser
   /// </summary>
   internal class VariableAction
   {
-    public VariableActionType ActionType { get; set; } = VariableActionType.Set;
-    public VariableDataType DataType { get; set; } = VariableDataType.Value;
+    // Stored as int (not enum) to match TimerType/TriggerAgainOption pattern — immune to renames
+    public int ActionType { get; set; } = 0; // 0=Set, 1=Clear
+    public int DataType { get; set; } = 0;   // 0=Value, 1=Counter
+
+    // Convenience helpers so callers don't use magic numbers
+    public bool IsSetAction => ActionType == 0;
+    public bool IsClearAction => ActionType == 1;
+    public bool IsValueType => DataType == 0;
+    public bool IsCounterType => DataType == 1;
+
     public string VariableName { get; set; } = "";
 
     // For Value: capture group ref like "{s1}", variable ref "{varName}" or "${varName}", or literal text
@@ -400,8 +409,8 @@ namespace EQLogParser
     /// </summary>
     public void SyncToModel(VariableAction model)
     {
-      model.ActionType = ActionType;
-      model.DataType = DataType;
+      model.ActionType = (int)ActionType;
+      model.DataType = (int)DataType;
       model.VariableName = VariableName?.Trim();
       model.Value = Value?.Trim();
       model.InitialValue = InitialValue;
@@ -418,8 +427,8 @@ namespace EQLogParser
     {
       return new VariableActionViewModel
       {
-        ActionType = model.ActionType,
-        DataType = model.DataType,
+        ActionType = (VariableActionType)model.ActionType,
+        DataType = (VariableDataType)model.DataType,
         VariableName = model.VariableName,
         Value = model.Value,
         InitialValue = model.InitialValue,
@@ -436,16 +445,16 @@ namespace EQLogParser
     {
       return new VariableActionViewModel
       {
-        _actionType = model.ActionType,
-        _dataType = model.DataType,
+        _actionType = (VariableActionType)model.ActionType,
+        _dataType = (VariableDataType)model.DataType,
         _variableName = model.VariableName,
         _value = model.Value,
         _initialValue = model.InitialValue,
         _step = model.Step,
         _timeToLiveSeconds = model.TimeToLiveSeconds,
         _isDirty = false,
-        _actionTypeDisplay = model.ActionType == VariableActionType.Clear ? "Clear Value" : "Set Value",
-        _dataTypeDisplay = model.DataType == VariableDataType.Counter ? "Counter" : "Value"
+        _actionTypeDisplay = model.ActionType == 1 ? "Clear Value" : "Set Value",
+        _dataTypeDisplay = model.DataType == 1 ? "Counter" : "Value"
       };
     }
 

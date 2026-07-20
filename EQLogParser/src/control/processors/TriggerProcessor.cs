@@ -1378,53 +1378,47 @@ namespace EQLogParser
         {
           if (string.IsNullOrWhiteSpace(va.VariableName)) continue;
 
-          switch (va.ActionType)
+          if (va.IsClearAction)
           {
-            case VariableActionType.Set:
-              {
-                var key = va.VariableName;
-                var hasTtl = va.TimeToLiveSeconds > 0;
-                var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + (long)(va.TimeToLiveSeconds * TimeSpan.TicksPerSecond) : 0;
+            var key = va.VariableName;
+            _variables.TryRemove(key, out _);
+            _counterValues.Remove(key);
+            _variableExpiryTimes.Remove(key);
+          }
+          else
+          {
+            var key = va.VariableName;
+            var hasTtl = va.TimeToLiveSeconds > 0;
+            var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + (long)(va.TimeToLiveSeconds * TimeSpan.TicksPerSecond) : 0;
 
-                if (va.DataType == VariableDataType.Counter)
-                {
-                  // Counter: increment by Step, starting from InitialValue if new
-                  if (!_counterValues.TryGetValue(key, out var current))
-                    current = va.InitialValue;
-                  current += va.Step;
-                  _counterValues[key] = current;
-                  _variables[key] = current.ToString(CultureInfo.InvariantCulture);
-                }
-                else if (!string.IsNullOrEmpty(va.Value))
-                {
-                  // Value: resolve the value through the same pipeline as display text
-                  var resolved = ProcessMatchesText(va.Value, _variables);
-                  resolved = ProcessMatchesText(resolved, matches);
-                  resolved = ProcessMatchesText(resolved, previousMatches);
-                  resolved = ProcessLineCode(resolved, action);
-                  _variables[key] = resolved;
-                }
+            if (va.IsCounterType)
+            {
+              // Counter: increment by Step, starting from InitialValue if new
+              if (!_counterValues.TryGetValue(key, out var current))
+                current = va.InitialValue;
+              current += va.Step;
+              _counterValues[key] = current;
+              _variables[key] = current.ToString(CultureInfo.InvariantCulture);
+            }
+            else if (!string.IsNullOrEmpty(va.Value))
+            {
+              // Value: resolve the value through the same pipeline as display text
+              var resolved = ProcessMatchesText(va.Value, _variables);
+              resolved = ProcessMatchesText(resolved, matches);
+              resolved = ProcessMatchesText(resolved, previousMatches);
+              resolved = ProcessLineCode(resolved, action);
+              _variables[key] = resolved;
+            }
 
-                // Set TTL if specified
-                if (hasTtl)
-                {
-                  _variableExpiryTimes[key] = expiryTicks;
-                }
-                else
-                {
-                  _variableExpiryTimes.Remove(key);
-                }
-                break;
-              }
-
-            case VariableActionType.Clear:
-              {
-                var key = va.VariableName;
-                _variables.TryRemove(key, out _);
-                _counterValues.Remove(key);
-                _variableExpiryTimes.Remove(key);
-                break;
-              }
+            // Set TTL if specified
+            if (hasTtl)
+            {
+              _variableExpiryTimes[key] = expiryTicks;
+            }
+            else
+            {
+              _variableExpiryTimes.Remove(key);
+            }
           }
         }
       }
