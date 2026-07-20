@@ -78,13 +78,15 @@ namespace EQLogParser
                     continue;
                 }
 
-                // Variable: {name}
-                if (input[i] == '{')
+                // Variable: {name} or ${name}
+                if (input[i] == '{' || (input[i] == '$' && i + 1 < len && input[i + 1] == '{'))
                 {
-                    int close = input.IndexOf('}', i + 1);
+                    int braceStart = input[i] == '$' ? i + 1 : i;
+                    int close = input.IndexOf('}', braceStart + 1);
                     if (close < 0) return null; // Unclosed brace
-                    string name = input.Substring(i + 1, close - i - 1);
-                    tokens.Add(new ConditionToken(ConditionTokenType.Variable, input.Substring(i, close - i + 1), name));
+                    string rawText = input.Substring(i, close - i + 1);
+                    string name = input.Substring(braceStart + 1, close - braceStart - 1);
+                    tokens.Add(new ConditionToken(ConditionTokenType.Variable, rawText, name));
                     i = close + 1;
                     continue;
                 }

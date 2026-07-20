@@ -197,6 +197,44 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
+    public void Parse_DollarPrefixedVariable_ParsesCorrectly()
+    {
+      // ${name} is the standard syntax for custom variable references (matches MatchesTokenRegex)
+      var node = ConditionParser.Parse("${hello} == 'test'");
+      Assert.IsNotNull(node);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionNodeType.Variable, bin.Left.NodeType);
+      Assert.AreEqual("hello", ((ConditionVariableNode)bin.Left).Name);
+    }
+
+    [TestMethod]
+    public void Parse_MixedDollarAndBraceOnly_ParsesCorrectly()
+    {
+      // {capture} and ${customVar} can appear in the same expression
+      var node = ConditionParser.Parse("{test} > 3 && ${hello} == 'test'");
+      Assert.IsNotNull(node);
+      var top = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionTokenType.And, top.Operator);
+      var left = (ConditionBinaryNode)top.Left;
+      Assert.AreEqual("test", ((ConditionVariableNode)left.Left).Name);
+      var right = (ConditionBinaryNode)top.Right;
+      Assert.AreEqual("hello", ((ConditionVariableNode)right.Left).Name);
+    }
+
+    [TestMethod]
+    public void Parse_DollarPrefixed_MidTypingPartial_ReturnsNull()
+    {
+      // Partial ${var} while typing — must not throw
+      Assert.IsNull(ConditionParser.Parse("$"));
+      Assert.IsNull(ConditionParser.Parse("${"));
+      Assert.IsNull(ConditionParser.Parse("${h"));
+      Assert.IsNull(ConditionParser.Parse("${hel"));
+      Assert.IsNull(ConditionParser.Parse("${hello"));
+      Assert.IsNull(ConditionParser.Parse("${hello} =="));
+      Assert.IsNull(ConditionParser.Parse("${hello} == '\""));
+    }
+
+    [TestMethod]
     public void Parse_ChainedAnds_ParsesCorrectly()
     {
       var node = ConditionParser.Parse("{a} > 1 and {b} > 2 and {c} > 3");
@@ -1073,6 +1111,25 @@ namespace EQLogParserTest
     {
       var node = ConditionParser.Parse("{name} = dragon");
       Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_DollarPrefixedVariable_ResolvesCorrectly()
+    {
+      // ${varName} resolves the same as {varName} — the $ is just syntax, not part of the name
+      var node = ConditionParser.Parse("${hello} == 'test'");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "hello" ? "test" : null));
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "hello" ? "other" : null));
+      // Should NOT resolve as "$hello" — the $ is stripped by the parser
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "$hello" ? "test" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_MixedDollarAndBraceOnly_ResolvesCorrectly()
+    {
+      var node = ConditionParser.Parse("{test} > 3 && ${hello} == 'test'");
+      var vars = new Dictionary<string, string> { ["test"] = "10", ["hello"] = "test" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, n => Resolve(vars, n)));
     }
 
     [TestMethod]
