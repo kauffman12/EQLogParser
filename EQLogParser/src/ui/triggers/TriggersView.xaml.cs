@@ -880,24 +880,18 @@ namespace EQLogParser
       if (model is TriggerPropertyModel triggerModel)
       {
         // Sync variable actions from ViewModel UI to model before saving (filter out entries with no name)
-        var hasChanges = false;
         triggerModel.VariableActions = _variableActionViewModels
           .Select(vm =>
           {
             var va = new VariableAction();
             vm.SyncToModel(va);
-            if (vm.IsDirty) hasChanges = true;
             return va;
           })
           .Where(va => !string.IsNullOrWhiteSpace(va.VariableName))
           .ToList();
-        
-        // Only save if there are actual changes or items exist
-        if (hasChanges || triggerModel.VariableActions.Count > 0)
-        {
-          await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
-          await TriggerStateDB.Instance.Update(triggerModel.Node);
-        }
+
+        await TriggerUtil.Copy(triggerModel.Node.TriggerData, model);
+        await TriggerStateDB.Instance.Update(triggerModel.Node);
       }
       else
       {

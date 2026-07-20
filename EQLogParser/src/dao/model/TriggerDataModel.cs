@@ -441,7 +441,9 @@ namespace EQLogParser
         _initialValue = model.InitialValue,
         _step = model.Step,
         _timeToLiveSeconds = model.TimeToLiveSeconds,
-        _isDirty = false
+        _isDirty = false,
+        _actionTypeDisplay = model.ActionType == VariableActionType.Clear ? "Clear Value" : "Set Value",
+        _dataTypeDisplay = model.DataType == VariableDataType.Counter ? "Counter" : "Text"
       };
     }
 
