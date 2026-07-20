@@ -45,6 +45,9 @@ namespace EQLogParser
                 return null;
 
             var tokens = Tokenize(expression);
+            if (tokens == null)
+                return null; // e.g. unclosed brace while user is still typing
+
             var parser = new ParserContext(tokens);
 
             try
@@ -319,7 +322,7 @@ namespace EQLogParser
             private readonly List<ConditionToken> _tokens;
             private int _index;
 
-            public ConditionToken Current => _tokens[_index];
+            public ConditionToken Current => _tokens?[_index] ?? new ConditionToken(ConditionTokenType.End, null);
 
             public ParserContext(List<ConditionToken> tokens)
             {

@@ -166,6 +166,193 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
+    public void Parse_MixedOperatorStyles_ParsesCorrectly()
+    {
+      // Mixing symbolic and word operators should work
+      Assert.IsNotNull(ConditionParser.Parse("{a} && {b} or {c} = 1"));
+      Assert.IsNotNull(ConditionParser.Parse("{a} || {b} and {c} neq 1"));
+    }
+
+    [TestMethod]
+    public void Parse_VariableToVariableComparison_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("{a} = {b}");
+      Assert.IsNotNull(node);
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionNodeType.Variable, bin.Left.NodeType);
+      Assert.AreEqual(ConditionNodeType.Variable, bin.Right.NodeType);
+      Assert.AreEqual("a", ((ConditionVariableNode)bin.Left).Name);
+      Assert.AreEqual("b", ((ConditionVariableNode)bin.Right).Name);
+    }
+
+    [TestMethod]
+    public void Parse_VariableNamesWithSpecialChars_ParsesCorrectly()
+    {
+      // Variable names with underscores, dots, numbers
+      Assert.IsNotNull(ConditionParser.Parse("{my_var} = 1"));
+      Assert.IsNotNull(ConditionParser.Parse("{s1} > 0"));
+      Assert.IsNotNull(ConditionParser.Parse("{n2} < 10"));
+      Assert.IsNotNull(ConditionParser.Parse("{hp.max} >= 100"));
+      Assert.IsNotNull(ConditionParser.Parse("{_private} = test"));
+    }
+
+    [TestMethod]
+    public void Parse_ChainedAnds_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("{a} > 1 and {b} > 2 and {c} > 3");
+      Assert.IsNotNull(node);
+      // Left-associative: ((a>1 and b>2) and c>3)
+      var top = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionTokenType.And, top.Operator);
+      var left = (ConditionBinaryNode)top.Left;
+      Assert.AreEqual(ConditionTokenType.And, left.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_ChainedOrs_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("{a} = 1 or {b} = 2 or {c} = 3");
+      Assert.IsNotNull(node);
+      var top = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionTokenType.Or, top.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_AndPrecedenceOverOr_ParsesCorrectly()
+    {
+      // {a} and {b} or {c} should parse as ({a} and {b}) or {c}
+      var node = ConditionParser.Parse("{a} = 1 and {b} = 2 or {c} = 3");
+      Assert.IsNotNull(node);
+      var top = (ConditionBinaryNode)node;
+      Assert.AreEqual(ConditionTokenType.Or, top.Operator);
+      // Left side should be AND
+      var left = (ConditionBinaryNode)top.Left;
+      Assert.AreEqual(ConditionTokenType.And, left.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_NestedParentheses_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("((({a} > 1)))");
+      Assert.IsNotNull(node);
+      // Multiple parens around the same expression — parser resolves directly to the inner binary node
+      var bin = (ConditionBinaryNode)node;
+      Assert.AreEqual("a", ((ConditionVariableNode)bin.Left).Name);
+      Assert.AreEqual(ConditionTokenType.Greater, bin.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_DoubleNot_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("not not {a}");
+      Assert.IsNotNull(node);
+      var outer = (ConditionUnaryNode)node;
+      Assert.AreEqual(ConditionTokenType.Not, outer.Operator);
+      var inner = (ConditionUnaryNode)outer.Operand;
+      Assert.AreEqual(ConditionTokenType.Not, inner.Operator);
+    }
+
+    [TestMethod]
+    public void Parse_NotWithParentheses_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("not ({a} and {b})");
+      Assert.IsNotNull(node);
+      var unary = (ConditionUnaryNode)node;
+      Assert.AreEqual(ConditionTokenType.Not, unary.Operator);
+      Assert.AreEqual(ConditionNodeType.Binary, unary.Operand.NodeType);
+    }
+
+    [TestMethod]
+    public void Parse_StandaloneNumber_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("42");
+      Assert.IsNotNull(node);
+      Assert.AreEqual(ConditionNodeType.Literal, node.NodeType);
+      var lit = (ConditionLiteralNode)node;
+      Assert.AreEqual(ConditionTokenType.Number, lit.Type);
+      Assert.AreEqual(42.0, lit.NumberValue);
+    }
+
+    [TestMethod]
+    public void Parse_StandaloneBareword_ParsesCorrectly()
+    {
+      var node = ConditionParser.Parse("hello");
+      Assert.IsNotNull(node);
+      Assert.AreEqual(ConditionNodeType.Literal, node.NodeType);
+      var lit = (ConditionLiteralNode)node;
+      Assert.AreEqual(ConditionTokenType.String, lit.Type);
+      Assert.AreEqual("hello", lit.StringValue);
+    }
+
+    [TestMethod]
+    public void Parse_WhitespaceVariations_ParsesCorrectly()
+    {
+      // Tabs and multiple spaces
+      Assert.IsNotNull(ConditionParser.Parse("{a}\t>\t5"));
+      Assert.IsNotNull(ConditionParser.Parse("  {a}   >   5  "));
+      Assert.IsNotNull(ConditionParser.Parse("{a} > 5\n"));
+    }
+
+    [TestMethod]
+    public void Parse_EmptyBraces_ParsesAsEmptyVariable()
+    {
+      // {} is technically valid — it creates a variable node with an empty name
+      var node = ConditionParser.Parse("{}");
+      Assert.IsNotNull(node);
+      Assert.AreEqual(ConditionNodeType.Variable, node.NodeType);
+      Assert.AreEqual("", ((ConditionVariableNode)node).Name);
+    }
+
+    [TestMethod]
+    public void Parse_TrailingOperator_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{a} > "));
+      Assert.IsNull(ConditionParser.Parse("{a} and "));
+      Assert.IsNull(ConditionParser.Parse("not "));
+    }
+
+    [TestMethod]
+    public void Parse_LeadingNonNotOperator_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("> 5"));
+      Assert.IsNull(ConditionParser.Parse("and {a}"));
+      Assert.IsNull(ConditionParser.Parse("or {a}"));
+    }
+
+    [TestMethod]
+    public void Parse_UnknownSymbol_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{a} @ {b}"));
+      Assert.IsNull(ConditionParser.Parse("{a} # 5"));
+      Assert.IsNull(ConditionParser.Parse("{a} % {b}"));
+    }
+
+    [TestMethod]
+    public void Parse_ExtraClosingParen_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("({a} > 5))"));
+    }
+
+    [TestMethod]
+    public void Parse_JustOpenParen_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("("));
+    }
+
+    [TestMethod]
+    public void Parse_JustCloseParen_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse(")"));
+    }
+
+    [TestMethod]
+    public void Parse_IncompleteNumber_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{a} > -"));
+      Assert.IsNull(ConditionParser.Parse("{a} > ."));
+    }
+
+    [TestMethod]
     public void Parse_CaseInsensitiveKeywords_ParsesCorrectly()
     {
       Assert.IsNotNull(ConditionParser.Parse("{a} = TRUE"));
@@ -229,6 +416,180 @@ namespace EQLogParserTest
       Assert.IsNotNull(node);
       Assert.AreEqual(ConditionNodeType.Variable, node.NodeType);
       Assert.AreEqual("enabled", ((ConditionVariableNode)node).Name);
+    }
+
+    // ---- Mid-typing / partial input — must never throw, always return null ----
+
+    [TestMethod]
+    public void Parse_MidTyping_JustOpenBrace_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_PartialVariableName_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{h"));
+      Assert.IsNull(ConditionParser.Parse("{hp"));
+      Assert.IsNull(ConditionParser.Parse("{my_var"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_NumberThenEqualsAndBrace_ReturnsNull()
+    {
+      // User typed: 124 == {
+      Assert.IsNull(ConditionParser.Parse("124 == {"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_VariableThenOperatorOnly_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} >"));
+      Assert.IsNull(ConditionParser.Parse("{hp} <"));
+      Assert.IsNull(ConditionParser.Parse("{hp} ="));
+      Assert.IsNull(ConditionParser.Parse("{hp} !"));
+      Assert.IsNull(ConditionParser.Parse("{hp} !="));
+      Assert.IsNull(ConditionParser.Parse("{hp} >="));
+      Assert.IsNull(ConditionParser.Parse("{hp} <="));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_VariableThenOperatorAndSpace_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} > "));
+      Assert.IsNull(ConditionParser.Parse("{hp} = "));
+      Assert.IsNull(ConditionParser.Parse("{hp} contains "));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_VariableThenPartialKeyword_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} an"));
+      Assert.IsNull(ConditionParser.Parse("{hp} and"));  // "and" with no right side is still trailing-op
+      Assert.IsNull(ConditionParser.Parse("{hp} or"));
+      Assert.IsNull(ConditionParser.Parse("{hp} co"));
+      Assert.IsNull(ConditionParser.Parse("{hp} cont"));
+      Assert.IsNull(ConditionParser.Parse("{hp} contain"));
+      Assert.IsNull(ConditionParser.Parse("{hp} contains"));  // "contains" with no right side
+      Assert.IsNull(ConditionParser.Parse("not "));
+      Assert.IsNull(ConditionParser.Parse("not {"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_VariableThenPartialQuotedString_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} = \""));
+      Assert.IsNull(ConditionParser.Parse("{hp} = \"h"));
+      Assert.IsNull(ConditionParser.Parse("{hp} = \"he"));
+      Assert.IsNull(ConditionParser.Parse("{hp} eq '\""));
+      Assert.IsNull(ConditionParser.Parse("{hp} eq 'hel"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_JustOpenParen_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("("));
+      Assert.IsNull(ConditionParser.Parse("(("));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_ParenThenPartialExpression_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("({hp}"));
+      Assert.IsNull(ConditionParser.Parse("({hp} >"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50 and"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50 and {mana}"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50 and {mana} >"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_ClosedParenThenPartial_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50) and"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50) and {"));
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50) or {mana} >"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_DoubleEqualsPartial_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} ="));
+      Assert.IsNull(ConditionParser.Parse("{hp} =="));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_DoubleAmpersandPartial_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} &"));
+      Assert.IsNull(ConditionParser.Parse("{hp} &&"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_DoublePipePartial_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{hp} |"));
+      Assert.IsNull(ConditionParser.Parse("{hp} ||"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_JustSpace_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse(" "));
+      Assert.IsNull(ConditionParser.Parse("  "));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_NumberThenOperator_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("42 >"));
+      Assert.IsNull(ConditionParser.Parse("42 ="));
+      Assert.IsNull(ConditionParser.Parse("42 and"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_BarewordThenOperator_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("hello >"));
+      Assert.IsNull(ConditionParser.Parse("hello ="));
+      Assert.IsNull(ConditionParser.Parse("hello contains"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_ExclamationAlone_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("!"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_GreaterThanAlone_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse(">"));
+      Assert.IsNull(ConditionParser.Parse("<"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_MultipleBraces_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{{"));
+      Assert.IsNull(ConditionParser.Parse("{a}{b}"));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_VariableThenTwoOperators_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("{a} > >"));
+      Assert.IsNull(ConditionParser.Parse("{a} = ="));
+    }
+
+    [TestMethod]
+    public void Parse_MidTyping_ComplexPartial_ReturnsNull()
+    {
+      Assert.IsNull(ConditionParser.Parse("({hp} > 50 and {mana} > 10) or {godmod"));
+      // ({hp} > 50 and {mana} > 10) or {godmode} is VALID — standalone var as truthy check
+      Assert.IsNotNull(ConditionParser.Parse("({hp} > 50 and {mana} > 10) or {godmode}"));
+      Assert.IsNull(ConditionParser.Parse("not ({hp} > 50 and {mana} >"));
+      Assert.IsNull(ConditionParser.Parse("{a} contains \"some long string tha"));
     }
 
     // ---- Evaluator Tests ----
@@ -599,6 +960,143 @@ namespace EQLogParserTest
       Assert.IsTrue(ConditionEvaluator.Evaluate(eqNode!, name => name == "s" ? "" : null));
       // Null does NOT equal empty string literal
       Assert.IsFalse(ConditionEvaluator.Evaluate(eqNode!, name => null));
+    }
+
+    // ---- Evaluator: unset / missing variable edge-cases ----
+
+    [TestMethod]
+    public void Evaluate_AllVariablesUnset_EqualityReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{a} = {b}");
+      // Both null — null = null should be true
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_LeftUnsetRightSet_EqualityReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{a} = hello");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_LeftSetRightUnset_EqualityReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{a} = {b}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "hello" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_UnsetVariableInNumericComparison_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{hp} > 50");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_UnsetVariableInContains_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{name} contains dragon");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_UnsetVariableStandalone_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{enabled}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NotUnsetVariable_ReturnsTrue()
+    {
+      // not {unsetVar} — unset is falsy, so not falsy = true
+      var node = ConditionParser.Parse("not {disabled}");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_AndWithOneUnsetVariable_HandlesGracefully()
+    {
+      var node = ConditionParser.Parse("{hp} > 50 and {mana} > 10");
+      // hp set, mana unset
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "hp" ? "75" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_OrWithOneUnsetVariable_HandlesGracefully()
+    {
+      var node = ConditionParser.Parse("{hp} > 50 or {mana} > 10");
+      // hp set and true, mana unset — should short-circuit to true
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "hp" ? "75" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_OrBothUnset_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{a} or {b}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NumericComparisonWithLeadingZeros()
+    {
+      var node = ConditionParser.Parse("{count} > 5");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "count" ? "010" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NumericComparisonWithDecimalInVariable()
+    {
+      var node = ConditionParser.Parse("{value} >= 3.14");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "value" ? "3.14159" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NumericComparisonRightSideNonNumeric_ReturnsFalse()
+    {
+      var node = ConditionParser.Parse("{hp} > 50");
+      // hp resolves to non-numeric
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "hp" ? "high" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_ContainsWithVariableResolvingToEmptyString_ReturnsExpected()
+    {
+      var node = ConditionParser.Parse("{name} contains dragon");
+      // Empty string does not contain "dragon"
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_EqualityWithVariableResolvingToEmptyString()
+    {
+      var node = ConditionParser.Parse("{name} = dragon");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "name" ? "" : null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NotEqualsWithBothUnset_ReturnsFalse()
+    {
+      // null != null is false (they are equal)
+      var node = ConditionParser.Parse("{a} != {b}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NestedNotWithUnsetVariable()
+    {
+      // not not {unsetVar} — unset is falsy, not falsy = true, not true = false
+      var node = ConditionParser.Parse("not not {x}");
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_NestedNotWithSetVariable()
+    {
+      // not not {x} where x="yes" — truthy, not truthy = false, not false = true
+      var node = ConditionParser.Parse("not not {x}");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "x" ? "yes" : null));
     }
   }
 }
