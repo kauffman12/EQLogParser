@@ -668,6 +668,12 @@ namespace EQLogParser
           }
         }
       }
+
+      // Clear variables listed in EndTimerClearVariables (after display/speak/log so they can reference the values)
+      if (timersToStopUi != null)
+      {
+        ClearTimerEndVariablesIfNeeded(wrapper.TriggerData);
+      }
     }
 
     private async Task HandleTriggerAsync(TriggerWrapper wrapper, LineData lineData, Dictionary<string, string> matches,
@@ -1113,6 +1119,9 @@ namespace EQLogParser
             }
           }
 
+          // Clear variables listed in EndTimerClearVariables (after display/speak so they can reference the values)
+          ClearTimerEndVariablesIfNeeded(trigger);
+
           // repeating
           if (wrapper.TriggerData.TimerType == 4 && wrapper.TriggerData.TimesToLoop > data2.TimesToLoopCount)
           {
@@ -1472,6 +1481,35 @@ namespace EQLogParser
       lock (_variableLock)
       {
         ExpireVariables();
+      }
+    }
+
+    /// <summary>
+    /// Parses the EndTimerClearVariables string and clears the listed variables.
+    /// Accepts comma or space separated names with optional braces/dollar signs: "test, var2, {var3}, $var4".
+    /// Must only be called while the caller holds _variableLock.
+    /// </summary>
+    private void ClearTimerEndVariables(string variableList)
+    {
+      if (string.IsNullOrWhiteSpace(variableList)) return;
+
+      // Split on commas, spaces, or semicolons; strip braces and dollar signs
+      var names = variableList.Split(',', ' ', ';');
+      foreach (var raw in names)
+      {
+        var name = raw.Trim().TrimStart('$').TrimStart('{').TrimEnd('}').Trim();
+        if (string.IsNullOrEmpty(name)) continue;
+        _variables.TryRemove(name, out _);
+        _counterValues.Remove(name);
+        _variableExpiryTimes.Remove(name);
+      }
+    }
+
+    private void ClearTimerEndVariablesIfNeeded(Trigger trigger)
+    {
+      lock (_variableLock)
+      {
+        ClearTimerEndVariables(trigger.EndTimerClearVariables);
       }
     }
 

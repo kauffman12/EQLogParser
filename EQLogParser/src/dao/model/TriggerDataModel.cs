@@ -523,6 +523,7 @@ namespace EQLogParser
     public string EndEarlySoundToPlay { get; set; }
     public string EndSoundToPlay { get; set; }
     public string WarningSoundToPlay { get; set; }
+    public string EndTimerClearVariables { get; set; }
     public string ChatWebhook { get; set; }
     public string TextToSendToChat { get; set; }
     public string TextToShare { get; set; }

@@ -213,6 +213,29 @@ Use **Clear Value** actions to remove a variable when a condition ends. For exam
 
 Other triggers can check `{gCasting}` in their Match Variables field to only fire while the player is actively casting.
 
+### End Clear Variables (Timer Tab)
+
+The **End Clear Variables** field (found under *Basic Timer Options* on the Timer tab) lets you specify a list of custom variables to clear automatically when a Timer ends — whether it expires normally or ends early via an End Early Pattern. This is useful for cleaning up temporary variables that were only needed while the timer was active.
+
+Enter variable names separated by commas, spaces, or semicolons. The following formats are all accepted and resolve to the same variable name:
+
+- `gCaster` — plain name
+- `{gCaster}` — braces (same as display text syntax)
+- `${gCaster}` — dollar-brace (NAG-style syntax)
+- `gCaster, gSpellName; gZone` — multiple names with mixed separators
+
+Variables are cleared **after** the End Text to Display and End Sound/Text to Speak are processed, so end display text can still reference the variable values. The cleanup happens once all timer-end side effects (display, speak, log) are complete.
+
+**Example — Caster name that dies with the buff timer:**
+
+1. Trigger matches "Player begins casting Spirit of Vesagran" → Set `gEpicCaster = {s1}`
+2. Enable Timer, Duration: 3:00, End Text to Display: `BRD Epic ({gEpicCaster})`
+3. End Clear Variables: `gEpicCaster`
+
+When the 3-minute buff timer ends, the display shows the caster name and the variable is cleared.
+
+**Note:** Only use this for variables that are owned by a single trigger/timer pair. Shared variables like a global `SpellBeingCast` tracker used across many triggers should be cleared with explicit Clear Value actions instead, since clearing them on timer end could wipe out a newer value set by a different trigger.
+
 ---
 
 ## Match Variables Field
