@@ -119,6 +119,7 @@ namespace EQLogParser
         toTrigger.EndEarlySoundToPlay = TextUtils.Trim(fromTrigger.EndEarlySoundToPlay);
         toTrigger.EndSoundToPlay = TextUtils.Trim(fromTrigger.EndSoundToPlay);
         toTrigger.WarningSoundToPlay = TextUtils.Trim(fromTrigger.WarningSoundToPlay);
+        toTrigger.EndTimerClearVariables = TextUtils.Trim(fromTrigger.EndTimerClearVariables);
         toTrigger.IconSource = fromTrigger.IconSource;
         toTrigger.VoiceRate = fromTrigger.VoiceRate;
         toTrigger.Volume = fromTrigger.Volume;
