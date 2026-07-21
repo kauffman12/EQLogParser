@@ -95,6 +95,7 @@ namespace EQLogParser
 
   internal class Overlay
   {
+    // TODO: Source is used by local NagUtil.cs — remove if NagUtil is discarded
     public string Source { get; set; }
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";

@@ -64,12 +64,6 @@ namespace EQLogParser
         }
       };
 
-      // Wire up existing items
-      foreach (var vm in _variableActionViewModels)
-      {
-        vm.PropertyChanged += OnVariableActionPropertyChanged;
-      }
-
       _characterViewWidth = mainGrid.ColumnDefinitions[0].Width;
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 

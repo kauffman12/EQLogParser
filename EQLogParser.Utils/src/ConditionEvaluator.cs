@@ -53,7 +53,7 @@ namespace EQLogParser
       // Comparison operators
       var left = ResolveValue(node.Left, resolve);
       var right = ResolveValue(node.Right, resolve);
-      return Compare(left, node.Operator, right);
+      return Compare(left, node.Left, node.Operator, right, node.Right);
     }
 
     private static bool EvaluateUnary(ConditionUnaryNode node, VariableResolver resolve)
@@ -103,13 +103,13 @@ namespace EQLogParser
       };
     }
 
-    private static bool Compare(string left, ConditionTokenType op, string right)
+    private static bool Compare(string left, ConditionNode leftNode, ConditionTokenType op, string right, ConditionNode rightNode)
     {
-      // Null equality checks
+      // Null equality checks — distinguish "two unset vars" from "explicit null literal"
       if (op == ConditionTokenType.Equals)
-        return Equals(left, right);
+        return Equals(left, leftNode, right, rightNode);
       if (op == ConditionTokenType.NotEquals)
-        return !Equals(left, right);
+        return !Equals(left, leftNode, right, rightNode);
 
       // Contains (case-insensitive) — null right-hand side is falsy
       if (op == ConditionTokenType.Contains)
@@ -131,10 +131,24 @@ namespace EQLogParser
       };
     }
 
-    private static bool Equals(string left, string right)
+    private static bool Equals(string left, ConditionNode leftNode, string right, ConditionNode rightNode)
     {
-      if (left is null && right is null) return true;
-      if (left is null || right is null) return false;
+      // Handle null cases:
+      // - {var} = null literal → true when var is unset (explicit null check)
+      // - {var1} = {var2} → false when both are unset (two unset vars are not equal)
+      if (left is null || right is null)
+      {
+        bool leftIsNullLiteral = leftNode is ConditionLiteralNode ln && ln.Type == ConditionTokenType.Null;
+        bool rightIsNullLiteral = rightNode is ConditionLiteralNode rn && rn.Type == ConditionTokenType.Null;
+
+        // If at least one side is an explicit null literal, treat as a null check
+        if (leftIsNullLiteral || rightIsNullLiteral)
+          return left is null && right is null; // both must be null for equality
+
+        // Both are unset variables — not equal
+        return false;
+      }
+
       return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
     }
   }

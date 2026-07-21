@@ -311,23 +311,32 @@ namespace EQLogParser
       try
       {
         var beginTicks = DateTime.UtcNow.Ticks;
-        // Expire TTL'd variables before pattern matching and condition evaluation
-        ExpireVariablesIfNeeded();
+        // Expire TTL'd variables only when a trigger actually matches (not on every line).
+        // CheckLine/PreviousLine don't use global variables, so no risk of reading stale data.
+        bool expiredVariables = false;
 
         foreach (var wrapper in _activeTriggersById.Values)
         {
           if (CheckLine(wrapper, lineData, out var matches, out var dynamicDuration, out var swTime) &&
               CheckPreviousLine(wrapper, _previous, out var previousMatches, out var previousSwTime))
           {
+            // Expire once before condition evaluation and trigger actions
+            if (!expiredVariables)
+            {
+              ExpireVariablesIfNeeded();
+              expiredVariables = true;
+            }
+
             // Evaluate variable condition (after pattern match, before actions)
             if (wrapper.ConditionAst != null)
             {
               string ResolveVariable(string name)
               {
+                // Global variables first (highest priority), then capture groups as fallback
+                if (_variables.TryGetValue(name, out var v) && !string.IsNullOrEmpty(v)) return v;
                 if (matches?.TryGetValue(name, out var m) is true && !string.IsNullOrEmpty(m)) return m;
                 if (previousMatches?.TryGetValue(name, out var pm) is true && !string.IsNullOrEmpty(pm)) return pm;
-                _variables.TryGetValue(name, out var v);
-                return v;
+                return null;
               }
               if (!ConditionEvaluator.Evaluate(wrapper.ConditionAst, ResolveVariable))
                 continue; // Condition failed, skip this trigger
@@ -1428,7 +1437,7 @@ namespace EQLogParser
             }
             else if (!string.IsNullOrEmpty(va.Value))
             {
-              // Value: resolve the value through the same pipeline as display text
+              // Value: resolve through the same pipeline as display text (globals first)
               var resolved = ProcessMatchesText(va.Value, _variables);
               resolved = ProcessMatchesText(resolved, matches);
               resolved = ProcessMatchesText(resolved, previousMatches);
@@ -1519,12 +1528,12 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
-        // Capture groups first (highest priority), then variables as fallback
+        // Global variables first (highest priority), then capture groups as fallback
+        text = ProcessMatchesText(text, variables);
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
         text = ProcessMatchesText(text, previousMatches);
         text = ProcessLineCode(text, action);
-        text = ProcessMatchesText(text, variables);
 
         return text;
       }
@@ -1614,12 +1623,12 @@ namespace EQLogParser
     private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
       Dictionary<string, string> variables)
     {
-      // Capture groups first (highest priority), then variables as fallback
+      // Global variables first (highest priority), then capture groups as fallback
+      tts = ProcessMatchesText(tts, variables);
       tts = ProcessMatchesText(tts, original);
       tts = ProcessMatchesText(tts, matches);
       tts = ProcessMatchesText(tts, previous);
       tts = ProcessLineCode(tts, action);
-      tts = ProcessMatchesText(tts, variables);
 
       return tts;
     }

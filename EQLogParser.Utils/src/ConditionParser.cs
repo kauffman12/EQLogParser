@@ -149,7 +149,6 @@ namespace EQLogParser
         // Operator symbols: == != >= <= && || = > < ! & |
         if ("=!<>&|".IndexOf(input[i]) >= 0)
         {
-          int start = i;
           // Try two-character operators first
           if (i + 1 < len)
           {
@@ -349,7 +348,6 @@ namespace EQLogParser
           _index++;
       }
 
-      public void EnterDepth() => _depth++;
       public void ExitDepth() => _depth--;
 
       /// <summary>Increments depth and throws if the maximum nesting depth is exceeded.</summary>

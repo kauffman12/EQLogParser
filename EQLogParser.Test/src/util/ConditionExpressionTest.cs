@@ -1006,8 +1006,8 @@ namespace EQLogParserTest
     public void Evaluate_AllVariablesUnset_EqualityReturnsFalse()
     {
       var node = ConditionParser.Parse("{a} = {b}");
-      // Both null — null = null should be true
-      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
+      // Both unset (null) — two unset variables are not equal
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
     }
 
     [TestMethod]
@@ -1133,11 +1133,11 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public void Evaluate_NotEqualsWithBothUnset_ReturnsFalse()
+    public void Evaluate_NotEqualsWithBothUnset_ReturnsTrue()
     {
-      // null != null is false (they are equal)
+      // Two unset variables are not equal, so != returns true
       var node = ConditionParser.Parse("{a} != {b}");
-      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
     }
 
     [TestMethod]
