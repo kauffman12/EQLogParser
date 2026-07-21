@@ -653,6 +653,21 @@ namespace EQLogParser
       }
     }
 
+    internal static async void CheckForClear(ChatType chatType, string action)
+    {
+      if (chatType.Sender == null || action == null)
+      {
+        return;
+      }
+
+      // handle clear variables command
+      if (chatType.SenderIsYou && (chatType.TextStart - 28) is var s and > 0 && action.Length > s
+          && action.AsSpan()[s..].StartsWith("{EQLP:CLEAR}", StringComparison.OrdinalIgnoreCase))
+      {
+        await TriggerManager.Instance.ClearVariablesAsync();
+      }
+    }
+
     internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, bool doImport, string characterId,
       string processorName = null, List<TrustedPlayer> trust = null)
     {

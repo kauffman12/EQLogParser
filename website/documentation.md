@@ -142,8 +142,9 @@ Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your
 
 Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
 
-## {EQLP:STOP}
-Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
+## `{EQLP:CLEAR}`
+
+Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want to clear all custom variables, counters, and their expiry timers across all active trigger processors. Unlike `{EQLP:STOP}`, this does **not** stop audio or close overlays — it only resets variable state. Use this after zoning, changing zones, or when you want a clean slate for spell/zone tracking without interrupting active triggers.
 
 ---
 

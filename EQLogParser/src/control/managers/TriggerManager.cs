@@ -62,6 +62,19 @@ namespace EQLogParser
       TriggerOverlayManager.Instance.StopOverlays();
     }
 
+    /// <summary>
+    /// Clears all variables, counters, and expiry times across all trigger processors.
+    /// Called by {EQLP:CLEAR} to reset variable state without stopping triggers.
+    /// </summary>
+    internal async Task ClearVariablesAsync()
+    {
+      var processors = await GetProcessorsAsync();
+      foreach (var processor in processors)
+      {
+        processor.ClearVariables();
+      }
+    }
+
     internal async Task<List<LogReader>> GetLogReadersAsync()
     {
       await _logReadersSemaphore.WaitAsync().ConfigureAwait(false);

@@ -143,6 +143,22 @@ namespace EQLogParser
       }
     }
 
+    /// <summary>
+    /// Clears all variables, counters, and expiry times for this processor.
+    /// Called by {EQLP:CLEAR} to reset variable state without stopping triggers.
+    /// </summary>
+    internal void ClearVariables()
+    {
+      if (_isDisposed) return;
+
+      lock (_variableLock)
+      {
+        _variables.Clear();
+        _counterValues.Clear();
+        _variableExpiryTimes.Clear();
+      }
+    }
+
     internal async Task UpdateActiveTriggers()
     {
       await GetActiveTriggersAsync();
@@ -1186,8 +1202,9 @@ namespace EQLogParser
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
       if (chatType != null)
       {
-        // Look for Stop
+        // Look for Stop and Clear
         TriggerUtil.CheckForStop(chatType, lineData.Action);
+        TriggerUtil.CheckForClear(chatType, lineData.Action);
 
         // Look for Quick Share entries
         TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, true, CurrentCharacterId, CurrentProcessorName, _trustedPlayers);
