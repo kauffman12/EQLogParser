@@ -24,8 +24,56 @@ namespace EQLogParser
   {
     public const string ShareOverlay = "EQLPO";
     public const string ShareTrigger = "EQLPT";
+
+    // Legacy: shows file dialog and processes in one call
     internal static async Task ImportTriggers(TriggerNode parent) => await Import(parent);
     internal static async Task ImportOverlays(TriggerNode triggerNode) => await Import(triggerNode, false);
+
+    // Pick a file via OpenFileDialog; returns the path or null if cancelled
+    internal static string SelectImportFile(TriggerNode parent, bool triggers = true)
+    {
+      var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
+      var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
+
+      var dialog = new OpenFileDialog
+      {
+        DefaultExt = defExt,
+        Filter = filter
+      };
+
+      return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    // Process a previously-selected import file (caller shows progress UI around this)
+    internal static async Task ProcessImportFile(string filePath, TriggerNode parent, bool triggers = true)
+    {
+      var fileInfo = new FileInfo(filePath);
+      if (!fileInfo.Exists || fileInfo.Length >= 100000000) return;
+
+      if (filePath.EndsWith($"{ExtTrigger}.gz", StringComparison.OrdinalIgnoreCase) ||
+        filePath.EndsWith($"{ExtOverlay}.gz", StringComparison.OrdinalIgnoreCase))
+      {
+        var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
+        var reader = new StreamReader(decompressionStream);
+        var json = await reader.ReadToEndAsync();
+        reader.Close();
+        var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, SerializationOptions);
+        if (triggers)
+          await TriggerStateDB.Instance.ImportTriggers(parent, data);
+        else
+          await TriggerStateDB.Instance.ImportOverlays(data);
+      }
+      else if (filePath.EndsWith(".gtp", StringComparison.InvariantCulture))
+      {
+        var data = new byte[fileInfo.Length];
+        var read = fileInfo.OpenRead().Read(data);
+        if (read > 0)
+        {
+          var imported = GinaUtil.CovertToTriggerNodes(data);
+          await TriggerStateDB.Instance.ImportTriggers(parent, imported);
+        }
+      }
+    }
 
     private const string ExtTrigger = "tgf";
     private const string ExtOverlay = "ogf";
@@ -1061,52 +1109,9 @@ namespace EQLogParser
     {
       try
       {
-        var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
-        var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
-
-        // WPF doesn't have its own file chooser so use Win32 Version
-        var dialog = new OpenFileDialog
-        {
-          // filter to txt files
-          DefaultExt = defExt,
-          Filter = filter
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-          // limit to 100 megs just in case
-          var fileInfo = new FileInfo(dialog.FileName);
-          if (fileInfo.Exists && fileInfo.Length < 100000000)
-          {
-            if (dialog.FileName.EndsWith($"{ExtTrigger}.gz", StringComparison.OrdinalIgnoreCase) ||
-              dialog.FileName.EndsWith($"{ExtOverlay}.gz", StringComparison.OrdinalIgnoreCase))
-            {
-              var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
-              var reader = new StreamReader(decompressionStream);
-              var json = await reader.ReadToEndAsync();
-              reader.Close();
-              var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, SerializationOptions);
-              if (triggers)
-              {
-                await TriggerStateDB.Instance.ImportTriggers(parent, data);
-              }
-              else
-              {
-                await TriggerStateDB.Instance.ImportOverlays(data);
-              }
-            }
-            else if (dialog.FileName.EndsWith(".gtp", StringComparison.InvariantCulture))
-            {
-              var data = new byte[fileInfo.Length];
-              var read = fileInfo.OpenRead().Read(data);
-              if (read > 0)
-              {
-                var imported = GinaUtil.CovertToTriggerNodes(data);
-                await TriggerStateDB.Instance.ImportTriggers(parent, imported);
-              }
-            }
-          }
-        }
+        var filePath = SelectImportFile(parent, triggers);
+        if (filePath is not null)
+          await ProcessImportFile(filePath, parent, triggers);
       }
       catch (Exception ex)
       {

@@ -265,15 +265,24 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode node } treeView)
       {
-        if (treeView == triggerTreeView)
+        var triggers = treeView == triggerTreeView;
+        var filePath = TriggerUtil.SelectImportFile(node.SerializedData, triggers);
+        if (filePath is null) return;
+
+        var progressWindow = new MessageWindow("Importing...", "Import", MessageWindow.IconType.Info, noButtons: true);
+        progressWindow.Show();
+
+        try
         {
-          await TriggerUtil.ImportTriggers(node.SerializedData);
-          await RefreshTriggerNode();
+          await TriggerUtil.ProcessImportFile(filePath, node.SerializedData, triggers);
+          if (triggers)
+            await RefreshTriggerNode();
+          else
+            await RefreshOverlayNode();
         }
-        else if (treeView == overlayTreeView)
+        finally
         {
-          await TriggerUtil.ImportOverlays(node.SerializedData);
-          await RefreshOverlayNode();
+          progressWindow.Close();
         }
       }
     }
