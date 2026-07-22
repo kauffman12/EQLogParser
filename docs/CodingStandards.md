@@ -56,7 +56,8 @@
 
 ## Code Organization
 
-- XML documentation comments are used for public members
+- Use `/* ... */` comment blocks for method, class, enum, and field documentation
+- XML documentation comments (`/// <summary>`) are **only** for WPF component class headers (e.g., `TriggersView`, `ConditionEditor`) where tooling or designers may consume them
 - **Remove unused `using` statements** — run `dotnet format` or your IDE's cleanup to auto-remove them before committing
 - Methods are ordered by visibility (public first, then internal, then private)
 - Related methods are grouped together

@@ -2,6 +2,7 @@
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -31,7 +32,7 @@ namespace EQLogParser
     public Dictionary<string, string> Matches { get; init; }
     public Dictionary<string, string> Previous { get; init; }
     public Dictionary<string, string> Original { get; init; }
-    /// <summary>Snapshot of _variables at enqueue time so TTL expiration doesn't affect TTS resolution.</summary>
+    /* Snapshot of _variables at enqueue time so TTL expiration doesn't affect TTS resolution. */
     public Dictionary<string, string> Variables { get; init; } = new();
     public long CounterCount { get; init; }
     public double BeginTime { get; init; }
@@ -145,28 +146,21 @@ namespace EQLogParser
     public bool IsCooldown { get; set; }
   }
 
-  /// <summary>
-  /// The type of variable action to perform.
-  /// </summary>
+  /* The type of variable action to perform. */
   internal enum VariableActionType
   {
     Set,
     Clear
   }
 
-  /// <summary>
-  /// The data type stored by a variable.
-  /// </summary>
+  /* The data type stored by a variable. */
   internal enum VariableDataType
   {
     Value,
-    Text = 0, // Deprecated alias — kept for backward compatibility with existing saved data
     Counter
   }
 
-  /// <summary>
-  /// Represents a single variable action (set or clear) configured on a trigger.
-  /// </summary>
+  /* Represents a single variable action (set or clear) configured on a trigger. */
   internal class VariableAction
   {
     // Stored as int (not enum) to match TimerType/TriggerAgainOption pattern — immune to renames
@@ -176,7 +170,7 @@ namespace EQLogParser
     // Convenience helpers so callers don't use magic numbers
     public bool IsSetAction => ActionType == 0;
     public bool IsClearAction => ActionType == 1;
-    public bool IsTextType => DataType == 0;
+    public bool IsValueType => DataType == 0;
     public bool IsCounterType => DataType == 1;
 
     public string VariableName { get; set; } = "";
@@ -192,15 +186,13 @@ namespace EQLogParser
     public double TimeToLiveSeconds { get; set; } = 0; // 0 = no expiration
   }
 
-  /// <summary>
-  /// ViewModel for VariableAction to support WPF data binding with INotifyPropertyChanged.
-  /// Used exclusively in the Variables tab UI; syncs to/from VariableAction model for persistence.
-  /// </summary>
+  /* ViewModel for VariableAction to support WPF data binding with INotifyPropertyChanged.
+   * Used exclusively in the Variables tab UI; syncs to/from VariableAction model for persistence. */
   internal class VariableActionViewModel : INotifyPropertyChanged
   {
     // Pre-computed static arrays for ComboBox binding (no per-access allocation)
     private static readonly string[] s_actionTypeDisplays = ["Set Value", "Clear Value"];
-    private static readonly string[] s_dataTypeDisplays = ["Fixed", "Counter"];
+    private static readonly string[] s_dataTypeDisplays = ["Value", "Counter"];
 
     // Instance properties for binding - return cached display strings
     public string[] ActionTypes => s_actionTypeDisplays;
@@ -214,7 +206,7 @@ namespace EQLogParser
     public string GetDisplayFromActionType(VariableActionType type)
       => type == VariableActionType.Clear ? "Clear Value" : "Set Value";
     public string GetDisplayFromDataType(VariableDataType type)
-      => type == VariableDataType.Counter ? "Counter" : "Fixed";
+      => type == VariableDataType.Counter ? "Counter" : "Value";
 
     private VariableActionType _actionType = VariableActionType.Set;
     private VariableDataType _dataType = VariableDataType.Value;
@@ -252,12 +244,12 @@ namespace EQLogParser
     // Computed properties for UI visibility bindings
     public bool IsSetAction => _actionType == VariableActionType.Set;
     public bool IsClearAction => _actionType == VariableActionType.Clear;
-    public bool IsTextType => _dataType == VariableDataType.Value;
+    public bool IsValueType => _dataType == VariableDataType.Value;
     public bool IsCounterType => _dataType == VariableDataType.Counter;
 
     // Cached display strings — updated only when the underlying enum changes
     private string _actionTypeDisplay = "Set Value";
-    private string _dataTypeDisplay = "Fixed";
+    private string _dataTypeDisplay = "Value";
 
     public VariableActionType ActionType
     {
@@ -306,7 +298,7 @@ namespace EQLogParser
           _dataType = value;
           _dataTypeDisplay = GetDisplayFromDataType(value);
           OnPropertyChanged();
-          OnPropertyChanged(nameof(IsTextType));
+          OnPropertyChanged(nameof(IsValueType));
           OnPropertyChanged(nameof(IsCounterType));
           // Also notify the display property for ComboBox binding
           OnPropertyChanged(nameof(DataTypeDisplay));
@@ -326,7 +318,7 @@ namespace EQLogParser
           _dataType = newType;
           _dataTypeDisplay = value;
           OnPropertyChanged(nameof(DataType));
-          OnPropertyChanged(nameof(IsTextType));
+          OnPropertyChanged(nameof(IsValueType));
           OnPropertyChanged(nameof(IsCounterType));
           OnPropertyChanged();
         }
@@ -338,9 +330,10 @@ namespace EQLogParser
       get => _variableName;
       set
       {
-        if (_variableName != value)
+        var cleaned = value == null ? "" : new string(value.Where(char.IsLetterOrDigit).ToArray());
+        if (_variableName != cleaned)
         {
-          _variableName = value;
+          _variableName = cleaned;
           OnPropertyChanged();
         }
       }
@@ -360,9 +353,7 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>
-    /// Returns true if Value is null, empty, or whitespace. Used for placeholder visibility.
-    /// </summary>
+    /* Returns true if Value is null, empty, or whitespace. Used for placeholder visibility. */
     public bool IsValueEmpty => string.IsNullOrWhiteSpace(_value);
 
     public double InitialValue
@@ -404,10 +395,8 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>
-    /// Syncs this ViewModel's current values to the target model object.
-    /// Trims VariableName and Value once at save time to avoid interfering with editing.
-    /// </summary>
+    /* Syncs this ViewModel's current values to the target model object.
+     * Trims VariableName and Value once at save time to avoid interfering with editing. */
     public void SyncToModel(VariableAction model)
     {
       model.ActionType = (int)ActionType;
@@ -421,62 +410,67 @@ namespace EQLogParser
       IsDirty = false;
     }
 
-    /// <summary>
-    /// Creates a ViewModel instance from a model object.
-    /// </summary>
+    /* Creates a ViewModel instance from a model object, firing PropertyChanged events. */
     public static VariableActionViewModel FromModel(VariableAction model)
+      => new(model, suppressNotifications: false);
+
+    /* Initializes a ViewModel from a model object. When suppressNotifications is true,
+     * no PropertyChanged events are fired — use this during initialization. */
+    private VariableActionViewModel(VariableAction model, bool suppressNotifications)
     {
-      return new VariableActionViewModel
+      _actionType = (VariableActionType)model.ActionType;
+      _dataType = (VariableDataType)model.DataType;
+      _variableName = model.VariableName ?? "";
+      _value = model.Value ?? "";
+      _initialValue = model.InitialValue;
+      _step = model.Step;
+      _timeToLiveSeconds = model.TimeToLiveSeconds;
+      _isDirty = false;
+      _actionTypeDisplay = GetDisplayFromActionType(_actionType);
+      _dataTypeDisplay = GetDisplayFromDataType(_dataType);
+
+      if (!suppressNotifications)
       {
-        ActionType = (VariableActionType)model.ActionType,
-        DataType = (VariableDataType)model.DataType,
-        VariableName = model.VariableName,
-        Value = model.Value,
-        InitialValue = model.InitialValue,
-        Step = model.Step,
-        TimeToLiveSeconds = model.TimeToLiveSeconds
-      };
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ActionType)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DataType)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(VariableName)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InitialValue)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Step)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TimeToLiveSeconds)));
+      }
     }
 
-    /// <summary>
-    /// Creates a ViewModel instance from a model object without firing PropertyChanged events.
-    /// Use this when loading data to avoid triggering UI updates during initialization.
-    /// </summary>
+    /* Initializes a ViewModel with default values. When suppressNotifications is true,
+     * no PropertyChanged events are fired — use this during initialization. */
+    private VariableActionViewModel(string variableName, bool suppressNotifications)
+    {
+      _actionType = VariableActionType.Set;
+      _dataType = VariableDataType.Value;
+      _variableName = variableName ?? "";
+      _value = "";
+      _initialValue = 0;
+      _step = 1;
+      _timeToLiveSeconds = 0;
+      _isDirty = false;
+      _actionTypeDisplay = "Set Value";
+      _dataTypeDisplay = "Value";
+
+      if (!suppressNotifications)
+      {
+        OnPropertyChanged();
+      }
+    }
+
+    /* Creates a ViewModel instance from a model object without firing PropertyChanged events.
+     * Use this when loading data to avoid triggering UI updates during initialization. */
     internal static VariableActionViewModel FromModelSilent(VariableAction model)
-    {
-      return new VariableActionViewModel
-      {
-        _actionType = (VariableActionType)model.ActionType,
-        _dataType = (VariableDataType)model.DataType,
-        _variableName = model.VariableName,
-        _value = model.Value,
-        _initialValue = model.InitialValue,
-        _step = model.Step,
-        _timeToLiveSeconds = model.TimeToLiveSeconds,
-        _isDirty = false,
-        _actionTypeDisplay = model.ActionType == 1 ? "Clear Value" : "Set Value",
-        _dataTypeDisplay = model.DataType == 1 ? "Counter" : "Fixed"
-      };
-    }
+      => new(model, suppressNotifications: true);
 
-    /// <summary>
-    /// Creates a fresh ViewModel with default values without firing PropertyChanged events.
-    /// Use this when adding new variable action cards during initialization.
-    /// </summary>
-    internal static VariableActionViewModel CreateSilent()
-    {
-      return new VariableActionViewModel
-      {
-        _actionType = VariableActionType.Set,
-        _dataType = VariableDataType.Value,
-        _variableName = "gVariable1", // Placeholder — user is expected to change this before saving
-        _value = "",
-        _initialValue = 0,
-        _step = 1,
-        _timeToLiveSeconds = 0,
-        _isDirty = false
-      };
-    }
+    /* Creates a fresh ViewModel with default values without firing PropertyChanged events.
+     * Use this when adding new variable action cards during initialization. */
+    internal static VariableActionViewModel CreateSilent(string variableName = "gVariable1")
+      => new(variableName, suppressNotifications: true);
   }
 
   internal class Trigger

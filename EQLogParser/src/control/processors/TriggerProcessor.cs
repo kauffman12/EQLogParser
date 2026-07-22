@@ -143,10 +143,8 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>
-    /// Clears all variables, counters, and expiry times for this processor.
-    /// Called by {EQLP:CLEAR} to reset variable state without stopping triggers.
-    /// </summary>
+    /* Clears all variables, counters, and expiry times for this processor.
+     * Called by {EQLP:CLEAR} to reset variable state without stopping triggers. */
     internal void ClearVariables()
     {
       if (_isDisposed) return;
@@ -323,7 +321,7 @@ namespace EQLogParser
             // Expire once before condition evaluation and trigger actions
             if (!expiredVariables)
             {
-              ExpireVariablesIfNeeded();
+              ExpireVariablesIfNeeded(beginTicks);
               expiredVariables = true;
             }
 
@@ -573,9 +571,6 @@ namespace EQLogParser
               Action = lineData.Action
             });
           }
-
-          // Expire TTL'd variables before processing timer end-early text
-          ExpireVariablesIfNeeded();
 
           // --- Defer: Overlay text add ---
           var displayTemplate = string.IsNullOrEmpty(wrapper.ModifiedEndEarlyDisplay) ? wrapper.ModifiedEndDisplay : wrapper.ModifiedEndEarlyDisplay;
@@ -1133,9 +1128,10 @@ namespace EQLogParser
             try
             {
               if (!_activeTriggersById.ContainsKey(wrapper.Id)) return;
-              // repeat 
+              // repeat
               await HandleTriggerAsync(wrapper, data2.RepeatingTimerLineData, data2.OriginalMatches, data2.PreviousMatches, dynamicDuration,
                 0, DateTime.UtcNow.Ticks, data2.TimesToLoopCount + 1);
+              ExpireVariablesIfNeeded();
               await CheckTimersAsync(wrapper, timerList, lineData);
             }
             finally
@@ -1451,45 +1447,28 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>
-    /// Checks for expired variables and removes them based on TTL.
-    /// Must only be called while the caller holds _variableLock.
-    /// </summary>
-    private void ExpireVariables()
+    /* Checks for expired variables and removes them based on TTL. */
+    private void ExpireVariablesIfNeeded(long now = 0)
     {
-      if (_variableExpiryTimes.Count == 0) return;
-
-      var now = DateTime.UtcNow.Ticks;
-      // Collect expired keys first to avoid modifying dictionary during iteration
-      var keysToRemove = new List<string>(_variableExpiryTimes.Count);
-      foreach (var kvp in _variableExpiryTimes)
-      {
-        if (now >= kvp.Value)
-          keysToRemove.Add(kvp.Key);
-      }
-
-      foreach (var key in keysToRemove)
-      {
-        _variables.TryRemove(key, out _);
-        _counterValues.Remove(key);
-        _variableExpiryTimes.Remove(key);
-      }
-    }
-
-    private void ExpireVariablesIfNeeded()
-    {
-      // Expire under lock; reads from _variables are lock-free via ConcurrentDictionary.
       lock (_variableLock)
       {
-        ExpireVariables();
+        if (_variableExpiryTimes.Count == 0) return;
+        var time = now == 0 ? DateTime.UtcNow.Ticks : now;
+        var keys = _variableExpiryTimes.Keys.ToArray();
+        foreach (var key in keys)
+        {
+          if (time < _variableExpiryTimes[key]) continue;
+
+          _variables.TryRemove(key, out _);
+          _counterValues.Remove(key);
+          _variableExpiryTimes.Remove(key);
+        }
       }
     }
 
-    /// <summary>
-    /// Parses the EndTimerClearVariables string and clears the listed variables.
-    /// Accepts comma or space separated names with optional braces/dollar signs: "test, var2, {var3}, $var4".
-    /// Must only be called while the caller holds _variableLock.
-    /// </summary>
+    /* Parses the EndTimerClearVariables string and clears the listed variables.
+     * Accepts comma or space separated names with optional braces/dollar signs: "test, var2, {var3}, $var4".
+     * Must only be called while the caller holds _variableLock. */
     private void ClearTimerEndVariables(string variableList)
     {
       if (string.IsNullOrWhiteSpace(variableList)) return;
@@ -1532,7 +1511,7 @@ namespace EQLogParser
       return null;
     }
 
-    /// <summary>Apply a named modifier (e.g. upper, number) to a resolved value string.</summary>
+    /* Apply a named modifier (e.g. upper, number) to a resolved value string. */
     private static string ApplyModifier(string value, string modifierName, string modifierArg)
     {
       if (string.IsNullOrEmpty(modifierName))
@@ -1552,10 +1531,8 @@ namespace EQLogParser
       };
     }
 
-    /// <summary>
-    /// Resolve a variable name for condition evaluation.
-    /// Priority: global variables → current matches → previous matches.
-    /// </summary>
+    /* Resolve a variable name for condition evaluation.
+     * Priority: global variables → current matches → previous matches. */
     private static string ResolveVariable(string name,
         ConcurrentDictionary<string, string> variables,
         Dictionary<string, string> matches,
@@ -1577,7 +1554,7 @@ namespace EQLogParser
       return BuildReplacedText(text, matchCollection, name => matches.TryGetValue(name, out var v) ? v : null);
     }
 
-    /// <summary>Core token replacement loop — resolves names via a delegate and applies modifiers.</summary>
+    /* Core token replacement loop — resolves names via a delegate and applies modifiers. */
     private static string BuildReplacedText(string text, MatchCollection matchCollection,
       Func<string, string> resolveValue)
     {

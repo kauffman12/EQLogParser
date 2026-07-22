@@ -230,8 +230,9 @@
                                     <sys:String>{</sys:String>
                                   </TextBlock.Text>
                                 </TextBlock>
-                                <TextBox Width="{DynamicResource VariableInputWidth}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
-                                  Text="{Binding VariableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox x:Name="variableNameBox" Width="{DynamicResource VariableInputWidth}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                  Text="{Binding VariableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  PreviewTextInput="VariableNamePreviewTextInput" />
                                 <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource EQTitleSize}" FontWeight="Bold"
                                   Foreground="{DynamicResource ContentForeground}" Margin="2,0,0,0">
                                   <TextBlock.Text>
@@ -309,7 +310,7 @@
                                   <MultiDataTrigger>
                                     <MultiDataTrigger.Conditions>
                                       <Condition Binding="{Binding IsSetAction}" Value="True" />
-                                      <Condition Binding="{Binding IsTextType}" Value="True" />
+                                      <Condition Binding="{Binding IsValueType}" Value="True" />
                                     </MultiDataTrigger.Conditions>
                                     <Setter Property="Visibility" Value="Visible" />
                                   </MultiDataTrigger>

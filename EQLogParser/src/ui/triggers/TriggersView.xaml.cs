@@ -1123,24 +1123,24 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>Holds a stable delegate reference for the Escape-key handler on variable value TextBoxes.</summary>
+    /* Holds a stable delegate reference for the Escape-key handler on variable value TextBoxes. */
     private sealed class ValueEscapeHandler
     {
-      private readonly VariableActionViewModel _vm;
-      private readonly TextBox _textBox;
+      private readonly WeakReference<VariableActionViewModel> _vmRef;
+      private readonly WeakReference<TextBox> _textBoxRef;
 
       public ValueEscapeHandler(VariableActionViewModel vm, TextBox textBox)
       {
-        _vm = vm;
-        _textBox = textBox;
+        _vmRef = new WeakReference<VariableActionViewModel>(vm);
+        _textBoxRef = new WeakReference<TextBox>(textBox);
       }
 
       public void OnPreviewKeyDown(object sender, KeyEventArgs e)
       {
-        if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape && _vmRef.TryGetTarget(out var vm) && _textBoxRef.TryGetTarget(out var textBox))
         {
-          _vm.Value = "";
-          _textBox.Focus();
+          vm.Value = "";
+          textBox.Focus();
           e.Handled = true;
         }
       }
@@ -1152,9 +1152,7 @@ namespace EQLogParser
       cancelButton.IsEnabled = true;
     }
 
-    /// <summary>
-    /// Handles property changes on VariableActionViewModels to enable the save button.
-    /// </summary>
+    /* Handles property changes on VariableActionViewModels to enable the save button. */
     private void OnVariableActionPropertyChanged(object sender, PropertyChangedEventArgs e)
     {
       // Any property change on a ViewModel means the user made an edit
@@ -1163,7 +1161,7 @@ namespace EQLogParser
 
     private void AddVariableActionClick(object sender, RoutedEventArgs e)
     {
-      _variableActionViewModels.Add(new VariableActionViewModel { VariableName = GenerateVariableName() });
+      _variableActionViewModels.Add(VariableActionViewModel.CreateSilent(GenerateVariableName()));
       EnableSaveCancel();
       UpdateVariableActionsEmptyState();
     }
@@ -1179,10 +1177,16 @@ namespace EQLogParser
         // If last variable was removed, add a fresh starter card
         if (_variableActionViewModels.Count == 0)
         {
-          _variableActionViewModels.Add(new VariableActionViewModel { VariableName = GenerateVariableName() });
+          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent(GenerateVariableName()));
           UpdateVariableActionsEmptyState();
         }
       }
+    }
+
+    /* Only allow alphanumeric characters in variable names. */
+    private void VariableNamePreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+      e.Handled = !e.Text.All(char.IsLetterOrDigit);
     }
 
   }
