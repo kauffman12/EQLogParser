@@ -53,10 +53,10 @@ namespace EQLogParser
       if (filePath.EndsWith($"{ExtTrigger}.gz", StringComparison.OrdinalIgnoreCase) ||
         filePath.EndsWith($"{ExtOverlay}.gz", StringComparison.OrdinalIgnoreCase))
       {
-        var decompressionStream = new GZipStream(fileInfo.OpenRead(), CompressionMode.Decompress);
-        var reader = new StreamReader(decompressionStream);
+        await using var fs = fileInfo.OpenRead();
+        using var decompressionStream = new GZipStream(fs, CompressionMode.Decompress);
+        using var reader = new StreamReader(decompressionStream);
         var json = await reader.ReadToEndAsync();
-        reader.Close();
         var data = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, SerializationOptions);
         if (triggers)
           await TriggerStateDB.Instance.ImportTriggers(parent, data);
@@ -65,8 +65,9 @@ namespace EQLogParser
       }
       else if (filePath.EndsWith(".gtp", StringComparison.InvariantCulture))
       {
+        await using var fs = fileInfo.OpenRead();
         var data = new byte[fileInfo.Length];
-        var read = fileInfo.OpenRead().Read(data);
+        var read = await fs.ReadAsync(data);
         if (read > 0)
         {
           var imported = GinaUtil.CovertToTriggerNodes(data);

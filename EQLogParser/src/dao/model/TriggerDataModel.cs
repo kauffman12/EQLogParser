@@ -176,7 +176,7 @@ namespace EQLogParser
     // Convenience helpers so callers don't use magic numbers
     public bool IsSetAction => ActionType == 0;
     public bool IsClearAction => ActionType == 1;
-    public bool IsValueType => DataType == 0;
+    public bool IsTextType => DataType == 0;
     public bool IsCounterType => DataType == 1;
 
     public string VariableName { get; set; } = "";
@@ -469,7 +469,7 @@ namespace EQLogParser
       {
         _actionType = VariableActionType.Set,
         _dataType = VariableDataType.Value,
-        _variableName = "gVariable1",
+        _variableName = "gVariable1", // Placeholder — user is expected to change this before saving
         _value = "",
         _initialValue = 0,
         _step = 1,
