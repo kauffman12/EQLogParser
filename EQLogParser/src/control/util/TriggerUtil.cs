@@ -66,9 +66,10 @@ namespace EQLogParser
       else if (filePath.EndsWith(".gtp", StringComparison.InvariantCulture))
       {
         await using var fs = fileInfo.OpenRead();
-        var data = new byte[fileInfo.Length];
-        var read = await fs.ReadAsync(data);
-        if (read > 0)
+        using var ms = new MemoryStream();
+        await fs.CopyToAsync(ms);
+        var data = ms.ToArray();
+        if (data.Length > 0)
         {
           var imported = GinaUtil.CovertToTriggerNodes(data);
           await TriggerStateDB.Instance.ImportTriggers(parent, imported);
@@ -146,7 +147,14 @@ namespace EQLogParser
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.RepeatedResetTime = fromTrigger.RepeatedResetTime;
         toTrigger.LockoutTime = fromTrigger.LockoutTime;
-        toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays;
+        toTrigger.EnableTimer = fromTrigger.EnableTimer;
+        toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays is { Count: > 0 } srcOverlays
+          ? [.. srcOverlays]
+          : [];
+        toTrigger.ActiveColor = fromTrigger.ActiveColor;
+        toTrigger.IdleColor = fromTrigger.IdleColor;
+        toTrigger.ResetColor = fromTrigger.ResetColor;
+        toTrigger.FontColor = fromTrigger.FontColor;
         toTrigger.TriggerAgainOption = fromTrigger.TriggerAgainOption;
         toTrigger.TimerType = fromTrigger.TimerType;
         toTrigger.UseRegex = fromTrigger.UseRegex;
@@ -215,10 +223,12 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
-          toTrigger.IdleColor = fromModel.TriggerIdleBrush?.Color.ToHexString();
-          toTrigger.ResetColor = fromModel.TriggerResetBrush?.Color.ToHexString();
-          toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
+          // Colors already copied above from base Trigger properties;
+          // override with brush-derived values only if source is a TriggerPropertyModel.
+          toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString() ?? toTrigger.ActiveColor;
+          toTrigger.IdleColor = fromModel.TriggerIdleBrush?.Color.ToHexString() ?? toTrigger.IdleColor;
+          toTrigger.ResetColor = fromModel.TriggerResetBrush?.Color.ToHexString() ?? toTrigger.ResetColor;
+          toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString() ?? toTrigger.FontColor;
 
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
@@ -688,33 +698,24 @@ namespace EQLogParser
       }
     }
 
-    internal static async void CheckForStop(ChatType chatType, string action)
+    /// <summary>Check for embedded EQLP commands ({EQLP:STOP}, {EQLP:CLEAR}) and execute them.</summary>
+    internal static async Task CheckCommands(ChatType chatType, string action)
     {
-      if (chatType.Sender == null || action == null)
-      {
+      if (chatType?.Sender == null || action == null || !chatType.SenderIsYou)
         return;
-      }
 
-      // handle stop command
-      if (chatType.SenderIsYou && (chatType.TextStart - 27) is var s and > 0 && action.Length > s
-          && action.AsSpan()[s..].StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
+      int offset = chatType.TextStart;
+      if (offset > 0 && action.Length > offset)
       {
-        await TriggerManager.Instance.StopTriggersAsync();
-      }
-    }
-
-    internal static async void CheckForClear(ChatType chatType, string action)
-    {
-      if (chatType.Sender == null || action == null)
-      {
-        return;
-      }
-
-      // handle clear variables command
-      if (chatType.SenderIsYou && (chatType.TextStart - 28) is var s and > 0 && action.Length > s
-          && action.AsSpan()[s..].StartsWith("{EQLP:CLEAR}", StringComparison.OrdinalIgnoreCase))
-      {
-        await TriggerManager.Instance.ClearVariablesAsync();
+        var tail = action.Substring(offset);
+        if (tail.StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
+        {
+          await TriggerManager.Instance.StopTriggersAsync();
+        }
+        else if (tail.StartsWith("{EQLP:CLEAR}", StringComparison.OrdinalIgnoreCase))
+        {
+          await TriggerManager.Instance.ClearVariablesAsync();
+        }
       }
     }
 
@@ -945,7 +946,7 @@ namespace EQLogParser
       try
       {
         var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
-        var response = MainActions.TheHttpClient.GetAsync(url).Result;
+        var response = await MainActions.TheHttpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
           await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);

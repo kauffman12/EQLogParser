@@ -71,11 +71,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_CopiesAllStringProperties()
+    public async Task Copy_CopiesAllStringProperties()
     {
       var source = CreateSource();
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual(source.AltTimerName, dest.AltTimerName);
       Assert.AreEqual(source.Comments, dest.Comments);
@@ -109,11 +109,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_CopiesAllNumericProperties()
+    public async Task Copy_CopiesAllNumericProperties()
     {
       var source = CreateSource();
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual(source.DurationSeconds, dest.DurationSeconds);
       Assert.AreEqual(source.ResetDurationSeconds, dest.ResetDurationSeconds);
@@ -131,11 +131,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_CopiesAllBooleanProperties()
+    public async Task Copy_CopiesAllBooleanProperties()
     {
       var source = CreateSource();
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual(source.Private, dest.Private);
       Assert.AreEqual(source.UseRegex, dest.UseRegex);
@@ -146,11 +146,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_CopiesSelectedOverlaysAsNewList()
+    public async Task Copy_CopiesSelectedOverlaysAsNewList()
     {
       var source = CreateSource();
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual(source.SelectedOverlays.Count, dest.SelectedOverlays.Count);
       CollectionAssert.AreEquivalent(source.SelectedOverlays, dest.SelectedOverlays);
@@ -159,11 +159,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_CopiesVariableActionsAsNewList()
+    public async Task Copy_CopiesVariableActionsAsNewList()
     {
       var source = CreateSource();
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual(source.VariableActions.Count, dest.VariableActions.Count);
       Assert.AreNotSame(source.VariableActions, dest.VariableActions);
@@ -183,29 +183,29 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_EmptyVariableActionsProducesEmptyList()
+    public async Task Copy_EmptyVariableActionsProducesEmptyList()
     {
       var source = new Trigger { VariableActions = [] };
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.IsNotNull(dest.VariableActions);
       Assert.AreEqual(0, dest.VariableActions.Count);
     }
 
     [TestMethod]
-    public void Copy_NullVariableActionsProducesEmptyList()
+    public async Task Copy_NullVariableActionsProducesEmptyList()
     {
       var source = new Trigger { VariableActions = null! };
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.IsNotNull(dest.VariableActions);
       Assert.AreEqual(0, dest.VariableActions.Count);
     }
 
     [TestMethod]
-    public void Copy_TrimsStringProperties()
+    public async Task Copy_TrimsStringProperties()
     {
       var source = new Trigger
       {
@@ -214,7 +214,7 @@ namespace EQLogParser.Wpf.Test
         TextToDisplay = "  display  "
       };
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.AreEqual("trimmed", dest.Pattern);
       Assert.AreEqual("var1,var2", dest.EndTimerClearVariables);
@@ -222,19 +222,19 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void Copy_EnableTimerDerivedFromModel()
+    public async Task Copy_EnableTimerDerivedFromModel()
     {
       // When copying from TriggerPropertyModel, EnableTimer is derived from TimerType > 0.
       // This test verifies the direct Trigger-to-Trigger path copies it as-is.
       var source = new Trigger { EnableTimer = true };
       var dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
 
       Assert.IsTrue(dest.EnableTimer);
 
       source.EnableTimer = false;
       dest = new Trigger();
-      TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(source, dest);
       Assert.IsFalse(dest.EnableTimer);
     }
   }

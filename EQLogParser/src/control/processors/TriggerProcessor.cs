@@ -330,15 +330,8 @@ namespace EQLogParser
             // Evaluate variable condition (after pattern match, before actions)
             if (wrapper.ConditionAst != null)
             {
-              string ResolveVariable(string name)
-              {
-                // Global variables first (highest priority), then capture groups as fallback
-                if (_variables.TryGetValue(name, out var v) && !string.IsNullOrEmpty(v)) return v;
-                if (matches?.TryGetValue(name, out var m) is true && !string.IsNullOrEmpty(m)) return m;
-                if (previousMatches?.TryGetValue(name, out var pm) is true && !string.IsNullOrEmpty(pm)) return pm;
-                return null;
-              }
-              if (!ConditionEvaluator.Evaluate(wrapper.ConditionAst, ResolveVariable))
+              if (!ConditionEvaluator.Evaluate(wrapper.ConditionAst,
+                  name => ResolveVariable(name, _variables, matches, previousMatches)))
                 continue; // Condition failed, skip this trigger
             }
 
@@ -1220,9 +1213,8 @@ namespace EQLogParser
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
       if (chatType != null)
       {
-        // Look for Stop and Clear
-        TriggerUtil.CheckForStop(chatType, lineData.Action);
-        TriggerUtil.CheckForClear(chatType, lineData.Action);
+        // Look for Stop and Clear commands (fire-and-forget in Task.Run context)
+        _ = TriggerUtil.CheckCommands(chatType, lineData.Action);
 
         // Look for Quick Share entries
         TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, true, CurrentCharacterId, CurrentProcessorName, _trustedPlayers);
@@ -1560,19 +1552,24 @@ namespace EQLogParser
       };
     }
 
-    private static string ProcessMatchesText(string text, Dictionary<string, string> matches)
+    /// <summary>
+    /// Resolve a variable name for condition evaluation.
+    /// Priority: global variables → current matches → previous matches.
+    /// </summary>
+    private static string ResolveVariable(string name,
+        ConcurrentDictionary<string, string> variables,
+        Dictionary<string, string> matches,
+        Dictionary<string, string> previousMatches)
     {
-      if (matches == null || string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
-
-      var matchCollection = TokenRegex.Matches(text);
-      if (matchCollection.Count == 0) return text;
-
-      return BuildReplacedText(text, matchCollection, name => matches.TryGetValue(name, out var v) ? v : null);
+      if (variables.TryGetValue(name, out var v) && !string.IsNullOrEmpty(v)) return v;
+      if (matches?.TryGetValue(name, out var m) is true && !string.IsNullOrEmpty(m)) return m;
+      if (previousMatches?.TryGetValue(name, out var pm) is true && !string.IsNullOrEmpty(pm)) return pm;
+      return null;
     }
 
-    private static string ProcessMatchesText(string text, ConcurrentDictionary<string, string> matches)
+    private static string ProcessMatchesText(string text, IReadOnlyDictionary<string, string> matches)
     {
-      if (string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
+      if (matches == null || string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
 
       var matchCollection = TokenRegex.Matches(text);
       if (matchCollection.Count == 0) return text;
