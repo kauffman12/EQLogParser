@@ -75,7 +75,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = CreateSource();
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual(source.AltTimerName, dest.AltTimerName);
       Assert.AreEqual(source.Comments, dest.Comments);
@@ -113,7 +113,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = CreateSource();
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual(source.DurationSeconds, dest.DurationSeconds);
       Assert.AreEqual(source.ResetDurationSeconds, dest.ResetDurationSeconds);
@@ -135,7 +135,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = CreateSource();
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual(source.Private, dest.Private);
       Assert.AreEqual(source.UseRegex, dest.UseRegex);
@@ -150,7 +150,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = CreateSource();
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual(source.SelectedOverlays.Count, dest.SelectedOverlays.Count);
       CollectionAssert.AreEquivalent(source.SelectedOverlays, dest.SelectedOverlays);
@@ -163,7 +163,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = CreateSource();
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual(source.VariableActions.Count, dest.VariableActions.Count);
       Assert.AreNotSame(source.VariableActions, dest.VariableActions);
@@ -187,7 +187,7 @@ namespace EQLogParser.Wpf.Test
     {
       var source = new Trigger { VariableActions = [] };
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.IsNotNull(dest.VariableActions);
       Assert.AreEqual(0, dest.VariableActions.Count);
@@ -196,9 +196,9 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public async Task Copy_NullVariableActionsProducesEmptyList()
     {
-      var source = new Trigger { VariableActions = null! };
+      var source = new Trigger { VariableActions = null };
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.IsNotNull(dest.VariableActions);
       Assert.AreEqual(0, dest.VariableActions.Count);
@@ -214,7 +214,7 @@ namespace EQLogParser.Wpf.Test
         TextToDisplay = "  display  "
       };
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.AreEqual("trimmed", dest.Pattern);
       Assert.AreEqual("var1,var2", dest.EndTimerClearVariables);
@@ -228,13 +228,13 @@ namespace EQLogParser.Wpf.Test
       // This test verifies the direct Trigger-to-Trigger path copies it as-is.
       var source = new Trigger { EnableTimer = true };
       var dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
 
       Assert.IsTrue(dest.EnableTimer);
 
       source.EnableTimer = false;
       dest = new Trigger();
-      await TriggerUtil.Copy(source, dest);
+      await TriggerUtil.Copy(dest, source);
       Assert.IsFalse(dest.EnableTimer);
     }
   }
