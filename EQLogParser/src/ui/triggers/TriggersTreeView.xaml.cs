@@ -3,6 +3,7 @@ using FontAwesome5;
 using Syncfusion.UI.Xaml.TreeView;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -269,7 +270,8 @@ namespace EQLogParser
         var filePath = TriggerUtil.SelectImportFile(node.SerializedData, triggers);
         if (filePath is null) return;
 
-        var progressWindow = new MessageWindow("Importing...", "Import", MessageWindow.IconType.Info, noButtons: true);
+        var fileName = Path.GetFileName(filePath);
+        var progressWindow = new MessageWindow($"Loading Triggers from {fileName}", "Import Triggers", MessageWindow.IconType.Info, noButtons: true);
         progressWindow.Show();
 
         try

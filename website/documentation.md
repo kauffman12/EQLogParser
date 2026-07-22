@@ -150,59 +150,54 @@ Not a trigger variable. You send this text as a say, to the group, raid, another
 
 ## Creating Custom Variables (Trigger Variables Tab)
 
-In addition to the built-in variables above, you can create **custom variables** that persist across trigger firings. This lets one trigger capture a value (like a caster name or spell being cast) and other triggers reference it later.
+In addition to the built-in variables above, you can create **custom variables** that persist across trigger firings. This lets one trigger capture a value (like a caster name or spell being cast) and other triggers reference it later. To access this feature, open the **Trigger Manager**, select a trigger, and click the **Trigger Variables** tab. Each variable has the following settings:
 
-To access this feature, open the **Trigger Manager**, select a trigger, and click the **Variables** tab.
+### Action Type
 
-### Variable Cards
+**Set Value** stores a value in the variable. **Clear Value** removes it.
 
-Each row on the Variables tab is called a **variable card**. Every card defines one action — either setting or clearing a named variable when the trigger fires.
+### Variable Name
 
-| Field | Description |
-|---|---|
-| **Action Type** | **Set Value** stores a value into the variable. **Clear Value** removes it. |
-| **Variable Name** | A unique name for this variable (e.g. `gCaster`, `gSpellName`). Used in conditions and display text. Names starting with `g` are conventional but not required. |
-| **Data Type** | **Fixed** stores a set value (text or number). **Counter** stores a number that increments each time the trigger fires. |
-| **Value Source** | What value to store. Can be a capture group (`{s1}`), another variable (`{otherVar}`), or a literal string like `Red Dragon`. Ignored for Clear Value actions. |
-| **Initial Value** | *(Counter only)* Starting number when the counter is first created. Default is `0`. |
-| **Step** | *(Counter only)* How much to add each time the trigger fires. Default is `1`. Use negative values to decrement. |
-| **Time To Live** | *(Optional)* Number of seconds before the variable automatically expires and is cleared. Set to `0` for no expiration (variable persists until explicitly cleared). |
+A unique name for the variable, such as `gCaster` or `gSpellName`. It can be used in conditions and display text. Names beginning with `g` are conventional but not required.
+
+### Data Type
+
+- **Fixed** stores a specific text or numeric value.
+- **Counter** stores a number that changes each time the trigger fires.
+
+### Value
+
+The value to store. This can be:
+
+- A capture group, such as `{s1}`
+- Another variable, such as `{otherVar}`
+- A literal value, such as `Red Dragon`
+
+### Initial Value
+
+*Counter only.* The starting value when the counter is first created. The default is `0`.
+
+### Step
+
+*Counter only.* The amount added each time the trigger fires. The default is `1`. Use a negative value to decrement.
+
+### Time To Live
+
+*Optional.* The number of seconds before the variable expires and is automatically cleared. Set this to `0` for no expiration.
 
 ### Adding and Removing Variables
 
 - Click the **+ Add Variable** button at the bottom of the tab to add a new variable card.
-- Click the **trash icon** on any card to delete it.
+- Click the **Remove** button on any card to delete it.
 - If all cards are deleted, a blank starter card is automatically added back.
 
-### Referencing Custom Variables
+### Examples
 
-Once a variable is set by one trigger, other triggers can reference it in two ways:
-
-1. **In Display/Speak Text:** Use `{variableName}` syntax. For example, if a trigger sets a variable named `gCaster`, another trigger can display `{gCaster} is casting something!`.
-2. **In Match Variables conditions:** Use `{variableName}` or `${variableName}` in condition expressions (both syntaxes work identically). See the [Match Variables Field](#match-variables-field) section below.
-
-### Value Source Examples
-
-| Value Source | What Gets Stored |
+| Value | What Gets Stored |
 |---|---|
-| `{s1}` | Whatever the first capture group matched in the Pattern |
-| `{target}` | A named regex capture group from the Pattern |
 | `{otherVar}` | The current value of another custom variable |
 | `Red Dragon` | The literal text "Red Dragon" |
-| `{s1} the Brave` | The captured value with appended text (e.g. "Grok the Brave") |
-
-### Counter Example
-
-To track how many times a specific spell was cast:
-
-1. Create a trigger with Pattern matching the spell cast log line.
-2. On the Variables tab, add a card:
-   - Action Type: **Set Value**
-   - Variable Name: `gFireStormCount`
-   - Data Type: **Counter**
-   - Initial Value: `0`
-   - Step: `1`
-3. In another trigger (e.g. a "spell ended" trigger), display `Fire Storm was cast {gFireStormCount} times.`
+| `{s1} the Brave` | The captured value with appended text |
 
 ### Clearing Variables
 
@@ -221,7 +216,7 @@ Enter variable names separated by commas, spaces, or semicolons. The following f
 
 - `gCaster` — plain name
 - `{gCaster}` — braces (same as display text syntax)
-- `${gCaster}` — dollar-brace (NAG-style syntax)
+- `${gCaster}` — dollar-brace
 - `gCaster, gSpellName; gZone` — multiple names with mixed separators
 
 Variables are cleared **after** the End Text to Display and End Sound/Text to Speak are processed, so end display text can still reference the variable values. The cleanup happens once all timer-end side effects (display, speak, log) are complete.
@@ -233,8 +228,6 @@ Variables are cleared **after** the End Text to Display and End Sound/Text to Sp
 3. End Clear Variables: `gEpicCaster`
 
 When the 3-minute buff timer ends, the display shows the caster name and the variable is cleared.
-
-**Note:** Only use this for variables that are owned by a single trigger/timer pair. Shared variables like a global `SpellBeingCast` tracker used across many triggers should be cleared with explicit Clear Value actions instead, since clearing them on timer end could wipe out a newer value set by a different trigger.
 
 ---
 
@@ -255,7 +248,7 @@ A condition expression consists of **variables**, **literals**, **comparison ope
 {s} = hello
 {hp} > 50
 {name} contains dragon
-({hp} > 50 and {mana} > 10) or {godmode} = true
+({hp} > 50 and {mana} > 10) || {godmode} = true
 ```
 
 ### Variables
@@ -266,7 +259,7 @@ Variables are referenced using curly braces and resolve to their current string 
 |---|---|
 | `{s}` / `{s1}` / `{n2}` | Capture group values from the current Pattern match |
 | `${s}` / `${s1}` | Same as above (dollar-sign prefix is optional) |
-| `{hp}` | A custom variable named `hp` (set via the Variables tab) |
+| `{hp}` | A custom variable named `hp` (set via the Trigger Variables tab) |
 | `${hp}` | Same as above (dollar-sign prefix is optional) |
 | `{target}` | A named regex capture group or custom variable |
 
@@ -278,7 +271,7 @@ All comparison operators are **case-insensitive**.
 
 | Operator | Aliases | Description | Example |
 |---|---|---|---|
-| `=` or `==` | `eq` | Equal to | `{name} = grok` |
+| `=` | `==`, `eq` | Equal to | `{name} = test` |
 | `!=` | `<>`, `neq` | Not equal to | `{class} != druid` |
 | `>` | `gt` | Greater than (numeric) | `{hp} > 50` |
 | `>=` | `ge`, `gte` | Greater than or equal | `{level} >= 20` |
@@ -298,7 +291,7 @@ Combine multiple conditions using boolean logic:
 | Operator | Aliases | Description |
 |---|---|---|
 | `and` | `&&` | Both sides must be true |
-| `or` | `\|\|` | At least one side must be true |
+| `or` | `||` | At least one side must be true |
 | `not` | `!` | Negates the following expression |
 | `(` ... `)` | — | Groups expressions for precedence |
 
@@ -310,7 +303,7 @@ You can compare variables against literal values:
 
 | Type | Syntax | Example |
 |---|---|---|
-| **String (bareword)** | `hello` | `{name} = grok` |
+| **String (bareword)** | `hello` | `{name} = test` |
 | **String (quoted)** | `"hello world"` or `'hello world'` | `{name} = "red dragon"` |
 | **Number** | `42`, `-10`, `3.14` | `{hp} > 50` |
 | **Boolean** | `true`, `false` | `{enabled} = true` |
@@ -325,46 +318,10 @@ A variable by itself (no comparison) is treated as a boolean check:
 - `{enabled}` → `true` if the variable is set and non-empty, `false` otherwise
 - `not {disabled}` → `true` if `disabled` is unset or empty
 
-### Examples
-
-```
-# Fire only if captured HP is above 50
-{hp} > 50
-
-# Fire only if the mob name contains "dragon"
-{name} contains dragon
-
-# Fire if HP is between 100 and 500
-{hp} >= 100 and {hp} <= 500
-
-# Fire if either HP or mana is low
-{hp} < 100 or {mana} < 200
-
-# Fire only when the custom variable gCasting is set
-gCasting
-
-# Fire only when gCasting is NOT set
-not {gCasting}
-
-# Complex multi-condition with grouping
-({hp} > 50 and {mana} > 10) or {godmode} = true
-
-# Check if a capture group equals a specific quoted string
-{s1} = "Rise, Servant"
-
-# Ensure a variable is not null
-{target} != null
-```
-
 ### Error Handling
 
 If the Match Variables field contains a syntax error (unclosed braces, unknown operators, mismatched parentheses), the condition is treated as **always true** — meaning the trigger fires whenever the Pattern matches. A warning is logged to the EQLogParser error log.
 
-Common mistakes:
-- `{hp > 50` — Missing closing brace on variable
-- `{name} = "hello` — Unclosed quote
-- `({hp} > 50` — Missing closing parenthesis
-- `{a} @ {b}` — Unknown operator symbol
 
 # Linux Support
 
