@@ -3,7 +3,7 @@
 You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 project.
 
 ## Core Principles
-- **Follow Coding Standards** read and follow the stanrds under docs/CodingStandards.md
+- **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
