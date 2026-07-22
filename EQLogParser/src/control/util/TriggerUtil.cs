@@ -699,7 +699,8 @@ namespace EQLogParser
     }
 
     /// <summary>Check for embedded EQLP commands ({EQLP:STOP}, {EQLP:CLEAR}) and execute them.</summary>
-    internal static async Task CheckCommands(ChatType chatType, string action)
+    /// <remarks>Called fire-and-forget from the chat processing loop (Task.Run context). Uses async void intentionally.</remarks>
+    internal static async void CheckCommands(ChatType chatType, string action)
     {
       if (chatType?.Sender == null || action == null || !chatType.SenderIsYou)
         return;

@@ -168,6 +168,28 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 - Prefer `switch` expressions over `switch` statements
 - Use `OfType<T>()` for filtering collections instead of `ForEach(x as Type)`
 
+### Nullable Reference Types
+- **Never use `null!` (null-forgiving operator)** — it suppresses compiler null-safety checks and hides potential bugs
+- Make properties/fields `string?` when they can legitimately be null rather than using `null!` to silence warnings
+- Use `?? defaultValue` or null-conditional operators (`?.`, `?[`) instead of `!`
+- If a value is guaranteed non-null by program logic, use a local variable assignment with pattern matching: `if (value is not null) { var safe = value; ... }`
+
+**Anti-patterns to avoid:**
+
+```csharp
+// Bad: null-forgiving operator hides the fact that this can be null
+public string Name { get; } = null!;
+
+// Good: make it nullable and handle null at the call site
+public string? Name { get; }
+
+// Bad: suppressing null with !
+return token.VariableName!;
+
+// Good: use null-coalescing or pattern matching
+return token.VariableName ?? "";
+```
+
 **Anti-patterns to avoid:**
 
 ```csharp

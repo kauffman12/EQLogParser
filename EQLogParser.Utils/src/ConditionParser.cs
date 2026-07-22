@@ -303,7 +303,7 @@ namespace EQLogParser
       if (token.Type == ConditionTokenType.Variable)
       {
         p.Next();
-        return new ConditionVariableNode { Name = token.VariableName! };
+        return new ConditionVariableNode { Name = token.VariableName ?? "" };
       }
 
       // Literal

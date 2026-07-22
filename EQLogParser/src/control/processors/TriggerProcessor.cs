@@ -1209,8 +1209,8 @@ namespace EQLogParser
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
       if (chatType != null)
       {
-        // Look for Stop and Clear commands (fire-and-forget in Task.Run context)
-        _ = TriggerUtil.CheckCommands(chatType, lineData.Action);
+        // Look for Stop and Clear commands (async void, fire-and-forget in Task.Run context)
+        TriggerUtil.CheckCommands(chatType, lineData.Action);
 
         // Look for Quick Share entries
         TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, true, CurrentCharacterId, CurrentProcessorName, _trustedPlayers);
@@ -1495,7 +1495,7 @@ namespace EQLogParser
 
     private static string ProcessDisplayText(string text, string action, Dictionary<string, string> matches,
       Dictionary<string, string> originalMatches, Dictionary<string, string> previousMatches,
-      ConcurrentDictionary<string, string> variables)
+      IReadOnlyDictionary<string, string> variables)
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {

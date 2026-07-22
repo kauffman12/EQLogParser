@@ -30,8 +30,8 @@ namespace EQLogParser
   public readonly struct ConditionToken
   {
     public ConditionTokenType Type { get; }
-    public string RawText { get; }
-    public string VariableName { get; }  // Set when Type == Variable
+    public string RawText { get; }  // null when not applicable (e.g. End token)
+    public string VariableName { get; }  // Set when Type == Variable, null otherwise
     public double NumberValue { get; }     // Set when Type == Number
     public bool BooleanValue { get; }      // Set when Type == Boolean
 
@@ -39,7 +39,7 @@ namespace EQLogParser
     {
       Type = type;
       RawText = rawText;
-      VariableName = null!;
+      VariableName = null;
       NumberValue = 0;
       BooleanValue = false;
     }
@@ -57,7 +57,7 @@ namespace EQLogParser
     {
       Type = type;
       RawText = rawText;
-      VariableName = null!;
+      VariableName = null;
       NumberValue = numberValue;
       BooleanValue = false;
     }
@@ -66,7 +66,7 @@ namespace EQLogParser
     {
       Type = type;
       RawText = rawText;
-      VariableName = null!;
+      VariableName = null;
       NumberValue = 0;
       BooleanValue = booleanValue;
     }
