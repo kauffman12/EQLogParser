@@ -641,7 +641,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void Evaluate_NullNode_ReturnsTrue()
     {
-      Assert.IsTrue(ConditionEvaluator.Evaluate(null!, name => "test"));
+      Assert.IsTrue(ConditionEvaluator.Evaluate(null, name => "test"));
     }
 
     [TestMethod]
@@ -956,8 +956,9 @@ namespace EQLogParserTest
     [TestMethod]
     public void Evaluate_NullNode_AlwaysReturnsTrue()
     {
-      // Simulates a trigger with no condition set (or parse failure treated as no-op)
-      Assert.IsTrue(ConditionEvaluator.Evaluate(null!, name => "anything"));
+      // A null AST means no condition was set — the evaluator returns true.
+      // (Parse failures that block triggers are handled at the TriggerProcessor level.)
+      Assert.IsTrue(ConditionEvaluator.Evaluate(null, name => "anything"));
     }
 
     [TestMethod]

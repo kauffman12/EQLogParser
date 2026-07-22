@@ -1,6 +1,6 @@
 namespace EQLogParser
 {
-  /// <summary>Token types for the variable condition expression language.</summary>
+  /* Token types for the variable condition expression language. */
   public enum ConditionTokenType
   {
     End,
@@ -26,7 +26,7 @@ namespace EQLogParser
     RightParen,     // )
   }
 
-  /// <summary>A single token produced by the condition expression tokenizer.</summary>
+  /* A single token produced by the condition expression tokenizer. */
   public readonly struct ConditionToken
   {
     public ConditionTokenType Type { get; }

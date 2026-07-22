@@ -2,20 +2,16 @@ using System;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Evaluates a parsed condition expression AST against a variable resolver.
-  /// The resolver is a function that maps variable names to their string values.
-  /// Returns null for unset variables.
-  /// </summary>
+  /* Evaluates a parsed condition expression AST against a variable resolver.
+   * The resolver is a function that maps variable names to their string values.
+   * Returns null for unset variables. */
   public static class ConditionEvaluator
   {
-    /// <summary>Delegate for resolving variable names to values. Return null for unset variables.</summary>
+    /* Delegate for resolving variable names to values. Return null for unset variables. */
     public delegate string VariableResolver(string name);
 
-    /// <summary>Evaluate a condition AST node against the given variable resolver.</summary>
-    /// <param name="node">The parsed AST node (null means always true / no condition).</param>
-    /// <param name="resolve">Function to resolve variable names to values.</param>
-    /// <returns>true if the condition evaluates to true, false otherwise. Null node returns true.</returns>
+    /* Evaluate a condition AST node against the given variable resolver.
+     * A null node returns true (no condition = always passes). */
     public static bool Evaluate(ConditionNode node, VariableResolver resolve)
     {
       if (node is null)
@@ -80,7 +76,7 @@ namespace EQLogParser
       };
     }
 
-    /// <summary>Resolve a node to its raw string value for comparisons.</summary>
+    /* Resolve a node to its raw string value for comparisons. */
     private static string ResolveValue(ConditionNode node, VariableResolver resolve)
     {
       return node.NodeType switch

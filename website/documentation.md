@@ -320,7 +320,7 @@ A variable by itself (no comparison) is treated as a boolean check:
 
 ### Error Handling
 
-If the Match Variables field contains a syntax error (unclosed braces, unknown operators, mismatched parentheses), the condition is treated as **always true** — meaning the trigger fires whenever the Pattern matches. A warning is logged to the EQLogParser error log.
+If the Match Variables field contains a syntax error (unclosed braces, unknown operators, mismatched parentheses), the condition is treated as **false** — meaning the trigger will **not** fire even if the Pattern matches. A warning is logged to the EQLogParser error log so you can identify and fix the issue.
 
 
 # Linux Support

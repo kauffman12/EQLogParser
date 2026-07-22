@@ -325,12 +325,18 @@ namespace EQLogParser
               expiredVariables = true;
             }
 
-            // Evaluate variable condition (after pattern match, before actions)
+            // Evaluate variable condition (after pattern match, before actions).
+            // A null AST means no condition was set (always passes). If the condition string
+            // was non-empty but failed to parse, block the trigger (treat as false).
             if (wrapper.ConditionAst != null)
             {
               if (!ConditionEvaluator.Evaluate(wrapper.ConditionAst,
                   name => ResolveVariable(name, _variables, matches, previousMatches)))
                 continue; // Condition failed, skip this trigger
+            }
+            else if (!string.IsNullOrWhiteSpace(wrapper.TriggerData.MatchVariableCondition))
+            {
+              continue; // Invalid condition syntax — block the trigger
             }
 
             swTime += previousSwTime;
@@ -1278,7 +1284,8 @@ namespace EQLogParser
               ModifiedEndEarlyPattern3 = PreProcessCodes(trigger.EndEarlyPattern3, trigger)
             };
 
-            // Parse variable condition into AST (null = no condition / always passes)
+            // Parse variable condition into AST (null = no condition / always passes).
+            // A non-empty string that fails to parse will block the trigger at evaluation time.
             var conditionAst = ConditionParser.Parse(trigger.MatchVariableCondition);
             if (conditionAst == null && !string.IsNullOrWhiteSpace(trigger.MatchVariableCondition))
             {
@@ -1395,53 +1402,62 @@ namespace EQLogParser
     {
       if (variableActions is not { Count: > 0 }) return;
 
-      lock (_variableLock)
+      foreach (var va in variableActions)
       {
-        foreach (var va in variableActions)
-        {
-          if (string.IsNullOrWhiteSpace(va.VariableName)) continue;
+        if (string.IsNullOrWhiteSpace(va.VariableName)) continue;
 
-          if (va.IsClearAction)
+        var key = va.VariableName;
+        var hasTtl = va.TimeToLiveSeconds > 0;
+        var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + (long)(va.TimeToLiveSeconds * TimeSpan.TicksPerSecond) : 0;
+
+        if (va.IsClearAction)
+        {
+          lock (_variableLock)
           {
-            var key = va.VariableName;
             _variables.TryRemove(key, out _);
             _counterValues.Remove(key);
             _variableExpiryTimes.Remove(key);
           }
+          continue;
+        }
+
+        // For value-type actions, resolve text outside the lock so the hot path
+        // isn't blocked by string processing. ConcurrentDictionary reads are safe.
+        string resolved = null;
+        if (!va.IsCounterType && !string.IsNullOrEmpty(va.Value))
+        {
+          // Value: resolve through the same pipeline as display text (globals first)
+          resolved = ProcessMatchesText(va.Value, _variables);
+          resolved = ProcessMatchesText(resolved, matches);
+          resolved = ProcessMatchesText(resolved, previousMatches);
+          resolved = ProcessLineCode(resolved, action);
+        }
+
+        // Write mutations inside the lock — counter increment must be atomic
+        lock (_variableLock)
+        {
+          if (va.IsCounterType)
+          {
+            // Counter: increment by Step, starting from InitialValue if new
+            if (!_counterValues.TryGetValue(key, out var current))
+              current = va.InitialValue;
+            current += va.Step;
+            _counterValues[key] = current;
+            _variables[key] = current.ToString(CultureInfo.InvariantCulture);
+          }
+          else if (resolved is not null)
+          {
+            _variables[key] = resolved;
+          }
+
+          // Set TTL if specified
+          if (hasTtl)
+          {
+            _variableExpiryTimes[key] = expiryTicks;
+          }
           else
           {
-            var key = va.VariableName;
-            var hasTtl = va.TimeToLiveSeconds > 0;
-            var expiryTicks = hasTtl ? DateTime.UtcNow.Ticks + (long)(va.TimeToLiveSeconds * TimeSpan.TicksPerSecond) : 0;
-
-            if (va.IsCounterType)
-            {
-              // Counter: increment by Step, starting from InitialValue if new
-              if (!_counterValues.TryGetValue(key, out var current))
-                current = va.InitialValue;
-              current += va.Step;
-              _counterValues[key] = current;
-              _variables[key] = current.ToString(CultureInfo.InvariantCulture);
-            }
-            else if (!string.IsNullOrEmpty(va.Value))
-            {
-              // Value: resolve through the same pipeline as display text (globals first)
-              var resolved = ProcessMatchesText(va.Value, _variables);
-              resolved = ProcessMatchesText(resolved, matches);
-              resolved = ProcessMatchesText(resolved, previousMatches);
-              resolved = ProcessLineCode(resolved, action);
-              _variables[key] = resolved;
-            }
-
-            // Set TTL if specified
-            if (hasTtl)
-            {
-              _variableExpiryTimes[key] = expiryTicks;
-            }
-            else
-            {
-              _variableExpiryTimes.Remove(key);
-            }
+            _variableExpiryTimes.Remove(key);
           }
         }
       }

@@ -1,6 +1,5 @@
 ﻿using EQLogParser.Audio;
 using Syncfusion.Windows.PropertyGrid;
-using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

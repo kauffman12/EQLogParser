@@ -3,14 +3,12 @@ using System.Collections.Generic;
 
 namespace EQLogParser
 {
-  /// <summary>
-  /// Parses variable condition expressions into an AST.
-  /// Grammar: expression -> and (OR and)* ; and -> unary (AND unary)* ; unary -> NOT unary | comparison
-  /// comparison -> primary (OP primary)? ; primary -> variable | literal | '(' expression ')'
-  /// </summary>
+  /* Parses variable condition expressions into an AST.
+   * Grammar: expression -> and (OR and)* ; and -> unary (AND unary)* ; unary -> NOT unary | comparison
+   * comparison -> primary (OP primary)? ; primary -> variable | literal | '(' expression ')' */
   public static class ConditionParser
   {
-    /// <summary>Maximum allowed nesting depth for parentheses and unary operators to prevent stack overflow.</summary>
+    /* Maximum allowed nesting depth for parentheses and unary operators to prevent stack overflow. */
     private const int MaxNestingDepth = 10;
 
     // Operator keywords mapped to token types (case-insensitive)
@@ -41,7 +39,7 @@ namespace EQLogParser
       ["!"] = ConditionTokenType.Not,
     };
 
-    /// <summary>Parse a condition expression string into an AST node. Returns null on parse error.</summary>
+    /* Parse a condition expression string into an AST node. Returns null on parse error. */
     public static ConditionNode Parse(string expression)
     {
       if (string.IsNullOrWhiteSpace(expression))
@@ -350,7 +348,7 @@ namespace EQLogParser
 
       public void ExitDepth() => _depth--;
 
-      /// <summary>Increments depth and throws if the maximum nesting depth is exceeded.</summary>
+      /* Increments depth and throws if the maximum nesting depth is exceeded. */
       public void EnterAndCheckDepth()
       {
         _depth++;
