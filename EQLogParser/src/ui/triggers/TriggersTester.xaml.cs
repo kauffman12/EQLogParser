@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -137,8 +136,13 @@ namespace EQLogParser
               }
             }
 
-            var allLines = testTriggersBox.Lines.ToList().Where(line => !string.IsNullOrEmpty(line.Text)
-              && line.Text.Length > AppSettings.ActionIndex).Select(line => line.Text).ToList();
+            var allLines = new List<string>();
+            foreach (var line in testTriggersBox.Lines)
+            {
+              var text = line.Text;
+              if (!string.IsNullOrEmpty(text) && text.Length > AppSettings.ActionIndex)
+                allLines.Add(text);
+            }
             if (allLines.Count > 0)
             {
               RunTest(allLines);
@@ -193,10 +197,22 @@ namespace EQLogParser
           {
             if (allLines.Count > 0)
             {
-              var firstDate = DateUtil.ParseStandardDate(allLines.First());
-              var lastDate = DateUtil.ParseStandardDate(allLines.Last());
-              if (firstDate != DateTime.MinValue && lastDate != DateTime.MinValue)
+              var firstDate = DateUtil.ParseStandardDate(allLines[0]);
+              if (firstDate != DateTime.MinValue)
               {
+                // Scan backwards from the last line to find a valid end date >= first date.
+                // Avoids parsing every line in large log files.
+                var lastDate = firstDate;
+                for (int i = allLines.Count - 1; i >= 0; i--)
+                {
+                  var candidate = DateUtil.ParseStandardDate(allLines[i]);
+                  if (candidate > firstDate)
+                  {
+                    lastDate = candidate;
+                    break;
+                  }
+                }
+
                 var startTime = DateUtil.ToDotNetSeconds(firstDate);
                 var endTime = DateUtil.ToDotNetSeconds(lastDate);
                 var range = (int)(endTime - startTime + 1);
