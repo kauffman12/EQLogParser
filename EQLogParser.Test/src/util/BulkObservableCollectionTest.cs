@@ -1,6 +1,4 @@
 using EQLogParser;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 
 namespace EQLogParserTest
 {
@@ -108,10 +106,10 @@ namespace EQLogParserTest
     public void AddRange_NullEnumerable_Throws()
     {
       var collection = new BulkObservableCollection<int>();
-      bool threw = false;
+      var threw = false;
       try
       {
-        collection.AddRange((IEnumerable<int>?)null);
+        collection.AddRange(null);
       }
       catch (System.NullReferenceException)
       {

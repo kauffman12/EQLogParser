@@ -607,7 +607,7 @@ namespace EQLogParser
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1)
     {
-      int len = FindPossiblePlayerName(part, out var _, 0, stop);
+      var len = FindPossiblePlayerName(part, out var _, 0, stop);
       if (len > 0 && string.Equals(part[..len], Labels.Unk, StringComparison.OrdinalIgnoreCase))
       {
         return false;
@@ -615,7 +615,7 @@ namespace EQLogParser
       return len > -1;
     }
     internal static bool IsPossiblePetName(string name) =>
-      (IsPossiblePlayerName(name) || name?.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) == true);
+      IsPossiblePlayerName(name) || name?.EndsWith("`s warder", StringComparison.OrdinalIgnoreCase) == true;
 
     internal static string GetPlayerIconPath(string className)
     {

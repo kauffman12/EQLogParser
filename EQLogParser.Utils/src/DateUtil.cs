@@ -68,8 +68,8 @@ namespace EQLogParser
           {
             var totalSecs = (long)Math.Round((double)ticks / TimeSpan.TicksPerSecond);
             var daysSecs = totalSecs / 86400;
-            var hoursSecs = (totalSecs % 86400) / 3600;
-            var minutesSecs = (totalSecs % 3600) / 60;
+            var hoursSecs = totalSecs % 86400 / 3600;
+            var minutesSecs = totalSecs % 3600 / 60;
             var secondsSecs = totalSecs % 60;
 
             if (daysSecs > 0)
@@ -83,9 +83,9 @@ namespace EQLogParser
           {
             var totalMs = (long)Math.Round((double)ticks / TimeSpan.TicksPerMillisecond);
             var daysMs = totalMs / (86400 * 1000);
-            var hoursMs = (totalMs % (86400 * 1000)) / (3600 * 1000);
-            var minutesMs = (totalMs % (3600 * 1000)) / (60 * 1000);
-            var secondsMs = (totalMs % (60 * 1000)) / 1000;
+            var hoursMs = totalMs % (86400 * 1000) / (3600 * 1000);
+            var minutesMs = totalMs % (3600 * 1000) / (60 * 1000);
+            var secondsMs = totalMs % (60 * 1000) / 1000;
             var millisMs = totalMs % 1000;
 
             if (daysMs > 0)
@@ -155,7 +155,7 @@ namespace EQLogParser
       }
 
       // Check if any segment has a label (d, h, m, s)
-      bool hasLabel = false;
+      var hasLabel = false;
       foreach (var segment in split)
       {
         if (segment.Length > 0 && char.IsLetter(segment[^1]))

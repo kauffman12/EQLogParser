@@ -1,5 +1,3 @@
-using EQLogParser;
-
 namespace EQLogParser.Wpf.Test
 {
   [TestClass]

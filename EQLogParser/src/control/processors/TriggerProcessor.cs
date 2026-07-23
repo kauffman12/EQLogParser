@@ -100,7 +100,7 @@ namespace EQLogParser
     {
       // Register this processor's log collection before processing any triggers
       TriggerLogManager.Instance.EnsureCollection(CurrentProcessorName);
-      
+
       await GetActiveTriggersAsync();
       _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateDB.Instance.GetLexicon());
       _trustedPlayers = [.. await TriggerStateDB.Instance.GetTrustedPlayers()];
@@ -311,7 +311,7 @@ namespace EQLogParser
         var beginTicks = DateTime.UtcNow.Ticks;
         // Expire TTL'd variables only when a trigger actually matches (not on every line).
         // CheckLine/PreviousLine don't use global variables, so no risk of reading stale data.
-        bool expiredVariables = false;
+        var expiredVariables = false;
 
         foreach (var wrapper in _activeTriggersById.Values)
         {

@@ -67,8 +67,8 @@ namespace EQLogParser
     private static List<ConditionToken> Tokenize(string input)
     {
       var tokens = new List<ConditionToken>();
-      int i = 0;
-      int len = input.Length;
+      var i = 0;
+      var len = input.Length;
 
       while (i < len)
       {
@@ -82,11 +82,11 @@ namespace EQLogParser
         // Variable: {name} or ${name}
         if (input[i] == '{' || (input[i] == '$' && i + 1 < len && input[i + 1] == '{'))
         {
-          int braceStart = input[i] == '$' ? i + 1 : i;
-          int close = input.IndexOf('}', braceStart + 1);
+          var braceStart = input[i] == '$' ? i + 1 : i;
+          var close = input.IndexOf('}', braceStart + 1);
           if (close < 0) return null; // Unclosed brace
-          string rawText = input.Substring(i, close - i + 1);
-          string name = input.Substring(braceStart + 1, close - braceStart - 1);
+          var rawText = input.Substring(i, close - i + 1);
+          var name = input.Substring(braceStart + 1, close - braceStart - 1);
           tokens.Add(new ConditionToken(ConditionTokenType.Variable, rawText, name));
           i = close + 1;
           continue;
@@ -95,13 +95,13 @@ namespace EQLogParser
         // Quoted string: "..." or '...'
         if (input[i] == '"' || input[i] == '\'')
         {
-          char quote = input[i];
-          int start = i;
+          var quote = input[i];
+          var start = i;
           i++;
           while (i < len && input[i] != quote)
             i++;
           if (i >= len) return null; // Unclosed quote
-          string value = input.Substring(start + 1, i - start - 1);
+          var value = input.Substring(start + 1, i - start - 1);
           tokens.Add(new ConditionToken(ConditionTokenType.String, input.Substring(start, i - start + 1), value));
           i++;
           continue;
@@ -124,7 +124,7 @@ namespace EQLogParser
         // Number: optional minus, digits, optional decimal
         if (char.IsDigit(input[i]) || (input[i] == '-' && i + 1 < len && char.IsDigit(input[i + 1])))
         {
-          int start = i;
+          var start = i;
           if (input[i] == '-') i++;
           while (i < len && char.IsDigit(input[i])) i++;
           if (i < len && input[i] == '.')
@@ -132,8 +132,8 @@ namespace EQLogParser
             i++;
             while (i < len && char.IsDigit(input[i])) i++;
           }
-          string numStr = input.Substring(start, i - start);
-          if (double.TryParse(numStr, out double numVal))
+          var numStr = input.Substring(start, i - start);
+          if (double.TryParse(numStr, out var numVal))
           {
             tokens.Add(new ConditionToken(ConditionTokenType.Number, numStr, numVal));
           }
@@ -150,7 +150,7 @@ namespace EQLogParser
           // Try two-character operators first
           if (i + 1 < len)
           {
-            string two = input.Substring(i, 2);
+            var two = input.Substring(i, 2);
             if (Operators.TryGetValue(two, out var opTwo))
             {
               tokens.Add(new ConditionToken(opTwo, two));
@@ -159,7 +159,7 @@ namespace EQLogParser
             }
           }
           // Single character
-          string one = input.Substring(i, 1);
+          var one = input.Substring(i, 1);
           if (Operators.TryGetValue(one, out var opOne))
           {
             tokens.Add(new ConditionToken(opOne, one));
@@ -172,10 +172,10 @@ namespace EQLogParser
         // Word: operator keyword, boolean literal, null literal, or bareword string
         if (char.IsLetter(input[i]) || input[i] == '_')
         {
-          int start = i;
+          var start = i;
           while (i < len && (char.IsLetterOrDigit(input[i]) || input[i] == '_' || input[i] == '.'))
             i++;
-          string word = input.Substring(start, i - start);
+          var word = input.Substring(start, i - start);
 
           // Check if it's an operator keyword
           if (Operators.TryGetValue(word, out var opType))

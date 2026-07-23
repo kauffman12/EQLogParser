@@ -1,5 +1,4 @@
 using EQLogParser;
-using System.Collections.Generic;
 
 namespace EQLogParserTest
 {

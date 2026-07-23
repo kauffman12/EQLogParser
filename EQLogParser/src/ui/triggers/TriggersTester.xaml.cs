@@ -203,7 +203,7 @@ namespace EQLogParser
                 // Scan backwards from the last line to find a valid end date >= first date.
                 // Avoids parsing every line in large log files.
                 var lastDate = firstDate;
-                for (int i = allLines.Count - 1; i >= 0; i--)
+                for (var i = allLines.Count - 1; i >= 0; i--)
                 {
                   var candidate = DateUtil.ParseStandardDate(allLines[i]);
                   if (candidate > firstDate)

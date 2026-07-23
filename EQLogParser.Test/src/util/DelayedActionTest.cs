@@ -1,7 +1,4 @@
 using EQLogParser;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace EQLogParserTest
 {
@@ -21,7 +18,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_General_UsesLastInvokeValue()
     {
-      int lastValue = -1;
+      var lastValue = -1;
       using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), v => lastValue = v);
       action.Invoke(1);
       action.Invoke(2);
@@ -33,7 +30,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_General_InvokesOnlyOnce()
     {
-      int invokeCount = 0;
+      var invokeCount = 0;
       using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
       action.Invoke(1);
       action.Invoke(2);
@@ -45,7 +42,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_General_ResetDelay_ExtendsTimer()
     {
-      int invokeCount = 0;
+      var invokeCount = 0;
       using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
       action.Invoke(1, resetDelay: true);
       Thread.Sleep(30);
@@ -83,7 +80,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_Generic_InvokesActionAfterDelay()
     {
-      int received = -1;
+      var received = -1;
       using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), v => received = v);
       action.Invoke(42);
       Thread.Sleep(100);
@@ -93,7 +90,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_Generic_MultipleInvokesWithoutReset_FiresOnce()
     {
-      int invokeCount = 0;
+      var invokeCount = 0;
       using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
       action.Invoke(1);
       action.Invoke(2);
@@ -105,7 +102,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_Generic_Dispose_CleansUp()
     {
-      int invokeCount = 0;
+      var invokeCount = 0;
       var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
       action.Invoke(1);
       action.Dispose();
@@ -127,9 +124,9 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_Generic_NullValue_IsHandled()
     {
-      string received = "not set";
+      var received = "not set";
       using var action = new DelayedAction<string>(TimeSpan.FromMilliseconds(50), v => received = v);
-      action.Invoke((string)null!);
+      action.Invoke(null!);
       Thread.Sleep(100);
       Assert.IsNull(received);
     }

@@ -1,5 +1,3 @@
-using EQLogParser;
-
 namespace EQLogParser.Wpf.Test
 {
   /// <summary>
@@ -168,7 +166,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(source.VariableActions.Count, dest.VariableActions.Count);
       Assert.AreNotSame(source.VariableActions, dest.VariableActions);
 
-      for (int i = 0; i < source.VariableActions.Count; i++)
+      for (var i = 0; i < source.VariableActions.Count; i++)
       {
         var src = source.VariableActions[i];
         var dst = dest.VariableActions[i];

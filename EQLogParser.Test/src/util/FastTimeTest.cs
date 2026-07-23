@@ -1,6 +1,4 @@
 using EQLogParser;
-using System;
-using System.Threading;
 
 namespace EQLogParserTest
 {
@@ -69,8 +67,8 @@ namespace EQLogParserTest
     [TestMethod]
     public void Now_MultipleCallsConsistent()
     {
-      double[] seconds = new double[10];
-      long[] ticks = new long[10];
+      var seconds = new double[10];
+      var ticks = new long[10];
       for (var i = 0; i < 10; i++)
       {
         var result = FastTime.Now();

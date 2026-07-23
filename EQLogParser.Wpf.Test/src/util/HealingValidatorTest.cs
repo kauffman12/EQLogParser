@@ -1,6 +1,3 @@
-using EQLogParser;
-using System.Collections.Generic;
-
 namespace EQLogParser.Wpf.Test
 {
   [TestClass]

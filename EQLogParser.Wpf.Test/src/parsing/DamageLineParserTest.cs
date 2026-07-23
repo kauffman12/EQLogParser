@@ -1,4 +1,3 @@
-using EQLogParser;
 using Moq;
 
 namespace EQLogParser.Wpf.Test

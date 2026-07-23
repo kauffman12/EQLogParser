@@ -134,8 +134,8 @@ namespace EQLogParser
       // - {var1} = {var2} → false when both are unset (two unset vars are not equal)
       if (left is null || right is null)
       {
-        bool leftIsNullLiteral = leftNode is ConditionLiteralNode ln && ln.Type == ConditionTokenType.Null;
-        bool rightIsNullLiteral = rightNode is ConditionLiteralNode rn && rn.Type == ConditionTokenType.Null;
+        var leftIsNullLiteral = leftNode is ConditionLiteralNode ln && ln.Type == ConditionTokenType.Null;
+        var rightIsNullLiteral = rightNode is ConditionLiteralNode rn && rn.Type == ConditionTokenType.Null;
 
         // If at least one side is an explicit null literal, treat as a null check
         if (leftIsNullLiteral || rightIsNullLiteral)

@@ -103,7 +103,7 @@ namespace EQLogParser
       exStyle |= (int)NativeMethods.ExtendedWindowStyles.WsExToolwindow
                | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
 
-      NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, (IntPtr)exStyle);
+      NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
     }
   }
 }

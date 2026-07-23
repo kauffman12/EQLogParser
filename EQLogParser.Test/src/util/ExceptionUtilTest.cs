@@ -1,6 +1,4 @@
 using EQLogParser;
-using System;
-using System.IO;
 
 namespace EQLogParserTest
 {
@@ -47,7 +45,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Action_Rethrow_RethrowsIOException()
     {
-      bool threw = false;
+      var threw = false;
       try
       {
         ExceptionUtil.CatchIoExceptions(
@@ -65,7 +63,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Action_Rethrow_RethrowsUnauthorizedAccessException()
     {
-      bool threw = false;
+      var threw = false;
       try
       {
         ExceptionUtil.CatchIoExceptions(
@@ -83,7 +81,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Action_NonIoException_PassesThrough()
     {
-      bool threw = false;
+      var threw = false;
       try
       {
         ExceptionUtil.CatchIoExceptions(
@@ -125,7 +123,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Func_Rethrow_RethrowsIOException()
     {
-      bool threw = false;
+      var threw = false;
       try
       {
         ExceptionUtil.CatchIoExceptions(
@@ -143,7 +141,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void CatchIoExceptions_Func_NonIoException_PassesThrough()
     {
-      bool threw = false;
+      var threw = false;
       try
       {
         ExceptionUtil.CatchIoExceptions(
