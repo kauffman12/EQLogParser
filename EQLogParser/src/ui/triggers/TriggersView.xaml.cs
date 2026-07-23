@@ -18,7 +18,7 @@ namespace EQLogParser
 {
   public partial class TriggersView : IDocumentContent
   {
-    private int _nextVariableIndex;
+
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
     private readonly PatternEditor _closePatternEditor;
@@ -946,7 +946,7 @@ namespace EQLogParser
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent());
+          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent(GenerateVariableName()));
         }
       }
       else if (model is TimerOverlayPropertyModel timerModel)
@@ -1026,7 +1026,7 @@ namespace EQLogParser
         else
         {
           // Add a starter variable card so the UI isn't empty
-          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent());
+          _variableActionViewModels.Add(VariableActionViewModel.CreateSilent(GenerateVariableName()));
         }
 
         variableActionsList.ItemsSource = _variableActionViewModels;
@@ -1091,9 +1091,20 @@ namespace EQLogParser
       _ready = false;
     }
 
+    /* Generates a unique variable name by scanning existing names for the highest index. */
     private string GenerateVariableName()
     {
-      return $"gVariable{_nextVariableIndex++}";
+      var maxIndex = -1;
+      foreach (var vm in _variableActionViewModels)
+      {
+        if (vm.VariableName is { Length: > 9 } name && name.StartsWith("gVariable", StringComparison.Ordinal))
+        {
+          if (int.TryParse(name[9..], out var idx) && idx > maxIndex)
+            maxIndex = idx;
+        }
+      }
+
+      return $"gVariable{maxIndex + 1}";
     }
 
     private void UpdateVariableActionsEmptyState()

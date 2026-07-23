@@ -63,7 +63,7 @@ namespace EQLogParser
         else
           await TriggerStateDB.Instance.ImportOverlays(data);
       }
-      else if (filePath.EndsWith(".gtp", StringComparison.InvariantCulture))
+      else if (filePath.EndsWith(".gtp", StringComparison.OrdinalIgnoreCase))
       {
         await using var fs = fileInfo.OpenRead();
         using var ms = new MemoryStream();
@@ -705,7 +705,9 @@ namespace EQLogParser
       if (chatType?.Sender == null || action == null || !chatType.SenderIsYou)
         return;
 
-      int offset = chatType.TextStart;
+      // TextStart is an absolute position in the full log line (includes 27-char timestamp prefix).
+      // Since 'action' has the timestamp stripped, subtract 27 to get the correct offset.
+      int offset = chatType.TextStart - 27;
       if (offset > 0 && action.Length > offset)
       {
         var tail = action.Substring(offset);

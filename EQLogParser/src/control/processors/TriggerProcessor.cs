@@ -1293,7 +1293,8 @@ namespace EQLogParser
             }
             wrapper.ConditionAst = conditionAst;
 
-            // temp
+            // This is to convert from the old trigger format where TimerType=0 meant a basic timer.
+            // Can be removed eventually once all triggers are migrated to explicit TimerType values.
             if (wrapper.TriggerData.EnableTimer && wrapper.TriggerData.TimerType == 0)
             {
               wrapper.TriggerData.TimerType = 1;
