@@ -710,7 +710,7 @@ namespace EQLogParser
       var offset = chatType.TextStart - 27;
       if (offset > 0 && action.Length > offset)
       {
-        var tail = action.Substring(offset);
+        var tail = action[offset..];
         if (tail.StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
         {
           await TriggerManager.Instance.StopTriggersAsync();

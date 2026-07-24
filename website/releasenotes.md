@@ -1,5 +1,9 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.57 | 07/23/26
+1. **New Feature**. Added custom **Trigger Variables** to EQLP.
+2. **Details**. There is a new tab on the **Trigger** properties window. It allows for custom variables to be set or cleared when the trigger is activated. In addition, there is now a **Match Variables** property that can be used to test those variables to determine if a trigger should activate as well as a **End Clear Variables** that can be used when timers expire. See the documentation for details.
+
 # 2.3.56 | 07/12/26
 1. Reworked the **Damage Meter** controls/menu to display properly on displays with varied DPI settings.
 2. Fixed for DPS not being the default in **Damage Meter**.
