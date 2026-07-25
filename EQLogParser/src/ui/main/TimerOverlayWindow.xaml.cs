@@ -918,48 +918,31 @@ namespace EQLogParser
       }
     }
 
-    private static double CalcProgress(int type, long duration, long remaining, long max)
+    /* Resolve the display name for a timer bar.
+     *
+     * Variable resolution order (highest → lowest precedence):
+     *   1. Built-in codes: {counter}, {repeated}, {logtime}
+     *   2. Custom variables from timerData.Variables
+     *
+     * The line code {l} is resolved into the template at timer-creation time and
+     * always references the log action that started the timer — it does not update
+     * dynamically during the timer's lifetime.
+     *
+     * This method is called only during full renders (~450ms interval). Short ticks
+     * reuse the display name from the cached TimerBarModel. No additional rate-limiting
+     * is needed — the render cycle provides natural throttling.
+     */
+    internal static string GetDisplayName(TimerData timerData)
     {
-      var denom = max == long.MinValue ? duration : max;
-      if (denom <= 0) return 0.0;
-
-      var p = (double)remaining / denom * 100.0;
-      if (type == 3 && max != long.MinValue && duration > 0)
-        p += (1 - ((double)duration / max)) * 100.0;
-
-      if (double.IsNaN(p) || double.IsInfinity(p)) return 0.0;
-      return Math.Clamp(p, 0.0, 100.0);
-    }
-
-    private static string GetDisplayName(TimerData timerData)
-    {
-      // If the timer stores a template with custom variables, re-resolve from the
-      // latest variable values. Rate-limited to once per 500ms to avoid redundant work.
-      // Built-in codes ({counter}, {repeated}, {logtime}) are resolved first so they
-      // take precedence over any matching custom variable values; custom variables
-      // are always resolved last — consistent with ProcessDisplayText ordering.
-      string result;
-      var resolveVars = false;
-      var now = DateTime.UtcNow.Ticks;
-
-      if (!string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
+      var result = timerData.DisplayName;
+      var hasTemplateVars = !string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
           timerData.Variables is not null &&
-          timerData.DisplayNameTemplate.Contains('{'))
+          timerData.DisplayNameTemplate.Contains('{');
+
+      // If the timer has a template with custom variables, re-resolve from live values
+      if (hasTemplateVars)
       {
-        if (now - timerData.LastVariableResolveTicks > TimeSpan.TicksPerSecond / 2)
-        {
-          result = timerData.DisplayNameTemplate;
-          resolveVars = true;
-          timerData.LastVariableResolveTicks = now;
-        }
-        else
-        {
-          result = timerData.DisplayName;
-        }
-      }
-      else
-      {
-        result = timerData.DisplayName;
+        result = timerData.DisplayNameTemplate;
       }
 
       // Built-in codes first (highest priority)
@@ -979,12 +962,25 @@ namespace EQLogParser
       }
 
       // Custom variables last (lowest priority)
-      if (resolveVars)
+      if (hasTemplateVars)
       {
         result = TriggerProcessor.ProcessMatchesText(result, timerData.Variables);
       }
 
       return result;
+    }
+
+    private static double CalcProgress(int type, long duration, long remaining, long max)
+    {
+      var denom = max == long.MinValue ? duration : max;
+      if (denom <= 0) return 0.0;
+
+      var p = (double)remaining / denom * 100.0;
+      if (type == 3 && max != long.MinValue && duration > 0)
+        p += (1 - ((double)duration / max)) * 100.0;
+
+      if (double.IsNaN(p) || double.IsInfinity(p)) return 0.0;
+      return Math.Clamp(p, 0.0, 100.0);
     }
 
     private string FormatTime(long ticks)

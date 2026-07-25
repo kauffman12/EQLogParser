@@ -1456,16 +1456,24 @@ namespace EQLogParser
           {
             // Counter: increment by Step, starting from InitialValue if new.
             // If a value-type variable with this name already exists and is numeric,
-            // use it as the starting point instead of InitialValue — this allows
-            // a Value action in one trigger to seed a Counter in another.
+            // use it as the starting point instead of InitialValue. This is intentional:
+            // it allows a Value action in one trigger to seed a Counter in another,
+            // making variables more forgiving. For example, setting {stacks} = "3" via
+            // a Value action means a subsequent Counter action on {stacks} starts from 3
+            // rather than resetting to its InitialValue.
             if (!_counterValues.TryGetValue(key, out var current))
             {
-              if (_variables.TryGetValue(key, out var existing) &&
-                  double.TryParse(existing, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+              var seeded = false;
+              if (_variables.TryGetValue(key, out var existing))
               {
-                current = parsed;
+                var parsed = TextUtils.ParseDouble(existing.AsSpan());
+                if (!double.IsNaN(parsed))
+                {
+                  current = parsed;
+                  seeded = true;
+                }
               }
-              else
+              if (!seeded)
               {
                 current = va.InitialValue;
               }
