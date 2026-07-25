@@ -1,6 +1,7 @@
 ﻿using LiteDB;
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -53,6 +54,9 @@ namespace EQLogParser
     public bool Canceled { get; set; }
     public bool Warned { get; set; }
     public string DisplayName { get; set; }
+    public string DisplayNameTemplate { get; set; }
+    public ConcurrentDictionary<string, string> Variables { get; set; }
+    public long LastVariableResolveTicks { get; set; }
     public double DurationSeconds { get; set; }
     public long BeginTicks { get; set; }
     public long EndTicks { get; set; }

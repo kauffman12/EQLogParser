@@ -707,9 +707,14 @@ namespace EQLogParser
       // Process variable actions (set/clear variables)
       ProcessVariableActions(wrapper.TriggerData.VariableActions, matches, previousMatches, lineData.Action);
 
-      if (ProcessMatchesText(wrapper.ModifiedTimerName, _variables) is { } altTimerName)
+      // Resolve capture groups and line code first, then custom variables last.
+      // Storing the pre-variable template in TimerData.DisplayNameTemplate allows
+      // dynamic updates when variables change from other triggers (e.g. a counter
+      // that decrements while a long-running timer is active). Built-in codes
+      // ({counter}, {repeated}, {logtime}) are resolved in GetDisplayName before
+      // custom variables, giving them precedence.
+      if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } altTimerName)
       {
-        altTimerName = ProcessMatchesText(altTimerName, matches);
         altTimerName = ProcessMatchesText(altTimerName, previousMatches);
         altTimerName = ProcessLineCode(altTimerName, lineData.Action);
         if (wrapper.HasRepeatedTimer)
@@ -720,7 +725,14 @@ namespace EQLogParser
         if (wrapper.TriggerData.TimerType > 0 && (wrapper.TriggerData.DurationSeconds > 0 ||
            (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)))
         {
-          await StartTimerAsync(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount);
+          // Store the template (before variable resolution) for dynamic updates
+          var timerTemplate = altTimerName;
+          if (!string.IsNullOrEmpty(timerTemplate))
+          {
+            altTimerName = ProcessMatchesText(altTimerName, _variables);
+          }
+
+          await StartTimerAsync(wrapper, altTimerName, beginTicks, dynamicDuration, lineData, matches, previousMatches, loopCount, timerTemplate);
         }
       }
 
@@ -809,7 +821,7 @@ namespace EQLogParser
     }
 
     private async Task StartTimerAsync(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
-      Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0)
+      Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0, string timerNameTemplate = null)
     {
       var trigger = wrapper.TriggerData;
       var timerList = GetTimerList(wrapper);
@@ -886,6 +898,8 @@ namespace EQLogParser
         TimerIcon = wrapper.TimerIcon,
         TimerType = trigger.TimerType,
         TimesToLoopCount = loopCount,
+        DisplayNameTemplate = timerNameTemplate,
+        Variables = _variables,
         TriggerId = wrapper.Id,
         TriggerAgainOption = trigger.TriggerAgainOption,
       };
@@ -1428,11 +1442,11 @@ namespace EQLogParser
         string resolved = null;
         if (!va.IsCounterType && !string.IsNullOrEmpty(va.Value))
         {
-          // Value: resolve through the same pipeline as display text (globals first)
-          resolved = ProcessMatchesText(va.Value, _variables);
-          resolved = ProcessMatchesText(resolved, matches);
+          // Value: resolve through the same pipeline as display text (variables last)
+          resolved = ProcessMatchesText(va.Value, matches);
           resolved = ProcessMatchesText(resolved, previousMatches);
           resolved = ProcessLineCode(resolved, action);
+          resolved = ProcessMatchesText(resolved, _variables);
         }
 
         // Write mutations inside the lock — counter increment must be atomic
@@ -1476,6 +1490,10 @@ namespace EQLogParser
           }
         }
       }
+
+      // Display name resolution for timers with custom variables is deferred to
+      // the overlay's GetDisplayName, which resolves from timerData.Variables on each
+      // render cycle. No action needed here.
     }
 
     /* Checks for expired variables and removes them based on TTL. */
@@ -1530,12 +1548,12 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(text) && !text.Equals(NullCode, StringComparison.OrdinalIgnoreCase))
       {
-        // Global variables first (highest priority), then capture groups as fallback
-        text = ProcessMatchesText(text, variables);
+        // Capture groups and line code first, then global variables last
         text = ProcessMatchesText(text, originalMatches);
         text = ProcessMatchesText(text, matches);
         text = ProcessMatchesText(text, previousMatches);
         text = ProcessLineCode(text, action);
+        text = ProcessMatchesText(text, variables);
 
         return text;
       }
@@ -1575,7 +1593,7 @@ namespace EQLogParser
       return null;
     }
 
-    private static string ProcessMatchesText(string text, IReadOnlyDictionary<string, string> matches)
+    internal static string ProcessMatchesText(string text, IReadOnlyDictionary<string, string> matches)
     {
       if (matches == null || string.IsNullOrEmpty(text) || text.IndexOf('{') < 0) return text;
 
@@ -1628,12 +1646,12 @@ namespace EQLogParser
     private static string ProcessTts(string tts, string action, Dictionary<string, string> matches, Dictionary<string, string> previous, Dictionary<string, string> original,
       Dictionary<string, string> variables)
     {
-      // Global variables first (highest priority), then capture groups as fallback
-      tts = ProcessMatchesText(tts, variables);
+      // Capture groups and line code first, then global variables last
       tts = ProcessMatchesText(tts, original);
       tts = ProcessMatchesText(tts, matches);
       tts = ProcessMatchesText(tts, previous);
       tts = ProcessLineCode(tts, action);
+      tts = ProcessMatchesText(tts, variables);
 
       return tts;
     }

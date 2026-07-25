@@ -933,7 +933,36 @@ namespace EQLogParser
 
     private static string GetDisplayName(TimerData timerData)
     {
-      var result = timerData.DisplayName;
+      // If the timer stores a template with custom variables, re-resolve from the
+      // latest variable values. Rate-limited to once per 500ms to avoid redundant work.
+      // Built-in codes ({counter}, {repeated}, {logtime}) are resolved first so they
+      // take precedence over any matching custom variable values; custom variables
+      // are always resolved last — consistent with ProcessDisplayText ordering.
+      string result;
+      var resolveVars = false;
+      var now = DateTime.UtcNow.Ticks;
+
+      if (!string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
+          timerData.Variables is not null &&
+          timerData.DisplayNameTemplate.Contains('{'))
+      {
+        if (now - timerData.LastVariableResolveTicks > TimeSpan.TicksPerSecond / 2)
+        {
+          result = timerData.DisplayNameTemplate;
+          resolveVars = true;
+          timerData.LastVariableResolveTicks = now;
+        }
+        else
+        {
+          result = timerData.DisplayName;
+        }
+      }
+      else
+      {
+        result = timerData.DisplayName;
+      }
+
+      // Built-in codes first (highest priority)
       if (timerData.RepeatedCount > -1)
       {
         result = result.Replace(TriggerProcessor.RepeatedCode, $"{timerData.RepeatedCount}", StringComparison.OrdinalIgnoreCase);
@@ -947,6 +976,12 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(timerData.LogTime))
       {
         result = result.Replace(TriggerProcessor.LogTimeCode, timerData.LogTime, StringComparison.OrdinalIgnoreCase);
+      }
+
+      // Custom variables last (lowest priority)
+      if (resolveVars)
+      {
+        result = TriggerProcessor.ProcessMatchesText(result, timerData.Variables);
       }
 
       return result;
