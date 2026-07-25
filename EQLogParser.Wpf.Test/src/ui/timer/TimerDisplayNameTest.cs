@@ -166,8 +166,9 @@ namespace EQLogParser.Wpf.Test
         variables: variables);
 
       var result = TimerOverlayWindow.GetDisplayName(timerData);
-      // Unset variables are replaced with null (empty string in ProcessMatchesText)
-      Assert.AreEqual("Ice ", result);
+      // Unset variables are left as-is by ProcessMatchesText (the original {missing} token
+      // is preserved when the variable is not found in the dictionary)
+      Assert.AreEqual("Ice {missing}", result);
     }
 
     #endregion
