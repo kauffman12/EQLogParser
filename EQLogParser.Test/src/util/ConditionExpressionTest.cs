@@ -1027,8 +1027,25 @@ namespace EQLogParserTest
     [TestMethod]
     public void Evaluate_UnsetVariableInNumericComparison_ReturnsFalse()
     {
+      // Unset variable treated as 0: 0 > 50 = false
       var node = ConditionParser.Parse("{hp} > 50");
       Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_UnsetVariableInLessThanComparison_ReturnsTrue()
+    {
+      // Unset variable treated as 0: 0 < 50 = true (intuitive for "low hp" checks)
+      var node = ConditionParser.Parse("{hp} < 50");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
+    }
+
+    [TestMethod]
+    public void Evaluate_UnsetVariableInLessEqualComparison_ReturnsTrue()
+    {
+      // Unset variable treated as 0: 0 <= 50 = true
+      var node = ConditionParser.Parse("{hp} <= 50");
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => null));
     }
 
     [TestMethod]
@@ -1057,7 +1074,7 @@ namespace EQLogParserTest
     public void Evaluate_AndWithOneUnsetVariable_HandlesGracefully()
     {
       var node = ConditionParser.Parse("{hp} > 50 and {mana} > 10");
-      // hp set, mana unset
+      // hp set (75 > 50 = true), mana unset (0 > 10 = false)
       Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "hp" ? "75" : null));
     }
 

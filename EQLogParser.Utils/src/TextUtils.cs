@@ -312,6 +312,78 @@ namespace EQLogParser
       return value;
     }
 
+    /* Fast allocation-free double parser for condition evaluation. Handles optional
+     * leading sign, integer part, and fractional part. Returns defValue (NaN) on
+     * any parse failure — no CultureInfo or exception overhead like double.TryParse. */
+    internal static double ParseDouble(ReadOnlySpan<char> span, double defValue = double.NaN)
+    {
+      if (span.IsEmpty)
+        return defValue;
+
+      var index = 0;
+      var negative = false;
+
+      // Optional sign
+      if (span[0] == '-')
+      {
+        negative = true;
+        index = 1;
+      }
+      else if (span[0] == '+')
+      {
+        index = 1;
+      }
+
+      if (index >= span.Length)
+        return defValue;
+
+      // Integer part — parse as ulong to avoid precision loss on large integers
+      ulong intPart = 0;
+      var hasDigits = false;
+
+      while (index < span.Length && span[index] != '.')
+      {
+        var digit = (uint)(span[index] - '0');
+        if (digit > 9)
+          return defValue;
+
+        // Overflow guard for ulong
+        if (intPart > ulong.MaxValue / 10 || (intPart == ulong.MaxValue / 10 && digit > 5))
+          return defValue;
+
+        intPart = intPart * 10 + digit;
+        hasDigits = true;
+        index++;
+      }
+
+      double result = intPart;
+
+      // Fractional part
+      if (index < span.Length && span[index] == '.')
+      {
+        index++;
+        var scale = 0.1;
+
+        while (index < span.Length)
+        {
+          var digit = (uint)(span[index] - '0');
+          if (digit > 9)
+            return defValue;
+
+          result += digit * scale;
+          scale *= 0.1;
+          hasDigits = true;
+          index++;
+        }
+      }
+
+      // Must have consumed all characters and had at least one digit
+      if (index < span.Length || !hasDigits)
+        return defValue;
+
+      return negative ? -result : result;
+    }
+
     internal static string ReplaceWholeWords(string input, IReadOnlyDictionary<string, string> replacements)
     {
       if (string.IsNullOrEmpty(input) || replacements == null || replacements.Count == 0)

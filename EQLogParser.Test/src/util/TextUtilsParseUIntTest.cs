@@ -268,5 +268,107 @@ namespace EQLogParserTest
     }
 
     #endregion
+
+    #region ParseDouble Tests
+
+    [TestMethod]
+    public void TestParseDouble_PositiveInteger()
+    {
+      var result = TextUtils.ParseDouble("50".AsSpan());
+      Assert.AreEqual(50.0, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_NegativeInteger()
+    {
+      var result = TextUtils.ParseDouble("-10".AsSpan());
+      Assert.AreEqual(-10.0, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_PositiveDecimal()
+    {
+      var result = TextUtils.ParseDouble("12.5".AsSpan());
+      Assert.AreEqual(12.5, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_NegativeDecimal()
+    {
+      var result = TextUtils.ParseDouble("-3.14".AsSpan());
+      Assert.AreEqual(-3.14, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_Zero()
+    {
+      var result = TextUtils.ParseDouble("0".AsSpan());
+      Assert.AreEqual(0.0, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_LeadingDecimalPoint()
+    {
+      var result = TextUtils.ParseDouble(".5".AsSpan());
+      Assert.AreEqual(0.5, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_TrailingDecimalPoint()
+    {
+      var result = TextUtils.ParseDouble("5.".AsSpan());
+      Assert.AreEqual(5.0, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_PlusSign()
+    {
+      var result = TextUtils.ParseDouble("+42".AsSpan());
+      Assert.AreEqual(42.0, result);
+    }
+
+    [TestMethod]
+    public void TestParseDouble_Empty_ReturnsNaN()
+    {
+      var result = TextUtils.ParseDouble("".AsSpan());
+      Assert.IsTrue(double.IsNaN(result));
+    }
+
+    [TestMethod]
+    public void TestParseDouble_NullString_ReturnsNaN()
+    {
+      var result = TextUtils.ParseDouble((string)null!);
+      Assert.IsTrue(double.IsNaN(result));
+    }
+
+    [TestMethod]
+    public void TestParseDouble_LoneMinusSign_ReturnsNaN()
+    {
+      var result = TextUtils.ParseDouble("-".AsSpan());
+      Assert.IsTrue(double.IsNaN(result));
+    }
+
+    [TestMethod]
+    public void TestParseDouble_NonNumeric_ReturnsNaN()
+    {
+      var result = TextUtils.ParseDouble("abc".AsSpan());
+      Assert.IsTrue(double.IsNaN(result));
+    }
+
+    [TestMethod]
+    public void TestParseDouble_MixedAlphaNumeric_ReturnsNaN()
+    {
+      var result = TextUtils.ParseDouble("12a34".AsSpan());
+      Assert.IsTrue(double.IsNaN(result));
+    }
+
+    [TestMethod]
+    public void TestParseDouble_CustomDefault()
+    {
+      var result = TextUtils.ParseDouble("abc".AsSpan(), 99.0);
+      Assert.AreEqual(99.0, result);
+    }
+
+    #endregion
   }
 }

@@ -111,11 +111,15 @@ namespace EQLogParser
       if (op == ConditionTokenType.Contains)
         return right is not null && (left?.Contains(right, StringComparison.OrdinalIgnoreCase) ?? false);
 
-      // Numeric comparisons: try to parse both sides as doubles
-      if (!double.TryParse(left, out var lVal))
-        return false;
-      if (!double.TryParse(right, out var rVal))
-        return false;
+      // Numeric comparisons: try to parse both sides as doubles.
+      // Unset (null) variables are treated as 0 so that conditions like
+      // {hp} < 50 evaluate intuitively even before hp has been set.
+      // Non-numeric strings still cause the comparison to fail (return false).
+      var lVal = left is null ? 0 : TextUtils.ParseDouble(left.AsSpan());
+      var rVal = right is null ? 0 : TextUtils.ParseDouble(right.AsSpan());
+
+      if (double.IsNaN(lVal) || double.IsNaN(rVal))
+        return false; // Non-numeric string value can't be compared numerically
 
       return op switch
       {

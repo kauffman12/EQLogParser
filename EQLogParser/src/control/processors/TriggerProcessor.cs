@@ -707,8 +707,9 @@ namespace EQLogParser
       // Process variable actions (set/clear variables)
       ProcessVariableActions(wrapper.TriggerData.VariableActions, matches, previousMatches, lineData.Action);
 
-      if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } altTimerName)
+      if (ProcessMatchesText(wrapper.ModifiedTimerName, _variables) is { } altTimerName)
       {
+        altTimerName = ProcessMatchesText(altTimerName, matches);
         altTimerName = ProcessMatchesText(altTimerName, previousMatches);
         altTimerName = ProcessLineCode(altTimerName, lineData.Action);
         if (wrapper.HasRepeatedTimer)
@@ -1439,9 +1440,22 @@ namespace EQLogParser
         {
           if (va.IsCounterType)
           {
-            // Counter: increment by Step, starting from InitialValue if new
+            // Counter: increment by Step, starting from InitialValue if new.
+            // If a value-type variable with this name already exists and is numeric,
+            // use it as the starting point instead of InitialValue — this allows
+            // a Value action in one trigger to seed a Counter in another.
             if (!_counterValues.TryGetValue(key, out var current))
-              current = va.InitialValue;
+            {
+              if (_variables.TryGetValue(key, out var existing) &&
+                  double.TryParse(existing, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+              {
+                current = parsed;
+              }
+              else
+              {
+                current = va.InitialValue;
+              }
+            }
             current += va.Step;
             _counterValues[key] = current;
             _variables[key] = current.ToString(CultureInfo.InvariantCulture);
