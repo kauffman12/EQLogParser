@@ -29,7 +29,17 @@ namespace EQLogParser
     internal static async Task ImportTriggers(TriggerNode parent) => await Import(parent);
     internal static async Task ImportOverlays(TriggerNode triggerNode) => await Import(triggerNode, false);
 
-    // Pick a file via OpenFileDialog; returns the path or null if cancelled
+    // Pick a NAG database directory via folder dialog; returns the path or null if cancelled
+    internal static string SelectNagDatabaseDirectory()
+    {
+      using var dialog = new System.Windows.Forms.FolderBrowserDialog {
+        Description = "Select the directory containing the NAG database files (overlays-database.json, etc.)",
+        AutoUpgradeEnabled = true,
+      };
+
+      return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dialog.SelectedPath : null;
+    }
+
     internal static string SelectImportFile(TriggerNode parent, bool triggers = true)
     {
       var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
@@ -42,6 +52,199 @@ namespace EQLogParser
       };
 
       return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    // Import overlays from a NAG database directory (reads overlays-database.json and parses via NagUtil)
+    internal static async Task ImportNagOverlays(string overlaysFilePath)
+    {
+      try
+      {
+        if (!File.Exists(overlaysFilePath))
+        {
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Could not find overlays-database.json in the selected directory.", "Import NAG DB", MessageWindow.IconType.Warn).ShowDialog();
+          });
+          return;
+        }
+
+        var json = await File.ReadAllTextAsync(overlaysFilePath);
+        var imported = NagUtil.ConvertOverlays(json);
+        if (imported?.Count > 0)
+        {
+          await TriggerStateDB.Instance.ImportOverlays(imported);
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow($"Imported {imported.Count} overlay(s).", "NAG Import Complete").ShowDialog();
+          });
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Error importing NAG overlays", ex);
+        await UiUtil.InvokeAsync(() =>
+        {
+          new MessageWindow("Problem importing NAG overlays. Check Error Log for details.", Resource.IMPORT_ERROR).ShowDialog();
+        });
+      }
+    }
+
+    // Import triggers from a NAG database directory (reads trigger-database.json and parses via NagUtil)
+    internal static async Task ImportNagTriggers(string databaseDirectory)
+    {
+      try
+      {
+        var filePath = Path.Combine(databaseDirectory, "trigger-database.json");
+        if (!File.Exists(filePath))
+        {
+          await UiUtil.InvokeAsync(() =>
+          {
+            new MessageWindow("Trigger-database.json not found in selected directory.", Resource.IMPORT_ERROR).ShowDialog();
+          });
+          return;
+        }
+
+        var json = await File.ReadAllTextAsync(filePath);
+        var (nodes, results, metadata) = NagUtil.ConvertTriggers(json, databaseDirectory);
+
+        if (nodes?.Count > 0)
+        {
+          var nagIdMap = await TriggerStateDB.Instance.ImportTriggers("", nodes);
+
+          // Import per-character trigger enable/disable state from characters-database.json
+          await ImportNagCharacterStates(databaseDirectory, nagIdMap, metadata);
+        }
+
+        // Generate CSV report
+        var reportPath = Path.Combine(databaseDirectory, "eqlp-import-report.csv");
+        try
+        {
+          NagUtil.WriteImportReport(results ?? [], reportPath);
+        }
+        catch (Exception ex)
+        {
+          Log.Warn("Could not write import report", ex);
+          reportPath = null;
+        }
+
+        // Show summary dialog
+        await UiUtil.InvokeAsync(() =>
+        {
+          if (results is null || results.Count == 0)
+          {
+            new MessageWindow("No triggers were processed.", "NAG Import Complete").ShowDialog();
+            return;
+          }
+
+          var imported = results.Count(r => r.Status == "Imported");
+          var partial = results.Count(r => r.Status == "Partial");
+          var skipped = results.Count(r => r.Status == "Skipped");
+
+          var message = $"NAG Trigger Import Complete\n\n" +
+            $"Total processed: {results.Count}\n" +
+            $"Imported: {imported}\n" +
+            $"Partial (some features dropped): {partial}\n" +
+            $"Skipped: {skipped}\n\n";
+
+          if (skipped > 0)
+          {
+            var skipReasons = results.Where(r => r.Status == "Skipped")
+              .GroupBy(r => r.Reason)
+              .Select(g => $"{g.Key}: {g.Count()}")
+              .ToList();
+            message += "Skipped triggers:\n" + string.Join("\n", skipReasons.Take(10)) + "\n";
+          }
+
+          if (!string.IsNullOrEmpty(reportPath))
+            message += $"\nDetailed report: {reportPath}";
+
+          new MessageWindow(message, "NAG Import Complete").ShowDialog();
+        });
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Error importing NAG triggers", ex);
+        await UiUtil.InvokeAsync(() =>
+        {
+          new MessageWindow("Problem importing NAG triggers. Check Error Log for details.", Resource.IMPORT_ERROR).ShowDialog();
+        });
+      }
+    }
+
+    // Import per-character trigger enable/disable state from characters-database.json.
+    // NAG supports two mechanisms:
+    // 1. Per-character disabledTriggers array (directly on the character entry)
+    // 2. triggerProfile reference — a profileId that maps to a triggerProfiles entry
+    //    containing its own disabledTriggers list.
+    private static async Task ImportNagCharacterStates(string databaseDirectory,
+      Dictionary<string, string> nagIdMap, Dictionary<string, NagTriggerMetadata> metadata = null)
+    {
+      try
+      {
+        var charsPath = Path.Combine(databaseDirectory, "characters-database.json");
+        if (!File.Exists(charsPath))
+          return;
+
+        var json = await File.ReadAllTextAsync(charsPath);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        // Build profileId → disabled list from triggerProfiles
+        var profileDisabledMap = new Dictionary<string, List<string>>();
+        if (root.TryGetProperty("triggerProfiles", out var profilesElem))
+        {
+          foreach (var p in profilesElem.EnumerateArray())
+          {
+            var profileId = p.TryGetProperty("profileId", out var pid) ? pid.GetString() : null;
+            var disabled = new List<string>();
+            if (p.TryGetProperty("disabledTriggers", out var dt))
+            {
+              foreach (var tid in dt.EnumerateArray())
+                disabled.Add(tid.GetString());
+            }
+            if (!string.IsNullOrEmpty(profileId))
+              profileDisabledMap[profileId] = disabled;
+          }
+        }
+
+        // Apply per-character states
+        if (root.TryGetProperty("characters", out var charsElem))
+        {
+          foreach (var c in charsElem.EnumerateArray())
+          {
+            var name = c.TryGetProperty("name", out var n) ? n.GetString() : null;
+            if (string.IsNullOrEmpty(name)) continue;
+
+            // Collect disabled trigger IDs: direct list + profile-referenced list
+            var disabledList = new List<string>();
+
+            // 1. Direct disabledTriggers on the character entry
+            if (c.TryGetProperty("disabledTriggers", out var dt))
+            {
+              foreach (var tid in dt.EnumerateArray())
+                disabledList.Add(tid.GetString());
+            }
+
+            // 2. Profile-referenced disabledTriggers via triggerProfile field
+            if (c.TryGetProperty("triggerProfile", out var tp) && tp.GetString() is { } profileId &&
+                profileDisabledMap.TryGetValue(profileId, out var profileDisabled))
+            {
+              foreach (var tid in profileDisabled)
+              {
+                if (!disabledList.Contains(tid))
+                  disabledList.Add(tid);
+              }
+            }
+
+            if (disabledList.Count > 0)
+              await TriggerStateDB.Instance.SetNagCharacterState(name, disabledList, nagIdMap);
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Warn("Could not import character states from characters-database.json", ex);
+      }
     }
 
     // Process a previously-selected import file (caller shows progress UI around this)
@@ -288,6 +491,7 @@ namespace EQLogParser
         toOverlay.Width = fromOverlay.Width;
         toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
+        toOverlay.NoTextWrap = fromOverlay.NoTextWrap;
         toOverlay.ClosePattern = TextUtils.Trim(fromOverlay.ClosePattern);
         toOverlay.UseCloseRegex = fromOverlay.UseCloseRegex;
 

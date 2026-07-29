@@ -540,24 +540,29 @@ namespace EQLogParser
         Import(parent, imported, Triggers);
         return Task.CompletedTask;
       });
+
+      TriggerImportEvent?.Invoke(true);
     }
 
     // from GINA or Quick Share with custom Folder name
-    internal async Task ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds = null)
+    // Returns a mapping of OriginalId (e.g. NAG triggerId) → EQLP node Id for import-time lookups.
+    internal async Task<Dictionary<string, string>> ImportTriggers(string name, IEnumerable<ExportTriggerNode> imported, HashSet<string> characterIds = null)
     {
+      var idMap = new Dictionary<string, string>();
       await _taskQueue.EnqueueTransaction(() =>
       {
         if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
           var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
-          Import(parent, imported, Triggers, characterIds);
+          Import(parent, imported, Triggers, characterIds, idMap);
         }
 
         return Task.CompletedTask;
       });
 
       TriggerImportEvent?.Invoke(true);
+      return idMap;
     }
 
     internal async Task<bool> IsAnyEnabled(string triggerId)
@@ -575,6 +580,37 @@ namespace EQLogParser
           }
         }
         return Task.FromResult(false);
+      });
+    }
+
+    // Set per-character trigger enable/disable state from NAG character profiles.
+    // disabledTriggerIds is the list of NAG trigger IDs that should be disabled for this character.
+    // Triggers NOT in this list remain enabled (default).
+    // nagIdMap is the pre-built mapping of NAG trigger IDs → EQLP node IDs from the import step.
+    internal async Task SetNagCharacterState(string characterName, List<string> disabledTriggerIds, Dictionary<string, string> nagIdMap)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        if (GetCol<TriggerState>(StatesCol) is not { } states)
+          return Task.CompletedTask;
+
+        // Build enabled dictionary: all NAG-imported triggers start as true,
+        // then disable the ones in the disabled list
+        var disabledSet = new HashSet<string>(disabledTriggerIds);
+        var enabledDict = new Dictionary<string, bool?>();
+
+        foreach (var kvp in nagIdMap)
+        {
+          var isDisabled = disabledSet.Contains(kvp.Key);
+          enabledDict[kvp.Value] = !isDisabled;
+        }
+
+        // Create or update the TriggerState for this character
+        var state = states.FindById(characterName) ?? new TriggerState { Id = characterName };
+        state.Enabled = enabledDict;
+        states.Upsert(state);
+
+        return Task.CompletedTask;
       });
     }
 
@@ -937,7 +973,7 @@ namespace EQLogParser
       tree.Delete(id);
     }
 
-    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
+    private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null, IDictionary<string, string> idMap = null)
     {
       if (parent?.Id is not { } parentId || imported == null || GetCol<TriggerNode>(TreeCol) is not { } tree) return;
 
@@ -953,13 +989,13 @@ namespace EQLogParser
       {
         if (newNode.Nodes?.Count > 0)
         {
-          Import(tree, parentId, newNode.Nodes, type, characterStates);
+          Import(tree, parentId, newNode.Nodes, type, characterStates, idMap);
         }
       }
     }
 
     private bool Import(ILiteCollection<TriggerNode> tree, string parentId,
-      IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates)
+      IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates, IDictionary<string, string> idMap = null)
     {
       var hasMissingMedia = false;
       var triggers = type == Triggers;
@@ -982,7 +1018,7 @@ namespace EQLogParser
             // directory but make sure it is one
             else if (foundTrigger.OverlayData == null && foundTrigger.TriggerData == null && newNode.Nodes?.Count > 0)
             {
-              if (Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates))
+              if (Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates, idMap))
               {
                 MissingMedia[foundTrigger.Id] = true;
                 hasMissingMedia = true;
@@ -1008,7 +1044,7 @@ namespace EQLogParser
             {
               Insert(node2, index);
 
-              if (Import(tree, node2.Id, newNode.Nodes, type, characterStates))
+              if (Import(tree, node2.Id, newNode.Nodes, type, characterStates, idMap))
               {
                 MissingMedia[node2.Id] = true;
                 hasMissingMedia = true;
@@ -1033,7 +1069,7 @@ namespace EQLogParser
             // directory but make sure it is one
             else if (foundOverlay.OverlayData == null && foundOverlay.TriggerData == null && newNode.Nodes?.Count > 0)
             {
-              Import(tree, foundOverlay.Id, newNode.Nodes, type, characterStates);
+              Import(tree, foundOverlay.Id, newNode.Nodes, type, characterStates, idMap);
               enableId = foundOverlay.Id;
             }
           }
@@ -1053,7 +1089,7 @@ namespace EQLogParser
             else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node)
             {
               Insert(node, index);
-              Import(tree, node.Id, newNode.Nodes, type, characterStates);
+              Import(tree, node.Id, newNode.Nodes, type, characterStates, idMap);
               enableId = node.Id;
             }
           }
@@ -1061,6 +1097,10 @@ namespace EQLogParser
 
         if (enableId != null)
         {
+          // Record OriginalId → EQLP nodeId mapping for import-time lookups (e.g. NAG character state)
+          if (triggers && newNode.OriginalId != null && idMap != null && !idMap.ContainsKey(newNode.OriginalId))
+            idMap[newNode.OriginalId] = enableId;
+
           RecentlyMerged[enableId] = true;
 
           if (characterStates != null && GetCol<TriggerState>(StatesCol) is { } states)
