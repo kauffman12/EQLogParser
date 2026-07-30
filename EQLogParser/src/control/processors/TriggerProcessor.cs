@@ -1,4 +1,4 @@
-﻿using EQLogParser.Audio;
+using EQLogParser.Audio;
 using log4net;
 using System;
 using System.Collections.Concurrent;

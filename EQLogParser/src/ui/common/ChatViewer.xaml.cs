@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Syncfusion.Windows.Controls.Input;
 using System;
 using System.Collections.Generic;

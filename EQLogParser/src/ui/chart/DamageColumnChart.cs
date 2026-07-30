@@ -1,4 +1,4 @@
-﻿namespace EQLogParser
+namespace EQLogParser
 {
   internal class DamageColumnChart : ColumnChart
   {

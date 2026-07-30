@@ -75,8 +75,8 @@ internal static class NagUtil
       return "#FFFFFFFF";
     }
 
-    // Already 8-char ARGB
-    if (color.Length == 9 && color[1] != ',')
+    // Already 8-char ARGB (#AARRGGBB)
+    if (color.Length == 9 && color.StartsWith('#'))
     {
       return color;
     }

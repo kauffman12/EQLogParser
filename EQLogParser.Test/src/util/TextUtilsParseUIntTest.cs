@@ -337,7 +337,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void TestParseDouble_NullString_ReturnsNaN()
     {
-      var result = TextUtils.ParseDouble((string)null!);
+      var result = TextUtils.ParseDouble(ReadOnlySpan<char>.Empty);
       Assert.IsTrue(double.IsNaN(result));
     }
 

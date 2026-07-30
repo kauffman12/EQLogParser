@@ -678,9 +678,12 @@ namespace EQLogParser.Wpf.Test
       var skipped = results.FirstOrDefault(r => r.TriggerId == "t2");
       var partial = results.FirstOrDefault(r => r.TriggerId == "t3");
 
-      Assert.AreEqual("Imported", imported.Status);
-      Assert.AreEqual("Skipped", skipped.Status);
-      Assert.AreEqual("Partial", partial.Status);
+      Assert.IsNotNull(imported);
+      Assert.IsNotNull(skipped);
+      Assert.IsNotNull(partial);
+      Assert.AreEqual("Imported", imported!.Status);
+      Assert.AreEqual("Skipped", skipped!.Status);
+      Assert.AreEqual("Partial", partial!.Status);
     }
 
     [TestMethod]
@@ -1065,9 +1068,9 @@ namespace EQLogParser.Wpf.Test
 
     #region Helper Methods
 
-    private string CreateTriggerJson(string name, string pattern, bool onlyExecuteInDev = false, double score = 0.5,
-        JsonElement[] capturePhrases = null, JsonElement[] conditions = null, JsonElement[] endEarlyPhrases = null,
-        JsonElement[] actions = null)
+    private string CreateTriggerJson(string? name, string pattern, bool onlyExecuteInDev = false, double score = 0.5,
+        JsonElement[]? capturePhrases = null, JsonElement[]? conditions = null, JsonElement[]? endEarlyPhrases = null,
+        JsonElement[]? actions = null)
     {
       var phrases = capturePhrases ?? new[] { CreateCapturePhrase(pattern) };
       var sb = new StringBuilder();
@@ -1126,7 +1129,7 @@ namespace EQLogParser.Wpf.Test
       return sb.ToString();
     }
 
-    private string CreateActionString(int actionType, string displayText = null, double? duration = null, bool durationNull = false, string audioFileId = null)
+    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null)
     {
       var sb = new StringBuilder();
       sb.Append("{\"actionType\":");
@@ -1155,7 +1158,7 @@ namespace EQLogParser.Wpf.Test
       return sb.ToString();
     }
 
-    private JsonElement CreateAction(int actionType, string displayText = null, double? duration = null, bool durationNull = false, string audioFileId = null)
+    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null)
     {
       var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId);
       return JsonDocument.Parse(json).RootElement;
@@ -1167,7 +1170,7 @@ namespace EQLogParser.Wpf.Test
       return JsonDocument.Parse(json).RootElement;
     }
 
-    private JsonElement CreateCondition(string variableName, int operatorType, string variableValue)
+    private JsonElement CreateCondition(string variableName, int operatorType, string? variableValue)
     {
       var sb = new StringBuilder();
       sb.Append("{\"conditionType\":1,\"variableName\":\"");

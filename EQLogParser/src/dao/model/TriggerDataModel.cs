@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Concurrent;

@@ -1,4 +1,4 @@
-﻿using EQLogParser.Audio;
+using EQLogParser.Audio;
 using FontAwesome5;
 using Syncfusion.UI.Xaml.TreeView;
 using System;

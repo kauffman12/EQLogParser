@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.TreeGrid;
 using Syncfusion.UI.Xaml.Utility;
 

@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using Microsoft.Extensions.Caching.Memory;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;

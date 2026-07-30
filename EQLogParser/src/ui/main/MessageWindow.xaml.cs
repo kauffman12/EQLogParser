@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;

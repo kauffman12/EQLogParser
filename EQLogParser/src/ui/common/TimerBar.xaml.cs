@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.ProgressBar;
+using Syncfusion.UI.Xaml.ProgressBar;
 using System.Windows;
 using System.Windows.Controls;
 
