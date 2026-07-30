@@ -939,6 +939,130 @@ namespace EQLogParser.Wpf.Test
 
     #endregion
 
+    #region Missing Audio Files Tracking
+
+    [TestMethod]
+    public void ConvertTriggers_AudioFileNotInSoundsDir_TrackedInMissingAudioFiles()
+    {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
+      {
+        CreateAction(1, audioFileId: "audio-file-123")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      // Without files-database.json, the raw audioFileId is used as SoundToPlay.
+      // Since "audio-file-123" doesn't have a .wav/.mp3 extension and won't exist in data/sounds/,
+      // it should be tracked as missing.
+      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.AreEqual("audio-file-123", results[0].MissingAudioFiles[0]);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_AudioFileWithExtensionNotInSoundsDir_TrackedInMissingAudioFiles()
+    {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
+      {
+        CreateAction(1, audioFileId: "test-sound.wav")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      // "test-sound.wav" has a valid extension but doesn't exist in data/sounds/
+      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.AreEqual("test-sound.wav", results[0].MissingAudioFiles[0]);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_NoAudioActions_MissingAudioFilesEmpty()
+    {
+      var json = CreateTriggerJson("Text Trigger", "pattern", actions: new[]
+      {
+        CreateAction(0, displayText: "Hello")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      Assert.AreEqual(0, results[0].MissingAudioFiles.Count);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_MultipleAudioActions_AllTrackedInMissingAudioFiles()
+    {
+      var json = CreateTriggerJson("Multi Audio Trigger", "pattern", actions: new[]
+      {
+        CreateAction(1, audioFileId: "sound-a.wav"),
+        CreateAction(1, audioFileId: "sound-b.mp3")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      Assert.AreEqual(2, results[0].MissingAudioFiles.Count);
+      Assert.IsTrue(results[0].MissingAudioFiles.Contains("sound-a.wav"));
+      Assert.IsTrue(results[0].MissingAudioFiles.Contains("sound-b.mp3"));
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_SkippedTrigger_MissingAudioFilesStillTracked()
+    {
+      var json = CreateTriggerJson("Skipped Trigger", "pattern", onlyExecuteInDev: true, actions: new[]
+      {
+        CreateAction(1, audioFileId: "dev-only-sound.wav")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(0, nodes.Count);
+      Assert.AreEqual("Skipped", results[0].Status);
+      // Even skipped triggers should track their missing audio files for reporting
+      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_AudioFileIdWithoutExtension_NotTrackedAsMissing()
+    {
+      // When there's no files-database.json, the raw audioFileId is used as SoundToPlay.
+      // If it doesn't have a .wav/.mp3 extension (like "ShortWarningPing"), it won't be
+      // recognized by SoundFileRegex at runtime, but we don't track it as missing since
+      // we can't verify its existence without the file map.
+      var json = CreateTriggerJson("Ding Trigger", "pattern", actions: new[]
+      {
+        CreateAction(1, audioFileId: "ShortWarningPing")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      // Without files-database.json, the raw ID is used directly
+      Assert.AreEqual("ShortWarningPing", nodes[0].TriggerData.SoundToPlay);
+      // Not tracked as missing since we can't verify without the file map
+      Assert.AreEqual(0, results[0].MissingAudioFiles.Count);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_MissingAudioFilesInMetadata()
+    {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
+      {
+        CreateAction(1, audioFileId: "missing-sound.wav")
+      });
+
+      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, metadata.Count);
+      // Find the trigger ID from results to look up metadata
+      var triggerId = results[0].TriggerId;
+      Assert.IsTrue(metadata.ContainsKey(triggerId));
+      Assert.IsNotNull(metadata[triggerId].MissingAudioFiles);
+      Assert.AreEqual(1, metadata[triggerId].MissingAudioFiles.Count);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private string CreateTriggerJson(string name, string pattern, bool onlyExecuteInDev = false, double score = 0.5,

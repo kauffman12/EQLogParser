@@ -155,6 +155,21 @@ namespace EQLogParser
             message += "Skipped triggers:\n" + string.Join("\n", skipReasons.Take(10)) + "\n";
           }
 
+          // Collect unique missing audio files across all results
+          var missingAudio = results.Where(r => r.MissingAudioFiles?.Count > 0)
+            .SelectMany(r => r.MissingAudioFiles)
+            .Distinct()
+            .ToList();
+
+          if (missingAudio.Count > 0)
+          {
+            message += $"\nMissing audio files ({missingAudio.Count}):\n" +
+              string.Join("\n", missingAudio.Take(10));
+            if (missingAudio.Count > 10)
+              message += $"\n... and {missingAudio.Count - 10} more";
+            message += "\nUse 'Browse for Sound File' in the trigger editor to locate these.";
+          }
+
           if (!string.IsNullOrEmpty(reportPath))
             message += $"\nDetailed report: {reportPath}";
 
@@ -654,6 +669,28 @@ namespace EQLogParser
       return text;
     }
 
+    // Resolves a sound file reference to a full path. If the filename contains
+    // a path separator, it is treated as an explicit (absolute or relative) path.
+    // Otherwise, it is resolved from the default data/sounds directory.
+    internal static string ResolveSoundPath(string soundFile)
+    {
+      if (string.IsNullOrEmpty(soundFile))
+      {
+        return null;
+      }
+
+      // If it contains a path separator, treat as an explicit path
+      if (soundFile.Contains('\\') || soundFile.Contains('/'))
+      {
+        return Path.IsPathRooted(soundFile)
+          ? soundFile
+          : Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, soundFile));
+      }
+
+      // Otherwise, look in the default sounds directory
+      return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", soundFile);
+    }
+
     internal static bool SoundFileExists(string text)
     {
       if (string.IsNullOrEmpty(text))
@@ -661,7 +698,7 @@ namespace EQLogParser
         return false;
       }
 
-      return File.Exists(@"data/sounds/" + text);
+      return File.Exists(ResolveSoundPath(text));
     }
 
     internal static bool MatchSoundFile(string text, out string file, out string notFile)

@@ -1,6 +1,9 @@
 ﻿using EQLogParser.Audio;
+using log4net;
+using Microsoft.Win32;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Tools.Controls;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -15,6 +18,7 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly ObservableCollection<string> _fileList;
     private ComboBoxAdv _theOptionsCombo;
     private ComboBox _theSoundCombo;
@@ -65,7 +69,7 @@ namespace EQLogParser
 
       _theOptionsCombo = new ComboBoxAdv
       {
-        ItemsSource = new List<string> { "Text to Speak", "Play Sound" },
+        ItemsSource = new List<string> { "Text to Speak", "Play Sound", "Browse for Sound File" },
         SelectedIndex = 0,
         BorderThickness = new Thickness(0),
         IsReadOnly = true
@@ -151,7 +155,7 @@ namespace EQLogParser
           }
           else if (_theOptionsCombo.SelectedIndex == 1 && _theSoundCombo.SelectedValue is string selected && !string.IsNullOrEmpty(selected))
           {
-            AudioManager.Instance.TestSpeakFileAsync(@"data/sounds/" + selected, model.Volume);
+            AudioManager.Instance.TestSpeakFileAsync(TriggerUtil.ResolveSoundPath(selected), model.Volume);
           }
         }
       }
@@ -162,7 +166,7 @@ namespace EQLogParser
       if (sender is TextBox textBox)
       {
         var isSound = TriggerUtil.MatchSoundFile(textBox.Text, out var soundFile, out _);
-        var soundExists = isSound && File.Exists(@"data/sounds/" + soundFile);
+        var soundExists = isSound && TriggerUtil.SoundFileExists(soundFile);
 
         if (isSound)
         {
@@ -212,6 +216,18 @@ namespace EQLogParser
     {
       if (sender is ComboBoxAdv { SelectedIndex: > -1 } combo)
       {
+        // Index 2 = "Browse for Sound File" — open file dialog immediately
+        if (combo.SelectedIndex == 2)
+        {
+          var browseSucceeded = BrowseForSoundFile();
+          if (!browseSucceeded)
+          {
+            // User cancelled or error — reset to previous selection
+            combo.SelectedIndex = _theTtsBox.Visibility == Visibility.Visible ? 0 : 1;
+          }
+          return;
+        }
+
         var hideText = combo.SelectedIndex != 0;
         _theTtsBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
         _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
@@ -239,6 +255,51 @@ namespace EQLogParser
       }
     }
 
+    private bool BrowseForSoundFile()
+    {
+      var dialog = new OpenFileDialog
+      {
+        Filter = "Audio Files|*.wav;*.mp3",
+        Title = "Select a Sound File"
+      };
+
+      if (dialog.ShowDialog() == true && !string.IsNullOrEmpty(dialog.FileName))
+      {
+        var selectedPath = dialog.FileName;
+        var fileName = Path.GetFileName(selectedPath);
+        var soundsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds");
+        var targetPath = Path.Combine(soundsDir, fileName);
+
+        // Copy the file to data/sounds/ if it's not already there
+        if (!File.Exists(targetPath))
+        {
+          try
+          {
+            Directory.CreateDirectory(soundsDir);
+            File.Copy(selectedPath, targetPath, overwrite: false);
+            // Add to fileList immediately so combo box shows it without waiting for FileSystemWatcher
+            if (!_fileList.Contains(fileName))
+            {
+              _fileList.Add(fileName);
+            }
+          }
+          catch (Exception ex)
+          {
+            Log.Warn("Could not copy sound file to data/sounds/", ex);
+            // Still set the absolute path — ResolveSoundPath will handle it
+            _theRealTextBox.Text = "<<" + selectedPath + ">>";
+            return true;
+          }
+        }
+
+        // Set the coded filename in the real text box (same format as combo selection)
+        _theRealTextBox.Text = "<<" + fileName + ">>";
+        return true;
+      }
+
+      return false;
+    }
+
     private void SoundComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (sender is ComboBox { SelectedValue: string selected } combo)
@@ -246,7 +307,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(selected))
         {
           // change from real text box being modified
-          var path = @"data/sounds/" + selected;
+          var path = TriggerUtil.ResolveSoundPath(selected);
           if (combo.Tag == null && File.Exists(path))
           {
             var codedName = "<<" + selected + ">>";

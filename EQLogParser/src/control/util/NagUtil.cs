@@ -20,6 +20,7 @@ public class NagImportResult
   public string ActionsSummary { get; set; }
   public double Score { get; set; } = 0.5;
   public List<string> DroppedFeatures { get; set; }
+  public List<string> MissingAudioFiles { get; set; } = [];
 }
 
 /// <summary>
@@ -33,14 +34,12 @@ public class NagTriggerMetadata
   public double Score { get; set; }
   public string ActionsSummary { get; set; }
   public List<string> DroppedFeatures { get; set; }
+  public List<string> MissingAudioFiles { get; set; } = [];
 }
 
 internal static class NagUtil
 {
   private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
-  // Regex to find named capture groups: (?<name>...)
-  private static readonly Regex NamedGroupPattern = new(@"\(\?<([a-zA-Z][^>]*?)>", RegexOptions.Compiled);
 
   // NAG fontWeight (numeric) → EQLP FontWeight (string)
   private static string ConvertFontWeight(int weight) => weight switch
@@ -130,16 +129,20 @@ internal static class NagUtil
   private static readonly Regex GroupPattern = new(@"(?<!\$)\{([a-zA-Z][^}]*)\}", RegexOptions.Compiled);
 
   // NAG ${varName} in regex phrases — not supported by EQLP, replace with (?<varName>.+?)
+  // Exception: ${Character} maps to EQLP's native {c} (replaced with player name at runtime).
   private static readonly Regex DollarVarRegex = new(@"\$\{(\w+)\}", RegexOptions.Compiled);
 
   // NAG {VAR} in regex phrases that EQLP does NOT handle at runtime.
-  // EQLP handles {S}/{s}, {N}/{n}, {TS}/{ts} via CheckOptions(). Everything else
-  // (e.g., {C}, {c}, {LN}, {target}) must be replaced with a capture group to avoid regex errors.
-  // Simple alphanumeric names become named groups (?<VAR>.+?) so they can be referenced in display text.
-  // Names with spaces/special chars fall back to anonymous (.+?).
-  // Also excludes (?<name>...) named groups and ${...} (already handled above).
+  // Excluded (passed through for EQLP runtime handling):
+  //   {S}/{s}/{N}/{n} + digit suffixes — CheckOptions() string/number captures
+  //   {TS}/{ts} — CheckOptions() timer duration
+  //   {C}/{c} — TriggerProcessor replaces with player character name at runtime
+  // Everything else becomes a named capture group:
+  //   {LN} → (?<LN>\w+) (player/NPC name, single word)
+  //   {target} → (?<target>.+?) (NPC names can have spaces, commas, quotes)
+  //   ${SpellBeingCast} → (?<SpellBeingCast>.+?) (handled by DollarVarRegex above)
   private static readonly Regex UnhandledVarRegex = new(
-    @"(?<!\$)\{(?!S\d?|s\d?|N\d?|n\d?|TS|ts)[a-zA-Z][^}]*\}",
+    @"(?<!\$)\{(?!S\d?|s\d?|N\d?|n\d?|TS|ts|[Cc])[a-zA-Z][^}]*\}",
     RegexOptions.Compiled);
 
   // Convert NAG template syntax to EQLP syntax
@@ -231,65 +234,6 @@ internal static class NagUtil
     return parts.Count > 0 ? string.Join(" && ", parts) : null;
   }
 
-  // Combine multiple capture phrases into a single regex pattern using alternation
-  private static string CombinePhrases(List<string> phrases, bool anyUseRegex)
-  {
-    if (phrases.Count == 1) return phrases[0];
-
-    var escaped = new List<string>();
-    foreach (var phrase in phrases)
-    {
-      if (anyUseRegex)
-      {
-        escaped.Add(phrase);
-      }
-      else
-      {
-        // Escape regex special chars for non-regex phrases
-        escaped.Add(Regex.Escape(phrase));
-      }
-    }
-
-    // Collect all named capture groups and rename conflicts
-    var groupNames = new List<string>();
-    foreach (var phrase in phrases)
-    {
-      foreach (Match m in NamedGroupPattern.Matches(phrase))
-      {
-        groupNames.Add(m.Groups[1].Value);
-      }
-    }
-
-    // Check for duplicate group names and rename if needed
-    var uniqueGroups = new HashSet<string>(groupNames, StringComparer.OrdinalIgnoreCase);
-    if (uniqueGroups.Count < groupNames.Count)
-    {
-      var seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-      var renamed = new List<string>();
-      foreach (var phrase in escaped)
-      {
-        var result = phrase;
-        foreach (Match m in NamedGroupPattern.Matches(phrase))
-        {
-          var name = m.Groups[1].Value;
-          if (!seen.TryGetValue(name, out var count))
-          {
-            seen[name] = 0;
-          }
-
-          seen[name]++;
-          var newName = seen[name] > 1 ? $"{name}{seen[name]}" : name;
-          result = result.Replace($"(?<{name}", $"(?<{newName}");
-        }
-        renamed.Add(result);
-      }
-
-      return "(?:" + string.Join("|", renamed) + ")";
-    }
-
-    return "(?:" + string.Join("|", escaped) + ")";
-  }
-
   // Resolve audio file ID to filename using files-database.json if available
   private static Dictionary<string, string> _audioFileMap;
   private static void LoadAudioFileMap(string databaseDirectory)
@@ -304,6 +248,8 @@ internal static class NagUtil
         using var doc = JsonDocument.Parse(File.ReadAllText(filePath));
         _audioFileMap = new Dictionary<string, string>();
         // files-database.json has structure: { "files": [ { fileId, mediaType, fileName, physicalName }, ... ] }
+        // Prefer physicalName (full path on disk) so ResolveSoundPath can use it directly.
+        // Fall back to fileName if physicalName is absent.
         var filesElem = doc.RootElement.GetProperty("files");
         foreach (var file in filesElem.EnumerateArray())
         {
@@ -313,7 +259,12 @@ internal static class NagUtil
             var fileName = name.GetString();
             if (!string.IsNullOrEmpty(fileId) && !string.IsNullOrEmpty(fileName))
             {
-              _audioFileMap[fileId] = fileName;
+              // physicalName holds the real path to the audio file on the user's machine.
+              // ResolveSoundPath handles both bare filenames and full paths.
+              var resolved = file.TryGetProperty("physicalName", out var phys) && phys.GetString() is { Length: > 0 } p
+                ? p
+                : fileName;
+              _audioFileMap[fileId] = resolved;
             }
           }
         }
@@ -391,7 +342,8 @@ internal static class NagUtil
             FolderPath = parsed.result.FolderPath,
             Score = parsed.result.Score,
             ActionsSummary = parsed.result.ActionsSummary,
-            DroppedFeatures = parsed.result.DroppedFeatures
+            DroppedFeatures = parsed.result.DroppedFeatures,
+            MissingAudioFiles = parsed.result.MissingAudioFiles
           };
         }
       }
@@ -487,15 +439,14 @@ internal static class NagUtil
       return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = "No capture phrases" });
     }
 
-    // Collect all phrases and check for regex usage
-    var phrases = new List<string>();
-    var anyUseRegex = false;
+    // Collect all phrases — each becomes its own EQLP trigger (no alternation combining).
+    // This avoids named group collisions when multiple phrases share capture group names.
+    var phrases = new List<(string pattern, bool useRegex)>();
     foreach (var phrase in capturePhrases.EnumerateArray())
     {
       if (phrase.TryGetProperty("phrase", out var p) && p.GetString() is { Length: > 0 } text)
       {
         var useRegex = phrase.TryGetProperty("useRegEx", out var re) && re.GetBoolean();
-        if (useRegex) anyUseRegex = true;
 
         // NAG uses several variable-reference syntaxes in capture phrases that need
         // special handling before the pattern is stored:
@@ -513,45 +464,60 @@ internal static class NagUtil
         // 3. {S}, {N} and variants — EQLP's CheckOptions() also handles these at runtime
         //    ({S}→(?<S>.+), {N}→(?<N>\d+)). Must NOT be converted by ConvertTemplates.
         //
-        // 4. {C}, {c}, {LN}, {target} and other unhandled vars — not supported by EQLP.
-        //    Replace with named capture groups (?<VAR>.+?) so the captured value can be
-        //    referenced in display text (e.g., {target} → {$target}). Simple alphanumeric
-        //    names become named groups; complex names fall back to anonymous (.+?).
+        // 4. {C}, {c} — EQLP replaces with player character name at runtime.
+        //    Passed through untouched (no regex capture group needed).
+        //
+        // 5. {LN} — Player/NPC name, single word. Replaced with (?<LN>\w+).
+        //
+        // 6. {target} — Target entity name (can have spaces, commas, quotes).
+        //    Replaced with (?<target>.+?).
+        //
+        // 7. Other unhandled vars like {SpellBeingCast} in ${var} syntax —
+        //    replaced with (?<VAR>.+?) via DollarVarRegex.
         //
         // For non-regex phrases containing NAG variable references ({VAR}), we must
         // also enable regex mode because these variables require capture groups to work.
-        // 49 single-phrase triggers use {C} in non-regex phrases — without regex mode,
-        // the literal text "{C}" would never match log lines. Note: {C}/{c} refers to
-        // the player character name, same concept as EQLP's {c} (CharacterCode).
-        var hasNagVars = Regex.IsMatch(text, @"(?<!\$)\{[A-Za-z]");
+        // Excluded from this check: {C}/{c} (EQLP replaces natively), ${var} (handled below).
+        // Variables like {S}, {N}, {TS} and their digit-suffixed variants DO force regex
+        // mode because EQLP's CheckOptions() needs them as named capture groups.
+        var hasNagVars = Regex.IsMatch(text, @"(?<!\$)\{(?![Cc]|S\d?|s\d?|N\d?|n\d?|TS|ts)");
         if (useRegex || hasNagVars)
         {
-          anyUseRegex = true;
+          useRegex = true;
 
-          // Replace ${varName} with (?<varName>.+?) so it can be referenced in display text
-          text = DollarVarRegex.Replace(text, m => $"(?<{m.Groups[1].Value}>.+?)");
+          // Replace ${varName} with (?<varName>.+?) so it can be referenced in display text.
+          // Exception: ${Character} → {c} (EQLP replaces {c} with player name at runtime).
+          text = DollarVarRegex.Replace(text, m =>
+            m.Groups[1].Value.Equals("Character", StringComparison.OrdinalIgnoreCase)
+              ? "{c}"
+              : $"(?<{m.Groups[1].Value}>.+?)");
 
-          // Replace unhandled {VAR} patterns (not S/s/N/n/TS/ts and not named groups)
-          // Simple names become named groups (?<VAR>.+?); complex names fall back to (.+?)
+          // Replace unhandled {VAR} patterns with named capture groups.
+          // {LN} → (?<LN>\w+) (player/NPC name, single word like a valid EQ player name)
+          // {target}, others → (?<VAR>.+?) (NPC names/spell names can have spaces, commas, quotes)
           text = UnhandledVarRegex.Replace(text, m =>
           {
             var varName = m.Groups[0].Value.Trim('{', '}');
+            if (varName.Equals("LN", StringComparison.OrdinalIgnoreCase))
+            {
+              return "(?<LN>\\w+)";
+            }
             return char.IsLetterOrDigit(varName[0]) && varName.All(c => char.IsLetterOrDigit(c) || c == '_')
               ? $"(?<{varName}>.+?)"
               : "(.+?)";
           });
 
           // Do NOT call ConvertTemplates — leave {S}, {N}, {TS} as-is for EQLP runtime
-          phrases.Add(text);
+          phrases.Add((text, useRegex));
         }
         else
         {
-          phrases.Add(ConvertTemplates(text));
+          phrases.Add((ConvertTemplates(text), false));
         }
       }
-      else if (phrase.TryGetProperty("useRegEx", out var re) && re.GetBoolean())
+      else if (phrase.TryGetProperty("useRegEx", out var re2) && re2.GetBoolean())
       {
-        anyUseRegex = true;
+        // Phrase text was empty/null but useRegEx is set — skip it
       }
     }
 
@@ -560,18 +526,14 @@ internal static class NagUtil
       return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = "No valid phrases" });
     }
 
-    // Build pattern: single phrase or combined via alternation
-    var pattern = phrases.Count == 1 ? phrases[0] : CombinePhrases(phrases, anyUseRegex);
-    var useRegEx = phrases.Count > 1 || anyUseRegex;
-
-    // Parse actions and build Trigger data
-    var parsed = ParseActions(element.GetProperty("actions"), score, useRegEx, useCooldown, cooldownDuration, databaseDirectory);
+    // Parse actions once — shared across all phrase-based triggers
+    var parsed = ParseActions(element.GetProperty("actions"), score, phrases.Any(p => p.useRegex), useCooldown, cooldownDuration, databaseDirectory);
     if (parsed.triggerData is null)
     {
       return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = parsed.reason ?? "No supported actions" });
     }
 
-    var triggerData = parsed.triggerData;
+    var baseTriggerData = parsed.triggerData;
     var droppedFeatures = parsed.droppedFeatures;
 
     // Add class level filtering as a dropped feature (no EQLP equivalent)
@@ -580,17 +542,11 @@ internal static class NagUtil
       droppedFeatures.Add("class level filtering");
     }
 
-    // Assign the computed pattern (was previously lost — ParseActions set Pattern = "")
-    triggerData.Pattern = pattern;
-
-    // Parse conditions into MatchVariableCondition
+    // Parse conditions into MatchVariableCondition (shared across all phrase-triggers)
+    string conditionStr = null;
     if (element.TryGetProperty("conditions", out var conds))
     {
-      var conditionStr = ParseConditions(conds);
-      if (!string.IsNullOrEmpty(conditionStr))
-      {
-        triggerData.MatchVariableCondition = conditionStr;
-      }
+      conditionStr = ParseConditions(conds);
     }
 
     // Build import notes for Comments field (no longer embeds NAG ID — that's in OriginalId)
@@ -599,54 +555,85 @@ internal static class NagUtil
       commentParts.Add($"Original: {comments}");
     if (droppedFeatures.Count > 0)
       commentParts.Add($"Dropped: {string.Join(", ", droppedFeatures)}");
-    triggerData.Comments = commentParts.Count > 0 ? string.Join("\n", commentParts) : null;
-    triggerData.Priority = ConvertScore(score);
-    triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
+    var triggerComments = commentParts.Count > 0 ? string.Join("\n", commentParts) : null;
 
-    var node = new ExportTriggerNode
+    // Build one EQLP trigger per capture phrase (no regex alternation combining)
+    var nodes = new List<ExportTriggerNode>();
+    for (var i = 0; i < phrases.Count; i++)
     {
-      Id = Guid.NewGuid().ToString(),
-      Name = name,
-      OriginalId = triggerId,
-      TriggerData = triggerData
-    };
+      var (pattern, useRegEx) = phrases[i];
+      var triggerData = baseTriggerData.Clone();
+
+      // Assign the pattern for this phrase
+      triggerData.Pattern = pattern;
+      triggerData.UseRegex = useRegEx;
+
+      // Apply conditions
+      if (!string.IsNullOrEmpty(conditionStr))
+      {
+        triggerData.MatchVariableCondition = conditionStr;
+      }
+
+      // Apply shared metadata
+      triggerData.Comments = triggerComments;
+      triggerData.Priority = ConvertScore(score);
+      triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
+
+      var triggerName = phrases.Count > 1 ? $"{name} #{i + 1}" : name;
+
+      nodes.Add(new ExportTriggerNode
+      {
+        Id = Guid.NewGuid().ToString(),
+        Name = triggerName,
+        OriginalId = triggerId,
+        TriggerData = triggerData
+      });
+    }
 
     // Parse end-early phrases — merge trigger-level and action-level (max 3 slots)
-    var allEndEarlyPhrases = new List<string>();
+    // Each entry tracks (phrase, useRegEx) so EndUseRegex is set correctly
+    var allEndEarlyPhrases = new List<(string phrase, bool useRegex)>();
     if (element.TryGetProperty("endEarlyPhrases", out var eep) && eep.ValueKind == JsonValueKind.Array)
     {
       foreach (var ee in eep.EnumerateArray())
       {
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
-          allEndEarlyPhrases.Add(ConvertTemplates(phrase));
+          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
+          allEndEarlyPhrases.Add((ConvertTemplates(phrase), useRegex));
         }
         if (allEndEarlyPhrases.Count >= 3) break;
       }
     }
     // Merge action-level end-early phrases (537 timer actions have these in real data)
-    foreach (var aep in parsed.actionEndEarlyPhrases)
+    var actionEep = parsed.actionEndEarlyPhrases;
+    for (var idx = 0; idx < actionEep.phrases.Count && allEndEarlyPhrases.Count < 3; idx++)
     {
-      if (!allEndEarlyPhrases.Contains(aep))
-        allEndEarlyPhrases.Add(aep);
-      if (allEndEarlyPhrases.Count >= 3) break;
+      var aep = actionEep.phrases[idx];
+      if (!allEndEarlyPhrases.Any(x => x.phrase == aep))
+      {
+        allEndEarlyPhrases.Add((aep, actionEep.regexFlags[idx]));
+      }
     }
 
-    // Apply end-early patterns to the trigger
-    if (allEndEarlyPhrases.Count > 0)
+    // Apply end-early patterns to ALL phrase-triggers (shared across them)
+    foreach (var node in nodes)
     {
-      node.TriggerData.EndEarlyPattern = allEndEarlyPhrases[0];
-      node.TriggerData.EndUseRegex = false;
-    }
-    if (allEndEarlyPhrases.Count > 1)
-    {
-      node.TriggerData.EndEarlyPattern2 = allEndEarlyPhrases[1];
-      node.TriggerData.EndUseRegex2 = false;
-    }
-    if (allEndEarlyPhrases.Count > 2)
-    {
-      node.TriggerData.EndEarlyPattern3 = allEndEarlyPhrases[2];
-      node.TriggerData.EndUseRegex3 = false;
+      if (allEndEarlyPhrases.Count > 0)
+      {
+        node.TriggerData.EndEarlyPattern = allEndEarlyPhrases[0].phrase;
+        node.TriggerData.EndUseRegex = allEndEarlyPhrases[0].useRegex;
+      }
+      if (allEndEarlyPhrases.Count > 1)
+      {
+        node.TriggerData.EndEarlyPattern2 = allEndEarlyPhrases[1].phrase;
+        node.TriggerData.EndUseRegex2 = allEndEarlyPhrases[1].useRegex;
+      }
+      if (allEndEarlyPhrases.Count > 2)
+      {
+        node.TriggerData.EndEarlyPattern3 = allEndEarlyPhrases[2].phrase;
+        node.TriggerData.EndUseRegex3 = allEndEarlyPhrases[2].useRegex;
+      }
     }
 
     // Determine import status and reason
@@ -665,14 +652,15 @@ internal static class NagUtil
         TriggerId = triggerId,
         Status = "Skipped",
         Reason = "Sequential capture method (not supported)",
-        ActionsSummary = parsed.actionSummary
+        ActionsSummary = parsed.actionSummary,
+        MissingAudioFiles = parsed.missingAudioFiles
       });
     }
 
     // Build actions summary
     var actionSummary = parsed.actionSummary;
 
-    return ([node], new NagImportResult
+    return (nodes, new NagImportResult
     {
       TriggerName = name,
       TriggerId = triggerId,
@@ -680,11 +668,12 @@ internal static class NagUtil
       Reason = reason,
       ActionsSummary = actionSummary,
       Score = score,
-      DroppedFeatures = droppedFeatures
+      DroppedFeatures = droppedFeatures,
+      MissingAudioFiles = parsed.missingAudioFiles
     });
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, List<string> actionEndEarlyPhrases) ParseActions(
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory)
   {
     var textToDisplay = "";
@@ -698,9 +687,15 @@ internal static class NagUtil
     var activeColor = "";
     var selectedOverlays = new List<string>();
     var actionEndEarlyPhrases = new List<string>();
+    var actionEndEarlyUseRegex = new List<bool>();
+    var warningTextToDisplay = "";
+    var warningTextToSpeak = "";
+    var endTextToDisplay = "";
+    var endTextToSpeak = "";
     var hasAction = false;
     var droppedFeatures = new List<string>();
     var actionSummary = new List<string>();
+    var missingAudioFiles = new List<string>();
 
     foreach (var action in actions.EnumerateArray())
     {
@@ -733,6 +728,16 @@ internal static class NagUtil
           {
             // Try to resolve via files-database.json
             soundToPlay = _audioFileMap?.TryGetValue(audio, out var resolvedName) == true ? resolvedName : audio;
+            // Map NAG's "Speech ding" (ShortWarningPing) to EQLP's built-in alert1.wav
+            if (soundToPlay == "Speech ding")
+            {
+              soundToPlay = "alert1.wav";
+            }
+            // Track if the resolved file doesn't exist in data/sounds/
+            if (!TriggerUtil.SoundFileExists(soundToPlay))
+            {
+              missingAudioFiles.Add(soundToPlay);
+            }
           }
           // Collect overlayId (NAG audio actions can reference overlays for positioning)
           if (action.TryGetProperty("overlayId", out var ov1) && ov1.GetString() is { Length: > 0 } overlayId1)
@@ -774,8 +779,26 @@ internal static class NagUtil
               if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
               {
                 actionEndEarlyPhrases.Add(ConvertTemplates(phrase));
+                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean());
               }
             }
+          }
+          // Map ending/ended sub-action text to EQLP warning/end fields
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.GetString() is { Length: > 0 } wtd)
+          {
+            warningTextToDisplay = ConvertTemplates(wtd);
+          }
+          if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.GetString() is { Length: > 0 } wts)
+          {
+            warningTextToSpeak = ConvertTemplates(wts);
+          }
+          if (action.TryGetProperty("endedDisplayText", out var edt) && edt.GetString() is { Length: > 0 } etd)
+          {
+            endTextToDisplay = ConvertTemplates(etd);
+          }
+          if (action.TryGetProperty("endedSpeak", out var esk) && esk.GetString() is { Length: > 0 } ets)
+          {
+            endTextToSpeak = ConvertTemplates(ets);
           }
           if (action.TryGetProperty("duration", out var tdur))
           {
@@ -819,6 +842,35 @@ internal static class NagUtil
           {
             textToDisplay = ConvertTemplates(timerText6);
           }
+          // Collect action-level endEarlyPhrases
+          if (action.TryGetProperty("endEarlyPhrases", out var aeep6) && aeep6.ValueKind == JsonValueKind.Array)
+          {
+            foreach (var ee in aeep6.EnumerateArray())
+            {
+              if (ee.TryGetProperty("phrase", out var ep6) && ep6.GetString() is { Length: > 0 } phrase6)
+              {
+                actionEndEarlyPhrases.Add(ConvertTemplates(phrase6));
+                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe6) && useRe6.GetBoolean());
+              }
+            }
+          }
+          // Map ending/ended sub-action text to EQLP warning/end fields
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt6) && esdt6.GetString() is { Length: > 0 } wtd6)
+          {
+            warningTextToDisplay = ConvertTemplates(wtd6);
+          }
+          if (action.TryGetProperty("endingSoonSpeak", out var ess6) && ess6.GetString() is { Length: > 0 } wts6)
+          {
+            warningTextToSpeak = ConvertTemplates(wts6);
+          }
+          if (action.TryGetProperty("endedDisplayText", out var edt6) && edt6.GetString() is { Length: > 0 } etd6)
+          {
+            endTextToDisplay = ConvertTemplates(etd6);
+          }
+          if (action.TryGetProperty("endedSpeak", out var esk6) && esk6.GetString() is { Length: > 0 } ets6)
+          {
+            endTextToSpeak = ConvertTemplates(ets6);
+          }
           if (action.TryGetProperty("duration", out var tdur6) && tdur6.ValueKind is JsonValueKind.Number or JsonValueKind.String)
           {
             durationSeconds = tdur6.GetDouble();
@@ -853,6 +905,35 @@ internal static class NagUtil
           if (action.TryGetProperty("displayText", out var td10) && td10.GetString() is { Length: > 0 } timerText10)
           {
             textToDisplay = ConvertTemplates(timerText10);
+          }
+          // Collect action-level endEarlyPhrases
+          if (action.TryGetProperty("endEarlyPhrases", out var aeep10) && aeep10.ValueKind == JsonValueKind.Array)
+          {
+            foreach (var ee in aeep10.EnumerateArray())
+            {
+              if (ee.TryGetProperty("phrase", out var ep10) && ep10.GetString() is { Length: > 0 } phrase10)
+              {
+                actionEndEarlyPhrases.Add(ConvertTemplates(phrase10));
+                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe10) && useRe10.GetBoolean());
+              }
+            }
+          }
+          // Map ending/ended sub-action text to EQLP warning/end fields
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt10) && esdt10.GetString() is { Length: > 0 } wtd10)
+          {
+            warningTextToDisplay = ConvertTemplates(wtd10);
+          }
+          if (action.TryGetProperty("endingSoonSpeak", out var ess10) && ess10.GetString() is { Length: > 0 } wts10)
+          {
+            warningTextToSpeak = ConvertTemplates(wts10);
+          }
+          if (action.TryGetProperty("endedDisplayText", out var edt10) && edt10.GetString() is { Length: > 0 } etd10)
+          {
+            endTextToDisplay = ConvertTemplates(etd10);
+          }
+          if (action.TryGetProperty("endedSpeak", out var esk10) && esk10.GetString() is { Length: > 0 } ets10)
+          {
+            endTextToSpeak = ConvertTemplates(ets10);
           }
           if (action.TryGetProperty("duration", out var tdur10) && tdur10.ValueKind is JsonValueKind.Number or JsonValueKind.String)
           {
@@ -892,7 +973,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, []);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles);
     }
 
     // Build the Trigger object with all parsed data
@@ -911,7 +992,11 @@ internal static class NagUtil
       WarningSeconds = warningSeconds,
       ActiveColor = activeColor,
       SelectedOverlays = selectedOverlays.Count > 0 ? selectedOverlays : [],
-    }, droppedFeatures, null, string.Join(", ", actionSummary), actionEndEarlyPhrases);
+      WarningTextToDisplay = warningTextToDisplay,
+      WarningTextToSpeak = warningTextToSpeak,
+      EndTextToDisplay = endTextToDisplay,
+      EndTextToSpeak = endTextToSpeak,
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles);
   }
 
   internal static void WriteImportReport(List<NagImportResult> results, string outputPath)
@@ -919,7 +1004,7 @@ internal static class NagUtil
     try
     {
       var sb = new StringBuilder();
-      sb.AppendLine("TriggerName,TriggerId,Status,Reason,FolderPath,ActionsSummary");
+      sb.AppendLine("TriggerName,TriggerId,Status,Reason,FolderPath,ActionsSummary,MissingAudioFiles");
       foreach (var r in results)
       {
         // Escape CSV fields that contain commas or quotes
@@ -929,7 +1014,8 @@ internal static class NagUtil
         var reason = EscapeCsv(r.Reason);
         var folder = EscapeCsv(r.FolderPath);
         var summary = EscapeCsv(r.ActionsSummary);
-        sb.AppendLine($"{name},{id},{status},{reason},{folder},{summary}");
+        var missingAudio = EscapeCsv(string.Join("; ", r.MissingAudioFiles ?? []));
+        sb.AppendLine($"{name},{id},{status},{reason},{folder},{summary},{missingAudio}");
       }
       File.WriteAllText(outputPath, sb.ToString());
     }
@@ -1014,6 +1100,12 @@ internal static class NagUtil
       noTextWrap = true;
     }
 
+    // Map timerSortType → SortBy (0=none, 1=alphabetical, 2=time remaining)
+    var sortBy = element.TryGetProperty("timerSortType", out var st) ? st.GetInt32() : 0;
+
+    // Map showTextGlow → UseTextDropShadow (default true for backward compat)
+    var useTextDropShadow = element.TryGetProperty("showTextGlow", out var stg) ? stg.GetBoolean() : true;
+
     return new ExportTriggerNode
     {
       Id = overlayId,
@@ -1038,10 +1130,11 @@ internal static class NagUtil
         IsTimerOverlay = isTimerOverlay,
         IsTextOverlay = isTextOverlay,
         NoTextWrap = noTextWrap,
+        SortBy = sortBy,
         ShowActive = true,
         ShowIdle = true,
         ShowReset = true,
-        UseTextDropShadow = true,
+        UseTextDropShadow = useTextDropShadow,
         FadeDelay = 10
       }
     };

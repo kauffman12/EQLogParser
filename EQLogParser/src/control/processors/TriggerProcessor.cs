@@ -1179,7 +1179,7 @@ namespace EQLogParser
         var data = speak.Wrapper.TriggerData;
         if (speak.IsSound)
         {
-          var theFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds", speak.TtsOrSound);
+          var theFile = TriggerUtil.ResolveSoundPath(speak.TtsOrSound);
           AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, data.Priority, _playerVolume, data.Volume);
         }
         else
