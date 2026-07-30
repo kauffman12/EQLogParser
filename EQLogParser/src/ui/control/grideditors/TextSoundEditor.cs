@@ -1,5 +1,4 @@
 using EQLogParser.Audio;
-using log4net;
 using Microsoft.Win32;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Tools.Controls;
@@ -18,13 +17,13 @@ namespace EQLogParser
 {
   internal class TextSoundEditor : BaseTypeEditor
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly ObservableCollection<string> _fileList;
     private ComboBoxAdv _theOptionsCombo;
     private ComboBox _theSoundCombo;
     private TextBox _theTtsBox;
     private TextBox _theRealTextBox;
     private TextBox _theErrorTextBox;
+    private TextBox _thePathBox;
     private Button _testButton;
     private StackPanel _buttonContainer;
     private Grid _grid;
@@ -112,6 +111,18 @@ namespace EQLogParser
         Visibility = Visibility.Collapsed
       };
 
+      _thePathBox = new TextBox
+      {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        Padding = new Thickness(0, 2, 0, 2),
+        TextWrapping = TextWrapping.Wrap,
+        VerticalContentAlignment = VerticalAlignment.Center,
+        BorderThickness = new Thickness(0, 0, 0, 0),
+        IsReadOnly = true,
+        Visibility = Visibility.Collapsed
+      };
+
       _theRealTextBox = new TextBox
       {
         Name = "Real",
@@ -128,11 +139,13 @@ namespace EQLogParser
 
       _theTtsBox.SetValue(Grid.ColumnProperty, 0);
       _theErrorTextBox.SetValue(Grid.ColumnProperty, 0);
+      _thePathBox.SetValue(Grid.ColumnProperty, 0);
       _theSoundCombo.SetValue(Grid.ColumnProperty, 0);
       _buttonContainer.SetValue(Grid.ColumnProperty, 1);
       _grid.Children.Add(_theRealTextBox);
       _grid.Children.Add(_theTtsBox);
       _grid.Children.Add(_theErrorTextBox);
+      _grid.Children.Add(_thePathBox);
       _grid.Children.Add(_theSoundCombo);
       _grid.Children.Add(_buttonContainer);
 
@@ -157,6 +170,11 @@ namespace EQLogParser
           {
             AudioManager.Instance.TestSpeakFileAsync(TriggerUtil.ResolveSoundPath(selected), model.Volume);
           }
+          else if (_theOptionsCombo.SelectedIndex == 2 && TriggerUtil.MatchSoundFile(_theRealTextBox.Text, out var browsedFile, out _) &&
+            File.Exists(TriggerUtil.ResolveSoundPath(browsedFile)))
+          {
+            AudioManager.Instance.TestSpeakFileAsync(TriggerUtil.ResolveSoundPath(browsedFile), model.Volume);
+          }
         }
       }
     }
@@ -170,19 +188,31 @@ namespace EQLogParser
 
         if (isSound)
         {
-          if (soundExists)
+          var isInFileList = _theSoundCombo.Items.Contains(soundFile);
+          if (soundExists && isInFileList)
           {
             _theOptionsCombo.SelectedIndex = 1;
             _theErrorTextBox.Visibility = Visibility.Collapsed;
+            _thePathBox.Visibility = Visibility.Collapsed;
             _theTtsBox.Visibility = Visibility.Collapsed;
 
-            if (!Equals(_theSoundCombo.SelectedItem, soundFile) && _theSoundCombo.Items.Contains(soundFile))
+            if (!Equals(_theSoundCombo.SelectedItem, soundFile))
             {
               _theSoundCombo.Tag = true;
               _theSoundCombo.SelectedItem = soundFile;
             }
 
             _theSoundCombo.Visibility = Visibility.Visible;
+          }
+          else if (soundExists && !isInFileList)
+          {
+            // Custom browsed sound file — show full path, keep "Browse for Sound File" selected
+            _theOptionsCombo.SelectedIndex = 2;
+            _theErrorTextBox.Visibility = Visibility.Collapsed;
+            _theTtsBox.Visibility = Visibility.Collapsed;
+            _theSoundCombo.Visibility = Visibility.Collapsed;
+            _thePathBox.Text = TriggerUtil.ResolveSoundPath(soundFile);
+            _thePathBox.Visibility = Visibility.Visible;
           }
           else
           {
@@ -208,6 +238,7 @@ namespace EQLogParser
         }
 
         _testButton.IsEnabled = _theOptionsCombo.SelectedIndex == 1 ||
+          _theOptionsCombo.SelectedIndex == 2 ||
           (_theOptionsCombo.SelectedIndex == 0 && !string.IsNullOrEmpty(textBox.Text));
       }
     }
@@ -230,8 +261,9 @@ namespace EQLogParser
 
         var hideText = combo.SelectedIndex != 0;
         _theTtsBox.Visibility = hideText ? Visibility.Collapsed : Visibility.Visible;
-        _theSoundCombo.Visibility = hideText ? Visibility.Visible : Visibility.Collapsed;
+        _theSoundCombo.Visibility = hideText && combo.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         _theErrorTextBox.Visibility = Visibility.Collapsed;
+        _thePathBox.Visibility = Visibility.Collapsed;
 
         if (!hideText)
         {
@@ -239,7 +271,7 @@ namespace EQLogParser
           _theTtsBox.Text = previous + " ";
           _theTtsBox.Text = previous;
         }
-        else
+        else if (combo.SelectedIndex == 1)
         {
           var isSound = TriggerUtil.MatchSoundFile(_theRealTextBox.Text, out var decoded, out var _);
           if (!isSound || !_theSoundCombo.Items.Contains(decoded) || (_theSoundCombo.SelectedValue is string selectedValue &&
@@ -266,34 +298,8 @@ namespace EQLogParser
       if (dialog.ShowDialog() == true && !string.IsNullOrEmpty(dialog.FileName))
       {
         var selectedPath = dialog.FileName;
-        var fileName = Path.GetFileName(selectedPath);
-        var soundsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sounds");
-        var targetPath = Path.Combine(soundsDir, fileName);
-
-        // Copy the file to data/sounds/ if it's not already there
-        if (!File.Exists(targetPath))
-        {
-          try
-          {
-            Directory.CreateDirectory(soundsDir);
-            File.Copy(selectedPath, targetPath, overwrite: false);
-            // Add to fileList immediately so combo box shows it without waiting for FileSystemWatcher
-            if (!_fileList.Contains(fileName))
-            {
-              _fileList.Add(fileName);
-            }
-          }
-          catch (Exception ex)
-          {
-            Log.Warn("Could not copy sound file to data/sounds/", ex);
-            // Still set the absolute path — ResolveSoundPath will handle it
-            _theRealTextBox.Text = "<<" + selectedPath + ">>";
-            return true;
-          }
-        }
-
-        // Set the coded filename in the real text box (same format as combo selection)
-        _theRealTextBox.Text = "<<" + fileName + ">>";
+        // Store the full path in <<>> encoding — ResolveSoundPath handles absolute paths
+        _theRealTextBox.Text = "<<" + selectedPath + ">>";
         return true;
       }
 
@@ -370,6 +376,13 @@ namespace EQLogParser
       {
         BindingOperations.ClearAllBindings(_theErrorTextBox);
         _theErrorTextBox = null;
+      }
+
+      if (_thePathBox != null)
+      {
+        _thePathBox.Text = string.Empty;
+        BindingOperations.ClearAllBindings(_thePathBox);
+        _thePathBox = null;
       }
 
       if (_testButton != null)
