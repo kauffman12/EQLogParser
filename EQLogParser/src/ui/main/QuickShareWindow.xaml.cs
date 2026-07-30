@@ -1,4 +1,4 @@
-﻿using Syncfusion.Data;
+using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.ScrollAxis;

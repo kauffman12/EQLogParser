@@ -1,4 +1,4 @@
-﻿using Syncfusion.Windows.PropertyGrid;
+using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
 using System.ComponentModel;
 using System.Reflection;

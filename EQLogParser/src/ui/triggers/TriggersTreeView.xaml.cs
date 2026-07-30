@@ -1,4 +1,4 @@
-﻿using EQLogParser.Audio;
+using EQLogParser.Audio;
 using FontAwesome5;
 using Syncfusion.UI.Xaml.TreeView;
 using System;
@@ -286,6 +286,52 @@ namespace EQLogParser
         {
           progressWindow.Close();
         }
+      }
+    }
+
+    private async void ImportNagDbClick(object sender, RoutedEventArgs e)
+    {
+      if (GetTreeViewFromMenu(sender) is null)
+        return;
+
+      var dirPath = TriggerUtil.SelectNagDatabaseDirectory();
+      if (dirPath is null)
+        return;
+
+      var progressWindow = new MessageWindow($"Loading NAG Overlays from {Path.GetFileName(dirPath)}", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
+      progressWindow.Show();
+
+      try
+      {
+        await TriggerUtil.ImportNagOverlays(Path.Combine(dirPath, "overlays-database.json"));
+        await RefreshOverlayNode();
+      }
+      finally
+      {
+        progressWindow.Close();
+      }
+    }
+
+    private async void ImportNagTriggersClick(object sender, RoutedEventArgs e)
+    {
+      if (GetTreeViewFromMenu(sender) is null)
+        return;
+
+      var dirPath = TriggerUtil.SelectNagDatabaseDirectory();
+      if (dirPath is null)
+        return;
+
+      var progressWindow = new MessageWindow($"Loading NAG Triggers from {Path.GetFileName(dirPath)}...\nThis may take a moment for large databases.", "Import NAG Triggers", MessageWindow.IconType.Info, noButtons: true);
+      progressWindow.Show();
+
+      try
+      {
+        await TriggerUtil.ImportNagTriggers(dirPath);
+        await RefreshTriggerNode();
+      }
+      finally
+      {
+        progressWindow.Close();
       }
     }
 
@@ -664,6 +710,7 @@ namespace EQLogParser
         renameTriggerMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteTriggerMenuItem.IsEnabled = node.ParentNode != null;
         importTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
+        importNagDbTriggerMenuItem.IsEnabled = true; // Always available regardless of selection
         newTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyTriggerItem.IsEnabled = !node.IsDir() && count == 1;
         cutTriggerItem.IsEnabled = node.ParentNode != null && (copyTriggerItem.IsEnabled || (node.IsDir() && count == 1));
@@ -674,6 +721,7 @@ namespace EQLogParser
         renameTriggerMenuItem.IsEnabled = false;
         deleteTriggerMenuItem.IsEnabled = false;
         importTriggerMenuItem.IsEnabled = false;
+        importNagDbTriggerMenuItem.IsEnabled = true; // Always available
         newTriggerMenuItem.IsEnabled = false;
         copyTriggerItem.IsEnabled = false;
         cutTriggerItem.IsEnabled = false;
@@ -781,6 +829,7 @@ namespace EQLogParser
         renameOverlayMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteOverlayMenuItem.IsEnabled = node.ParentNode != null;
         importOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
+        importNagDbOverlayMenuItem.IsEnabled = true; // Always available — NAG import goes to root
         newOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyOverlayItem.IsEnabled = !node.IsDir() && count == 1;
         pasteOverlayItem.IsEnabled = node.IsDir() && count == 1 && _overlayCopiedNode != null;
@@ -790,6 +839,7 @@ namespace EQLogParser
         renameOverlayMenuItem.IsEnabled = false;
         deleteOverlayMenuItem.IsEnabled = false;
         importOverlayMenuItem.IsEnabled = false;
+        importNagDbOverlayMenuItem.IsEnabled = true; // Always available — NAG import goes to root
         copyOverlayItem.IsEnabled = false;
         pasteOverlayItem.IsEnabled = false;
       }

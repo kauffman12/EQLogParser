@@ -1,4 +1,4 @@
-﻿using Syncfusion.UI.Xaml.TreeGrid;
+using Syncfusion.UI.Xaml.TreeGrid;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;

@@ -1,4 +1,4 @@
-﻿using FontAwesome5;
+using FontAwesome5;
 using log4net;
 using Syncfusion.Windows.Edit;
 using Syncfusion.Windows.Tools.Controls;

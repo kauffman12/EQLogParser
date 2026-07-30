@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using Syncfusion.UI.Xaml.TreeView.Engine;
 using System;
 using System.Collections.Concurrent;
@@ -127,6 +127,7 @@ namespace EQLogParser
     public bool StreamerMode { get; set; }
     public bool HideDuplicates { get; set; }
     public bool UseTextDropShadow { get; set; } = true;
+    public bool NoTextWrap { get; set; }
     public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;
@@ -625,6 +626,8 @@ namespace EQLogParser
   {
     public List<ExportTriggerNode> Nodes { get; set; } = [];
     [JsonIgnore][BsonIgnore] public bool HasMissingMedia { get; set; }
+    // Original source ID (e.g. NAG triggerId) for building import-time mappings. Not persisted.
+    [JsonIgnore][BsonIgnore] public string OriginalId { get; set; }
   }
 
   internal class LegacyTriggerNode

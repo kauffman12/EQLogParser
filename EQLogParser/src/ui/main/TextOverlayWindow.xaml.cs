@@ -1,4 +1,4 @@
-﻿using log4net;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -452,7 +452,7 @@ namespace EQLogParser
         Padding = new Thickness(6, 0, 6, 0),
         Margin = new Thickness(0),
         Text = text,
-        TextWrapping = TextWrapping.Wrap,
+        TextWrapping = _node.OverlayData.NoTextWrap ? TextWrapping.NoWrap : TextWrapping.Wrap,
         Visibility = Visibility.Collapsed,
         IsHitTestVisible = false
       };

@@ -1,4 +1,4 @@
-﻿using EQLogParser.Audio;
+using EQLogParser.Audio;
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
