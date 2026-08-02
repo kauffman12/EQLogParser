@@ -8,17 +8,20 @@ aws s3 cp dist\%1 s3://eqlogparser.kizant.net/%1 --content-type "text/html; char
 goto :eof
 
 :uploadcss
-aws s3 cp dist\css\style.css s3://eqlogparser.kizant.net/css/style.css --content-type "text/css" --acl public-read
+aws s3 cp dist\css\style.css s3://eqlogparser.kizant.net/css/style.css --content-type "text/css" --cache-control "no-cache, no-store, must-revalidate" --acl public-read
 goto :eof
 
 :main
 REM === Upload files ===
 call :upload releasenotes.html
 call :upload index.html
+call :upload getting-started.html
 call :upload documentation.html
+call :upload faq.html
 call :upload policy.html
 call :upload status.html
-REM call :uploadcss 
+call :upload download.html
+call :uploadcss 
 
 REM aws s3 cp s3://eqlogparser-logs . --recursive
 REM cat */* > all-logs.txt
