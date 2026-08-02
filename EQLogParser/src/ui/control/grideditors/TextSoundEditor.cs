@@ -27,6 +27,7 @@ namespace EQLogParser
     private Button _testButton;
     private StackPanel _buttonContainer;
     private Grid _grid;
+    private bool _isSettingOptionsFromText;
 
     public TextSoundEditor(ObservableCollection<string> fileList)
     {
@@ -207,7 +208,10 @@ namespace EQLogParser
           else if (soundExists && !isInFileList)
           {
             // Custom browsed sound file — show full path, keep "Browse for Sound File" selected
+            // Guard against TypeComboBoxSelectionChanged opening the file dialog during programmatic update
+            _isSettingOptionsFromText = true;
             _theOptionsCombo.SelectedIndex = 2;
+            _isSettingOptionsFromText = false;
             _theErrorTextBox.Visibility = Visibility.Collapsed;
             _theTtsBox.Visibility = Visibility.Collapsed;
             _theSoundCombo.Visibility = Visibility.Collapsed;
@@ -245,6 +249,11 @@ namespace EQLogParser
 
     private void TypeComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_isSettingOptionsFromText)
+      {
+        return;
+      }
+
       if (sender is ComboBoxAdv { SelectedIndex: > -1 } combo)
       {
         // Index 2 = "Browse for Sound File" — open file dialog immediately
