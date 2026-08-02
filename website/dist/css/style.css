@@ -1,126 +1,104 @@
+/* ============================================================
+   CSS Variables — Light theme (default)
+   ============================================================ */
+:root {
+  --bg-body: #f4f4f4;
+  --color-text: #222;
+  --color-bg-card: #ffffff;
+  --color-border: #ddd;
+  --color-link: #0055aa;
+  --color-accent: #4588c0;
+  --color-topbar-bg: #000;
+  --color-topbar-text: #fff;
+  --color-code-bg: #f0f0f0;
+  --color-toc-link: #0055aa;
+  --color-shadow: rgba(0, 0, 0, 0.2);
+  --color-muted: #6b7280;
+  --color-hero-bg: #ffffff;
+}
+
+/* ============================================================
+   Dark theme overrides
+   ============================================================ */
+html.dark {
+  --bg-body: #1a1a2e;
+  --color-text: #e0e0e0;
+  --color-bg-card: #252535;
+  --color-border: #333;
+  --color-link: #6cb6ff;
+  --color-accent: #4588c0;
+  --color-topbar-bg: #111;
+  --color-topbar-text: #e0e0e0;
+  --color-code-bg: #2a2a3e;
+  --color-toc-link: #6cb6ff;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-muted: #9aa0b1;
+  --color-hero-bg: #252535;
+}
+
+/* ============================================================
+   Base / Global styles
+   ============================================================ */
 body {
   font-family: 'Inter', 'Segoe UI', sans-serif;
   margin: 0;
-  background: #f4f4f4;
-  color: #222;
+  background: var(--bg-body);
+  color: var(--color-text);
   line-height: 1.6;
+  overflow-x: hidden; /* Prevent horizontal scroll when clicking anchor links */
+}
+
+a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 code {
-  background: #f0f0f0;
+  background: var(--color-code-bg);
   padding: 0.1em 0.3em;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 
-.badge {
-  color: white;
-  font-size: 20px;
+pre {
+  background: var(--color-code-bg);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+pre code {
+  background: none;
   padding: 0;
 }
 
-.btn {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: #4588c0;
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  border-radius: 4px;
-}
-
-.center-section {
-  text-align: center;
-}
-
-.center-section h3 {
-  margin: 0
-}
-
-.container {
-  max-width: 1100px;
-  margin: 0.8rem auto;
-}
-
-.docs-container {
-  max-width: none;
+/* ============================================================
+   Top Bar Navigation
+   ============================================================ */
+.topbar {
+  background: var(--color-topbar-bg);
+  color: var(--color-topbar-text);
+  padding: 7px 0 7px 5px;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  margin: 0;
-  padding: 0 0 2.5rem;
-}
-
-.docs-container h1 {
-  font-size: 1.75em;
-  font-weight: 600;
-  border-bottom: 1px solid #ddd;
-  margin: 0;
-  scroll-margin-top: 100px;
-}
-
-.docs-container h1:not(:first-child) {
-  margin-top: 1.5em;
-}
-
-.docs-container h2 {
-  font-weight: 500;
-  border-bottom: 1px solid #ddd;
-}
-
-.image-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 100%;
-  padding: 1.2rem 0;
-  gap: 1rem;
-}
-
-.info-section {
-  width: 650px;
-  margin: 0 auto;
-  padding: 0rem;
-}
-
-.info-section h2 {
-  margin: 0.1em 0 0 0
-}
-
-.info-section p {
-  margin: 0
-}
-
-.info-section ul {
-  margin: 0.2rem 0 0 0
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 200px 1fr 160px; /* TOC | MAIN | Ad */
-  column-gap: 1.5rem;
-  align-items: start;
-  /* push content below fixed topbar */
-  margin-top: 50px;
-  padding: 0 1rem;
-}
-
-.layout.toc-collapsed {
-  grid-template-columns: 0 1fr 160px;
-}
-.layout.toc-collapsed .toc {
-  width: 0;
-  overflow: hidden;
-}
-
-.logo {
-  border: 2px solid black;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  height: 50px;
 }
 
 .nav-container {
   display: flex;
   align-items: center;
-  justify-content: right;
-  margin: 0.15em 2rem 0 1rem;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .nav-links {
@@ -132,56 +110,111 @@ code {
 }
 
 .nav-links li a {
-  color: #fff;
+  color: var(--color-topbar-text);
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
-.thumbnail {
-  max-width: 100%;
-  border-radius: 6px;
-  border: 1px solid #aaa;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
+.nav-links li a:hover {
+  opacity: 0.8;
 }
 
-.rightad {
-  position: sticky;   /* was fixed */
-  top: 50px;
-  right: auto;        /* handled by grid */
-  z-index: 1;         /* lower than topbar */
+/* Theme toggle button */
+.theme-toggle {
   background: transparent;
+  border: none;
+  color: var(--color-topbar-text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  transition: opacity 0.2s;
 }
 
-/* Responsive: hide side columns on narrower screens */
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 2fr 160px; /* MAIN only */
-  }
-  .toc {
-    display: none;
-  }
+.theme-toggle:hover {
+  opacity: 0.8;
 }
 
+/* Mobile hamburger menu toggle */
+.menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--color-topbar-text);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Layout Grid
+   ============================================================ */
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr 160px; /* TOC | MAIN | Ad */
+  column-gap: 1.5rem;
+  align-items: start;
+  margin-top: 60px;
+  padding: 0 1rem;
+}
+
+.layout.toc-collapsed {
+  grid-template-columns: 0 1fr 160px;
+}
+
+.layout.toc-collapsed .toc {
+  width: 0;
+  overflow: hidden;
+}
+
+/* Pages without a TOC — use full-width main + right ad only */
+.layout.no-toc {
+  grid-template-columns: 1fr 160px; /* MAIN | Ad */
+}
+
+/* Hide the empty TOC nav on no-toc pages */
+.layout.no-toc > .toc {
+  display: none;
+}
+
+/* ============================================================
+   Table of Contents (left sidebar)
+   ============================================================ */
 .toc {
-  position: sticky;  /* was fixed */
-  top: 50px;         /* aligns with .topbar height */
-  left: auto;        /* no longer needed */
-  width: 200px;      /* match grid col */
-  padding-left: 0;   /* optional: cleaner */
+  position: sticky;
+  top: 70px;
+  align-self: start;
+  width: 200px;
+  padding-left: 0;
+}
+
+.toc-toggle-btn {
+  display: none;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  margin-bottom: 0.5rem;
 }
 
 .toc h1 {
-  font-size: 1.75em;
+  font-size: 1.5em;
   font-weight: 600;
-  border-bottom: 1px solid #ddd;
-  margin-top: 0rem;
+  border-bottom: 1px solid var(--color-border);
+  margin-top: 0;
+  color: var(--color-text);
 }
 
 .toc ul {
   list-style: none;
   padding-left: 1rem;
-  margin: 0;
+  margin: 0.5rem 0 0 0;
 }
 
 .toc li {
@@ -190,31 +223,528 @@ code {
 
 .toc a {
   text-decoration: none;
-  color: #0055aa;
+  color: var(--color-toc-link);
+  font-size: 0.85rem;
 }
 
 .toc a:hover {
   text-decoration: underline;
 }
 
-.topbar {
-  background: #000;
-  color: #fff;
-  padding: 7px 0 7px 5px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  height: 30px;
+.toc a.sub {
+  display: block;
+  padding-left: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
 }
 
+.toc a.sub:hover {
+  color: var(--color-link);
+  padding-left: 0.75rem;
+}
+
+/* ============================================================
+   Right Ad Sidebar
+   ============================================================ */
+.rightad {
+  position: sticky;
+  top: 70px;
+  align-self: start;
+  z-index: 1;
+  background: transparent;
+}
+
+/* ============================================================
+   Main Container (home, download, status pages)
+   ============================================================ */
+.container {
+  max-width: 1100px;
+  margin: 0.8rem auto;
+}
+
+/* ============================================================
+   Docs Container (documentation, releasenotes, policy)
+   ============================================================ */
+.docs-container {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 2.5rem;
+  overflow-x: hidden;
+}
+
+.docs-container h1 {
+  font-size: 1.75em;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+  margin: 0;
+  scroll-margin-top: 100px;
+}
+
+.docs-container h1:not(:first-child) {
+  margin-top: 1.5em;
+}
+
+.docs-container h2 {
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-border);
+  scroll-margin-top: 80px;
+}
+
+.docs-container h3 {
+  font-weight: 500;
+  margin-top: 1em;
+}
+
+/* Trigger variable spans inside h2 */
 .var {
   font-weight: bold;
-  color: #0055aa;
+  color: var(--color-link);
 }
 
 .version {
   padding-left: 0.75em;
+}
+
+/* ============================================================
+   Hero Section (home + download pages)
+   ============================================================ */
+.hero {
+  background: var(--color-hero-bg);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px var(--color-shadow);
+}
+
+.hero.center-section {
+  text-align: center;
+}
+
+.hero-logo {
+  max-width: 360px;
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+
+.hero h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  color: var(--color-text);
+}
+
+.hero-subtitle {
+  font-size: 1.4em;
+  color: var(--color-muted);
+  margin: 0.3rem 0;
+}
+
+.version-badge {
+  display: inline-block;
+  background: var(--color-accent);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-accent);
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-hero {
+  background: var(--color-accent);
+  font-size: 1.1rem;
+  padding: 0.85rem 2rem;
+}
+
+.btn-download {
+  background: #e74c3c;
+  font-size: 1.05rem;
+  padding: 0.85rem 2rem;
+  min-width: 260px;
+}
+
+.btn-download:hover {
+  background: #c0392b;
+}
+
+/* ============================================================
+   Feature Cards (home page)
+   ============================================================ */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 6px var(--color-shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px var(--color-shadow);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.5rem 0;
+  color: var(--color-text);
+}
+
+.feature-card p {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* ============================================================
+   Download Card (download page)
+   ============================================================ */
+.download-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0;
+  width: 100%;
+  box-shadow: 0 4px 12px var(--color-shadow);
+  text-align: center;
+}
+
+.download-card h2 {
+  font-size: 1.4em;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text);
+}
+
+.version-badge-inline {
+  display: inline-block;
+  background: var(--color-accent);
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Two-column layout for download page */
+.download-layout {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr;
+  gap: 2rem;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.download-col .download-card {
+  width: 100%;
+  max-width: none;
+}
+
+.download-col .info-section {
+  max-width: 100%;
+}
+
+.sys-reqs .info-section {
+  padding-left: 20px;
+}
+
+.download-btn-wrapper {
+  margin: 0.35rem 0;
+}
+
+.countdown {
+  display: inline-block;
+  font-weight: bold;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+/* ============================================================
+   Info Sections (download page, docs)
+   ============================================================ */
+.info-section {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.info-section.center-section {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.info-section h2 {
+  margin: 0 0 0.5em 0;
+  color: var(--color-text);
+}
+
+.info-section p {
+  margin: 0.3rem 0;
+}
+
+.info-section ul {
+  margin: 0.3rem 0 0 0;
+}
+
+/* ============================================================
+   Image Row / Thumbnails
+   ============================================================ */
+.image-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  padding: 1.2rem 0;
+  gap: 1rem;
+}
+
+.thumbnail {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 0 6px var(--color-shadow);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.thumbnail:hover {
+  transform: scale(1.02);
+}
+
+.logo {
+  border: 2px solid black;
+}
+
+/* ============================================================
+   Linux CTA (home page)
+   ============================================================ */
+.linux-cta {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.linux-cta p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Tables (documentation, status pages)
+   ============================================================ */
+table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+th, td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+th {
+  background: var(--color-code-bg);
+  font-weight: 600;
+}
+
+tr.row-highlight td {
+  background: #fff7cc;
+}
+
+html.dark tr.row-highlight td {
+  background: #3a2e1a;
+}
+
+/* ============================================================
+   Utility classes
+   ============================================================ */
+.center-section {
+  text-align: center;
+}
+
+.center {
+  text-align: center;
+}
+
+.center-section h3 {
+  margin: 0;
+}
+
+.badge {
+  color: white;
+  font-size: 20px;
+  padding: 0;
+}
+
+/* ============================================================
+   Site Footer
+   ============================================================ */
+.site-footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  border-top: 1px solid var(--color-border);
+  margin-top: 2rem;
+}
+
+.site-footer a {
+  color: var(--color-link);
+}
+
+/* ============================================================
+   Responsive Design
+   ============================================================ */
+
+/* Tablet/narrow desktop: collapsible TOC with toggle button */
+@media (max-width: 900px) {
+  /* Two-column layout: TOC + Main (hide right ad) */
+  .layout {
+    grid-template-columns: 200px 1fr;
+  }
+
+  .rightad {
+    display: none;
+  }
+
+  /* Show TOC toggle button on narrow screens */
+  .toc-toggle-btn {
+    display: block;
+  }
+
+  /* Collapse TOC by default on narrow screens — user clicks button to expand */
+  body.toc-collapsed .toc {
+    display: none;
+  }
+
+  /* Show mobile menu toggle */
+  .menu-toggle {
+    display: block;
+  }
+
+  /* Hide nav links by default on mobile, show when open */
+  .nav-links {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    background: var(--color-topbar-bg);
+    flex-direction: column;
+    gap: 0;
+    padding: 1rem 1rem 0.5rem;
+    margin: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    transition: clip-path 0.3s ease-out;
+    z-index: 999;
+  }
+
+  .nav-links.open {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .nav-links li {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .nav-links li a {
+    display: block;
+    padding: 0.3rem 0;
+  }
+
+  /* Move theme toggle outside the nav links on mobile */
+  .theme-toggle,
+  .menu-toggle {
+    position: relative;
+    z-index: 1001;
+  }
+
+  /* Feature cards stack */
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Download card full width */
+  .download-card {
+    margin: 0.5rem;
+    max-width: none;
+  }
+
+  /* Stack download layout columns on mobile */
+  .download-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Info section full width */
+  .info-section {
+    max-width: 90%;
+  }
+
+  /* Hero font size smaller on mobile */
+  .hero h1 {
+    font-size: 2em;
+  }
+}
+
+/* Mobile phone: keep TOC toggle, hide right ad */
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 180px 1fr;
+  }
+
+  .rightad {
+    display: none;
+  }
 }

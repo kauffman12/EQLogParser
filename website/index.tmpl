@@ -4,56 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EQLogParser</title>
-  <meta name="description" content="EQLogParser is is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions. Download link below." />
+  <meta name="description" content="EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions. Download link below." />
   <meta name="robots" content="index, follow" />
   <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
   <meta name="version" />
   <meta name="download" />  
   <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="css/style.css?v=7" />
+  <link rel="preconnect" href="https://www.googletagmanager.com" />
+  <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+  <link rel="preconnect" href="https://www.google-analytics.com" />
+  <meta property="og:title" content="EQLogParser - Real-time combat analyzer for EverQuest" />
+  <meta property="og:description" content="EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO." />
+  <meta property="og:image" content="https://eqlogparser.kizant.net/img/logo.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/style.css?v=12" />
 </head>
 <body>
   <nav id="nav-bar" class="topbar" />
-  <div class="layout">
+  <div class="layout no-toc">
     <nav class="toc" />
     <main class="container">
-      <section class="center-section">
-        <img src="img/logo.png" class="logo" />
-        <h3><em><span id="version-text"/></em></h3>
-      </section>
-      <section class="info-section">
-        <p>
-          <h2 style="display: inline;">EQLogParser</h2> is a real-time <em>combat log analyzer</em> and <em>damage parsing application</em> built specifically for the <strong>EverQuest MMO</strong>. 
-          It monitors and processes in-game log files to provide detailed statistics as well as various utility functions
-        </p>
-        <ul>
-          <li><strong>Damage dealt and received</strong> (per player, mob, or encounter)</li>
-          <li><strong>Spell casting counts and activity timelines</strong></li>
-          <li><strong>Audio triggers and game overlays </strong> (damage meter, visual feedback and timers)</li>
-          <li><strong>Log search, automated backups, and much more</strong></li>
-        </ul>
-        <h2>What do I need to run EQLogParser?</h2>
-        <ul>
-          <li><strong>Windows 10/11</strong> (64 bit only)</li>
-          <li><strong>.NET Desktop Runtime 8.0.11+</strong> (<a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.17-windows-x64-installer">download .Net 8 here</a>)</li>
-          <li><strong>Ideally a high-performance Gaming PC, SSD, etc for fast log reading</strong></li>
-          <li><strong>Game Overlays require `Overlay Windows Taskbar` set to off in game</strong></li>
-          <li><strong>Game Overlays require Everquest in windowed mode</strong></li>
-        </ul>
-      </section>
-      <section class="center-section">
-        <a id="download-link" class="btn">
-          Download EQLogParser
+      <!-- Hero Section -->
+      <section class="hero center-section">
+        <img src="img/logo.png" class="hero-logo" loading="lazy" />
+        <p class="hero-subtitle">Real-time combat analyzer &amp; damage parser for EverQuest</p>
+        <a href="download.html" class="btn btn-hero">
+          Download v<span id="version-text"></span>
         </a>
       </section>
+
+      <!-- Feature Cards -->
+      <section class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Damage Meter</h3>
+          <p>Real-time DPS tracking with per-player, per-mob, and encounter breakdowns.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔔</div>
+          <h3>Audio Triggers</h3>
+          <p>Play sounds or TTS speech when log patterns match — fully customizable.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⏱️</div>
+          <h3>Timer Overlays</h3>
+          <p>Visual countdown and progress timers for buffs, debuffs, and cooldowns.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Text Overlays</h3>
+          <p>Display custom text messages in-game with full styling control.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📤</div>
+          <h3>Quick Share</h3>
+          <p>Share triggers and overlays with other players instantly via in-game chat.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>Log Search &amp; Archive</h3>
+          <p>Search through historical logs and auto-archive old sessions.</p>
+        </div>
+      </section>
+
+      <!-- Screenshots -->
       <section class="center-section">
         <div class="image-row">
           <a href="img/example1.png" target="_blank">
-            <img src="img/example1.png" title="Showing EQLogParser" class="thumbnail" />
+            <img src="img/example1.png" title="EQLogParser Main Window" class="thumbnail" loading="lazy" />
           </a>
           <a href="img/example2.png" target="_blank">
-            <img src="img/example2.png" title="Showing Damage Meter and Timer Overlay" class="thumbnail" />
+            <img src="img/example2.png" title="Damage Meter and Timer Overlay" class="thumbnail" loading="lazy" />
           </a>
+        </div>
+      </section>
+
+      <!-- Linux Support CTA -->
+      <section class="center-section">
+        <div class="linux-cta">
+          <p><strong>🐧 Linux users:</strong> EQLogParser runs under Wine.
+             <a href="faq.html#linux-support">See the installation guide</a></p>
         </div>
       </section>
     </main>
@@ -63,7 +94,11 @@
         style="display:inline-block; width:160px; height:600px"
         data-ad-client="ca-pub-4428145487599357"
         data-ad-slot="9757256233"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>     
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
     </nav>
+  </div>
+  <footer class="site-footer">
+    <a href="policy.html">Privacy Policy</a> | © 2025 EQLogParser
+  </footer>
 </body>
 </html>
