@@ -984,12 +984,19 @@ namespace EQLogParser
         characterStates = states.Query().Where(s => characterIds.Contains(s.Id)).ToList();
       }
 
+      var triggers = type == Triggers;
+
       // exports include the tree root so ignore
       foreach (var newNode in imported)
       {
         if (newNode.Nodes?.Count > 0)
         {
           Import(tree, parentId, newNode.Nodes, type, characterStates, idMap);
+        }
+        // Overlay leaf nodes (no child Nodes) — process directly via the second overload
+        else if (!triggers && newNode.OverlayData != null)
+        {
+          Import(tree, parentId, new[] { newNode }, type, characterStates, idMap);
         }
       }
     }
