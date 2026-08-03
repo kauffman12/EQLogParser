@@ -135,6 +135,7 @@ namespace EQLogParser
       _theSoundCombo.SelectedIndex = -1;
       _theSoundCombo.ItemsSource = _fileList;
       _theRealTextBox.TextChanged += RealTextBoxTextChanged;
+      _theErrorTextBox.TextChanged += ErrorBoxTextChanged;
       _theErrorTextBox.SetResourceReference(TextBox.ForegroundProperty, "EQWarnForegroundBrush");
       _testButton.SetResourceReference(Button.HeightProperty, "EQButtonHeight");
 
@@ -338,6 +339,26 @@ namespace EQLogParser
       }
     }
 
+    private void ErrorBoxTextChanged(object sender, TextChangedEventArgs e)
+    {
+      // When the user edits a missing sound file path in the error box,
+      // propagate the change to the bound _theRealTextBox so the model is
+      // updated (enabling save). Only update when the text looks like a
+      // complete sound file path to avoid intermediate typing states from
+      // triggering RealTextBoxTextChanged's TTS branch.
+      if (sender is TextBox textBox &&
+        _theOptionsCombo.SelectedIndex == -1 &&
+        (textBox.Text.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ||
+         textBox.Text.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase)))
+      {
+        var codedName = "<<" + textBox.Text + ">>";
+        if (_theRealTextBox.Text != codedName)
+        {
+          _theRealTextBox.Text = codedName;
+        }
+      }
+    }
+
     private void TextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
       if (sender is TextBox textBox)
@@ -383,6 +404,7 @@ namespace EQLogParser
 
       if (_theErrorTextBox != null)
       {
+        _theErrorTextBox.TextChanged -= ErrorBoxTextChanged;
         BindingOperations.ClearAllBindings(_theErrorTextBox);
         _theErrorTextBox = null;
       }
