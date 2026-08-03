@@ -353,7 +353,10 @@ internal static class NagUtil
       Log.Error("Error Parsing NAG Triggers", ex);
     }
 
-    return (nodes, results, metadata);
+    // Wrap all nodes in a root node — consistent with GINA export format
+    // so the first Import() overload skips the root and processes folders correctly
+    var rootNode = new ExportTriggerNode { Nodes = nodes };
+    return (new List<ExportTriggerNode> { rootNode }, results, metadata);
   }
 
   // Recursively parse NAG folder structure to build a folderId → path mapping
