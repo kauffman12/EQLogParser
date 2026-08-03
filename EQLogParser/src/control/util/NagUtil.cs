@@ -784,22 +784,29 @@ internal static class NagUtil
               }
             }
           }
-          // Map ending/ended sub-action text to EQLP warning/end fields
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.GetString() is { Length: > 0 } wtd)
+          // Map ending/ended sub-action text to EQLP warning/end fields.
+          // NAG uses boolean flags (endingSoonDisplayText, endingSoonSpeak, etc.) to indicate
+          // whether the feature is enabled, with actual text in separate fields (endingSoonText,
+          // endingSoonSpeakPhrase, endedText, endedSpeakPhrase).
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonText", out var est) && est.GetString() is { Length: > 0 } etext)
           {
-            warningTextToDisplay = ConvertTemplates(wtd);
+            warningTextToDisplay = ConvertTemplates(etext);
           }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.GetString() is { Length: > 0 } wts)
+          if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonSpeakPhrase", out var esp) && esp.GetString() is { Length: > 0 } stext)
           {
-            warningTextToSpeak = ConvertTemplates(wts);
+            warningTextToSpeak = ConvertTemplates(stext);
           }
-          if (action.TryGetProperty("endedDisplayText", out var edt) && edt.GetString() is { Length: > 0 } etd)
+          if (action.TryGetProperty("endedDisplayText", out var edt) && edt.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedText", out var etdt) && etdt.GetString() is { Length: > 0 } edtext)
           {
-            endTextToDisplay = ConvertTemplates(etd);
+            endTextToDisplay = ConvertTemplates(edtext);
           }
-          if (action.TryGetProperty("endedSpeak", out var esk) && esk.GetString() is { Length: > 0 } ets)
+          if (action.TryGetProperty("endedSpeak", out var esk) && esk.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
           {
-            endTextToSpeak = ConvertTemplates(ets);
+            endTextToSpeak = ConvertTemplates(estext);
           }
           if (action.TryGetProperty("duration", out var tdur))
           {
@@ -856,21 +863,25 @@ internal static class NagUtil
             }
           }
           // Map ending/ended sub-action text to EQLP warning/end fields
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt6) && esdt6.GetString() is { Length: > 0 } wtd6)
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt6) && esdt6.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonText", out var est6) && est6.GetString() is { Length: > 0 } etext6)
           {
-            warningTextToDisplay = ConvertTemplates(wtd6);
+            warningTextToDisplay = ConvertTemplates(etext6);
           }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess6) && ess6.GetString() is { Length: > 0 } wts6)
+          if (action.TryGetProperty("endingSoonSpeak", out var ess6) && ess6.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonSpeakPhrase", out var esp6) && esp6.GetString() is { Length: > 0 } stext6)
           {
-            warningTextToSpeak = ConvertTemplates(wts6);
+            warningTextToSpeak = ConvertTemplates(stext6);
           }
-          if (action.TryGetProperty("endedDisplayText", out var edt6) && edt6.GetString() is { Length: > 0 } etd6)
+          if (action.TryGetProperty("endedDisplayText", out var edt6) && edt6.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedText", out var etdt6) && etdt6.GetString() is { Length: > 0 } edtext6)
           {
-            endTextToDisplay = ConvertTemplates(etd6);
+            endTextToDisplay = ConvertTemplates(edtext6);
           }
-          if (action.TryGetProperty("endedSpeak", out var esk6) && esk6.GetString() is { Length: > 0 } ets6)
+          if (action.TryGetProperty("endedSpeak", out var esk6) && esk6.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedSpeakPhrase", out var espk6) && espk6.GetString() is { Length: > 0 } estext6)
           {
-            endTextToSpeak = ConvertTemplates(ets6);
+            endTextToSpeak = ConvertTemplates(estext6);
           }
           if (action.TryGetProperty("duration", out var tdur6) && tdur6.ValueKind is JsonValueKind.Number or JsonValueKind.String)
           {
@@ -920,21 +931,25 @@ internal static class NagUtil
             }
           }
           // Map ending/ended sub-action text to EQLP warning/end fields
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt10) && esdt10.GetString() is { Length: > 0 } wtd10)
+          if (action.TryGetProperty("endingSoonDisplayText", out var esdt10) && esdt10.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonText", out var est10) && est10.GetString() is { Length: > 0 } etext10)
           {
-            warningTextToDisplay = ConvertTemplates(wtd10);
+            warningTextToDisplay = ConvertTemplates(etext10);
           }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess10) && ess10.GetString() is { Length: > 0 } wts10)
+          if (action.TryGetProperty("endingSoonSpeak", out var ess10) && ess10.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endingSoonSpeakPhrase", out var esp10) && esp10.GetString() is { Length: > 0 } stext10)
           {
-            warningTextToSpeak = ConvertTemplates(wts10);
+            warningTextToSpeak = ConvertTemplates(stext10);
           }
-          if (action.TryGetProperty("endedDisplayText", out var edt10) && edt10.GetString() is { Length: > 0 } etd10)
+          if (action.TryGetProperty("endedDisplayText", out var edt10) && edt10.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedText", out var etdt10) && etdt10.GetString() is { Length: > 0 } edtext10)
           {
-            endTextToDisplay = ConvertTemplates(etd10);
+            endTextToDisplay = ConvertTemplates(edtext10);
           }
-          if (action.TryGetProperty("endedSpeak", out var esk10) && esk10.GetString() is { Length: > 0 } ets10)
+          if (action.TryGetProperty("endedSpeak", out var esk10) && esk10.ValueKind == JsonValueKind.True &&
+            action.TryGetProperty("endedSpeakPhrase", out var espk10) && espk10.GetString() is { Length: > 0 } estext10)
           {
-            endTextToSpeak = ConvertTemplates(ets10);
+            endTextToSpeak = ConvertTemplates(estext10);
           }
           if (action.TryGetProperty("duration", out var tdur10) && tdur10.ValueKind is JsonValueKind.Number or JsonValueKind.String)
           {
