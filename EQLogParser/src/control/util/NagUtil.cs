@@ -1018,32 +1018,6 @@ internal static class NagUtil
     }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles);
   }
 
-  internal static void WriteImportReport(List<NagImportResult> results, string outputPath)
-  {
-    try
-    {
-      var sb = new StringBuilder();
-      sb.AppendLine("TriggerName,TriggerId,Status,Reason,FolderPath,ActionsSummary,MissingAudioFiles");
-      foreach (var r in results)
-      {
-        // Escape CSV fields that contain commas or quotes
-        var name = EscapeCsv(r.TriggerName);
-        var id = EscapeCsv(r.TriggerId);
-        var status = EscapeCsv(r.Status);
-        var reason = EscapeCsv(r.Reason);
-        var folder = EscapeCsv(r.FolderPath);
-        var summary = EscapeCsv(r.ActionsSummary);
-        var missingAudio = EscapeCsv(string.Join("; ", r.MissingAudioFiles ?? []));
-        sb.AppendLine($"{name},{id},{status},{reason},{folder},{summary},{missingAudio}");
-      }
-      File.WriteAllText(outputPath, sb.ToString());
-    }
-    catch (Exception ex)
-    {
-      Log.Error("Error writing import report", ex);
-    }
-  }
-
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)
   {
     try
@@ -1121,16 +1095,6 @@ internal static class NagUtil
   private static string HtmlEncode(string value)
   {
     return string.IsNullOrEmpty(value) ? "" : System.Net.WebUtility.HtmlEncode(value);
-  }
-
-  private static string EscapeCsv(string value)
-  {
-    if (string.IsNullOrEmpty(value)) return "";
-    if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-    {
-      return $"\"{value.Replace("\"", "\"\"")}\"";
-    }
-    return value;
   }
 
   internal static List<ExportTriggerNode> ConvertOverlays(string json)

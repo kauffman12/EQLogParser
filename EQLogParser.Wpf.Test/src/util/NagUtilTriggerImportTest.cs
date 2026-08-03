@@ -698,48 +698,12 @@ namespace EQLogParser.Wpf.Test
       var tempFile = Path.GetTempFileName();
       try
       {
-        NagUtil.WriteImportReport(results, tempFile);
+        NagUtil.WriteImportReportHtml(results, tempFile);
         Assert.IsTrue(File.Exists(tempFile));
 
-        var content = File.ReadAllText(tempFile);
-        Assert.IsTrue(content.Contains("FolderPath"));
-        Assert.IsTrue(content.Contains("/root/sub"));
-        Assert.IsTrue(content.Contains("/root"));
-      }
-      finally
-      {
-        File.Delete(tempFile);
-      }
-    }
-
-    #endregion
-
-    #region CSV Report Generation
-
-    [TestMethod]
-    public void WriteImportReport_ValidResults_CreatesCsv()
-    {
-      var results = new List<NagImportResult>
-      {
-        new() { TriggerName = "Test1", TriggerId = "t1", Status = "Imported", Reason = null, ActionsSummary = "Text" },
-        new() { TriggerName = "Test2", TriggerId = "t2", Status = "Skipped", Reason = "Dev-only trigger", ActionsSummary = null },
-        new() { TriggerName = "Has,Comma", TriggerId = "t3", Status = "Partial", Reason = "set variable", ActionsSummary = "Text, Audio" }
-      };
-
-      var tempFile = Path.GetTempFileName();
-      try
-      {
-        NagUtil.WriteImportReport(results, tempFile);
-        Assert.IsTrue(File.Exists(tempFile));
-
-        var content = File.ReadAllText(tempFile);
-        // Verify FolderPath column exists in header
-        Assert.IsTrue(content.Contains("FolderPath"));
-        Assert.IsTrue(content.Contains("TriggerName"));
-        Assert.IsTrue(content.Contains("Test1"));
-        Assert.IsTrue(content.Contains("Test2"));
-        // CSV escaping for comma in name
-        Assert.IsTrue(content.Contains("\"Has,Comma\""));
+        var html = File.ReadAllText(tempFile);
+        Assert.IsTrue(html.Contains("/root/sub"));
+        Assert.IsTrue(html.Contains("/root"));
       }
       finally
       {
