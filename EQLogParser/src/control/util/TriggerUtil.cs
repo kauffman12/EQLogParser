@@ -55,37 +55,26 @@ namespace EQLogParser
     }
 
     // Import overlays from a NAG database directory (reads overlays-database.json and parses via NagUtil)
-    internal static async Task ImportNagOverlays(string overlaysFilePath)
+    internal static async Task ImportNagOverlays(string databaseDirectory)
     {
       try
       {
-        if (!File.Exists(overlaysFilePath))
+        var filePath = Path.Combine(databaseDirectory, "overlays-database.json");
+        if (!File.Exists(filePath))
         {
-          await UiUtil.InvokeAsync(() =>
-          {
-            new MessageWindow("Could not find overlays-database.json in the selected directory.", "Import NAG DB", MessageWindow.IconType.Warn).ShowDialog();
-          });
           return;
         }
 
-        var json = await File.ReadAllTextAsync(overlaysFilePath);
+        var json = await File.ReadAllTextAsync(filePath);
         var imported = NagUtil.ConvertOverlays(json);
         if (imported?.Count > 0)
         {
           await TriggerStateDB.Instance.ImportOverlays(imported);
-          await UiUtil.InvokeAsync(() =>
-          {
-            new MessageWindow($"Imported {imported.Count} overlay(s).", "NAG Import Complete").ShowDialog();
-          });
         }
       }
       catch (Exception ex)
       {
         Log.Error("Error importing NAG overlays", ex);
-        await UiUtil.InvokeAsync(() =>
-        {
-          new MessageWindow("Problem importing NAG overlays. Check Error Log for details.", Resource.IMPORT_ERROR).ShowDialog();
-        });
       }
     }
 
@@ -109,11 +98,15 @@ namespace EQLogParser
 
         if (nodes?.Count > 0)
         {
-          var nagIdMap = await TriggerStateDB.Instance.ImportTriggers("", nodes);
+          var folderName = $"NAG Import - {DateTime.Now:yyyy-MM-dd HH:mm}";
+          var nagIdMap = await TriggerStateDB.Instance.ImportTriggers(folderName, nodes);
 
           // Import per-character trigger enable/disable state from characters-database.json
           await ImportNagCharacterStates(databaseDirectory, nagIdMap, metadata);
         }
+
+        // Import overlays from the same NAG database directory
+        await ImportNagOverlays(databaseDirectory);
 
         // Generate CSV report
         var reportPath = Path.Combine(databaseDirectory, "eqlp-import-report.csv");

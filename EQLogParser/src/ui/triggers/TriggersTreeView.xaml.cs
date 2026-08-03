@@ -289,29 +289,6 @@ namespace EQLogParser
       }
     }
 
-    private async void ImportNagDbClick(object sender, RoutedEventArgs e)
-    {
-      if (GetTreeViewFromMenu(sender) is null)
-        return;
-
-      var dirPath = TriggerUtil.SelectNagDatabaseDirectory();
-      if (dirPath is null)
-        return;
-
-      var progressWindow = new MessageWindow($"Loading NAG Overlays from {Path.GetFileName(dirPath)}", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
-      progressWindow.Show();
-
-      try
-      {
-        await TriggerUtil.ImportNagOverlays(Path.Combine(dirPath, "overlays-database.json"));
-        await RefreshOverlayNode();
-      }
-      finally
-      {
-        progressWindow.Close();
-      }
-    }
-
     private async void ImportNagTriggersClick(object sender, RoutedEventArgs e)
     {
       if (GetTreeViewFromMenu(sender) is null)
@@ -321,13 +298,14 @@ namespace EQLogParser
       if (dirPath is null)
         return;
 
-      var progressWindow = new MessageWindow($"Loading NAG Triggers from {Path.GetFileName(dirPath)}...\nThis may take a moment for large databases.", "Import NAG Triggers", MessageWindow.IconType.Info, noButtons: true);
+      var progressWindow = new MessageWindow($"Loading NAG Triggers and Overlays from {Path.GetFileName(dirPath)}...\nThis may take a moment for large databases.", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
       progressWindow.Show();
 
       try
       {
         await TriggerUtil.ImportNagTriggers(dirPath);
         await RefreshTriggerNode();
+        await RefreshOverlayNode();
       }
       finally
       {
@@ -829,7 +807,6 @@ namespace EQLogParser
         renameOverlayMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteOverlayMenuItem.IsEnabled = node.ParentNode != null;
         importOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
-        importNagDbOverlayMenuItem.IsEnabled = true; // Always available — NAG import goes to root
         newOverlayMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyOverlayItem.IsEnabled = !node.IsDir() && count == 1;
         pasteOverlayItem.IsEnabled = node.IsDir() && count == 1 && _overlayCopiedNode != null;
@@ -839,7 +816,6 @@ namespace EQLogParser
         renameOverlayMenuItem.IsEnabled = false;
         deleteOverlayMenuItem.IsEnabled = false;
         importOverlayMenuItem.IsEnabled = false;
-        importNagDbOverlayMenuItem.IsEnabled = true; // Always available — NAG import goes to root
         copyOverlayItem.IsEnabled = false;
         pasteOverlayItem.IsEnabled = false;
       }

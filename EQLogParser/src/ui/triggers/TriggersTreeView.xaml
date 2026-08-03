@@ -145,7 +145,7 @@
                     <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
                   </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="importNagDbTriggerMenuItem" Header="Import NAG Triggers" ToolTip="Import Triggers from a NAG database directory" Click="ImportNagTriggersClick">
+                <MenuItem x:Name="importNagDbTriggerMenuItem" Header="Import NAG DB" ToolTip="Import Triggers and Overlays from a NAG database directory" Click="ImportNagTriggersClick">
                   <MenuItem.Icon>
                     <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
                   </MenuItem.Icon>
@@ -236,11 +236,6 @@
             </MenuItem>
             <Separator />
             <MenuItem x:Name="exportOverlayMenuItem" Header="Export" ToolTip="Exports Selected Folders" Click="ExportClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="importNagDbOverlayMenuItem" Header="Import NAG DB" ToolTip="Import Overlays from a NAG database directory" Click="ImportNagDbClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Download" />
               </MenuItem.Icon>
