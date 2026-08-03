@@ -549,12 +549,13 @@ internal static class NagUtil
       conditionStr = ParseConditions(conds);
     }
 
-    // Build import notes for Comments field (no longer embeds NAG ID — that's in OriginalId)
+    // Build Comments field: preserve original NAG comments as-is.
+    // Only append notes about dropped features when something was actually lost in conversion.
     var commentParts = new List<string>();
     if (!string.IsNullOrEmpty(comments))
-      commentParts.Add($"Original: {comments}");
+      commentParts.Add(comments);
     if (droppedFeatures.Count > 0)
-      commentParts.Add($"Dropped: {string.Join(", ", droppedFeatures)}");
+      commentParts.Add($"EQLP Import Notes: {string.Join(", ", droppedFeatures)}");
     var triggerComments = commentParts.Count > 0 ? string.Join("\n", commentParts) : null;
 
     // Build one EQLP trigger per capture phrase (no regex alternation combining)
