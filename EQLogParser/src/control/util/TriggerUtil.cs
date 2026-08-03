@@ -108,11 +108,13 @@ namespace EQLogParser
         // Import overlays from the same NAG database directory
         await ImportNagOverlays(databaseDirectory);
 
-        // Generate CSV report
+        // Generate CSV and HTML reports
         var reportPath = Path.Combine(databaseDirectory, "eqlp-import-report.csv");
+        var htmlReportPath = Path.Combine(databaseDirectory, "eqlp-import-report.html");
         try
         {
           NagUtil.WriteImportReport(results ?? [], reportPath);
+          NagUtil.WriteImportReportHtml(results ?? [], htmlReportPath);
         }
         catch (Exception ex)
         {
@@ -163,8 +165,11 @@ namespace EQLogParser
             message += "\nUse 'Browse for Sound File' in the trigger editor to locate these.";
           }
 
+          var htmlReport = File.Exists(htmlReportPath) ? htmlReportPath : null;
           if (!string.IsNullOrEmpty(reportPath))
-            message += $"\nDetailed report: {reportPath}";
+            message += $"\nDetailed CSV report: {reportPath}";
+          if (htmlReport != null)
+            message += $"\nDetailed HTML report: {htmlReport}";
 
           new MessageWindow(message, "NAG Import Complete").ShowDialog();
         });
