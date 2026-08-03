@@ -463,9 +463,9 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = NagUtil.ConvertTriggers(json);
 
       Assert.AreEqual(1, nodes.Count);
-      // NAG trigger ID is no longer embedded in comments; it's tracked via OriginalId
-      // and the metadata dictionary returned by ConvertTriggers.
-      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("Original:"));
+      // NAG comments are preserved as-is (no "Original:" prefix).
+      // The NAG trigger ID is tracked via OriginalId and the metadata dictionary.
+      Assert.IsFalse(nodes[0].TriggerData.Comments.Contains("Original:"));
       Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("User's note here"));
     }
 
@@ -481,7 +481,7 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = NagUtil.ConvertTriggers(json);
 
       Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("Dropped:"));
+      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("EQLP Import Notes:"));
       Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("set variable"));
     }
 
@@ -740,6 +740,121 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(content.Contains("Test2"));
         // CSV escaping for comma in name
         Assert.IsTrue(content.Contains("\"Has,Comma\""));
+      }
+      finally
+      {
+        File.Delete(tempFile);
+      }
+    }
+
+    #endregion
+
+    #region HTML Report Generation
+
+    [TestMethod]
+    public void WriteImportReportHtml_ValidResults_CreatesHtml()
+    {
+      var results = new List<NagImportResult>
+      {
+        new() { TriggerName = "Test1", TriggerId = "t1", Status = "Imported", Reason = null, FolderPath = "NAG Import - 2024-01-15 10:30/Orphaned Triggers", ActionsSummary = "Text", MissingAudioFiles = [] },
+        new() { TriggerName = "Test2", TriggerId = "t2", Status = "Skipped", Reason = "Dev-only trigger", FolderPath = "(root)", ActionsSummary = null, MissingAudioFiles = [] },
+        new() { TriggerName = "Has,Comma", TriggerId = "t3", Status = "Partial", Reason = "set variable", FolderPath = "NAG Import - 2024-01-15 10:30/Raids/Kunark", ActionsSummary = "Text, Audio", MissingAudioFiles = new List<string> { "missing.wav" } }
+      };
+
+      var tempFile = Path.GetTempFileName();
+      try
+      {
+        NagUtil.WriteImportReportHtml(results, tempFile);
+        Assert.IsTrue(File.Exists(tempFile));
+
+        var html = File.ReadAllText(tempFile);
+        // Verify HTML structure
+        Assert.IsTrue(html.Contains("<!DOCTYPE html>"));
+        Assert.IsTrue(html.Contains("</html>"));
+        // Verify summary stats
+        Assert.IsTrue(html.Contains("Imported"));
+        Assert.IsTrue(html.Contains("Partial"));
+        Assert.IsTrue(html.Contains("Skipped"));
+        // Verify trigger names appear
+        Assert.IsTrue(html.Contains("Test1"));
+        Assert.IsTrue(html.Contains("Has,Comma"));
+        // Verify folder paths appear
+        Assert.IsTrue(html.Contains("Orphaned Triggers"));
+        Assert.IsTrue(html.Contains("Kunark"));
+        // Verify missing audio file is listed
+        Assert.IsTrue(html.Contains("missing.wav"));
+        // Verify badge classes
+        Assert.IsTrue(html.Contains("badge-imported"));
+        Assert.IsTrue(html.Contains("badge-partial"));
+        Assert.IsTrue(html.Contains("badge-skipped"));
+      }
+      finally
+      {
+        File.Delete(tempFile);
+      }
+    }
+
+    [TestMethod]
+    public void WriteImportReportHtml_EmptyResults_CreatesHtml()
+    {
+      var tempFile = Path.GetTempFileName();
+      try
+      {
+        NagUtil.WriteImportReportHtml([], tempFile);
+        Assert.IsTrue(File.Exists(tempFile));
+
+        var html = File.ReadAllText(tempFile);
+        Assert.IsTrue(html.Contains("<!DOCTYPE html>"));
+        Assert.IsTrue(html.Contains("</html>"));
+      }
+      finally
+      {
+        File.Delete(tempFile);
+      }
+    }
+
+    [TestMethod]
+    public void WriteImportReportHtml_SpecialCharacters_AreHtmlEncoded()
+    {
+      var results = new List<NagImportResult>
+      {
+        new() { TriggerName = "Trigger <with> & \"quotes\"", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+      };
+
+      var tempFile = Path.GetTempFileName();
+      try
+      {
+        NagUtil.WriteImportReportHtml(results, tempFile);
+        Assert.IsTrue(File.Exists(tempFile));
+
+        var html = File.ReadAllText(tempFile);
+        // Raw HTML special chars must NOT appear unencoded
+        Assert.IsFalse(html.Contains("<with>"));
+        Assert.IsTrue(html.Contains("&lt;with&gt;"));
+        Assert.IsTrue(html.Contains("&amp;"));
+      }
+      finally
+      {
+        File.Delete(tempFile);
+      }
+    }
+
+    [TestMethod]
+    public void WriteImportReportHtml_RootFolder_ShowsEmRoot()
+    {
+      var results = new List<NagImportResult>
+      {
+        new() { TriggerName = "Root Trig", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+      };
+
+      var tempFile = Path.GetTempFileName();
+      try
+      {
+        NagUtil.WriteImportReportHtml(results, tempFile);
+        Assert.IsTrue(File.Exists(tempFile));
+
+        var html = File.ReadAllText(tempFile);
+        Assert.IsTrue(html.Contains("<em>(root)</em>"));
       }
       finally
       {
