@@ -159,20 +159,8 @@ namespace EQLogParser
             message += "Skipped triggers:\n" + string.Join("\n", skipReasons.Take(10)) + "\n";
           }
 
-          // Collect unique missing audio files across all results
-          var missingAudio = results.Where(r => r.MissingAudioFiles?.Count > 0)
-            .SelectMany(r => r.MissingAudioFiles)
-            .Distinct()
-            .ToList();
-
-          if (missingAudio.Count > 0)
-          {
-            message += $"\nMissing audio files ({missingAudio.Count}):\n" +
-              string.Join("\n", missingAudio.Take(10));
-            if (missingAudio.Count > 10)
-              message += $"\n... and {missingAudio.Count - 10} more";
-            message += "\nUse 'Browse for Sound File' in the trigger editor to locate these.";
-          }
+          // Missing audio files are listed in the HTML report, not here,
+          // to keep the dialog concise.
 
           if (!string.IsNullOrEmpty(htmlReportPath))
           {
