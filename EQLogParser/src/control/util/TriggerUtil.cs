@@ -1,5 +1,6 @@
 using EQLogParser.Audio;
 using log4net;
+using log4net.Appender;
 using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
@@ -108,16 +109,25 @@ namespace EQLogParser
         // Import overlays from the same NAG database directory
         await ImportNagOverlays(databaseDirectory);
 
-        // Generate CSV report
-        var reportPath = Path.Combine(databaseDirectory, "eqlp-import-report.csv");
+        // Generate HTML import report — save in the EQLP log directory
+        // (where the error log lives), with a timestamped filename so repeated
+        // imports don't overwrite each other. This keeps the NAG database
+        // directory clean for users who may want to delete it entirely.
+        var htmlReportPath = string.Empty;
         try
         {
-          NagUtil.WriteImportReport(results ?? [], reportPath);
+          var logDir = GetLogDirectory();
+          if (!string.IsNullOrEmpty(logDir))
+          {
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            htmlReportPath = Path.Combine(logDir, $"eqlp-import-report-{timestamp}.html");
+            NagUtil.WriteImportReportHtml(results ?? [], htmlReportPath);
+          }
         }
         catch (Exception ex)
         {
           Log.Warn("Could not write import report", ex);
-          reportPath = null;
+          htmlReportPath = null;
         }
 
         // Show summary dialog
@@ -163,10 +173,21 @@ namespace EQLogParser
             message += "\nUse 'Browse for Sound File' in the trigger editor to locate these.";
           }
 
-          if (!string.IsNullOrEmpty(reportPath))
-            message += $"\nDetailed report: {reportPath}";
+          if (!string.IsNullOrEmpty(htmlReportPath))
+          {
+            message += $"\nDetailed HTML report: {htmlReportPath}";
 
-          new MessageWindow(message, "NAG Import Complete").ShowDialog();
+            var msg = new MessageWindow(message, "NAG Import Complete", MessageWindow.IconType.Info, "Open Report");
+            msg.ShowDialog();
+            if (msg.IsYes1Clicked)
+            {
+              MainActions.OpenFileWithDefault("\"" + htmlReportPath + "\"");
+            }
+          }
+          else
+          {
+            new MessageWindow(message, "NAG Import Complete").ShowDialog();
+          }
         });
       }
       catch (Exception ex)
@@ -1417,6 +1438,28 @@ namespace EQLogParser
 
     [GeneratedRegex(@"\{(TS|[sn](?:\s*[0-9]+\s*|\s*[><]=?\s*[0-9]+\s*|=\s*[0-9]+\s*)?)\}", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex TestRegex();
+
+    /// <summary>
+    /// Returns the directory of the EQLP log file (where the error log lives),
+    /// or null if it cannot be determined.
+    /// </summary>
+    private static string GetLogDirectory()
+    {
+      try
+      {
+        var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault();
+        if (appender is FileAppender fileAppender && !string.IsNullOrEmpty(fileAppender.File))
+        {
+          return Path.GetDirectoryName(fileAppender.File);
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Warn("Could not determine log directory", ex);
+      }
+
+      return null;
+    }
   }
 
   internal class CharacterData

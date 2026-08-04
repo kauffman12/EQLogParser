@@ -1018,40 +1018,83 @@ internal static class NagUtil
     }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles);
   }
 
-  internal static void WriteImportReport(List<NagImportResult> results, string outputPath)
+  internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)
   {
     try
     {
       var sb = new StringBuilder();
-      sb.AppendLine("TriggerName,TriggerId,Status,Reason,FolderPath,ActionsSummary,MissingAudioFiles");
+      sb.AppendLine("<!DOCTYPE html>");
+      sb.AppendLine("<html lang=\"en\">\n<head>");
+      sb.AppendLine("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NAG Import Report</title>");
+      sb.AppendLine("<style>");
+      sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #333; }");
+      sb.AppendLine("h1 { color: #1a73e8; margin-bottom: 5px; }");
+      sb.AppendLine(".summary { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }");
+      sb.AppendLine(".stat { background: white; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 100px; }");
+      sb.AppendLine(".stat .num { font-size: 28px; font-weight: bold; display: block; }");
+      sb.AppendLine(".stat .label { font-size: 12px; color: #666; text-transform: uppercase; }");
+      sb.AppendLine(".stat.imported .num { color: #2e7d32; }");
+      sb.AppendLine(".stat.partial .num { color: #f57c00; }");
+      sb.AppendLine(".stat.skipped .num { color: #c62828; }");
+      sb.AppendLine("table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }");
+      sb.AppendLine("th { background: #1a73e8; color: white; padding: 10px 12px; text-align: left; font-size: 13px; position: sticky; top: 0; }");
+      sb.AppendLine("td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }");
+      sb.AppendLine("tr:hover td { background: #f0f7ff; }");
+      sb.AppendLine(".badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }");
+      sb.AppendLine(".badge-imported { background: #c8e6c9; color: #1b5e20; }");
+      sb.AppendLine(".badge-partial { background: #fff9c4; color: #f57f17; }");
+      sb.AppendLine(".badge-skipped { background: #ffcdd2; color: #b71c1c; }");
+      sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #555; }");
+      sb.AppendLine(".missing-audio { font-size: 11px; color: #999; }");
+      sb.AppendLine(".actions { max-width: 300px; word-break: break-word; }");
+      sb.AppendLine(".reason { max-width: 250px; word-break: break-word; font-size: 12px; }");
+      sb.AppendLine("th .folder-col { width: 220px; }");
+      sb.AppendLine("th .actions-col { width: 280px; }");
+      sb.AppendLine("th .reason-col { width: 200px; }");
+      sb.AppendLine("</style>\n</head>\n<body>");
+
+      var total = results.Count;
+      var imported = results.Count(r => r.Status == "Imported");
+      var partial = results.Count(r => r.Status == "Partial");
+      var skipped = results.Count(r => r.Status == "Skipped");
+
+      sb.AppendLine($"<h1>NAG Import Report</h1>");
+      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Imported</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
+
+      sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
+
       foreach (var r in results)
       {
-        // Escape CSV fields that contain commas or quotes
-        var name = EscapeCsv(r.TriggerName);
-        var id = EscapeCsv(r.TriggerId);
-        var status = EscapeCsv(r.Status);
-        var reason = EscapeCsv(r.Reason);
-        var folder = EscapeCsv(r.FolderPath);
-        var summary = EscapeCsv(r.ActionsSummary);
-        var missingAudio = EscapeCsv(string.Join("; ", r.MissingAudioFiles ?? []));
-        sb.AppendLine($"{name},{id},{status},{reason},{folder},{summary},{missingAudio}");
+        var badgeClass = r.Status switch
+        {
+          "Imported" => "badge-imported",
+          "Partial" => "badge-partial",
+          "Skipped" => "badge-skipped",
+          _ => ""
+        };
+        var badge = $"<span class=\"badge {badgeClass}\">{r.Status}</span>";
+        var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
+          ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
+        var actions = HtmlEncode(r.ActionsSummary ?? "");
+        var reason = string.IsNullOrEmpty(r.Reason) ? "—" : HtmlEncode(r.Reason);
+        var missingAudio = r.MissingAudioFiles?.Count > 0
+          ? $"<div class=\"missing-audio\">{string.Join("<br>", r.MissingAudioFiles.Select(HtmlEncode))}</div>"
+          : "—";
+        sb.AppendLine($"<tr><td>{HtmlEncode(r.TriggerName)}</td><td>{badge}</td><td>{folder}</td><td class=\"actions\">{actions}</td><td class=\"reason\">{reason}</td><td>{missingAudio}</td></tr>");
       }
+
+      sb.AppendLine("</tbody>\n</table>\n</body>\n</html>");
       File.WriteAllText(outputPath, sb.ToString());
     }
     catch (Exception ex)
     {
-      Log.Error("Error writing import report", ex);
+      Log.Error("Error writing HTML import report", ex);
     }
   }
 
-  private static string EscapeCsv(string value)
+  private static string HtmlEncode(string value)
   {
-    if (string.IsNullOrEmpty(value)) return "";
-    if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-    {
-      return $"\"{value.Replace("\"", "\"\"")}\"";
-    }
-    return value;
+    return string.IsNullOrEmpty(value) ? "" : System.Net.WebUtility.HtmlEncode(value);
   }
 
   internal static List<ExportTriggerNode> ConvertOverlays(string json)
