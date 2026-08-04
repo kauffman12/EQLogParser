@@ -653,10 +653,13 @@ internal static class NagUtil
     }
 
     // Determine import status and reason
-    var status = droppedFeatures.Count > 0 ? "Partial" : "Imported";
+    // Triggers with missing audio files are Partial (imported but incomplete)
+    var hasMissingAudio = parsed.missingAudioFiles?.Count > 0;
+    var status = hasMissingAudio || droppedFeatures.Count > 0 ? "Partial" : "Imported";
     var reason = isSequential ? "Sequential capture method (not supported)" :
                  hasClassLevels ? "Class level filtering (not supported)" :
                  droppedFeatures.Count > 0 ? string.Join(", ", droppedFeatures) :
+                 hasMissingAudio ? $"{parsed.missingAudioFiles.Count} missing audio file(s)" :
                  null;
 
     // Sequential capture triggers cannot be reliably converted — skip them entirely
