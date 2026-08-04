@@ -636,8 +636,8 @@ internal static class NagUtil
 
       // Add VariableActions for set-variable mappings on this phrase.
       // EQLP stores the captured value as a global variable accessible by other triggers.
-      var currentPhraseId = phrases[i].phraseId;
-      if (!string.IsNullOrEmpty(currentPhraseId) && phraseVarMap.TryGetValue(currentPhraseId, out var varList))
+      var currentPhraseId = phrases[i].phraseId ?? "";
+      if (phraseVarMap.TryGetValue(currentPhraseId, out var varList))
       {
         foreach (var (groupName, varName) in varList)
         {
@@ -771,6 +771,88 @@ internal static class NagUtil
     });
   }
 
+  // Shared parsing for NAG timer actions (actionType 3/4, 6, 10). Extracts common fields: display text,
+  // endEarlyPhrases, endingSoon/ended sub-action text, duration, colors, and overlayId.
+  private static void ParseTimerActionFields(
+      JsonElement action, bool handleNullDuration, ref string textToDisplay, ref double durationSeconds,
+      ref int triggerAgainOption, ref string activeColor, ref string idleColor,
+      List<string> actionEndEarlyPhrases, List<bool> actionEndEarlyUseRegex,
+      ref string warningTextToDisplay, ref string warningTextToSpeak,
+      ref string endTextToDisplay, ref string endTextToSpeak,
+      List<string> selectedOverlays, List<string> droppedFeatures)
+  {
+    if (action.TryGetProperty("displayText", out var dt) && dt.GetString() is { Length: > 0 } timerText)
+    {
+      textToDisplay = ConvertTemplates(timerText);
+    }
+    if (action.TryGetProperty("endEarlyPhrases", out var aeep) && aeep.ValueKind == JsonValueKind.Array)
+    {
+      foreach (var ee in aeep.EnumerateArray())
+      {
+        if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
+        {
+          actionEndEarlyPhrases.Add(ConvertTemplates(phrase));
+          actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean());
+        }
+      }
+    }
+    if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.ValueKind == JsonValueKind.True &&
+      action.TryGetProperty("endingSoonText", out var est) && est.GetString() is { Length: > 0 } etext)
+    {
+      warningTextToDisplay = ConvertTemplates(etext);
+    }
+    if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.ValueKind == JsonValueKind.True &&
+      action.TryGetProperty("endingSoonSpeakPhrase", out var esp) && esp.GetString() is { Length: > 0 } stext)
+    {
+      warningTextToSpeak = ConvertTemplates(stext);
+    }
+    if (action.TryGetProperty("endedDisplayText", out var edt) && edt.ValueKind == JsonValueKind.True &&
+      action.TryGetProperty("endedText", out var etdt) && etdt.GetString() is { Length: > 0 } edtext)
+    {
+      endTextToDisplay = ConvertTemplates(edtext);
+    }
+    if (action.TryGetProperty("endedSpeak", out var esk) && esk.ValueKind == JsonValueKind.True &&
+      action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
+    {
+      endTextToSpeak = ConvertTemplates(estext);
+    }
+    if (action.TryGetProperty("duration", out var tdur))
+    {
+      if (handleNullDuration && tdur.ValueKind == JsonValueKind.Null)
+      {
+        // NAG null duration = indefinite timer ended by endEarlyPhrases.
+        // EQLP requires a fixed DurationSeconds; default to 60s and rely on
+        // EndEarlyPattern(s) to stop the timer when the spell fades.
+        durationSeconds = 60.0;
+        droppedFeatures.Add("indefinite timer duration (defaulted to 60s)");
+      }
+      else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
+      {
+        durationSeconds = tdur.GetDouble();
+      }
+    }
+    if (action.TryGetProperty("restartBehavior", out var rb) && rb.ValueKind is JsonValueKind.Number or JsonValueKind.String)
+    {
+      triggerAgainOption = rb.GetInt32();
+    }
+    if (action.TryGetProperty("useCustomColor", out var ucc) && ucc.GetBoolean())
+    {
+      if (action.TryGetProperty("overrideTimerColor", out var otc) && otc.GetString() is { Length: > 0 } color)
+      {
+        activeColor = ConvertColor(color);
+      }
+    }
+    if (action.TryGetProperty("timerBackgroundColor", out var tbc) && tbc.GetString() is { Length: > 0 } bgColor)
+    {
+      idleColor = ConvertColor(bgColor);
+    }
+    if (action.TryGetProperty("overlayId", out var ov) && ov.GetString() is { Length: > 0 } overlayId)
+    {
+      if (!selectedOverlays.Contains(overlayId))
+        selectedOverlays.Add(overlayId);
+    }
+  }
+
   private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
@@ -870,130 +952,24 @@ internal static class NagUtil
         case 4: // Repeating Timer
           hasAction = true;
           timerType = actionType == 4 ? 4 : 1;
-          if (action.TryGetProperty("displayText", out var td) && td.GetString() is { Length: > 0 } timerText)
-          {
-            textToDisplay = ConvertTemplates(timerText);
-          }
-          // Collect action-level endEarlyPhrases for dynamic-duration timers
-          if (action.TryGetProperty("endEarlyPhrases", out var aeep) && aeep.ValueKind == JsonValueKind.Array)
-          {
-            foreach (var ee in aeep.EnumerateArray())
-            {
-              if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
-              {
-                actionEndEarlyPhrases.Add(ConvertTemplates(phrase));
-                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean());
-              }
-            }
-          }
-          // Map ending/ended sub-action text to EQLP warning/end fields.
-          // NAG uses boolean flags (endingSoonDisplayText, endingSoonSpeak, etc.) to indicate
-          // whether the feature is enabled, with actual text in separate fields (endingSoonText,
-          // endingSoonSpeakPhrase, endedText, endedSpeakPhrase).
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonText", out var est) && est.GetString() is { Length: > 0 } etext)
-          {
-            warningTextToDisplay = ConvertTemplates(etext);
-          }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonSpeakPhrase", out var esp) && esp.GetString() is { Length: > 0 } stext)
-          {
-            warningTextToSpeak = ConvertTemplates(stext);
-          }
-          if (action.TryGetProperty("endedDisplayText", out var edt) && edt.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedText", out var etdt) && etdt.GetString() is { Length: > 0 } edtext)
-          {
-            endTextToDisplay = ConvertTemplates(edtext);
-          }
-          if (action.TryGetProperty("endedSpeak", out var esk) && esk.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
-          {
-            endTextToSpeak = ConvertTemplates(estext);
-          }
-          if (action.TryGetProperty("duration", out var tdur))
-          {
-            if (tdur.ValueKind == JsonValueKind.Null)
-            {
-              // NAG null duration = indefinite timer ended by endEarlyPhrases.
-              // EQLP requires a fixed DurationSeconds; default to 60s and rely on
-              // EndEarlyPattern(s) to stop the timer when the spell fades.
-              durationSeconds = 60.0;
-              droppedFeatures.Add("indefinite timer duration (defaulted to 60s)");
-            }
-            else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-            {
-              durationSeconds = tdur.GetDouble();
-            }
-          }
-          if (action.TryGetProperty("restartBehavior", out var rb) && rb.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-          {
-            triggerAgainOption = rb.GetInt32();
-          }
-          if (action.TryGetProperty("useCustomColor", out var ucc) && ucc.GetBoolean())
-          {
-            if (action.TryGetProperty("overrideTimerColor", out var otc) && otc.GetString() is { Length: > 0 } color)
-            {
-              activeColor = ConvertColor(color);
-            }
-          }
-          // Collect overlayId
-          if (action.TryGetProperty("overlayId", out var ov) && ov.GetString() is { Length: > 0 } overlayId)
-          {
-            if (!selectedOverlays.Contains(overlayId))
-              selectedOverlays.Add(overlayId);
-          }
+          ParseTimerActionFields(action, handleNullDuration: true,
+            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
+            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
+            ref warningTextToDisplay, ref warningTextToSpeak,
+            ref endTextToDisplay, ref endTextToSpeak,
+            selectedOverlays, droppedFeatures);
           actionSummary.Add(actionType == 4 ? "Looping Timer" : "Timer");
           break;
 
         case 6: // Timer with Remain (remain-after-ended)
           hasAction = true;
           timerType = 1;
-          if (action.TryGetProperty("displayText", out var td6) && td6.GetString() is { Length: > 0 } timerText6)
-          {
-            textToDisplay = ConvertTemplates(timerText6);
-          }
-          // Collect action-level endEarlyPhrases
-          if (action.TryGetProperty("endEarlyPhrases", out var aeep6) && aeep6.ValueKind == JsonValueKind.Array)
-          {
-            foreach (var ee in aeep6.EnumerateArray())
-            {
-              if (ee.TryGetProperty("phrase", out var ep6) && ep6.GetString() is { Length: > 0 } phrase6)
-              {
-                actionEndEarlyPhrases.Add(ConvertTemplates(phrase6));
-                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe6) && useRe6.GetBoolean());
-              }
-            }
-          }
-          // Map ending/ended sub-action text to EQLP warning/end fields
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt6) && esdt6.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonText", out var est6) && est6.GetString() is { Length: > 0 } etext6)
-          {
-            warningTextToDisplay = ConvertTemplates(etext6);
-          }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess6) && ess6.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonSpeakPhrase", out var esp6) && esp6.GetString() is { Length: > 0 } stext6)
-          {
-            warningTextToSpeak = ConvertTemplates(stext6);
-          }
-          if (action.TryGetProperty("endedDisplayText", out var edt6) && edt6.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedText", out var etdt6) && etdt6.GetString() is { Length: > 0 } edtext6)
-          {
-            endTextToDisplay = ConvertTemplates(edtext6);
-          }
-          if (action.TryGetProperty("endedSpeak", out var esk6) && esk6.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedSpeakPhrase", out var espk6) && espk6.GetString() is { Length: > 0 } estext6)
-          {
-            endTextToSpeak = ConvertTemplates(estext6);
-          }
-          if (action.TryGetProperty("duration", out var tdur6) && tdur6.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-          {
-            durationSeconds = tdur6.GetDouble();
-          }
-          if (action.TryGetProperty("overlayId", out var ov6) && ov6.GetString() is { Length: > 0 } overlayId6)
-          {
-            if (!selectedOverlays.Contains(overlayId6))
-              selectedOverlays.Add(overlayId6);
-          }
+          ParseTimerActionFields(action, handleNullDuration: false,
+            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
+            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
+            ref warningTextToDisplay, ref warningTextToSpeak,
+            ref endTextToDisplay, ref endTextToSpeak,
+            selectedOverlays, droppedFeatures);
           droppedFeatures.Add("remain-after-ended timer");
           actionSummary.Add("Timer (partial)");
           break;
@@ -1016,52 +992,12 @@ internal static class NagUtil
         case 10: // Buff Timer with Cast Time
           hasAction = true;
           timerType = 1;
-          if (action.TryGetProperty("displayText", out var td10) && td10.GetString() is { Length: > 0 } timerText10)
-          {
-            textToDisplay = ConvertTemplates(timerText10);
-          }
-          // Collect action-level endEarlyPhrases
-          if (action.TryGetProperty("endEarlyPhrases", out var aeep10) && aeep10.ValueKind == JsonValueKind.Array)
-          {
-            foreach (var ee in aeep10.EnumerateArray())
-            {
-              if (ee.TryGetProperty("phrase", out var ep10) && ep10.GetString() is { Length: > 0 } phrase10)
-              {
-                actionEndEarlyPhrases.Add(ConvertTemplates(phrase10));
-                actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe10) && useRe10.GetBoolean());
-              }
-            }
-          }
-          // Map ending/ended sub-action text to EQLP warning/end fields
-          if (action.TryGetProperty("endingSoonDisplayText", out var esdt10) && esdt10.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonText", out var est10) && est10.GetString() is { Length: > 0 } etext10)
-          {
-            warningTextToDisplay = ConvertTemplates(etext10);
-          }
-          if (action.TryGetProperty("endingSoonSpeak", out var ess10) && ess10.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endingSoonSpeakPhrase", out var esp10) && esp10.GetString() is { Length: > 0 } stext10)
-          {
-            warningTextToSpeak = ConvertTemplates(stext10);
-          }
-          if (action.TryGetProperty("endedDisplayText", out var edt10) && edt10.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedText", out var etdt10) && etdt10.GetString() is { Length: > 0 } edtext10)
-          {
-            endTextToDisplay = ConvertTemplates(edtext10);
-          }
-          if (action.TryGetProperty("endedSpeak", out var esk10) && esk10.ValueKind == JsonValueKind.True &&
-            action.TryGetProperty("endedSpeakPhrase", out var espk10) && espk10.GetString() is { Length: > 0 } estext10)
-          {
-            endTextToSpeak = ConvertTemplates(estext10);
-          }
-          if (action.TryGetProperty("duration", out var tdur10) && tdur10.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-          {
-            durationSeconds = tdur10.GetDouble();
-          }
-          if (action.TryGetProperty("overlayId", out var ov10) && ov10.GetString() is { Length: > 0 } overlayId10)
-          {
-            if (!selectedOverlays.Contains(overlayId10))
-              selectedOverlays.Add(overlayId10);
-          }
+          ParseTimerActionFields(action, handleNullDuration: false,
+            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
+            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
+            ref warningTextToDisplay, ref warningTextToSpeak,
+            ref endTextToDisplay, ref endTextToSpeak,
+            selectedOverlays, droppedFeatures);
           droppedFeatures.Add("cast time tracking");
           actionSummary.Add("Timer (partial)");
           break;
@@ -1098,8 +1034,13 @@ internal static class NagUtil
           timerType = 1; // Countdown timer (same as actionType 3)
           if (action.TryGetProperty("displayText", out var cd) && cd.GetString() is { Length: > 0 } counterText)
           {
-            textToDisplay = ConvertTemplates(counterText);
-            // displayText doubles as the variable name for the counter
+            // Only set textToDisplay from the counter's displayText if no prior
+            // action (e.g. text overlay) has already provided a more descriptive label.
+            // The counter's displayText doubles as the variable name regardless.
+            if (string.IsNullOrEmpty(textToDisplay))
+            {
+              textToDisplay = ConvertTemplates(counterText);
+            }
             counterVarName = counterText;
           }
           if (action.TryGetProperty("duration", out var cdur) && cdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
@@ -1112,10 +1053,13 @@ internal static class NagUtil
             if (!selectedOverlays.Contains(overlayId8))
               selectedOverlays.Add(overlayId8);
           }
-          // Map colors
-          if (action.TryGetProperty("overrideTimerColor", out var ctc) && ctc.GetString() is { Length: > 0 } color8)
+          // Map colors (consistent with ParseTimerActionFields — check useCustomColor first)
+          if (action.TryGetProperty("useCustomColor", out var ucc8) && ucc8.GetBoolean())
           {
-            activeColor = color8;
+            if (action.TryGetProperty("overrideTimerColor", out var ctc) && ctc.GetString() is { Length: > 0 } color8)
+            {
+              activeColor = ConvertColor(color8);
+            }
           }
           if (action.TryGetProperty("timerBackgroundColor", out var ctbc) && ctbc.GetString() is { Length: > 0 } bgColor8)
           {
@@ -1142,7 +1086,7 @@ internal static class NagUtil
           break;
 
         default:
-          // Types 8,11,13,14,15 - counters, hotkeys, buffs, lists - unsupported
+          // Types 11,12,13,14,15 - hotkeys, screen flash, global reset, buffs, lists - unsupported
           var skipNames = actionType switch
           {
             11 => "hotkey",
@@ -1301,6 +1245,34 @@ internal static class NagUtil
       else if (trimmed.StartsWith("class level filtering", StringComparison.OrdinalIgnoreCase))
       {
         friendly.Add("Class level filtering: trigger was restricted to specific class levels, which EQLP does not support.");
+      }
+      else if (trimmed.Equals("screen flash", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Screen flash: NAG visual screen flash effect has no EQLP equivalent. Other actions in this trigger are still imported.");
+      }
+      else if (trimmed.Equals("hotkey", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Hotkey: NAG hotkey triggers fire on keyboard input, but EQLP only supports chat-log-based triggers.");
+      }
+      else if (trimmed.Equals("global reset", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Global reset: NAG clears all variables globally; EQLP only supports per-trigger variable clearing via EndTimerClearVariables.");
+      }
+      else if (trimmed.Equals("list widget", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("List widget: complex NAG UI component for managing lists of timers with enrollment and enumeration phrases. No EQLP equivalent.");
+      }
+      else if (trimmed.StartsWith("remain-after-ended timer", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Remain-after-ended timer: NAG keeps the timer visible after it ends; EQLP timers disappear when they complete.");
+      }
+      else if (trimmed.StartsWith("cast time tracking", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Cast time tracking: NAG adjusts timer duration based on spell cast time; EQLP uses fixed durations only.");
+      }
+      else if (trimmed.StartsWith("indefinite timer duration", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Indefinite timer duration: NAG timer has no fixed duration and ends via end-early phrases. EQLP requires a fixed duration; defaulted to 60 seconds.");
       }
       else
       {

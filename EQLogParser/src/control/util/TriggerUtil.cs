@@ -1435,8 +1435,10 @@ namespace EQLogParser
     {
       try
       {
-        var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault();
-        if (appender is FileAppender fileAppender && !string.IsNullOrEmpty(fileAppender.File))
+        var fileAppender = Log.Logger.Repository.GetAppenders()
+          .OfType<FileAppender>()
+          .FirstOrDefault(fa => !string.IsNullOrEmpty(fa.File));
+        if (fileAppender is not null)
         {
           return Path.GetDirectoryName(fileAppender.File);
         }
