@@ -111,8 +111,7 @@ namespace EQLogParser
         }
 
         // Generate HTML import report — save in the EQLP log directory
-        // (where the error log lives), with a timestamped filename so repeated
-        // imports don't overwrite each other. This keeps the NAG database
+        // (where the error log lives). This keeps the NAG database
         // directory clean for users who may want to delete it entirely.
         var htmlReportPath = string.Empty;
         try
@@ -120,8 +119,7 @@ namespace EQLogParser
           var logDir = GetLogDirectory();
           if (!string.IsNullOrEmpty(logDir))
           {
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            htmlReportPath = Path.Combine(logDir, $"eqlp-import-report-{timestamp}.html");
+            htmlReportPath = Path.Combine(logDir, "nag-import.html");
             NagUtil.WriteImportReportHtml(results ?? [], htmlReportPath);
           }
         }
@@ -164,7 +162,7 @@ namespace EQLogParser
 
           if (!string.IsNullOrEmpty(htmlReportPath))
           {
-            message += $"\nDetailed HTML report: {htmlReportPath}";
+            message += $"\nReport: {htmlReportPath}";
 
             var msg = new MessageWindow(message, "NAG Import Complete", MessageWindow.IconType.Info, "Open Report");
             msg.ShowDialog();
