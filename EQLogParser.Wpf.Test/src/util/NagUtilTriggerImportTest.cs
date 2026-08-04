@@ -1382,5 +1382,116 @@ namespace EQLogParser.Wpf.Test
     }
 
     #endregion
+
+    #region Real Data Integration Tests
+
+    /// <summary>
+    /// Loads a real NAG trigger extracted from nag/trigger-database.json and verifies
+    /// that set-variable (actionType 5) with phraseId correctly converts the capture
+    /// group to a named group and creates a VariableAction.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_SetVariableWithPhraseId()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // The trigger has 8 capture phrases → 8 EQLP triggers
+      Assert.AreEqual(8, nodes.Count);
+      Assert.AreEqual(8, results.Count);
+
+      // Phrase 0 (^You begin casting (.*)\.) should have set-variable mapping
+      var spellCastNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("s1"));
+      Assert.IsNotNull(spellCastNode, "Expected at least one trigger with a converted named group s1");
+
+      // The pattern should use (?<s1>) instead of unnamed (.*)
+      Assert.IsTrue(spellCastNode.TriggerData.Pattern.Contains("?<s1>"));
+
+      // Should have a VariableAction storing SpellBeingCast from {s1}
+      var setVarAction = spellCastNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast");
+      Assert.IsNotNull(setVarAction);
+      Assert.AreEqual("{s1}", setVarAction.Value);
+      Assert.IsTrue(setVarAction.IsSetAction);
+
+      // All triggers should import successfully (no dropped features)
+      Assert.IsTrue(results.All(r => r.Status == "Imported" || r.Status == "Partial"), $"Unexpected status: {string.Join(", ", results.Select(r => r.Status))}");
+    }
+
+    /// <summary>
+    /// Loads a real NAG trigger with set-variable (actionType 5) but NO phraseId,
+    /// verifying that the variable mapping applies to ALL regex phrases with capture groups.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_BardEpic_NoPhraseId_AppliesToAllRegexPhrases()
+    {
+      var json = LoadFixture("bard-epic-2-caster.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // 2 capture phrases → 2 EQLP triggers
+      Assert.AreEqual(2, nodes.Count);
+      Assert.AreEqual(2, results.Count);
+
+      // Phrase 0 (^([A-Za-z]{3,15}) begins? casting...) is regex with a capture group
+      var casterNode = nodes[0];
+      Assert.IsTrue(casterNode.TriggerData.Pattern.Contains("?<s1>"));
+
+      // Should have a VariableAction storing BrdEpic2Caster from {s1}
+      var setVarAction = casterNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
+      Assert.IsNotNull(setVarAction);
+      Assert.AreEqual("{s1}", setVarAction.Value);
+
+      // Phrase 1 (You are filled with the spirit of Vesagran.) is non-regex — no group conversion
+      var spiritNode = nodes[1];
+      Assert.IsFalse(spiritNode.TriggerData.Pattern.Contains("?<s1>"));
+    }
+
+    /// <summary>
+    /// Verifies that ${SpellBeingCast} in display text is converted to {SpellBeingCast}
+    /// (valid EQLP syntax), not {$SpellBeingCast} (invalid).
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_DisplayTextVariableConverted()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // The actionType 7 (clear variable) has displayText "Spell ${SpellBeingCast} was interrupted."
+      var nodeWithDisplay = nodes.FirstOrDefault(n => n.TriggerData.TextToDisplay.Contains("interrupted"));
+      Assert.IsNotNull(nodeWithDisplay, "Expected a trigger with 'interrupted' in display text");
+
+      // Should contain {SpellBeingCast} (valid EQLP), not {$SpellBeingCast} or ${SpellBeingCast}
+      Assert.IsTrue(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{SpellBeingCast}"));
+      Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{$SpellBeingCast}"));
+      Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("${SpellBeingCast}"));
+    }
+
+    /// <summary>
+    /// Verifies that ${Character} in regex capture phrases is converted to {c}
+    /// (EQLP native character name replacement) by DollarVarRegex.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_CharacterRefConvertedInRegexPhrase()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // Phrase "^${Character}'s ${SpellBeingCast} spell has been reflected" should have {c}
+      var reflectNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("reflected"));
+      Assert.IsNotNull(reflectNode, "Expected a trigger with 'reflected' in pattern");
+      Assert.IsTrue(reflectNode.TriggerData.Pattern.Contains("{c}"));
+      Assert.IsFalse(reflectNode.TriggerData.Pattern.Contains("${Character}"));
+    }
+
+    private static string LoadFixture(string fixtureName)
+    {
+      var assembly = typeof(NagUtilTriggerImportTest).Assembly;
+      var resourceName = $"EQLogParser.Wpf.Test.src.util.fixtures.nag.{fixtureName}";
+      using var stream = assembly.GetManifestResourceStream(resourceName);
+      if (stream is null) throw new InvalidOperationException($"Embedded resource '{resourceName}' not found.");
+      using var reader = new StreamReader(stream);
+      return reader.ReadToEnd();
+    }
+
+    #endregion
   }
 }

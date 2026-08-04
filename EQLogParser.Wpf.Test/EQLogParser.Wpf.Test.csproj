@@ -22,4 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="src\util\fixtures\nag\*.json" />
+  </ItemGroup>
 </Project>

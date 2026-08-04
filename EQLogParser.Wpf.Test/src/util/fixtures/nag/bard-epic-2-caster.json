@@ -1,0 +1,50 @@
+{
+  "triggerId": "Q5niVm5cuz82avCR",
+  "name": "Bard Epic 2.0 - Caster name in timer",
+  "capturePhrases": [
+    {
+      "phraseId": "aQQSloSfVskZ8LBa",
+      "phrase": "^([A-Za-z]{3,15}) begins? casting Spirit of Vesagran",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "2b5PzKhezDmXDuAc",
+      "phrase": "You are filled with the spirit of Vesagran.",
+      "useRegEx": false
+    }
+  ],
+  "actions": [
+    {
+      "actionType": 7,
+      "variableName": "BrdEpic2Caster"
+    },
+    {
+      "actionType": 5,
+      "variableName": "BrdEpic2Caster"
+    },
+    {
+      "actionType": 4,
+      "variableName": null,
+      "displayText": "BRD Epic (${BrdEpic2Caster})"
+    },
+    {
+      "actionType": 4,
+      "variableName": null,
+      "displayText": "BRD Epic refresh (${BrdEpic2Caster})"
+    },
+    {
+      "actionType": 2,
+      "variableName": null,
+      "displayText": "Bard epic"
+    },
+    {
+      "actionType": 0,
+      "variableName": null,
+      "displayText": "\ud83c\udfb5Bard Epic\ud83c\udfb6"
+    },
+    {
+      "actionType": 7,
+      "variableName": "BrdEpic2Caster"
+    }
+  ]
+}

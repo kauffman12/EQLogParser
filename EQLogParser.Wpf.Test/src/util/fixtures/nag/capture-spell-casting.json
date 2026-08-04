@@ -1,0 +1,59 @@
+{
+  "triggerId": "trGkfio6z2xs6hAh",
+  "name": "Capture spell casting",
+  "capturePhrases": [
+    {
+      "phraseId": "v7GDFrDCcFwhTAOP",
+      "phrase": "^You begin casting (.*)\\.",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "1nl8HaPwOjAFOoFO",
+      "phrase": "^You activate (.*)\\.",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "7iax6y76baIan4jq",
+      "phrase": "^You begin singing (.*)\\.",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "SmZAE0oEzuhq1cqh",
+      "phrase": "^Your ${SpellBeingCast} spell is interrupted\\.",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "iNy1LoUUFcXnaHws",
+      "phrase": "^(.*) resisted your ${SpellBeingCast}",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "CC31CtgDiqwi8xV4",
+      "phrase": "^Your ${SpellBeingCast} spell did not take hold\\. \\(Blocked by (.*)\\.\\)",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "9ccr5pJj08H9rEi7",
+      "phrase": "^Your ${SpellBeingCast} spell fizzles!$",
+      "useRegEx": true
+    },
+    {
+      "phraseId": "z4i5GLKVp79M5FAV",
+      "phrase": "^${Character}'s ${SpellBeingCast} spell has been reflected",
+      "useRegEx": true
+    }
+  ],
+  "actions": [
+    {
+      "actionType": 5,
+      "variableName": "SpellBeingCast",
+      "phraseId": "v7GDFrDCcFwhTAOP"
+    },
+    {
+      "actionType": 7,
+      "variableName": "SpellBeingCast",
+      "phraseId": "SmZAE0oEzuhq1cqh",
+      "displayText": "Spell ${SpellBeingCast} was interrupted."
+    }
+  ]
+}
