@@ -1158,6 +1158,7 @@ internal static class NagUtil
     var backgroundColor = element.TryGetProperty("backgroundColor", out var bc) ? bc.GetString() : "#000000";
     var backgroundTransparency = element.TryGetProperty("backgroundTransparency", out var bt) ? bt.GetDouble() : 0;
     var timerColor = element.TryGetProperty("timerColor", out var tc) ? tc.GetString() : "#008000";
+    var timerBackgroundColor = element.TryGetProperty("timerBackgroundColor", out var tbc) ? tbc.GetString() : null;
     var fontFamily = element.TryGetProperty("fontFamily", out var ff) ? ff.GetString() : "Segoe UI";
     var fontSize = element.TryGetProperty("fontSize", out var fs) ? fs.GetInt32() : 12;
     var fontWeight = element.TryGetProperty("fontWeight", out var fw) ? fw.GetInt32() : 400;
@@ -1196,7 +1197,7 @@ internal static class NagUtil
         FontColor = ConvertColor(fontColor),
         BackgroundColor = ConvertBackground(backgroundColor, backgroundTransparency),
         ActiveColor = ConvertColor(timerColor),
-        IdleColor = "#FF8f1515",
+        IdleColor = timerBackgroundColor is not null ? ConvertColor(timerBackgroundColor) : "#FF8f1515",
         ResetColor = "#FF8f1515",
         HorizontalAlignment = ConvertHorizontalAlignment(horizontalAlignment),
         VerticalAlignment = ConvertVerticalAlignment(verticalAlignment),
