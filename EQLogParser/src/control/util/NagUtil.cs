@@ -712,6 +712,7 @@ internal static class NagUtil
     var endTextToDisplay = "";
     var endTextToSpeak = "";
     var hasAction = false;
+    var clearVariables = new List<string>();
     var droppedFeatures = new List<string>();
     var actionSummary = new List<string>();
     var missingAudioFiles = new List<string>();
@@ -982,6 +983,15 @@ internal static class NagUtil
           actionSummary.Add("Timer (partial)");
           break;
 
+        case 7: // Clear Variable — map to EndTimerClearVariables
+          hasAction = true;
+          if (action.TryGetProperty("variableName", out var vn) && vn.GetString() is { Length: > 0 } varName)
+          {
+            clearVariables.Add(ConvertTemplates(varName));
+          }
+          actionSummary.Add("clear variable");
+          break;
+
         case 12: // Screen Flash - unsupported, skip
           droppedFeatures.Add("screen flash");
           Log.Debug($"Skipping unsupported action type 12 (Screen Flash) in trigger");
@@ -992,7 +1002,6 @@ internal static class NagUtil
           var skipNames = actionType switch
           {
             5 => "set variable",
-            7 => "clear variable",
             8 => "counter",
             11 => "hotkey",
             13 => "global reset",
@@ -1030,6 +1039,7 @@ internal static class NagUtil
       WarningTextToSpeak = warningTextToSpeak,
       EndTextToDisplay = endTextToDisplay,
       EndTextToSpeak = endTextToSpeak,
+      EndTimerClearVariables = clearVariables.Count > 0 ? string.Join(", ", clearVariables) : "",
     }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles);
   }
 
