@@ -735,8 +735,8 @@ namespace EQLogParser.Wpf.Test
         // Verify HTML structure
         Assert.IsTrue(html.Contains("<!DOCTYPE html>"));
         Assert.IsTrue(html.Contains("</html>"));
-        // Verify summary stats
-        Assert.IsTrue(html.Contains("Imported"));
+        // Verify summary stats (display text uses 'Success' instead of 'Imported')
+        Assert.IsTrue(html.Contains("Success"));
         Assert.IsTrue(html.Contains("Partial"));
         Assert.IsTrue(html.Contains("Skipped"));
         // Verify trigger names appear
@@ -747,10 +747,11 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(html.Contains("Kunark"));
         // Verify missing audio file is listed
         Assert.IsTrue(html.Contains("missing.wav"));
-        // Verify badge classes
+        // Verify badge classes and dark theme CSS
         Assert.IsTrue(html.Contains("badge-imported"));
         Assert.IsTrue(html.Contains("badge-partial"));
         Assert.IsTrue(html.Contains("badge-skipped"));
+        Assert.IsTrue(html.Contains("background: #1e1e1e"));
       }
       finally
       {
@@ -819,6 +820,39 @@ namespace EQLogParser.Wpf.Test
 
         var html = File.ReadAllText(tempFile);
         Assert.IsTrue(html.Contains("<em>(root)</em>"));
+      }
+      finally
+      {
+        File.Delete(tempFile);
+      }
+    }
+
+    [TestMethod]
+    public void WriteImportReportHtml_ResultsSortedByStatus_SkippedFirst()
+    {
+      var results = new List<NagImportResult>
+      {
+        new() { TriggerName = "ImportedOne", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" },
+        new() { TriggerName = "SkippedOne", TriggerId = "t2", Status = "Skipped", Reason = "dev", FolderPath = "(root)", ActionsSummary = null },
+        new() { TriggerName = "PartialOne", TriggerId = "t3", Status = "Partial", Reason = "dropped", FolderPath = "(root)", ActionsSummary = "" },
+        new() { TriggerName = "ImportedTwo", TriggerId = "t4", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+      };
+
+      var tempFile = Path.GetTempFileName();
+      try
+      {
+        NagUtil.WriteImportReportHtml(results, tempFile);
+        Assert.IsTrue(File.Exists(tempFile));
+
+        var html = File.ReadAllText(tempFile);
+        // Skipped should appear before Partial which appears before Success
+        var skippedIdx = html.IndexOf("SkippedOne");
+        var partialIdx = html.IndexOf("PartialOne");
+        var importedIdx = html.IndexOf("ImportedTwo");
+
+        Assert.IsTrue(skippedIdx >= 0 && partialIdx >= 0 && importedIdx >= 0);
+        Assert.IsTrue(skippedIdx < partialIdx, "Skipped should come before Partial");
+        Assert.IsTrue(partialIdx < importedIdx, "Partial should come before Success/Imported");
       }
       finally
       {
@@ -995,28 +1029,30 @@ namespace EQLogParser.Wpf.Test
 
     #endregion
 
-    #region Overlay NoTextWrap Parsing
+    #region Overlay TextOverlayWrap Parsing
 
     [TestMethod]
-    public void ConvertOverlays_NoTextWrap_ParsedFromNagData()
+    public void ConvertOverlays_TextOverlayWrap_ParsedFromNagData()
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\",\"textOverflow\":{\"whiteSpace\":\"nowrap\",\"overflow\":\"hidden\",\"textOverflow\":\"clip\"}}]}";
 
       var overlays = NagUtil.ConvertOverlays(json);
 
       Assert.AreEqual(1, overlays.Count);
-      Assert.IsTrue(overlays[0].OverlayData.NoTextWrap);
+      // NAG whiteSpace=nowrap means wrap is disabled
+      Assert.IsFalse(overlays[0].OverlayData.TextOverlayWrap);
     }
 
     [TestMethod]
-    public void ConvertOverlays_NoTextWrap_DefaultsToFalse()
+    public void ConvertOverlays_TextOverlayWrap_DefaultsToTrue()
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\"}]}";
 
       var overlays = NagUtil.ConvertOverlays(json);
 
       Assert.AreEqual(1, overlays.Count);
-      Assert.IsFalse(overlays[0].OverlayData.NoTextWrap);
+      // Default is true (text wraps) when no textOverflow specified
+      Assert.IsTrue(overlays[0].OverlayData.TextOverlayWrap);
     }
 
     #endregion

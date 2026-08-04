@@ -127,7 +127,7 @@ namespace EQLogParser
     public bool StreamerMode { get; set; }
     public bool HideDuplicates { get; set; }
     public bool UseTextDropShadow { get; set; } = true;
-    public bool NoTextWrap { get; set; }
+    public bool TextOverlayWrap { get; set; } = true;
     public int TimerMode { get; set; }
     public long Height { get; set; } = 400;
     public long Width { get; set; } = 300;

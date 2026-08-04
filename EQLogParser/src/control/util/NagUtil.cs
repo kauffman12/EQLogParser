@@ -1027,25 +1027,25 @@ internal static class NagUtil
       sb.AppendLine("<html lang=\"en\">\n<head>");
       sb.AppendLine("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NAG Import Report</title>");
       sb.AppendLine("<style>");
-      sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #333; }");
-      sb.AppendLine("h1 { color: #1a73e8; margin-bottom: 5px; }");
+      sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #1e1e1e; color: #d4d4d4; }");
+      sb.AppendLine("h1 { color: #4fc3f7; margin-bottom: 5px; }");
       sb.AppendLine(".summary { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }");
-      sb.AppendLine(".stat { background: white; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 100px; }");
+      sb.AppendLine(".stat { background: #2d2d2d; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); text-align: center; min-width: 100px; }");
       sb.AppendLine(".stat .num { font-size: 28px; font-weight: bold; display: block; }");
-      sb.AppendLine(".stat .label { font-size: 12px; color: #666; text-transform: uppercase; }");
-      sb.AppendLine(".stat.imported .num { color: #2e7d32; }");
-      sb.AppendLine(".stat.partial .num { color: #f57c00; }");
-      sb.AppendLine(".stat.skipped .num { color: #c62828; }");
-      sb.AppendLine("table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }");
-      sb.AppendLine("th { background: #1a73e8; color: white; padding: 10px 12px; text-align: left; font-size: 13px; position: sticky; top: 0; }");
+      sb.AppendLine(".stat .label { font-size: 12px; color: #888; text-transform: uppercase; }");
+      sb.AppendLine(".stat.imported .num { color: #4caf50; }");
+      sb.AppendLine(".stat.partial .num { color: #ffb74d; }");
+      sb.AppendLine(".stat.skipped .num { color: #e57373; }");
+      sb.AppendLine("table { border-collapse: collapse; width: 100%; background: #2d2d2d; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; }");
+      sb.AppendLine("th { background: #2d2d30; color: #4fc3f7; padding: 10px 12px; text-align: left; font-size: 13px; position: sticky; top: 0; border-bottom: 1px solid #3e3e3e; }");
       sb.AppendLine("td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }");
-      sb.AppendLine("tr:hover td { background: #f0f7ff; }");
+      sb.AppendLine("tr:hover td { background: #2a2d2a; }");
       sb.AppendLine(".badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }");
-      sb.AppendLine(".badge-imported { background: #c8e6c9; color: #1b5e20; }");
-      sb.AppendLine(".badge-partial { background: #fff9c4; color: #f57f17; }");
-      sb.AppendLine(".badge-skipped { background: #ffcdd2; color: #b71c1c; }");
-      sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #555; }");
-      sb.AppendLine(".missing-audio { font-size: 11px; color: #999; }");
+      sb.AppendLine(".badge-imported { background: #1b5e20; color: #c8e6c9; }");
+      sb.AppendLine(".badge-partial { background: #f57f17; color: #fff9c4; }");
+      sb.AppendLine(".badge-skipped { background: #b71c1c; color: #ffcdd2; }");
+      sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #aaa; }");
+      sb.AppendLine(".missing-audio { font-size: 11px; color: #888; }");
       sb.AppendLine(".actions { max-width: 300px; word-break: break-word; }");
       sb.AppendLine(".reason { max-width: 250px; word-break: break-word; font-size: 12px; }");
       sb.AppendLine("th .folder-col { width: 220px; }");
@@ -1059,11 +1059,20 @@ internal static class NagUtil
       var skipped = results.Count(r => r.Status == "Skipped");
 
       sb.AppendLine($"<h1>NAG Import Report</h1>");
-      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Imported</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
+      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
 
       sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
 
-      foreach (var r in results)
+      // Sort: Skipped first, then Partial, then Success (Imported)
+      var sorted = results.OrderBy(r => r.Status switch
+      {
+        "Skipped" => 0,
+        "Partial" => 1,
+        "Imported" => 2,
+        _ => 3
+      }).ToList();
+
+      foreach (var r in sorted)
       {
         var badgeClass = r.Status switch
         {
@@ -1072,7 +1081,9 @@ internal static class NagUtil
           "Skipped" => "badge-skipped",
           _ => ""
         };
-        var badge = $"<span class=\"badge {badgeClass}\">{r.Status}</span>";
+        // Display "Success" instead of "Imported" in the report
+        var displayStatus = r.Status == "Imported" ? "Success" : r.Status;
+        var badge = $"<span class=\"badge {badgeClass}\">{displayStatus}</span>";
         var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
           ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
         var actions = HtmlEncode(r.ActionsSummary ?? "");
@@ -1153,13 +1164,13 @@ internal static class NagUtil
     var horizontalAlignment = element.TryGetProperty("horizontalAlignment", out var ha) ? ha.GetString() : "center";
     var verticalAlignment = element.TryGetProperty("verticalAlignment", out var va) ? va.GetString() : "bottom";
 
-    // Parse textOverflow for NoTextWrap support (NAG whiteSpace=nowrap → EQLP NoTextWrap=true)
-    var noTextWrap = false;
+    // Parse textOverflow for TextOverlayWrap support (NAG whiteSpace=nowrap → EQLP TextOverlayWrap=false)
+    var textOverlayWrap = true;
     if (element.TryGetProperty("textOverflow", out var to) && to.ValueKind == JsonValueKind.Object &&
         to.TryGetProperty("whiteSpace", out var ws) && ws.GetString() is { } whiteSpace &&
         whiteSpace.Equals("nowrap", StringComparison.OrdinalIgnoreCase))
     {
-      noTextWrap = true;
+      textOverlayWrap = false;
     }
 
     // Map timerSortType → SortBy (0=none, 1=alphabetical, 2=time remaining)
@@ -1191,7 +1202,7 @@ internal static class NagUtil
         VerticalAlignment = ConvertVerticalAlignment(verticalAlignment),
         IsTimerOverlay = isTimerOverlay,
         IsTextOverlay = isTextOverlay,
-        NoTextWrap = noTextWrap,
+        TextOverlayWrap = textOverlayWrap,
         SortBy = sortBy,
         ShowActive = true,
         ShowIdle = true,
