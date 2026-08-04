@@ -886,6 +886,13 @@ internal static class NagUtil
     {
       var actionType = action.TryGetProperty("actionType", out var at) ? at.GetInt32() : -1;
 
+      // Skip blank/template actions that have no actionType (all fields null/default).
+      // These appear in NAG data as empty template objects with no real behavior.
+      if (actionType < 0)
+      {
+        continue;
+      }
+
       switch (actionType)
       {
         case 0: // Text Overlay
