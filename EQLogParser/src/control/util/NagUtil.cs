@@ -651,6 +651,23 @@ internal static class NagUtil
         }
       }
 
+      // Add phrase-specific clear-variable VariableActions.
+      // NAG actionType 7 with a phraseId means "when this specific phrase matches, clear the variable."
+      // This is different from EndTimerClearVariables (which fires when a timer ends) — these
+      // are per-phrase triggers that fire on match, so we use VariableAction { ActionType=Clear }.
+      foreach (var (clearPhraseId, clearVarName) in parsed.phraseClearVariables)
+      {
+        if (currentPhraseId == clearPhraseId)
+        {
+          triggerData.VariableActions.Add(new VariableAction
+          {
+            ActionType = 1, // Clear
+            DataType = 0,   // Value
+            VariableName = clearVarName
+          });
+        }
+      }
+
       var triggerName = phrases.Count > 1 ? $"{name} #{i + 1}" : name;
 
       nodes.Add(new ExportTriggerNode
@@ -853,7 +870,7 @@ internal static class NagUtil
     }
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases) ParseActions(
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases, List<(string phraseId, string variableName)> phraseClearVariables) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
     var textToDisplay = "";
@@ -874,6 +891,7 @@ internal static class NagUtil
     var endTextToSpeak = "";
     var hasAction = false;
     var clearVariables = new List<string>();
+    var phraseClearVariables = new List<(string phraseId, string variableName)>();
     var setVariables = new List<(string phraseId, string variableName)>();
     var counterResetPhrases = new List<(string phrase, bool useRegex, string variableName)>();
     var counterVarName = "";
@@ -1009,11 +1027,24 @@ internal static class NagUtil
           actionSummary.Add("Timer (partial)");
           break;
 
-        case 7: // Clear Variable — map to EndTimerClearVariables
+        case 7: // Clear Variable
           hasAction = true;
           if (action.TryGetProperty("variableName", out var vn) && vn.GetString() is { Length: > 0 } varName)
           {
-            clearVariables.Add(ConvertTemplates(varName));
+            var clearedVarName = ConvertTemplates(varName);
+            var actionPhraseId = action.TryGetProperty("phraseId", out var pid7) ? pid7.GetString() : null;
+            if (!string.IsNullOrEmpty(actionPhraseId))
+            {
+              // Phrase-specific clear: add a VariableAction to only the matching phrase trigger.
+              // This handles cases like "Your X spell is interrupted" clearing SpellBeingCast,
+              // where there's no timer and EndTimerClearVariables would never fire.
+              phraseClearVariables.Add((actionPhraseId, clearedVarName));
+            }
+            else
+            {
+              // Global clear: applies when the trigger's timer ends naturally.
+              clearVariables.Add(clearedVarName);
+            }
           }
           actionSummary.Add("clear variable");
           break;
@@ -1115,7 +1146,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], []);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], [], []);
     }
 
     // Build the Trigger object with all parsed data
@@ -1143,7 +1174,7 @@ internal static class NagUtil
       VariableActions = counterVarName.Length > 0
         ? new List<VariableAction> { new() { ActionType = 0, DataType = 1, VariableName = counterVarName, Step = 1 } }
         : new List<VariableAction>(),
-    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases);
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases, phraseClearVariables);
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)
