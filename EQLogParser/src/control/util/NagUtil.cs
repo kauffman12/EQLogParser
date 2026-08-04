@@ -1118,7 +1118,7 @@ internal static class NagUtil
         var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
           ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
         var actions = HtmlEncode(r.ActionsSummary ?? "");
-        var reason = string.IsNullOrEmpty(r.Reason) ? "—" : HtmlEncode(r.Reason);
+        var reason = string.IsNullOrEmpty(r.Reason) ? "—" : FormatDroppedFeaturesForReport(r.Reason);
         var missingAudio = r.MissingAudioFiles?.Count > 0
           ? $"<div class=\"missing-audio\">{string.Join("<br>", r.MissingAudioFiles.Select(HtmlEncode))}</div>"
           : "—";
@@ -1137,6 +1137,31 @@ internal static class NagUtil
   private static string HtmlEncode(string value)
   {
     return string.IsNullOrEmpty(value) ? "" : System.Net.WebUtility.HtmlEncode(value);
+  }
+
+  // Convert dropped feature names into user-friendly descriptions for the HTML report
+  private static string FormatDroppedFeaturesForReport(string reason)
+  {
+    var parts = reason.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    var friendly = new List<string>();
+    foreach (var part in parts)
+    {
+      var trimmed = part.Trim();
+      if (trimmed.StartsWith("set variable (", StringComparison.OrdinalIgnoreCase))
+      {
+        var varName = trimmed.Substring("set variable (".Length).TrimEnd(')');
+        friendly.Add($"Set variable ({HtmlEncode(varName)}): stores captured text in a named variable, but EQLP requires regex named groups instead. Trigger works but stored values may be empty.");
+      }
+      else if (trimmed.StartsWith("class level filtering", StringComparison.OrdinalIgnoreCase))
+      {
+        friendly.Add("Class level filtering: trigger was restricted to specific class levels, which EQLP does not support.");
+      }
+      else
+      {
+        friendly.Add(HtmlEncode(trimmed));
+      }
+    }
+    return string.Join("<br>", friendly);
   }
 
   internal static List<ExportTriggerNode> ConvertOverlays(string json)
