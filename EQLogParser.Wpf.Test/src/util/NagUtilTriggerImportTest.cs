@@ -296,7 +296,24 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_ConditionOperator1_Contains()
+    public void ConvertTriggers_ConditionOperator1_Contains_SingleValue()
+    {
+      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions: new[]
+      {
+        CreateCondition("SpellBeingCast", 1, "Fireball")
+      }, actions: new[]
+      {
+        CreateAction(0, displayText: "Fire spell")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      Assert.AreEqual("{SpellBeingCast} contains \"Fireball\"", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator1_Contains_PipeSeparatedValues()
     {
       var json = CreateTriggerJson("Contains Trigger", "pattern", conditions: new[]
       {
@@ -309,7 +326,8 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = NagUtil.ConvertTriggers(json);
 
       Assert.AreEqual(1, nodes.Count);
-      Assert.AreEqual("{SpellBeingCast} contains \"Fireball|Flame Strike\"", nodes[0].TriggerData.MatchVariableCondition);
+      // NAG pipe-separated values should become OR'd contains clauses
+      Assert.AreEqual("{SpellBeingCast} contains \"Fireball\" || {SpellBeingCast} contains \"Flame Strike\"", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]

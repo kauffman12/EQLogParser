@@ -209,12 +209,24 @@ internal static class NagUtil
           }
           break;
 
-        case 1: // Contains check with pipe-separated values: {var} contains "val1|val2"
+        case 1: // Contains check — NAG pipe-separated values mean OR, not literal substring
           {
             var value = cond.TryGetProperty("variableValue", out var vv) ? vv.GetString() : null;
             if (!string.IsNullOrEmpty(value))
             {
-              parts.Add($"{{{varName}}} contains \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+              // NAG uses | to separate multiple values meaning "contains any of".
+              // EQLP's contains operator does a literal substring check, so we need
+              // to split on | and create separate contains clauses joined by ||.
+              var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
+              if (values.Length > 1)
+              {
+                var escaped = values.Select(v => v.Replace("\\", "\\\\").Replace("\"", "\\\"")).Select(v => $"{{{varName}}} contains \"{v}\"");
+                parts.Add(string.Join(" || ", escaped));
+              }
+              else
+              {
+                parts.Add($"{{{varName}}} contains \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+              }
             }
           }
           break;
@@ -1158,6 +1170,7 @@ internal static class NagUtil
     var backgroundColor = element.TryGetProperty("backgroundColor", out var bc) ? bc.GetString() : "#000000";
     var backgroundTransparency = element.TryGetProperty("backgroundTransparency", out var bt) ? bt.GetDouble() : 0;
     var timerColor = element.TryGetProperty("timerColor", out var tc) ? tc.GetString() : "#008000";
+    var timerBackgroundColor = element.TryGetProperty("timerBackgroundColor", out var tbc) ? tbc.GetString() : null;
     var fontFamily = element.TryGetProperty("fontFamily", out var ff) ? ff.GetString() : "Segoe UI";
     var fontSize = element.TryGetProperty("fontSize", out var fs) ? fs.GetInt32() : 12;
     var fontWeight = element.TryGetProperty("fontWeight", out var fw) ? fw.GetInt32() : 400;
@@ -1196,7 +1209,7 @@ internal static class NagUtil
         FontColor = ConvertColor(fontColor),
         BackgroundColor = ConvertBackground(backgroundColor, backgroundTransparency),
         ActiveColor = ConvertColor(timerColor),
-        IdleColor = "#FF8f1515",
+        IdleColor = timerBackgroundColor is not null ? ConvertColor(timerBackgroundColor) : "#FF8f1515",
         ResetColor = "#FF8f1515",
         HorizontalAlignment = ConvertHorizontalAlignment(horizontalAlignment),
         VerticalAlignment = ConvertVerticalAlignment(verticalAlignment),
