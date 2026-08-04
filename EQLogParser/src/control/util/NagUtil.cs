@@ -209,12 +209,24 @@ internal static class NagUtil
           }
           break;
 
-        case 1: // Contains check with pipe-separated values: {var} contains "val1|val2"
+        case 1: // Contains check — NAG pipe-separated values mean OR, not literal substring
           {
             var value = cond.TryGetProperty("variableValue", out var vv) ? vv.GetString() : null;
             if (!string.IsNullOrEmpty(value))
             {
-              parts.Add($"{{{varName}}} contains \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+              // NAG uses | to separate multiple values meaning "contains any of".
+              // EQLP's contains operator does a literal substring check, so we need
+              // to split on | and create separate contains clauses joined by ||.
+              var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
+              if (values.Length > 1)
+              {
+                var escaped = values.Select(v => v.Replace("\\", "\\\\").Replace("\"", "\\\"")).Select(v => $"{{{varName}}} contains \"{v}\"");
+                parts.Add(string.Join(" || ", escaped));
+              }
+              else
+              {
+                parts.Add($"{{{varName}}} contains \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
+              }
             }
           }
           break;
