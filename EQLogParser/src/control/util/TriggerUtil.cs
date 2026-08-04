@@ -34,7 +34,7 @@ namespace EQLogParser
     internal static string SelectNagDatabaseDirectory()
     {
       using var dialog = new System.Windows.Forms.FolderBrowserDialog {
-        Description = "Select the directory containing the NAG database files (overlays-database.json, etc.)",
+        Description = "Select the directory containing your NAG database files.",
         AutoUpgradeEnabled = true,
       };
 
@@ -97,6 +97,10 @@ namespace EQLogParser
         var json = await File.ReadAllTextAsync(filePath);
         var (nodes, results, metadata) = NagUtil.ConvertTriggers(json, databaseDirectory);
 
+        // Import overlays BEFORE triggers so that ValidateOverlays() can find them
+        // when triggers reference overlay IDs. Triggers must be imported after overlays.
+        await ImportNagOverlays(databaseDirectory);
+
         if (nodes?.Count > 0)
         {
           var folderName = $"NAG Import - {DateTime.Now:yyyy-MM-dd HH:mm}";
@@ -105,9 +109,6 @@ namespace EQLogParser
           // Import per-character trigger enable/disable state from characters-database.json
           await ImportNagCharacterStates(databaseDirectory, nagIdMap, metadata);
         }
-
-        // Import overlays from the same NAG database directory
-        await ImportNagOverlays(databaseDirectory);
 
         // Generate HTML import report — save in the EQLP log directory
         // (where the error log lives), with a timestamped filename so repeated
