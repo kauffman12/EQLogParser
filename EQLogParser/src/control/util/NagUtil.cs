@@ -1008,7 +1008,13 @@ internal static class NagUtil
             15 => "list widget",
             _ => $"action type {actionType}"
           };
-          droppedFeatures.Add(skipNames);
+          // Include the variable name if available for more context
+          var skipDetail = skipNames;
+          if (action.TryGetProperty("variableName", out var vn2) && vn2.GetString() is { Length: > 0 } vname2)
+          {
+            skipDetail = $"{skipNames} ({vname2})";
+          }
+          droppedFeatures.Add(skipDetail);
           Log.Debug($"Skipping unsupported action type {actionType} in trigger");
           break;
       }
