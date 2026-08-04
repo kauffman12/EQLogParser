@@ -140,7 +140,7 @@ internal static class NagUtil
   // Everything else becomes a named capture group:
   //   {LN} → (?<LN>\w+) (player/NPC name, single word)
   //   {target} → (?<target>.+?) (NPC names can have spaces, commas, quotes)
-  //   ${SpellBeingCast} → (?<SpellBeingCast>.+?) (handled by DollarVarRegex above)
+  //   ${SpellBeingCast} → {SpellBeingCast} in display text (handled by VarPattern above)
   private static readonly Regex UnhandledVarRegex = new(
     @"(?<!\$)\{(?!S\d?|s\d?|N\d?|n\d?|TS|ts|[Cc])[a-zA-Z][^}]*\}",
     RegexOptions.Compiled);
@@ -153,10 +153,10 @@ internal static class NagUtil
       return input;
     }
 
-    // ${var} → {$var} ($$ = literal $, $1 = capture group)
-    input = VarPattern.Replace(input, "{$$1}");
+    // ${var} → {var} ($1 = capture group value; EQLP TokenRegex matches {var} or ${var})
+    input = VarPattern.Replace(input, "{$1}");
 
-    // {groupName} → {$groupName} (but not already converted {$...})
+    // {groupName} → {groupName} (but not already converted ${...})
     input = GroupPattern.Replace(input, "{$1}");
 
     return input;
@@ -456,7 +456,7 @@ internal static class NagUtil
 
     // Collect all phrases — each becomes its own EQLP trigger (no alternation combining).
     // This avoids named group collisions when multiple phrases share capture group names.
-    var phrases = new List<(string pattern, bool useRegex)>();
+    var phrases = new List<(string pattern, bool useRegex, string phraseId)>();
     foreach (var phrase in capturePhrases.EnumerateArray())
     {
       if (phrase.TryGetProperty("phrase", out var p) && p.GetString() is { Length: > 0 } text)
@@ -523,11 +523,13 @@ internal static class NagUtil
           });
 
           // Do NOT call ConvertTemplates — leave {S}, {N}, {TS} as-is for EQLP runtime
-          phrases.Add((text, useRegex));
+          var phraseId = phrase.TryGetProperty("phraseId", out var pid) ? pid.GetString() : null;
+          phrases.Add((text, useRegex, phraseId));
         }
         else
         {
-          phrases.Add((ConvertTemplates(text), false));
+          var phraseId2 = phrase.TryGetProperty("phraseId", out var pid2) ? pid2.GetString() : null;
+          phrases.Add((ConvertTemplates(text), false, phraseId2));
         }
       }
       else if (phrase.TryGetProperty("useRegEx", out var re2) && re2.GetBoolean())
@@ -542,7 +544,7 @@ internal static class NagUtil
     }
 
     // Parse actions once — shared across all phrase-based triggers
-    var parsed = ParseActions(element.GetProperty("actions"), score, phrases.Any(p => p.useRegex), useCooldown, cooldownDuration, databaseDirectory);
+    var parsed = ParseActions(element.GetProperty("actions"), score, phrases.Any(p => p.useRegex), useCooldown, cooldownDuration, databaseDirectory, phrases.Select(p => p.phraseId).ToList());
     if (parsed.triggerData is null)
     {
       return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = parsed.reason ?? "No supported actions" });
@@ -550,6 +552,43 @@ internal static class NagUtil
 
     var baseTriggerData = parsed.triggerData;
     var droppedFeatures = parsed.droppedFeatures;
+
+    // Apply set-variable actions: convert numbered capture groups in the
+    // referenced phrase to simple named groups, then add VariableActions so
+    // EQLP's global variable system stores the captured value under the NAG
+    // variable name. This enables cross-trigger variable sharing (e.g., one
+    // trigger captures the spell name, others reference it via {SpellBeingCast}).
+    // NAG's actionType 5 stores a captured group into a named variable.
+    var phraseVarMap = new Dictionary<string, List<(string groupName, string varName)>>();
+    foreach (var (phraseId, varName) in parsed.setVariables)
+    {
+      if (string.IsNullOrEmpty(phraseId)) continue;
+      for (var i = 0; i < phrases.Count; i++)
+      {
+        if (phrases[i].phraseId == phraseId && phrases[i].useRegex)
+        {
+          var pattern = phrases[i].pattern;
+          // Convert the next un-named capture group to a simple named group
+          var openParenIdx = pattern.IndexOf('(');
+          while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
+          {
+            openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
+          }
+          if (openParenIdx >= 0)
+          {
+            var groupName = "s" + (i + 1);
+            pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
+            if (!phraseVarMap.TryGetValue(phraseId, out var list))
+            {
+              phraseVarMap[phraseId] = list = new List<(string, string)>();
+            }
+            list.Add((groupName, varName));
+          }
+          phrases[i] = (pattern, true, phraseId);
+          break;
+        }
+      }
+    }
 
     // Add class level filtering as a dropped feature (no EQLP equivalent)
     if (hasClassLevels)
@@ -577,7 +616,7 @@ internal static class NagUtil
     var nodes = new List<ExportTriggerNode>();
     for (var i = 0; i < phrases.Count; i++)
     {
-      var (pattern, useRegEx) = phrases[i];
+      var (pattern, useRegEx, _) = phrases[i];
       var triggerData = baseTriggerData.Clone();
 
       // Assign the pattern for this phrase
@@ -594,6 +633,23 @@ internal static class NagUtil
       triggerData.Comments = triggerComments;
       triggerData.Priority = ConvertScore(score);
       triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
+
+      // Add VariableActions for set-variable mappings on this phrase.
+      // EQLP stores the captured value as a global variable accessible by other triggers.
+      var currentPhraseId = phrases[i].phraseId;
+      if (!string.IsNullOrEmpty(currentPhraseId) && phraseVarMap.TryGetValue(currentPhraseId, out var varList))
+      {
+        foreach (var (groupName, varName) in varList)
+        {
+          triggerData.VariableActions.Add(new VariableAction
+          {
+            ActionType = 0, // Set
+            DataType = 0,   // Value
+            VariableName = varName,
+            Value = "{" + groupName + "}"
+          });
+        }
+      }
 
       var triggerName = phrases.Count > 1 ? $"{name} #{i + 1}" : name;
 
@@ -692,8 +748,8 @@ internal static class NagUtil
     });
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles) ParseActions(
-      JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory)
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables) ParseActions(
+      JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
     var textToDisplay = "";
     var textToSpeak = "";
@@ -713,6 +769,7 @@ internal static class NagUtil
     var endTextToSpeak = "";
     var hasAction = false;
     var clearVariables = new List<string>();
+    var setVariables = new List<(string phraseId, string variableName)>();
     var droppedFeatures = new List<string>();
     var actionSummary = new List<string>();
     var missingAudioFiles = new List<string>();
@@ -992,16 +1049,33 @@ internal static class NagUtil
           actionSummary.Add("clear variable");
           break;
 
+        case 5: // Set Variable — store captured text from a phrase into a named variable
+          {
+            var svVarName = action.TryGetProperty("variableName", out var vn5) ? vn5.GetString() : null;
+            var phraseId = action.TryGetProperty("phraseId", out var pid) ? pid.GetString() : null;
+            if (!string.IsNullOrEmpty(svVarName))
+            {
+              // Record this mapping so the corresponding capture phrase's
+              // numbered group can be converted to a named group.
+              setVariables.Add((phraseId, svVarName));
+              actionSummary.Add("set variable");
+            }
+            else
+            {
+              droppedFeatures.Add("set variable (no name)");
+            }
+          }
+          break;
+
         case 12: // Screen Flash - unsupported, skip
           droppedFeatures.Add("screen flash");
           Log.Debug($"Skipping unsupported action type 12 (Screen Flash) in trigger");
           break;
 
         default:
-          // Types 5,7,8,11,13,14,15 - variables, counters, buffs, lists - unsupported
+          // Types 7,8,11,13,14,15 - variables, counters, buffs, lists - unsupported
           var skipNames = actionType switch
           {
-            5 => "set variable",
             8 => "counter",
             11 => "hotkey",
             13 => "global reset",
@@ -1022,7 +1096,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, []);
     }
 
     // Build the Trigger object with all parsed data
@@ -1046,7 +1120,7 @@ internal static class NagUtil
       EndTextToDisplay = endTextToDisplay,
       EndTextToSpeak = endTextToSpeak,
       EndTimerClearVariables = clearVariables.Count > 0 ? string.Join(", ", clearVariables) : "",
-    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles);
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables);
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)
