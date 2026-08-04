@@ -812,11 +812,11 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(html.Contains("Kunark"));
         // Verify missing audio file is listed
         Assert.IsTrue(html.Contains("missing.wav"));
-        // Verify badge classes and dark theme CSS
+        // Verify badge classes and light theme CSS
         Assert.IsTrue(html.Contains("badge-imported"));
         Assert.IsTrue(html.Contains("badge-partial"));
         Assert.IsTrue(html.Contains("badge-skipped"));
-        Assert.IsTrue(html.Contains("background: #1e1e1e"));
+        Assert.IsTrue(html.Contains("background: #f5f5f5"));
       }
       finally
       {
@@ -1506,10 +1506,10 @@ namespace EQLogParser.Wpf.Test
       Assert.IsTrue(counterNode.TriggerData.EnableTimer, "Counter trigger should have timer enabled");
       Assert.AreEqual(300, counterNode.TriggerData.DurationSeconds);
       Assert.AreEqual("Physical", counterNode.TriggerData.TextToDisplay);
-      Assert.AreEqual("#b71c1c", counterNode.TriggerData.ActiveColor);
-      // TimerBackgroundColor rgba(48,7,7,0.75) should be converted to hex for IdleColor
-      Assert.IsNotNull(counterNode.TriggerData.IdleColor);
-      Assert.IsTrue(counterNode.TriggerData.IdleColor.Length > 0, "IdleColor should be set from timerBackgroundColor");
+      // ConvertColor converts #RRGGBB → #AARRGGBB (FF = full opacity) for EQLP format
+      Assert.AreEqual("#FFb71c1c", counterNode.TriggerData.ActiveColor);
+      // TimerBackgroundColor rgba(48,7,7,0.75) → #BF300707 (alpha=192, r=48, g=7, b=7)
+      Assert.AreEqual("#BF300707", counterNode.TriggerData.IdleColor);
 
       // Should have a Counter-type VariableAction named "Physical"
       var counterVarAction = counterNode.TriggerData.VariableActions.FirstOrDefault();
