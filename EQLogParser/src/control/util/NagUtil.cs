@@ -562,31 +562,31 @@ internal static class NagUtil
     var phraseVarMap = new Dictionary<string, List<(string groupName, string varName)>>();
     foreach (var (phraseId, varName) in parsed.setVariables)
     {
-      if (string.IsNullOrEmpty(phraseId)) continue;
+      // If no specific phraseId, apply to all regex phrases with un-named groups.
+      // NAG uses this when the variable is set from whatever phrase triggered.
       for (var i = 0; i < phrases.Count; i++)
       {
-        if (phrases[i].phraseId == phraseId && phrases[i].useRegex)
+        var matchesPhrase = string.IsNullOrEmpty(phraseId) || phrases[i].phraseId == phraseId;
+        if (!matchesPhrase || !phrases[i].useRegex) continue;
+
+        var pattern = phrases[i].pattern;
+        // Convert the next un-named capture group to a simple named group
+        var openParenIdx = pattern.IndexOf('(');
+        while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
         {
-          var pattern = phrases[i].pattern;
-          // Convert the next un-named capture group to a simple named group
-          var openParenIdx = pattern.IndexOf('(');
-          while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
-          {
-            openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
-          }
-          if (openParenIdx >= 0)
-          {
-            var groupName = "s" + (i + 1);
-            pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
-            if (!phraseVarMap.TryGetValue(phraseId, out var list))
-            {
-              phraseVarMap[phraseId] = list = new List<(string, string)>();
-            }
-            list.Add((groupName, varName));
-          }
-          phrases[i] = (pattern, true, phraseId);
-          break;
+          openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
         }
+        if (openParenIdx >= 0)
+        {
+          var groupName = "s" + (i + 1);
+          pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
+          if (!phraseVarMap.TryGetValue(phrases[i].phraseId ?? "", out var list))
+          {
+            phraseVarMap[phrases[i].phraseId ?? ""] = list = new List<(string, string)>();
+          }
+          list.Add((groupName, varName));
+        }
+        phrases[i] = (pattern, true, phrases[i].phraseId);
       }
     }
 
