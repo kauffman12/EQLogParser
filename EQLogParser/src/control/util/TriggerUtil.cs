@@ -34,7 +34,7 @@ namespace EQLogParser
     internal static string SelectNagDatabaseDirectory()
     {
       using var dialog = new System.Windows.Forms.FolderBrowserDialog {
-        Description = "Select the directory containing the NAG database files (overlays-database.json, etc.)",
+        Description = "Select the directory containing your NAG database files.",
         AutoUpgradeEnabled = true,
       };
 
