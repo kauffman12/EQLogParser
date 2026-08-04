@@ -298,7 +298,7 @@ namespace EQLogParser
       if (dirPath is null)
         return;
 
-      var progressWindow = new MessageWindow($"Loading NAG Triggers and Overlays from {Path.GetFileName(dirPath)}...\nThis may take a moment for large databases.", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
+      var progressWindow = new MessageWindow("Loading NAG Triggers and Overlays.\nThis may take a moment for large databases.", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
       progressWindow.Show();
 
       try
