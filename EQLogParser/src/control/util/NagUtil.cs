@@ -1164,13 +1164,13 @@ internal static class NagUtil
     var horizontalAlignment = element.TryGetProperty("horizontalAlignment", out var ha) ? ha.GetString() : "center";
     var verticalAlignment = element.TryGetProperty("verticalAlignment", out var va) ? va.GetString() : "bottom";
 
-    // Parse textOverflow for NoTextWrap support (NAG whiteSpace=nowrap → EQLP NoTextWrap=true)
-    var noTextWrap = false;
+    // Parse textOverflow for TextOverlayWrap support (NAG whiteSpace=nowrap → EQLP TextOverlayWrap=false)
+    var textOverlayWrap = true;
     if (element.TryGetProperty("textOverflow", out var to) && to.ValueKind == JsonValueKind.Object &&
         to.TryGetProperty("whiteSpace", out var ws) && ws.GetString() is { } whiteSpace &&
         whiteSpace.Equals("nowrap", StringComparison.OrdinalIgnoreCase))
     {
-      noTextWrap = true;
+      textOverlayWrap = false;
     }
 
     // Map timerSortType → SortBy (0=none, 1=alphabetical, 2=time remaining)
@@ -1202,7 +1202,7 @@ internal static class NagUtil
         VerticalAlignment = ConvertVerticalAlignment(verticalAlignment),
         IsTimerOverlay = isTimerOverlay,
         IsTextOverlay = isTextOverlay,
-        NoTextWrap = noTextWrap,
+        TextOverlayWrap = textOverlayWrap,
         SortBy = sortBy,
         ShowActive = true,
         ShowIdle = true,

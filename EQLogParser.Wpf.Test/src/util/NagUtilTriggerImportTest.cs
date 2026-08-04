@@ -1029,28 +1029,30 @@ namespace EQLogParser.Wpf.Test
 
     #endregion
 
-    #region Overlay NoTextWrap Parsing
+    #region Overlay TextOverlayWrap Parsing
 
     [TestMethod]
-    public void ConvertOverlays_NoTextWrap_ParsedFromNagData()
+    public void ConvertOverlays_TextOverlayWrap_ParsedFromNagData()
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\",\"textOverflow\":{\"whiteSpace\":\"nowrap\",\"overflow\":\"hidden\",\"textOverflow\":\"clip\"}}]}";
 
       var overlays = NagUtil.ConvertOverlays(json);
 
       Assert.AreEqual(1, overlays.Count);
-      Assert.IsTrue(overlays[0].OverlayData.NoTextWrap);
+      // NAG whiteSpace=nowrap means wrap is disabled
+      Assert.IsFalse(overlays[0].OverlayData.TextOverlayWrap);
     }
 
     [TestMethod]
-    public void ConvertOverlays_NoTextWrap_DefaultsToFalse()
+    public void ConvertOverlays_TextOverlayWrap_DefaultsToTrue()
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\"}]}";
 
       var overlays = NagUtil.ConvertOverlays(json);
 
       Assert.AreEqual(1, overlays.Count);
-      Assert.IsFalse(overlays[0].OverlayData.NoTextWrap);
+      // Default is true (text wraps) when no textOverflow specified
+      Assert.IsTrue(overlays[0].OverlayData.TextOverlayWrap);
     }
 
     #endregion

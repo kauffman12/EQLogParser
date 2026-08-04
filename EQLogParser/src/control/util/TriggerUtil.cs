@@ -520,7 +520,7 @@ namespace EQLogParser
         toOverlay.Width = fromOverlay.Width;
         toOverlay.HorizontalAlignment = fromOverlay.HorizontalAlignment;
         toOverlay.VerticalAlignment = fromOverlay.VerticalAlignment;
-        toOverlay.NoTextWrap = fromOverlay.NoTextWrap;
+        toOverlay.TextOverlayWrap = fromOverlay.TextOverlayWrap;
         toOverlay.ClosePattern = TextUtils.Trim(fromOverlay.ClosePattern);
         toOverlay.UseCloseRegex = fromOverlay.UseCloseRegex;
 
@@ -572,6 +572,7 @@ namespace EQLogParser
           // make sure old default data is no longer set (should be fixed during startup)
           Application.Current.Resources["OverlayVerticalAlignment-" + toTextModel.Node.Id] = (VerticalAlignment)toTextModel.VerticalAlignment;
           Application.Current.Resources["OverlayTextEffect-" + toTextModel.Node.Id] = toTextModel.UseTextDropShadow ? ThemeConfig.OverlayTextEffect : null;
+          Application.Current.Resources["TextOverlayTextWrapping-" + toTextModel.Node.Id] = toTextModel.Node.OverlayData.TextOverlayWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
 
           AssignBrushResource(toTextModel, fromOverlay, "OverlayColor", "OverlayBrush", "OverlayBrushColor");
           AssignBrushResource(toTextModel, fromOverlay, "FontColor", "FontBrush", "TextOverlayFontColor");
