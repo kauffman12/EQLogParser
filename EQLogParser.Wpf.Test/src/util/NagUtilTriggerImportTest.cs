@@ -229,6 +229,24 @@ namespace EQLogParser.Wpf.Test
       Assert.IsTrue(results[0].Reason.Contains("hotkey"));
     }
 
+    [TestMethod]
+    public void ConvertTriggers_ActionType7_ClearVariable_MappedToEndTimerClearVariables()
+    {
+      var json = CreateTriggerJson("Var Trigger", "pattern", actions: new[]
+      {
+        CreateAction(0, displayText: "text overlay", duration: 5.0),
+        CreateAction(7, variableName: "SpellBeingCast")
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+      Assert.IsNotNull(nodes[0].TriggerData.EndTimerClearVariables);
+      Assert.IsTrue(nodes[0].TriggerData.EndTimerClearVariables.Contains("SpellBeingCast"));
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
     #endregion
 
     #region Null Duration Handling
@@ -1262,7 +1280,7 @@ namespace EQLogParser.Wpf.Test
       return sb.ToString();
     }
 
-    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null)
+    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null)
     {
       var sb = new StringBuilder();
       sb.Append("{\"actionType\":");
@@ -1287,13 +1305,18 @@ namespace EQLogParser.Wpf.Test
         sb.Append($",\"audioFileId\":\"{audioFileId}\"");
       }
 
+      if (variableName != null)
+      {
+        sb.Append($",\"variableName\":\"{variableName}\"");
+      }
+
       sb.Append("}");
       return sb.ToString();
     }
 
-    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null)
+    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null)
     {
-      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId);
+      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName);
       return JsonDocument.Parse(json).RootElement;
     }
 
