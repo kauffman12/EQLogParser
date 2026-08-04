@@ -1057,7 +1057,7 @@ internal static class NagUtil
       sb.AppendLine(".badge-partial { background: #fff9c4; color: #f57f17; }");
       sb.AppendLine(".badge-skipped { background: #ffcdd2; color: #b71c1c; }");
       sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #666; }");
-      sb.AppendLine(".missing-audio { font-size: 11px; color: #999; }");
+      sb.AppendLine(".missing-audio { font-size: 11px; color: #b71c1c; font-weight: bold; }");
       sb.AppendLine(".actions { max-width: 300px; word-break: break-word; }");
       sb.AppendLine(".reason { max-width: 250px; word-break: break-word; font-size: 12px; }");
       sb.AppendLine("th .folder-col { width: 220px; }");
