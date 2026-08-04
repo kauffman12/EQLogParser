@@ -182,11 +182,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType5_SetVariable_Dropped()
+    public void ConvertTriggers_ActionType5_SetVariable_NoName_Dropped()
     {
       var json = CreateTriggerJson("Var Trigger", "pattern", actions: new[]
       {
-        CreateAction(5, displayText: "set some var"),
+        CreateAction(5, displayText: "set some var"), // No variableName — can't map
         CreateAction(0, displayText: "text overlay")
       });
 
@@ -195,6 +195,35 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Partial", results[0].Status);
       Assert.IsTrue(results[0].Reason.Contains("set variable"));
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionType5_SetVariable_WithPhraseId_NamedGroup()
+    {
+      // NAG set-variable action stores a capture group into a named variable.
+      // The corresponding phrase uses numbered groups (.*) which should be converted
+      // to named groups (?<varName>.*) so EQLP can reference the captured value.
+      var json = CreateTriggerJson("Spell Trigger", "placeholder", capturePhrases: new[]
+      {
+        CreateCapturePhrase("^You begin casting (.*)\\.", useRegEx: true, phraseId: "phrase-spell")
+      }, actions: new[]
+      {
+        CreateAction(0, displayText: "Spell: ${SpellBeingCast}"), // text overlay using the variable
+        CreateAction(5, variableName: "SpellBeingCast", phraseId: "phrase-spell") // set variable from capture group
+      });
+
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(1, nodes.Count);
+      // Pattern should use a simple named group (s1), not the variable name
+      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("?<s1>"));
+      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("(*)")); // no unnamed groups
+      // A VariableAction should be set to store the captured value globally
+      var setVarAction = nodes[0].TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast");
+      Assert.IsNotNull(setVarAction);
+      Assert.AreEqual("{s1}", setVarAction.Value);
+      Assert.IsTrue(setVarAction.IsSetAction);
+      Assert.AreEqual("Imported", results[0].Status);
     }
 
     [TestMethod]
@@ -541,14 +570,14 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = NagUtil.ConvertTriggers(json);
 
       Assert.AreEqual(1, nodes.Count);
-      // NAG's {groupName} should become EQLP's {$groupName}
-      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{$spellName}"));
+      // NAG's {groupName} preserved as EQLP's {groupName} (no leading $)
+      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{spellName}"));
     }
 
     [TestMethod]
     public void ConvertTriggers_NagDollarVar_ConvertedToEqlp()
     {
-      // NAG ${var} → EQLP {$var} (in display text, not regex phrases)
+      // NAG ${var} → EQLP {var} (in display text, not regex phrases)
       var json = CreateTriggerJson("Dollar Var Trigger", "pattern", actions: new[]
       {
         CreateAction(0, displayText: "${caster} casts!")
@@ -557,7 +586,7 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = NagUtil.ConvertTriggers(json);
 
       Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{$caster}"));
+      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{caster}"));
       Assert.IsFalse(nodes[0].TriggerData.TextToDisplay.Contains("${caster}"));
     }
 
@@ -1280,7 +1309,7 @@ namespace EQLogParser.Wpf.Test
       return sb.ToString();
     }
 
-    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null)
+    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null)
     {
       var sb = new StringBuilder();
       sb.Append("{\"actionType\":");
@@ -1310,19 +1339,24 @@ namespace EQLogParser.Wpf.Test
         sb.Append($",\"variableName\":\"{variableName}\"");
       }
 
+      if (phraseId != null)
+      {
+        sb.Append($",\"phraseId\":\"{phraseId}\"");
+      }
+
       sb.Append("}");
       return sb.ToString();
     }
 
-    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null)
+    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null)
     {
-      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName);
+      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName, phraseId);
       return JsonDocument.Parse(json).RootElement;
     }
 
-    private JsonElement CreateCapturePhrase(string phrase, bool useRegEx = false)
+    private JsonElement CreateCapturePhrase(string phrase, bool useRegEx = false, string? phraseId = null)
     {
-      var json = $"{{\"phrase\":\"{phrase.Replace("\"", "\\\"")}\",\"useRegEx\":{useRegEx.ToString().ToLower()}}}";
+      var json = $"{{\"phrase\":\"{phrase.Replace("\"", "\\\"")}\",\"useRegEx\":{useRegEx.ToString().ToLower()}" + (phraseId != null ? $",\"phraseId\":\"{phraseId}\"" : "") + "}}";
       return JsonDocument.Parse(json).RootElement;
     }
 
