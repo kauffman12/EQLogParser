@@ -24,22 +24,18 @@
     },
     {
       "actionType": 4,
-      "variableName": null,
       "displayText": "BRD Epic (${BrdEpic2Caster})"
     },
     {
       "actionType": 4,
-      "variableName": null,
       "displayText": "BRD Epic refresh (${BrdEpic2Caster})"
     },
     {
       "actionType": 2,
-      "variableName": null,
       "displayText": "Bard epic"
     },
     {
       "actionType": 0,
-      "variableName": null,
       "displayText": "\ud83c\udfb5Bard Epic\ud83c\udfb6"
     },
     {

@@ -1446,6 +1446,26 @@ namespace EQLogParser.Wpf.Test
     }
 
     /// <summary>
+    /// Verifies that ${BrdEpic2Caster} in timer display text is converted to {BrdEpic2Caster}
+    /// (valid EQLP syntax) in the Bard Epic trigger which has set-variable without phraseId.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_BardEpic_DisplayTextVariableConverted()
+    {
+      var json = LoadFixture("bard-epic-2-caster.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // actionType 4 (repeating timer) has displayText "BRD Epic (${BrdEpic2Caster})"
+      var timerNode = nodes.FirstOrDefault(n => n.TriggerData.TextToDisplay.Contains("BRD Epic"));
+      Assert.IsNotNull(timerNode, "Expected a trigger with 'BRD Epic' in display text");
+
+      // Should contain {BrdEpic2Caster} (valid EQLP), not {$BrdEpic2Caster} or ${BrdEpic2Caster}
+      Assert.IsTrue(timerNode.TriggerData.TextToDisplay.Contains("{BrdEpic2Caster}"));
+      Assert.IsFalse(timerNode.TriggerData.TextToDisplay.Contains("{$BrdEpic2Caster}"));
+      Assert.IsFalse(timerNode.TriggerData.TextToDisplay.Contains("${BrdEpic2Caster}"));
+    }
+
+    /// <summary>
     /// Verifies that ${SpellBeingCast} in display text is converted to {SpellBeingCast}
     /// (valid EQLP syntax), not {$SpellBeingCast} (invalid).
     /// </summary>
@@ -1463,6 +1483,56 @@ namespace EQLogParser.Wpf.Test
       Assert.IsTrue(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{SpellBeingCast}"));
       Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{$SpellBeingCast}"));
       Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("${SpellBeingCast}"));
+    }
+
+    /// <summary>
+    /// Verifies that NAG counter actions (actionType 8) are properly converted:
+    /// - Timer portion (duration, displayText, colors) becomes a regular timer trigger
+    /// - A Counter-type VariableAction is added to increment the variable on each match
+    /// - Reset phrases become separate triggers with Clear VariableAction
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_Counter_ConvertedToTimerAndVariableActions()
+    {
+      var json = LoadFixture("counter-physical.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // Should have 2 nodes: 1 main counter trigger + 1 reset phrase trigger
+      Assert.AreEqual(2, nodes.Count);
+      Assert.AreEqual(2, results.Count);
+
+      // Main counter trigger (from capture phrase "Your bones are brittle.")
+      var counterNode = nodes[0];
+      Assert.IsTrue(counterNode.TriggerData.EnableTimer, "Counter trigger should have timer enabled");
+      Assert.AreEqual(300, counterNode.TriggerData.DurationSeconds);
+      Assert.AreEqual("Physical", counterNode.TriggerData.TextToDisplay);
+      Assert.AreEqual("#b71c1c", counterNode.TriggerData.ActiveColor);
+      // TimerBackgroundColor rgba(48,7,7,0.75) should be converted to hex for IdleColor
+      Assert.IsNotNull(counterNode.TriggerData.IdleColor);
+      Assert.IsTrue(counterNode.TriggerData.IdleColor.Length > 0, "IdleColor should be set from timerBackgroundColor");
+
+      // Should have a Counter-type VariableAction named "Physical"
+      var counterVarAction = counterNode.TriggerData.VariableActions.FirstOrDefault();
+      Assert.IsNotNull(counterVarAction);
+      Assert.IsTrue(counterVarAction.IsSetAction);
+      Assert.IsTrue(counterVarAction.IsCounterType);
+      Assert.AreEqual("Physical", counterVarAction.VariableName);
+      Assert.AreEqual(1, counterVarAction.Step);
+
+      // Reset phrase trigger (from "^Your bones are no longer brittle.")
+      var resetNode = nodes[1];
+      Assert.IsTrue(resetNode.Name.Contains("Counter Reset"), $"Reset trigger name should contain 'Counter Reset': {resetNode.Name}");
+      Assert.AreEqual("^Your bones are no longer brittle.", resetNode.TriggerData.Pattern);
+      Assert.IsTrue(resetNode.TriggerData.UseRegex);
+
+      // Should have a Clear VariableAction for the counter variable
+      var clearVarAction = resetNode.TriggerData.VariableActions.FirstOrDefault();
+      Assert.IsNotNull(clearVarAction);
+      Assert.IsTrue(clearVarAction.IsClearAction);
+      Assert.AreEqual("Physical", clearVarAction.VariableName);
+
+      // Comments should explain this is auto-generated from counter reset phrase
+      Assert.IsTrue(resetNode.TriggerData.Comments.Contains("counter"), "Reset trigger comments should mention counter");
     }
 
     /// <summary>
