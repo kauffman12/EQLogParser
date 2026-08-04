@@ -1,0 +1,47 @@
+{
+  "triggerId": "nxZbpYYehdD5xxYh",
+  "name": "Withering Physicallity",
+  "capturePhrases": [
+    {
+      "phraseId": "mp6VHhVqAIpkDi5s",
+      "useRegEx": true,
+      "requirePreviousPhrase": false,
+      "duration": null,
+      "phrase": "Your bones are brittle\\.",
+      "ignoreCase": true
+    }
+  ],
+  "actions": [
+    {
+      "phrases": [
+        "mp6VHhVqAIpkDi5s"
+      ],
+      "actionType": 8,
+      "overlayId": "d3R0HwE9iPhTHbV6",
+      "duration": 300,
+      "actionId": "OYesdHAMJuwl6ghB",
+      "displayText": "Physical",
+      "useCustomColor": true,
+      "overrideTimerColor": "#b71c1c",
+      "timerBackgroundColor": "rgba(48,7,7,0.75)",
+      "restartBehavior": 2,
+      "endingDuration": null,
+      "endingSoonColor": null,
+      "remainAfterEnded": false,
+      "remainDuration": null,
+      "endedColor": null,
+      "endedBackgroundColor": null,
+      "resetCounterPhrases": [
+        {
+          "phraseId": "AvY1R7l62BfDWrtw",
+          "phrase": "^Your bones are no longer brittle\\.",
+          "useRegEx": true,
+          "ignoreCase": true
+        }
+      ],
+      "speechRate": 1,
+      "speakNext": false,
+      "storeDuration": false
+    }
+  ]
+}

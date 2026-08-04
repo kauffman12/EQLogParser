@@ -708,6 +708,29 @@ internal static class NagUtil
       }
     }
 
+    // Create additional triggers for NAG counter reset phrases. Each reset phrase
+    // becomes a trigger that clears the counter variable, simulating NAG's behavior
+    // where matching the reset phrase resets the auto-incrementing counter to 0.
+    foreach (var (resetPhrase, useRegex, varName) in parsed.counterResetPhrases)
+    {
+      var resetNode = new ExportTriggerNode
+      {
+        Id = Guid.NewGuid().ToString(),
+        Name = nodes.Count > 0 ? $"{name} #{(nodes.Count + 1)} (Counter Reset)" : name,
+        OriginalId = triggerId,
+        TriggerData = new Trigger
+        {
+          Pattern = resetPhrase,
+          UseRegex = useRegex,
+          Comments = "Auto-generated from NAG counter reset phrase. Clears the counter variable when this phrase matches.",
+          Priority = ConvertScore(score),
+          LockoutTime = useCooldown ? cooldownDuration : 0,
+          VariableActions = new List<VariableAction> { new() { ActionType = 1, DataType = 0, VariableName = varName } },
+        }
+      };
+      nodes.Add(resetNode);
+    }
+
     // Determine import status and reason
     // Triggers with missing audio files are Partial (imported but incomplete)
     var hasMissingAudio = parsed.missingAudioFiles?.Count > 0;
@@ -748,7 +771,7 @@ internal static class NagUtil
     });
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables) ParseActions(
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
     var textToDisplay = "";
@@ -770,6 +793,9 @@ internal static class NagUtil
     var hasAction = false;
     var clearVariables = new List<string>();
     var setVariables = new List<(string phraseId, string variableName)>();
+    var counterResetPhrases = new List<(string phrase, bool useRegex, string variableName)>();
+    var counterVarName = "";
+    var idleColor = "";
     var droppedFeatures = new List<string>();
     var actionSummary = new List<string>();
     var missingAudioFiles = new List<string>();
@@ -1067,16 +1093,58 @@ internal static class NagUtil
           }
           break;
 
+        case 8: // Counter - timer with auto-incrementing variable
+          hasAction = true;
+          timerType = 1; // Countdown timer (same as actionType 3)
+          if (action.TryGetProperty("displayText", out var cd) && cd.GetString() is { Length: > 0 } counterText)
+          {
+            textToDisplay = ConvertTemplates(counterText);
+            // displayText doubles as the variable name for the counter
+            counterVarName = counterText;
+          }
+          if (action.TryGetProperty("duration", out var cdur) && cdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
+          {
+            durationSeconds = cdur.GetDouble();
+          }
+          // Map overlayId
+          if (action.TryGetProperty("overlayId", out var cov8) && cov8.GetString() is { Length: > 0 } overlayId8)
+          {
+            if (!selectedOverlays.Contains(overlayId8))
+              selectedOverlays.Add(overlayId8);
+          }
+          // Map colors
+          if (action.TryGetProperty("overrideTimerColor", out var ctc) && ctc.GetString() is { Length: > 0 } color8)
+          {
+            activeColor = color8;
+          }
+          if (action.TryGetProperty("timerBackgroundColor", out var ctbc) && ctbc.GetString() is { Length: > 0 } bgColor8)
+          {
+            idleColor = ConvertColor(bgColor8);
+          }
+          // Map reset counter phrases — these become separate triggers that clear the variable
+          if (action.TryGetProperty("resetCounterPhrases", out var rcp) && rcp.ValueKind == JsonValueKind.Array)
+          {
+            foreach (var rp in rcp.EnumerateArray())
+            {
+              if (rp.TryGetProperty("phrase", out var rpp) && rpp.GetString() is { Length: > 0 } resetPhrase)
+              {
+                var useRegex = rp.TryGetProperty("useRegEx", out var rpr) && rpr.GetBoolean();
+                counterResetPhrases.Add((ConvertTemplates(resetPhrase), useRegex, counterVarName));
+              }
+            }
+          }
+          actionSummary.Add("Counter");
+          break;
+
         case 12: // Screen Flash - unsupported, skip
           droppedFeatures.Add("screen flash");
           Log.Debug($"Skipping unsupported action type 12 (Screen Flash) in trigger");
           break;
 
         default:
-          // Types 7,8,11,13,14,15 - variables, counters, buffs, lists - unsupported
+          // Types 8,11,13,14,15 - counters, hotkeys, buffs, lists - unsupported
           var skipNames = actionType switch
           {
-            8 => "counter",
             11 => "hotkey",
             13 => "global reset",
             15 => "list widget",
@@ -1096,7 +1164,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, []);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], []);
     }
 
     // Build the Trigger object with all parsed data
@@ -1114,13 +1182,17 @@ internal static class NagUtil
       TriggerAgainOption = triggerAgainOption >= 0 ? triggerAgainOption : 0,
       WarningSeconds = warningSeconds,
       ActiveColor = activeColor,
+      IdleColor = idleColor,
       SelectedOverlays = selectedOverlays.Count > 0 ? selectedOverlays : [],
       WarningTextToDisplay = warningTextToDisplay,
       WarningTextToSpeak = warningTextToSpeak,
       EndTextToDisplay = endTextToDisplay,
       EndTextToSpeak = endTextToSpeak,
       EndTimerClearVariables = clearVariables.Count > 0 ? string.Join(", ", clearVariables) : "",
-    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables);
+      VariableActions = counterVarName.Length > 0
+        ? new List<VariableAction> { new() { ActionType = 0, DataType = 1, VariableName = counterVarName, Step = 1 } }
+        : new List<VariableAction>(),
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases);
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)
