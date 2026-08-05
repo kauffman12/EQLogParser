@@ -438,10 +438,32 @@ internal static class NagUtil
       return ([], new NagImportResult { TriggerName = name ?? "(null)", Status = "Skipped", Reason = "Missing name" });
     }
 
-    // Skip dev-only triggers
+    // Skip dev-only triggers (but still track missing audio files for reporting)
     if (element.TryGetProperty("onlyExecuteInDev", out var devProp) && devProp.GetBoolean())
     {
-      return ([], new NagImportResult { TriggerName = name, TriggerId = element.GetProperty("triggerId").GetString(), Status = "Skipped", Reason = "Dev-only trigger" });
+      var devTriggerId = element.GetProperty("triggerId").GetString();
+      List<string> devMissingAudio = [];
+      if (element.TryGetProperty("actions", out var devActions))
+      {
+        foreach (var action in devActions.EnumerateArray())
+        {
+          if (action.TryGetProperty("actionType", out var at) && at.GetInt32() == 1 &&
+              action.TryGetProperty("audioFileId", out var af) && !string.IsNullOrEmpty(af.GetString()))
+          {
+            var audio = af.GetString();
+            var soundToPlay = _audioFileMap?.TryGetValue(audio, out var resolvedName) == true ? resolvedName : audio;
+            if (soundToPlay == "Speech ding")
+            {
+              soundToPlay = "alert1.wav";
+            }
+            if (!TriggerUtil.SoundFileExists(soundToPlay))
+            {
+              devMissingAudio.Add(soundToPlay);
+            }
+          }
+        }
+      }
+      return ([], new NagImportResult { TriggerName = name, TriggerId = devTriggerId, Status = "Skipped", Reason = "Dev-only trigger", MissingAudioFiles = devMissingAudio });
     }
 
     var triggerId = element.GetProperty("triggerId").GetString() ?? "";

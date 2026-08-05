@@ -1356,7 +1356,7 @@ namespace EQLogParser.Wpf.Test
 
     private JsonElement CreateCapturePhrase(string phrase, bool useRegEx = false, string? phraseId = null)
     {
-      var json = $"{{\"phrase\":\"{phrase.Replace("\"", "\\\"")}\",\"useRegEx\":{useRegEx.ToString().ToLower()}" + (phraseId != null ? $",\"phraseId\":\"{phraseId}\"" : "") + "}}";
+      var json = $"{{\"phrase\":\"{phrase.Replace("\"", "\\\"")}\",\"useRegEx\":{useRegEx.ToString().ToLower()}" + (phraseId != null ? $",\"phraseId\":\"{phraseId}\"" : "") + "}";
       return JsonDocument.Parse(json).RootElement;
     }
 
