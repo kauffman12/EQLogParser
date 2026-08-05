@@ -373,6 +373,31 @@ namespace EQLogParser
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
+    private async void MigrateNagDbClick(object sender, RoutedEventArgs e)
+    {
+      var dirPath = TriggerUtil.SelectNagDatabaseDirectory();
+      if (dirPath is null)
+        return;
+
+      var progressWindow = new MessageWindow("Migrate NAG database. This may take a moment for large databases.", "NAG Migrate", MessageWindow.IconType.Info, noButtons: true);
+      progressWindow.Show();
+
+      try
+      {
+        await TriggerUtil.ImportNagTriggers(dirPath);
+        if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue("triggersWindow", out var value) &&
+            value.Content is TriggersView triggersView)
+        {
+          await triggersView.theTreeView.RefreshTriggers();
+          await triggersView.theTreeView.RefreshOverlays();
+        }
+      }
+      finally
+      {
+        progressWindow.Close();
+      }
+    }
+
     private void OpenLogManager(object sender, RoutedEventArgs e) => new LogManagementWindow().ShowDialog();
     private void DockSiteCloseButtonClick(object sender, CloseButtonEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);
     private void DockSiteWindowClosing(object sender, WindowClosingEventArgs e) => SyncFusionUtil.CloseTab(dockSite, e.TargetItem as ContentControl, _logWindows);

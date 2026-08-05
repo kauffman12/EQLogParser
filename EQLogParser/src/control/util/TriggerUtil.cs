@@ -56,14 +56,14 @@ namespace EQLogParser
     }
 
     // Import overlays from a NAG database directory (reads overlays-database.json and parses via NagUtil)
-    internal static async Task ImportNagOverlays(string databaseDirectory)
+    internal static async Task<int> ImportNagOverlays(string databaseDirectory)
     {
       try
       {
         var filePath = Path.Combine(databaseDirectory, "overlays-database.json");
         if (!File.Exists(filePath))
         {
-          return;
+          return 0;
         }
 
         var json = await File.ReadAllTextAsync(filePath);
@@ -71,12 +71,15 @@ namespace EQLogParser
         if (imported?.Count > 0)
         {
           await TriggerStateDB.Instance.ImportOverlays(imported);
+          return imported.Count;
         }
       }
       catch (Exception ex)
       {
         Log.Error("Error importing NAG overlays", ex);
       }
+
+      return 0;
     }
 
     // Import triggers from a NAG database directory (reads trigger-database.json and parses via NagUtil)
@@ -99,11 +102,11 @@ namespace EQLogParser
 
         // Import overlays BEFORE triggers so that ValidateOverlays() can find them
         // when triggers reference overlay IDs. Triggers must be imported after overlays.
-        await ImportNagOverlays(databaseDirectory);
+        var overlayCount = await ImportNagOverlays(databaseDirectory);
 
         if (nodes?.Count > 0)
         {
-          var folderName = $"NAG Import - {DateTime.Now:yyyy-MM-dd HH:mm}";
+          var folderName = $"NAG Ingest - {DateTime.Now:yyyy-MM-dd HH:mm}";
           var nagIdMap = await TriggerStateDB.Instance.ImportTriggers(folderName, nodes);
 
           // Import per-character trigger enable/disable state from characters-database.json
@@ -134,7 +137,7 @@ namespace EQLogParser
         {
           if (results is null || results.Count == 0)
           {
-            new MessageWindow("No triggers were processed.", "NAG Import Complete").ShowDialog();
+            new MessageWindow($"No triggers were processed.\nOverlays imported: {overlayCount}", "NAG Ingest Complete").ShowDialog();
             return;
           }
 
@@ -142,8 +145,9 @@ namespace EQLogParser
           var partial = results.Count(r => r.Status == "Partial");
           var skipped = results.Count(r => r.Status == "Skipped");
 
-          var message = $"NAG Trigger Import Complete\n\n" +
-            $"Total processed: {results.Count}\n" +
+          var message = $"NAG Ingest Complete\n\n" +
+            $"Overlays imported: {overlayCount}\n" +
+            $"Triggers processed: {results.Count}\n" +
             $"Imported: {imported}\n" +
             $"Partial (some features dropped): {partial}\n" +
             $"Skipped: {skipped}\n\n";
@@ -164,7 +168,7 @@ namespace EQLogParser
           {
             message += $"\nReport: {htmlReportPath}";
 
-            var msg = new MessageWindow(message, "NAG Import Complete", MessageWindow.IconType.Info, "Open Report");
+            var msg = new MessageWindow(message, "NAG Ingest Complete", MessageWindow.IconType.Info, "Open Report");
             msg.ShowDialog();
             if (msg.IsYes1Clicked)
             {
@@ -173,7 +177,7 @@ namespace EQLogParser
           }
           else
           {
-            new MessageWindow(message, "NAG Import Complete").ShowDialog();
+            new MessageWindow(message, "NAG Ingest Complete").ShowDialog();
           }
         });
       }
