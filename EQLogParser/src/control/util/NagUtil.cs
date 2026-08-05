@@ -1125,6 +1125,13 @@ internal static class NagUtil
               clearVariables.Add(clearedVarName);
             }
           }
+          // Capture displayText from clear-variable actions for TextToDisplay.
+          // Some NAG clear-variable actions include display text (e.g., "Spell ${var} was interrupted.")
+          // that should be shown when the clear phrase matches.
+          if (action.TryGetProperty("displayText", out var dt7) && dt7.GetString() is { Length: > 0 } clearDisplayText)
+          {
+            textToDisplay = ConvertTemplates(clearDisplayText);
+          }
           actionSummary.Add("clear variable");
           break;
 
