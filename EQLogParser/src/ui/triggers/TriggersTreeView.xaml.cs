@@ -289,30 +289,6 @@ namespace EQLogParser
       }
     }
 
-    private async void ImportNagTriggersClick(object sender, RoutedEventArgs e)
-    {
-      if (GetTreeViewFromMenu(sender) is null)
-        return;
-
-      var dirPath = TriggerUtil.SelectNagDatabaseDirectory();
-      if (dirPath is null)
-        return;
-
-      var progressWindow = new MessageWindow("Loading NAG Triggers and Overlays.\nThis may take a moment for large databases.", "Import NAG DB", MessageWindow.IconType.Info, noButtons: true);
-      progressWindow.Show();
-
-      try
-      {
-        await TriggerUtil.ImportNagTriggers(dirPath);
-        await RefreshTriggerNode();
-        await RefreshOverlayNode();
-      }
-      finally
-      {
-        progressWindow.Close();
-      }
-    }
-
     private async Task RefreshTriggerNode()
     {
       triggerTreeView?.Nodes?.Clear();
@@ -688,7 +664,6 @@ namespace EQLogParser
         renameTriggerMenuItem.IsEnabled = node.ParentNode != null && count == 1;
         deleteTriggerMenuItem.IsEnabled = node.ParentNode != null;
         importTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
-        importNagDbTriggerMenuItem.IsEnabled = true; // Always available regardless of selection
         newTriggerMenuItem.IsEnabled = node.IsDir() && count == 1;
         copyTriggerItem.IsEnabled = !node.IsDir() && count == 1;
         cutTriggerItem.IsEnabled = node.ParentNode != null && (copyTriggerItem.IsEnabled || (node.IsDir() && count == 1));
@@ -699,7 +674,6 @@ namespace EQLogParser
         renameTriggerMenuItem.IsEnabled = false;
         deleteTriggerMenuItem.IsEnabled = false;
         importTriggerMenuItem.IsEnabled = false;
-        importNagDbTriggerMenuItem.IsEnabled = true; // Always available
         newTriggerMenuItem.IsEnabled = false;
         copyTriggerItem.IsEnabled = false;
         cutTriggerItem.IsEnabled = false;
@@ -708,6 +682,7 @@ namespace EQLogParser
 
       clearRecentlyMergedMenuItem.IsEnabled = !TriggerStateDB.Instance.RecentlyMerged.IsEmpty || !TriggerStateDB.Instance.MissingMedia.IsEmpty;
       importTriggerMenuItem.Header = node != null && importTriggerMenuItem.IsEnabled ? $"Import to ({node.Content})" : "Import";
+      exportTriggerMenuItem.Header = node != null && count == 1 ? $"Export ({node.Content})" : "Export";
       shareTriggerMenuItem.IsEnabled = count != 1 || node?.SerializedData?.TriggerData?.Private != true;
 
       UiElementUtil.ClearMenuEvents(copySettingsMenuItem.Items, CopySettingsClick);
@@ -821,6 +796,7 @@ namespace EQLogParser
       }
 
       importOverlayMenuItem.Header = node != null && importOverlayMenuItem.IsEnabled ? $"Import to Folder ({node.Content})" : "Import";
+      exportOverlayMenuItem.Header = node != null && count == 1 ? $"Export ({node.Content})" : "Export";
     }
 
     private async void CopySettingsClick(object sender, RoutedEventArgs e)
