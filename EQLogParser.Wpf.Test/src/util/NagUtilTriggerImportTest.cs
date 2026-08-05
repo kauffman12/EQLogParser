@@ -1594,6 +1594,37 @@ namespace EQLogParser.Wpf.Test
       Assert.IsNotNull(setVarAction, "Phrase [0] should have Set VariableAction for SpellBeingCast");
     }
 
+    /// <summary>
+    /// Verifies that capture phrases [1] and [2] in "Capture spell casting" ("You activate X",
+    /// "You begin singing X") get set-variable VariableActions via fallback logic.
+    /// These phrases have un-named capture groups and no ${var} references, but are not
+    /// explicitly listed in the actionType 5's phrases array (which only includes phrase [0]).
+    /// The fallback logic should inherit the SET action from phrase [0].
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_FallbackSetVariableForPhrases1And2()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(8, nodes.Count);
+      Assert.AreEqual(8, results.Count);
+
+      // Phrase [1]: "^You activate (.*)\." — should get set-variable fallback
+      var activateNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("activate") && n.TriggerData.Pattern.Contains("?<s"));
+      Assert.IsNotNull(activateNode, "Expected phrase [1] 'You activate X' to have a converted named group");
+      var activateSetVar = activateNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
+      Assert.IsNotNull(activateSetVar, "Phrase [1] should get SET VariableAction via fallback");
+      Assert.AreEqual("{s2}", activateSetVar.Value, "Should use s2 group name (phrase index 2 = 0-based)");
+
+      // Phrase [2]: "^You begin singing (.*)\." — should get set-variable fallback
+      var singNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("singing") && n.TriggerData.Pattern.Contains("?<s"));
+      Assert.IsNotNull(singNode, "Expected phrase [2] 'You begin singing X' to have a converted named group");
+      var singSetVar = singNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
+      Assert.IsNotNull(singSetVar, "Phrase [2] should get SET VariableAction via fallback");
+      Assert.AreEqual("{s3}", singSetVar.Value, "Should use s3 group name (phrase index 3 = 0-based)");
+    }
+
     private static string LoadFixture(string fixtureName)
     {
       var assembly = typeof(NagUtilTriggerImportTest).Assembly;
