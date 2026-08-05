@@ -396,12 +396,6 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="migrateNagDb" Header="Migrate NAG _Database" Click="MigrateNagDbClick" ToolTip="Import Triggers and Overlays from a NAG database directory">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Database" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <Separator />
           <MenuItem x:Name="deleteChat" Header="_Clear Chat Archive" IsEnabled="False">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="deleteChatIcon" Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Times" />
@@ -434,6 +428,12 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem x:Name="migrateNagDb" Header="Migrate NAG _Database" Click="MigrateNagDbClick" ToolTip="Import Triggers and Overlays from a NAG database directory">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Database" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem Header="Create WAV _Audio" Click="OpenCreateWavClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileAudio" />
@@ -444,6 +444,7 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FolderOpen" />
             </MenuItem.Icon>
           </MenuItem>
+          <Separator />
           <MenuItem Header="View _Error Log" Click="ViewErrorLogClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />

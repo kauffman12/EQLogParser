@@ -35,7 +35,7 @@ namespace EQLogParser
     {
       using var dialog = new System.Windows.Forms.FolderBrowserDialog
       {
-        Description = "Select the directory containing your NAG database files.",
+        Description = "Select the directory containing your NAG database files. (*.json)",
         AutoUpgradeEnabled = true,
       };
 
