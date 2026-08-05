@@ -629,9 +629,8 @@ namespace EQLogParser.Wpf.Test
       // {TS} must be preserved as-is (not {$TS})
       Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{TS}"));
       Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("{$TS}"));
-      // ${Character} must be replaced with (.+?)
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("(.+?)"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("${Character}"));
+      // ${Character} → {c} (EQLP native replacement, not a capture group)
+      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{c}"));
     }
 
     [TestMethod]
@@ -1543,7 +1542,7 @@ namespace EQLogParser.Wpf.Test
       // Reset phrase trigger (from "^Your bones are no longer brittle.")
       var resetNode = nodes[1];
       Assert.IsTrue(resetNode.Name.Contains("Counter Reset"), $"Reset trigger name should contain 'Counter Reset': {resetNode.Name}");
-      Assert.AreEqual("^Your bones are no longer brittle.", resetNode.TriggerData.Pattern);
+      Assert.AreEqual("^Your bones are no longer brittle\\.", resetNode.TriggerData.Pattern);
       Assert.IsTrue(resetNode.TriggerData.UseRegex);
 
       // Should have a Clear VariableAction for the counter variable

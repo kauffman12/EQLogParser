@@ -359,8 +359,9 @@ internal static class NagUtil
         }
         results.Add(parsed.result);
 
-        // Build metadata dictionary keyed by NAG triggerId for profile-level operations
-        if (!string.IsNullOrEmpty(parsed.result.TriggerId) && !metadata.ContainsKey(parsed.result.TriggerId))
+        // Build metadata dictionary keyed by NAG triggerId for profile-level operations.
+        // Skipped triggers (dev-only, missing name, etc.) are excluded from metadata.
+        if (!string.IsNullOrEmpty(parsed.result.TriggerId) && parsed.result.Status != "Skipped" && !metadata.ContainsKey(parsed.result.TriggerId))
         {
           metadata[parsed.result.TriggerId] = new NagTriggerMetadata
           {
