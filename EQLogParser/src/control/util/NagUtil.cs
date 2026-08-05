@@ -1137,12 +1137,31 @@ internal static class NagUtil
           {
             var clearedVarName = ConvertTemplates(varName);
             var actionPhraseId = action.TryGetProperty("phraseId", out var pid7) ? pid7.GetString() : null;
-            if (!string.IsNullOrEmpty(actionPhraseId))
+            // Determine which phrases this clear-variable action targets. If a "phrases"
+            // array is present, route to each listed phrase. Otherwise fall back to
+            // the single "phraseId" field, or treat as global if neither exists.
+            var targetPhraseIds = new List<string>();
+            if (action.TryGetProperty("phrases", out var ap7) && ap7.ValueKind == JsonValueKind.Array)
             {
-              // Phrase-specific clear: add a VariableAction to only the matching phrase trigger.
+              foreach (var ap in ap7.EnumerateArray())
+              {
+                var apStr = ap.GetString();
+                if (!string.IsNullOrEmpty(apStr))
+                  targetPhraseIds.Add(apStr);
+              }
+            }
+            else if (!string.IsNullOrEmpty(actionPhraseId))
+            {
+              targetPhraseIds.Add(actionPhraseId);
+            }
+
+            if (targetPhraseIds.Count > 0)
+            {
+              // Phrase-specific clear: add a VariableAction to only the matching phrase triggers.
               // This handles cases like "Your X spell is interrupted" clearing SpellBeingCast,
               // where there's no timer and EndTimerClearVariables would never fire.
-              phraseClearVariables.Add((actionPhraseId, clearedVarName));
+              foreach (var pid in targetPhraseIds)
+                phraseClearVariables.Add((pid, clearedVarName));
             }
             else
             {

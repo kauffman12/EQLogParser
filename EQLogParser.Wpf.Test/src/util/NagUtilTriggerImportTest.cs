@@ -1589,20 +1589,26 @@ namespace EQLogParser.Wpf.Test
       // None should be Skipped or Partial — all phrases are valid regex captures
       Assert.IsTrue(results.All(r => r.Status == "Imported"), "All phrases should import successfully");
 
-      // Phrase [3] ("Your ${SpellBeingCast} spell is interrupted") should have a Clear VariableAction for SpellBeingCast
-      var interruptedNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("interrupted"));
-      Assert.IsNotNull(interruptedNode, "Expected a trigger with 'interrupted' in pattern (phrase [3])");
+      // All 5 failure phrases [3-7] ("interrupted", "resisted", "blocked", "fizzles", "reflected")
+      // should have a Clear VariableAction for SpellBeingCast, since the actionType 7 has
+      // a "phrases" array listing all 5 phraseIds.
+      var failurePatterns = new[] { "interrupted", "resisted", "did not take hold", "fizzles", "reflected" };
+      foreach (var pattern in failurePatterns)
+      {
+        var node = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains(pattern));
+        Assert.IsNotNull(node, $"Expected a trigger with '{pattern}' in pattern");
+        var clearVarAction = node.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
+        Assert.IsNotNull(clearVarAction, $"Phrase matching '{pattern}' should have SpellBeingCast Clear VariableAction (in action's phrases array)");
+      }
 
-      var clearVarAction = interruptedNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
-      Assert.IsNotNull(clearVarAction, "Phrase-specific clear variable should create a Clear VariableAction");
-
-      // Other phrase triggers should NOT have the clear VariableAction for SpellBeingCast
-      var nonInterruptedNodes = nodes.Where(n => !n.TriggerData.Pattern.Contains("interrupted")).ToList();
-      Assert.AreEqual(7, nonInterruptedNodes.Count, "Expected 7 non-interrupted phrase triggers");
-      foreach (var node in nonInterruptedNodes)
+      // Phrase [0] ("You begin casting") and phrases [1-2] ("You activate", "You begin singing")
+      // should NOT have the clear VariableAction — they are not in the action's phrases array.
+      var nonFailureNodes = nodes.Where(n => failurePatterns.All(p => !n.TriggerData.Pattern.Contains(p))).ToList();
+      Assert.AreEqual(3, nonFailureNodes.Count, "Expected 3 non-failure phrase triggers (begin casting, activate, singing)");
+      foreach (var node in nonFailureNodes)
       {
         var hasClear = node.TriggerData.VariableActions.Any(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
-        Assert.IsFalse(hasClear, $"Non-interrupted phrase should not have SpellBeingCast clear VariableAction: {node.Name}");
+        Assert.IsFalse(hasClear, $"Non-failure phrase should not have SpellBeingCast clear VariableAction: {node.Name}");
       }
 
       // The set-variable action (phrase [0]) should still work — that trigger gets a Set VariableAction
@@ -1683,6 +1689,16 @@ namespace EQLogParser.Wpf.Test
       Assert.IsNotNull(interruptNode, "Expected a trigger with 'interrupted' in pattern (phrase [3])");
       Assert.IsTrue(interruptNode.TriggerData.TextToDisplay.Contains("Spell {SpellBeingCast} was interrupted."),
         $"Interrupt phrase should show interrupt message. TextToDisplay: {interruptNode.TriggerData.TextToDisplay}");
+
+      // Phrases [4-7] (resisted, blocked, fizzles, reflected) — SHOULD also have interrupt display text
+      var failurePatterns = new[] { "resisted", "did not take hold", "fizzles", "reflected" };
+      foreach (var pattern in failurePatterns)
+      {
+        var node = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains(pattern));
+        Assert.IsNotNull(node, $"Expected a trigger with '{pattern}' in pattern");
+        Assert.IsTrue(node.TriggerData.TextToDisplay.Contains("Spell {SpellBeingCast} was interrupted."),
+          $"Phrase matching '{pattern}' should show interrupt message. TextToDisplay: {node.TriggerData.TextToDisplay}");
+      }
     }
 
     /// <summary>
