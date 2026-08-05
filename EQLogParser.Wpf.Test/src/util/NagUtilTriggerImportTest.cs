@@ -1685,6 +1685,40 @@ namespace EQLogParser.Wpf.Test
         $"Interrupt phrase should show interrupt message. TextToDisplay: {interruptNode.TriggerData.TextToDisplay}");
     }
 
+    /// <summary>
+    /// Verifies that phrase [5] ("X resisted your ${SpellBeingCast}") does NOT get a fallback
+    /// set-variable VariableAction. This phrase already has a named capture group from
+    /// ${SpellBeingCast} conversion, so the fallback should skip it — the spell name is
+    /// already captured by (?<SpellBeingCast>.+?) and doesn't need to be stored again.
+    /// The (.*) at the start of the pattern captures the NPC name, not the spell.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_Phrase5NoFallbackSetVariable()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(8, nodes);
+
+      // Phrase [5]: "^(.*) resisted your (?<SpellBeingCast>.+?)" — should NOT get a set-variable VariableAction
+      var resistNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("resisted"));
+      Assert.IsNotNull(resistNode, "Expected a trigger with 'resisted' in pattern (phrase [5])");
+
+      // Should have the named capture group from ${SpellBeingCast} conversion
+      Assert.IsTrue(resistNode.TriggerData.Pattern.Contains("?<SpellBeingCast>"),
+        $"Pattern should contain named group SpellBeingCast: {resistNode.TriggerData.Pattern}");
+
+      // Should NOT have a set-variable VariableAction that maps s-group to SpellBeingCast
+      // (the (.*) captures NPC name, not spell name — fallback should skip this phrase)
+      var wrongSetVar = resistNode.TriggerData.VariableActions.FirstOrDefault(va =>
+        va.VariableName == "SpellBeingCast" &&
+        va.IsSetAction &&
+        va.Value != null &&
+        va.Value.Contains("s") &&
+        !va.Value.Contains("SpellBeingCast"));
+      Assert.IsNull(wrongSetVar, "Phrase [5] should NOT get a fallback set-variable mapping s-group → SpellBeingCast (would capture NPC name instead of spell)");
+    }
+
     #endregion
   }
 }

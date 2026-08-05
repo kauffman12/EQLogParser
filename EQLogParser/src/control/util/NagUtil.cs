@@ -176,6 +176,13 @@ internal static class NagUtil
     return idx >= 0;
   }
 
+  // Checks if a regex pattern contains any named capture groups (e.g., (?<name>...)).
+  private static bool HasNamedCaptureGroup(string pattern)
+  {
+    var idx = pattern.IndexOf("?<", StringComparison.Ordinal);
+    return idx >= 0;
+  }
+
   // NAG score (0-1, higher = more important) → EQLP Priority (lower = more important)
   private static long ConvertScore(double score)
   {
@@ -647,8 +654,12 @@ internal static class NagUtil
         if (!phrases[i].useRegex) continue;
 
         var pattern = phrases[i].pattern;
-        // Only apply to capture phrases with un-named groups and no ${var} references
-        if (pattern.Contains("${") || !HasUnnamedCaptureGroup(pattern)) continue;
+        // Only apply to capture phrases with un-named groups and no ${var} references.
+        // Note: by this point, ${var} has already been converted to (?<var>.+?) by DollarVarRegex,
+        // so we check for existing named groups instead. If the pattern already has named
+        // capture groups (from ${var} conversion), it's a dependent phrase that references
+        // an existing variable — don't add another set-variable action.
+        if (!HasUnnamedCaptureGroup(pattern) || HasNamedCaptureGroup(pattern)) continue;
 
         // Convert the next un-named capture group to a simple named group
         var openParenIdx = pattern.IndexOf('(');
