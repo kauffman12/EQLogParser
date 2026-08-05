@@ -714,9 +714,19 @@ internal static class NagUtil
       triggerData.Priority = ConvertScore(score);
       triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
 
+      // Determine which phrase this node corresponds to, for per-phrase action routing.
+      var currentPhraseId = phrases[i].phraseId ?? "";
+
+      // Apply phrase-specific display texts from actions that target specific phrases.
+      // For example, a clear-variable action with displayText "Spell {var} was interrupted."
+      // should only show on the interrupt phrases, not on the begin-casting phrase.
+      if (parsed.phraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
+      {
+        triggerData.TextToDisplay = phraseDisplayText;
+      }
+
       // Add VariableActions for set-variable mappings on this phrase.
       // EQLP stores the captured value as a global variable accessible by other triggers.
-      var currentPhraseId = phrases[i].phraseId ?? "";
       if (phraseVarMap.TryGetValue(currentPhraseId, out var varList))
       {
         foreach (var (groupName, varName) in varList)
@@ -950,7 +960,7 @@ internal static class NagUtil
     }
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases, List<(string phraseId, string variableName)> phraseClearVariables) ParseActions(
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases, List<(string phraseId, string variableName)> phraseClearVariables, Dictionary<string, string> phraseDisplayTexts) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
     var textToDisplay = "";
@@ -972,6 +982,9 @@ internal static class NagUtil
     var hasAction = false;
     var clearVariables = new List<string>();
     var phraseClearVariables = new List<(string phraseId, string variableName)>();
+    // Phrase-specific display texts from actions that target specific phrases.
+    // Keyed by phraseId; only applied to matching phrases, not globally.
+    var phraseDisplayTexts = new Dictionary<string, string>();
     var setVariables = new List<(string phraseId, string variableName)>();
     var counterResetPhrases = new List<(string phrase, bool useRegex, string variableName)>();
     var counterVarName = "";
@@ -1126,12 +1139,31 @@ internal static class NagUtil
               clearVariables.Add(clearedVarName);
             }
           }
-          // Capture displayText from clear-variable actions for TextToDisplay.
+          // Capture displayText from clear-variable actions for phrase-specific TextToDisplay.
           // Some NAG clear-variable actions include display text (e.g., "Spell ${var} was interrupted.")
-          // that should be shown when the clear phrase matches.
+          // that should only be shown when the specific phrase(s) listed in the action's "phrases"
+          // array match — NOT applied globally to all phrases. For example, phrase [0] ("You begin casting")
+          // should NOT show an interrupt message just because phrase [3] has one.
           if (action.TryGetProperty("displayText", out var dt7) && dt7.GetString() is { Length: > 0 } clearDisplayText)
           {
-            textToDisplay = ConvertTemplates(clearDisplayText);
+            var convertedDisplayText = ConvertTemplates(clearDisplayText);
+            // Route display text to specific phrases listed in the action's "phrases" array.
+            if (action.TryGetProperty("phrases", out var actionPhrases) && actionPhrases.ValueKind == JsonValueKind.Array)
+            {
+              foreach (var ap in actionPhrases.EnumerateArray())
+              {
+                var apStr = ap.GetString();
+                if (!string.IsNullOrEmpty(apStr) && !phraseDisplayTexts.ContainsKey(apStr))
+                {
+                  phraseDisplayTexts[apStr] = convertedDisplayText;
+                }
+              }
+            }
+            else
+            {
+              // No specific phrase routing — apply globally (backward compatibility).
+              textToDisplay = convertedDisplayText;
+            }
           }
           actionSummary.Add("clear variable");
           break;
@@ -1233,7 +1265,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], [], []);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], [], [], new Dictionary<string, string>());
     }
 
     // Build the Trigger object with all parsed data
@@ -1261,7 +1293,7 @@ internal static class NagUtil
       VariableActions = counterVarName.Length > 0
         ? new List<VariableAction> { new() { ActionType = 0, DataType = 1, VariableName = counterVarName, Step = 1 } }
         : new List<VariableAction>(),
-    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases, phraseClearVariables);
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases, phraseClearVariables, phraseDisplayTexts);
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)

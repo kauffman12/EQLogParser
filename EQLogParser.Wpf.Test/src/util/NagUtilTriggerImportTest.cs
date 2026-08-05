@@ -1659,6 +1659,32 @@ namespace EQLogParser.Wpf.Test
       return content;
     }
 
+    /// <summary>
+    /// Verifies that phrase [0] ("You begin casting") does NOT get the interrupt display text
+    /// from actionType 7's clear-variable action. The interrupt message should only appear
+    /// on phrases [3-7] (the ones listed in the action's "phrases" array).
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_BeginCastPhraseNoInterruptDisplay()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(8, nodes);
+
+      // Phrase [0]: "^You begin casting (.*)\." — should NOT have interrupt display text
+      var beginCastNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("begin casting"));
+      Assert.IsNotNull(beginCastNode, "Expected a trigger with 'begin casting' in pattern");
+      Assert.IsFalse(beginCastNode.TriggerData.TextToDisplay.Contains("interrupted"),
+        $"Begin-casting phrase should NOT show interrupt message. TextToDisplay: {beginCastNode.TriggerData.TextToDisplay}");
+
+      // Phrase [3]: "^Your ${{SpellBeingCast}} spell is interrupted\." — SHOULD have interrupt display text
+      var interruptNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("interrupted"));
+      Assert.IsNotNull(interruptNode, "Expected a trigger with 'interrupted' in pattern (phrase [3])");
+      Assert.IsTrue(interruptNode.TriggerData.TextToDisplay.Contains("Spell {SpellBeingCast} was interrupted."),
+        $"Interrupt phrase should show interrupt message. TextToDisplay: {interruptNode.TriggerData.TextToDisplay}");
+    }
+
     #endregion
   }
 }
