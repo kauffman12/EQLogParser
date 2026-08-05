@@ -53,7 +53,20 @@
       "actionType": 7,
       "variableName": "SpellBeingCast",
       "phraseId": "SmZAE0oEzuhq1cqh",
-      "displayText": "Spell ${SpellBeingCast} was interrupted."
+      "overlayId": "gx4ySJU9Cj35xR1n",
+      "duration": 15,
+      "displayText": "Spell ${SpellBeingCast} was interrupted.",
+      "actionId": "2779yyKWjlmJvIhn",
+      "phrases": [
+        "SmZAE0oEzuhq1cqh",
+        "iNy1LoUUFcXnaHws",
+        "CC31CtgDiqwi8xV4",
+        "9ccr5pJj08H9rEi7",
+        "z4i5GLKVp79M5FAV"
+      ],
+      "restartBehavior": 0,
+      "onlyExecuteInDev": false,
+      "variableStorageType": "localVariable"
     }
   ]
 }
