@@ -12,6 +12,21 @@ namespace EQLogParser.Wpf.Test
   [TestClass]
   public class NagUtilTriggerImportTest
   {
+    /// <summary>
+    /// Calls ConvertTriggers and unwraps the root wrapper node so tests can access trigger data directly.
+    /// </summary>
+    private static (List<ExportTriggerNode> nodes, List<NagImportResult> results, Dictionary<string, NagTriggerMetadata> metadata) ConvertTriggersUnwrapped(string json)
+    {
+      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json);
+      // ConvertTriggers wraps all nodes in a root ExportTriggerNode for the Import() flow.
+      // Unwrap it for test assertions.
+      if (nodes.Count == 1 && nodes[0].TriggerData is null && nodes[0].Nodes != null)
+      {
+        return (nodes[0].Nodes, results, metadata);
+      }
+      return (nodes, results, metadata);
+    }
+
     #region Basic Trigger Conversion
 
     [TestMethod]
@@ -22,7 +37,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Fireball cast!", duration: 5.0)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Test Trigger", nodes[0].Name);
@@ -43,7 +58,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual(1, results.Count);
@@ -58,7 +73,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual("Skipped", results[0].Status);
@@ -73,7 +88,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual("Skipped", results[0].Status);
@@ -87,7 +102,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(5, displayText: "set variable") // Action type 5 is unsupported
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual("Skipped", results[0].Status);
@@ -105,7 +120,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Hello World", duration: 10.0)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Hello World", nodes[0].TriggerData.TextToDisplay);
@@ -115,20 +130,21 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType1_Audio_Imported()
+    public void ConvertTriggers_ActionType1_Audio_MissingFile_TrackedAsPartial()
     {
       var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
       {
         CreateAction(1, audioFileId: "audio-file-123")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Without files-database.json, audioFileId is used as-is
       Assert.AreEqual("audio-file-123", nodes[0].TriggerData.SoundToPlay);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
-      Assert.AreEqual("Imported", results[0].Status);
+      // Missing audio file → Partial status
+      Assert.AreEqual("Partial", results[0].Status);
     }
 
     [TestMethod]
@@ -139,7 +155,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(2, displayText: "Spell ready")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Spell ready", nodes[0].TriggerData.TextToSpeak);
@@ -155,7 +171,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(3, displayText: "Cooldown", duration: 30.0)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
@@ -172,7 +188,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(4, displayText: "Channeling", duration: 15.0)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
@@ -190,7 +206,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text overlay")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Partial", results[0].Status);
@@ -212,7 +228,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(5, variableName: "SpellBeingCast", phraseId: "phrase-spell") // set variable from capture group
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Pattern should use a simple named group (s1), not the variable name
@@ -235,7 +251,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text overlay")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Partial", results[0].Status);
@@ -251,7 +267,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text overlay")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Partial", results[0].Status);
@@ -267,7 +283,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(7, variableName: "SpellBeingCast")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
@@ -288,7 +304,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(3, displayText: "Dynamic Timer", durationNull: true)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
@@ -313,7 +329,7 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual(60.0, nodes[0].TriggerData.DurationSeconds);
@@ -336,7 +352,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "In Norg")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("{CurrentZone} = \"Norg\"", nodes[0].TriggerData.MatchVariableCondition);
@@ -353,7 +369,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Fire spell")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("{SpellBeingCast} contains \"Fireball\"", nodes[0].TriggerData.MatchVariableCondition);
@@ -370,7 +386,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Fire spell")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // NAG pipe-separated values should become OR'd contains clauses
@@ -388,7 +404,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Item check")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("{EbItemZone}", nodes[0].TriggerData.MatchVariableCondition);
@@ -406,7 +422,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Specific check")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       var cond = nodes[0].TriggerData.MatchVariableCondition;
@@ -421,7 +437,7 @@ namespace EQLogParser.Wpf.Test
       // NAG data has 4 conditions with null operatorType — must not crash
       var json = "{\"triggers\":[{\"name\":\"Null Op Trigger\",\"triggerId\":\"t1\",\"onlyExecuteInDev\":false,\"capturePhrases\":[{\"phrase\":\"pattern\",\"useRegEx\":false}],\"conditions\":[{\"conditionType\":1,\"variableName\":\"SomeVar\",\"operatorType\":null,\"variableValue\":\"val\"}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Imported", results[0].Status);
@@ -443,7 +459,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Fire spell")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Should be combined with alternation: (?:phrase1|phrase2)
@@ -463,7 +479,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "{spellName} ready!")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.UseRegex);
@@ -485,7 +501,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(3, displayText: "Channeling", duration: 30.0)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Spell ended", nodes[0].TriggerData.EndEarlyPattern);
@@ -508,7 +524,7 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Both trigger-level and action-level should be present (max 3 slots)
@@ -525,7 +541,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"triggers\":[{\"name\":\"Commented Trigger\",\"triggerId\":\"test-123\",\"onlyExecuteInDev\":false,\"comments\":\"User's note here\",\"capturePhrases\":[{\"phrase\":\"pattern\",\"useRegEx\":false}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // NAG comments are preserved as-is (no "Original:" prefix).
@@ -543,7 +559,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("EQLP Import Notes:"));
@@ -567,7 +583,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "{spellName} ready!")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // NAG's {groupName} preserved as EQLP's {groupName} (no leading $)
@@ -583,7 +599,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "${caster} casts!")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{caster}"));
@@ -608,7 +624,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(3, displayText: "Timer started", durationNull: true)
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // {TS} must be preserved as-is (not {$TS})
@@ -631,7 +647,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Spell cast")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("(.+?)"));
@@ -650,7 +666,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Cast")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // {S} and {N} should be preserved as-is for EQLP runtime conversion
@@ -672,7 +688,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Cloud formed")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("(.+?)"));
@@ -691,7 +707,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Cloud")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // {C} should be replaced with (.+?) even though useRegEx was false
@@ -712,7 +728,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Cast")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsFalse(nodes[0].TriggerData.UseRegex);
@@ -734,7 +750,7 @@ namespace EQLogParser.Wpf.Test
         ]
       }";
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(2, nodes.Count); // Good + Partial
       Assert.AreEqual(3, results.Count);
@@ -933,7 +949,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_EmptyTriggersArray_ReturnsEmpty()
     {
       var json = "{\"triggers\": []}";
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual(0, results.Count);
@@ -943,7 +959,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_InvalidJson_ReturnsEmpty()
     {
       var json = "not valid json";
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual(0, results.Count);
@@ -957,7 +973,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Score 1.0 should map to Priority 1
@@ -969,7 +985,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"triggers\":[{\"name\":\"Seq Trigger\",\"triggerId\":\"t1\",\"onlyExecuteInDev\":false,\"captureMethod\":\"Sequential\",\"capturePhrases\":[{\"phrase\":\"You begin casting\",\"useRegEx\":false},{\"phrase\":\"Spell lands\",\"useRegEx\":false}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual(1, results.Count);
@@ -982,7 +998,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"triggers\":[{\"name\":\"Class Trigger\",\"triggerId\":\"t1\",\"onlyExecuteInDev\":false,\"classLevels\":[{\"class\":\"Cleric\",\"level\":50}],\"capturePhrases\":[{\"phrase\":\"pattern\",\"useRegEx\":false}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual("Partial", results[0].Status);
@@ -999,7 +1015,7 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-123"));
@@ -1015,7 +1031,7 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-456"));
@@ -1031,10 +1047,12 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-789"));
+      // Missing audio file → Partial status
+      Assert.AreEqual("Partial", results[0].Status);
     }
 
     [TestMethod]
@@ -1047,7 +1065,7 @@ namespace EQLogParser.Wpf.Test
         JsonDocument.Parse(actionJson).RootElement
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-clip"));
@@ -1065,7 +1083,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "text")
       });
 
-      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual(1, metadata.Count);
@@ -1085,7 +1103,7 @@ namespace EQLogParser.Wpf.Test
         + "{\"name\":\"Skip\",\"triggerId\":\"t-skip\",\"onlyExecuteInDev\":true,\"capturePhrases\":[{\"phrase\":\"p\",\"useRegEx\":false}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}"
         + "]}";
 
-      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.IsTrue(metadata.ContainsKey("t-good"));
@@ -1132,7 +1150,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(1, audioFileId: "audio-file-123")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Without files-database.json, the raw audioFileId is used as SoundToPlay.
@@ -1150,7 +1168,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(1, audioFileId: "test-sound.wav")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // "test-sound.wav" has a valid extension but doesn't exist in data/sounds/
@@ -1166,7 +1184,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(0, displayText: "Hello")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual(0, results[0].MissingAudioFiles.Count);
@@ -1181,7 +1199,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(1, audioFileId: "sound-b.mp3")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       Assert.AreEqual(2, results[0].MissingAudioFiles.Count);
@@ -1197,7 +1215,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(1, audioFileId: "dev-only-sound.wav")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(0, nodes.Count);
       Assert.AreEqual("Skipped", results[0].Status);
@@ -1206,24 +1224,24 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_AudioFileIdWithoutExtension_NotTrackedAsMissing()
+    public void ConvertTriggers_AudioFileIdWithoutExtension_TrackedAsMissing()
     {
       // When there's no files-database.json, the raw audioFileId is used as SoundToPlay.
-      // If it doesn't have a .wav/.mp3 extension (like "ShortWarningPing"), it won't be
-      // recognized by SoundFileRegex at runtime, but we don't track it as missing since
-      // we can't verify its existence without the file map.
+      // Even without a .wav/.mp3 extension, we still check for file existence —
+      // if the file doesn't exist in data/sounds/, it's tracked as missing.
       var json = CreateTriggerJson("Ding Trigger", "pattern", actions: new[]
       {
         CreateAction(1, audioFileId: "ShortWarningPing")
       });
 
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, nodes.Count);
       // Without files-database.json, the raw ID is used directly
       Assert.AreEqual("ShortWarningPing", nodes[0].TriggerData.SoundToPlay);
-      // Not tracked as missing since we can't verify without the file map
-      Assert.AreEqual(0, results[0].MissingAudioFiles.Count);
+      // Tracked as missing since the file doesn't exist in data/sounds/
+      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.AreEqual("ShortWarningPing", results[0].MissingAudioFiles[0]);
     }
 
     [TestMethod]
@@ -1234,7 +1252,7 @@ namespace EQLogParser.Wpf.Test
         CreateAction(1, audioFileId: "missing-sound.wav")
       });
 
-      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(1, metadata.Count);
       // Find the trigger ID from results to look up metadata
@@ -1394,7 +1412,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_CaptureSpellCasting_SetVariableWithPhraseId()
     {
       var json = LoadFixture("capture-spell-casting.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // The trigger has 8 capture phrases → 8 EQLP triggers
       Assert.AreEqual(8, nodes.Count);
@@ -1425,7 +1443,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_BardEpic_NoPhraseId_AppliesToAllRegexPhrases()
     {
       var json = LoadFixture("bard-epic-2-caster.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // 2 capture phrases → 2 EQLP triggers
       Assert.AreEqual(2, nodes.Count);
@@ -1453,7 +1471,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_BardEpic_DisplayTextVariableConverted()
     {
       var json = LoadFixture("bard-epic-2-caster.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // actionType 4 (repeating timer) has displayText "BRD Epic (${BrdEpic2Caster})"
       var timerNode = nodes.FirstOrDefault(n => n.TriggerData.TextToDisplay.Contains("BRD Epic"));
@@ -1473,7 +1491,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_CaptureSpellCasting_DisplayTextVariableConverted()
     {
       var json = LoadFixture("capture-spell-casting.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // The actionType 7 (clear variable) has displayText "Spell ${SpellBeingCast} was interrupted."
       var nodeWithDisplay = nodes.FirstOrDefault(n => n.TriggerData.TextToDisplay.Contains("interrupted"));
@@ -1495,7 +1513,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_Counter_ConvertedToTimerAndVariableActions()
     {
       var json = LoadFixture("counter-physical.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // Should have 2 nodes: 1 main counter trigger + 1 reset phrase trigger
       Assert.AreEqual(2, nodes.Count);
@@ -1543,7 +1561,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_CaptureSpellCasting_CharacterRefConvertedInRegexPhrase()
     {
       var json = LoadFixture("capture-spell-casting.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // Phrase "^${Character}'s ${SpellBeingCast} spell has been reflected" should have {c}
       var reflectNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("reflected"));
@@ -1563,7 +1581,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_CaptureSpellCasting_PhraseSpecificClearVariable()
     {
       var json = LoadFixture("capture-spell-casting.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // Should have 8 phrase triggers
       Assert.AreEqual(8, nodes.Count);
@@ -1605,7 +1623,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_RealData_CaptureSpellCasting_FallbackSetVariableForPhrases1And2()
     {
       var json = LoadFixture("capture-spell-casting.json");
-      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual(8, nodes.Count);
       Assert.AreEqual(8, results.Count);
@@ -1632,7 +1650,13 @@ namespace EQLogParser.Wpf.Test
       using var stream = assembly.GetManifestResourceStream(resourceName);
       if (stream is null) throw new InvalidOperationException($"Embedded resource '{resourceName}' not found.");
       using var reader = new StreamReader(stream);
-      return reader.ReadToEnd();
+      var content = reader.ReadToEnd();
+      // Wrap single trigger object in {"triggers":[...]} format expected by ConvertTriggers
+      if (!content.TrimStart().StartsWith("{\"triggers\""))
+      {
+        return $"{{\"triggers\":[{content}]}}";
+      }
+      return content;
     }
 
     #endregion
