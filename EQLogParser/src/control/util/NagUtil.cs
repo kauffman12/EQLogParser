@@ -162,6 +162,20 @@ internal static class NagUtil
     return input;
   }
 
+  /// <summary>
+  /// Checks if a regex pattern string contains an un-named capture group.
+  /// Looks for '(' not followed by '?' (which would indicate named, non-capturing, etc.).
+  /// </summary>
+  private static bool HasUnnamedCaptureGroup(string pattern)
+  {
+    var idx = pattern.IndexOf('(');
+    while (idx >= 0 && idx + 1 < pattern.Length && pattern[idx + 1] == '?')
+    {
+      idx = pattern.IndexOf('(', idx + 1);
+    }
+    return idx >= 0;
+  }
+
   // NAG score (0-1, higher = more important) → EQLP Priority (lower = more important)
   private static long ConvertScore(double score)
   {
@@ -560,6 +574,12 @@ internal static class NagUtil
     // trigger captures the spell name, others reference it via {SpellBeingCast}).
     // NAG's actionType 5 stores a captured group into a named variable.
     var phraseVarMap = new Dictionary<string, List<(string groupName, string varName)>>();
+    // Track the last set-variable action that matched a phrase, so subsequent
+    // capture phrases without an explicit match can fall back to it.
+    // This handles triggers like "Capture spell casting" where only the first
+    // capture phrase has an explicit actionId routing; later capture phrases
+    // (e.g., "You activate X", "You begin singing X") should also set the variable.
+    string lastSetVarName = null;
     foreach (var (phraseId, varName) in parsed.setVariables)
     {
       // If no specific phraseId, apply to all regex phrases with un-named groups.
@@ -569,6 +589,7 @@ internal static class NagUtil
         var matchesPhrase = string.IsNullOrEmpty(phraseId) || phrases[i].phraseId == phraseId;
         if (!matchesPhrase || !phrases[i].useRegex) continue;
 
+        lastSetVarName = varName;
         var pattern = phrases[i].pattern;
         // Convert the next un-named capture group to a simple named group
         var openParenIdx = pattern.IndexOf('(');
@@ -585,6 +606,42 @@ internal static class NagUtil
             phraseVarMap[phrases[i].phraseId ?? ""] = list = new List<(string, string)>();
           }
           list.Add((groupName, varName));
+        }
+        phrases[i] = (pattern, true, phrases[i].phraseId);
+      }
+    }
+
+    // Fallback: for regex capture phrases that didn't match any set-variable action,
+    // but have un-named capture groups and no ${var} references, inherit the last
+    // matched set-variable action. This ensures all capture phrases in triggers like
+    // "Capture spell casting" get VariableActions to store captured values.
+    if (lastSetVarName != null)
+    {
+      for (var i = 0; i < phrases.Count; i++)
+      {
+        var currentPhraseId = phrases[i].phraseId ?? "";
+        if (phraseVarMap.ContainsKey(currentPhraseId)) continue;
+        if (!phrases[i].useRegex) continue;
+
+        var pattern = phrases[i].pattern;
+        // Only apply to capture phrases with un-named groups and no ${var} references
+        if (pattern.Contains("${") || !HasUnnamedCaptureGroup(pattern)) continue;
+
+        // Convert the next un-named capture group to a simple named group
+        var openParenIdx = pattern.IndexOf('(');
+        while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
+        {
+          openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
+        }
+        if (openParenIdx >= 0)
+        {
+          var groupName = "s" + (i + 1);
+          pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
+          if (!phraseVarMap.TryGetValue(currentPhraseId, out var list))
+          {
+            phraseVarMap[currentPhraseId] = list = new List<(string, string)>();
+          }
+          list.Add((groupName, lastSetVarName));
         }
         phrases[i] = (pattern, true, phrases[i].phraseId);
       }
@@ -647,6 +704,23 @@ internal static class NagUtil
             DataType = 0,   // Value
             VariableName = varName,
             Value = "{" + groupName + "}"
+          });
+        }
+      }
+
+      // Add phrase-specific clear-variable VariableActions.
+      // NAG actionType 7 with a phraseId means "when this specific phrase matches, clear the variable."
+      // This is different from EndTimerClearVariables (which fires when a timer ends) — these
+      // are per-phrase triggers that fire on match, so we use VariableAction { ActionType=Clear }.
+      foreach (var (clearPhraseId, clearVarName) in parsed.phraseClearVariables)
+      {
+        if (currentPhraseId == clearPhraseId)
+        {
+          triggerData.VariableActions.Add(new VariableAction
+          {
+            ActionType = 1, // Clear
+            DataType = 0,   // Value
+            VariableName = clearVarName
           });
         }
       }
@@ -853,7 +927,7 @@ internal static class NagUtil
     }
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases) ParseActions(
+  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases, List<(string phraseId, string variableName)> phraseClearVariables) ParseActions(
       JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
   {
     var textToDisplay = "";
@@ -874,6 +948,7 @@ internal static class NagUtil
     var endTextToSpeak = "";
     var hasAction = false;
     var clearVariables = new List<string>();
+    var phraseClearVariables = new List<(string phraseId, string variableName)>();
     var setVariables = new List<(string phraseId, string variableName)>();
     var counterResetPhrases = new List<(string phrase, bool useRegex, string variableName)>();
     var counterVarName = "";
@@ -885,6 +960,13 @@ internal static class NagUtil
     foreach (var action in actions.EnumerateArray())
     {
       var actionType = action.TryGetProperty("actionType", out var at) ? at.GetInt32() : -1;
+
+      // Skip blank/template actions that have no actionType (all fields null/default).
+      // These appear in NAG data as empty template objects with no real behavior.
+      if (actionType < 0)
+      {
+        continue;
+      }
 
       switch (actionType)
       {
@@ -1002,11 +1084,24 @@ internal static class NagUtil
           actionSummary.Add("Timer (partial)");
           break;
 
-        case 7: // Clear Variable — map to EndTimerClearVariables
+        case 7: // Clear Variable
           hasAction = true;
           if (action.TryGetProperty("variableName", out var vn) && vn.GetString() is { Length: > 0 } varName)
           {
-            clearVariables.Add(ConvertTemplates(varName));
+            var clearedVarName = ConvertTemplates(varName);
+            var actionPhraseId = action.TryGetProperty("phraseId", out var pid7) ? pid7.GetString() : null;
+            if (!string.IsNullOrEmpty(actionPhraseId))
+            {
+              // Phrase-specific clear: add a VariableAction to only the matching phrase trigger.
+              // This handles cases like "Your X spell is interrupted" clearing SpellBeingCast,
+              // where there's no timer and EndTimerClearVariables would never fire.
+              phraseClearVariables.Add((actionPhraseId, clearedVarName));
+            }
+            else
+            {
+              // Global clear: applies when the trigger's timer ends naturally.
+              clearVariables.Add(clearedVarName);
+            }
           }
           actionSummary.Add("clear variable");
           break;
@@ -1108,7 +1203,7 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], []);
+      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], [], []);
     }
 
     // Build the Trigger object with all parsed data
@@ -1136,7 +1231,7 @@ internal static class NagUtil
       VariableActions = counterVarName.Length > 0
         ? new List<VariableAction> { new() { ActionType = 0, DataType = 1, VariableName = counterVarName, Step = 1 } }
         : new List<VariableAction>(),
-    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases);
+    }, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases, phraseClearVariables);
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath)

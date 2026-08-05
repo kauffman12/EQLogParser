@@ -1552,6 +1552,79 @@ namespace EQLogParser.Wpf.Test
       Assert.IsFalse(reflectNode.TriggerData.Pattern.Contains("${Character}"));
     }
 
+    /// <summary>
+    /// Verifies that NAG actionType 7 (clear variable) with a specific phraseId
+    /// creates a VariableAction { ActionType=Clear } on the matching phrase trigger only,
+    /// rather than using EndTimerClearVariables which would never fire without a timer.
+    /// In "Capture spell casting", phrase [3] ("Your X spell is interrupted") has a clear-variable
+    /// action for SpellBeingCast — this should create a Clear VariableAction on that phrase's trigger.
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_PhraseSpecificClearVariable()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      // Should have 8 phrase triggers
+      Assert.AreEqual(8, nodes.Count);
+      Assert.AreEqual(8, results.Count);
+      // None should be Skipped or Partial — all phrases are valid regex captures
+      Assert.IsTrue(results.All(r => r.Status == "Imported"), "All phrases should import successfully");
+
+      // Phrase [3] ("Your ${SpellBeingCast} spell is interrupted") should have a Clear VariableAction for SpellBeingCast
+      var interruptedNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("interrupted"));
+      Assert.IsNotNull(interruptedNode, "Expected a trigger with 'interrupted' in pattern (phrase [3])");
+
+      var clearVarAction = interruptedNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
+      Assert.IsNotNull(clearVarAction, "Phrase-specific clear variable should create a Clear VariableAction");
+
+      // Other phrase triggers should NOT have the clear VariableAction for SpellBeingCast
+      var nonInterruptedNodes = nodes.Where(n => !n.TriggerData.Pattern.Contains("interrupted")).ToList();
+      Assert.IsTrue(nonInterruptedNodes.Count == 7, "Expected 7 non-interrupted phrase triggers");
+      foreach (var node in nonInterruptedNodes)
+      {
+        var hasClear = node.TriggerData.VariableActions.Any(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
+        Assert.IsFalse(hasClear, $"Non-interrupted phrase should not have SpellBeingCast clear VariableAction: {node.Name}");
+      }
+
+      // The set-variable action (phrase [0]) should still work — that trigger gets a Set VariableAction
+      var castingNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("s1"));
+      Assert.IsNotNull(castingNode, "Expected phrase [0] to have converted capture group to s1");
+      var setVarAction = castingNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
+      Assert.IsNotNull(setVarAction, "Phrase [0] should have Set VariableAction for SpellBeingCast");
+    }
+
+    /// <summary>
+    /// Verifies that capture phrases [1] and [2] in "Capture spell casting" ("You activate X",
+    /// "You begin singing X") get set-variable VariableActions via fallback logic.
+    /// These phrases have un-named capture groups and no ${var} references, but are not
+    /// explicitly listed in the actionType 5's phrases array (which only includes phrase [0]).
+    /// The fallback logic should inherit the SET action from phrase [0].
+    /// </summary>
+    [TestMethod]
+    public void ConvertTriggers_RealData_CaptureSpellCasting_FallbackSetVariableForPhrases1And2()
+    {
+      var json = LoadFixture("capture-spell-casting.json");
+      var (nodes, results, _) = NagUtil.ConvertTriggers(json);
+
+      Assert.AreEqual(8, nodes.Count);
+      Assert.AreEqual(8, results.Count);
+
+      // Phrase [1]: "^You activate (.*)\." — should get set-variable fallback
+      var activateNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("activate") && n.TriggerData.Pattern.Contains("?<s"));
+      Assert.IsNotNull(activateNode, "Expected phrase [1] 'You activate X' to have a converted named group");
+      var activateSetVar = activateNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
+      Assert.IsNotNull(activateSetVar, "Phrase [1] should get SET VariableAction via fallback");
+      Assert.AreEqual("{s2}", activateSetVar.Value, "Should use s2 group name (phrase index 2 = 0-based)");
+
+      // Phrase [2]: "^You begin singing (.*)\." — should get set-variable fallback
+      var singNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("singing") && n.TriggerData.Pattern.Contains("?<s"));
+      Assert.IsNotNull(singNode, "Expected phrase [2] 'You begin singing X' to have a converted named group");
+      var singSetVar = singNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
+      Assert.IsNotNull(singSetVar, "Phrase [2] should get SET VariableAction via fallback");
+      Assert.AreEqual("{s3}", singSetVar.Value, "Should use s3 group name (phrase index 3 = 0-based)");
+    }
+
     private static string LoadFixture(string fixtureName)
     {
       var assembly = typeof(NagUtilTriggerImportTest).Assembly;
