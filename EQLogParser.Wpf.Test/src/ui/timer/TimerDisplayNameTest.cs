@@ -143,10 +143,10 @@ namespace EQLogParser.Wpf.Test
     public void GetDisplayName_MultipleVariables_AllResolved()
     {
       var variables = new ConcurrentDictionary<string, string>
-        {
-          ["spell"] = "Fireball",
-          ["stacks"] = "3",
-        };
+      {
+        ["spell"] = "Fireball",
+        ["stacks"] = "3",
+      };
       var timerData = CreateTimerData(
         displayName: "Fireball 3",
         displayNameTemplate: "{spell} x{stacks}",

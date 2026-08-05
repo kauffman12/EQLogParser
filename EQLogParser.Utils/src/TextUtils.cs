@@ -351,7 +351,7 @@ namespace EQLogParser
         if (intPart > ulong.MaxValue / 10 || (intPart == ulong.MaxValue / 10 && digit > 5))
           return defValue;
 
-        intPart = intPart * 10 + digit;
+        intPart = (intPart * 10) + digit;
         hasDigits = true;
         index++;
       }

@@ -813,7 +813,7 @@ internal static class NagUtil
       var resetNode = new ExportTriggerNode
       {
         Id = Guid.NewGuid().ToString(),
-        Name = nodes.Count > 0 ? $"{name} #{(nodes.Count + 1)} (Counter Reset)" : name,
+        Name = nodes.Count > 0 ? $"{name} #{nodes.Count + 1} (Counter Reset)" : name,
         OriginalId = triggerId,
         TriggerData = new Trigger
         {

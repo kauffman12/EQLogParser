@@ -33,7 +33,8 @@ namespace EQLogParser
     // Pick a NAG database directory via folder dialog; returns the path or null if cancelled
     internal static string SelectNagDatabaseDirectory()
     {
-      using var dialog = new System.Windows.Forms.FolderBrowserDialog {
+      using var dialog = new System.Windows.Forms.FolderBrowserDialog
+      {
         Description = "Select the directory containing your NAG database files.",
         AutoUpgradeEnabled = true,
       };

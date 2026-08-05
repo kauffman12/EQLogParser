@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using EQLogParser;
 
 namespace EQLogParser.Wpf.Test
 {
@@ -32,14 +31,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_SingleTextOverlay_ReturnsNode()
     {
-      var json = CreateTriggerJson("Test Trigger", "spellcast:Fireball", actions: new[]
-      {
+      var json = CreateTriggerJson("Test Trigger", "spellcast:Fireball", actions:
+      [
         CreateAction(0, displayText: "Fireball cast!", duration: 5.0)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Test Trigger", nodes[0].Name);
       Assert.IsFalse(nodes[0].TriggerData.UseRegex);
       Assert.AreEqual("Fireball cast!", nodes[0].TriggerData.TextToDisplay);
@@ -53,58 +52,58 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_MissingName_Skipped()
     {
-      var json = CreateTriggerJson(null, "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson(null, "pattern", actions:
+      [
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.IsEmpty(nodes);
+      Assert.HasCount(1, results);
       Assert.AreEqual("Skipped", results[0].Status);
     }
 
     [TestMethod]
     public void ConvertTriggers_DevOnly_Skipped()
     {
-      var json = CreateTriggerJson("Dev Trigger", "pattern", onlyExecuteInDev: true, actions: new[]
-      {
+      var json = CreateTriggerJson("Dev Trigger", "pattern", onlyExecuteInDev: true, actions:
+      [
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
+      Assert.IsEmpty(nodes);
       Assert.AreEqual("Skipped", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("Dev-only"));
+      Assert.Contains("Dev-only", results[0].Reason);
     }
 
     [TestMethod]
     public void ConvertTriggers_NoCapturePhrases_Skipped()
     {
-      var json = CreateTriggerJson("No Phrases", "pattern", capturePhrases: Array.Empty<JsonElement>(), actions: new[]
-      {
+      var json = CreateTriggerJson("No Phrases", "pattern", capturePhrases: Array.Empty<JsonElement>(), actions:
+      [
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
+      Assert.IsEmpty(nodes);
       Assert.AreEqual("Skipped", results[0].Status);
     }
 
     [TestMethod]
     public void ConvertTriggers_NoSupportedActions_Skipped()
     {
-      var json = CreateTriggerJson("No Actions", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("No Actions", "pattern", actions:
+      [
         CreateAction(5, displayText: "set variable") // Action type 5 is unsupported
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
+      Assert.IsEmpty(nodes);
       Assert.AreEqual("Skipped", results[0].Status);
     }
 
@@ -115,14 +114,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType0_TextOverlay_Imported()
     {
-      var json = CreateTriggerJson("Text Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Text Trigger", "pattern", actions:
+      [
         CreateAction(0, displayText: "Hello World", duration: 10.0)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Hello World", nodes[0].TriggerData.TextToDisplay);
       Assert.AreEqual(10.0, nodes[0].TriggerData.DurationSeconds);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
@@ -132,14 +131,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType1_Audio_MissingFile_TrackedAsPartial()
     {
-      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "audio-file-123")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Without files-database.json, audioFileId is used as-is
       Assert.AreEqual("audio-file-123", nodes[0].TriggerData.SoundToPlay);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
@@ -150,14 +149,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType2_TTS_Imported()
     {
-      var json = CreateTriggerJson("TTS Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("TTS Trigger", "pattern", actions:
+      [
         CreateAction(2, displayText: "Spell ready")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Spell ready", nodes[0].TriggerData.TextToSpeak);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("Imported", results[0].Status);
@@ -166,14 +165,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType3_Timer_Imported()
     {
-      var json = CreateTriggerJson("Timer Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Timer Trigger", "pattern", actions:
+      [
         CreateAction(3, displayText: "Cooldown", duration: 30.0)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual(30.0, nodes[0].TriggerData.DurationSeconds);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
@@ -183,14 +182,14 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType4_LoopingTimer_Imported()
     {
-      var json = CreateTriggerJson("Loop Timer", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Loop Timer", "pattern", actions:
+      [
         CreateAction(4, displayText: "Channeling", duration: 15.0)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual(15.0, nodes[0].TriggerData.DurationSeconds);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
@@ -200,17 +199,17 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType5_SetVariable_NoName_Dropped()
     {
-      var json = CreateTriggerJson("Var Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Var Trigger", "pattern", actions:
+      [
         CreateAction(5, displayText: "set some var"), // No variableName — can't map
         CreateAction(0, displayText: "text overlay")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("set variable"));
+      Assert.Contains("set variable", results[0].Reason);
     }
 
     [TestMethod]
@@ -219,21 +218,21 @@ namespace EQLogParser.Wpf.Test
       // NAG set-variable action stores a capture group into a named variable.
       // The corresponding phrase uses numbered groups (.*) which should be converted
       // to named groups (?<varName>.*) so EQLP can reference the captured value.
-      var json = CreateTriggerJson("Spell Trigger", "placeholder", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("Spell Trigger", "placeholder", capturePhrases:
+      [
         CreateCapturePhrase("^You begin casting (.*)\\.", useRegEx: true, phraseId: "phrase-spell")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Spell: ${SpellBeingCast}"), // text overlay using the variable
         CreateAction(5, variableName: "SpellBeingCast", phraseId: "phrase-spell") // set variable from capture group
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Pattern should use a simple named group (s1), not the variable name
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("?<s1>"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("(*)")); // no unnamed groups
+      Assert.Contains("?<s1>", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("(*)", nodes[0].TriggerData.Pattern); // no unnamed groups
       // A VariableAction should be set to store the captured value globally
       var setVarAction = nodes[0].TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast");
       Assert.IsNotNull(setVarAction);
@@ -245,50 +244,50 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType12_ScreenFlash_Dropped()
     {
-      var json = CreateTriggerJson("Flash Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Flash Trigger", "pattern", actions:
+      [
         CreateAction(12),
         CreateAction(0, displayText: "text overlay")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("screen flash"));
+      Assert.Contains("screen flash", results[0].Reason);
     }
 
     [TestMethod]
     public void ConvertTriggers_ActionType11_Hotkey_Dropped()
     {
-      var json = CreateTriggerJson("Hotkey Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Hotkey Trigger", "pattern", actions:
+      [
         CreateAction(11),
         CreateAction(0, displayText: "text overlay")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("hotkey"));
+      Assert.Contains("hotkey", results[0].Reason);
     }
 
     [TestMethod]
     public void ConvertTriggers_ActionType7_ClearVariable_MappedToEndTimerClearVariables()
     {
-      var json = CreateTriggerJson("Var Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Var Trigger", "pattern", actions:
+      [
         CreateAction(0, displayText: "text overlay", duration: 5.0),
         CreateAction(7, variableName: "SpellBeingCast")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.IsNotNull(nodes[0].TriggerData.EndTimerClearVariables);
-      Assert.IsTrue(nodes[0].TriggerData.EndTimerClearVariables.Contains("SpellBeingCast"));
+      Assert.Contains("SpellBeingCast", nodes[0].TriggerData.EndTimerClearVariables);
       Assert.AreEqual("Imported", results[0].Status);
     }
 
@@ -299,18 +298,18 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_NullDuration_UsesDefault60()
     {
-      var json = CreateTriggerJson("Null Dur Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Null Dur Trigger", "pattern", actions:
+      [
         CreateAction(3, displayText: "Dynamic Timer", durationNull: true)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual(60.0, nodes[0].TriggerData.DurationSeconds);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("indefinite timer duration"));
+      Assert.Contains("indefinite timer duration", results[0].Reason);
     }
 
     [TestMethod]
@@ -321,17 +320,17 @@ namespace EQLogParser.Wpf.Test
       var actionJson = CreateActionString(3, displayText: "Timer", durationNull: true);
       actionJson = actionJson.Replace("}", ",\"endEarlyPhrases\":[{\"phrase\":\"Spell faded\"}]}");
 
-      var json = CreateTriggerJson("Null Dur EEP", "pattern", endEarlyPhrases: new[]
-      {
+      var json = CreateTriggerJson("Null Dur EEP", "pattern", endEarlyPhrases:
+      [
         CreateEndEarlyPhrase("Channel broken")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual(60.0, nodes[0].TriggerData.DurationSeconds);
       Assert.AreEqual("Channel broken", nodes[0].TriggerData.EndEarlyPattern);
       Assert.AreEqual("Spell faded", nodes[0].TriggerData.EndEarlyPattern2);
@@ -344,51 +343,51 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ConditionOperator16_EqualityCheck()
     {
-      var json = CreateTriggerJson("Zone Trigger", "pattern", conditions: new[]
-      {
+      var json = CreateTriggerJson("Zone Trigger", "pattern", conditions:
+      [
         CreateCondition("CurrentZone", 16, "Norg")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "In Norg")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("{CurrentZone} = \"Norg\"", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]
     public void ConvertTriggers_ConditionOperator1_Contains_SingleValue()
     {
-      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions: new[]
-      {
+      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions:
+      [
         CreateCondition("SpellBeingCast", 1, "Fireball")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Fire spell")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("{SpellBeingCast} contains \"Fireball\"", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]
     public void ConvertTriggers_ConditionOperator1_Contains_PipeSeparatedValues()
     {
-      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions: new[]
-      {
+      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions:
+      [
         CreateCondition("SpellBeingCast", 1, "Fireball|Flame Strike")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Fire spell")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // NAG pipe-separated values should become OR'd contains clauses
       Assert.AreEqual("{SpellBeingCast} contains \"Fireball\" || {SpellBeingCast} contains \"Flame Strike\"", nodes[0].TriggerData.MatchVariableCondition);
     }
@@ -396,39 +395,39 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ConditionOperator2_Existence()
     {
-      var json = CreateTriggerJson("Exists Trigger", "pattern", conditions: new[]
-      {
+      var json = CreateTriggerJson("Exists Trigger", "pattern", conditions:
+      [
         CreateCondition("EbItemZone", 2, null)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Item check")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("{EbItemZone}", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]
     public void ConvertTriggers_MultipleConditions_JoinedWithAnd()
     {
-      var json = CreateTriggerJson("Multi Cond Trigger", "pattern", conditions: new[]
-      {
+      var json = CreateTriggerJson("Multi Cond Trigger", "pattern", conditions:
+      [
         CreateCondition("CurrentZone", 16, "Norg"),
         CreateCondition("SpellBeingCast", 16, "Fireball")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Specific check")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       var cond = nodes[0].TriggerData.MatchVariableCondition;
-      Assert.IsTrue(cond.Contains("{CurrentZone}"));
-      Assert.IsTrue(cond.Contains("{SpellBeingCast}"));
-      Assert.IsTrue(cond.Contains("&&"));
+      Assert.Contains("{CurrentZone}", cond);
+      Assert.Contains("{SpellBeingCast}", cond);
+      Assert.Contains("&&", cond);
     }
 
     [TestMethod]
@@ -439,7 +438,7 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Imported", results[0].Status);
     }
 
@@ -450,18 +449,18 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_MultiplePhrases_CombinedWithAlternation()
     {
-      var json = CreateTriggerJson("Multi Phrase", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("Multi Phrase", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("You cast Fireball"),
         CreateCapturePhrase("You cast Flame Strike")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Fire spell")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(2, nodes.Count);
+      Assert.HasCount(2, nodes);
       // Each phrase becomes its own EQLP trigger (no alternation combining)
       Assert.AreEqual("You cast Fireball", nodes[0].TriggerData.Pattern);
       Assert.AreEqual("You cast Flame Strike", nodes[1].TriggerData.Pattern);
@@ -470,17 +469,17 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_MultiplePhrasesWithRegex_Preserved()
     {
-      var json = CreateTriggerJson("Regex Phrase", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("Regex Phrase", "pattern", capturePhrases:
+      [
         CreateCapturePhrase(@"You cast (?<spellName>\w+)", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "{spellName} ready!")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.UseRegex);
     }
 
@@ -491,18 +490,17 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_EndEarlyPhrases_AppliedToTrigger()
     {
-      var json = CreateTriggerJson("End Early Trigger", "pattern", endEarlyPhrases: new[]
-      {
+      var json = CreateTriggerJson("End Early Trigger", "pattern", endEarlyPhrases:
+      [
         CreateEndEarlyPhrase("Spell ended"),
         CreateEndEarlyPhrase("Channel broken")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(3, displayText: "Channeling", duration: 30.0)
-      });
+      ]);
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
 
-      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
-
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Spell ended", nodes[0].TriggerData.EndEarlyPattern);
       Assert.AreEqual("Channel broken", nodes[0].TriggerData.EndEarlyPattern2);
     }
@@ -515,17 +513,17 @@ namespace EQLogParser.Wpf.Test
       // Inject endEarlyPhrases into the action JSON
       actionJson = actionJson.Replace("}", ",\"endEarlyPhrases\":[{\"phrase\":\"Spell faded\"}]}");
 
-      var json = CreateTriggerJson("Merged EEP", "pattern", endEarlyPhrases: new[]
-      {
+      var json = CreateTriggerJson("Merged EEP", "pattern", endEarlyPhrases:
+      [
         CreateEndEarlyPhrase("Channel broken")
-      }, actions: new[]
-      {
+      ], actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Both trigger-level and action-level should be present (max 3 slots)
       Assert.AreEqual("Channel broken", nodes[0].TriggerData.EndEarlyPattern);
       Assert.AreEqual("Spell faded", nodes[0].TriggerData.EndEarlyPattern2);
@@ -542,27 +540,27 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // NAG comments are preserved as-is (no "Original:" prefix).
       // The NAG trigger ID is tracked via OriginalId and the metadata dictionary.
-      Assert.IsFalse(nodes[0].TriggerData.Comments.Contains("Original:"));
-      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("User's note here"));
+      Assert.DoesNotContain("Original:", nodes[0].TriggerData.Comments);
+      Assert.Contains("User's note here", nodes[0].TriggerData.Comments);
     }
 
     [TestMethod]
     public void ConvertTriggers_DroppedFeatures_ListedInComment()
     {
-      var json = CreateTriggerJson("Partial Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Partial Trigger", "pattern", actions:
+      [
         CreateAction(5, displayText: "set var"), // Unsupported
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("EQLP Import Notes:"));
-      Assert.IsTrue(nodes[0].TriggerData.Comments.Contains("set variable"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("EQLP Import Notes:", nodes[0].TriggerData.Comments);
+      Assert.Contains("set variable", nodes[0].TriggerData.Comments);
     }
 
     #endregion
@@ -574,35 +572,35 @@ namespace EQLogParser.Wpf.Test
     {
       // NAG uses ${var} for variables and (?<name>...) for regex groups.
       // EQLP display text uses {$name} for variable references (the $ prefix is optional).
-      var json = CreateTriggerJson("Template Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("Template Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase(@"You cast (?<spellName>\w+)", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "{spellName} ready!")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // NAG's {groupName} preserved as EQLP's {groupName} (no leading $)
-      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{spellName}"));
+      Assert.Contains("{spellName}", nodes[0].TriggerData.TextToDisplay);
     }
 
     [TestMethod]
     public void ConvertTriggers_NagDollarVar_ConvertedToEqlp()
     {
       // NAG ${var} → EQLP {var} (in display text, not regex phrases)
-      var json = CreateTriggerJson("Dollar Var Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Dollar Var Trigger", "pattern", actions:
+      [
         CreateAction(0, displayText: "${caster} casts!")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.TextToDisplay.Contains("{caster}"));
-      Assert.IsFalse(nodes[0].TriggerData.TextToDisplay.Contains("${caster}"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("{caster}", nodes[0].TriggerData.TextToDisplay);
+      Assert.DoesNotContain("${caster}", nodes[0].TriggerData.TextToDisplay);
     }
 
     #endregion
@@ -615,84 +613,84 @@ namespace EQLogParser.Wpf.Test
       // NAG uses {TS} as a duration placeholder in regex phrases.
       // EQLP's CheckOptions() at runtime converts {TS} → (?<TS>(?:\d+[dhms]?:?){1,4}).
       // Must NOT be converted to {$TS} by ConvertTemplates.
-      var json = CreateTriggerJson("TS Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("TS Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("^${Character} starts a {TS} timer\\.$", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(3, displayText: "Timer started", durationNull: true)
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // {TS} must be preserved as-is (not {$TS})
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{TS}"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("{$TS}"));
+      Assert.Contains("{TS}", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("{$TS}", nodes[0].TriggerData.Pattern);
       // ${Character} → {c} (EQLP native replacement, not a capture group)
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{c}"));
+      Assert.Contains("{c}", nodes[0].TriggerData.Pattern);
     }
 
     [TestMethod]
     public void ConvertTriggers_DollarVar_ReplacedWithCaptureGroup()
     {
       // NAG ${varName} in regex phrases → (.+?) since EQLP doesn't support {$var} in patterns
-      var json = CreateTriggerJson("DollarVar Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("DollarVar Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("^${Character} casts a spell\\.$", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Spell cast")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // ${Character} → {c} (EQLP native replacement)
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{c}"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("${Character}"));
+      Assert.Contains("{c}", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("${Character}", nodes[0].TriggerData.Pattern);
     }
 
     [TestMethod]
     public void ConvertTriggers_EqlpHandledVars_PreservedInRegexPhrase()
     {
       // EQLP handles {S}, {N} at runtime via CheckOptions(). Must not be converted.
-      var json = CreateTriggerJson("EqlpVars Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("EqlpVars Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("^You cast {S} for {N} damage\\.$", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Cast")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // {S} and {N} should be preserved as-is for EQLP runtime conversion
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{S}"));
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{N}"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("{$S}"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("{$N}"));
+      Assert.Contains("{S}", nodes[0].TriggerData.Pattern);
+      Assert.Contains("{N}", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("{$S}", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("{$N}", nodes[0].TriggerData.Pattern);
     }
 
     [TestMethod]
     public void ConvertTriggers_UnhandledVar_ReplacedWithCaptureGroup()
     {
       // {target} is an unhandled NAG variable — must be replaced with (?<target>.+?) for regex matching
-      var json = CreateTriggerJson("UnhandledVar Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("UnhandledVar Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("^A yellow cloud forms above {target}'s head\\.$", useRegEx: true)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Cloud formed")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // {target} should be replaced with a named capture group
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("?<target>"));
-      Assert.IsFalse(nodes[0].TriggerData.Pattern.Contains("{target}"));
+      Assert.Contains("?<target>", nodes[0].TriggerData.Pattern);
+      Assert.DoesNotContain("{target}", nodes[0].TriggerData.Pattern);
     }
 
     [TestMethod]
@@ -700,19 +698,19 @@ namespace EQLogParser.Wpf.Test
     {
       // 49 single-phrase non-regex triggers use {C} — EQLP replaces {C} at runtime via PreProcessCodes,
       // so regex mode is NOT needed. The pattern stays as a literal string with {C} preserved.
-      var json = CreateTriggerJson("NonRegex Var Trigger", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("NonRegex Var Trigger", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("A yellow cloud forms above {C}'s head.", useRegEx: false)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Cloud")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // {C} is preserved as-is — EQLP replaces it at runtime via PreProcessCodes
-      Assert.IsTrue(nodes[0].TriggerData.Pattern.Contains("{C}"));
+      Assert.Contains("{C}", nodes[0].TriggerData.Pattern);
       Assert.IsFalse(nodes[0].TriggerData.UseRegex);
     }
 
@@ -720,17 +718,17 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_NonRegexPhraseWithoutVars_StayNonRegex()
     {
       // Non-regex phrases without NAG variables should stay non-regex (literal match)
-      var json = CreateTriggerJson("Plain NonRegex", "pattern", capturePhrases: new[]
-      {
+      var json = CreateTriggerJson("Plain NonRegex", "pattern", capturePhrases:
+      [
         CreateCapturePhrase("You cast Fireball.", useRegEx: false)
-      }, actions: new[]
-      {
+      ], actions:
+      [
         CreateAction(0, displayText: "Cast")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsFalse(nodes[0].TriggerData.UseRegex);
       Assert.AreEqual("You cast Fireball.", nodes[0].TriggerData.Pattern);
     }
@@ -752,8 +750,8 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(2, nodes.Count); // Good + Partial
-      Assert.AreEqual(3, results.Count);
+      Assert.HasCount(2, nodes); // Good + Partial
+      Assert.HasCount(3, results);
 
       var imported = results.FirstOrDefault(r => r.TriggerId == "t1");
       var skipped = results.FirstOrDefault(r => r.TriggerId == "t2");
@@ -783,8 +781,8 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(File.Exists(tempFile));
 
         var html = File.ReadAllText(tempFile);
-        Assert.IsTrue(html.Contains("/root/sub"));
-        Assert.IsTrue(html.Contains("/root"));
+        Assert.Contains("/root/sub", html);
+        Assert.Contains("/root", html);
       }
       finally
       {
@@ -814,25 +812,25 @@ namespace EQLogParser.Wpf.Test
 
         var html = File.ReadAllText(tempFile);
         // Verify HTML structure
-        Assert.IsTrue(html.Contains("<!DOCTYPE html>"));
-        Assert.IsTrue(html.Contains("</html>"));
+        Assert.Contains("<!DOCTYPE html>", html);
+        Assert.Contains("</html>", html);
         // Verify summary stats (display text uses 'Success' instead of 'Imported')
-        Assert.IsTrue(html.Contains("Success"));
-        Assert.IsTrue(html.Contains("Partial"));
-        Assert.IsTrue(html.Contains("Skipped"));
+        Assert.Contains("Success", html);
+        Assert.Contains("Partial", html);
+        Assert.Contains("Skipped", html);
         // Verify trigger names appear
-        Assert.IsTrue(html.Contains("Test1"));
-        Assert.IsTrue(html.Contains("Has,Comma"));
+        Assert.Contains("Test1", html);
+        Assert.Contains("Has,Comma", html);
         // Verify folder paths appear
-        Assert.IsTrue(html.Contains("Orphaned Triggers"));
-        Assert.IsTrue(html.Contains("Kunark"));
+        Assert.Contains("Orphaned Triggers", html);
+        Assert.Contains("Kunark", html);
         // Verify missing audio file is listed
-        Assert.IsTrue(html.Contains("missing.wav"));
+        Assert.Contains("missing.wav", html);
         // Verify badge classes and light theme CSS
-        Assert.IsTrue(html.Contains("badge-imported"));
-        Assert.IsTrue(html.Contains("badge-partial"));
-        Assert.IsTrue(html.Contains("badge-skipped"));
-        Assert.IsTrue(html.Contains("background: #f5f5f5"));
+        Assert.Contains("badge-imported", html);
+        Assert.Contains("badge-partial", html);
+        Assert.Contains("badge-skipped", html);
+        Assert.Contains("background: #f5f5f5", html);
       }
       finally
       {
@@ -850,8 +848,8 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(File.Exists(tempFile));
 
         var html = File.ReadAllText(tempFile);
-        Assert.IsTrue(html.Contains("<!DOCTYPE html>"));
-        Assert.IsTrue(html.Contains("</html>"));
+        Assert.Contains("<!DOCTYPE html>", html);
+        Assert.Contains("</html>", html);
       }
       finally
       {
@@ -875,9 +873,9 @@ namespace EQLogParser.Wpf.Test
 
         var html = File.ReadAllText(tempFile);
         // Raw HTML special chars must NOT appear unencoded
-        Assert.IsFalse(html.Contains("<with>"));
-        Assert.IsTrue(html.Contains("&lt;with&gt;"));
-        Assert.IsTrue(html.Contains("&amp;"));
+        Assert.DoesNotContain("<with>", html);
+        Assert.Contains("&lt;with&gt;", html);
+        Assert.Contains("&amp;", html);
       }
       finally
       {
@@ -900,7 +898,7 @@ namespace EQLogParser.Wpf.Test
         Assert.IsTrue(File.Exists(tempFile));
 
         var html = File.ReadAllText(tempFile);
-        Assert.IsTrue(html.Contains("<em>(root)</em>"));
+        Assert.Contains("<em>(root)</em>", html);
       }
       finally
       {
@@ -932,8 +930,8 @@ namespace EQLogParser.Wpf.Test
         var importedIdx = html.IndexOf("ImportedTwo");
 
         Assert.IsTrue(skippedIdx >= 0 && partialIdx >= 0 && importedIdx >= 0);
-        Assert.IsTrue(skippedIdx < partialIdx, "Skipped should come before Partial");
-        Assert.IsTrue(partialIdx < importedIdx, "Partial should come before Success/Imported");
+        Assert.IsLessThan(partialIdx, skippedIdx, "Skipped should come before Partial");
+        Assert.IsLessThan(importedIdx, partialIdx, "Partial should come before Success/Imported");
       }
       finally
       {
@@ -951,8 +949,8 @@ namespace EQLogParser.Wpf.Test
       var json = "{\"triggers\": []}";
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
-      Assert.AreEqual(0, results.Count);
+      Assert.IsEmpty(nodes);
+      Assert.IsEmpty(results);
     }
 
     [TestMethod]
@@ -961,21 +959,21 @@ namespace EQLogParser.Wpf.Test
       var json = "not valid json";
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
-      Assert.AreEqual(0, results.Count);
+      Assert.IsEmpty(nodes);
+      Assert.IsEmpty(results);
     }
 
     [TestMethod]
     public void ConvertTriggers_ScoreToPriority_Mapping()
     {
-      var json = CreateTriggerJson("Scored Trigger", "pattern", score: 1.0, actions: new[]
-      {
+      var json = CreateTriggerJson("Scored Trigger", "pattern", score: 1.0, actions:
+      [
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Score 1.0 should map to Priority 1
       Assert.AreEqual(1, nodes[0].TriggerData.Priority);
     }
@@ -987,10 +985,10 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.IsEmpty(nodes);
+      Assert.HasCount(1, results);
       Assert.AreEqual("Skipped", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("Sequential"));
+      Assert.Contains("Sequential", results[0].Reason);
     }
 
     [TestMethod]
@@ -1000,9 +998,9 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.IsTrue(results[0].Reason.Contains("Class level filtering"), results[0].Reason);
+      Assert.Contains("Class level filtering", results[0].Reason, results[0].Reason);
     }
 
     [TestMethod]
@@ -1010,15 +1008,15 @@ namespace EQLogParser.Wpf.Test
     {
       // NAG text overlay actions (type 0) have overlayId in 1860/1863 real cases
       var actionJson = "{\"actionType\":0,\"displayText\":\"Overlaid text\",\"overlayId\":\"ov-123\"}";
-      var json = CreateTriggerJson("Overlay Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Overlay Trigger", "pattern", actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-123"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("ov-123", nodes[0].TriggerData.SelectedOverlays);
     }
 
     [TestMethod]
@@ -1026,15 +1024,15 @@ namespace EQLogParser.Wpf.Test
     {
       // TTS actions (type 2) also support overlayId in NAG data
       var actionJson = "{\"actionType\":2,\"displayText\":\"TTS text\",\"overlayId\":\"ov-456\"}";
-      var json = CreateTriggerJson("TTS Overlay Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("TTS Overlay Trigger", "pattern", actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-456"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("ov-456", nodes[0].TriggerData.SelectedOverlays);
     }
 
     [TestMethod]
@@ -1042,15 +1040,15 @@ namespace EQLogParser.Wpf.Test
     {
       // Audio actions (type 1) also support overlayId in NAG data
       var actionJson = "{\"actionType\":1,\"audioFileId\":\"sound-123\",\"overlayId\":\"ov-789\"}";
-      var json = CreateTriggerJson("Audio Overlay Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Audio Overlay Trigger", "pattern", actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-789"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("ov-789", nodes[0].TriggerData.SelectedOverlays);
       // Missing audio file → Partial status
       Assert.AreEqual("Partial", results[0].Status);
     }
@@ -1060,15 +1058,15 @@ namespace EQLogParser.Wpf.Test
     {
       // Clipboard actions (type 9) also support overlayId in NAG data
       var actionJson = "{\"actionType\":9,\"displayText\":\"Clipboard text\",\"overlayId\":\"ov-clip\"}";
-      var json = CreateTriggerJson("Clipboard Overlay Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Clipboard Overlay Trigger", "pattern", actions:
+      [
         JsonDocument.Parse(actionJson).RootElement
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.IsTrue(nodes[0].TriggerData.SelectedOverlays.Contains("ov-clip"));
+      Assert.HasCount(1, nodes);
+      Assert.Contains("ov-clip", nodes[0].TriggerData.SelectedOverlays);
     }
 
     #endregion
@@ -1078,15 +1076,15 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ReturnsMetadataDictionary()
     {
-      var json = CreateTriggerJson("Meta Trigger", "pattern", score: 0.8, actions: new[]
-      {
+      var json = CreateTriggerJson("Meta Trigger", "pattern", score: 0.8, actions:
+      [
         CreateAction(0, displayText: "text")
-      });
+      ]);
 
       var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.AreEqual(1, metadata.Count);
+      Assert.HasCount(1, nodes);
+      Assert.HasCount(1, metadata);
       Assert.IsTrue(metadata.ContainsKey("test-123"));
       var meta = metadata["test-123"];
       Assert.AreEqual("Meta Trigger", meta.TriggerName);
@@ -1105,7 +1103,7 @@ namespace EQLogParser.Wpf.Test
 
       var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       Assert.IsTrue(metadata.ContainsKey("t-good"));
       Assert.IsFalse(metadata.ContainsKey("t-skip"));
     }
@@ -1121,7 +1119,7 @@ namespace EQLogParser.Wpf.Test
 
       var overlays = NagUtil.ConvertOverlays(json);
 
-      Assert.AreEqual(1, overlays.Count);
+      Assert.HasCount(1, overlays);
       // NAG whiteSpace=nowrap means wrap is disabled
       Assert.IsFalse(overlays[0].OverlayData.TextOverlayWrap);
     }
@@ -1133,7 +1131,7 @@ namespace EQLogParser.Wpf.Test
 
       var overlays = NagUtil.ConvertOverlays(json);
 
-      Assert.AreEqual(1, overlays.Count);
+      Assert.HasCount(1, overlays);
       // Default is true (text wraps) when no textOverflow specified
       Assert.IsTrue(overlays[0].OverlayData.TextOverlayWrap);
     }
@@ -1145,82 +1143,82 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_AudioFileNotInSoundsDir_TrackedInMissingAudioFiles()
     {
-      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "audio-file-123")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Without files-database.json, the raw audioFileId is used as SoundToPlay.
       // Since "audio-file-123" doesn't have a .wav/.mp3 extension and won't exist in data/sounds/,
       // it should be tracked as missing.
-      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.HasCount(1, results[0].MissingAudioFiles);
       Assert.AreEqual("audio-file-123", results[0].MissingAudioFiles[0]);
     }
 
     [TestMethod]
     public void ConvertTriggers_AudioFileWithExtensionNotInSoundsDir_TrackedInMissingAudioFiles()
     {
-      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "test-sound.wav")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // "test-sound.wav" has a valid extension but doesn't exist in data/sounds/
-      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.HasCount(1, results[0].MissingAudioFiles);
       Assert.AreEqual("test-sound.wav", results[0].MissingAudioFiles[0]);
     }
 
     [TestMethod]
     public void ConvertTriggers_NoAudioActions_MissingAudioFilesEmpty()
     {
-      var json = CreateTriggerJson("Text Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Text Trigger", "pattern", actions:
+      [
         CreateAction(0, displayText: "Hello")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.AreEqual(0, results[0].MissingAudioFiles.Count);
+      Assert.HasCount(1, nodes);
+      Assert.IsEmpty(results[0].MissingAudioFiles);
     }
 
     [TestMethod]
     public void ConvertTriggers_MultipleAudioActions_AllTrackedInMissingAudioFiles()
     {
-      var json = CreateTriggerJson("Multi Audio Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Multi Audio Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "sound-a.wav"),
         CreateAction(1, audioFileId: "sound-b.mp3")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
-      Assert.AreEqual(2, results[0].MissingAudioFiles.Count);
-      Assert.IsTrue(results[0].MissingAudioFiles.Contains("sound-a.wav"));
-      Assert.IsTrue(results[0].MissingAudioFiles.Contains("sound-b.mp3"));
+      Assert.HasCount(1, nodes);
+      Assert.HasCount(2, results[0].MissingAudioFiles);
+      Assert.Contains("sound-a.wav", results[0].MissingAudioFiles);
+      Assert.Contains("sound-b.mp3", results[0].MissingAudioFiles);
     }
 
     [TestMethod]
     public void ConvertTriggers_SkippedTrigger_MissingAudioFilesStillTracked()
     {
-      var json = CreateTriggerJson("Skipped Trigger", "pattern", onlyExecuteInDev: true, actions: new[]
-      {
+      var json = CreateTriggerJson("Skipped Trigger", "pattern", onlyExecuteInDev: true, actions:
+      [
         CreateAction(1, audioFileId: "dev-only-sound.wav")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(0, nodes.Count);
+      Assert.IsEmpty(nodes);
       Assert.AreEqual("Skipped", results[0].Status);
       // Even skipped triggers should track their missing audio files for reporting
-      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.HasCount(1, results[0].MissingAudioFiles);
     }
 
     [TestMethod]
@@ -1229,37 +1227,37 @@ namespace EQLogParser.Wpf.Test
       // When there's no files-database.json, the raw audioFileId is used as SoundToPlay.
       // Even without a .wav/.mp3 extension, we still check for file existence —
       // if the file doesn't exist in data/sounds/, it's tracked as missing.
-      var json = CreateTriggerJson("Ding Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Ding Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "ShortWarningPing")
-      });
+      ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, nodes.Count);
+      Assert.HasCount(1, nodes);
       // Without files-database.json, the raw ID is used directly
       Assert.AreEqual("ShortWarningPing", nodes[0].TriggerData.SoundToPlay);
       // Tracked as missing since the file doesn't exist in data/sounds/
-      Assert.AreEqual(1, results[0].MissingAudioFiles.Count);
+      Assert.HasCount(1, results[0].MissingAudioFiles);
       Assert.AreEqual("ShortWarningPing", results[0].MissingAudioFiles[0]);
     }
 
     [TestMethod]
     public void ConvertTriggers_MissingAudioFilesInMetadata()
     {
-      var json = CreateTriggerJson("Audio Trigger", "pattern", actions: new[]
-      {
+      var json = CreateTriggerJson("Audio Trigger", "pattern", actions:
+      [
         CreateAction(1, audioFileId: "missing-sound.wav")
-      });
+      ]);
 
       var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(1, metadata.Count);
+      Assert.HasCount(1, metadata);
       // Find the trigger ID from results to look up metadata
       var triggerId = results[0].TriggerId;
       Assert.IsTrue(metadata.ContainsKey(triggerId));
       Assert.IsNotNull(metadata[triggerId].MissingAudioFiles);
-      Assert.AreEqual(1, metadata[triggerId].MissingAudioFiles.Count);
+      Assert.HasCount(1, metadata[triggerId].MissingAudioFiles);
     }
 
     #endregion
@@ -1270,7 +1268,7 @@ namespace EQLogParser.Wpf.Test
         JsonElement[]? capturePhrases = null, JsonElement[]? conditions = null, JsonElement[]? endEarlyPhrases = null,
         JsonElement[]? actions = null)
     {
-      var phrases = capturePhrases ?? new[] { CreateCapturePhrase(pattern) };
+      var phrases = capturePhrases ?? [CreateCapturePhrase(pattern)];
       var sb = new StringBuilder();
       sb.Append("{\"triggers\":[{\"name\":\"");
       sb.Append(name ?? "");
@@ -1283,7 +1281,7 @@ namespace EQLogParser.Wpf.Test
 
       // Capture phrases
       sb.Append(",\"capturePhrases\":[");
-      for (int i = 0; i < phrases.Length; i++)
+      for (var i = 0; i < phrases.Length; i++)
       {
         if (i > 0) sb.Append(",");
         sb.Append(phrases[i].GetRawText());
@@ -1294,7 +1292,7 @@ namespace EQLogParser.Wpf.Test
       if (conditions != null && conditions.Length > 0)
       {
         sb.Append(",\"conditions\":[");
-        for (int i = 0; i < conditions.Length; i++)
+        for (var i = 0; i < conditions.Length; i++)
         {
           if (i > 0) sb.Append(",");
           sb.Append(conditions[i].GetRawText());
@@ -1306,7 +1304,7 @@ namespace EQLogParser.Wpf.Test
       if (endEarlyPhrases != null && endEarlyPhrases.Length > 0)
       {
         sb.Append(",\"endEarlyPhrases\":[");
-        for (int i = 0; i < endEarlyPhrases.Length; i++)
+        for (var i = 0; i < endEarlyPhrases.Length; i++)
         {
           if (i > 0) sb.Append(",");
           sb.Append(endEarlyPhrases[i].GetRawText());
@@ -1317,7 +1315,7 @@ namespace EQLogParser.Wpf.Test
       // Actions
       sb.Append(",\"actions\":[");
       var acts = actions ?? Array.Empty<JsonElement>();
-      for (int i = 0; i < acts.Length; i++)
+      for (var i = 0; i < acts.Length; i++)
       {
         if (i > 0) sb.Append(",");
         sb.Append(acts[i].GetRawText());
@@ -1416,15 +1414,15 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // The trigger has 8 capture phrases → 8 EQLP triggers (but only 1 import result)
-      Assert.AreEqual(8, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.HasCount(8, nodes);
+      Assert.HasCount(1, results);
 
       // Phrase 0 (^You begin casting (.*)\.) should have set-variable mapping
       var spellCastNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("s1"));
       Assert.IsNotNull(spellCastNode, "Expected at least one trigger with a converted named group s1");
 
       // The pattern should use (?<s1>) instead of unnamed (.*)
-      Assert.IsTrue(spellCastNode.TriggerData.Pattern.Contains("?<s1>"));
+      Assert.Contains("?<s1>", spellCastNode.TriggerData.Pattern);
 
       // Should have a VariableAction storing SpellBeingCast from {s1}
       var setVarAction = spellCastNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast");
@@ -1447,12 +1445,12 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // 2 capture phrases → 2 EQLP triggers (but only 1 import result for the trigger)
-      Assert.AreEqual(2, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.HasCount(2, nodes);
+      Assert.HasCount(1, results);
 
       // Phrase 0 (^([A-Za-z]{3,15}) begins? casting...) is regex with a capture group
       var casterNode = nodes[0];
-      Assert.IsTrue(casterNode.TriggerData.Pattern.Contains("?<s1>"));
+      Assert.Contains("?<s1>", casterNode.TriggerData.Pattern);
 
       // Should have a VariableAction storing BrdEpic2Caster from {s1}
       var setVarAction = casterNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
@@ -1461,7 +1459,7 @@ namespace EQLogParser.Wpf.Test
 
       // Phrase 1 (You are filled with the spirit of Vesagran.) is non-regex — no group conversion
       var spiritNode = nodes[1];
-      Assert.IsFalse(spiritNode.TriggerData.Pattern.Contains("?<s1>"));
+      Assert.DoesNotContain("?<s1>", spiritNode.TriggerData.Pattern);
     }
 
     /// <summary>
@@ -1481,8 +1479,8 @@ namespace EQLogParser.Wpf.Test
       // The timer displayText "BRD Epic (${BrdEpic2Caster})" was converted by ConvertTemplates
       // but overwritten by actionType 0's displayText. Verify the conversion happened by
       // checking that no invalid {$var} syntax remains anywhere in the trigger data.
-      Assert.IsFalse(timerNode.TriggerData.TextToDisplay.Contains("{$BrdEpic2Caster}"));
-      Assert.IsFalse(timerNode.TriggerData.TextToDisplay.Contains("${BrdEpic2Caster}"));
+      Assert.DoesNotContain("{$BrdEpic2Caster}", timerNode.TriggerData.TextToDisplay);
+      Assert.DoesNotContain("${BrdEpic2Caster}", timerNode.TriggerData.TextToDisplay);
     }
 
     /// <summary>
@@ -1500,9 +1498,9 @@ namespace EQLogParser.Wpf.Test
       Assert.IsNotNull(nodeWithDisplay, "Expected a trigger with 'interrupted' in display text");
 
       // Should contain {SpellBeingCast} (valid EQLP), not {$SpellBeingCast} or ${SpellBeingCast}
-      Assert.IsTrue(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{SpellBeingCast}"));
-      Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("{$SpellBeingCast}"));
-      Assert.IsFalse(nodeWithDisplay.TriggerData.TextToDisplay.Contains("${SpellBeingCast}"));
+      Assert.Contains("{SpellBeingCast}", nodeWithDisplay.TriggerData.TextToDisplay);
+      Assert.DoesNotContain("{$SpellBeingCast}", nodeWithDisplay.TriggerData.TextToDisplay);
+      Assert.DoesNotContain("${SpellBeingCast}", nodeWithDisplay.TriggerData.TextToDisplay);
     }
 
     /// <summary>
@@ -1518,8 +1516,8 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // Should have 2 nodes: 1 main counter trigger + 1 reset phrase trigger (but only 1 import result)
-      Assert.AreEqual(2, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.HasCount(2, nodes);
+      Assert.HasCount(1, results);
 
       // Main counter trigger (from capture phrase "Your bones are brittle.")
       var counterNode = nodes[0];
@@ -1541,7 +1539,7 @@ namespace EQLogParser.Wpf.Test
 
       // Reset phrase trigger (from "^Your bones are no longer brittle.")
       var resetNode = nodes[1];
-      Assert.IsTrue(resetNode.Name.Contains("Counter Reset"), $"Reset trigger name should contain 'Counter Reset': {resetNode.Name}");
+      Assert.Contains("Counter Reset", resetNode.Name, $"Reset trigger name should contain 'Counter Reset': {resetNode.Name}");
       Assert.AreEqual("^Your bones are no longer brittle\\.", resetNode.TriggerData.Pattern);
       Assert.IsTrue(resetNode.TriggerData.UseRegex);
 
@@ -1552,7 +1550,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual("Physical", clearVarAction.VariableName);
 
       // Comments should explain this is auto-generated from counter reset phrase
-      Assert.IsTrue(resetNode.TriggerData.Comments.Contains("counter"), "Reset trigger comments should mention counter");
+      Assert.Contains("counter", resetNode.TriggerData.Comments, "Reset trigger comments should mention counter");
     }
 
     /// <summary>
@@ -1568,8 +1566,8 @@ namespace EQLogParser.Wpf.Test
       // Phrase "^${Character}'s ${SpellBeingCast} spell has been reflected" should have {c}
       var reflectNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("reflected"));
       Assert.IsNotNull(reflectNode, "Expected a trigger with 'reflected' in pattern");
-      Assert.IsTrue(reflectNode.TriggerData.Pattern.Contains("{c}"));
-      Assert.IsFalse(reflectNode.TriggerData.Pattern.Contains("${Character}"));
+      Assert.Contains("{c}", reflectNode.TriggerData.Pattern);
+      Assert.DoesNotContain("${Character}", reflectNode.TriggerData.Pattern);
     }
 
     /// <summary>
@@ -1586,8 +1584,8 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       // Should have 8 phrase triggers (but only 1 import result)
-      Assert.AreEqual(8, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.HasCount(8, nodes);
+      Assert.HasCount(1, results);
       // None should be Skipped or Partial — all phrases are valid regex captures
       Assert.IsTrue(results.All(r => r.Status == "Imported"), "All phrases should import successfully");
 
@@ -1600,7 +1598,7 @@ namespace EQLogParser.Wpf.Test
 
       // Other phrase triggers should NOT have the clear VariableAction for SpellBeingCast
       var nonInterruptedNodes = nodes.Where(n => !n.TriggerData.Pattern.Contains("interrupted")).ToList();
-      Assert.IsTrue(nonInterruptedNodes.Count == 7, "Expected 7 non-interrupted phrase triggers");
+      Assert.AreEqual(7, nonInterruptedNodes.Count, "Expected 7 non-interrupted phrase triggers");
       foreach (var node in nonInterruptedNodes)
       {
         var hasClear = node.TriggerData.VariableActions.Any(va => va.VariableName == "SpellBeingCast" && va.IsClearAction);
@@ -1627,8 +1625,8 @@ namespace EQLogParser.Wpf.Test
       var json = LoadFixture("capture-spell-casting.json");
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual(8, nodes.Count);
-      Assert.AreEqual(1, results.Count);
+      Assert.HasCount(8, nodes);
+      Assert.HasCount(1, results);
 
       // Phrase [1]: "^You activate (.*)\." — should get set-variable fallback
       var activateNode = nodes.FirstOrDefault(n => n.TriggerData.Pattern.Contains("activate") && n.TriggerData.Pattern.Contains("?<s"));
