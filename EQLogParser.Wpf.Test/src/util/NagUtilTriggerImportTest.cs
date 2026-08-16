@@ -163,8 +163,10 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType3_Timer_Imported()
+    public void ConvertTriggers_ActionType3_Timer_MappedToProgress()
     {
+      // NAG actionType 3 ("Timer") fills up over time — must map to EQLP Progress (3),
+      // not Countdown (1) which drains.
       var json = CreateTriggerJson("Timer Trigger", "pattern", actions:
       [
         CreateAction(3, displayText: "Cooldown", duration: 30.0)
@@ -175,14 +177,16 @@ namespace EQLogParser.Wpf.Test
       Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual(30.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.AreEqual(3, nodes[0].TriggerData.TimerType);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("Imported", results[0].Status);
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType4_LoopingTimer_Imported()
+    public void ConvertTriggers_ActionType4_Countdown_MappedToCountdown()
     {
-      var json = CreateTriggerJson("Loop Timer", "pattern", actions:
+      // NAG actionType 4 without repeatTimer is a plain countdown (drains) — EQLP Countdown (1).
+      var json = CreateTriggerJson("Countdown Timer", "pattern", actions:
       [
         CreateAction(4, displayText: "Channeling", duration: 15.0)
       ]);
@@ -192,8 +196,125 @@ namespace EQLogParser.Wpf.Test
       Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual(15.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.AreEqual(1, nodes[0].TriggerData.TimerType);
+      Assert.AreEqual(0L, nodes[0].TriggerData.TimesToLoop);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionType4_RepeatTimerWithCount_MappedToLooping()
+    {
+      var json = CreateTriggerJson("Loop Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Aura", duration: 60.0, repeatTimer: true, repeatCount: 3)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual(4, nodes[0].TriggerData.TimerType);
+      Assert.AreEqual(3L, nodes[0].TriggerData.TimesToLoop);
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionType4_RepeatTimerUnlimited_MappedToLargeLoopCount()
+    {
+      // NAG repeatTimer with no repeatCount repeats forever — approximate with a large
+      // loop count and report it as a dropped feature.
+      var json = CreateTriggerJson("Infinite Loop", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Aura", duration: 60.0, repeatTimer: true)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual(4, nodes[0].TriggerData.TimerType);
+      Assert.IsTrue(nodes[0].TriggerData.TimesToLoop > 1000);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("unlimited timer repeat", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_RestartBehavior_MappedToEqlpOption()
+    {
+      // NAG: 0=StartNewTimer, 1=RestartOnDuplicate, 2=RestartTimer, 3=DoNothing
+      // EQLP: 0=new entry, 1=clear all, 2=stop same display name then start, 3=skip if any
+      var cases = new (int nag, int eqlp)[]
+      {
+        (0, 0),
+        (1, 2),
+        (2, 1),
+        (3, 3)
+      };
+
+      foreach (var (nag, eqlp) in cases)
+      {
+        var json = CreateTriggerJson($"RB {nag}", "pattern", actions:
+        [
+          CreateAction(3, displayText: "Timer", duration: 10.0, restartBehavior: nag)
+        ]);
+
+        var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+        Assert.AreEqual(eqlp, nodes[0].TriggerData.TriggerAgainOption, $"NAG restartBehavior {nag}");
+      }
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionType8_Counter_NoTimer_IdleResetMapped()
+    {
+      // NAG counters are invisible in-memory tallies — no timer should be created.
+      // The counter duration is an idle-reset window → EQLP RepeatedResetTime.
+      var json = CreateTriggerJson("Counter Trigger", "pattern", actions:
+      [
+        CreateAction(8, displayText: "Physical", duration: 300.0)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsFalse(nodes[0].TriggerData.EnableTimer, "NAG counters do not create a visible timer");
+      Assert.AreEqual(300.0, nodes[0].TriggerData.RepeatedResetTime);
+      Assert.AreEqual("Physical", nodes[0].TriggerData.TextToDisplay);
+      var step = nodes[0].TriggerData.VariableActions.FirstOrDefault();
+      Assert.IsNotNull(step);
+      Assert.AreEqual("Physical", step.VariableName);
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_OrphanedFolderId_PlacedInOrphanedTriggers()
+    {
+      // Triggers whose folderId doesn't exist in the folder list go to "Orphaned Triggers"
+      // (mirroring NAG's own startup re-filing), not flattened to the root.
+      var json = @"{
+        ""folders"": [{""folderId"": ""F1"", ""name"": ""Raids"", ""children"": []}],
+        ""triggers"": [
+          {""name"": ""In Folder"", ""triggerId"": ""t1"", ""folderId"": ""F1"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""p1"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]},
+          {""name"": ""Orphaned"", ""triggerId"": ""t2"", ""folderId"": ""MISSING-FOLDER"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""p2"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]}
+        ]
+      }";
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      // Both triggers are wrapped in a folder node at the top level.
+      Assert.HasCount(2, nodes);
+      var raidNode = nodes.FirstOrDefault(n => n.Name == "Raids");
+      Assert.IsNotNull(raidNode);
+      Assert.IsTrue(raidNode.Nodes.Any(n => n.Name == "In Folder"));
+
+      var orphanNode = nodes.FirstOrDefault(n => n.Name == "Orphaned Triggers");
+      Assert.IsNotNull(orphanNode, "Dead folderId should be refiled into Orphaned Triggers");
+      Assert.IsTrue(orphanNode.Nodes.Any(n => n.Name == "Orphaned"));
+
+      Assert.AreEqual("Raids", results.First(r => r.TriggerId == "t1").FolderPath);
+      Assert.AreEqual("Orphaned Triggers", results.First(r => r.TriggerId == "t2").FolderPath);
     }
 
     [TestMethod]
@@ -447,7 +568,7 @@ namespace EQLogParser.Wpf.Test
     #region Multi-Phrase Capture
 
     [TestMethod]
-    public void ConvertTriggers_MultiplePhrases_CombinedWithAlternation()
+    public void ConvertTriggers_MultiplePhrases_OneTriggerPerPhrase()
     {
       var json = CreateTriggerJson("Multi Phrase", "pattern", capturePhrases:
       [
@@ -1117,7 +1238,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\",\"textOverflow\":{\"whiteSpace\":\"nowrap\",\"overflow\":\"hidden\",\"textOverflow\":\"clip\"}}]}";
 
-      var overlays = NagUtil.ConvertOverlays(json);
+      var overlays = NagUtil.ConvertOverlays(json, out _);
 
       Assert.HasCount(1, overlays);
       // NAG whiteSpace=nowrap means wrap is disabled
@@ -1129,11 +1250,26 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\"}]}";
 
-      var overlays = NagUtil.ConvertOverlays(json);
-
-      Assert.HasCount(1, overlays);
+      var overlays = NagUtil.ConvertOverlays(json, out _);
       // Default is true (text wraps) when no textOverflow specified
       Assert.IsTrue(overlays[0].OverlayData.TextOverlayWrap);
+    }
+
+    [TestMethod]
+    public void ConvertOverlays_FctOverlays_SkippedAndCounted()
+    {
+      var json = "{\"overlays\":[" +
+        "{\"overlayId\":\"ov-1\",\"name\":\"Timer 1\",\"overlayType\":\"Timer\"}," +
+        "{\"overlayId\":\"ov-2\",\"name\":\"FCT 1\",\"overlayType\":\"FCT\"}," +
+        "{\"overlayId\":\"ov-3\",\"name\":\"FCT 2\",\"overlayType\":\"fct\"}" +
+        "]}";
+
+      var overlays = NagUtil.ConvertOverlays(json, out var skipped);
+
+      // Only the Timer overlay is imported; both FCT overlays are skipped and counted (case-insensitive).
+      Assert.HasCount(1, overlays);
+      Assert.AreEqual("Timer 1", overlays[0].Name);
+      Assert.AreEqual(2, skipped);
     }
 
     #endregion
@@ -1325,7 +1461,7 @@ namespace EQLogParser.Wpf.Test
       return sb.ToString();
     }
 
-    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null)
+    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null)
     {
       var sb = new StringBuilder();
       sb.Append("{\"actionType\":");
@@ -1360,13 +1496,43 @@ namespace EQLogParser.Wpf.Test
         sb.Append($",\"phraseId\":\"{phraseId}\"");
       }
 
+      if (restartBehavior.HasValue)
+      {
+        sb.Append($",\"restartBehavior\":{restartBehavior.Value}");
+      }
+
+      if (repeatTimer.HasValue)
+      {
+        sb.Append($",\"repeatTimer\":{(repeatTimer.Value ? "true" : "false")}");
+      }
+
+      if (repeatCount.HasValue)
+      {
+        sb.Append($",\"repeatCount\":{repeatCount.Value}");
+      }
+
+      if (interruptSpeech.HasValue)
+      {
+        sb.Append($",\"interruptSpeech\":{(interruptSpeech.Value ? "true" : "false")}");
+      }
+
+      if (phrases != null)
+      {
+        sb.Append($",\"phrases\":[{string.Join(",", phrases.Select(p => $"\"{p}\""))}]");
+      }
+
+      if (secondaryPhrases != null)
+      {
+        sb.Append($",\"secondaryPhrases\":[{string.Join(",", secondaryPhrases.Select(p => $"\"{p}\""))}]");
+      }
+
       sb.Append("}");
       return sb.ToString();
     }
 
-    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null)
+    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null)
     {
-      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName, phraseId);
+      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName, phraseId, restartBehavior, repeatTimer, repeatCount, interruptSpeech, phrases, secondaryPhrases);
       return JsonDocument.Parse(json).RootElement;
     }
 
@@ -1616,7 +1782,122 @@ namespace EQLogParser.Wpf.Test
       Assert.IsNotNull(castingNode, "Expected phrase [0] to have converted capture group to s1");
       var setVarAction = castingNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "SpellBeingCast" && va.IsSetAction);
       Assert.IsNotNull(setVarAction, "Phrase [0] should have Set VariableAction for SpellBeingCast");
+
+      // The clear-variable action's NAG alert overlay (overlayId + 15s duration) has no EQLP
+      // equivalent for non-timer actions — it must be reported as a dropped feature.
+      Assert.Contains("clear variable action alert overlay", results[0].DroppedFeatures);
     }
+
+    #region Dropped Feature Reporting
+
+    [TestMethod]
+    public void ConvertTriggers_InterruptSpeech_ReportedAsDroppedFeature()
+    {
+      // NAG interruptSpeech preempts currently-speaking text; EQLP queues speech — must be noted.
+      var json = CreateTriggerJson("Interrupt", "pattern", actions:
+      [
+        CreateAction(1, audioFileId: "sound-123", interruptSpeech: true)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("speech interruption", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_NoInterruptSpeech_NoNote()
+    {
+      var json = CreateTriggerJson("No Interrupt", "pattern", actions:
+      [
+        CreateAction(0, displayText: "text")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.AreEqual("Imported", results[0].Status);
+      Assert.IsFalse(results[0].DroppedFeatures.Contains("speech interruption"));
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_SecondaryPhrases_ReportedAsDroppedFeature()
+    {
+      var json = CreateTriggerJson("Secondary", "pattern", actions:
+      [
+        CreateAction(0, displayText: "text", secondaryPhrases: ["sp1"])
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("secondary phrases", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_MoreThanThreeEndEarlyPhrases_KeepsFirstThreeAndReportsNote()
+    {
+      var json = CreateTriggerJson("End Early 4", "pattern", endEarlyPhrases:
+      [
+        CreateEndEarlyPhrase("faded"),
+        CreateEndEarlyPhrase("interrupted"),
+        CreateEndEarlyPhrase("resisted"),
+        CreateEndEarlyPhrase("blocked")
+      ], actions:
+      [
+        CreateAction(3, displayText: "Channeling", duration: 30.0)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("extra end-early phrases dropped (max 3)", results[0].DroppedFeatures);
+      // First three are kept in order; the fourth is dropped.
+      Assert.AreEqual("faded", nodes[0].TriggerData.EndEarlyPattern);
+      Assert.AreEqual("interrupted", nodes[0].TriggerData.EndEarlyPattern2);
+      Assert.AreEqual("resisted", nodes[0].TriggerData.EndEarlyPattern3);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionScopedToPhraseSubset_ReportedAsDroppedFeature()
+    {
+      // The timer action only lists phrase p1, but the import applies the merged action set to
+      // both phrase triggers — the divergence must be reported.
+      var json = CreateTriggerJson("Scoped", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^You cast \w+", useRegEx: true, phraseId: "p1"),
+        CreateCapturePhrase(@"^You cast 2 \w+", useRegEx: true, phraseId: "p2")
+      ], actions:
+      [
+        CreateAction(3, displayText: "Timer", duration: 10.0, phrases: ["p1"])
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("per-phrase action scoping", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionCoversAllPhrases_NoScopingNote()
+    {
+      var json = CreateTriggerJson("Unscoped", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^You cast \w+", useRegEx: true, phraseId: "p1"),
+        CreateCapturePhrase(@"^You cast 2 \w+", useRegEx: true, phraseId: "p2")
+      ], actions:
+      [
+        CreateAction(3, displayText: "Timer", duration: 10.0, phrases: ["p1", "p2"])
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      Assert.AreEqual("Imported", results[0].Status);
+      Assert.IsFalse(results[0].DroppedFeatures.Contains("per-phrase action scoping"));
+    }
+
+    #endregion
 
     /// <summary>
     /// Verifies that capture phrases [1] and [2] in "Capture spell casting" ("You activate X",

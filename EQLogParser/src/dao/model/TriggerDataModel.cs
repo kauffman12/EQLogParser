@@ -589,6 +589,10 @@ namespace EQLogParser
     public string Id { get; set; }
     public bool IsExpanded { get; set; }
     public string Name { get; set; }
+    // Original source ID (e.g. NAG triggerId). Persisted so re-imports can match nodes by
+    // source identity — NAG allows duplicate names for distinct triggers, so matching by
+    // name alone would collapse them. Null for hand-created and GINA-imported nodes.
+    public string OriginalId { get; set; }
     public Trigger TriggerData { get; set; }
     public Overlay OverlayData { get; set; }
     public int Index { get; set; }
@@ -626,8 +630,8 @@ namespace EQLogParser
   {
     public List<ExportTriggerNode> Nodes { get; set; } = [];
     [JsonIgnore][BsonIgnore] public bool HasMissingMedia { get; set; }
-    // Original source ID (e.g. NAG triggerId) for building import-time mappings. Not persisted.
-    [JsonIgnore][BsonIgnore] public string OriginalId { get; set; }
+    // OriginalId is inherited from TriggerNode (persisted) — import flows set it from the
+    // NAG triggerId and Import() uses it to match same-named distinct triggers on re-import.
   }
 
   internal class LegacyTriggerNode
