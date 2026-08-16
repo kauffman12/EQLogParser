@@ -1,5 +1,10 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.59 | 08/16/26
+1. Added **Text Wrap** toggle to Text Overlays. 
+2. Now allow browsing for custom **Sound Files** when configuring Triggers. 
+3. **NAG Migration** as requested, if you want to attempt an import of your NAG database to EQLP there is way to do this now under the **Options** menu. It does not handle everything but it should cover a good amount. Note that it will generate a report to explain what worked and what didn't. To try it, click **Migrate NAG Database** and choose the NAG folder with all the json files.
+
 # 2.3.58 | 07/25/26
 1. Fix for alt timer name not seeing custom variables.
 2. Updated match variable to better handle string vs number values.
