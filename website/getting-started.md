@@ -10,7 +10,7 @@ EQLogParser is a real-time combat analyzer and damage parsing application built 
 - **Spell casting counts** and activity timelines
 - **Audio triggers** that play sounds or TTS speech when log patterns match
 - **Visual overlays** (damage meter, timers, text displays) that can show in OBS for streaming
-- **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG (Never Again GINA) databases
+- **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG databases
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ If you're switching from GINA:
 2. Select **Import** and choose your `.gtp` GINA package file
 3. Imported triggers will be highlighted — review and adjust patterns as needed
 
-### 5. Migrating from NAG (Never Again GINA)
+### 5. Migrating from NAG
 
 If you're coming from NAG, EQLogParser can import your entire NAG database in one step:
 

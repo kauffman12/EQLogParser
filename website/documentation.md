@@ -10,7 +10,7 @@ EQLogParser is a real-time combat analyzer and damage parsing application built 
 - **Spell casting counts** and activity timelines
 - **Audio triggers** that play sounds or TTS speech when log patterns match
 - **Visual overlays** (damage meter, timers, text displays) that can show in OBS for streaming
-- **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG (Never Again GINA) databases
+- **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG databases
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ If you're switching from GINA:
 2. Select **Import** and choose your `.gtp` GINA package file
 3. Imported triggers will be highlighted — review and adjust patterns as needed
 
-### 5. Migrating from NAG (Never Again GINA)
+### 5. Migrating from NAG
 
 If you're coming from NAG, EQLogParser can import your entire NAG database in one step:
 
@@ -617,7 +617,7 @@ Piper TTS is an Open Source **text-to-speech engine** and a custom build is prov
     - Overlay packages use the **.ogf.gz** extension
 7. Do not extract the **.tgf.gz** files onto your computer.
 
-## Coming from NAG (Never Again GINA)?
+## Coming from NAG?
 1. See **Migrating from NAG** in the Quick Start section above — one menu command imports your entire trigger and overlay database
 2. In short: **Tools → Migrate NAG Database**, pick the folder that contains `trigger-database.json`, and everything lands in a new `NAG Ingest - {date time}` folder under Triggers
 3. Imported triggers start **disabled** so you can enable what you want — check the HTML report from the summary dialog for any NAG features that have no EQLogParser equivalent

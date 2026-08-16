@@ -223,7 +223,7 @@ namespace EQLogParser.Wpf.Test
     public void ConvertTriggers_ActionType4_RepeatTimerUnlimited_MappedToLargeLoopCount()
     {
       // NAG repeatTimer with no repeatCount repeats forever — approximate with a large
-      // loop count and report it as a dropped feature.
+      // loop count and report the approximation in dropped features.
       var json = CreateTriggerJson("Infinite Loop", "pattern", actions:
       [
         CreateAction(4, displayText: "Aura", duration: 60.0, repeatTimer: true)
@@ -235,7 +235,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(4, nodes[0].TriggerData.TimerType);
       Assert.IsTrue(nodes[0].TriggerData.TimesToLoop > 1000);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("unlimited timer repeat", results[0].DroppedFeatures);
+      Assert.Contains("unlimited timer repeat (approximated)", results[0].DroppedFeatures);
     }
 
     [TestMethod]
@@ -1676,7 +1676,7 @@ namespace EQLogParser.Wpf.Test
     /// - Reset phrases become separate triggers with Clear VariableAction
     /// </summary>
     [TestMethod]
-    public void ConvertTriggers_RealData_Counter_ConvertedToTimerAndVariableActions()
+    public void ConvertTriggers_RealData_Counter_ConvertedToVariableActionWithResetTrigger()
     {
       var json = LoadFixture("counter-physical.json");
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
@@ -1687,8 +1687,10 @@ namespace EQLogParser.Wpf.Test
 
       // Main counter trigger (from capture phrase "Your bones are brittle.")
       var counterNode = nodes[0];
-      Assert.IsTrue(counterNode.TriggerData.EnableTimer, "Counter trigger should have timer enabled");
-      Assert.AreEqual(300, counterNode.TriggerData.DurationSeconds);
+      // NAG counters are invisible tallies — the import must NOT create a visible timer.
+      Assert.IsFalse(counterNode.TriggerData.EnableTimer, "NAG counters have no visible timer component");
+      // The NAG duration is an idle-reset window, mapped to RepeatedResetTime (not DurationSeconds)
+      Assert.AreEqual(300.0, counterNode.TriggerData.RepeatedResetTime);
       Assert.AreEqual("Physical", counterNode.TriggerData.TextToDisplay);
       // ConvertColor converts #RRGGBB → #AARRGGBB (FF = full opacity) for EQLP format
       Assert.AreEqual("#FFb71c1c", counterNode.TriggerData.ActiveColor);
@@ -1702,6 +1704,10 @@ namespace EQLogParser.Wpf.Test
       Assert.IsTrue(counterVarAction.IsCounterType);
       Assert.AreEqual("Physical", counterVarAction.VariableName);
       Assert.AreEqual(1, counterVarAction.Step);
+
+      // The visible-countdown gap is reported honestly in the single import result.
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("counter converted to variable only (no visible timer)", results[0].DroppedFeatures);
 
       // Reset phrase trigger (from "^Your bones are no longer brittle.")
       var resetNode = nodes[1];
