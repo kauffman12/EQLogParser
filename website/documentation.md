@@ -61,7 +61,7 @@ If you're coming from NAG, EQLogParser can import your entire NAG database in on
 What you get:
 - A new **`NAG Ingest - {date time}`** folder under **Triggers** with your NAG folders replicated. Triggers whose NAG folder was deleted are placed in an **Orphaned Triggers** sub-folder so nothing is lost
 - Your NAG **overlays** are imported alongside the triggers (except FCT overlays, which have no EQLogParser equivalent — the dialog tells you how many were skipped)
-- A summary dialog and an **HTML report** ("Open Report" button) listing every trigger with any features that have no EQLogParser equivalent (e.g. class level filtering, speech interruption). Check it before enabling triggers
+- A summary dialog and an **HTML report** ("Open Report" button) listing every trigger with any features that have no EQLogParser equivalent (e.g. class level filtering, per-phrase action scoping). Check it before enabling triggers
 - **Audio files are not copied** — NAG stores them separately. Triggers referencing missing audio are listed in the report; copy the `.wav`/`.mp3` files into EQLogParser's Sounds folder as needed (Tools → Open Sounds Folder)
 
 Important:

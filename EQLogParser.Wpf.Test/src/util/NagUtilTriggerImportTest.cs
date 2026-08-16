@@ -1793,16 +1793,19 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_InterruptSpeech_ReportedAsDroppedFeature()
     {
-      // NAG interruptSpeech preempts currently-speaking text; EQLP queues speech — must be noted.
+      // NAG interruptSpeech preempts currently-speaking text; the import approximates this by
+      // assigning priority 1 (top urgency). The note stays visible for transparency, but it is
+      // an implemented approximation — it must NOT downgrade status to Partial on its own.
       var json = CreateTriggerJson("Interrupt", "pattern", actions:
       [
-        CreateAction(1, audioFileId: "sound-123", interruptSpeech: true)
+        CreateAction(2, displayText: "interrupting text", interruptSpeech: true)
       ]);
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("speech interruption", results[0].DroppedFeatures);
+      Assert.AreEqual("Imported", results[0].Status);
+      Assert.Contains(NagUtil.InterruptSpeechNote, results[0].DroppedFeatures);
+      Assert.AreEqual(1, nodes[0].TriggerData.Priority);
     }
 
     [TestMethod]
@@ -1816,7 +1819,9 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.AreEqual("Imported", results[0].Status);
-      Assert.IsFalse(results[0].DroppedFeatures.Contains("speech interruption"));
+      Assert.IsFalse(results[0].DroppedFeatures.Contains(NagUtil.InterruptSpeechNote));
+      // No interruptSpeech — priority stays the score-derived default.
+      Assert.AreEqual(3, nodes[0].TriggerData.Priority);
     }
 
     [TestMethod]

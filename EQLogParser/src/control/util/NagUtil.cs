@@ -132,6 +132,15 @@ internal static class NagUtil
   // with a very large loop count.
   private const long UnlimitedRepeatLoops = 999999;
 
+  // NAG interruptSpeech note. Listed in droppedFeatures for report transparency, but it is an
+  // implemented approximation (priority 1) rather than a missing feature, so it does not
+  // downgrade the trigger's status to Partial on its own.
+  internal const string InterruptSpeechNote = "speech interruption (approximated as priority 1)";
+
+  // Dropped-feature notes that are approximations of implemented behavior — they stay in the
+  // report/Comments but do not affect import status. True gaps still mark a trigger Partial.
+  private static readonly HashSet<string> NonStatusDroppedFeatures = new() { InterruptSpeechNote };
+
   // NAG ${varName} in regex phrases — not supported by EQLP, replace with (?<varName>.+?)
   // Exception: ${Character} maps to EQLP's native {c} (replaced with player name at runtime).
   private static readonly Regex DollarVarRegex = new(@"\$\{(\w+)\}", RegexOptions.Compiled);
@@ -696,18 +705,24 @@ internal static class NagUtil
       droppedFeatures.Add("class level filtering");
     }
 
-    // Report NAG action features EQLP cannot represent (one pass over all actions):
-    // - interruptSpeech: NAG preempts any currently-speaking text; EQLP queues speech.
+    // Report NAG action features EQLP cannot represent exactly (one pass over all actions):
+    // - interruptSpeech: NAG preempts any currently-speaking text. Approximated by importing
+    //   the trigger at priority 1 (top urgency) — the EQLP audio engine stops playing audio of
+    //   lower priority and drops queued lower-priority events. Same convention as GINA import.
     // - secondaryPhrases: extra phrase IDs the same action also matches; no EQLP equivalent.
     // - per-phrase action scoping: NAG fires an action only on the phrases listed in its
     //   "phrases" array, but the import applies the merged action set to every phrase trigger.
     //   When any action covers a strict subset of the trigger's phrases, extra phrase triggers
     //   will also run it — flag the divergence so the report stays honest.
     var phraseIdSet = phrases.Where(p => p.phraseId != null).Select(p => p.phraseId!).ToHashSet();
+    var hasInterruptSpeech = false;
     foreach (var action in element.GetProperty("actions").EnumerateArray())
     {
       if (action.TryGetProperty("interruptSpeech", out var interruptSpeech) && interruptSpeech.GetBoolean())
-        droppedFeatures.Add("speech interruption");
+      {
+        hasInterruptSpeech = true;
+        droppedFeatures.Add(InterruptSpeechNote);
+      }
 
       if (action.TryGetProperty("secondaryPhrases", out var secondary) &&
           secondary.ValueKind == JsonValueKind.Array && secondary.GetArrayLength() > 0)
@@ -758,7 +773,10 @@ internal static class NagUtil
 
       // Apply shared metadata
       triggerData.Comments = triggerComments;
-      triggerData.Priority = ConvertScore(score);
+      // interruptSpeech triggers get top urgency so the audio engine preempts lower-priority
+      // playback, approximating NAG's speech interruption (see note above). Priority 1 is also
+      // what GINA import uses for interrupt triggers.
+      triggerData.Priority = hasInterruptSpeech ? 1 : ConvertScore(score);
       triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
 
       // Determine which phrase this node corresponds to, for per-phrase action routing.
@@ -893,12 +911,15 @@ internal static class NagUtil
     droppedFeatures = droppedFeatures.Distinct().ToList();
 
     // Determine import status and reason
-    // Triggers with missing audio files are Partial (imported but incomplete)
+    // Triggers with missing audio files are Partial (imported but incomplete).
+    // Approximation notes (NonStatusDroppedFeatures) don't count — the behavior is implemented
+    // as closely as EQLP allows, so they stay visible without burying real gaps in noise.
+    var meaningfulDrops = droppedFeatures.Where(f => !NonStatusDroppedFeatures.Contains(f)).ToList();
     var hasMissingAudio = parsed.missingAudioFiles?.Count > 0;
-    var status = hasMissingAudio || droppedFeatures.Count > 0 ? "Partial" : "Imported";
+    var status = hasMissingAudio || meaningfulDrops.Count > 0 ? "Partial" : "Imported";
     var reason = isSequential ? "Sequential capture method (not supported)" :
                  hasClassLevels ? "Class level filtering (not supported)" :
-                 droppedFeatures.Count > 0 ? string.Join(", ", droppedFeatures) :
+                 meaningfulDrops.Count > 0 ? string.Join(", ", meaningfulDrops) :
                  hasMissingAudio ? $"{parsed.missingAudioFiles.Count} missing audio file(s)" :
                  null;
 
