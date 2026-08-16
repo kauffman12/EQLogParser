@@ -113,7 +113,12 @@
     - You can clear the highlighting by right-clicking and selecting **Clear Highlighting**
 6. Overlays are imported the same way but use the **Overlays** folder instead
     - Overlay packages use the **.ogf.gz** extension
-7. Do no extract the **.tgf.gz** files onto your computer.
+7. Do not extract the **.tgf.gz** files onto your computer.
+
+## Coming from NAG (Never Again GINA)?
+1. See **Migrating from NAG** in [Getting Started](getting-started.html#quick-start) — one menu command imports your entire trigger and overlay database
+2. In short: **Tools → Migrate NAG Database**, pick the folder that contains `trigger-database.json`, and everything lands in a new `NAG Ingest - {date time}` folder under Triggers
+3. Imported triggers start **disabled** so you can enable what you want — check the HTML report from the summary dialog for any NAG features that have no EQLogParser equivalent
 
 # Linux Support
 

@@ -74,7 +74,7 @@
 
 These are special variables or codes that can be used in trigger `Pattern` fields to capture values so that they can be displayed or spoken.
 
-None of these trigger variables are case-insensitive. Whether you use `{c}` or `{C}` they will do the same thing. Also, if you define one variable as `{S}` and reference it later as `{s}` it will still work. The x value in `{Sx}` or `{Nx}` is any number from `0` to `9` so you can use more than one of these in the same trigger.
+All of these trigger variables are case-insensitive — whether you use `{c}` or `{C}` they will do the same thing. Also, if you define one variable as `{S}` and reference it later as `{s}` it will still work. The x value in `{Sx}` or `{Nx}` is any number from `0` to `9` so you can use more than one of these in the same trigger.
 
 In addition, modifiers may be used with these variables for display purposes. They do not function in any of the `Pattern` fields but will work in the display fields. These modifiers include `.number`, `.capitalize`, `.lower`, `.upper`, `.padleft`, `.padright`, and `.center`. Number will format number values based on region. For example, in the U.S., they will be formatted with commas. The other options are self-explanatory.
 
