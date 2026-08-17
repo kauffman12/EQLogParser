@@ -363,9 +363,10 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType12_ScreenFlash_Dropped()
+    public void ConvertTriggers_ActionType12_ScreenGlow_Dropped()
     {
-      var json = CreateTriggerJson("Flash Trigger", "pattern", actions:
+      // NAG v0.2.26 names actionType 12 "Screen Glow" (older notes said "screen flash").
+      var json = CreateTriggerJson("Glow Trigger", "pattern", actions:
       [
         CreateAction(12),
         CreateAction(0, displayText: "text overlay")
@@ -375,13 +376,14 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("screen flash", results[0].Reason);
+      Assert.Contains("screen glow", results[0].Reason);
     }
 
     [TestMethod]
-    public void ConvertTriggers_ActionType11_Hotkey_Dropped()
+    public void ConvertTriggers_ActionType11_DeathRecap_Dropped()
     {
-      var json = CreateTriggerJson("Hotkey Trigger", "pattern", actions:
+      // NAG v0.2.26 names actionType 11 "DisplayDeathRecap" (older notes said "hotkey").
+      var json = CreateTriggerJson("DeathRecap Trigger", "pattern", actions:
       [
         CreateAction(11),
         CreateAction(0, displayText: "text overlay")
@@ -391,7 +393,23 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("hotkey", results[0].Reason);
+      Assert.Contains("death recap display", results[0].Reason);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionType14_Stopwatch_Dropped()
+    {
+      var json = CreateTriggerJson("Stopwatch Trigger", "pattern", actions:
+      [
+        CreateAction(14),
+        CreateAction(0, displayText: "text overlay")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("stopwatch timer", results[0].Reason);
     }
 
     [TestMethod]
@@ -462,8 +480,10 @@ namespace EQLogParser.Wpf.Test
     #region Conditions Parsing
 
     [TestMethod]
-    public void ConvertTriggers_ConditionOperator16_EqualityCheck()
+    public void ConvertTriggers_ConditionOperator16_ContainsCheck()
     {
+      // NAG operatorType 16 = Contains (case-insensitive substring — verified against the
+      // v0.2.26 engine, models/trigger.js + log-watcher.js storeContainsValue).
       var json = CreateTriggerJson("Zone Trigger", "pattern", conditions:
       [
         CreateCondition("CurrentZone", 16, "Norg")
@@ -475,13 +495,14 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      Assert.AreEqual("{CurrentZone} = \"Norg\"", nodes[0].TriggerData.MatchVariableCondition);
+      Assert.AreEqual("{CurrentZone} contains \"Norg\"", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]
-    public void ConvertTriggers_ConditionOperator1_Contains_SingleValue()
+    public void ConvertTriggers_ConditionOperator1_EqualityCheck_SingleValue()
     {
-      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions:
+      // NAG operatorType 1 = Equals (exact match — verified against v0.2.26 engine).
+      var json = CreateTriggerJson("Equality Trigger", "pattern", conditions:
       [
         CreateCondition("SpellBeingCast", 1, "Fireball")
       ], actions:
@@ -492,13 +513,13 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      Assert.AreEqual("{SpellBeingCast} contains \"Fireball\"", nodes[0].TriggerData.MatchVariableCondition);
+      Assert.AreEqual("{SpellBeingCast} = \"Fireball\"", nodes[0].TriggerData.MatchVariableCondition);
     }
 
     [TestMethod]
-    public void ConvertTriggers_ConditionOperator1_Contains_PipeSeparatedValues()
+    public void ConvertTriggers_ConditionOperator1_Equality_PipeSeparatedValues()
     {
-      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions:
+      var json = CreateTriggerJson("Equality Trigger", "pattern", conditions:
       [
         CreateCondition("SpellBeingCast", 1, "Fireball|Flame Strike")
       ], actions:
@@ -509,8 +530,136 @@ namespace EQLogParser.Wpf.Test
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      // NAG pipe-separated values should become OR'd contains clauses
-      Assert.AreEqual("{SpellBeingCast} contains \"Fireball\" || {SpellBeingCast} contains \"Flame Strike\"", nodes[0].TriggerData.MatchVariableCondition);
+      // NAG pipe-separated values should become OR'd equality clauses; parenthesized so the
+      // OR cannot leak across a larger "&&" join (EQLP condition grammar: AND binds tighter).
+      Assert.AreEqual("({SpellBeingCast} = \"Fireball\" || {SpellBeingCast} = \"Flame Strike\")", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator16_Contains_PipeSeparatedValues()
+    {
+      var json = CreateTriggerJson("Contains Trigger", "pattern", conditions:
+      [
+        CreateCondition("SpellBeingCast", 16, "Fire|Flame")
+      ], actions:
+      [
+        CreateAction(0, displayText: "Fire spell")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("({SpellBeingCast} contains \"Fire\" || {SpellBeingCast} contains \"Flame\")", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator0_IsNull()
+    {
+      // NAG operatorType 0 = IsNull — passes while the variable has no stored value.
+      var json = CreateTriggerJson("IsNull Trigger", "pattern", conditions:
+      [
+        CreateCondition("SpellBeingCast", 0, null)
+      ], actions:
+      [
+        CreateAction(0, displayText: "No spell tracked")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("!{SpellBeingCast}", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator2_WithValues_NegatedEquality()
+    {
+      // NAG operatorType 2 = DoesNotEqual: no stored value may equal a condition value.
+      var json = CreateTriggerJson("NotEq Trigger", "pattern", conditions:
+      [
+        CreateCondition("SpellBeingCast", 2, "Fireball|Flame Strike")
+      ], actions:
+      [
+        CreateAction(0, displayText: "Other spell")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("!({SpellBeingCast} = \"Fireball\" || {SpellBeingCast} = \"Flame Strike\")", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator2_NoValue_MustBeSet()
+    {
+      // NAG DoesNotEqual without a value passes only when the variable has at least one
+      // stored value — EQLP truthy check.
+      var json = CreateTriggerJson("Exists Trigger", "pattern", conditions:
+      [
+        CreateCondition("EbItemZone", 2, null)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Item check")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("{EbItemZone}", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ConditionOperator_MultiConditionWithPipeValues_Parenthesized()
+    {
+      // A multi-value (OR) condition joined with another via && must stay parenthesized.
+      var json = CreateTriggerJson("Multi Cond Trigger", "pattern", conditions:
+      [
+        CreateCondition("CurrentZone", 16, "Norg"),
+        CreateCondition("SpellBeingCast", 1, "Fireball|Flame Strike")
+      ], actions:
+      [
+        CreateAction(0, displayText: "Specific check")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("{CurrentZone} contains \"Norg\" && ({SpellBeingCast} = \"Fireball\" || {SpellBeingCast} = \"Flame Strike\")", nodes[0].TriggerData.MatchVariableCondition);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_Condition_UnknownOperator_DroppedAndReported()
+    {
+      // Operators outside {0, 1, 2, 16} (e.g. 8 = numeric GreaterThan, used by NAG only for
+      // counter conditions) cannot be expressed — the condition must be dropped and reported,
+      // not silently lost.
+      var json = CreateTriggerJson("Unknown Op Trigger", "pattern", conditions:
+      [
+        CreateCondition("SomeCounter", 8, "50")
+      ], actions:
+      [
+        CreateAction(0, displayText: "text")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsNull(nodes[0].TriggerData.MatchVariableCondition);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains($"condition operator 8 on SomeCounter", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_Condition_NonVariableType_Reported()
+    {
+      // conditionType 3 (counter value) has no EQLP equivalent — must be reported.
+      var json = "{\"triggers\":[{\"name\":\"Counter Cond Trigger\",\"triggerId\":\"t1\",\"onlyExecuteInDev\":false,\"capturePhrases\":[{\"phrase\":\"pattern\",\"useRegEx\":false}],\"conditions\":[{\"conditionType\":3,\"variableName\":\"Physical\",\"operatorType\":8,\"variableValue\":\"50\"}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsNull(nodes[0].TriggerData.MatchVariableCondition);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("counter condition", results[0].DroppedFeatures);
     }
 
     [TestMethod]
@@ -546,8 +695,8 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       var cond = nodes[0].TriggerData.MatchVariableCondition;
-      Assert.Contains("{CurrentZone}", cond);
-      Assert.Contains("{SpellBeingCast}", cond);
+      Assert.Contains("{CurrentZone} contains", cond);
+      Assert.Contains("{SpellBeingCast} contains", cond);
       Assert.Contains("&&", cond);
     }
 
@@ -602,6 +751,113 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       Assert.IsTrue(nodes[0].TriggerData.UseRegex);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_IgnoreCaseFalse_RegexPhrase_GetsNegativeInlineModifier()
+    {
+      // NAG phrases are case-insensitive by default but can opt out per phrase. EQLP compiles
+      // all patterns with RegexOptions.IgnoreCase, so the import must prepend (?-i) to restore
+      // case sensitivity (verified: .NET lets an inline (?-i) override the compile flag).
+      var json = CreateTriggerJson("Sensitive Trigger", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^Fireball hits for \d+ damage$", useRegEx: true, ignoreCase: false)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Fireball")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsTrue(nodes[0].TriggerData.Pattern.StartsWith("(?-i)"), $"Pattern should start with (?-i): {nodes[0].TriggerData.Pattern}");
+      // Case sensitivity restored: the pattern must not match a differently-cased line.
+      var regex = new System.Text.RegularExpressions.Regex(nodes[0].TriggerData.Pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+      Assert.IsTrue(regex.IsMatch("Fireball hits for 50 damage"));
+      Assert.IsFalse(regex.IsMatch("FIREBALL hits for 50 damage"));
+      // No dropped-feature note — the restriction is fully preserved for regex phrases.
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_IgnoreCaseDefault_RegexPhrase_NoPrefix()
+    {
+      var json = CreateTriggerJson("Insensitive Trigger", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^Fireball hits$", useRegEx: true)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Fireball")
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsFalse(nodes[0].TriggerData.Pattern.StartsWith("(?-i)"));
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_IgnoreCaseFalse_NonRegexPhrase_Reported()
+    {
+      // Non-regex phrases use EQLP's always-case-insensitive literal matching — there is no
+      // per-trigger override, so the divergence is reported instead of silently imported.
+      var json = CreateTriggerJson("Sensitive Literal Trigger", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase("Fireball hits for damage", useRegEx: false, ignoreCase: false)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Fireball")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("Fireball hits for damage", nodes[0].TriggerData.Pattern);
+      Assert.IsFalse(nodes[0].TriggerData.UseRegex);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("case-sensitive non-regex phrase(s) imported as case-insensitive", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_DollarVarInRegexPhrase_RestrictionReported()
+    {
+      // NAG treats ${var} in a phrase as a match-time restriction (only matches stored values
+      // of that variable, never when the variable is empty). EQLP cannot express it — the
+      // import matches any text and must report the divergence.
+      var json = CreateTriggerJson("Var Condition Trigger", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^Your ${SpellBeingCast} spell fizzles.$", useRegEx: true)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Fizzled")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.Contains("(?<SpellBeingCast>.+?)", nodes[0].TriggerData.Pattern);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("phrase ${var} restriction", results[0].DroppedFeatures);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_DollarCharacterOnly_NoRestrictionNote()
+    {
+      // ${Character} maps to EQLP's native {c} replacement — that is exact, not a relaxation,
+      // so no restriction note may be reported.
+      var json = CreateTriggerJson("Char Trigger", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^${Character} casts a spell.$", useRegEx: true)
+      ], actions:
+      [
+        CreateAction(0, displayText: "Cast")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("Imported", results[0].Status);
+      Assert.IsFalse(results[0].DroppedFeatures.Contains("phrase ${var} restriction"));
     }
 
     #endregion
@@ -1536,10 +1792,10 @@ namespace EQLogParser.Wpf.Test
       return JsonDocument.Parse(json).RootElement;
     }
 
-    private JsonElement CreateCapturePhrase(string phrase, bool useRegEx = false, string? phraseId = null)
+    private JsonElement CreateCapturePhrase(string phrase, bool useRegEx = false, string? phraseId = null, bool? ignoreCase = null)
     {
       var escapedPhrase = phrase.Replace("\\", "\\\\").Replace("\"", "\\\"");
-      var json = $"{{\"phrase\":\"{escapedPhrase}\",\"useRegEx\":{useRegEx.ToString().ToLower()}" + (phraseId != null ? $",\"phraseId\":\"{phraseId}\"" : "") + "}";
+      var json = $"{{\"phrase\":\"{escapedPhrase}\",\"useRegEx\":{useRegEx.ToString().ToLower()}" + (phraseId != null ? $",\"phraseId\":\"{phraseId}\"" : "") + (ignoreCase.HasValue ? $",\"ignoreCase\":{ignoreCase.Value.ToString().ToLower()}" : "") + "}";
       return JsonDocument.Parse(json).RootElement;
     }
 
@@ -1758,8 +2014,10 @@ namespace EQLogParser.Wpf.Test
       // Should have 8 phrase triggers (but only 1 import result)
       Assert.HasCount(8, nodes);
       Assert.HasCount(1, results);
-      // None should be Skipped or Partial — all phrases are valid regex captures
-      Assert.IsTrue(results.All(r => r.Status == "Imported"), "All phrases should import successfully");
+      // The trigger is Partial: the ${var} restriction note (phrases use ${SpellBeingCast})
+      // and the clear-variable alert overlay note have no EQLP equivalents.
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("phrase ${var} restriction", results[0].DroppedFeatures);
 
       // All 5 failure phrases [3-7] ("interrupted", "resisted", "blocked", "fizzles", "reflected")
       // should have a Clear VariableAction for SpellBeingCast, since the actionType 7 has

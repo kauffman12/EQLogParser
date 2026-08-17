@@ -204,8 +204,20 @@ internal static class NagUtil
     return Math.Clamp((long)(inverted * 4) + 1, 1, 5);
   }
 
-  // Parse NAG conditions into EQLP MatchVariableCondition syntax
-  private static string ParseConditions(JsonElement element)
+  // Parse NAG conditions into EQLP MatchVariableCondition syntax.
+  //
+  // NAG OperatorTypes (verified against the NAG v0.2.26 engine source —
+  // src/electron/data/models/trigger.js and checkCondition in log-watcher.js):
+  //   0=IsNull, 1=Equals, 2=DoesNotEqual, 4=LessThan, 8=GreaterThan, 16=Contains.
+  // Equals matches a stored value exactly against NAG's pipe-separated condition values
+  // (case-sensitive in NAG); Contains is a case-insensitive substring check. EQLP's
+  // condition evaluator treats both "=" and "contains" case-insensitively, so the mapping is:
+  //   0 (IsNull)       → !{var}                        (variable has no stored value)
+  //   1 (Equals)       → {var} = "A" || {var} = "B"    (per-value equality, OR-combined)
+  //   2 (DoesNotEqual) → with values: !({var} = "A" || ...); without a value: {var} (must be set)
+  //   16 (Contains)    → {var} contains "A" || ...     (per-value substring, OR-combined)
+  // Operators and condition types EQLP cannot express are reported through droppedFeatures.
+  internal static string ParseConditions(JsonElement element, ICollection<string> droppedFeatures)
   {
     if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() == 0)
     {
@@ -215,9 +227,10 @@ internal static class NagUtil
     var parts = new List<string>();
     foreach (var cond in element.EnumerateArray())
     {
-      // Only handle conditionType == 1 (variable-based conditions)
-      if (!cond.TryGetProperty("conditionType", out var ct) || ct.GetInt32() != 1)
+      var conditionType = cond.TryGetProperty("conditionType", out var ct) ? ct.GetInt32() : -1;
+      if (conditionType != 1) // Only variable-based conditions are expressible in EQLP
       {
+        droppedFeatures.Add(conditionType == 3 ? "counter condition" : $"condition type {conditionType}");
         continue;
       }
 
@@ -230,50 +243,70 @@ internal static class NagUtil
       var operatorType = cond.TryGetProperty("operatorType", out var ot) && ot.ValueKind != JsonValueKind.Null
         ? ot.GetInt32()
         : -1;
+      var value = cond.TryGetProperty("variableValue", out var vv) && vv.ValueKind == JsonValueKind.String
+        ? vv.GetString()
+        : null;
 
+      // NAG separates multiple condition values with |. Split them and OR-combine the
+      // clauses; parenthesize multi-clause results so they cannot leak across a larger
+      // "&&" join (EQLP's condition grammar binds AND tighter than OR).
+      string OrClauses(Func<string, string> clause)
+      {
+        var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        if (values.Length == 0)
+        {
+          return null;
+        }
+
+        var joined = string.Join(" || ", values.Select(clause));
+        return values.Length > 1 ? $"({joined})" : joined;
+      }
+
+      static string Escaped(string v) => v.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+      string part = null;
       switch (operatorType)
       {
-        case 16: // Equality check: {var} = "value"
-          {
-            var value = cond.TryGetProperty("variableValue", out var vv) ? vv.GetString() : null;
-            if (!string.IsNullOrEmpty(value))
-            {
-              parts.Add($"{{{varName}}} = \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
-            }
-          }
+        // IsNull: passes while the variable has no stored value.
+        case 0:
+          part = $"!{{{varName}}}";
           break;
 
-        case 1: // Contains check — NAG pipe-separated values mean OR, not literal substring
-          {
-            var value = cond.TryGetProperty("variableValue", out var vv) ? vv.GetString() : null;
-            if (!string.IsNullOrEmpty(value))
-            {
-              // NAG uses | to separate multiple values meaning "contains any of".
-              // EQLP's contains operator does a literal substring check, so we need
-              // to split on | and create separate contains clauses joined by ||.
-              var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
-              if (values.Length > 1)
-              {
-                var escaped = values.Select(v => v.Replace("\\", "\\\\").Replace("\"", "\\\"")).Select(v => $"{{{varName}}} contains \"{v}\"");
-                parts.Add(string.Join(" || ", escaped));
-              }
-              else
-              {
-                parts.Add($"{{{varName}}} contains \"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"");
-              }
-            }
-          }
+        // Equals: exact match against any of NAG's pipe-separated values.
+        case 1:
+          part = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
           break;
 
-        case 2: // Existence check (truthy): {var} standalone
+        // DoesNotEqual: with values, no stored value may equal a condition value (an unset
+        // variable passes); without a value, NAG passes only when the variable has at
+        // least one stored value.
+        case 2:
+        {
+          if (string.IsNullOrEmpty(value))
           {
-            parts.Add($"{{{varName}}}");
+            part = $"{{{varName}}}";
+          }
+          else
+          {
+            var notEqualClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+            part = notEqualClauses is null ? null : $"!({notEqualClauses})";
           }
           break;
+        }
 
-        default:
-          Log.Debug($"Skipping condition with unknown operatorType {operatorType}");
+        // Contains: case-insensitive substring of any pipe-separated value.
+        case 16:
+          part = OrClauses(v => $"{{{varName}}} contains \"{Escaped(v)}\"");
           break;
+      }
+
+      if (part is null)
+      {
+        droppedFeatures.Add($"condition operator {operatorType} on {varName}");
+      }
+      else
+      {
+        parts.Add(part);
       }
     }
 
@@ -517,6 +550,8 @@ internal static class NagUtil
     // Collect all phrases — each becomes its own EQLP trigger (no alternation combining).
     // This avoids named group collisions when multiple phrases share capture group names.
     var phrases = new List<(string pattern, bool useRegex, string phraseId)>();
+    var hasDollarVarCondition = false;
+    var hasCaseSensitiveNonRegexPhrase = false;
     foreach (var phrase in capturePhrases.EnumerateArray())
     {
       if (phrase.TryGetProperty("phrase", out var p) && p.GetString() is { Length: > 0 } text)
@@ -563,9 +598,18 @@ internal static class NagUtil
           // Replace ${varName} with (?<varName>.+?) so it can be referenced in display text.
           // Exception: ${Character} → {c} (EQLP replaces {c} with player name at runtime).
           text = DollarVarRegex.Replace(text, m =>
-            m.Groups[1].Value.Equals("Character", StringComparison.OrdinalIgnoreCase)
-              ? "{c}"
-              : $"(?<{m.Groups[1].Value}>.+?)");
+          {
+            if (m.Groups[1].Value.Equals("Character", StringComparison.OrdinalIgnoreCase))
+            {
+              return "{c}";
+            }
+
+            // NAG treats ${var} as a match-time restriction — the phrase only matches when the
+            // variable currently holds the captured value. EQLP cannot express that, so the
+            // import matches any text; flag it once per trigger after actions are parsed.
+            hasDollarVarCondition = true;
+            return $"(?<{m.Groups[1].Value}>.+?)";
+          });
 
           // Replace unhandled {VAR} patterns with named capture groups.
           // {LN} → (?<LN>\w+) (player/NPC name, single word like a valid EQ player name)
@@ -585,6 +629,14 @@ internal static class NagUtil
           // Do NOT call ConvertTemplates — keep {S}, {N}, {TS} as literals. The EQLP runtime
           // does not expand these in plain (non-regex) patterns, which matches NAG: its
           // non-regex path never expands them either, so such phrases match literally there too.
+
+          // NAG phrases are case-insensitive by default but can opt out per phrase. EQLP compiles
+          // every pattern with RegexOptions.IgnoreCase, so re-enable sensitivity for those.
+          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ignoreCase.GetBoolean())
+          {
+            text = "(?-i)" + text;
+          }
+
           var phraseId = phrase.TryGetProperty("phraseId", out var pid) ? pid.GetString() : null;
           phrases.Add((text, useRegex, phraseId));
         }
@@ -592,6 +644,10 @@ internal static class NagUtil
         {
           var phraseId2 = phrase.TryGetProperty("phraseId", out var pid2) ? pid2.GetString() : null;
           phrases.Add((ConvertTemplates(text), false, phraseId2));
+          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ignoreCase.GetBoolean())
+          {
+            hasCaseSensitiveNonRegexPhrase = true;
+          }
         }
       }
       else if (phrase.TryGetProperty("useRegEx", out var re2) && re2.GetBoolean())
@@ -705,6 +761,17 @@ internal static class NagUtil
       droppedFeatures.Add("class level filtering");
     }
 
+    // Report phrase-level limitations found while converting capture phrases.
+    if (hasDollarVarCondition)
+    {
+      droppedFeatures.Add("phrase ${var} restriction (NAG only matches stored variable values; import matches any text)");
+    }
+
+    if (hasCaseSensitiveNonRegexPhrase)
+    {
+      droppedFeatures.Add("case-sensitive non-regex phrase(s) imported as case-insensitive");
+    }
+
     // Report NAG action features EQLP cannot represent exactly (one pass over all actions):
     // - interruptSpeech: NAG preempts any currently-speaking text. Approximated by importing
     //   the trigger at priority 1 (top urgency) — the EQLP audio engine stops playing audio of
@@ -742,7 +809,7 @@ internal static class NagUtil
     string conditionStr = null;
     if (element.TryGetProperty("conditions", out var conds))
     {
-      conditionStr = ParseConditions(conds);
+      conditionStr = ParseConditions(conds, droppedFeatures);
     }
 
     // Build Comments field: preserve original NAG comments as-is.
@@ -1385,17 +1452,18 @@ internal static class NagUtil
           actionSummary.Add("Counter");
           break;
 
-        case 12: // Screen Flash - unsupported, skip
-          droppedFeatures.Add("screen flash");
-          Log.Debug($"Skipping unsupported action type 12 (Screen Flash) in trigger");
+        case 12: // Screen Glow - unsupported, skip
+          droppedFeatures.Add("screen glow");
+          Log.Debug($"Skipping unsupported action type 12 (Screen Glow) in trigger");
           break;
 
         default:
-          // Types 11,12,13,14,15 - hotkeys, screen flash, global reset, buffs, lists - unsupported
+          // Types 11,13,14,15 - death recap display, clear all, stopwatch, lists - unsupported
           var skipNames = actionType switch
           {
-            11 => "hotkey",
-            13 => "global reset",
+            11 => "death recap display",
+            13 => "clear all",
+            14 => "stopwatch timer",
             15 => "list widget",
             _ => $"action type {actionType}"
           };

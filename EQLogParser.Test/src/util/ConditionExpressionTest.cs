@@ -1367,5 +1367,67 @@ namespace EQLogParserTest
       Assert.IsTrue(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "-1" : null));
       Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => name == "a" ? "1" : null));
     }
+
+    // ---- Condition shapes emitted by the NAG import (NagUtil.ParseConditions) ----
+
+    [TestMethod]
+    public void Evaluate_NagIsNull_ShortHand()
+    {
+      // NAG IsNull → !{var}: passes while the variable has no stored value.
+      var node = ConditionParser.Parse("!{SpellBeingCast}");
+      Assert.IsNotNull(node);
+
+      var unset = new Dictionary<string, string>();
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node, name => Resolve(unset, name)));
+
+      var set = new Dictionary<string, string> { ["SpellBeingCast"] = "Fireball" };
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node, name => Resolve(set, name)));
+    }
+
+    [TestMethod]
+    public void Evaluate_NagEqualityOr_CombinedWithAnd_StaysGrouped()
+    {
+      // NAG Equals (multi-value) joined with another condition via &&: the OR group must not
+      // leak across the AND (EQLP grammar binds AND tighter, so the import parenthesizes it).
+      var node = ConditionParser.Parse("{zone} contains \"Norg\" && ({spell} = \"Fireball\" || {spell} = \"Flame Strike\")");
+      Assert.IsNotNull(node);
+
+      var pass = new Dictionary<string, string> { ["zone"] = "NORG-TH", ["spell"] = "flame strike" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node, name => Resolve(pass, name)));
+
+      var wrongSpell = new Dictionary<string, string> { ["zone"] = "Norg", ["spell"] = "Arcane" };
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node, name => Resolve(wrongSpell, name)));
+
+      // OR leak check: zone fails, spell matches — must stay false.
+      var wrongZone = new Dictionary<string, string> { ["zone"] = "Kunark", ["spell"] = "Flame Strike" };
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node, name => Resolve(wrongZone, name)));
+    }
+
+    [TestMethod]
+    public void Evaluate_NagNegatedEqualityOr()
+    {
+      // NAG DoesNotEqual (multi-value) → negated OR: passes when unset or holding another value.
+      var node = ConditionParser.Parse("!({spell} = \"Fireball\" || {spell} = \"Flame Strike\")");
+      Assert.IsNotNull(node);
+
+      var unset = new Dictionary<string, string>();
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node, name => Resolve(unset, name)));
+
+      var other = new Dictionary<string, string> { ["spell"] = "Arcane" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node, name => Resolve(other, name)));
+
+      var fireball = new Dictionary<string, string> { ["spell"] = "FIREBALL" }; // case-insensitive equality
+      Assert.IsFalse(ConditionEvaluator.Evaluate(node, name => Resolve(fireball, name)));
+    }
+
+    [TestMethod]
+    public void Evaluate_NagContains_CaseInsensitiveSubstring()
+    {
+      var node = ConditionParser.Parse("{zone} contains \"Norg\"");
+      Assert.IsNotNull(node);
+
+      var vars = new Dictionary<string, string> { ["zone"] = "norg-th, deeps of" };
+      Assert.IsTrue(ConditionEvaluator.Evaluate(node, name => Resolve(vars, name)));
+    }
   }
 }
