@@ -365,6 +365,8 @@ namespace EQLogParser
         }
       }
 
+      SyncFolderCheckStates();
+
       if (!_enableFlushQueued)
       {
         _enableFlushQueued = true;
@@ -451,6 +453,8 @@ namespace EQLogParser
       {
         await TriggerStateDB.Instance.UpdateCharacterTreePositions(positions);
       }
+
+      SyncFolderCheckStates();
     }
 
     private void ItemBeginEdit(object sender, TreeViewItemBeginEditEventArgs e)
@@ -542,6 +546,7 @@ namespace EQLogParser
       }
 
       _suppressChecked = false;
+      SyncFolderCheckStates();
     }
 
     private static int GetNodeIndex(CharacterTreeViewNode node) => node.Folder?.Index ?? node.Character?.Index ?? 0;
@@ -664,7 +669,69 @@ namespace EQLogParser
         }
       }
 
+      SyncFolderCheckStates();
       _suppressChecked = false;
+    }
+
+    /* Folder checkbox reflects its characters: all enabled = checked, none = unchecked, mixed = indeterminate. */
+    private void SyncFolderCheckStates()
+    {
+      var suppressed = _suppressChecked;
+      _suppressChecked = true;
+      foreach (var node in EnumerateNodes().Where(node => node.IsFolder()).ToList())
+      {
+        var (total, checkedCount) = CountCharacterStates(node);
+        bool? state;
+        if (total > 0 && checkedCount == total)
+        {
+          state = true;
+        }
+        else if (checkedCount > 0)
+        {
+          state = null;
+        }
+        else
+        {
+          state = false;
+        }
+
+        node.IsChecked = state;
+      }
+
+      _suppressChecked = suppressed;
+    }
+
+    private static (int Total, int Checked) CountCharacterStates(CharacterTreeViewNode folder)
+    {
+      var total = 0;
+      var checkedCount = 0;
+      var stack = new Stack<CharacterTreeViewNode>();
+      foreach (var child in folder.ChildNodes.OfType<CharacterTreeViewNode>())
+      {
+        stack.Push(child);
+      }
+
+      while (stack.Count > 0)
+      {
+        var node = stack.Pop();
+        if (node.IsFolder())
+        {
+          foreach (var child in node.ChildNodes.OfType<CharacterTreeViewNode>())
+          {
+            stack.Push(child);
+          }
+        }
+        else
+        {
+          total++;
+          if (node.IsChecked == true)
+          {
+            checkedCount++;
+          }
+        }
+      }
+
+      return (total, checkedCount);
     }
 
     #region IDisposable Support
