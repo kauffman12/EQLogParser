@@ -232,8 +232,8 @@ namespace EQLogParser
       else if (node.Folder is { } folder)
       {
         var msgDialog = new MessageWindow(
-          $"Are you sure you want to delete '{folder.Name}'?\n\nNote: Contents will be moved to the parent folder.",
-          Resource.FOLDER_DELETE, MessageWindow.IconType.Question, "Delete");
+          $"Are you sure you want to delete '{folder.Name}'? Contents will be moved to the parent.",
+          Resource.FOLDER_DELETE, MessageWindow.IconType.Warn, "Delete");
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
         {
