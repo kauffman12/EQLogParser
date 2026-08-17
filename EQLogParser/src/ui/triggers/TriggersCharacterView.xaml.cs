@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -315,9 +316,25 @@ namespace EQLogParser
         var newFolderItem = new MenuItem { Header = "New Folder" };
         newFolderItem.Click += RootFolderClick;
         var menu = new ContextMenu { Placement = PlacementMode.MousePoint, PlacementTarget = characterTreeView };
+        StyleRootMenu(menu);
         menu.Items.Add(newCharacterItem);
         menu.Items.Add(newFolderItem);
         menu.IsOpen = true;
+      }
+    }
+
+    /* Same elevated surface as the item context menu (see XAML): Alt2 fill + 1px Alt3 border so the popup reads as floating above the tree. */
+    private void StyleRootMenu(ContextMenu menu)
+    {
+      if (TryFindResource("ContentBackgroundAlt2") is Brush background)
+      {
+        menu.Background = background;
+      }
+
+      if (TryFindResource("ContentBackgroundAlt3") is Brush border)
+      {
+        menu.BorderBrush = border;
+        menu.BorderThickness = new Thickness(1);
       }
     }
 
