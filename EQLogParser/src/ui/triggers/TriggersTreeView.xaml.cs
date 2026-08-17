@@ -627,6 +627,15 @@ namespace EQLogParser
       }
     }
 
+    /* Top-level roots (Triggers/Overlays) are located by name throughout the app and must never be renamed. */
+    private void ItemBeginEdit(object sender, TreeViewItemBeginEditEventArgs e)
+    {
+      if (e.Node is TriggerTreeViewNode { ParentNode: null })
+      {
+        e.Cancel = true;
+      }
+    }
+
     private void ItemEndEdit(object sender, TreeViewItemEndEditEventArgs e)
     {
       if (!e.Cancel && e.Node is TriggerTreeViewNode node && sender is SfTreeView treeView)

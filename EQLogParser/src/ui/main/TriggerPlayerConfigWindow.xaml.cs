@@ -15,12 +15,14 @@ namespace EQLogParser
   {
     private const string EnterName = "Enter Character Name";
     private readonly TriggerCharacter _theCharacter;
+    private readonly string _newCharacterParentId;
     private readonly bool _ready;
 
-    internal TriggerPlayerConfigWindow(TriggerCharacter character = null)
+    internal TriggerPlayerConfigWindow(TriggerCharacter character = null, string newCharacterParentId = null)
     {
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
+      _newCharacterParentId = newCharacterParentId;
 
       Owner = MainActions.GetOwner();
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
@@ -138,7 +140,8 @@ namespace EQLogParser
 
       if (_theCharacter == null)
       {
-        await TriggerStateDB.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(), rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor);
+        await TriggerStateDB.Instance.AddCharacter(characterName.Text, txtFilePath.Text, voices.SelectedValue.ToString(),
+          rateOption.SelectedIndex, customVolume, activeColor, idleColor, resetColor, fontColor, _newCharacterParentId);
       }
       else
       {

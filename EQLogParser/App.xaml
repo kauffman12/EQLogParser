@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:local="clr-namespace:EQLogParser"
+             xmlns:gif="http://wpfanimatedgif.codeplex.com"
   xmlns:theme="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero2">
   <Application.Resources>
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -200,6 +202,105 @@
           </fa:ImageAwesome>
           <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
         </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="CharacterFolderTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+            <CheckBox.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </CheckBox.LayoutTransform>
+          </CheckBox>
+          <fa:ImageAwesome Margin="5,0,0,0" Height="16" Width="16" HorizontalAlignment="Center" Foreground="{DynamicResource Border}">
+            <fa:ImageAwesome.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </fa:ImageAwesome.LayoutTransform>
+            <fa:ImageAwesome.Style>
+              <Style TargetType="fa:ImageAwesome">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                    <Setter Property="Icon" Value="Solid_FolderOpen"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                    <Setter Property="Icon" Value="Solid_Folder"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </fa:ImageAwesome.Style>
+          </fa:ImageAwesome>
+          <TextBlock Margin="5,0,0,0" VerticalAlignment="Center" Text="{Binding Content}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="CharacterNodeTemplate">
+      <Grid>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <CheckBox x:Name="CheckBox" Margin="0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+            <CheckBox.LayoutTransform>
+              <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
+            </CheckBox.LayoutTransform>
+          </CheckBox>
+          <TextBlock Margin="5,0,0,0" Padding="4,0,4,0" VerticalAlignment="Center" Text="{Binding Character.Name}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Character.IsEnabled}" Value="True">
+                    <Setter Property="FontStyle" Value="Normal"/>
+                    <Setter Property="FontWeight" Value="DemiBold" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Character.IsEnabled}" Value="False">
+                    <Setter Property="FontStyle" Value="Italic"/>
+                    <Setter Property="FontWeight" Value="Normal" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+        <Image Height="{DynamicResource EQTitleSize}" HorizontalAlignment="Right" Margin="0,0,15,0"
+               Visibility="{Binding Character.IsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+          <Image.Style>
+            <Style TargetType="Image">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="True">
+                  <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/waiting.gif"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="False">
+                  <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/active.gif"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="{x:Null}">
+                  <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/idle.gif"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Image.Style>
+        </Image>
+        <Label Foreground="Transparent" Background="Transparent" HorizontalAlignment="Right" Width="50" Margin="0,0,24,0">
+          <Label.Style>
+            <Style TargetType="Label">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="True">
+                  <Setter Property="ToolTip" Value="Attempting to open log file."/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="False">
+                  <Setter Property="ToolTip" Value="Log file active."/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsWaiting}" Value="{x:Null}">
+                  <Setter Property="ToolTip" Value="File open. Waiting for data."/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsEnabled}" Value="False">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Character.IsEnabled}" Value="True">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Label.Style>
+        </Label>
       </Grid>
     </DataTemplate>
 

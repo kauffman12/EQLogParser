@@ -231,10 +231,13 @@ namespace EQLogParser
     internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
     internal async Task Dispose() => await _taskQueue.Stop();
 
-    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string idleColor, string resetColor, string fontColor)
+    internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume,
+      string activeColor, string idleColor, string resetColor, string fontColor, string parentId = null)
     {
       if (await GetConfig() is { } config)
       {
+        EnsureCharacterFolders(config);
+        var parent = NormalizeParent(parentId);
         var newCharacter = new TriggerCharacter
         {
           Name = name,
@@ -246,11 +249,12 @@ namespace EQLogParser
           IdleColor = idleColor,
           ResetColor = resetColor,
           FontColor = fontColor,
-          Id = Guid.NewGuid().ToString()
+          Id = Guid.NewGuid().ToString(),
+          Parent = parent,
+          Index = GetNextCharacterTreeIndex(config, parent)
         };
 
         config.Characters.Add(newCharacter);
-        config.Characters.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
         await UpdateConfig(config);
       }
     }
@@ -446,7 +450,17 @@ namespace EQLogParser
             configs.Insert(new TriggerConfig { Id = Guid.NewGuid().ToString() });
           }
 
-          return Task.FromResult(configs.FindAll().FirstOrDefault());
+          var config = configs.FindAll().FirstOrDefault();
+          if (config != null)
+          {
+            EnsureCharacterFolders(config);
+            if (AssignCharacterTreeIndicesIfNeeded(config))
+            {
+              configs.Update(config);
+            }
+          }
+
+          return Task.FromResult(config);
         }
 
         return Task.FromResult<TriggerConfig>(null);
@@ -771,6 +785,159 @@ namespace EQLogParser
       }
     }
 
+    /* Persist IsEnabled for many characters in one write (folder recursive checkbox). */
+    internal async Task UpdateCharactersEnabled(IEnumerable<(string Id, bool Enabled)> updates)
+    {
+      if (await GetConfig() is not { } config)
+      {
+        return;
+      }
+
+      var byId = updates.ToDictionary(item => item.Id, item => item.Enabled);
+      var changed = false;
+      foreach (var character in config.Characters)
+      {
+        if (byId.TryGetValue(character.Id, out var enabled) && character.IsEnabled != enabled)
+        {
+          character.IsEnabled = enabled;
+          if (enabled)
+          {
+            character.IsWaiting = true;
+          }
+
+          changed = true;
+        }
+      }
+
+      if (changed)
+      {
+        await UpdateConfig(config);
+      }
+    }
+
+    /* Create a character folder under parentId (empty/null = root). */
+    internal async Task<TriggerCharacterFolder> CreateCharacterFolder(string parentId, string name)
+    {
+      if (await GetConfig() is not { } config)
+      {
+        return null;
+      }
+
+      EnsureCharacterFolders(config);
+      var parent = NormalizeParent(parentId);
+      var folder = new TriggerCharacterFolder
+      {
+        Id = Guid.NewGuid().ToString(),
+        Name = name,
+        Parent = parent,
+        Index = GetNextCharacterTreeIndex(config, parent),
+        IsExpanded = true
+      };
+
+      config.CharacterFolders.Add(folder);
+      await UpdateConfig(config);
+      return folder;
+    }
+
+    internal async Task RenameCharacterFolder(string id, string name)
+    {
+      if (await GetConfig() is not { } config)
+      {
+        return;
+      }
+
+      EnsureCharacterFolders(config);
+      if (config.CharacterFolders.FirstOrDefault(folder => folder.Id == id) is { } existing)
+      {
+        existing.Name = name;
+        await UpdateConfigSilent(config);
+      }
+    }
+
+    /* Remove the folder and move its children (characters and nested folders) to the parent. */
+    internal async Task DeleteCharacterFolder(string id)
+    {
+      if (await GetConfig() is not { } config)
+      {
+        return;
+      }
+
+      EnsureCharacterFolders(config);
+      if (config.CharacterFolders.FirstOrDefault(folder => folder.Id == id) is not { } existing)
+      {
+        return;
+      }
+
+      var newParent = NormalizeParent(existing.Parent);
+      var nextIndex = GetNextCharacterTreeIndex(config, newParent);
+      foreach (var folder in config.CharacterFolders.Where(folder => SameParent(folder.Parent, existing.Id)).ToList())
+      {
+        folder.Parent = newParent;
+        folder.Index = nextIndex++;
+      }
+
+      foreach (var character in config.Characters.Where(character => SameParent(character.Parent, existing.Id)).ToList())
+      {
+        character.Parent = newParent;
+        character.Index = nextIndex++;
+      }
+
+      config.CharacterFolders.Remove(existing);
+      await UpdateConfig(config);
+    }
+
+    /* Persist Parent/Index after drag-and-drop. */
+    internal async Task UpdateCharacterTreePositions(IReadOnlyList<(string Id, bool IsFolder, string Parent, int Index)> positions)
+    {
+      if (await GetConfig() is not { } config || positions == null || positions.Count == 0)
+      {
+        return;
+      }
+
+      EnsureCharacterFolders(config);
+      var folderById = config.CharacterFolders.ToDictionary(folder => folder.Id);
+      var characterById = config.Characters.ToDictionary(character => character.Id);
+      foreach (var position in positions)
+      {
+        var parent = NormalizeParent(position.Parent);
+        if (position.IsFolder)
+        {
+          if (folderById.TryGetValue(position.Id, out var folder))
+          {
+            folder.Parent = parent;
+            folder.Index = position.Index;
+          }
+        }
+        else if (characterById.TryGetValue(position.Id, out var character))
+        {
+          character.Parent = parent;
+          character.Index = position.Index;
+        }
+      }
+
+      await UpdateConfig(config);
+    }
+
+    internal async Task SetCharacterFolderExpanded(string id, bool expanded)
+    {
+      if (await GetConfig() is not { } config)
+      {
+        return;
+      }
+
+      EnsureCharacterFolders(config);
+      if (config.CharacterFolders.FirstOrDefault(folder => folder.Id == id) is { } existing)
+      {
+        existing.IsExpanded = expanded;
+        await UpdateConfigSilent(config);
+      }
+    }
+
+    internal static string NormalizeParent(string parent) => string.IsNullOrEmpty(parent) ? "" : parent;
+
+    internal static bool SameParent(string left, string right) =>
+      string.Equals(NormalizeParent(left), NormalizeParent(right), StringComparison.Ordinal);
+
     internal async Task UpdateCharacter(string id, string name, string filePath, string voice, int voiceRate, int customVolume, string activeColor, string idleColor, string resetColor, string fontColor)
     {
       if (await GetConfig() is { } config && config.Characters.FirstOrDefault(character => character.Id == id) is { } existing)
@@ -797,6 +964,16 @@ namespace EQLogParser
       });
 
       TriggerConfigUpdateEvent?.Invoke(config);
+    }
+
+    /* Persist config without notifying listeners (folder expand/rename). */
+    private async Task UpdateConfigSilent(TriggerConfig config)
+    {
+      await _taskQueue.EnqueueTransaction(() =>
+      {
+        GetCol<TriggerConfig>(ConfigCol)?.Update(config);
+        return Task.CompletedTask;
+      });
     }
 
     internal async void UpdateLastTriggered(string id, double updatedTime)
@@ -1388,6 +1565,58 @@ namespace EQLogParser
     {
       var highest = tree.Query().Where(n => n.Parent == parentId).OrderByDescending(n => n.Index).FirstOrDefault();
       return highest?.Index + 1 ?? 0;
+    }
+
+    private static void EnsureCharacterFolders(TriggerConfig config)
+    {
+      config.CharacterFolders ??= [];
+      foreach (var character in config.Characters)
+      {
+        character.Parent = NormalizeParent(character.Parent);
+      }
+
+      foreach (var folder in config.CharacterFolders)
+      {
+        folder.Parent = NormalizeParent(folder.Parent);
+      }
+    }
+
+    /* First-load: if every character still has Index 0 and there are no folders, keep the old name sort. */
+    private static bool AssignCharacterTreeIndicesIfNeeded(TriggerConfig config)
+    {
+      if (config.CharacterFolders.Count > 0 || config.Characters.Count <= 1)
+      {
+        return false;
+      }
+
+      if (config.Characters.Any(character => character.Index != 0))
+      {
+        return false;
+      }
+
+      config.Characters.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+      for (var i = 0; i < config.Characters.Count; i++)
+      {
+        config.Characters[i].Index = i;
+      }
+
+      return true;
+    }
+
+    private static int GetNextCharacterTreeIndex(TriggerConfig config, string parent)
+    {
+      parent = NormalizeParent(parent);
+      var folderMax = config.CharacterFolders
+        .Where(folder => SameParent(folder.Parent, parent))
+        .Select(folder => folder.Index)
+        .DefaultIfEmpty(-1)
+        .Max();
+      var characterMax = config.Characters
+        .Where(character => SameParent(character.Parent, parent))
+        .Select(character => character.Index)
+        .DefaultIfEmpty(-1)
+        .Max();
+      return Math.Max(folderMax, characterMax) + 1;
     }
 
     // remove eventually

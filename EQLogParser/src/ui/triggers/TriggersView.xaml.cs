@@ -259,14 +259,7 @@ namespace EQLogParser
       {
         if (characterView?.Visibility == Visibility.Visible)
         {
-          if (characterView.dataGrid.ItemsSource is List<TriggerCharacter> characters)
-          {
-            var index = characters.FindIndex(character => character.Id == entry.CharacterId);
-            if (index > -1)
-            {
-              characterView.dataGrid.SelectedIndex = index;
-            }
-          }
+          characterView.SelectCharacter(entry.CharacterId);
         }
 
         Dispatcher.InvokeAsync(async () => await theTreeView.SelectNode(entry.NodeId));

@@ -599,12 +599,27 @@ namespace EQLogParser
     public string Parent { get; set; }
   }
 
-  internal class TriggerCharacter
+  /* Character entry in Advanced Trigger Manager. Parent/Index organize the folder tree; empty Parent is root. */
+  internal class TriggerCharacter : INotifyPropertyChanged
   {
+    private bool _isEnabled;
+    private bool? _isWaiting = true;
+
     public string Id { get; set; }
     public string Name { get; set; }
     public string FilePath { get; set; }
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled
+    {
+      get => _isEnabled;
+      set
+      {
+        if (_isEnabled != value)
+        {
+          _isEnabled = value;
+          PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnabled)));
+        }
+      }
+    }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
     public int CustomVolume { get; set; } = -1;
@@ -612,7 +627,36 @@ namespace EQLogParser
     public string IdleColor { get; set; }
     public string ResetColor { get; set; }
     public string FontColor { get; set; }
-    [BsonIgnore] public bool? IsWaiting { get; set; } = true;
+    /* Folder id that contains this character. Null/empty means the character is at the tree root. */
+    public string Parent { get; set; }
+    /* Sort order among siblings in the same folder (or at root). */
+    public int Index { get; set; }
+    [BsonIgnore]
+    public bool? IsWaiting
+    {
+      get => _isWaiting;
+      set
+      {
+        if (_isWaiting != value)
+        {
+          _isWaiting = value;
+          PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsWaiting)));
+        }
+      }
+    }
+    [BsonIgnore]
+    public event PropertyChangedEventHandler PropertyChanged;
+  }
+
+  /* Nested folder used only for organizing characters. Checking a folder enables/disables descendant characters. */
+  internal class TriggerCharacterFolder
+  {
+    public string Id { get; set; }
+    public string Name { get; set; }
+    /* Parent folder id. Null/empty means this folder is at the tree root. */
+    public string Parent { get; set; }
+    public int Index { get; set; }
+    public bool IsExpanded { get; set; } = true;
   }
 
   internal class TriggerConfig
@@ -621,6 +665,7 @@ namespace EQLogParser
     public string Id { get; set; }
     public bool IsAdvanced { get; set; }
     public List<TriggerCharacter> Characters { get; set; } = [];
+    public List<TriggerCharacterFolder> CharacterFolders { get; set; } = [];
     public bool IsEnabled { get; set; }
     public string Voice { get; set; }
     public int VoiceRate { get; set; }
@@ -652,6 +697,16 @@ namespace EQLogParser
     public bool IsDir() => !IsOverlay() && !IsTrigger();
     public bool IsRecentlyMerged { get; set; }
     public bool HasMissingMedia { get; set; }
+  }
+
+  /* SfTreeView node for Manage Characters. Folder nodes have Folder set; character nodes have Character set. */
+  internal class CharacterTreeViewNode : TreeViewNode
+  {
+    public TriggerCharacter Character { get; set; }
+    public TriggerCharacterFolder Folder { get; set; }
+    public bool IsFolder() => Folder != null;
+    public bool IsCharacter() => Character != null;
+    public string NodeId => Folder?.Id ?? Character?.Id;
   }
 
   internal class TriggerLogEntry

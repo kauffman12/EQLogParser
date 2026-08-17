@@ -5,12 +5,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
-             xmlns:gif="http://wpfanimatedgif.codeplex.com"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <local:BooleanToVisibilityConverter x:Key="VisConverter" />
+      <local:CharacterTemplateSelector x:Key="characterTemplateSelector"/>
     </Grid.Resources>
     <Grid Grid.Column="0">
       <Grid.RowDefinitions>
@@ -28,93 +27,48 @@
         <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Margin="0,0,8,0" Padding="4,4,4,4" IsEnabled="False" Click="ModifyClick">Modify</Button>
         <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Padding="4,4,4,4" IsEnabled="False" Click="DeleteClick">Delete</Button>
       </syncfusion:ToolBarAdv>
-      <syncfusion:SfDataGrid x:Name="dataGrid"
-                               Grid.Row="2"
-                               AllowResizingColumns="False"
-                               AutoGenerateColumns="False"
-                               ColumnSizer="AutoLastColumnFill"
-                               HideEmptyGridViewDefinition="False"
-                               GridLinesVisibility="Both"
-                               CurrentCellBorderThickness="2"
-                               HeaderRowHeight="0"
-                               IsReadOnly="True"
-                               RowHeight="{DynamicResource EQTableRowHeight}"
-                               SelectionChanged="CharacterSelectionChanged"
-                               ShowRowHeader="False"
-                               GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                               SelectionUnit="Row"
-                               SelectionMode="Extended">
-        <syncfusion:SfDataGrid.Columns>
-          <syncfusion:GridTemplateColumn MappingName="Configured Players">
-            <syncfusion:GridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Grid>
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <CheckBox Margin="8,0,0,0" FocusVisualStyle="{x:Null}" IsChecked="{Binding IsEnabled, Mode=TwoWay}" 
-                        PreviewMouseLeftButtonDown="CharacterCheckboxPreviewMouseLeftButtonDown" />
-                    <TextBlock Margin="5,0,0,0" Padding="4,0,4,0" VerticalAlignment="Center" Text="{Binding Name}">
-                      <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                          <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                              <Setter Property="FontStyle" Value="Normal"/>
-                              <Setter Property="FontWeight" Value="DemiBold" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                              <Setter Property="FontStyle" Value="Italic"/>
-                              <Setter Property="FontWeight" Value="Normal" />
-                            </DataTrigger>
-                          </Style.Triggers>
-                        </Style>
-                      </TextBlock.Style>
-                    </TextBlock>
-                  </StackPanel>
-                  <Image Height="{DynamicResource EQTitleSize}" HorizontalAlignment="Right" Margin="0,0,15,0" Visibility="{Binding IsEnabled, Converter={StaticResource VisConverter}}">
-                    <Image.Style>
-                      <Style TargetType="Image">
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="True">
-                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/waiting.gif"/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="False">
-                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/active.gif"/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="{x:Null}">
-                            <Setter Property="gif:ImageBehavior.AnimatedSource" Value="/icons/idle.gif"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Image.Style>
-                  </Image>
-                  <Label Foreground="Transparent" Background="Transparent" HorizontalAlignment="Right" Width="50" Margin="0,0,24,0">
-                    <Label.Style>
-                      <Style TargetType="Label">
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="True">
-                            <Setter Property="ToolTip" Value="Attempting to open log file."/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="False">
-                            <Setter Property="ToolTip" Value="Log file active."/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsWaiting}" Value="{x:Null}">
-                            <Setter Property="ToolTip" Value="File open. Waiting for data."/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                          </DataTrigger>
-                          <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                            <Setter Property="Visibility" Value="Visible"/>
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Label.Style>
-                  </Label>
-                </Grid>
-              </DataTemplate>
-            </syncfusion:GridTemplateColumn.CellTemplate>
-          </syncfusion:GridTemplateColumn>
-        </syncfusion:SfDataGrid.Columns>
-      </syncfusion:SfDataGrid>
+      <syncfusion:SfTreeView
+          x:Name="characterTreeView"
+          Grid.Row="2"
+          AllowDragging="True"
+          AllowEditing="True"
+          BorderBrush="{DynamicResource ContentBackground}"
+          BorderThickness="0"
+          CheckBoxMode="Recursive"
+          EditTrigger="F2"
+          FullRowSelect="False"
+          IsAnimationEnabled="False"
+          ItemBeginEdit="ItemBeginEdit"
+          ItemContextMenuOpening="CharacterItemContextMenuOpening"
+          ItemDropped="ItemDropped"
+          ItemDropping="ItemDropping"
+          ItemEndEdit="ItemEndEdit"
+          ItemTemplateDataContextType="Node"
+          ItemTemplateSelector="{StaticResource characterTemplateSelector}"
+          NodeChecked="NodeChecked"
+          NodeCollapsed="NodeExpanded"
+          NodeExpanded="NodeExpanded"
+          Padding="0"
+          PreviewKeyDown="CharacterTreePreviewKeyDown"
+          PreviewMouseRightButtonDown="CharacterTreePreviewMouseRightButtonDown"
+          SelectionChanged="CharacterSelectionChanged"
+          SelectionMode="Extended"
+          ShowRootLines="False">
+        <syncfusion:SfTreeView.EditTemplate>
+          <DataTemplate>
+            <TextBox HorizontalAlignment="Stretch" FontSize="{DynamicResource EQContentSize}" Margin="2,0,8,0"
+                     Text="{Binding Content, Mode=TwoWay}" />
+          </DataTemplate>
+        </syncfusion:SfTreeView.EditTemplate>
+        <syncfusion:SfTreeView.ItemContextMenu>
+          <ContextMenu>
+            <MenuItem x:Name="newFolderMenuItem" Header="New Folder" Click="FolderClick" />
+            <MenuItem x:Name="editMenuItem" Header="Modify" Click="ModifyClick" />
+            <Separator />
+            <MenuItem x:Name="deleteMenuItem" Header="Delete" Click="DeleteClick" />
+          </ContextMenu>
+        </syncfusion:SfTreeView.ItemContextMenu>
+      </syncfusion:SfTreeView>
     </Grid>
   </Grid>
 </UserControl>
