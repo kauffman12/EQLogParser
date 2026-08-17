@@ -248,22 +248,22 @@ internal static class NagUtil
         : null;
 
       // NAG separates multiple condition values with |. Split them and OR-combine the
-      // clauses; parenthesize multi-clause results so they cannot leak across a larger
-      // "&&" join (EQLP's condition grammar binds AND tighter than OR).
-      string OrClauses(Func<string, string> clause)
+      // clauses; callers parenthesize multi-clause results so they cannot leak across a
+      // larger "&&" join (EQLP's condition grammar binds AND tighter than OR).
+      (string? Joined, bool Multiple) OrClauses(Func<string, string> clause)
       {
         var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
         if (values.Length == 0)
         {
-          return null;
+          return (null, false);
         }
 
-        var joined = string.Join(" || ", values.Select(clause));
-        return values.Length > 1 ? $"({joined})" : joined;
+        return (string.Join(" || ", values.Select(clause)), values.Length > 1);
       }
 
       static string Escaped(string v) => v.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
+      (string? Joined, bool Multiple) orClauses = (null, false);
       string part = null;
       switch (operatorType)
       {
@@ -274,8 +274,11 @@ internal static class NagUtil
 
         // Equals: exact match against any of NAG's pipe-separated values.
         case 1:
-          part = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+        {
+          orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+          part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
           break;
+        }
 
         // DoesNotEqual: with values, no stored value may equal a condition value (an unset
         // variable passes); without a value, NAG passes only when the variable has at
@@ -288,16 +291,20 @@ internal static class NagUtil
           }
           else
           {
-            var notEqualClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
-            part = notEqualClauses is null ? null : $"!({notEqualClauses})";
+            // The negation must bind to the whole OR group, so always parenthesize.
+            orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+            part = orClauses.Joined is null ? null : $"!({orClauses.Joined})";
           }
           break;
         }
 
         // Contains: case-insensitive substring of any pipe-separated value.
         case 16:
-          part = OrClauses(v => $"{{{varName}}} contains \"{Escaped(v)}\"");
+        {
+          orClauses = OrClauses(v => $"{{{varName}}} contains \"{Escaped(v)}\"");
+          part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
           break;
+        }
       }
 
       if (part is null)

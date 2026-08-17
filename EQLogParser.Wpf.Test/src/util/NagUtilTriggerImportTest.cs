@@ -710,13 +710,16 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_NullOperatorType_HandledGracefully()
     {
-      // NAG data has 4 conditions with null operatorType — must not crash
+      // NAG data has 4 conditions with null operatorType — must not crash, and the
+      // unevaluable condition is dropped + reported (Partial) rather than silently lost.
       var json = "{\"triggers\":[{\"name\":\"Null Op Trigger\",\"triggerId\":\"t1\",\"onlyExecuteInDev\":false,\"capturePhrases\":[{\"phrase\":\"pattern\",\"useRegEx\":false}],\"conditions\":[{\"conditionType\":1,\"variableName\":\"SomeVar\",\"operatorType\":null,\"variableValue\":\"val\"}],\"actions\":[{\"actionType\":0,\"displayText\":\"text\"}]}]}";
 
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      Assert.AreEqual("Imported", results[0].Status);
+      Assert.IsNull(nodes[0].TriggerData.MatchVariableCondition);
+      Assert.AreEqual("Partial", results[0].Status);
+      Assert.Contains("condition operator -1 on SomeVar", results[0].DroppedFeatures);
     }
 
     #endregion
@@ -844,7 +847,8 @@ namespace EQLogParser.Wpf.Test
       Assert.HasCount(1, nodes);
       Assert.Contains("(?<SpellBeingCast>.+?)", nodes[0].TriggerData.Pattern);
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("phrase ${var} restriction", results[0].DroppedFeatures);
+      // Assert.Contains on a collection is an exact match — use the full note string.
+      Assert.Contains("phrase ${var} restriction (NAG only matches stored variable values; import matches any text)", results[0].DroppedFeatures);
     }
 
     [TestMethod]
@@ -864,7 +868,7 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       Assert.AreEqual("Imported", results[0].Status);
-      Assert.IsFalse(results[0].DroppedFeatures.Contains("phrase ${var} restriction"));
+      Assert.IsFalse(results[0].DroppedFeatures.Any(f => f.StartsWith("phrase ${var} restriction")));
     }
 
     #endregion
@@ -1968,9 +1972,9 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual("Physical", counterVarAction.VariableName);
       Assert.AreEqual(1, counterVarAction.Step);
 
-      // The visible-countdown gap is reported honestly in the single import result.
-      Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("counter converted to variable only (no visible timer)", results[0].DroppedFeatures);
+      // NAG counters are invisible tallies in NAG itself, and this import keeps them
+      // invisible (variable action + RepeatedResetTime), so the conversion is faithful.
+      Assert.AreEqual("Imported", results[0].Status);
 
       // Reset phrase trigger (from "^Your bones are no longer brittle.")
       var resetNode = nodes[1];
@@ -2024,7 +2028,8 @@ namespace EQLogParser.Wpf.Test
       // The trigger is Partial: the ${var} restriction note (phrases use ${SpellBeingCast})
       // and the clear-variable alert overlay note have no EQLP equivalents.
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("phrase ${var} restriction", results[0].DroppedFeatures);
+      // Assert.Contains on a collection is an exact match — use the full note string.
+      Assert.Contains("phrase ${var} restriction (NAG only matches stored variable values; import matches any text)", results[0].DroppedFeatures);
 
       // All 5 failure phrases [3-7] ("interrupted", "resisted", "blocked", "fizzles", "reflected")
       // should have a Clear VariableAction for SpellBeingCast, since the actionType 7 has
