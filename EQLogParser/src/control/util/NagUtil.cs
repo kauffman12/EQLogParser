@@ -1276,7 +1276,8 @@ internal static class NagUtil
           actionSummary.Add(repeatTimer ? "Looping Timer" : "Timer");
           break;
 
-        case 6: // Timer with Remain (remain-after-ended)
+        case 6: // DotTimer (NAG v0.2.26 name; older notes said "Timer with Remain"). The tick display has
+          // no EQLP equivalent — import as a plain countdown and report the divergence.
           hasAction = true;
           timerType = 1;
           ParseTimerActionFields(action, handleNullDuration: false,
