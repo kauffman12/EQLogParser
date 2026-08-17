@@ -113,12 +113,15 @@ namespace EQLogParser
 
     private async void UpdateStatus()
     {
-      if (_lastConfig?.Characters == null)
+      /* Write status onto the tree-bound instances. LiteDB returns fresh objects on every config
+         read, so _lastConfig characters can be different instances than the ones the UI is bound to. */
+      var byId = EnumerateNodes()
+        .Where(node => node.Character != null)
+        .ToDictionary(node => node.Character.Id, node => node.Character);
+      if (byId.Count == 0)
       {
         return;
       }
-
-      var byId = _lastConfig.Characters.ToDictionary(character => character.Id);
       foreach (var reader in await TriggerManager.Instance.GetLogReadersAsync())
       {
         if (reader.GetProcessor() is TriggerProcessor processor && byId.TryGetValue(processor.CurrentCharacterId, out var character))
@@ -614,14 +617,12 @@ namespace EQLogParser
       return false;
     }
 
+    /* Carry the live tree waiting state onto fresh config instances before nodes rebind to them. */
     private void PreserveWaiting(TriggerConfig config)
     {
-      if (_lastConfig?.Characters == null)
-      {
-        return;
-      }
-
-      var waiting = _lastConfig.Characters.ToDictionary(character => character.Id, character => character.IsWaiting);
+      var waiting = EnumerateNodes()
+        .Where(node => node.Character != null)
+        .ToDictionary(node => node.Character.Id, node => node.Character.IsWaiting);
       foreach (var character in config.Characters)
       {
         if (waiting.TryGetValue(character.Id, out var value))
