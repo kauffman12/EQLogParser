@@ -19,8 +19,7 @@
         WindowStartupLocation="CenterOwner"
         SizeToContent="WidthAndHeight"
         MinHeight="135"
-        MinWidth="300"
-        MaxWidth="375">
+        Width="375">
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="1*" />
