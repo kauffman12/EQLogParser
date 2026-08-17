@@ -42,7 +42,10 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual("Test Trigger", nodes[0].Name);
       Assert.IsFalse(nodes[0].TriggerData.UseRegex);
       Assert.AreEqual("Fireball cast!", nodes[0].TriggerData.TextToDisplay);
-      Assert.AreEqual(5.0, nodes[0].TriggerData.DurationSeconds);
+      // NAG's DisplayText duration is only the on-screen lifetime of the text — it must NOT
+      // become an EQLP timer, or every text notification would show a countdown.
+      Assert.IsFalse(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual(0.0, nodes[0].TriggerData.DurationSeconds);
       // Pattern must be set — this is the critical bug that was previously missed
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("spellcast:Fireball", nodes[0].TriggerData.Pattern);
@@ -123,7 +126,8 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(1, nodes);
       Assert.AreEqual("Hello World", nodes[0].TriggerData.TextToDisplay);
-      Assert.AreEqual(10.0, nodes[0].TriggerData.DurationSeconds);
+      // Text display duration must not turn the notification into a countdown.
+      Assert.IsFalse(nodes[0].TriggerData.EnableTimer);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("Imported", results[0].Status);
     }
@@ -415,9 +419,12 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void ConvertTriggers_ActionType7_ClearVariable_MappedToEndTimerClearVariables()
     {
+      // The trigger needs a real timer action for EndTimerClearVariables to fire at timer
+      // end — a DisplayText duration no longer creates one.
       var json = CreateTriggerJson("Var Trigger", "pattern", actions:
       [
-        CreateAction(0, displayText: "text overlay", duration: 5.0),
+        CreateAction(0, displayText: "text overlay"),
+        CreateAction(4, displayText: "channeling", duration: 5.0),
         CreateAction(7, variableName: "SpellBeingCast")
       ]);
 

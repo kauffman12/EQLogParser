@@ -1169,10 +1169,12 @@ internal static class NagUtil
           {
             textToDisplay = ConvertTemplates(text);
           }
-          if (action.TryGetProperty("duration", out var dur) && dur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
-          {
-            durationSeconds = dur.GetDouble();
-          }
+          // NAG's `duration` on a DisplayText action is only the number of seconds the
+          // text stays on screen before auto-hiding (overlay.js: sendDisplayTextToOverlay).
+          // It is deliberately NOT mapped to EnableTimer/DurationSeconds: EQLP would render
+          // that as a visible countdown instead of a plain text notification, and EQLP has
+          // no auto-hide for timerless text anyway. The text persists until cleared by a
+          // clear action (see docs/nag-import.md).
           // Collect overlayId for text overlay routing
           if (action.TryGetProperty("overlayId", out var ov0) && ov0.GetString() is { Length: > 0 } overlayId0)
           {
