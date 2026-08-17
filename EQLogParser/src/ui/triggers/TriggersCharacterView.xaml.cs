@@ -182,6 +182,13 @@ namespace EQLogParser
 
     private async void FolderClick(object sender, RoutedEventArgs e) => await CreateAndRenameFolderAsync(GetTargetFolderId());
 
+    /* Context menu on empty tree space: create a character at the root. */
+    private void RootCharacterClick(object sender, RoutedEventArgs e)
+    {
+      var configWindow = new TriggerPlayerConfigWindow(null, "");
+      configWindow.ShowDialog();
+    }
+
     /* Context menu on empty tree space: create a folder at the root. */
     private async void RootFolderClick(object sender, RoutedEventArgs e) => await CreateAndRenameFolderAsync("");
 
@@ -255,6 +262,7 @@ namespace EQLogParser
       var selected = characterTreeView?.SelectedItems?.OfType<CharacterTreeViewNode>().ToList() ?? [];
       var single = selected.Count == 1 ? selected[0] : null;
 
+      newCharacterMenuItem.IsEnabled = single != null;
       newFolderMenuItem.IsEnabled = single != null;
       editMenuItem.IsEnabled = single != null;
       deleteMenuItem.IsEnabled = single != null;
@@ -302,10 +310,13 @@ namespace EQLogParser
       }
       else
       {
-        var menuItem = new MenuItem { Header = "New Folder" };
-        menuItem.Click += RootFolderClick;
+        var newCharacterItem = new MenuItem { Header = "New Character" };
+        newCharacterItem.Click += RootCharacterClick;
+        var newFolderItem = new MenuItem { Header = "New Folder" };
+        newFolderItem.Click += RootFolderClick;
         var menu = new ContextMenu { Placement = PlacementMode.MousePoint, PlacementTarget = characterTreeView };
-        menu.Items.Add(menuItem);
+        menu.Items.Add(newCharacterItem);
+        menu.Items.Add(newFolderItem);
         menu.IsOpen = true;
       }
     }

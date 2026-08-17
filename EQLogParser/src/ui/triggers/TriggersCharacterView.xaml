@@ -62,6 +62,7 @@
         </syncfusion:SfTreeView.EditTemplate>
         <syncfusion:SfTreeView.ItemContextMenu>
           <ContextMenu>
+            <MenuItem x:Name="newCharacterMenuItem" Header="New Character" Click="AddClick" />
             <MenuItem x:Name="newFolderMenuItem" Header="New Folder" Click="FolderClick" />
             <MenuItem x:Name="editMenuItem" Header="Modify" Click="ModifyClick" />
             <Separator />
