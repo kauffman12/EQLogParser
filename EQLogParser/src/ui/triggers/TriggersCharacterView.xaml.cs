@@ -232,7 +232,7 @@ namespace EQLogParser
       else if (node.Folder is { } folder)
       {
         var msgDialog = new MessageWindow(
-          $"Are you sure you want to delete '{folder.Name}'? Contents will be moved out, not deleted.",
+          $"Are you sure you want to delete '{folder.Name}'? Contents will be kept.",
           Resource.FOLDER_DELETE, MessageWindow.IconType.Question, "Delete");
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
