@@ -17,16 +17,19 @@
         <RowDefinition Height="30" />
         <RowDefinition Height="100*" />
       </Grid.RowDefinitions>
-      <Border Grid.Row="0" Padding="8,2,0,0" Background="{DynamicResource ContentBackgroundAlt}">
+      <!-- Same framed header panel as TriggersTreeView: plain WPF Borders (Alt3 frame + Alt2 surface) so the theme has nothing to override. -->
+      <Border Grid.Row="0" Grid.RowSpan="2" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
         <DockPanel>
-          <TextBlock Text="Manage Characters" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+          <Border DockPanel.Dock="Top" Height="36" Padding="6,2,0,0" Background="{DynamicResource ContentBackgroundAlt2}">
+            <TextBlock Text="Manage Characters" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
+          </Border>
+          <syncfusion:ToolBarAdv GripperVisibility="Hidden" Background="{DynamicResource ContentBackgroundAlt2}">
+            <Button x:Name="addCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Margin="0,0,8,0" Padding="4,4,4,4" Click="AddClick">Add</Button>
+            <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Margin="0,0,8,0" Padding="4,4,4,4" IsEnabled="False" Click="ModifyClick">Modify</Button>
+            <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Padding="4,4,4,4" IsEnabled="False" Click="DeleteClick">Delete</Button>
+          </syncfusion:ToolBarAdv>
         </DockPanel>
       </Border>
-      <syncfusion:ToolBarAdv Grid.Row="1" GripperVisibility="Hidden" Background="{DynamicResource ContentBackground}">
-        <Button x:Name="addCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Margin="0,0,8,0" Padding="4,4,4,4" Click="AddClick">Add</Button>
-        <Button x:Name="modifyCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Margin="0,0,8,0" Padding="4,4,4,4" IsEnabled="False" Click="ModifyClick">Modify</Button>
-        <Button x:Name="deleteCharacter" FontSize="{DynamicResource EQContentSize}" MinWidth="50" Padding="4,4,4,4" IsEnabled="False" Click="DeleteClick">Delete</Button>
-      </syncfusion:ToolBarAdv>
       <syncfusion:SfTreeView
           x:Name="characterTreeView"
           Grid.Row="2"
