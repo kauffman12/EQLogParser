@@ -220,9 +220,8 @@ namespace EQLogParser
 
       if (node.Character is { } character)
       {
-        /* Same wording/icon/button as the other delete confirmations (TriggersTreeView). */
         var msgDialog = new MessageWindow($"Are you sure you want to delete {character.Name}?",
-          Resource.TRIGGER_CHARACTER_DELETE, MessageWindow.IconType.Question, "Delete");
+          Resource.TRIGGER_CHARACTER_DELETE, MessageWindow.IconType.Warn, "Delete");
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
         {
@@ -232,7 +231,7 @@ namespace EQLogParser
       else if (node.Folder is { } folder)
       {
         var msgDialog = new MessageWindow(
-          $"Are you sure you want to delete '{folder.Name}'? Contents will be moved to the parent.",
+          $"Are you sure you want to delete {folder.Name}? Contents will be moved to the parent.",
           Resource.FOLDER_DELETE, MessageWindow.IconType.Warn, "Delete");
         msgDialog.ShowDialog();
         if (msgDialog.IsYes1Clicked)
