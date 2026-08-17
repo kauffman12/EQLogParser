@@ -61,8 +61,7 @@
           </DataTemplate>
         </syncfusion:SfTreeView.EditTemplate>
         <syncfusion:SfTreeView.ItemContextMenu>
-          <ContextMenu Background="{DynamicResource ContentBackgroundAlt2}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
-                       BorderThickness="1">
+          <ContextMenu>
             <MenuItem x:Name="newCharacterMenuItem" Header="New Character" Click="AddClick" />
             <MenuItem x:Name="newFolderMenuItem" Header="New Folder" Click="FolderClick" />
             <MenuItem x:Name="editMenuItem" Header="Modify" Click="ModifyClick" />
