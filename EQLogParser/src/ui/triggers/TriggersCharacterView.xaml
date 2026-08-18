@@ -27,13 +27,14 @@
                New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) for New Character / New Folder at the top level. -->
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
             <!-- Always creates at top level (unlike the row context menu, which is relative to the selection). -->
-            <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,8,0" Padding="10,3,4,3">
+            <!-- IconHeight=0/IconWidth=5 and 4px padding/margins match Timeline's Manage Layouts DropDownButtonAdv. -->
+            <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" IconHeight="0" IconWidth="5" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="4,0,4,0">
               <syncfusion:DropDownMenuGroup>
                 <syncfusion:DropDownMenuItem Header="New Character" Click="RootCharacterClick" />
                 <syncfusion:DropDownMenuItem Header="New Folder" Click="RootFolderClick" />
               </syncfusion:DropDownMenuGroup>
             </syncfusion:DropDownButtonAdv>
-            <Button x:Name="modifyCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,8,0" Padding="10,3,10,3" IsEnabled="False" Click="ModifyClick" Content="Modify" />
+            <Button x:Name="modifyCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="10,3,10,3" IsEnabled="False" Click="ModifyClick" Content="Modify" />
             <Button x:Name="deleteCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Padding="10,3,10,3" IsEnabled="False" Click="DeleteClick" Content="Delete" />
           </StackPanel>
         </DockPanel>
