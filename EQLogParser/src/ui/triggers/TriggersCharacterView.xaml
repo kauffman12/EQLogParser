@@ -24,12 +24,13 @@
             <TextBlock Text="Manage Characters" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
           </Border>
           <!-- Buttons in the Save/Cancel/Hide-Overlays house style, one font size smaller (EQDescriptionSize) and tighter padding to fit the compact panel.
-               New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) covering the context menu's New Character / New Folder options. -->
+               New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) for New Character / New Folder at the top level. -->
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+            <!-- Always creates at top level (unlike the row context menu, which is relative to the selection). -->
             <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,8,0" Padding="10,3,4,3">
               <syncfusion:DropDownMenuGroup>
-                <syncfusion:DropDownMenuItem Header="New Character" Click="AddClick" />
-                <syncfusion:DropDownMenuItem Header="New Folder" Click="FolderClick" />
+                <syncfusion:DropDownMenuItem Header="New Character" Click="RootCharacterClick" />
+                <syncfusion:DropDownMenuItem Header="New Folder" Click="RootFolderClick" />
               </syncfusion:DropDownMenuGroup>
             </syncfusion:DropDownButtonAdv>
             <Button x:Name="modifyCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,8,0" Padding="10,3,10,3" IsEnabled="False" Click="ModifyClick" Content="Modify" />

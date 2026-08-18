@@ -185,14 +185,14 @@ namespace EQLogParser
 
     private async void FolderClick(object sender, RoutedEventArgs e) => await CreateAndRenameFolderAsync(GetTargetFolderId());
 
-    /* Context menu on empty tree space: create a character at the root. */
+    /* Create a character at the root (toolbar New dropdown, context menu on empty tree space). */
     private void RootCharacterClick(object sender, RoutedEventArgs e)
     {
       var configWindow = new TriggerPlayerConfigWindow(null, "");
       configWindow.ShowDialog();
     }
 
-    /* Context menu on empty tree space: create a folder at the root. */
+    /* Create a folder at the root (toolbar New dropdown, context menu on empty tree space). */
     private async void RootFolderClick(object sender, RoutedEventArgs e) => await CreateAndRenameFolderAsync("");
 
     /* Creates a folder under parentId (empty = root) and starts an inline rename on it. */
