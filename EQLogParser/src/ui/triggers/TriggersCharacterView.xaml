@@ -27,15 +27,15 @@
                New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) for New Character / New Folder at the top level. -->
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
             <!-- Always creates at top level (unlike the row context menu, which is relative to the selection). -->
-            <!-- IconHeight=0/IconWidth=5 and 4px padding/margins match Timeline's Manage Layouts DropDownButtonAdv. -->
-            <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" IconHeight="0" IconWidth="5" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="4,0,4,0">
+            <!-- IconHeight=0/IconWidth=5 hide the default icon; EQButtonHeight keeps all three buttons the same height. -->
+            <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" IconHeight="0" IconWidth="5" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="0" Height="{DynamicResource EQButtonHeight}">
               <syncfusion:DropDownMenuGroup>
                 <syncfusion:DropDownMenuItem Header="New Character" Click="RootCharacterClick" />
                 <syncfusion:DropDownMenuItem Header="New Folder" Click="RootFolderClick" />
               </syncfusion:DropDownMenuGroup>
             </syncfusion:DropDownButtonAdv>
-            <Button x:Name="modifyCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="10,3,10,3" IsEnabled="False" Click="ModifyClick" Content="Modify" />
-            <Button x:Name="deleteCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Padding="10,3,10,3" IsEnabled="False" Click="DeleteClick" Content="Delete" />
+            <Button x:Name="modifyCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="10,0,10,0" IsEnabled="False" Click="ModifyClick" Content="Modify" Height="{DynamicResource EQButtonHeight}" />
+            <Button x:Name="deleteCharacter" Foreground="{DynamicResource PrimaryDarken}" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Padding="10,0,10,0" IsEnabled="False" Click="DeleteClick" Content="Delete" Height="{DynamicResource EQButtonHeight}" />
           </StackPanel>
         </DockPanel>
       </Border>
