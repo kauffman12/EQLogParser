@@ -230,6 +230,10 @@ namespace EQLogParser
       }
     }
 
+    /* Extra width above 15pt keeps the manage characters toolbar buttons visible at large fonts.
+       TriggersView must also apply this on theme changes: a ColumnDefinition's DynamicResource only resolves at load. */
+    internal static GridLength GetTriggerCharacterListWidth() => new(180 + (CurrentFontSize * 4) + Math.Max(0.0, CurrentFontSize - 15) * 17);
+
     private static void SetThemeFontSizes()
     {
       CurrentNameWidth = (10.0 * CurrentFontSize) + 25;
@@ -243,8 +247,7 @@ namespace EQLogParser
       Application.Current.Resources["EQGridTitleHeight"] = new GridLength(18 + CurrentFontSize);
       Application.Current.Resources["EQGridFooterHeight"] = new GridLength(10 + CurrentFontSize);
       Application.Current.Resources["EQFightGridTitleHeight"] = new GridLength(21 + CurrentFontSize);
-      // extra width above 15pt keeps the manage characters toolbar buttons fully visible at large fonts
-      Application.Current.Resources["EQTriggerCharacterList"] = new GridLength(180 + (CurrentFontSize * 4) + Math.Max(0.0, CurrentFontSize - 15) * 17);
+      Application.Current.Resources["EQTriggerCharacterList"] = GetTriggerCharacterListWidth();
       Application.Current.Resources["EQGridWindowTitleHeight"] = new GridLength(14 + CurrentFontSize);
       Application.Current.Resources["EQWindowTitleHeight"] = 14 + CurrentFontSize;
       Application.Current.Resources["EQAlertIconSize"] = CurrentFontSize + 18;
