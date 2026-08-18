@@ -17,6 +17,7 @@ namespace EQLogParser
     private const string LabelNewFolder = "New Folder";
     private readonly DispatcherTimer _statusTimer;
     private TriggerConfig _lastConfig;
+    private double? _expanderGutterWidth;
     private bool _suppressChecked;
     private bool _enableFlushQueued;
 
@@ -547,6 +548,13 @@ namespace EQLogParser
         characterTreeView.Nodes.Add(node);
       }
 
+      // hide the expand/collapse gutter while there are no folders, so flat trees don't show a dead left margin
+      if (_expanderGutterWidth is null)
+      {
+        _expanderGutterWidth = characterTreeView.ExpanderWidth;
+      }
+
+      characterTreeView.ExpanderWidth = config.CharacterFolders.Count > 0 ? _expanderGutterWidth.Value : 0;
       _suppressChecked = false;
       SyncFolderCheckStates();
     }
