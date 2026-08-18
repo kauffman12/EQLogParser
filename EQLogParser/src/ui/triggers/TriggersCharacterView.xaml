@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="EQLogParser.TriggersCharacterView"
+<UserControl x:Class="EQLogParser.TriggersCharacterView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -21,12 +21,12 @@
       <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
         <DockPanel>
           <!-- 44 matches the manage triggers header row so the two title bars line up -->
-          <Border DockPanel.Dock="Top" Height="44" Padding="6,2,0,0" Background="{DynamicResource ContentBackgroundAlt2}">
+          <Border DockPanel.Dock="Top" Height="39" Padding="6,2,0,0" Background="{DynamicResource ContentBackgroundAlt2}">
             <TextBlock Text="Manage Characters" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
           </Border>
           <!-- Buttons in the Save/Cancel/Hide-Overlays house style, one font size smaller (EQDescriptionSize) and tighter padding to fit the compact panel.
                New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) for New Character / New Folder at the top level. -->
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4,0,4">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,5,0,4">
             <!-- Always creates at top level (unlike the row context menu, which is relative to the selection). -->
             <!-- IconHeight=0/IconWidth=5 hide the default icon; EQButtonHeight keeps all three buttons the same height. -->
             <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" IconHeight="0" IconWidth="5" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="0" Height="{DynamicResource EQButtonHeight}">

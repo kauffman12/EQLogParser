@@ -1,5 +1,10 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.60 | 08/18/26
+1. Updated Trigger Manager **Chararacter List** to allow folders to be created for organization. Code provided by **Neclub**.
+2. Some fixes to migrating NAG databases. You may want to re-run this.
+3. Fix for Trigger tree allowing rename of root.
+
 # 2.3.59 | 08/16/26
 1. Added **Text Wrap** toggle to Text Overlays. 
 2. Now allow browsing for custom **Sound Files** when configuring Triggers. 
