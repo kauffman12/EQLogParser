@@ -26,7 +26,7 @@
           </Border>
           <!-- Buttons in the Save/Cancel/Hide-Overlays house style, one font size smaller (EQDescriptionSize) and tighter padding to fit the compact panel.
                New is a DropDownButtonAdv (Timeline's Manage Layouts pattern) for New Character / New Folder at the top level. -->
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4,0,4">
             <!-- Always creates at top level (unlike the row context menu, which is relative to the selection). -->
             <!-- IconHeight=0/IconWidth=5 hide the default icon; EQButtonHeight keeps all three buttons the same height. -->
             <syncfusion:DropDownButtonAdv x:Name="newButton" Label="New" IconHeight="0" IconWidth="5" FontSize="{DynamicResource EQDescriptionSize}" MinWidth="50" Margin="0,0,4,0" Padding="0" Height="{DynamicResource EQButtonHeight}">
