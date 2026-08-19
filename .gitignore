@@ -7,3 +7,5 @@ tmp/
 
 # Local-only working documents (never commit)
 local/
+# pi-subagents session artifacts
+.pi-subagents/
