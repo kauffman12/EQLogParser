@@ -420,7 +420,7 @@ namespace EQLogParser.Wpf.Test
       var second = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
       // Sibling timer only gets the trigger-level phrase
       Assert.AreEqual("Channel broken", second.TriggerData.EndEarlyPattern);
-      Assert.IsFalse(string.IsNullOrEmpty(second.TriggerData.EndEarlyPattern2),
+      Assert.IsTrue(string.IsNullOrEmpty(second.TriggerData.EndEarlyPattern2),
         "Sibling timer node must not receive the other action's end-early phrases");
     }
 
