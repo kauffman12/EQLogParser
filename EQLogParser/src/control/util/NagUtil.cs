@@ -391,7 +391,7 @@ internal static class NagUtil
       var triggers = root.GetProperty("triggers");
       foreach (var trigger in triggers.EnumerateArray())
       {
-        var parsed = ParseTrigger(trigger, databaseDirectory);
+        var parsed = ParseTrigger(trigger);
         foreach (var n in parsed.nodes)
         {
           // Set folder path on the result for reporting. Triggers whose parent folder no
@@ -494,7 +494,7 @@ internal static class NagUtil
     return current ?? triggerNode;
   }
 
-  private static (List<ExportTriggerNode> nodes, NagImportResult result) ParseTrigger(JsonElement element, string databaseDirectory)
+  private static (List<ExportTriggerNode> nodes, NagImportResult result) ParseTrigger(JsonElement element)
   {
     var name = element.GetProperty("name").GetString();
     if (string.IsNullOrEmpty(name))
@@ -668,15 +668,16 @@ internal static class NagUtil
       return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = "No valid phrases" });
     }
 
-    // Parse actions once — shared across all phrase-based triggers
-    var parsed = ParseActions(element.GetProperty("actions"), score, phrases.Any(p => p.useRegex), useCooldown, cooldownDuration, databaseDirectory, phrases.Select(p => p.phraseId).ToList());
-    if (parsed.triggerData is null)
+    // Parse actions once — non-timer actions are shared across all nodes; timer actions are
+    // collected per NAG timer action (each becomes its own node in the fan-out below)
+    var parsed = ParseActions(element.GetProperty("actions"), phrases.Any(p => p.useRegex));
+    if (parsed.BaseTriggerData is null)
     {
-      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = parsed.reason ?? "No supported actions" });
+      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = parsed.SkipReason ?? "No supported actions" });
     }
 
-    var baseTriggerData = parsed.triggerData;
-    var droppedFeatures = parsed.droppedFeatures;
+    var baseTriggerData = parsed.BaseTriggerData;
+    var droppedFeatures = parsed.DroppedFeatures;
 
     // Apply set-variable actions: convert numbered capture groups in the
     // referenced phrase to simple named groups, then add VariableActions so
@@ -691,7 +692,7 @@ internal static class NagUtil
     // capture phrase has an explicit actionId routing; later capture phrases
     // (e.g., "You activate X", "You begin singing X") should also set the variable.
     string lastSetVarName = null;
-    foreach (var (phraseId, varName) in parsed.setVariables)
+    foreach (var (phraseId, varName) in parsed.SetVariables)
     {
       // If no specific phraseId, apply to all regex phrases with un-named groups.
       // NAG uses this when the variable is set from whatever phrase triggered.
@@ -828,89 +829,8 @@ internal static class NagUtil
       commentParts.Add($"EQLP Import Notes: {string.Join(", ", droppedFeatures)}");
     var triggerComments = commentParts.Count > 0 ? string.Join("\n", commentParts) : null;
 
-    // Build one EQLP trigger per capture phrase (no regex alternation combining)
-    var nodes = new List<ExportTriggerNode>();
-    for (var i = 0; i < phrases.Count; i++)
-    {
-      var (pattern, useRegEx, _) = phrases[i];
-      var triggerData = baseTriggerData.Clone();
-
-      // Assign the pattern for this phrase
-      triggerData.Pattern = pattern;
-      triggerData.UseRegex = useRegEx;
-
-      // Apply conditions
-      if (!string.IsNullOrEmpty(conditionStr))
-      {
-        triggerData.MatchVariableCondition = conditionStr;
-      }
-
-      // Apply shared metadata
-      triggerData.Comments = triggerComments;
-      // interruptSpeech triggers get top urgency so the audio engine preempts lower-priority
-      // playback, approximating NAG's speech interruption (see note above). Priority 1 is also
-      // what GINA import uses for interrupt triggers.
-      triggerData.Priority = hasInterruptSpeech ? 1 : ConvertScore(score);
-      triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
-
-      // Determine which phrase this node corresponds to, for per-phrase action routing.
-      var currentPhraseId = phrases[i].phraseId ?? "";
-
-      // Apply phrase-specific display texts from actions that target specific phrases.
-      // For example, a clear-variable action with displayText "Spell {var} was interrupted."
-      // should only show on the interrupt phrases, not on the begin-casting phrase.
-      if (parsed.phraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
-      {
-        triggerData.TextToDisplay = phraseDisplayText;
-      }
-
-      // Add VariableActions for set-variable mappings on this phrase.
-      // EQLP stores the captured value as a global variable accessible by other triggers.
-      if (phraseVarMap.TryGetValue(currentPhraseId, out var varList))
-      {
-        foreach (var (groupName, varName) in varList)
-        {
-          triggerData.VariableActions.Add(new VariableAction
-          {
-            ActionType = 0, // Set
-            DataType = 0,   // Value
-            VariableName = varName,
-            Value = "{" + groupName + "}"
-          });
-        }
-      }
-
-      // Add phrase-specific clear-variable VariableActions.
-      // NAG actionType 7 with a phraseId means "when this specific phrase matches, clear the variable."
-      // This is different from EndTimerClearVariables (which fires when a timer ends) — these
-      // are per-phrase triggers that fire on match, so we use VariableAction { ActionType=Clear }.
-      foreach (var (clearPhraseId, clearVarName) in parsed.phraseClearVariables)
-      {
-        if (currentPhraseId == clearPhraseId)
-        {
-          triggerData.VariableActions.Add(new VariableAction
-          {
-            ActionType = 1, // Clear
-            DataType = 0,   // Value
-            VariableName = clearVarName
-          });
-        }
-      }
-
-      var triggerName = phrases.Count > 1 ? $"{name} #{i + 1}" : name;
-
-      nodes.Add(new ExportTriggerNode
-      {
-        Id = Guid.NewGuid().ToString(),
-        Name = triggerName,
-        OriginalId = triggerId,
-        TriggerData = triggerData
-      });
-    }
-
-    // Parse end-early phrases — merge trigger-level and action-level (max 3 slots)
-    // Each entry tracks (phrase, useRegEx) so EndUseRegex is set correctly
-    var allEndEarlyPhrases = new List<(string phrase, bool useRegex)>();
+    // Trigger-level end-early phrases, parsed once and shared by every node's merged list.
+    var triggerEndEarly = new List<(string phrase, bool useRegex)>();
     if (element.TryGetProperty("endEarlyPhrases", out var eep) && eep.ValueKind == JsonValueKind.Array)
     {
       foreach (var ee in eep.EnumerateArray())
@@ -918,50 +838,160 @@ internal static class NagUtil
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
           var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
-          allEndEarlyPhrases.Add((ConvertTemplates(phrase), useRegex));
+          triggerEndEarly.Add((ConvertTemplates(phrase), useRegex));
         }
       }
     }
-    // Merge action-level end-early phrases (537 timer actions have these in real data)
-    var actionEep = parsed.actionEndEarlyPhrases;
-    for (var idx = 0; idx < actionEep.phrases.Count; idx++)
+
+    // One merged end-early list per node variant (index-aligned with the timer variant loop):
+    // each NAG timer action's own endEarlyPhrases stop that timer only, so they merge into its
+    // nodes' lists and not into the sibling timers'. A single entry covers triggers without any
+    // timer action. EQLP has max 3 slots per node; overflow is reported as dropped.
+    var timerActions = parsed.TimerActions;
+    var endEarlyByVariant = new List<List<(string phrase, bool useRegex)>>();
+    if (timerActions.Count > 0)
     {
-      var aep = actionEep.phrases[idx];
-      if (!allEndEarlyPhrases.Any(x => x.phrase == aep))
+      foreach (var timer in timerActions)
       {
-        allEndEarlyPhrases.Add((aep, actionEep.regexFlags[idx]));
+        endEarlyByVariant.Add(MergeEndEarlyPhrases(triggerEndEarly, timer.EndEarlyPhrases, droppedFeatures));
       }
     }
-
-    // EQLP supports at most 3 end-early patterns — report anything beyond that as dropped.
-    if (allEndEarlyPhrases.Select(x => x.phrase).Distinct().Count() > 3)
-      droppedFeatures.Add("extra end-early phrases dropped (max 3)");
-    allEndEarlyPhrases = allEndEarlyPhrases.Take(3).ToList();
-
-    // Apply end-early patterns to ALL phrase-triggers (shared across them)
-    foreach (var node in nodes)
+    else
     {
-      if (allEndEarlyPhrases.Count > 0)
+      endEarlyByVariant.Add(MergeEndEarlyPhrases(triggerEndEarly, [], droppedFeatures));
+    }
+
+    // Build one EQLP trigger per capture phrase AND per NAG timer action (no regex alternation
+    // combining). An EQLP trigger holds exactly one timer, so a NAG trigger with M timer actions
+    // produces M nodes per phrase; each carries the shared non-timer actions plus its own timer's
+    // fields. Without this fan-out the last timer action would silently overwrite the earlier
+    // ones' duration, label, and restart behavior (e.g. "Bard Epic 2.0": its 180s and 60s timer
+    // actions collapsed into a single 60s timer).
+    var nodes = new List<ExportTriggerNode>();
+    for (var i = 0; i < phrases.Count; i++)
+    {
+      var (pattern, useRegEx, _) = phrases[i];
+
+      // Determine which phrase this node corresponds to, for per-phrase action routing.
+      var currentPhraseId = phrases[i].phraseId ?? "";
+      var phraseName = phrases.Count > 1 ? $"{name} #{i + 1}" : name;
+
+      // One variant per NAG timer action (a single placeholder iteration when there are none).
+      var variants = timerActions.Count > 0 ? timerActions.Count : 1;
+      for (var t = 0; t < variants; t++)
       {
-        node.TriggerData.EndEarlyPattern = allEndEarlyPhrases[0].phrase;
-        node.TriggerData.EndUseRegex = allEndEarlyPhrases[0].useRegex;
-      }
-      if (allEndEarlyPhrases.Count > 1)
-      {
-        node.TriggerData.EndEarlyPattern2 = allEndEarlyPhrases[1].phrase;
-        node.TriggerData.EndUseRegex2 = allEndEarlyPhrases[1].useRegex;
-      }
-      if (allEndEarlyPhrases.Count > 2)
-      {
-        node.TriggerData.EndEarlyPattern3 = allEndEarlyPhrases[2].phrase;
-        node.TriggerData.EndUseRegex3 = allEndEarlyPhrases[2].useRegex;
+        var triggerData = baseTriggerData.Clone();
+
+        // Assign the pattern for this phrase
+        triggerData.Pattern = pattern;
+        triggerData.UseRegex = useRegEx;
+
+        // Apply conditions
+        if (!string.IsNullOrEmpty(conditionStr))
+        {
+          triggerData.MatchVariableCondition = conditionStr;
+        }
+
+        // Apply shared metadata
+        triggerData.Comments = triggerComments;
+        // interruptSpeech triggers get top urgency so the audio engine preempts lower-priority
+        // playback, approximating NAG's speech interruption (see note above). Priority 1 is also
+        // what GINA import uses for interrupt triggers.
+        triggerData.Priority = hasInterruptSpeech ? 1 : ConvertScore(score);
+        triggerData.LockoutTime = useCooldown ? cooldownDuration : 0;
+
+        // Apply the NAG timer action this node represents (no-op for non-timer triggers).
+        var timer = t < timerActions.Count ? timerActions[t] : null;
+        if (timer is not null)
+        {
+          triggerData.EnableTimer = timer.DurationSeconds > 0;
+          triggerData.DurationSeconds = timer.DurationSeconds;
+          triggerData.TimerType = timer.TimerType;
+          triggerData.TimesToLoop = timer.TimesToLoop;
+          triggerData.TriggerAgainOption = timer.TriggerAgainOption >= 0 ? timer.TriggerAgainOption : 0;
+          // NAG's displayText is the timer bar label — EQLP renders it from AltTimerName.
+          triggerData.AltTimerName = timer.AltTimerName;
+          triggerData.ActiveColor = timer.ActiveColor;
+          triggerData.IdleColor = timer.IdleColor;
+          triggerData.WarningTextToDisplay = timer.WarningTextToDisplay;
+          triggerData.WarningTextToSpeak = timer.WarningTextToSpeak;
+          triggerData.EndTextToDisplay = timer.EndTextToDisplay;
+          triggerData.EndTextToSpeak = timer.EndTextToSpeak;
+
+          // Overlay routing: non-timer action overlays (base) plus this timer's own overlay.
+          if (timer.Overlays.Count > 0)
+          {
+            var overlays = new List<string>(triggerData.SelectedOverlays);
+            foreach (var ov in timer.Overlays)
+            {
+              if (!overlays.Contains(ov))
+                overlays.Add(ov);
+            }
+            triggerData.SelectedOverlays = overlays;
+          }
+        }
+
+        // End-early phrases for this node: trigger-level merged with this timer variant's own.
+        ApplyEndEarlyPatterns(triggerData, endEarlyByVariant[t]);
+
+        // Apply phrase-specific display texts from actions that target specific phrases.
+        // For example, a clear-variable action with displayText "Spell {var} was interrupted."
+        // should only show on the interrupt phrases, not on the begin-casting phrase.
+        if (parsed.PhraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
+        {
+          triggerData.TextToDisplay = phraseDisplayText;
+        }
+
+        // Add VariableActions for set-variable mappings on this phrase.
+        // EQLP stores the captured value as a global variable accessible by other triggers.
+        if (phraseVarMap.TryGetValue(currentPhraseId, out var varList))
+        {
+          foreach (var (groupName, varName) in varList)
+          {
+            triggerData.VariableActions.Add(new VariableAction
+            {
+              ActionType = 0, // Set
+              DataType = 0,   // Value
+              VariableName = varName,
+              Value = "{" + groupName + "}"
+            });
+          }
+        }
+
+        // Add phrase-specific clear-variable VariableActions.
+        // NAG actionType 7 with a phraseId means "when this specific phrase matches, clear the variable."
+        // This is different from EndTimerClearVariables (which fires when a timer ends) — these
+        // are per-phrase triggers that fire on match, so we use VariableAction { ActionType=Clear }.
+        foreach (var (clearPhraseId, clearVarName) in parsed.PhraseClearVariables)
+        {
+          if (currentPhraseId == clearPhraseId)
+          {
+            triggerData.VariableActions.Add(new VariableAction
+            {
+              ActionType = 1, // Clear
+              DataType = 0,   // Value
+              VariableName = clearVarName
+            });
+          }
+        }
+
+        // Number the timer variant so same-phrase nodes stay distinct for name-based dedup.
+        var triggerName = timerActions.Count > 1 ? $"{phraseName} (Timer {t + 1})" : phraseName;
+
+        nodes.Add(new ExportTriggerNode
+        {
+          Id = Guid.NewGuid().ToString(),
+          Name = triggerName,
+          OriginalId = triggerId,
+          TriggerData = triggerData
+        });
       }
     }
 
     // Create additional triggers for NAG counter reset phrases. Each reset phrase
     // becomes a trigger that clears the counter variable, simulating NAG's behavior
     // where matching the reset phrase resets the auto-incrementing counter to 0.
-    foreach (var (resetPhrase, useRegex, varName) in parsed.counterResetPhrases)
+    foreach (var (resetPhrase, useRegex, varName) in parsed.CounterResetPhrases)
     {
       var resetNode = new ExportTriggerNode
       {
@@ -989,12 +1019,12 @@ internal static class NagUtil
     // Approximation notes (NonStatusDroppedFeatures) don't count — the behavior is implemented
     // as closely as EQLP allows, so they stay visible without burying real gaps in noise.
     var meaningfulDrops = droppedFeatures.Where(f => !NonStatusDroppedFeatures.Contains(f)).ToList();
-    var hasMissingAudio = parsed.missingAudioFiles?.Count > 0;
+    var hasMissingAudio = parsed.MissingAudioFiles?.Count > 0;
     var status = hasMissingAudio || meaningfulDrops.Count > 0 ? "Partial" : "Imported";
     var reason = isSequential ? "Sequential capture method (not supported)" :
                  hasClassLevels ? "Class level filtering (not supported)" :
                  meaningfulDrops.Count > 0 ? string.Join(", ", meaningfulDrops) :
-                 hasMissingAudio ? $"{parsed.missingAudioFiles.Count} missing audio file(s)" :
+                 hasMissingAudio ? $"{parsed.MissingAudioFiles.Count} missing audio file(s)" :
                  null;
 
     // Sequential capture triggers cannot be reliably converted — skip them entirely
@@ -1006,13 +1036,13 @@ internal static class NagUtil
         TriggerId = triggerId,
         Status = "Skipped",
         Reason = "Sequential capture method (not supported)",
-        ActionsSummary = parsed.actionSummary,
-        MissingAudioFiles = parsed.missingAudioFiles
+        ActionsSummary = parsed.ActionSummary,
+        MissingAudioFiles = parsed.MissingAudioFiles
       });
     }
 
     // Build actions summary
-    var actionSummary = parsed.actionSummary;
+    var actionSummary = parsed.ActionSummary;
 
     return (nodes, new NagImportResult
     {
@@ -1023,23 +1053,61 @@ internal static class NagUtil
       ActionsSummary = actionSummary,
       Score = score,
       DroppedFeatures = droppedFeatures,
-      MissingAudioFiles = parsed.missingAudioFiles
+      MissingAudioFiles = parsed.MissingAudioFiles
     });
   }
 
-  // Shared parsing for NAG timer actions (actionType 3/4, 6, 10). Extracts common fields: display text,
-  // endEarlyPhrases, endingSoon/ended sub-action text, duration, colors, and overlayId.
-  private static void ParseTimerActionFields(
-      JsonElement action, bool handleNullDuration, ref string textToDisplay, ref double durationSeconds,
-      ref int triggerAgainOption, ref string activeColor, ref string idleColor,
-      List<string> actionEndEarlyPhrases, List<bool> actionEndEarlyUseRegex,
-      ref string warningTextToDisplay, ref string warningTextToSpeak,
-      ref string endTextToDisplay, ref string endTextToSpeak,
-      List<string> selectedOverlays, List<string> droppedFeatures)
+  /* One NAG timer action (type 3/4/6/10) parsed into EQLP fields. An EQLP trigger holds exactly
+   * one timer, so each NAG timer action is imported as its own trigger node — the fields here must
+   * never be merged across actions (last-wins overwriting silently dropped earlier timers). */
+  private sealed class TimerActionData
+  {
+    public int TimerType;
+    public double DurationSeconds;
+    public long TimesToLoop;
+    // -1 = not set on the NAG action (default to EQLP option 0)
+    public int TriggerAgainOption = -1;
+    // NAG labels its timer bar with this text (displayText || triggerName in the NAG overlay).
+    // EQLP renders the timer-bar label from AltTimerName; TextToDisplay is a separate text
+    // notification, so the label must go here — not into TextToDisplay.
+    public string AltTimerName = "";
+    public string ActiveColor = "";
+    public string IdleColor = "";
+    public List<string> Overlays = [];
+    public string WarningTextToDisplay = "";
+    public string WarningTextToSpeak = "";
+    public string EndTextToDisplay = "";
+    public string EndTextToSpeak = "";
+    // Action-level endEarlyPhrases — in NAG they stop this specific timer only.
+    public List<(string phrase, bool useRegex)> EndEarlyPhrases = [];
+  }
+
+  /* Result of ParseActions: the shared (non-timer) trigger data plus per-timer-action data. */
+  private sealed class ParsedActions
+  {
+    // null when nothing importable was found (see SkipReason)
+    public Trigger BaseTriggerData;
+    public string SkipReason;
+    public List<string> DroppedFeatures = [];
+    public string ActionSummary = "";
+    public List<string> MissingAudioFiles = [];
+    public List<(string phraseId, string variableName)> SetVariables = [];
+    public List<(string phrase, bool useRegex, string variableName)> CounterResetPhrases = [];
+    public List<(string phraseId, string variableName)> PhraseClearVariables = [];
+    public Dictionary<string, string> PhraseDisplayTexts = [];
+    public List<TimerActionData> TimerActions = [];
+  }
+
+  // Shared parsing for NAG timer actions (actionType 3/4, 6, 10). Extracts common fields: timer
+  // label (displayText), endEarlyPhrases, endingSoon/ended sub-action text, duration, restart
+  // behavior, colors, and overlayId — all onto this action's own TimerActionData.
+  private static void ParseTimerActionFields(JsonElement action, bool handleNullDuration,
+      TimerActionData timer, List<string> droppedFeatures)
   {
     if (action.TryGetProperty("displayText", out var dt) && dt.GetString() is { Length: > 0 } timerText)
     {
-      textToDisplay = ConvertTemplates(timerText);
+      // NAG shows this text as the timer bar label; EQLP does so via AltTimerName.
+      timer.AltTimerName = ConvertTemplates(timerText);
     }
     if (action.TryGetProperty("endEarlyPhrases", out var aeep) && aeep.ValueKind == JsonValueKind.Array)
     {
@@ -1047,30 +1115,30 @@ internal static class NagUtil
       {
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
-          actionEndEarlyPhrases.Add(ConvertTemplates(phrase));
-          actionEndEarlyUseRegex.Add(ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean());
+          timer.EndEarlyPhrases.Add((ConvertTemplates(phrase),
+            ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean()));
         }
       }
     }
     if (action.TryGetProperty("endingSoonDisplayText", out var esdt) && esdt.ValueKind == JsonValueKind.True &&
       action.TryGetProperty("endingSoonText", out var est) && est.GetString() is { Length: > 0 } etext)
     {
-      warningTextToDisplay = ConvertTemplates(etext);
+      timer.WarningTextToDisplay = ConvertTemplates(etext);
     }
     if (action.TryGetProperty("endingSoonSpeak", out var ess) && ess.ValueKind == JsonValueKind.True &&
       action.TryGetProperty("endingSoonSpeakPhrase", out var esp) && esp.GetString() is { Length: > 0 } stext)
     {
-      warningTextToSpeak = ConvertTemplates(stext);
+      timer.WarningTextToSpeak = ConvertTemplates(stext);
     }
     if (action.TryGetProperty("endedDisplayText", out var edt) && edt.ValueKind == JsonValueKind.True &&
       action.TryGetProperty("endedText", out var etdt) && etdt.GetString() is { Length: > 0 } edtext)
     {
-      endTextToDisplay = ConvertTemplates(edtext);
+      timer.EndTextToDisplay = ConvertTemplates(edtext);
     }
     if (action.TryGetProperty("endedSpeak", out var esk) && esk.ValueKind == JsonValueKind.True &&
       action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
     {
-      endTextToSpeak = ConvertTemplates(estext);
+      timer.EndTextToSpeak = ConvertTemplates(estext);
     }
     if (action.TryGetProperty("duration", out var tdur))
     {
@@ -1079,12 +1147,12 @@ internal static class NagUtil
         // NAG null duration = indefinite timer ended by endEarlyPhrases.
         // EQLP requires a fixed DurationSeconds; default to 60s and rely on
         // EndEarlyPattern(s) to stop the timer when the spell fades.
-        durationSeconds = 60.0;
+        timer.DurationSeconds = 60.0;
         droppedFeatures.Add("indefinite timer duration (defaulted to 60s)");
       }
       else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
       {
-        durationSeconds = tdur.GetDouble();
+        timer.DurationSeconds = tdur.GetDouble();
       }
     }
     if (action.TryGetProperty("restartBehavior", out var rb) && rb.ValueKind is JsonValueKind.Number or JsonValueKind.String)
@@ -1094,7 +1162,7 @@ internal static class NagUtil
       //        2=RestartTimer (all timers of this action), 3=DoNothing
       //   EQLP: 0=new entry, 1=clear all timers, 2=stop same display name then start,
       //         3=skip if any timer exists
-      triggerAgainOption = rb.GetInt32() switch
+      timer.TriggerAgainOption = rb.GetInt32() switch
       {
         0 => 0,
         1 => 2,
@@ -1107,40 +1175,82 @@ internal static class NagUtil
     {
       if (action.TryGetProperty("overrideTimerColor", out var otc) && otc.GetString() is { Length: > 0 } color)
       {
-        activeColor = ConvertColor(color);
+        timer.ActiveColor = ConvertColor(color);
       }
     }
     if (action.TryGetProperty("timerBackgroundColor", out var tbc) && tbc.GetString() is { Length: > 0 } bgColor)
     {
-      idleColor = ConvertColor(bgColor);
+      timer.IdleColor = ConvertColor(bgColor);
     }
     if (action.TryGetProperty("overlayId", out var ov) && ov.GetString() is { Length: > 0 } overlayId)
     {
-      if (!selectedOverlays.Contains(overlayId))
-        selectedOverlays.Add(overlayId);
+      if (!timer.Overlays.Contains(overlayId))
+        timer.Overlays.Add(overlayId);
     }
   }
 
-  private static (Trigger triggerData, List<string> droppedFeatures, string reason, string actionSummary, (List<string> phrases, List<bool> regexFlags) actionEndEarlyPhrases, List<string> missingAudioFiles, List<(string phraseId, string variableName)> setVariables, List<(string phrase, bool useRegex, string variableName)> counterResetPhrases, List<(string phraseId, string variableName)> phraseClearVariables, Dictionary<string, string> phraseDisplayTexts) ParseActions(
-      JsonElement actions, double score, bool useRegEx, bool useCooldown, double cooldownDuration, string databaseDirectory, List<string> phraseIds = null)
+  /* Merge trigger-level and a timer action's own end-early phrases (trigger-level first,
+   * de-duplicated by phrase), then cap at EQLP's 3 EndEarlyPattern slots — anything beyond is
+   * reported as dropped. One list per timer node: an action's endEarlyPhrases must not stop the
+   * sibling nodes of other timers. */
+  private static List<(string phrase, bool useRegex)> MergeEndEarlyPhrases(
+      List<(string phrase, bool useRegex)> triggerLevel, List<(string phrase, bool useRegex)> actionLevel,
+      List<string> droppedFeatures)
+  {
+    var merged = new List<(string phrase, bool useRegex)>(triggerLevel);
+    foreach (var aep in actionLevel)
+    {
+      if (!merged.Any(x => x.phrase == aep.phrase))
+      {
+        merged.Add(aep);
+      }
+    }
+
+    if (merged.Select(x => x.phrase).Distinct().Count() > 3)
+    {
+      droppedFeatures.Add("extra end-early phrases dropped (max 3)");
+    }
+
+    return merged.Take(3).ToList();
+  }
+
+  // EQLP supports at most 3 end-early patterns per trigger.
+  private static void ApplyEndEarlyPatterns(Trigger triggerData, List<(string phrase, bool useRegex)> endEarly)
+  {
+    if (endEarly.Count > 0)
+    {
+      triggerData.EndEarlyPattern = endEarly[0].phrase;
+      triggerData.EndUseRegex = endEarly[0].useRegex;
+    }
+
+    if (endEarly.Count > 1)
+    {
+      triggerData.EndEarlyPattern2 = endEarly[1].phrase;
+      triggerData.EndUseRegex2 = endEarly[1].useRegex;
+    }
+
+    if (endEarly.Count > 2)
+    {
+      triggerData.EndEarlyPattern3 = endEarly[2].phrase;
+      triggerData.EndUseRegex3 = endEarly[2].useRegex;
+    }
+  }
+
+  /* Parse a NAG trigger's actions into EQLP data. Non-timer actions (text, audio, TTS,
+   * clipboard, counter, set/clear variable) merge into one shared Trigger — an EQLP node carries
+   * them all. Timer actions (3/4/6/10) are collected separately as TimerActionData: an EQLP
+   * trigger holds exactly one timer, so ParseTrigger emits one node per NAG timer action and
+   * applies each action's own fields to its node. */
+  private static ParsedActions ParseActions(JsonElement actions, bool useRegEx)
   {
     var textToDisplay = "";
     var textToSpeak = "";
     var soundToPlay = "";
     var textToShare = "";
-    var durationSeconds = 0.0;
-    var timerType = 0;
-    var timesToLoop = 0L;
-    var triggerAgainOption = -1;
-    var warningSeconds = 0L;
+    // Colors set by non-timer actions (counters) — timer actions carry their own on TimerActionData.
     var activeColor = "";
+    var idleColor = "";
     var selectedOverlays = new List<string>();
-    var actionEndEarlyPhrases = new List<string>();
-    var actionEndEarlyUseRegex = new List<bool>();
-    var warningTextToDisplay = "";
-    var warningTextToSpeak = "";
-    var endTextToDisplay = "";
-    var endTextToSpeak = "";
     var hasAction = false;
     var clearVariables = new List<string>();
     var phraseClearVariables = new List<(string phraseId, string variableName)>();
@@ -1152,7 +1262,8 @@ internal static class NagUtil
     var counterVarName = "";
     // NAG counter idle-reset window (seconds); 0 = no counter in this trigger.
     var repeatedResetTime = 0.0;
-    var idleColor = "";
+    // One entry per NAG timer action — each becomes its own EQLP trigger node.
+    var timerActions = new List<TimerActionData>();
     var droppedFeatures = new List<string>();
     var actionSummary = new List<string>();
     var missingAudioFiles = new List<string>();
@@ -1181,7 +1292,7 @@ internal static class NagUtil
           // It is deliberately NOT mapped to EnableTimer/DurationSeconds: EQLP would render
           // that as a visible countdown instead of a plain text notification, and EQLP has
           // no auto-hide for timerless text anyway. The text persists until cleared by a
-          // clear action (see docs/nag-import.md).
+          // clear action.
           // Collect overlayId for text overlay routing
           if (action.TryGetProperty("overlayId", out var ov0) && ov0.GetString() is { Length: > 0 } overlayId0)
           {
@@ -1234,59 +1345,55 @@ internal static class NagUtil
 
         case 3: // Timer — fills up over time in NAG
           hasAction = true;
-          timerType = 3; // EQLP Progress (fills up); Countdown would drain
-          ParseTimerActionFields(action, handleNullDuration: true,
-            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
-            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
-            ref warningTextToDisplay, ref warningTextToSpeak,
-            ref endTextToDisplay, ref endTextToSpeak,
-            selectedOverlays, droppedFeatures);
+          {
+            var timer = new TimerActionData { TimerType = 3 }; // EQLP Progress (fills up); Countdown would drain
+            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures);
+            timerActions.Add(timer);
+          }
           actionSummary.Add("Timer");
           break;
 
         case 4: // Countdown — drains in NAG, optionally repeating
           hasAction = true;
           var repeatTimer = action.TryGetProperty("repeatTimer", out var rt) && rt.GetBoolean();
-          if (repeatTimer)
           {
-            timerType = 4; // EQLP Looping
-            var repeatCount = action.TryGetProperty("repeatCount", out var rc) && rc.ValueKind is JsonValueKind.Number or JsonValueKind.String
-              ? rc.GetInt32() : 0;
-            if (repeatCount > 0)
+            var timer = new TimerActionData();
+            if (repeatTimer)
             {
-              timesToLoop = repeatCount;
+              timer.TimerType = 4; // EQLP Looping
+              var repeatCount = action.TryGetProperty("repeatCount", out var rc) && rc.ValueKind is JsonValueKind.Number or JsonValueKind.String
+                ? rc.GetInt32() : 0;
+              if (repeatCount > 0)
+              {
+                timer.TimesToLoop = repeatCount;
+              }
+              else
+              {
+                // NAG unlimited repeat — approximate with a large loop count.
+                timer.TimesToLoop = UnlimitedRepeatLoops;
+                droppedFeatures.Add("unlimited timer repeat (approximated)");
+              }
             }
             else
             {
-              // NAG unlimited repeat — approximate with a large loop count.
-              timesToLoop = UnlimitedRepeatLoops;
-              droppedFeatures.Add("unlimited timer repeat (approximated)");
+              timer.TimerType = 1; // EQLP Countdown (drains like NAG Countdown)
             }
+            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures);
+            timerActions.Add(timer);
           }
-          else
-          {
-            timerType = 1; // EQLP Countdown (drains like NAG Countdown)
-          }
-          ParseTimerActionFields(action, handleNullDuration: true,
-            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
-            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
-            ref warningTextToDisplay, ref warningTextToSpeak,
-            ref endTextToDisplay, ref endTextToSpeak,
-            selectedOverlays, droppedFeatures);
           actionSummary.Add(repeatTimer ? "Looping Timer" : "Timer");
           break;
 
-        case 6: // DotTimer (NAG v0.2.26 name; older notes said "Timer with Remain"). The tick display has
-          // no EQLP equivalent — import as a plain countdown and report the divergence.
+        case 6: // DotTimer (older NAG versions called it "Timer with Remain") — per-target in NAG and drawn
+          // filling up like Timers (width = perc * 100%). EQLP has no per-target timers or tick display; import
+          // as a single filling Progress timer and report the divergence.
           hasAction = true;
-          timerType = 1;
-          ParseTimerActionFields(action, handleNullDuration: false,
-            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
-            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
-            ref warningTextToDisplay, ref warningTextToSpeak,
-            ref endTextToDisplay, ref endTextToSpeak,
-            selectedOverlays, droppedFeatures);
-          droppedFeatures.Add("remain-after-ended timer");
+          {
+            var timer = new TimerActionData { TimerType = 3 }; // EQLP Progress (fills up like NAG DotTimer)
+            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures);
+            timerActions.Add(timer);
+          }
+          droppedFeatures.Add("dot timer approximated (per-target ticks and remain-after-end lost)");
           actionSummary.Add("Timer (partial)");
           break;
 
@@ -1305,16 +1412,16 @@ internal static class NagUtil
           actionSummary.Add("Clipboard");
           break;
 
-        case 10: // Buff Timer with Cast Time
+        case 10: // BeneficialTimer (older NAG versions called it "Buff Timer with Cast Time") — per-target in
+          // NAG and drawn depleting like Countdowns. EQLP has no per-target timers; import as a single
+          // depleting timer and report the divergence.
           hasAction = true;
-          timerType = 1;
-          ParseTimerActionFields(action, handleNullDuration: false,
-            ref textToDisplay, ref durationSeconds, ref triggerAgainOption,
-            ref activeColor, ref idleColor, actionEndEarlyPhrases, actionEndEarlyUseRegex,
-            ref warningTextToDisplay, ref warningTextToSpeak,
-            ref endTextToDisplay, ref endTextToSpeak,
-            selectedOverlays, droppedFeatures);
-          droppedFeatures.Add("cast time tracking");
+          {
+            var timer = new TimerActionData { TimerType = 1 }; // EQLP Countdown (depletes like NAG BeneficialTimer)
+            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures);
+            timerActions.Add(timer);
+          }
+          droppedFeatures.Add("per-target buff timer (imported as a single timer)");
           actionSummary.Add("Timer (partial)");
           break;
 
@@ -1491,10 +1598,19 @@ internal static class NagUtil
 
     if (!hasAction)
     {
-      return (null, droppedFeatures, "No supported actions", null, ([], []), missingAudioFiles, [], [], [], new Dictionary<string, string>());
+      return new ParsedActions
+      {
+        SkipReason = "No supported actions",
+        DroppedFeatures = droppedFeatures,
+        MissingAudioFiles = missingAudioFiles,
+        ActionSummary = string.Join(", ", actionSummary),
+        TimerActions = timerActions
+      };
     }
 
-    // Build the Trigger object with all parsed data
+    // Build the shared Trigger from the non-timer actions. Timer-specific fields (type, duration,
+    // label, restart behavior, loop count, colors, end texts, end-early phrases) live on each
+    // TimerActionData — ParseTrigger applies exactly one of them per emitted node.
     var triggerData = new Trigger
     {
       Pattern = "", // Overwritten by ParseTrigger after this method returns
@@ -1503,19 +1619,9 @@ internal static class NagUtil
       TextToSpeak = textToSpeak,
       SoundToPlay = soundToPlay,
       TextToShare = textToShare,
-      EnableTimer = durationSeconds > 0,
-      DurationSeconds = durationSeconds,
-      TimerType = timerType,
-      TimesToLoop = timesToLoop,
-      TriggerAgainOption = triggerAgainOption >= 0 ? triggerAgainOption : 0,
-      WarningSeconds = warningSeconds,
       ActiveColor = activeColor,
       IdleColor = idleColor,
       SelectedOverlays = selectedOverlays.Count > 0 ? selectedOverlays : [],
-      WarningTextToDisplay = warningTextToDisplay,
-      WarningTextToSpeak = warningTextToSpeak,
-      EndTextToDisplay = endTextToDisplay,
-      EndTextToSpeak = endTextToSpeak,
       EndTimerClearVariables = clearVariables.Count > 0 ? string.Join(", ", clearVariables) : "",
       VariableActions = counterVarName.Length > 0
         ? new List<VariableAction> { new() { ActionType = 0, DataType = 1, VariableName = counterVarName, Step = 1 } }
@@ -1528,7 +1634,18 @@ internal static class NagUtil
       triggerData.RepeatedResetTime = repeatedResetTime;
     }
 
-    return (triggerData, droppedFeatures, null, string.Join(", ", actionSummary), (actionEndEarlyPhrases, actionEndEarlyUseRegex), missingAudioFiles, setVariables, counterResetPhrases, phraseClearVariables, phraseDisplayTexts);
+    return new ParsedActions
+    {
+      BaseTriggerData = triggerData,
+      DroppedFeatures = droppedFeatures,
+      ActionSummary = string.Join(", ", actionSummary),
+      MissingAudioFiles = missingAudioFiles,
+      SetVariables = setVariables,
+      CounterResetPhrases = counterResetPhrases,
+      PhraseClearVariables = phraseClearVariables,
+      PhraseDisplayTexts = phraseDisplayTexts,
+      TimerActions = timerActions
+    };
   }
 
   internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath, int skippedFctOverlays = 0)

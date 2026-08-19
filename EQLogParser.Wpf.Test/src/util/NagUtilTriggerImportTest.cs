@@ -290,6 +290,166 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual("Imported", results[0].Status);
     }
 
+    #region Multi-Timer Fan-Out & Timer Labels
+
+    [TestMethod]
+    public void ConvertTriggers_Countdown_DisplayText_BecomesAltTimerName()
+    {
+      // NAG labels its timer bar with the action's displayText (NAG overlay: displayText ||
+      // trigger name). EQLP renders the timer-bar label from AltTimerName; TextToDisplay is a
+      // separate text notification, so the label must not be imported as display text.
+      var json = CreateTriggerJson("Label Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Channeling ${Cast}", duration: 15.0)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual("Channeling {Cast}", nodes[0].TriggerData.AltTimerName);
+      Assert.AreEqual("", nodes[0].TriggerData.TextToDisplay,
+        "Timer label must not be imported as display text");
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_TwoCountdownActions_OneNodeEach_ValuesPreserved()
+    {
+      // A NAG trigger with two countdown actions must produce two EQLP triggers — the last
+      // action used to overwrite the first's duration, label, and restart behavior.
+      var json = CreateTriggerJson("Two Timers", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Long cooldown", duration: 180.0, restartBehavior: 0),
+        CreateAction(4, displayText: "Short cooldown", duration: 60.0, restartBehavior: 1)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      // The first action's values must survive on its own node
+      var first = nodes.First(n => n.Name.EndsWith("(Timer 1)"));
+      Assert.AreEqual(180.0, first.TriggerData.DurationSeconds);
+      Assert.AreEqual("Long cooldown", first.TriggerData.AltTimerName);
+      Assert.AreEqual(0, first.TriggerData.TriggerAgainOption);
+
+      var second = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
+      Assert.AreEqual(60.0, second.TriggerData.DurationSeconds);
+      Assert.AreEqual("Short cooldown", second.TriggerData.AltTimerName);
+      // NAG restartBehavior 1 (RestartOnDuplicate) → EQLP option 2 (stop same name then start)
+      Assert.AreEqual(2, second.TriggerData.TriggerAgainOption);
+
+      Assert.IsTrue(nodes.All(n => n.TriggerData.EnableTimer));
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_TextAndTimerActions_DoNotOverwriteEachOther()
+    {
+      // Text overlay and timer actions used to clobber each other's displayText — the timer's
+      // label now goes to AltTimerName, so both features coexist on one node.
+      var json = CreateTriggerJson("Text And Timer", "pattern", actions:
+      [
+        CreateAction(0, displayText: "Status text"),
+        CreateAction(4, displayText: "Cooldown", duration: 30.0)
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("Status text", nodes[0].TriggerData.TextToDisplay);
+      Assert.AreEqual("Cooldown", nodes[0].TriggerData.AltTimerName);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_TwoPhrasesTwoTimers_FourNodesNamedPerPhraseAndTimer()
+    {
+      var json = CreateTriggerJson("Grid", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase(@"^You cast \w+", useRegEx: true, phraseId: "p1"),
+        CreateCapturePhrase(@"^You cast 2 \w+", useRegEx: true, phraseId: "p2")
+      ], actions:
+      [
+        CreateAction(4, displayText: "A", duration: 10.0),
+        CreateAction(4, displayText: "B", duration: 20.0)
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(4, nodes);
+      Assert.AreEqual("Grid #1 (Timer 1)", nodes[0].Name);
+      Assert.AreEqual("Grid #1 (Timer 2)", nodes[1].Name);
+      Assert.AreEqual("Grid #2 (Timer 1)", nodes[2].Name);
+      Assert.AreEqual("Grid #2 (Timer 2)", nodes[3].Name);
+      // Each phrase × timer combination keeps its own duration/label
+      Assert.AreEqual(10.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.AreEqual(20.0, nodes[1].TriggerData.DurationSeconds);
+      Assert.AreEqual(10.0, nodes[2].TriggerData.DurationSeconds);
+      Assert.AreEqual(20.0, nodes[3].TriggerData.DurationSeconds);
+      Assert.AreEqual("A", nodes[0].TriggerData.AltTimerName);
+      Assert.AreEqual("B", nodes[1].TriggerData.AltTimerName);
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionEndEarlyPhrases_RoutedToOwnTimerNodeOnly()
+    {
+      // An action's endEarlyPhrases stop that timer only in NAG — in EQLP they must land on
+      // that timer's nodes and not leak into sibling timer nodes.
+      var actionJson = CreateActionString(4, displayText: "Timed", duration: 30.0);
+      actionJson = actionJson.Replace("}", ",\"endEarlyPhrases\":[{\"phrase\":\"Spell faded\"}]}");
+
+      var json = CreateTriggerJson("Scoped EEP", "pattern", endEarlyPhrases:
+      [
+        CreateEndEarlyPhrase("Channel broken")
+      ], actions:
+      [
+        JsonDocument.Parse(actionJson).RootElement,
+        CreateAction(4, displayText: "Untimed", duration: 15.0)
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      var first = nodes.First(n => n.Name.EndsWith("(Timer 1)"));
+      // Trigger-level phrase plus this action's own phrase, both on its node
+      Assert.AreEqual("Channel broken", first.TriggerData.EndEarlyPattern);
+      Assert.AreEqual("Spell faded", first.TriggerData.EndEarlyPattern2);
+
+      var second = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
+      // Sibling timer only gets the trigger-level phrase
+      Assert.AreEqual("Channel broken", second.TriggerData.EndEarlyPattern);
+      Assert.IsFalse(string.IsNullOrEmpty(second.TriggerData.EndEarlyPattern2),
+        "Sibling timer node must not receive the other action's end-early phrases");
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_DotTimerAndBeneficialTimer_MatchNagDrawDirection()
+    {
+      // Verified against the NAG runtime (renderer.js): DotTimers (6) are drawn filling up like
+      // Timers, and BeneficialTimers (10) deplete like Countdowns. Both are per-target in NAG,
+      // which EQLP cannot represent — the divergence must be reported on the node's comments.
+      var json = CreateTriggerJson("Dot And Buff", "pattern", actions:
+      [
+        CreateAction(6, displayText: "Dot", duration: 20.0),
+        CreateAction(10, displayText: "Buff", duration: 30.0)
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      var dot = nodes.First(n => n.Name.EndsWith("(Timer 1)"));
+      Assert.AreEqual(3, dot.TriggerData.TimerType, "NAG DotTimers fill up — must import as Progress");
+      StringAssert.Contains(dot.TriggerData.Comments ?? "", "dot timer approximated");
+
+      var buff = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
+      Assert.AreEqual(1, buff.TriggerData.TimerType, "NAG BeneficialTimers deplete — must import as Countdown");
+      StringAssert.Contains(buff.TriggerData.Comments ?? "", "per-target buff timer");
+    }
+
+    #endregion
+
     [TestMethod]
     public void ConvertTriggers_OrphanedFolderId_PlacedInOrphanedTriggers()
     {
@@ -1868,8 +2028,11 @@ namespace EQLogParser.Wpf.Test
     }
 
     /// <summary>
-    /// Loads a real NAG trigger with set-variable (actionType 5) but NO phraseId,
-    /// verifying that the variable mapping applies to ALL regex phrases with capture groups.
+    /// Loads a real NAG trigger with set-variable (actionType 5) but NO phraseId, plus two
+    /// countdown actions. Verifies that the variable mapping applies to ALL regex phrases with
+    /// capture groups and that each NAG timer action produces its own nodes (2 phrases × 2
+    /// timers = 4) instead of collapsing into one trigger where the last timer overwrote the
+    /// first's duration, label, and restart behavior.
     /// </summary>
     [TestMethod]
     public void ConvertTriggers_RealData_BardEpic_NoPhraseId_AppliesToAllRegexPhrases()
@@ -1877,27 +2040,38 @@ namespace EQLogParser.Wpf.Test
       var json = LoadFixture("bard-epic-2-caster.json");
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      // 2 capture phrases → 2 EQLP triggers (but only 1 import result for the trigger)
-      Assert.HasCount(2, nodes);
+      // 2 capture phrases × 2 countdown actions → 4 EQLP triggers (but only 1 import result for the trigger)
+      Assert.HasCount(4, nodes);
       Assert.HasCount(1, results);
 
-      // Phrase 0 (^([A-Za-z]{3,15}) begins? casting...) is regex with a capture group
-      var casterNode = nodes[0];
-      Assert.Contains("?<s1>", casterNode.TriggerData.Pattern);
-
-      // Should have a VariableAction storing BrdEpic2Caster from {s1}
-      var setVarAction = casterNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
-      Assert.IsNotNull(setVarAction);
-      Assert.AreEqual("{s1}", setVarAction.Value);
+      // Phrase 0 (^([A-Za-z]{3,15}) begins? casting...) is regex with a capture group — both of
+      // its timer nodes keep the converted named group and the set-variable mapping.
+      var casterNodes = nodes.Where(n => n.TriggerData.Pattern.Contains("?<s1>")).ToList();
+      Assert.AreEqual(2, casterNodes.Count, "Both timer variants of the regex phrase should keep the named group");
+      foreach (var casterNode in casterNodes)
+      {
+        var setVarAction = casterNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
+        Assert.IsNotNull(setVarAction);
+        Assert.AreEqual("{s1}", setVarAction.Value);
+      }
 
       // Phrase 1 (You are filled with the spirit of Vesagran.) is non-regex — no group conversion
-      var spiritNode = nodes[1];
-      Assert.DoesNotContain("?<s1>", spiritNode.TriggerData.Pattern);
+      var spiritNodes = nodes.Where(n => !n.TriggerData.Pattern.Contains("?<s1>")).ToList();
+      Assert.AreEqual(2, spiritNodes.Count);
+
+      // Both countdown labels must survive on their own node pairs (the fixture trims the NAG
+      // duration fields, so no visible timer is enabled — the point is per-action routing).
+      Assert.AreEqual(2, nodes.Count(n => n.TriggerData.AltTimerName == "BRD Epic ({BrdEpic2Caster})"));
+      Assert.AreEqual(2, nodes.Count(n => n.TriggerData.AltTimerName == "BRD Epic refresh ({BrdEpic2Caster})"));
     }
 
     /// <summary>
-    /// Verifies that ${BrdEpic2Caster} in timer display text is converted to {BrdEpic2Caster}
-    /// (valid EQLP syntax) in the Bard Epic trigger which has set-variable without phraseId.
+    /// Verifies the two displayText routes in the Bard Epic trigger (set-variable without
+    /// phraseId, text overlay + two countdowns):
+    /// - actionType 0's displayText "🎵Bard Epic🎶" is the node's TextToDisplay on every node;
+    /// - each countdown's label goes to AltTimerName with ${BrdEpic2Caster} converted to
+    ///   {BrdEpic2Caster} (valid EQLP token syntax), and no node's TextToDisplay carries a
+    ///   timer label.
     /// </summary>
     [TestMethod]
     public void ConvertTriggers_RealData_BardEpic_DisplayTextVariableConverted()
@@ -1905,15 +2079,28 @@ namespace EQLogParser.Wpf.Test
       var json = LoadFixture("bard-epic-2-caster.json");
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
-      // actionType 0 (text overlay) has displayText "🎵Bard Epic🎶" which overwrites timer display text
-      var timerNode = nodes.FirstOrDefault(n => n.TriggerData.TextToDisplay.Contains("Bard Epic"));
-      Assert.IsNotNull(timerNode, "Expected a trigger with 'Bard Epic' in display text");
+      Assert.HasCount(4, nodes);
 
-      // The timer displayText "BRD Epic (${BrdEpic2Caster})" was converted by ConvertTemplates
-      // but overwritten by actionType 0's displayText. Verify the conversion happened by
-      // checking that no invalid {$var} syntax remains anywhere in the trigger data.
-      Assert.DoesNotContain("{$BrdEpic2Caster}", timerNode.TriggerData.TextToDisplay);
-      Assert.DoesNotContain("${BrdEpic2Caster}", timerNode.TriggerData.TextToDisplay);
+      // The text overlay action's displayText is the node text on every timer variant.
+      Assert.IsTrue(nodes.All(n => n.TriggerData.TextToDisplay == "🎵Bard Epic🎶"),
+        $"Every node should carry the text overlay: {string.Join(" | ", nodes.Select(n => n.TriggerData.TextToDisplay))}");
+
+      // No timer label may leak into display text on any node.
+      Assert.IsTrue(nodes.All(n => !(n.TriggerData.TextToDisplay ?? "").Contains("BRD Epic")),
+        "Timer labels must not be imported as display text");
+
+      // Timer labels live in AltTimerName with the NAG variable converted to EQLP syntax.
+      foreach (var node in nodes)
+      {
+        Assert.IsNotNull(node.TriggerData.AltTimerName);
+        Assert.IsFalse(node.TriggerData.AltTimerName.Contains("${BrdEpic2Caster}"),
+          $"Unconverted NAG variable in timer label: {node.TriggerData.AltTimerName}");
+        Assert.IsFalse(node.TriggerData.AltTimerName.Contains("{$"),
+          $"Invalid token syntax in timer label: {node.TriggerData.AltTimerName}");
+      }
+
+      // TTS action's displayText is preserved as speech, not clobbered by the timers.
+      Assert.IsTrue(nodes.All(n => n.TriggerData.TextToSpeak == "Bard epic"));
     }
 
     /// <summary>
