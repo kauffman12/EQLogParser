@@ -852,8 +852,6 @@ internal static class NagUtil
     // "Bard Epic 2.0" TTS spoken twice, counter incremented twice). Later variants carry just
     // their own timer plus the per-node import notes.
     var multiTimer = timerActions.Count > 1;
-    if (timerActions.Count == 0)
-      durationSeconds = 0; // model default is 0.2 — a NAG trigger without timers must not export one
     var endEarlyByVariant = new List<List<(string phrase, bool useRegex)>>();
     if (timerActions.Count > 0)
     {
@@ -960,6 +958,10 @@ internal static class NagUtil
             }
             triggerData.SelectedOverlays = overlays;
           }
+        }
+        else
+        {
+          triggerData.DurationSeconds = 0; // model default is 0.2 — a timerless import must not export one
         }
 
         // End-early phrases for this node: trigger-level merged with this timer variant's own.
