@@ -448,6 +448,42 @@ namespace EQLogParser.Wpf.Test
       StringAssert.Contains(buff.TriggerData.Comments ?? "", "per-target buff timer");
     }
 
+    [TestMethod]
+    public void ConvertTriggers_SharedNonTimerActions_FirstTimerVariantOnly()
+    {
+      // NAG fires non-timer actions once per trigger execution, but every fan-out node matches
+      // the same line — shared actions must live on the first timer variant only or they would
+      // double-fire (TTS spoken twice, counter incremented twice).
+      var json = CreateTriggerJson("Shared Actions", "pattern", comments: "author note", actions:
+      [
+        CreateAction(2, displayText: "Spell ready"),
+        CreateAction(8, displayText: "Cooldowns", duration: 30.0),
+        CreateAction(4, displayText: "T1", duration: 60.0),
+        CreateAction(4, displayText: "T2", duration: 90.0)
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      var first = nodes.First(n => n.Name.EndsWith("(Timer 1)"));
+      var second = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
+
+      // Shared actions and the NAG author comment live on the first variant only...
+      Assert.AreEqual("Spell ready", first.TriggerData.TextToSpeak);
+      Assert.AreEqual("Cooldowns", first.TriggerData.TextToDisplay, "Counter label is a shared text action");
+      Assert.AreEqual(1, first.TriggerData.VariableActions.Count, "Counter increment must fire exactly once");
+      StringAssert.Contains(first.TriggerData.Comments ?? "", "author note");
+
+      // ...and are absent from the sibling variant, which carries only its own timer.
+      Assert.IsNull(second.TriggerData.TextToSpeak);
+      Assert.IsNull(second.TriggerData.TextToDisplay);
+      Assert.AreEqual(0, second.TriggerData.VariableActions.Count, "Counter must not increment on the sibling node");
+      Assert.IsFalse((second.TriggerData.Comments ?? "").Contains("author note"));
+      Assert.IsTrue(second.TriggerData.EnableTimer);
+      Assert.AreEqual(90.0, second.TriggerData.DurationSeconds);
+      Assert.AreEqual("T2", second.TriggerData.AltTimerName);
+    }
+
     #endregion
 
     [TestMethod]
@@ -1828,8 +1864,8 @@ namespace EQLogParser.Wpf.Test
     #region Helper Methods
 
     private string CreateTriggerJson(string? name, string pattern, bool onlyExecuteInDev = false, double score = 0.5,
-        JsonElement[]? capturePhrases = null, JsonElement[]? conditions = null, JsonElement[]? endEarlyPhrases = null,
-        JsonElement[]? actions = null)
+        string? comments = null, JsonElement[]? capturePhrases = null, JsonElement[]? conditions = null,
+        JsonElement[]? endEarlyPhrases = null, JsonElement[]? actions = null)
     {
       var phrases = capturePhrases ?? [CreateCapturePhrase(pattern)];
       var sb = new StringBuilder();
@@ -1840,6 +1876,13 @@ namespace EQLogParser.Wpf.Test
       if (score != 0.5)
       {
         sb.Append($",\"score\":{score}");
+      }
+
+      // NAG trigger-level comment
+      if (!string.IsNullOrEmpty(comments))
+      {
+        var escapedComments = comments.Replace("\"", "\\\"");
+        sb.Append($",\"comments\":\"{escapedComments}\"");
       }
 
       // Capture phrases
@@ -2048,12 +2091,17 @@ namespace EQLogParser.Wpf.Test
       // its timer nodes keep the converted named group and the set-variable mapping.
       var casterNodes = nodes.Where(n => n.TriggerData.Pattern.Contains("?<s1>")).ToList();
       Assert.AreEqual(2, casterNodes.Count, "Both timer variants of the regex phrase should keep the named group");
-      foreach (var casterNode in casterNodes)
-      {
-        var setVarAction = casterNode.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
-        Assert.IsNotNull(setVarAction);
-        Assert.AreEqual("{s1}", setVarAction.Value);
-      }
+
+      // The set-variable mapping rides with the shared non-timer actions on the first timer
+      // variant only — the sibling node matches the same line and must not set it again.
+      var firstCaster = casterNodes.First(n => n.Name.EndsWith("(Timer 1)"));
+      var setVarAction = firstCaster.TriggerData.VariableActions.FirstOrDefault(va => va.VariableName == "BrdEpic2Caster");
+      Assert.IsNotNull(setVarAction);
+      Assert.AreEqual("{s1}", setVarAction.Value);
+
+      var secondCaster = casterNodes.First(n => n.Name.EndsWith("(Timer 2)"));
+      Assert.AreEqual(0, secondCaster.TriggerData.VariableActions.Count(va => va.VariableName == "BrdEpic2Caster"),
+        "Sibling timer node must not re-set the shared variable");
 
       // Phrase 1 (You are filled with the spirit of Vesagran.) is non-regex — no group conversion
       var spiritNodes = nodes.Where(n => !n.TriggerData.Pattern.Contains("?<s1>")).ToList();
@@ -2068,7 +2116,8 @@ namespace EQLogParser.Wpf.Test
     /// <summary>
     /// Verifies the two displayText routes in the Bard Epic trigger (set-variable without
     /// phraseId, text overlay + two countdowns):
-    /// - actionType 0's displayText "🎵Bard Epic🎶" is the node's TextToDisplay on every node;
+    /// - actionType 0's displayText "🎵Bard Epic🎶" is the TextToDisplay on each phrase's first
+    ///   timer variant only (sibling variants must not repeat the shared text);
     /// - each countdown's label goes to AltTimerName with ${BrdEpic2Caster} converted to
     ///   {BrdEpic2Caster} (valid EQLP token syntax), and no node's TextToDisplay carries a
     ///   timer label.
@@ -2081,9 +2130,16 @@ namespace EQLogParser.Wpf.Test
 
       Assert.HasCount(4, nodes);
 
-      // The text overlay action's displayText is the node text on every timer variant.
-      Assert.IsTrue(nodes.All(n => n.TriggerData.TextToDisplay == "🎵Bard Epic🎶"),
-        $"Every node should carry the text overlay: {string.Join(" | ", nodes.Select(n => n.TriggerData.TextToDisplay))}");
+      // The text overlay action's displayText is the node text on each phrase's first timer
+      // variant only — sibling variants match the same line and would show it twice.
+      var firstVariants = nodes.Where(n => n.Name.EndsWith("(Timer 1)")).ToList();
+      var secondVariants = nodes.Where(n => n.Name.EndsWith("(Timer 2)")).ToList();
+      Assert.AreEqual(2, firstVariants.Count);
+      Assert.AreEqual(2, secondVariants.Count);
+      Assert.IsTrue(firstVariants.All(n => n.TriggerData.TextToDisplay == "🎵Bard Epic🎶"),
+        $"First variants should carry the text overlay: {string.Join(" | ", firstVariants.Select(n => n.TriggerData.TextToDisplay))}");
+      Assert.IsTrue(secondVariants.All(n => string.IsNullOrEmpty(n.TriggerData.TextToDisplay)),
+        "Sibling timer variants must not repeat the shared text overlay");
 
       // No timer label may leak into display text on any node.
       Assert.IsTrue(nodes.All(n => !(n.TriggerData.TextToDisplay ?? "").Contains("BRD Epic")),
@@ -2099,8 +2155,11 @@ namespace EQLogParser.Wpf.Test
           $"Invalid token syntax in timer label: {node.TriggerData.AltTimerName}");
       }
 
-      // TTS action's displayText is preserved as speech, not clobbered by the timers.
-      Assert.IsTrue(nodes.All(n => n.TriggerData.TextToSpeak == "Bard epic"));
+      // TTS action's displayText is preserved as speech on the first variants only — not
+      // clobbered by the timers and not repeated (spoken twice) on the siblings.
+      Assert.IsTrue(firstVariants.All(n => n.TriggerData.TextToSpeak == "Bard epic"));
+      Assert.IsTrue(secondVariants.All(n => string.IsNullOrEmpty(n.TriggerData.TextToSpeak)),
+        "Sibling timer variants must not repeat the shared TTS");
     }
 
     /// <summary>

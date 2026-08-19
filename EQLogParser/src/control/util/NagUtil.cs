@@ -820,14 +820,12 @@ internal static class NagUtil
       conditionStr = ParseConditions(conds, droppedFeatures);
     }
 
-    // Build Comments field: preserve original NAG comments as-is.
-    // Only append notes about dropped features when something was actually lost in conversion.
-    var commentParts = new List<string>();
-    if (!string.IsNullOrEmpty(comments))
-      commentParts.Add(comments);
-    if (droppedFeatures.Count > 0)
-      commentParts.Add($"EQLP Import Notes: {string.Join(", ", droppedFeatures)}");
-    var triggerComments = commentParts.Count > 0 ? string.Join("\n", commentParts) : null;
+    // Build Comments field content. The NAG author's own comment describes the trigger as a
+    // whole, so in a multi-timer fan-out it lands on each phrase's first timer variant only
+    // (see below); the import notes are per-node diagnostics and stay on every node.
+    var importNotes = droppedFeatures.Count > 0
+      ? $"EQLP Import Notes: {string.Join(", ", droppedFeatures)}"
+      : null;
 
     // Trigger-level end-early phrases, parsed once and shared by every node's merged list.
     var triggerEndEarly = new List<(string phrase, bool useRegex)>();
@@ -848,6 +846,12 @@ internal static class NagUtil
     // nodes' lists and not into the sibling timers'. A single entry covers triggers without any
     // timer action. EQLP has max 3 slots per node; overflow is reported as dropped.
     var timerActions = parsed.TimerActions;
+    // When a trigger fans out into multiple nodes, every node matches the same line. NAG fires
+    // its non-timer actions once per execution, so those actions (and the NAG author's comment)
+    // attach only to each phrase's first timer variant — otherwise they would double-fire (e.g.
+    // "Bard Epic 2.0" TTS spoken twice, counter incremented twice). Later variants carry just
+    // their own timer plus the per-node import notes.
+    var multiTimer = timerActions.Count > 1;
     var endEarlyByVariant = new List<List<(string phrase, bool useRegex)>>();
     if (timerActions.Count > 0)
     {
@@ -863,10 +867,10 @@ internal static class NagUtil
 
     // Build one EQLP trigger per capture phrase AND per NAG timer action (no regex alternation
     // combining). An EQLP trigger holds exactly one timer, so a NAG trigger with M timer actions
-    // produces M nodes per phrase; each carries the shared non-timer actions plus its own timer's
-    // fields. Without this fan-out the last timer action would silently overwrite the earlier
-    // ones' duration, label, and restart behavior (e.g. "Bard Epic 2.0": its 180s and 60s timer
-    // actions collapsed into a single 60s timer).
+    // produces M nodes per phrase. Without this fan-out the last timer action would silently
+    // overwrite the earlier ones' duration, label, and restart behavior (e.g. "Bard Epic 2.0":
+    // its 180s and 60s timer actions collapsed into a single 60s timer). Shared non-timer
+    // actions attach to each phrase's first variant only — see the strip below.
     var nodes = new List<ExportTriggerNode>();
     for (var i = 0; i < phrases.Count; i++)
     {
@@ -882,6 +886,21 @@ internal static class NagUtil
       {
         var triggerData = baseTriggerData.Clone();
 
+        // Strip the shared non-timer actions from sibling timer variants — they already run on
+        // this phrase's first node, which matches the same line. The timer block below still
+        // applies this variant's own timer and its overlays.
+        if (multiTimer && t > 0)
+        {
+          triggerData.TextToDisplay = null;
+          triggerData.TextToSpeak = null;
+          triggerData.SoundToPlay = null;
+          triggerData.TextToShare = null;
+          triggerData.SelectedOverlays = [];
+          triggerData.VariableActions = [];
+          triggerData.EndTimerClearVariables = null;
+          triggerData.RepeatedResetTime = 0.75; // model default — no counter on this node
+        }
+
         // Assign the pattern for this phrase
         triggerData.Pattern = pattern;
         triggerData.UseRegex = useRegEx;
@@ -892,8 +911,18 @@ internal static class NagUtil
           triggerData.MatchVariableCondition = conditionStr;
         }
 
-        // Apply shared metadata
-        triggerData.Comments = triggerComments;
+        // Apply shared metadata. The NAG comment rides with the shared non-timer actions on the
+        // first variant of each phrase; import notes stay on every node.
+        if (t == 0)
+        {
+          triggerData.Comments = string.IsNullOrEmpty(comments) ? importNotes
+            : string.IsNullOrEmpty(importNotes) ? comments : $"{comments}\n{importNotes}";
+        }
+        else
+        {
+          triggerData.Comments = importNotes;
+        }
+
         // interruptSpeech triggers get top urgency so the audio engine preempts lower-priority
         // playback, approximating NAG's speech interruption (see note above). Priority 1 is also
         // what GINA import uses for interrupt triggers.
@@ -936,15 +965,17 @@ internal static class NagUtil
 
         // Apply phrase-specific display texts from actions that target specific phrases.
         // For example, a clear-variable action with displayText "Spell {var} was interrupted."
-        // should only show on the interrupt phrases, not on the begin-casting phrase.
-        if (parsed.PhraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
+        // should only show on the interrupt phrases, not on the begin-casting phrase — and only
+        // on the first timer variant (shared non-timer actions must not double-fire).
+        if (t == 0 && parsed.PhraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
         {
           triggerData.TextToDisplay = phraseDisplayText;
         }
 
-        // Add VariableActions for set-variable mappings on this phrase.
+        // Add VariableActions for set-variable mappings on this phrase (first variant only —
+        // the sibling timer nodes match the same line and would set the variable again).
         // EQLP stores the captured value as a global variable accessible by other triggers.
-        if (phraseVarMap.TryGetValue(currentPhraseId, out var varList))
+        if (t == 0 && phraseVarMap.TryGetValue(currentPhraseId, out var varList))
         {
           foreach (var (groupName, varName) in varList)
           {
@@ -964,7 +995,7 @@ internal static class NagUtil
         // are per-phrase triggers that fire on match, so we use VariableAction { ActionType=Clear }.
         foreach (var (clearPhraseId, clearVarName) in parsed.PhraseClearVariables)
         {
-          if (currentPhraseId == clearPhraseId)
+          if (t == 0 && currentPhraseId == clearPhraseId)
           {
             triggerData.VariableActions.Add(new VariableAction
             {
