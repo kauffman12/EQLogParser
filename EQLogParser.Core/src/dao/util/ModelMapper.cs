@@ -2,11 +2,11 @@ using Riok.Mapperly.Abstractions;
 
 namespace EQLogParser
 {
-  /* Deep-cloning mappers for the trigger store models (see the WPF host's ModelMapper for the
-   * remaining UI-only mappings). */
+  /* Deep-cloning mappers for Core domain models (trigger store + combat log records). */
   [Mapper(UseDeepCloning = true)]
   internal static partial class ModelMapper
   {
+    public static partial LootRecord Clone(this LootRecord source);
     public static partial Trigger Clone(this Trigger source);
     public static partial Overlay Clone(this Overlay source);
     public static partial TriggerNode Clone(this TriggerNode source);
