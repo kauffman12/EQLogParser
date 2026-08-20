@@ -1,0 +1,37 @@
+using System;
+using System.Threading.Tasks;
+
+namespace EQLogParser
+{
+  /* Host hooks for the GINA import flow — the two places it needs a window: failure messages and
+   * the merge/new-folder question. Defaults are safe no-ops (Cancel) so Core never throws when a
+   * host forgets to wire them; App.xaml.cs maps caption keys to localized Resource strings and
+   * shows MessageWindows on the UI thread. */
+  internal static class GinaPlatform
+  {
+    // Semantic caption keys — the host decides how they render (localized strings).
+    public const string CaptionReceivedGina = "ReceivedGina";
+    public const string CaptionShareError = "ShareError";
+
+    /// <summary>Shows a modal message. Host must marshal to its UI thread.</summary>
+    public static Action<string, string> ShowMessage = (_, _) => { };
+
+    internal enum ImportChoice
+    {
+      // User dismissed the question (or no host is wired) — import nothing.
+      Cancel,
+      // Merge into the existing trigger tree.
+      Merge,
+      // Import into a freshly named folder.
+      NewFolder
+    }
+
+    /// <summary>Asks whether to merge or import into a new folder; <paramref name="allowCancel"/>
+    /// mirrors the original dialog's third button.</summary>
+    public static Func<string, bool, Task<ImportChoice>> AskImportChoice = async (_, _) =>
+    {
+      await Task.CompletedTask;
+      return ImportChoice.Cancel;
+    };
+  }
+}

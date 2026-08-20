@@ -83,6 +83,24 @@ namespace EQLogParser
         CombatRecordLookup.ClassLabelByEnumName = name => Resource.ResourceManager.GetString(name, System.Globalization.CultureInfo.InvariantCulture);
         TriggerStorePlatform.IconIsValid = path => UiElementUtil.CreateBitmap(path) != null;
         TriggerStorePlatform.SoundExists = TriggerUtil.SoundFileExists;
+
+        // Wire the GINA import UI hooks (failure messages + merge/new-folder question).
+        GinaPlatform.ShowMessage = (message, caption) =>
+        {
+          var title = caption == GinaPlatform.CaptionShareError ? Resource.SHARE_ERROR : Resource.RECEIVED_GINA;
+          _ = UiUtil.InvokeAsync(() => new MessageWindow(message, title).ShowDialog());
+        };
+
+        GinaPlatform.AskImportChoice = async (message, allowCancel) => await UiUtil.InvokeAsync(() =>
+        {
+          var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question,
+            "New Folder", "Merge", allowCancel);
+          msgDialog.ShowDialog();
+
+          return msgDialog.IsYes2Clicked ? GinaPlatform.ImportChoice.Merge :
+                 msgDialog.IsYes1Clicked ? GinaPlatform.ImportChoice.NewFolder :
+                 GinaPlatform.ImportChoice.Cancel;
+        });
         TriggerStorePlatform.ValidateSpritePath = EQUtil.ValidateSpritePath;
         TriggerStorePlatform.DefaultTextOverlayPosition = () =>
         {
