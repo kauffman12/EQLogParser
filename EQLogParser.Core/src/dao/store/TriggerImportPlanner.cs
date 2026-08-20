@@ -29,16 +29,18 @@ namespace EQLogParser
       Decide(FindExisting(siblings, incoming), incoming);
 
     // Match an existing node to update in place on re-import. Nodes carrying an OriginalId
-    // (NAG imports) must match by name AND source id — NAG allows duplicate names for distinct
-    // triggers, and matching by name alone would silently overwrite the first imported trigger
-    // with every same-named one. Name-only matches are kind-safe (MatchesReimportKind): without
-    // it, a folder wrapper could match an existing same-named trigger and reach the overwrite
-    // branch with TriggerData == null, erasing the trigger's data.
+    // (NAG imports) match by source id alone: NAG allows duplicate names for distinct triggers,
+    // and name is not stable — the importer renames a same-name collision ("X" → "X (2)"),
+    // after which a name+id match would fail and every re-import would insert yet another
+    // duplicate. The OriginalId is the stable source identity and survives on the stored node.
+    // Name-only matches are kind-safe (MatchesReimportKind): without it, a folder wrapper could
+    // match an existing same-named trigger and reach the overwrite branch with TriggerData ==
+    // null, erasing the trigger's data.
     public static TriggerNode FindExisting(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming)
     {
       if (incoming.OriginalId != null)
       {
-        return siblings.FirstOrDefault(n => n.Name == incoming.Name && n.OriginalId == incoming.OriginalId);
+        return siblings.FirstOrDefault(n => n.OriginalId == incoming.OriginalId);
       }
 
       return siblings.FirstOrDefault(n => n.Name == incoming.Name && MatchesReimportKind(n, incoming));

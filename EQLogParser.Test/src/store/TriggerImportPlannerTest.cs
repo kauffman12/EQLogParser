@@ -110,6 +110,19 @@ namespace EQLogParserTest
       Assert.AreSame(existing, decision.Existing);
     }
 
+    // The importer renames same-name collisions ("Foo" → "Foo (2)"), so on re-import the stored
+    // name may differ from the source name. Matching must survive that via the OriginalId alone,
+    // otherwise every re-import inserts a new duplicate sibling.
+    [TestMethod]
+    public void Plan_OriginalId_RenamedExistingNode_UpdatesInPlace()
+    {
+      var existing = ExistingTrigger("Foo (2)", "id-1");
+      var decision = TriggerImportPlanner.Plan([existing], IncomingLeaf("Foo", "id-1"));
+
+      Assert.AreEqual(ImportAction.UpdateInPlace, decision.Action);
+      Assert.AreSame(existing, decision.Existing);
+    }
+
     // OriginalId matching is identity-based: a node without an OriginalId never matches an
     // incoming node that carries one.
     [TestMethod]
