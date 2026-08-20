@@ -553,7 +553,7 @@ internal static class NagUtil
             {
               soundToPlay = "alert1.wav";
             }
-            if (!TriggerUtil.SoundFileExists(soundToPlay))
+            if (!TriggerStorePlatform.SoundExists(soundToPlay))
             {
               devMissingAudio.Add(soundToPlay);
             }
@@ -1382,7 +1382,7 @@ internal static class NagUtil
               soundToPlay = "alert1.wav";
             }
             // Track if the resolved file doesn't exist in data/sounds/
-            if (!TriggerUtil.SoundFileExists(soundToPlay))
+            if (!TriggerStorePlatform.SoundExists(soundToPlay))
             {
               missingAudioFiles.Add(soundToPlay);
             }
