@@ -321,6 +321,32 @@ internal static class NagUtil
   }
 
   // Resolve audio file ID to filename using files-database.json if available
+  /// <summary>Renames duplicate child names under each parent ("X", "X" → "X", "X (2)").</summary>
+  private static void UniquifySiblingNames(ExportTriggerNode parent)
+  {
+    if (parent?.Nodes is not { Count: > 1 } children)
+    {
+      return;
+    }
+
+    var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    foreach (var child in children)
+    {
+      if (child?.Name is null)
+      {
+        continue;
+      }
+
+      var seen = counts.TryGetValue(child.Name, out var count) ? ++counts[child.Name] : counts[child.Name] = 1;
+      if (seen > 1)
+      {
+        child.Name = $"{child.Name} ({seen})";
+      }
+
+      UniquifySiblingNames(child);
+    }
+  }
+
   private static Dictionary<string, string> _audioFileMap;
   private static void LoadAudioFileMap(string databaseDirectory)
   {
@@ -469,6 +495,12 @@ internal static class NagUtil
     // Wrap all nodes in a root node — consistent with GINA export format
     // so the first Import() overload skips the root and processes folders correctly
     var rootNode = new ExportTriggerNode { Nodes = nodes };
+
+    // NAG allows several children with the same name under one parent. The trigger store keys
+    // children by (kind, name), so duplicate names would merge into or shadow each other on
+    // re-import — normalize to unique sibling names here, the same normalization the app's own
+    // .tgf exports already contain.
+    UniquifySiblingNames(rootNode);
 
     return (new List<ExportTriggerNode> { rootNode }, results, metadata);
   }
