@@ -1,6 +1,6 @@
 using Moq;
 
-namespace EQLogParser.Wpf.Test
+namespace EQLogParser
 {
   [TestClass]
   public class DamageLineParserTest

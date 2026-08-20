@@ -22,4 +22,10 @@
     <ProjectReference Include="..\EQLogParser.Core\EQLogParser.Core.csproj" />
     <ProjectReference Include="..\EQLogParser.Utils\EQLogParser.Utils.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Combat-log data files (spells.txt, npcs.txt, ...) needed by EQDataStore in tests. -->
+    <None Include="..\EQLogParser\data\**" Link="data\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
