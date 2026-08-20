@@ -11,8 +11,11 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class TriggerStateDB
+  internal class TriggerStateDB : IAsyncDisposable
   {
+    /// <summary>Closes the LiteDB handle — call before re-opening the same file or on app exit.</summary>
+    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose();
+
     internal event Action<string> DeleteEvent;
     internal event Action<bool> OverlayImportEvent;
     internal event Action<TriggerNode> TriggerUpdateEvent;
@@ -1753,7 +1756,7 @@ namespace EQLogParser
       }
     }
 
-    private static string FixColor(string value)
+    internal static string FixColor(string value)
     {
       if (!string.IsNullOrEmpty(value))
       {
@@ -1766,7 +1769,7 @@ namespace EQLogParser
     // Normalizes a legacy color to #AARRGGBB; null when the value is not a hex color (FixColor
     // then falls back to #FFFFFF, same as the old non-parseable path). Replaces the Syncfusion
     // ColorConverter — named colors in pre-1.0 data now fall back instead of being resolved.
-    private static string NormalizeHexColor(string value)
+    internal static string NormalizeHexColor(string value)
     {
       var v = value.Trim();
       if (v.StartsWith('#'))
