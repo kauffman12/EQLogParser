@@ -41,6 +41,7 @@ namespace EQLogParser
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
       findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
+      TriggerStateDB.Instance.NodeCheckChanged += TriggerNodeCheckChanged;
       _findTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _findTimer.Tick += async (_, _) =>
       {
@@ -89,8 +90,11 @@ namespace EQLogParser
     internal async Task Init(string characterId, Func<bool> isCanceled, bool enable)
     {
       _isCancelSelection = isCanceled;
-      var nodes = await TriggerStateDB.Instance.GetOverlayTreeView();
-      overlayTreeView.Nodes.Add(nodes);
+      if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetOverlayTree()) is { } viewNode)
+      {
+        overlayTreeView.Nodes.Add(viewNode);
+      }
+
       await EnableAndRefreshTriggers(enable, characterId);
     }
 
@@ -146,10 +150,39 @@ namespace EQLogParser
 
     private async void NodeExpanded(object sender, NodeExpandedCollapsedEventArgs e)
     {
-      if (e.Node is TriggerTreeViewNode node)
+      if (e.Node is TriggerTreeViewNode { SerializedData.Id: { } id } node)
       {
-        await TriggerStateDB.Instance.SetExpanded(node);
+        await TriggerStateDB.Instance.SetExpanded(id, node.IsExpanded);
       }
+    }
+
+    /* Store-side SetStateFromParent resolved the parent's enabled value for an already-visible
+     * node (drag-and-drop) — apply it to the matching view node. */
+    private void TriggerNodeCheckChanged(string id, bool isChecked)
+    {
+      UiUtil.InvokeNow(() =>
+      {
+        if (triggerTreeView?.Nodes.Count > 0 && triggerTreeView.Nodes[0] is TriggerTreeViewNode root &&
+            FindNodeById(root, id) is { } node)
+        {
+          node.IsChecked = isChecked;
+        }
+      });
+    }
+
+    private static TriggerTreeViewNode FindNodeById(TriggerTreeViewNode node, string id)
+    {
+      if (node.SerializedData?.Id == id) return node;
+
+      foreach (var child in node.ChildNodes)
+      {
+        if (child is TriggerTreeViewNode triggerNode && FindNodeById(triggerNode, id) is { } found)
+        {
+          return found;
+        }
+      }
+
+      return null;
     }
 
     private static void SetupDragNDrop(SfTreeView treeView)
@@ -226,10 +259,10 @@ namespace EQLogParser
 
     private async void NodeChecked(object sender, NodeCheckedEventArgs e)
     {
-      if (e.Node is TriggerTreeViewNode viewNode)
+      if (e.Node is TriggerTreeViewNode { SerializedData.Id: { } nodeId } viewNode)
       {
         var ids = _selectedCharacters?.Select(x => x.Id).ToList() ?? [CurrentCharacterId];
-        await TriggerStateDB.Instance.SetState(ids, viewNode);
+        await TriggerStateDB.Instance.SetState(ids, nodeId, viewNode.IsChecked);
         TriggerManager.Instance.TriggersUpdated();
       }
     }
@@ -292,8 +325,10 @@ namespace EQLogParser
     private async Task RefreshTriggerNode()
     {
       triggerTreeView?.Nodes?.Clear();
-      var nodes = await TriggerStateDB.Instance.GetTriggerTreeView(CurrentCharacterId);
-      triggerTreeView?.Nodes?.Add(nodes);
+      if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetTriggerTree(CurrentCharacterId)) is { } viewNode)
+      {
+        triggerTreeView?.Nodes?.Add(viewNode);
+      }
     }
 
     private async Task RefreshOverlayNode()
@@ -301,8 +336,10 @@ namespace EQLogParser
       if (overlayTreeView?.Nodes.Count > 0)
       {
         overlayTreeView.Nodes.Clear();
-        var nodes = await TriggerStateDB.Instance.GetOverlayTreeView();
-        overlayTreeView.Nodes.Add(nodes);
+        if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetOverlayTree()) is { } viewNode)
+        {
+          overlayTreeView.Nodes.Add(viewNode);
+        }
       }
     }
 
@@ -403,11 +440,13 @@ namespace EQLogParser
     {
       if (GetTreeViewFromMenu(sender) is { SelectedItem: TriggerTreeViewNode { SerializedData.Id: { } id } parent })
       {
-        if (await TriggerStateDB.Instance.CreateFolder(id, LabelNewFolder, CurrentCharacterId) is { } newNode)
+        var created = await TriggerStateDB.Instance.CreateFolder(id, LabelNewFolder, CurrentCharacterId);
+        if (created.Node is { } newNode)
         {
-          parent.ChildNodes.Add(newNode);
-          await SelectNodeAsync(triggerTreeView, newNode.SerializedData.Id);
-          triggerTreeView.BringIntoView(newNode);
+          var viewNode = TriggerTreeViewBuilder.Build(newNode, created.Checked);
+          parent.ChildNodes.Add(viewNode);
+          await SelectNodeAsync(triggerTreeView, newNode.Id);
+          triggerTreeView.BringIntoView(viewNode);
         }
       }
     }
@@ -419,11 +458,12 @@ namespace EQLogParser
         var label = isTextOverlay ? LabelNewTextOverlay : LabelNewTimerOverlay;
         if (await TriggerStateDB.Instance.CreateOverlay(parent.SerializedData.Id, label, isTextOverlay) is { } newNode)
         {
+          var viewNode = TriggerTreeViewBuilder.Build(newNode);
           await Dispatcher.InvokeAsync(async () =>
           {
-            parent.ChildNodes.Add(newNode);
-            await SelectNodeAsync(overlayTreeView, newNode.SerializedData.Id);
-            overlayTreeView.BringIntoView(newNode);
+            parent.ChildNodes.Add(viewNode);
+            await SelectNodeAsync(overlayTreeView, newNode.Id);
+            overlayTreeView.BringIntoView(viewNode);
           });
         }
       }
@@ -433,13 +473,15 @@ namespace EQLogParser
     {
       if (triggerTreeView.SelectedItem is TriggerTreeViewNode parent)
       {
-        if (await TriggerStateDB.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, CurrentCharacterId) is { } newNode)
+        var createdTrigger = await TriggerStateDB.Instance.CreateTrigger(parent.SerializedData.Id, LabelNewTrigger, CurrentCharacterId);
+        if (createdTrigger.Node is { } newNode)
         {
+          var viewNode = TriggerTreeViewBuilder.Build(newNode, createdTrigger.Checked);
           await Dispatcher.InvokeAsync(async () =>
           {
-            parent.ChildNodes.Add(newNode);
-            await SelectNodeAsync(triggerTreeView, newNode.SerializedData.Id);
-            triggerTreeView.BringIntoView(newNode);
+            parent.ChildNodes.Add(viewNode);
+            await SelectNodeAsync(triggerTreeView, newNode.Id);
+            triggerTreeView.BringIntoView(viewNode);
           });
         }
       }
@@ -611,7 +653,7 @@ namespace EQLogParser
 
               if (_shiftDown)
               {
-                await TriggerStateDB.Instance.SetStateFromParent(node.SerializedData.Parent, CurrentCharacterId, node);
+                await TriggerStateDB.Instance.SetStateFromParent(node.SerializedData.Parent, CurrentCharacterId, node.SerializedData.Id);
               }
 
               needRefresh = true;
@@ -810,9 +852,10 @@ namespace EQLogParser
 
     private async void CopySettingsClick(object sender, RoutedEventArgs e)
     {
-      if (sender is MenuItem { Tag: string id })
+      if (sender is MenuItem { Tag: string id } &&
+          triggerTreeView.SelectedItem is TriggerTreeViewNode { SerializedData.Id: { } nodeId })
       {
-        await TriggerStateDB.Instance.CopyState((TriggerTreeViewNode)triggerTreeView.SelectedItem, CurrentCharacterId, id);
+        await TriggerStateDB.Instance.CopyState(nodeId, CurrentCharacterId, id);
       }
     }
 
@@ -1054,6 +1097,7 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         _disposedValue = true;
+        TriggerStateDB.Instance.NodeCheckChanged -= TriggerNodeCheckChanged;
         triggerTreeView?.DragDropController.Dispose();
         triggerTreeView?.Dispose();
         overlayTreeView?.DragDropController.Dispose();

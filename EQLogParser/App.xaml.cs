@@ -68,6 +68,17 @@ namespace EQLogParser
         // Read app settings
         ConfigUtil.Init();
 
+        // Wire platform-specific behavior into the cross-platform trigger store (Core).
+        TriggerStorePlatform.GetDbFile = ConfigUtil.GetTriggersDbFile;
+        TriggerStorePlatform.IconIsValid = path => UiElementUtil.CreateBitmap(path) != null;
+        TriggerStorePlatform.SoundExists = TriggerUtil.SoundFileExists;
+        TriggerStorePlatform.ValidateSpritePath = EQUtil.ValidateSpritePath;
+        TriggerStorePlatform.DefaultTextOverlayPosition = () =>
+        {
+          var position = TriggerUtil.CalculateDefaultTextOverlayPosition();
+          return ((long)position.X, (long)position.Y);
+        };
+
         var wineLoader = Environment.GetEnvironmentVariable("WINELOADER");
         if (!string.IsNullOrEmpty(wineLoader))
         {

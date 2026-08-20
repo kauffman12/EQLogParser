@@ -1,18 +1,12 @@
 using Riok.Mapperly.Abstractions;
 
-namespace EQLogParser;
-
-[Mapper(UseDeepCloning = true)]
-internal static partial class ModelMapper
+namespace EQLogParser
 {
-  public static partial Trigger Clone(this Trigger source);
-  public static partial Overlay Clone(this Overlay source);
-  public static partial TriggerNode Clone(this TriggerNode source);
-  // OriginalId must survive the copy — Import() matches re-imported NAG nodes by it.
-  [MapProperty(nameof(ExportTriggerNode.OriginalId), nameof(TriggerNode.OriginalId))]
-  [System.Diagnostics.CodeAnalysis.SuppressMessage("Mapper", "RMG020:Source member is not mapped to any target member", Justification = "Local Member")]
-  public static partial TriggerNode ToTriggerNode(this ExportTriggerNode source);
-  [System.Diagnostics.CodeAnalysis.SuppressMessage("Mapper", "RMG020:Source member is not mapped to any target member", Justification = "Local Member")]
-  public static partial Overlay ToOverlay(this LegacyOverlay source);
-  public static partial LootRecord Clone(this LootRecord source);
+  /* Deep-cloning mappers for UI-only models. The trigger store model mappings live in the
+   * cross-platform core (EQLogParser.Core ModelMapper). */
+  [Mapper(UseDeepCloning = true)]
+  internal static partial class ModelMapper
+  {
+    public static partial LootRecord Clone(this LootRecord source);
+  }
 }

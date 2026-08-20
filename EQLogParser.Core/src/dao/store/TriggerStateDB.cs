@@ -8,9 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -23,11 +20,19 @@ namespace EQLogParser
     internal event Action<bool> TriggerImportEvent;
     internal event Action<List<LexiconItem>> LexiconUpdateEvent;
     internal event Action<List<TrustedPlayer>> TrustedPlayersUpdateEvent;
+    // Fired after SetStateFromParent resolves the parent's enabled value for the given player —
+    // the WPF host applies it to the matching view node (replaces the old direct IsChecked poke).
+    internal event Action<string, bool> NodeCheckChanged;
     internal const string DefaultUser = "Default";
     internal const string Overlays = "Overlays";
     internal const string Triggers = "Triggers";
     internal readonly ConcurrentDictionary<string, bool> RecentlyMerged = new();
     internal readonly ConcurrentDictionary<string, bool> MissingMedia = new();
+
+    // System.Windows.VerticalAlignment values the overlay windows bind against (kept numeric so
+    // Core stays UI-free).
+    private const int AlignTop = 0;
+    private const int AlignBottom = 2;
 
     private const string LegacyOverlayFile = "triggerOverlays.json";
     private const string LegacyTriggersFile = "triggers.json";
@@ -39,15 +44,19 @@ namespace EQLogParser
     private const string BadVersionCol = "Version";
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Lazy<TriggerStateDB> Lazy = new(() => new TriggerStateDB());
+    private static readonly Lazy<TriggerStateDB> Lazy = new(() => new TriggerStateDB(TriggerStorePlatform.GetDbFile?.Invoke()));
     private static readonly JsonSerializerOptions SerializerOptions = new() { IncludeFields = true };
     internal static TriggerStateDB Instance => Lazy.Value; // instance
     private readonly LiteDbTaskQueue _taskQueue;
     private readonly LiteDatabase _db;
 
-    private TriggerStateDB()
+    /* dbFilePath: explicit database file (null/empty = no-op instance, e.g. tests without a
+     * database). applyLegacyUpgrades: run the pre-1.0 json upgrade + 1.0.1 backup (production
+     * only — test databases must not read the user's legacy files or write the last-database
+     * backup copy). */
+    internal TriggerStateDB(string dbFilePath, bool applyLegacyUpgrades = true)
     {
-      var path = ConfigUtil.GetTriggersDbFile();
+      var path = dbFilePath;
       if (!string.IsNullOrEmpty(path))
       {
         var needUpgrade = !File.Exists(path);
@@ -81,7 +90,7 @@ namespace EQLogParser
 
           _taskQueue = new LiteDbTaskQueue(_db);
 
-          if (needUpgrade)
+          if (needUpgrade && applyLegacyUpgrades)
           {
             // upgrade from old json trigger format
             UpgradeFromOldParser();
@@ -157,7 +166,7 @@ namespace EQLogParser
             {
               if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) is { } parentNode)
               {
-                var position = TriggerUtil.CalculateDefaultTextOverlayPosition();
+                var position = TriggerStorePlatform.DefaultTextOverlayPosition();
 
                 var textNode = new TriggerNode
                 {
@@ -168,8 +177,8 @@ namespace EQLogParser
                   {
                     IsDefault = true,
                     IsTextOverlay = true,
-                    Left = (long)position.X,
-                    Top = (long)position.Y,
+                    Left = position.X,
+                    Top = position.Y,
                     Height = 150,
                     Width = 450,
                     FontSize = "16pt",
@@ -203,17 +212,20 @@ namespace EQLogParser
             // save current values
             _db.Checkpoint();
 
-            var lastPath = ConfigUtil.GetTriggersLastDbFile();
-            if (!string.IsNullOrEmpty(lastPath) && !File.Exists(lastPath))
+            if (applyLegacyUpgrades)
             {
-              try
+              var lastPath = ConfigUtil.GetTriggersLastDbFile();
+              if (!string.IsNullOrEmpty(lastPath) && !File.Exists(lastPath))
               {
-                // create backup during for the 1.0.1 upgrade
-                File.Copy(ConfigUtil.GetTriggersDbFile(), lastPath);
-              }
-              catch (Exception)
-              {
-                // ignore
+                try
+                {
+                  // create backup during for the 1.0.1 upgrade
+                  File.Copy(ConfigUtil.GetTriggersDbFile(), lastPath);
+                }
+                catch (Exception)
+                {
+                  // ignore
+                }
               }
             }
           }
@@ -227,8 +239,8 @@ namespace EQLogParser
 
     internal Task<TriggerNode> GetDefaultTextOverlay() => GetDefaultOverlay(true);
     internal Task<TriggerNode> GetDefaultTimerOverlay() => GetDefaultOverlay(false);
-    internal Task<TriggerTreeViewNode> GetOverlayTreeView() => GetTreeView(Overlays);
-    internal Task<TriggerTreeViewNode> GetTriggerTreeView(string playerId) => GetTreeView(Triggers, playerId);
+    internal Task<TreeData> GetOverlayTree() => GetTree(Overlays);
+    internal Task<TreeData> GetTriggerTree(string playerId) => GetTree(Triggers, playerId);
     internal async Task Dispose() => await _taskQueue.Stop();
 
     internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume,
@@ -290,11 +302,12 @@ namespace EQLogParser
       });
     }
 
-    internal async Task CopyState(TriggerTreeViewNode treeView, string from, string to)
+    internal async Task CopyState(string nodeId, string from, string to)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (treeView?.SerializedData is { } node && GetCol<TriggerState>(StatesCol) is { } states)
+        if (nodeId != null && GetCol<TriggerNode>(TreeCol) is { } tree &&
+            tree.FindOne(n => n.Id == nodeId) is { } node && GetCol<TriggerState>(StatesCol) is { } states)
         {
           var fromState = states.FindOne(s => s.Id == from);
           var toState = states.FindOne(s => s.Id == to);
@@ -318,17 +331,20 @@ namespace EQLogParser
       });
     }
 
-    internal async Task<TriggerTreeViewNode> CreateFolder(string parentId, string name, string playerId)
+    /* Checked: the resolved IsChecked for the calling player when its state has an explicit
+     * enabled entry for the parent (null = keep the default). Applied to the view node by the
+     * WPF host, replacing the old store-side IsChecked poke. */
+    internal async Task<(TriggerNode Node, bool? Checked)> CreateFolder(string parentId, string name, string playerId)
     {
       return await _taskQueue.EnqueueTransaction(() =>
       {
         var node = CreateNode(parentId, name);
-        SetStateFromParentInternal(parentId, playerId, node);
-        return Task.FromResult(node);
+        var checkedFor = SetStateFromParentInternal(parentId, playerId, node?.Id);
+        return Task.FromResult((node, checkedFor));
       });
     }
 
-    internal async Task<TriggerTreeViewNode> CreateOverlay(string parentId, string name, bool isTextOverlay)
+    internal async Task<TriggerNode> CreateOverlay(string parentId, string name, bool isTextOverlay)
     {
       return await _taskQueue.EnqueueTransaction(() =>
       {
@@ -337,13 +353,13 @@ namespace EQLogParser
       });
     }
 
-    internal async Task<TriggerTreeViewNode> CreateTrigger(string parentId, string name, string playerId)
+    internal async Task<(TriggerNode Node, bool? Checked)> CreateTrigger(string parentId, string name, string playerId)
     {
       return await _taskQueue.EnqueueTransaction(() =>
       {
         var node = CreateNode(parentId, name, Triggers);
-        SetStateFromParentInternal(parentId, playerId, node);
-        return Task.FromResult(node);
+        var checkedFor = SetStateFromParentInternal(parentId, playerId, node?.Id);
+        return Task.FromResult((node, checkedFor));
       });
     }
 
@@ -568,7 +584,7 @@ namespace EQLogParser
         if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
-          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name).SerializedData;
+          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name);
           Import(parent, imported, Triggers, characterIds);
         }
 
@@ -654,31 +670,33 @@ namespace EQLogParser
       });
     }
 
-    internal async Task SetExpanded(TriggerTreeViewNode viewNode)
+    internal async Task SetExpanded(string id, bool isExpanded)
     {
       await _taskQueue.Enqueue(() =>
       {
-        if (viewNode?.SerializedData is { Id: not null } node)
+        if (id != null)
         {
-          _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {viewNode.IsExpanded} WHERE _id = '{node.Id}'");
+          _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {isExpanded} WHERE _id = '{id}'");
         }
 
         return Task.CompletedTask;
       });
     }
 
-    internal async Task SetState(List<string> playerIds, TriggerTreeViewNode viewNode)
+    internal async Task SetState(List<string> playerIds, string nodeId, bool? isChecked)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (viewNode?.SerializedData is not null && !viewNode.IsOverlay() &&
+        if (nodeId != null && GetCol<TriggerNode>(TreeCol) is { } tree &&
+            // overlays have no state
+            tree.FindOne(n => n.Id == nodeId) is { OverlayData: null } &&
             GetCol<TriggerState>(StatesCol) is { } states)
         {
           foreach (var playerId in playerIds)
           {
             if (states.FindOne(s => s.Id == playerId) is { } state)
             {
-              UpdateChildState(state, viewNode, viewNode.IsChecked);
+              UpdateChildState(state, tree, nodeId, isChecked);
               states.Update(state);
             }
           }
@@ -688,11 +706,11 @@ namespace EQLogParser
       });
     }
 
-    internal async Task SetStateFromParent(string parentId, string playerId, TriggerTreeViewNode node)
+    internal async Task SetStateFromParent(string parentId, string playerId, string nodeId)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        SetStateFromParentInternal(parentId, playerId, node);
+        SetStateFromParentInternal(parentId, playerId, nodeId);
         return Task.CompletedTask;
       });
     }
@@ -1068,12 +1086,12 @@ namespace EQLogParser
       }
     }
 
-    private TriggerTreeViewNode CreateNode(string parentId, string name, string type = null, bool isTextOverlay = false)
+    private TriggerNode CreateNode(string parentId, string name, string type = null, bool isTextOverlay = false)
     {
-      TriggerTreeViewNode viewNode = null;
+      TriggerNode newNode = null;
       if (GetCol<TriggerNode>(TreeCol) is { } tree)
       {
-        var newNode = new TriggerNode
+        newNode = new TriggerNode
         {
           Name = name,
           Id = Guid.NewGuid().ToString(),
@@ -1107,10 +1125,9 @@ namespace EQLogParser
         }
 
         tree.Insert(newNode);
-        viewNode = CreateViewNode(newNode);
       }
 
-      return viewNode;
+      return newNode;
     }
 
     private static void Delete(ILiteCollection<TriggerNode> tree, TriggerNode node, HashSet<string> removed, HashSet<string> removedOverlays)
@@ -1174,10 +1191,6 @@ namespace EQLogParser
       {
         if (triggers)
         {
-          // Match an existing node to update in place on re-import. Nodes carrying an
-          // OriginalId (NAG imports) must match by name AND source id — NAG allows
-          // duplicate names for distinct triggers, and matching by name alone would
-          // silently overwrite the first imported trigger with every same-named one.
           // Matching + branch selection lives in TriggerImportPlanner (pure, unit-tested on any
           // platform). A leaf updates only an existing leaf and a folder wrapper merges only into
           // an existing folder — same-named siblings of the other kind are inserted as new nodes
@@ -1322,7 +1335,7 @@ namespace EQLogParser
 
           // validate path/replace value if similar sprite path found in a different EQ folder
           var updated = false;
-          var updatedPath = EQUtil.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
+          var updatedPath = TriggerStorePlatform.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
           if (updatedPath != null && !Equals(updatedPath, storedNode.TriggerData.IconSource))
           {
             storedNode.TriggerData.IconSource = updatedPath;
@@ -1330,7 +1343,7 @@ namespace EQLogParser
           }
 
           // make sure it actually works
-          var valid = UiElementUtil.CreateBitmap(storedNode.TriggerData.IconSource) != null;
+          var valid = TriggerStorePlatform.IconIsValid(storedNode.TriggerData.IconSource);
           if (valid && updated)
           {
             tree.Update(storedNode);
@@ -1340,31 +1353,38 @@ namespace EQLogParser
         }
 
         // check sound files
-        if (!string.IsNullOrEmpty(storedNode.TriggerData.SoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.SoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndSoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.EndSoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndEarlySoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.EndEarlySoundToPlay)) return true;
-        if (!string.IsNullOrEmpty(storedNode.TriggerData.WarningSoundToPlay) && !TriggerUtil.SoundFileExists(storedNode.TriggerData.WarningSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.SoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.SoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndSoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.EndSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.EndEarlySoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.EndEarlySoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.WarningSoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.WarningSoundToPlay)) return true;
         return false;
       }
 
       return false;
     }
 
-    private static void UpdateChildState(TriggerState state, TriggerTreeViewNode node, bool? isEnabled)
+    // Store-side port of the old view-tree walk: applies isEnabled to the node and all its
+    // descendants (queried from the tree instead of walked through view ChildNodes — same set).
+    private static void UpdateChildState(TriggerState state, ILiteCollection<TriggerNode> tree, string nodeId, bool? isEnabled)
     {
-      if (node?.SerializedData?.Id is not { } id) return;
+      if (string.IsNullOrEmpty(nodeId)) return;
 
-      state.Enabled[id] = isEnabled;
-      foreach (var child in node.ChildNodes)
+      state.Enabled[nodeId] = isEnabled;
+      foreach (var child in tree.Query().Where(n => n.Parent == nodeId).ToArray())
       {
-        UpdateChildState(state, child as TriggerTreeViewNode, isEnabled);
+        UpdateChildState(state, tree, child.Id, isEnabled);
       }
     }
 
-    private void SetStateFromParentInternal(string parentId, string playerId, TriggerTreeViewNode node)
+    // Enables/disables the node's subtree to match the parent's enabled value. Returns the
+    // resolved value for the calling player (null = no explicit parent entry for that player)
+    // so Create* can seed a new view node's IsChecked; also raises NodeCheckChanged for an
+    // already-visible node (drag-and-drop path).
+    private bool? SetStateFromParentInternal(string parentId, string playerId, string nodeId)
     {
-      if (GetCol<TriggerState>(StatesCol) is { } states)
+      if (GetCol<TriggerState>(StatesCol) is { } states && GetCol<TriggerNode>(TreeCol) is { } tree)
       {
+        bool? checkedFor = null;
         foreach (var state in states.FindAll().ToArray())
         {
           // if parent is enabled for the player then also enable the new trigger
@@ -1372,27 +1392,33 @@ namespace EQLogParser
           {
             if (playerId == state.Id)
             {
-              UiUtil.InvokeNow(() =>
-              {
-                node.IsChecked = currentState is true;
-              }, DispatcherPriority.DataBind);
+              checkedFor = currentState is true;
+              NodeCheckChanged?.Invoke(nodeId, checkedFor.Value);
             }
 
-            UpdateChildState(state, node, currentState is true);
+            UpdateChildState(state, tree, nodeId, currentState is true);
             states.Update(state);
           }
         }
+
+        return checkedFor;
       }
+
+      return null;
     }
 
-    private async Task<TriggerTreeViewNode> GetTreeView(string name, string playerId = null)
+    // Raw data for the view-tree builders in the WPF host: the root node, every node under it
+    // (pre-order, children by Index) and the player's state (null for the overlay tree).
+    private Task<TreeData> GetTree(string name, string playerId = null)
     {
-      return await _taskQueue.EnqueueTransaction(() =>
+      return _taskQueue.EnqueueTransaction(() =>
       {
-        TriggerTreeViewNode root = null;
+        TriggerNode root = null;
+        TriggerState state = null;
+        var nodes = new List<TriggerNode>();
+
         if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
-          TriggerState state = null;
           if (name == Triggers)
           {
             state = GetPlayerState(playerId);
@@ -1400,24 +1426,37 @@ namespace EQLogParser
 
           if (tree.FindOne(n => n.Parent == null && n.Name == name) is { } parent)
           {
-            root = CreateViewNode(parent, state);
-            Populate(root, state, tree);
-          }
+            root = parent;
 
-          if (name == Triggers && state != null)
-          {
-            var needUpdate = false;
-            FixEnabledState(root, state, ref needUpdate);
-
-            if (needUpdate)
+            if (name == Triggers && state != null)
             {
-              GetCol<TriggerState>(StatesCol)?.Update(state);
+              var needUpdate = false;
+              FixEnabledState(tree, parent, state, ref needUpdate);
+
+              if (needUpdate)
+              {
+                GetCol<TriggerState>(StatesCol)?.Update(state);
+              }
             }
+
+            Collect(tree, parent.Id, nodes);
           }
         }
 
-        return Task.FromResult(root);
+        return Task.FromResult(new TreeData(root, nodes, state));
       });
+
+      static void Collect(ILiteCollection<TriggerNode> tree, string parentId, List<TriggerNode> nodes)
+      {
+        foreach (var child in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToArray())
+        {
+          nodes.Add(child);
+          if (child.OverlayData == null && child.TriggerData == null)
+          {
+            Collect(tree, child.Id, nodes);
+          }
+        }
+      }
     }
 
     private TriggerState GetPlayerState(string playerId)
@@ -1436,42 +1475,6 @@ namespace EQLogParser
       return state;
     }
 
-    private TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state = null)
-    {
-      var treeNode = new TriggerTreeViewNode
-      {
-        Content = node.Name,
-        IsExpanded = node.IsExpanded,
-        SerializedData = node,
-        IsRecentlyMerged = RecentlyMerged.ContainsKey(node.Id) && !MissingMedia.ContainsKey(node.Id),
-        HasMissingMedia = MissingMedia.ContainsKey(node.Id)
-      };
-
-      if (node.OverlayData == null && state != null)
-      {
-        treeNode.IsChecked = state.Enabled.GetValueOrDefault(node.Id, false);
-      }
-
-      return treeNode;
-    }
-
-    private void Populate(TriggerTreeViewNode parent, TriggerState state, ILiteCollection<TriggerNode> tree)
-    {
-      if (parent.SerializedData.Id is { } parentId)
-      {
-        foreach (var node in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToArray())
-        {
-          var child = CreateViewNode(node, state);
-          if (child.IsDir())
-          {
-            Populate(child, state, tree);
-          }
-
-          parent.ChildNodes.Add(child);
-        }
-      }
-    }
-
     private List<string> ValidateOverlays(IEnumerable<string> existing)
     {
       if (GetCol<TriggerNode>(TreeCol) is { } tree)
@@ -1483,67 +1486,76 @@ namespace EQLogParser
       return [];
     }
 
-    private static void FixEnabledState(TriggerTreeViewNode viewNode, TriggerState state, ref bool needUpdate)
+    // Store-side port of the old view-tree walk: re-derives a folder's saved enabled flag from
+    // its children (same computation; TriggerNode has no checked state of its own). A child's
+    // effective check mirrors CreateViewNode: Enabled value with a false default, null for overlays.
+    private static void FixEnabledState(ILiteCollection<TriggerNode> tree, TriggerNode folder, TriggerState state, ref bool needUpdate)
     {
-      if (!viewNode.IsDir()) return;
+      if (folder.OverlayData != null || folder.TriggerData != null) return;
 
-      if (viewNode.HasChildNodes)
+      var children = tree.Query().Where(n => n.Parent == folder.Id).OrderBy(n => n.Index).ToArray();
+      if (children.Length == 0) return;
+
+      foreach (var child in children)
       {
-        foreach (var child in viewNode.ChildNodes)
-        {
-          FixEnabledState(child as TriggerTreeViewNode, state, ref needUpdate);
-        }
+        FixEnabledState(tree, child, state, ref needUpdate);
+      }
 
-        var checkedCount = viewNode.ChildNodes.Count(c => c.IsChecked is true);
-        var uncheckCount = viewNode.ChildNodes.Count(c => c.IsChecked is false);
-        var changed = false;
+      var checkedCount = children.Count(child => ChildChecked(child) is true);
+      var uncheckCount = children.Count(child => ChildChecked(child) is false);
+      var viewChecked = state.Enabled.GetValueOrDefault(folder.Id, false);
+      var changed = false;
 
-        if (checkedCount == viewNode.ChildNodes.Count)
+      if (checkedCount == children.Length)
+      {
+        if (viewChecked != true)
         {
-          if (viewNode.IsChecked != true)
-          {
-            viewNode.IsChecked = true;
-            changed = true;
-          }
-        }
-        else if (uncheckCount == viewNode.ChildNodes.Count)
-        {
-          if (viewNode.IsChecked != false)
-          {
-            viewNode.IsChecked = false;
-            changed = true;
-          }
-        }
-        else if (viewNode.IsChecked != null)
-        {
-          viewNode.IsChecked = null;
+          viewChecked = true;
           changed = true;
         }
-
-        if (changed)
+      }
+      else if (uncheckCount == children.Length)
+      {
+        if (viewChecked != false)
         {
-          if (state.Enabled.TryGetValue(viewNode.SerializedData.Id, out var value))
+          viewChecked = false;
+          changed = true;
+        }
+      }
+      else if (viewChecked != null)
+      {
+        viewChecked = null;
+        changed = true;
+      }
+
+      if (changed)
+      {
+        if (state.Enabled.TryGetValue(folder.Id, out var value))
+        {
+          if (value != viewChecked)
           {
-            if (value != viewNode.IsChecked)
-            {
-              state.Enabled[viewNode.SerializedData.Id] = viewNode.IsChecked;
-              needUpdate = true;
-            }
-          }
-          else
-          {
-            state.Enabled[viewNode.SerializedData.Id] = viewNode.IsChecked;
+            state.Enabled[folder.Id] = viewChecked;
             needUpdate = true;
           }
         }
+        else
+        {
+          state.Enabled[folder.Id] = viewChecked;
+          needUpdate = true;
+        }
       }
+
+      // mirrors CreateViewNode: view IsChecked derives from Enabled with a false default and
+      // stays null for overlays (excluded from both counts below)
+      bool? ChildChecked(TriggerNode child) =>
+        child.OverlayData == null ? (bool?)state.Enabled.GetValueOrDefault(child.Id, false) : null;
     }
 
     private static void SetVerticalAlignment(TriggerNode overlay)
     {
       if (overlay.OverlayData?.VerticalAlignment == -1)
       {
-        overlay.OverlayData.VerticalAlignment = (int)(overlay.OverlayData.IsTextOverlay ? VerticalAlignment.Bottom : VerticalAlignment.Top);
+        overlay.OverlayData.VerticalAlignment = overlay.OverlayData.IsTextOverlay ? AlignBottom : AlignTop;
       }
     }
 
@@ -1745,14 +1757,41 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(value))
       {
-        if (ColorConverter.ConvertFromString(value) is Color color)
-        {
-          return color.ToHexString();
-        }
-        return "#FFFFFF";
+        return NormalizeHexColor(value) ?? "#FFFFFF";
       }
 
       return value;
+    }
+
+    // Normalizes a legacy color to #AARRGGBB; null when the value is not a hex color (FixColor
+    // then falls back to #FFFFFF, same as the old non-parseable path). Replaces the Syncfusion
+    // ColorConverter — named colors in pre-1.0 data now fall back instead of being resolved.
+    private static string NormalizeHexColor(string value)
+    {
+      var v = value.Trim();
+      if (v.StartsWith('#'))
+      {
+        v = v[1..];
+      }
+      else if (v.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+      {
+        v = v[2..];
+      }
+
+      switch (v.Length)
+      {
+        case 3: // #RGB
+          return AllHex(v) ? $"#FF{v[0]}{v[0]}{v[1]}{v[1]}{v[2]}{v[2]}".ToUpperInvariant() : null;
+        case 6: // #RRGGBB
+          return AllHex(v) ? $"#FF{v}".ToUpperInvariant() : null;
+        case 8: // #AARRGGBB
+          return AllHex(v) ? $"#{v}".ToUpperInvariant() : null;
+        default:
+          return null;
+      }
+
+      static bool AllHex(string s) => s.All(c =>
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
     }
 
     private ILiteCollection<T> GetCol<T>(string colName) => _db?.GetCollection<T>(colName);
@@ -1763,6 +1802,9 @@ namespace EQLogParser
       public string Version { get; set; }
     }
   }
+
+  /* Root + subtree data for the WPF view-tree builders (see TriggerTreeViewBuilder). */
+  internal readonly record struct TreeData(TriggerNode Root, List<TriggerNode> Nodes, TriggerState State);
 
   internal class OtData
   {
