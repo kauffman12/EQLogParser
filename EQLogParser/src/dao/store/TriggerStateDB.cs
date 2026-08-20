@@ -1135,18 +1135,6 @@ namespace EQLogParser
       tree.Delete(id);
     }
 
-    // Re-import name matches must be kind-safe: a payload-carrying leaf (trigger or overlay)
-    // updates only an existing leaf, and a folder wrapper merges only into an existing folder.
-    // TriggerNode has no explicit kind field — kind is defined by payload presence (see
-    // TriggerTreeViewNode.IsDir()). Without this, a folder wrapper could match a same-named
-    // trigger and reach the overwrite branch with null data (erasing it), or a leaf matching a
-    // same-named folder would hit no update/merge branch and be silently dropped.
-    internal static bool MatchesReimportKind(TriggerNode existing, ExportTriggerNode incoming) =>
-      HasDataPayload(existing) == HasDataPayload(incoming);
-
-    private static bool HasDataPayload(TriggerNode node) =>
-      node.TriggerData != null || node.OverlayData != null;
-
     private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
       if (parent?.Id is not { } parentId || imported == null || GetCol<TriggerNode>(TreeCol) is not { } tree) return;
@@ -1190,65 +1178,47 @@ namespace EQLogParser
           // OriginalId (NAG imports) must match by name AND source id — NAG allows
           // duplicate names for distinct triggers, and matching by name alone would
           // silently overwrite the first imported trigger with every same-named one.
-          // Name-only matches are kind-safe (MatchesReimportKind): without it, a folder
-          // wrapper could match an existing same-named trigger and reach the overwrite
-          // branch below with TriggerData == null, erasing the found trigger's data.
-          TriggerNode foundTrigger = null;
-          if (newNode.OriginalId != null)
-          {
-            foreach (var candidate in tree.Find(n => n.Parent == parentId && n.Name == newNode.Name))
-            {
-              if (candidate.OriginalId == newNode.OriginalId)
-              {
-                foundTrigger = candidate;
-                break;
-              }
-            }
-          }
-          else
-          {
-            foundTrigger = tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name &&
-              MatchesReimportKind(n, newNode));
-          }
+          // Matching + branch selection lives in TriggerImportPlanner (pure, unit-tested on any
+          // platform). A leaf updates only an existing leaf and a folder wrapper merges only into
+          // an existing folder — same-named siblings of the other kind are inserted as new nodes
+          // instead of erasing or dropping the other. See the planner for the full rationale.
+          var decision = TriggerImportPlanner.Plan(tree.Find(n => n.Parent == parentId), newNode);
 
-          if (foundTrigger is not null)
+          switch (decision.Action)
           {
-            // update trigger data
-            if (foundTrigger.TriggerData != null)
-            {
-              foundTrigger.TriggerData = newNode.TriggerData;
-              tree.Update(foundTrigger);
-              enableId = foundTrigger.Id;
-              hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger);
-            }
-            // directory but make sure it is one
-            else if (foundTrigger.OverlayData == null && foundTrigger.TriggerData == null && newNode.Nodes?.Count > 0)
-            {
-              if (Import(tree, foundTrigger.Id, newNode.Nodes, type, characterStates))
+            case ImportAction.UpdateInPlace when decision.Existing is { } foundTrigger:
+              // update trigger data
+              if (foundTrigger.TriggerData != null)
               {
-                MissingMedia[foundTrigger.Id] = true;
+                foundTrigger.TriggerData = newNode.TriggerData;
+                tree.Update(foundTrigger);
+                enableId = foundTrigger.Id;
+                hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger);
+              }
+
+              break;
+
+            case ImportAction.MergeIntoFolder when decision.Existing is { } folder:
+              if (Import(tree, folder.Id, newNode.Nodes, type, characterStates))
+              {
+                MissingMedia[folder.Id] = true;
                 hasMissingMedia = true;
               }
 
-              enableId = foundTrigger.Id;
-            }
-          }
-          else
-          {
-            var index = GetNextIndex(tree, parentId);
+              enableId = folder.Id;
+              break;
 
-            // new trigger and replace the exported version
-            if (newNode.TriggerData != null && newNode.ToTriggerNode() is { } node)
-            {
+            case ImportAction.InsertLeaf when newNode.ToTriggerNode() is { } node:
+              // new trigger and replace the exported version
               node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
-              Insert(node, index);
+              Insert(node, GetNextIndex(tree, parentId));
               enableId = node.Id;
               hasMissingMedia = CheckMissingMedia(tree, newNode, node);
-            }
-            // make sure it's a new directory and replace the exported version
-            else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node2)
-            {
-              Insert(node2, index);
+              break;
+
+            case ImportAction.InsertFolder when newNode.ToTriggerNode() is { } node2:
+              // make sure it's a new directory and replace the exported version
+              Insert(node2, GetNextIndex(tree, parentId));
 
               if (Import(tree, node2.Id, newNode.Nodes, type, characterStates))
               {
@@ -1257,7 +1227,7 @@ namespace EQLogParser
               }
 
               enableId = node2.Id;
-            }
+              break;
           }
         }
         else
