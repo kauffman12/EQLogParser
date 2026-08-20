@@ -32,7 +32,7 @@ namespace EQLogParser
       return group;
     }
 
-    private static DamageRecord Hit(double time, string attacker, uint total, string type = "damage", string subType = null, string owner = null) =>
+    private static DamageRecord Hit(double time, string attacker, uint total, string type = "damage", string? subType = null, string? owner = null) =>
       new()
       {
         Attacker = attacker,
@@ -43,7 +43,7 @@ namespace EQLogParser
         AttackerOwner = owner
       };
 
-    private static CombinedStats BuildDamage(Fight fight, GenerateStatsOptions options)
+    private static CombinedStats? BuildDamage(Fight fight, GenerateStatsOptions options)
     {
       DamageStatsBuilder.Instance.BuildTotalStats(options);
       return DamageStatsBuilder.Instance.GetLastStats()?.CombinedStats;
@@ -150,7 +150,7 @@ namespace EQLogParser
     public void BuildTotalStats_NoFires_ReportsNonpc()
     {
       // the no-data path only fires the generation event — it never sets the last-stats cache
-      StatsGenerationEvent captured = null;
+      StatsGenerationEvent? captured = null;
       DamageStatsBuilder.Instance.EventsGenerationStatus += e => captured = e;
       try
       {
@@ -229,7 +229,7 @@ namespace EQLogParser
       options.Npcs.Add(fight);
 
       // this builder surfaces its results through the generation event (no GetLastStats)
-      StatsGenerationEvent captured = null;
+      StatsGenerationEvent? captured = null;
       TankingStatsBuilder.Instance.EventsGenerationStatus += e => captured = e;
       try
       {

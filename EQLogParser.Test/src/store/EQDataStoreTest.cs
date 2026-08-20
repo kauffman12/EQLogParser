@@ -7,7 +7,7 @@ namespace EQLogParser
   [TestClass]
   public sealed class EQDataStoreTest
   {
-    private string _originalCwd;
+    private string? _originalCwd;
 
     [TestInitialize]
     public void Setup()
@@ -19,7 +19,10 @@ namespace EQLogParser
     [TestCleanup]
     public void Cleanup()
     {
-      Environment.CurrentDirectory = _originalCwd;
+      if (_originalCwd is not null)
+      {
+        Environment.CurrentDirectory = _originalCwd!;
+      }
       CombatRecordLookup.ClassLabelByEnumName = _ => null;
     }
 
@@ -122,9 +125,10 @@ namespace EQLogParser
       Assert.IsTrue(store.IsValidClassName("Warrior"));
       Assert.IsFalse(store.IsValidClassName("Shaman"));
       Assert.IsFalse(store.IsValidClassName(""));
-      Assert.AreEqual(SpellClass.Clr, store.GetClassEnum("Cleric").Value);
+      Assert.IsTrue(store.GetClassEnum("Cleric") == SpellClass.Clr);
       // unregistered classes resolve to the zero value, never to a real class
-      Assert.IsTrue(store.GetClassEnum("Shaman") is not (SpellClass.Clr or SpellClass.War));
+      var unknown = store.GetClassEnum("Shaman");
+      Assert.IsFalse(unknown == SpellClass.Clr || unknown == SpellClass.War);
       CollectionAssert.Contains(store.GetClassList(), "Warrior");
     }
 
@@ -187,7 +191,7 @@ namespace EQLogParser
       }
       finally
       {
-        Environment.CurrentDirectory = _originalCwd;
+        Environment.CurrentDirectory = _originalCwd!;
       }
     }
 
