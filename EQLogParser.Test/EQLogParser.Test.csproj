@@ -19,6 +19,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EQLogParser.Core\EQLogParser.Core.csproj" />
     <ProjectReference Include="..\EQLogParser.Utils\EQLogParser.Utils.csproj" />
   </ItemGroup>
 </Project>

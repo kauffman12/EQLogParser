@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>EQLogParser</RootNamespace>
+    <AssemblyName>EQLogParser.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LiteDB" Version="5.0.17" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="EQLogParser" />
+    <InternalsVisibleTo Include="EQLogParser.Test" />
+    <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />
+  </ItemGroup>
+</Project>
