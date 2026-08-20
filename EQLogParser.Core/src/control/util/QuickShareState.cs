@@ -37,5 +37,14 @@ namespace EQLogParser
         return _records.FirstOrDefault(r => r.IsMine && r.Key == key) != null;
       }
     }
+
+    /// <summary>Point-in-time copy for readers (tests, future views) that don't bind the WPF collection.</summary>
+    internal List<QuickShareRecord> Snapshot()
+    {
+      lock (_lock)
+      {
+        return [.. _records];
+      }
+    }
   }
 }
