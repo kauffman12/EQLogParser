@@ -109,14 +109,14 @@ namespace EQLogParser
       {
         if (Enum.GetName(item)?.ToUpperInvariant() is string { } resourceName)
         {
-          var name = Resource.ResourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
+          var name = CombatRecordLookup.ClassLabelByEnumName(resourceName);
           if (!string.IsNullOrEmpty(name))
           {
             _classNames[item] = StringCache.GetOrAdd(name);
             _classesByName[name] = item;
           }
 
-          var color = Resource.ResourceManager.GetString($"{resourceName}_COLOR", CultureInfo.InvariantCulture);
+          var color = CombatRecordLookup.ClassLabelByEnumName($"{resourceName}_COLOR");
           if (!string.IsNullOrEmpty(color))
           {
             _classColors[name] = color;

@@ -20,4 +20,7 @@
     <InternalsVisibleTo Include="EQLogParser.Test" />
     <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />
   </ItemGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 </Project>

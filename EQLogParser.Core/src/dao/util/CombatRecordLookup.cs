@@ -22,6 +22,9 @@ namespace EQLogParser
     /// <summary>Maps a player class name to its SpellClass bitmask (host: EQDataStore). Null when unknown.</summary>
     public static Func<string, SpellClass?> ClassEnumByName { get; set; } = _ => null;
 
+    /// <summary>Localized label lookup by resource name, incl. "{NAME}_COLOR" variants (host: resx). Null when absent.</summary>
+    public static Func<string, string> ClassLabelByEnumName { get; set; } = _ => null;
+
     /// <summary>Class name labels used when verifying player abilities (host: resx labels).</summary>
     public static string RogueClass { get; set; }
     public static string RangerClass { get; set; }
