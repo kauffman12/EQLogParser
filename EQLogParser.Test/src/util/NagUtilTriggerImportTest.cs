@@ -2615,5 +2615,30 @@ namespace EQLogParser
     }
 
     #endregion
+
+    #region Sibling Name Uniquification
+
+    [TestMethod]
+    public void ConvertTriggers_SameNameSiblings_UniquifySkipsTakenSuffixes()
+    {
+      // A literal sibling already named "A (2)" must not be clobbered by the generated suffix —
+      // the duplicate moves to the next free number instead. (The shared triggerId is fine here:
+      // only node generation is under test, and metadata is ignored.)
+      var json = "{\"triggers\":[" + JoinTriggerBodies(
+          CreateTriggerJson("A", "p1", actions: [CreateAction(0, displayText: "d1", duration: 5.0)]),
+          CreateTriggerJson("A", "p2", actions: [CreateAction(0, displayText: "d2", duration: 5.0)]),
+          CreateTriggerJson("A (2)", "p3", actions: [CreateAction(0, displayText: "d3", duration: 5.0)])) + "]}";
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(3, nodes);
+      CollectionAssert.AreEquivalent(new[] { "A", "A (2)", "A (3)" }, nodes.Select(n => n.Name).ToList());
+
+      // Each CreateTriggerJson output is {"triggers":[<one object>]} — strip the wrappers and join.
+      static string JoinTriggerBodies(params string[] singleTriggerJsons) =>
+        string.Join(",", singleTriggerJsons.Select(j => j["{\"triggers\":[".Length..^2]));
+    }
+
+    #endregion
   }
 }

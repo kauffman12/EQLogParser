@@ -330,19 +330,36 @@ internal static class NagUtil
     }
 
     var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    // Names the siblings currently use — generated "Name (n)" suffixes must not collide with a
+    // literal sibling that already has such a name.
+    var taken = new HashSet<string>(
+      children.Where(c => c?.Name is not null).Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
     foreach (var child in children)
     {
-      if (child?.Name is null)
+      if (child is null)
       {
         continue;
       }
 
-      var seen = counts.TryGetValue(child.Name, out var count) ? ++counts[child.Name] : counts[child.Name] = 1;
-      if (seen > 1)
+      if (child.Name is not null)
       {
-        child.Name = $"{child.Name} ({seen})";
+        var seen = counts.TryGetValue(child.Name, out var count) ? ++counts[child.Name] : counts[child.Name] = 1;
+        if (seen > 1)
+        {
+          var suffix = seen;
+          var candidate = $"{child.Name} ({suffix})";
+          while (taken.Contains(candidate))
+          {
+            candidate = $"{child.Name} ({++suffix})";
+          }
+
+          child.Name = candidate;
+        }
+
+        taken.Add(child.Name);
       }
 
+      // Recurse even for null-named nodes: their children are still siblings under one parent.
       UniquifySiblingNames(child);
     }
   }
