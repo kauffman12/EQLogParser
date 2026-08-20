@@ -9,3 +9,4 @@ tmp/
 local/
 # pi-subagents session artifacts
 .pi-subagents/
+nag/
