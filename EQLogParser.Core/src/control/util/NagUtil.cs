@@ -370,6 +370,9 @@ internal static class NagUtil
 
     try
     {
+      // Always reset so a call without a database directory can't inherit the previous
+      // caller's map (stale resolution would corrupt SoundToPlay and missing-audio tracking).
+      _audioFileMap = null;
       if (!string.IsNullOrEmpty(databaseDirectory))
       {
         LoadAudioFileMap(databaseDirectory);
@@ -466,6 +469,7 @@ internal static class NagUtil
     // Wrap all nodes in a root node — consistent with GINA export format
     // so the first Import() overload skips the root and processes folders correctly
     var rootNode = new ExportTriggerNode { Nodes = nodes };
+
     return (new List<ExportTriggerNode> { rootNode }, results, metadata);
   }
 
