@@ -57,32 +57,33 @@ namespace EQLogParser
     }
 
     // Import overlays from a NAG database directory (reads overlays-database.json and parses via NagUtil).
-    // Returns the number of imported overlays and the number of skipped FCT overlays (unsupported).
-    internal static async Task<(int Imported, int SkippedFct)> ImportNagOverlays(string databaseDirectory)
+    // Returns the number of imported overlays, the number of skipped FCT overlays (unsupported),
+    // and notes for overlays imported with reduced fidelity (e.g. reversed timer sort order).
+    internal static async Task<(int Imported, int SkippedFct, List<string> Notes)> ImportNagOverlays(string databaseDirectory)
     {
       try
       {
         var filePath = Path.Combine(databaseDirectory, "overlays-database.json");
         if (!File.Exists(filePath))
         {
-          return (0, 0);
+          return (0, 0, []);
         }
 
         var json = await File.ReadAllTextAsync(filePath);
-        var imported = NagUtil.ConvertOverlays(json, out var skippedFct);
+        var imported = NagUtil.ConvertOverlays(json, out var skippedFct, out var notes);
         if (imported?.Count > 0)
         {
           await TriggerStateDB.Instance.ImportOverlays(imported);
         }
 
-        return (imported?.Count ?? 0, skippedFct);
+        return (imported?.Count ?? 0, skippedFct, notes);
       }
       catch (Exception ex)
       {
         Log.Error("Error importing NAG overlays", ex);
       }
 
-      return (0, 0);
+      return (0, 0, []);
     }
 
     // Prefix for NAG import root folders ("NAG Ingest - <timestamp>"). Each import creates a new
@@ -110,7 +111,7 @@ namespace EQLogParser
 
         // Import overlays BEFORE triggers so that ValidateOverlays() can find them
         // when triggers reference overlay IDs. Triggers must be imported after overlays.
-        var (overlayCount, fctSkipped) = await ImportNagOverlays(databaseDirectory);
+        var (overlayCount, fctSkipped, overlayNotes) = await ImportNagOverlays(databaseDirectory);
 
         // Count earlier NAG imports so the summary can warn this adds another copy.
         var priorImports = await TriggerStateDB.Instance.CountChildren(TriggerStateDB.Triggers, NagImportRootPrefix);
@@ -133,7 +134,7 @@ namespace EQLogParser
           if (!string.IsNullOrEmpty(logDir))
           {
             htmlReportPath = Path.Combine(logDir, "nag-import.html");
-            NagUtil.WriteImportReportHtml(results ?? [], htmlReportPath, fctSkipped);
+            NagUtil.WriteImportReportHtml(results ?? [], htmlReportPath, fctSkipped, overlayNotes);
           }
         }
         catch (Exception ex)
@@ -170,6 +171,11 @@ namespace EQLogParser
               .Select(g => $"{g.Key}: {g.Count()}")
               .ToList();
             message += "Skipped triggers:\n" + string.Join("\n", skipReasons.Take(10)) + "\n";
+          }
+
+          if (overlayNotes.Count > 0)
+          {
+            message += $"Note: {overlayNotes.Count} overlay(s) display timers in reversed order vs NAG (no equivalent sort option) — see the report.\n\n";
           }
 
           if (priorImports > 0)

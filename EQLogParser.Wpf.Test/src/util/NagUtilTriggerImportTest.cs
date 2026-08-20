@@ -1548,6 +1548,35 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
+    public void ConvertTriggers_MalformedActionType_TriggerSkippedOthersImported()
+    {
+      // "Bad" has a non-numeric actionType, which makes ParseTrigger throw mid-conversion.
+      // The import must report only that trigger as Skipped and still convert the rest.
+      var json = "{\"triggers\":["
+        + "{\"name\":\"Bad\",\"triggerId\":\"t-bad\",\"capturePhrases\":[{\"phrase\":\"bad pattern\",\"useRegEx\":false}],"
+        + "\"actions\":[{\"actionType\":\"not-a-number\"}]}"
+        + ","
+        + "{\"name\":\"Good\",\"triggerId\":\"t-good\",\"capturePhrases\":[{\"phrase\":\"good pattern\",\"useRegEx\":false}],"
+        + "\"actions\":[{\"actionType\":0,\"displayText\":\"hello\"}]}"
+        + "]}";
+
+      var (nodes, results, metadata) = ConvertTriggersUnwrapped(json);
+
+      // The healthy trigger still converts and gets metadata.
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("Good", nodes[0].Name);
+      Assert.IsTrue(metadata.ContainsKey("t-good"));
+
+      // Both triggers appear in the results, in input order; the malformed one is Skipped with a reason.
+      Assert.HasCount(2, results);
+      Assert.AreEqual("Bad", results[0].TriggerName);
+      Assert.AreEqual("Skipped", results[0].Status);
+      StringAssert.Contains(results[0].Reason, "Error parsing trigger");
+      Assert.AreEqual("Good", results[1].TriggerName);
+      Assert.AreEqual("Imported", results[1].Status);
+    }
+
+    [TestMethod]
     public void ConvertTriggers_ScoreToPriority_Mapping()
     {
       var json = CreateTriggerJson("Scored Trigger", "pattern", score: 1.0, actions:
@@ -1701,7 +1730,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\",\"textOverflow\":{\"whiteSpace\":\"nowrap\",\"overflow\":\"hidden\",\"textOverflow\":\"clip\"}}]}";
 
-      var overlays = NagUtil.ConvertOverlays(json, out _);
+      var overlays = NagUtil.ConvertOverlays(json, out _, out _);
 
       Assert.HasCount(1, overlays);
       // NAG whiteSpace=nowrap means wrap is disabled
@@ -1713,7 +1742,7 @@ namespace EQLogParser.Wpf.Test
     {
       var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Test Alert\",\"overlayType\":\"Alert\"}]}";
 
-      var overlays = NagUtil.ConvertOverlays(json, out _);
+      var overlays = NagUtil.ConvertOverlays(json, out _, out _);
       // Default is true (text wraps) when no textOverflow specified
       Assert.IsTrue(overlays[0].OverlayData.TextOverlayWrap);
     }
@@ -1727,12 +1756,52 @@ namespace EQLogParser.Wpf.Test
         "{\"overlayId\":\"ov-3\",\"name\":\"FCT 2\",\"overlayType\":\"fct\"}" +
         "]}";
 
-      var overlays = NagUtil.ConvertOverlays(json, out var skipped);
+      var overlays = NagUtil.ConvertOverlays(json, out var skipped, out _);
 
       // Only the Timer overlay is imported; both FCT overlays are skipped and counted (case-insensitive).
       Assert.HasCount(1, overlays);
       Assert.AreEqual("Timer 1", overlays[0].Name);
       Assert.AreEqual(2, skipped);
+    }
+
+    [TestMethod]
+    public void ConvertOverlays_TimerSortType_DescendingMappedToRemainingTime()
+    {
+      // NAG 2 (Descending = ending soonest first) matches EQLP Remaining Time exactly.
+      var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Desc Sort\",\"overlayType\":\"Timer\",\"timerSortType\":2}]}";
+
+      var overlays = NagUtil.ConvertOverlays(json, out _, out var notes);
+
+      Assert.HasCount(1, overlays);
+      Assert.AreEqual(1, overlays[0].OverlayData.SortBy);
+      Assert.IsEmpty(notes);
+    }
+
+    [TestMethod]
+    public void ConvertOverlays_TimerSortType_AscendingKeptWithReversedOrderNote()
+    {
+      // NAG 1 (Ascending = most time remaining first) has no EQLP equivalent; it stays mapped to
+      // Remaining Time and is reported via overlayNotes because the order is reversed vs NAG.
+      var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"Asc Sort\",\"overlayType\":\"Timer\",\"timerSortType\":1}]}";
+
+      var overlays = NagUtil.ConvertOverlays(json, out _, out var notes);
+
+      Assert.HasCount(1, overlays);
+      Assert.AreEqual(1, overlays[0].OverlayData.SortBy);
+      Assert.HasCount(1, notes);
+      StringAssert.Contains(notes[0], "Asc Sort");
+    }
+
+    [TestMethod]
+    public void ConvertOverlays_TimerSortType_DefaultsToNoneWithoutNote()
+    {
+      var json = "{\"overlays\":[{\"overlayId\":\"ov-1\",\"name\":\"No Sort\",\"overlayType\":\"Timer\"}]}";
+
+      var overlays = NagUtil.ConvertOverlays(json, out _, out var notes);
+
+      Assert.HasCount(1, overlays);
+      Assert.AreEqual(0, overlays[0].OverlayData.SortBy);
+      Assert.IsEmpty(notes);
     }
 
     #endregion

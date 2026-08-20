@@ -391,8 +391,28 @@ internal static class NagUtil
       var triggers = root.GetProperty("triggers");
       foreach (var trigger in triggers.EnumerateArray())
       {
-        var parsed = ParseTrigger(trigger);
-        foreach (var n in parsed.nodes)
+        // Parse each trigger in its own try/catch so one malformed trigger is reported as
+        // Skipped instead of aborting the import of every remaining trigger.
+        List<ExportTriggerNode> triggerNodes;
+        NagImportResult parsedResult;
+        try
+        {
+          (triggerNodes, parsedResult) = ParseTrigger(trigger);
+        }
+        catch (Exception ex)
+        {
+          var triggerName = GetTriggerDisplayName(trigger);
+          Log.Warn($"NAG import: failed to parse trigger '{triggerName}': {ex.Message}");
+          triggerNodes = [];
+          parsedResult = new NagImportResult
+          {
+            TriggerName = triggerName,
+            Status = "Skipped",
+            Reason = $"Error parsing trigger: {ex.Message}"
+          };
+        }
+
+        foreach (var n in triggerNodes)
         {
           // Set folder path on the result for reporting. Triggers whose parent folder no
           // longer exists (e.g. after a package uninstall) go to "Orphaned Triggers",
@@ -402,17 +422,17 @@ internal static class NagUtil
           if (trigger.TryGetProperty("folderId", out var fid) &&
               fid.GetString() is { } folderId)
           {
-            parsed.result.FolderPath = folderPaths.TryGetValue(folderId, out var fpath) ? fpath : "Orphaned Triggers";
+            parsedResult.FolderPath = folderPaths.TryGetValue(folderId, out var fpath) ? fpath : "Orphaned Triggers";
           }
           else
           {
-            parsed.result.FolderPath = "(root)";
+            parsedResult.FolderPath = "(root)";
           }
 
           // Wrap trigger node in folder hierarchy if not at root level
-          if (parsed.result.FolderPath != "(root)")
+          if (parsedResult.FolderPath != "(root)")
           {
-            var wrapped = WrapInFolderHierarchy(parsed.result.FolderPath, n);
+            var wrapped = WrapInFolderHierarchy(parsedResult.FolderPath, n);
             nodes.Add(wrapped);
           }
           else
@@ -420,20 +440,20 @@ internal static class NagUtil
             nodes.Add(n);
           }
         }
-        results.Add(parsed.result);
+        results.Add(parsedResult);
 
         // Build metadata dictionary keyed by NAG triggerId for profile-level operations.
-        // Skipped triggers (dev-only, missing name, etc.) are excluded from metadata.
-        if (!string.IsNullOrEmpty(parsed.result.TriggerId) && parsed.result.Status != "Skipped" && !metadata.ContainsKey(parsed.result.TriggerId))
+        // Skipped triggers (dev-only, missing name, parse failures, etc.) are excluded from metadata.
+        if (!string.IsNullOrEmpty(parsedResult.TriggerId) && parsedResult.Status != "Skipped" && !metadata.ContainsKey(parsedResult.TriggerId))
         {
-          metadata[parsed.result.TriggerId] = new NagTriggerMetadata
+          metadata[parsedResult.TriggerId] = new NagTriggerMetadata
           {
-            TriggerName = parsed.result.TriggerName,
-            FolderPath = parsed.result.FolderPath,
-            Score = parsed.result.Score,
-            ActionsSummary = parsed.result.ActionsSummary,
-            DroppedFeatures = parsed.result.DroppedFeatures,
-            MissingAudioFiles = parsed.result.MissingAudioFiles
+            TriggerName = parsedResult.TriggerName,
+            FolderPath = parsedResult.FolderPath,
+            Score = parsedResult.Score,
+            ActionsSummary = parsedResult.ActionsSummary,
+            DroppedFeatures = parsedResult.DroppedFeatures,
+            MissingAudioFiles = parsedResult.MissingAudioFiles
           };
         }
       }
@@ -447,6 +467,19 @@ internal static class NagUtil
     // so the first Import() overload skips the root and processes folders correctly
     var rootNode = new ExportTriggerNode { Nodes = nodes };
     return (new List<ExportTriggerNode> { rootNode }, results, metadata);
+  }
+
+  // Best-effort display name for a NAG trigger element, used when reporting per-trigger parse failures.
+  private static string GetTriggerDisplayName(JsonElement trigger)
+  {
+    if (trigger.ValueKind == JsonValueKind.Object &&
+        trigger.TryGetProperty("name", out var n) &&
+        n.GetString() is { Length: > 0 } name)
+    {
+      return name;
+    }
+
+    return "(unknown)";
   }
 
   // Recursively parse NAG folder structure to build a folderId → path mapping
@@ -1683,7 +1716,8 @@ internal static class NagUtil
     };
   }
 
-  internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath, int skippedFctOverlays = 0)
+  internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath, int skippedFctOverlays = 0,
+      List<string> overlayNotes = null)
   {
     try
     {
@@ -1728,6 +1762,12 @@ internal static class NagUtil
       sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
       var fctNote = skippedFctOverlays > 0 ? $" {skippedFctOverlays} FCT overlay(s) were not imported (no EQLP equivalent)." : "";
       sb.AppendLine($"<div class=\"note\">All imported triggers start <b>disabled</b>. NAG per-character enable states are not imported — enable what you need in the Triggers view.{fctNote}</div>");
+
+      // Reduced-fidelity overlay notes (e.g. timer sort order reversed vs NAG)
+      if (overlayNotes is { Count: > 0 })
+      {
+        sb.AppendLine($"<div class=\"note\">{string.Join("<br>", overlayNotes.Select(HtmlEncode))}</div>");
+      }
 
       sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
 
@@ -1829,10 +1869,16 @@ internal static class NagUtil
     return string.Join("<br>", friendly);
   }
 
-  internal static List<ExportTriggerNode> ConvertOverlays(string json, out int skippedFctOverlays)
+  /// <summary>
+  /// Converts NAG overlay JSON to EQLP export trigger nodes (overlay definitions only, no trigger links).
+  /// </summary>
+  internal static List<ExportTriggerNode> ConvertOverlays(string json, out int skippedFctOverlays, out List<string> overlayNotes)
   {
     var result = new List<ExportTriggerNode>();
     skippedFctOverlays = 0;
+    // Notes for features imported with reduced fidelity (e.g. reversed timer sort order),
+    // surfaced in the import report and completion dialog.
+    overlayNotes = [];
 
     try
     {
@@ -1847,6 +1893,18 @@ internal static class NagUtil
         {
           skippedFctOverlays++;
           continue;
+        }
+
+        // NAG 'Ascending' timer sort (most time remaining first — overlay.js sorts by dir * timeRemaining,
+        // dir = -1 for Ascending) has no EQLP equivalent. The overlay still imports with 'Remaining Time'
+        // sorting, so its timers display in the opposite order from NAG — note it for the import report.
+        if (overlay.TryGetProperty("timerSortType", out var sortProp) && sortProp.ValueKind == JsonValueKind.Number &&
+            sortProp.GetInt32() == 1)
+        {
+          var overlayName = overlay.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "(unnamed)" : "(unnamed)";
+          var note = $"Overlay \"{overlayName}\": NAG 'Ascending' timer sort (most time remaining first) has no" +
+            " EQLP equivalent — imported as 'Remaining Time', so timers display in reversed order.";
+          overlayNotes.Add(note);
         }
 
         var nagOverlay = ParseOverlay(overlay);
@@ -1898,8 +1956,13 @@ internal static class NagUtil
       textOverlayWrap = false;
     }
 
-    // Map timerSortType → SortBy (0=none, 1=alphabetical, 2=time remaining)
-    var sortBy = element.TryGetProperty("timerSortType", out var st) ? st.GetInt32() : 0;
+    // Map NAG timerSortType → EQLP SortBy.
+    // NAG (overlay.js): 0=None, 1=Ascending (most time remaining first), 2=Descending (ending soonest first).
+    // EQLP: 0=Trigger Time, 1=Remaining Time (ending soonest first), 2/3=Timer Name.
+    // NAG Descending matches EQLP Remaining Time exactly; Ascending has no equivalent and is kept as 1
+    // (reversed order vs NAG — reported via ConvertOverlays' overlayNotes).
+    var nagSort = element.TryGetProperty("timerSortType", out var st) ? st.GetInt32() : 0;
+    var sortBy = nagSort == 2 ? 1 : nagSort;
 
     // Map showTextGlow → UseTextDropShadow (default true for backward compat)
     var useTextDropShadow = element.TryGetProperty("showTextGlow", out var stg) ? stg.GetBoolean() : true;
