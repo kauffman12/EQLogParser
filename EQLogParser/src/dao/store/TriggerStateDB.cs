@@ -1135,6 +1135,18 @@ namespace EQLogParser
       tree.Delete(id);
     }
 
+    // Re-import name matches must be kind-safe: a payload-carrying leaf (trigger or overlay)
+    // updates only an existing leaf, and a folder wrapper merges only into an existing folder.
+    // TriggerNode has no explicit kind field — kind is defined by payload presence (see
+    // TriggerTreeViewNode.IsDir()). Without this, a folder wrapper could match a same-named
+    // trigger and reach the overwrite branch with null data (erasing it), or a leaf matching a
+    // same-named folder would hit no update/merge branch and be silently dropped.
+    internal static bool MatchesReimportKind(TriggerNode existing, ExportTriggerNode incoming) =>
+      HasDataPayload(existing) == HasDataPayload(incoming);
+
+    private static bool HasDataPayload(TriggerNode node) =>
+      node.TriggerData != null || node.OverlayData != null;
+
     private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
       if (parent?.Id is not { } parentId || imported == null || GetCol<TriggerNode>(TreeCol) is not { } tree) return;
@@ -1178,6 +1190,9 @@ namespace EQLogParser
           // OriginalId (NAG imports) must match by name AND source id — NAG allows
           // duplicate names for distinct triggers, and matching by name alone would
           // silently overwrite the first imported trigger with every same-named one.
+          // Name-only matches are kind-safe (MatchesReimportKind): without it, a folder
+          // wrapper could match an existing same-named trigger and reach the overwrite
+          // branch below with TriggerData == null, erasing the found trigger's data.
           TriggerNode foundTrigger = null;
           if (newNode.OriginalId != null)
           {
@@ -1192,7 +1207,8 @@ namespace EQLogParser
           }
           else
           {
-            foundTrigger = tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name);
+            foundTrigger = tree.FindOne(n => n.Parent == parentId && n.Name == newNode.Name &&
+              MatchesReimportKind(n, newNode));
           }
 
           if (foundTrigger is not null)
