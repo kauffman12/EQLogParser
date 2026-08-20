@@ -14,20 +14,31 @@ namespace EQLogParser
     private readonly List<QuickShareRecord> _records = [];
     private readonly object _lock = new();
 
+    /// <summary>Raised on the accepting thread after a record is inserted, so view owners (e.g.
+    /// the WPF window's bound collection) can mirror it. Fires at most once per unique record.</summary>
+    internal event Action<QuickShareRecord> Accepted;
+
     /// <summary>Applies the insert-once-at-top rule. Returns true when the record was added, so
     /// view owners can mirror it into their own collections.</summary>
     internal bool Add(QuickShareRecord record)
     {
+      var added = false;
       lock (_lock)
       {
         if (_records.Count == 0 || _records[0].Key != record.Key || _records[0].BeginTime != record.BeginTime)
         {
           _records.Insert(0, record);
-          return true;
+          added = true;
         }
-
-        return false;
       }
+
+      // Raised outside the lock so view-side handlers can re-enter the state (IsMine, Add).
+      if (added)
+      {
+        Accepted?.Invoke(record);
+      }
+
+      return added;
     }
 
     internal bool IsMine(string key)

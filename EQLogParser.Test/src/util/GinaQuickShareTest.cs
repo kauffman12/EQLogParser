@@ -107,6 +107,23 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void QuickShareState_Accepted_FiresOncePerUniqueRecord()
+    {
+      // The WPF window mirrors its bound collection from this event (QuickShareManager) — both the
+      // GINA producer and legacy shares must surface exactly once each.
+      var state = new QuickShareState();
+      var accepted = new List<QuickShareRecord>();
+      state.Accepted += r => accepted.Add(r);
+
+      var record = new QuickShareRecord { Key = "{GINA:evt}", BeginTime = 1.0, From = "A" };
+      Assert.IsTrue(state.Add(record));
+      Assert.IsFalse(state.Add(new QuickShareRecord { Key = "{GINA:evt}", BeginTime = 1.0, From = "A" }), "duplicate must not re-fire");
+
+      Assert.HasCount(1, accepted);
+      Assert.AreSame(record, accepted[0]);
+    }
+
+    [TestMethod]
     public async Task GinaPackage_ConvertAndImport_RoundTrips()
     {
       const string xml = """
