@@ -156,7 +156,9 @@ namespace EQLogParser
               var ignoreRecords = new Dictionary<string, byte>();
               var filtered = new List<ActionGroup>();
 
-              var start = 1;
+              // start at 0 — FindIndex treats the argument as a 0-based index, so starting at 1
+              // silently dropped the first heal record of every full stats build
+              var start = 0;
               if (start < allHeals.Count)
               {
                 start = allHeals.FindIndex(start, special => special.Item1 >= beginTime);
