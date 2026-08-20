@@ -1,9 +1,10 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Data;
 
 namespace EQLogParser
 {
+  /* UI adapter over the cross-platform QuickShareState: keeps the collection the window binds to
+   * on the UI thread and defers the dedup/ownership rules to the shared state. */
   internal class QuickShareManager
   {
     internal static QuickShareManager Instance { get; set; } = new();
@@ -18,37 +19,13 @@ namespace EQLogParser
 
     internal async void Add(QuickShareRecord record)
     {
-      // Marshal to UI thread to avoid thread-safety issues with ObservableCollection
-      await UiUtil.InvokeAsync(() => AddInternal(record));
-    }
-
-    private void AddInternal(QuickShareRecord record)
-    {
-      // This method should only be called from UI thread
-      if (Records.Count == 0 || Records[0].Key != record.Key ||
-        Records[0].BeginTime != record.BeginTime)
+      if (QuickShareState.Instance.Add(record))
       {
-        Records.Insert(0, record);
+        // Marshal the view update to the UI thread; the dedup decision already happened in the shared state.
+        await UiUtil.InvokeAsync(() => Records.Insert(0, record));
       }
     }
 
-    internal bool IsMine(string key)
-    {
-      // Read operations can be from any thread since binding synchronization handles it
-      lock (_lock)
-      {
-        return Records.FirstOrDefault(r => r.IsMine && r.Key == key) != null;
-      }
-    }
-  }
-
-  public class QuickShareRecord
-  {
-    public double BeginTime { get; set; }
-    public string Type { get; set; }
-    public string To { get; set; }
-    public string From { get; set; }
-    public string Key { get; set; }
-    public bool IsMine { get; set; }
+    internal bool IsMine(string key) => QuickShareState.Instance.IsMine(key);
   }
 }

@@ -1402,11 +1402,4 @@ namespace EQLogParser
     }
   }
 
-  internal class CharacterData
-  {
-    public string Sender { get; set; }
-    public HashSet<string> CharacterIds { get; set; } = [];
-    public bool AutoMerge { get; set; }
-    public bool IsTrigger { get; set; }
-  }
 }
