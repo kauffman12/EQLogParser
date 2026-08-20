@@ -28,4 +28,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <!-- NAG conversion fixtures loaded via GetManifestResourceStream (see NagUtilTriggerImportTest). -->
+    <EmbeddedResource Include="src\util\fixtures\nag\*.json" />
+  </ItemGroup>
 </Project>

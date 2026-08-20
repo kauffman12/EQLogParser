@@ -24,6 +24,5 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="src\util\fixtures\nag\*.json" />
   </ItemGroup>
 </Project>
