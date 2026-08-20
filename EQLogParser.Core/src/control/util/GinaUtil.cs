@@ -121,7 +121,7 @@ namespace EQLogParser
           }
 
           badMessage += " but no supported Triggers found.";
-          GinaPlatform.ShowMessage(badMessage, GinaPlatform.CaptionReceivedGina);
+          await GinaPlatform.ShowMessage(badMessage, GinaPlatform.CaptionReceivedGina);
         }
         else if (autoMerge)
         {
@@ -253,7 +253,7 @@ namespace EQLogParser
         }
         else
         {
-          GinaPlatform.ShowMessage("Unable to Import. No data found, possibly expired?", GinaPlatform.CaptionReceivedGina);
+          await GinaPlatform.ShowMessage("Unable to Import. No data found, possibly expired?", GinaPlatform.CaptionReceivedGina);
 
           // no chunk data in response. too old?
           NextGinaTask(ginaKey);
@@ -263,7 +263,7 @@ namespace EQLogParser
       {
         if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
         {
-          GinaPlatform.ShowMessage("Error Downloading GINA Triggers. Blocked by Firewall?", GinaPlatform.CaptionReceivedGina);
+          await GinaPlatform.ShowMessage("Error Downloading GINA Triggers. Blocked by Firewall?", GinaPlatform.CaptionReceivedGina);
           Log.Error("Error Downloading GINA Triggers", ex);
           NextGinaTask(ginaKey);
         }
@@ -277,7 +277,7 @@ namespace EQLogParser
             return;
           }
 
-          GinaPlatform.ShowMessage("Unable to Import. May be Expired.\nCheck Error Log for Details.", GinaPlatform.CaptionShareError);
+          await GinaPlatform.ShowMessage("Unable to Import. May be Expired.\nCheck Error Log for Details.", GinaPlatform.CaptionShareError);
 
           Log.Error("Error Downloading GINA Triggers", ex);
           NextGinaTask(ginaKey);

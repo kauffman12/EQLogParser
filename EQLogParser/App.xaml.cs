@@ -85,16 +85,18 @@ namespace EQLogParser
         TriggerStorePlatform.SoundExists = TriggerUtil.SoundFileExists;
 
         // Wire the GINA import UI hooks (failure messages + merge/new-folder question).
-        GinaPlatform.ShowMessage = (message, caption) =>
+        // Awaiting keeps GINA failure handling sequential — the original flow blocked on the dialog
+        // before scheduling the next task.
+        GinaPlatform.ShowMessage = async (message, caption) =>
         {
           var title = caption == GinaPlatform.CaptionShareError ? Resource.SHARE_ERROR : Resource.RECEIVED_GINA;
-          _ = UiUtil.InvokeAsync(() => new MessageWindow(message, title).ShowDialog());
+          await UiUtil.InvokeAsync(() => new MessageWindow(message, title).ShowDialog());
         };
 
-        GinaPlatform.AskImportChoice = async (message, allowCancel) => await UiUtil.InvokeAsync(() =>
+        GinaPlatform.AskImportChoice = async (message, showMergeOption) => await UiUtil.InvokeAsync(() =>
         {
           var msgDialog = new MessageWindow(message, Resource.RECEIVED_GINA, MessageWindow.IconType.Question,
-            "New Folder", "Merge", allowCancel);
+            "New Folder", "Merge", showMergeOption);
           msgDialog.ShowDialog();
 
           return msgDialog.IsYes2Clicked ? GinaPlatform.ImportChoice.Merge :
