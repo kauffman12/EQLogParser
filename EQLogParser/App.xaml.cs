@@ -70,6 +70,15 @@ namespace EQLogParser
 
         // Wire platform-specific behavior into the cross-platform trigger store (Core).
         TriggerStorePlatform.GetDbFile = ConfigUtil.GetTriggersDbFile;
+
+        // Wire host-owned lookups used by Core stats/record code (EQDataStore + labels).
+        CombatRecordLookup.HealingSpellByName = name => EQDataStore.Instance.GetHealingSpellByName(name);
+        CombatRecordLookup.IsPlayerSpell = name => EQDataStore.Instance.IsPlayerSpell(name);
+        CombatRecordLookup.IsValidClassName = name => EQDataStore.Instance.IsValidClassName(name);
+        CombatRecordLookup.ClassEnumByName = name => EQDataStore.Instance.GetClassEnum(name);
+        CombatRecordLookup.RogueClass = Resource.ROG;
+        CombatRecordLookup.RangerClass = Resource.RNG;
+        CombatRecordLookup.PaladinClass = Resource.PAL;
         TriggerStorePlatform.IconIsValid = path => UiElementUtil.CreateBitmap(path) != null;
         TriggerStorePlatform.SoundExists = TriggerUtil.SoundFileExists;
         TriggerStorePlatform.ValidateSpritePath = EQUtil.ValidateSpritePath;

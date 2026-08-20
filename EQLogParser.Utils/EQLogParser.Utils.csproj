@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="EQLogParser.Core" />
     <InternalsVisibleTo Include="EQLogParser" />
     <InternalsVisibleTo Include="EQLogParser.Test" />
     <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />

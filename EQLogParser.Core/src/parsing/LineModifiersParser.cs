@@ -222,19 +222,19 @@ namespace EQLogParser
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = "Assassinate";
-          className = Resource.ROG;
+          className = CombatRecordLookup.RogueClass;
         }
         else if (IsHeadshot(result) || IsDoubleBowShot(result))
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = IsHeadshot(result) ? "Headshot" : "Double Bow Shot";
-          className = Resource.RNG;
+          className = CombatRecordLookup.RangerClass;
         }
         else if (IsSlayUndead(result))
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
           classAbility = "Slay Undead";
-          className = Resource.PAL;
+          className = CombatRecordLookup.PaladinClass;
         }
 
         if (!string.IsNullOrEmpty(classAbility) && !string.IsNullOrEmpty(className))

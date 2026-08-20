@@ -51,6 +51,14 @@ namespace EQLogParser
   }
 
 
+  internal class DataPointEvent
+  {
+    public string Action { get; set; }
+    public RecordGroupCollection Iterator { get; set; }
+    public List<PlayerStats> Selected { get; } = [];
+    public List<GroupEntry> SelectedGroups { get; } = [];
+  }
+
   internal class TauntEvent
   {
     public TauntRecord Record { get; set; }
