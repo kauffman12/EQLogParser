@@ -212,6 +212,8 @@ namespace EQLogParser
 
     internal static List<string> ReadList(string fileName)
     {
+      // Callers use Windows-style separators; normalize so non-Windows hosts can read too.
+      fileName = fileName.Replace('\\', Path.DirectorySeparatorChar);
       var result = new List<string>();
       ExceptionUtil.CatchSecurityExceptions(() =>
       {

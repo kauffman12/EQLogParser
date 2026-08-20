@@ -1,4 +1,4 @@
-namespace EQLogParser.Wpf.Test
+namespace EQLogParser
 {
   [TestClass]
   public class HealingValidatorTest
@@ -14,6 +14,9 @@ namespace EQLogParser.Wpf.Test
       // Create a fresh data store which loads from data files
       _dataStore = new EQDataStore();
       EQDataStore.Instance = _dataStore;
+
+      // Core resolves healing spells through the host seam; point it at the real store.
+      CombatRecordLookup.HealingSpellByName = name => _dataStore.GetHealingSpellByName(name);
     }
 
     [TestMethod]

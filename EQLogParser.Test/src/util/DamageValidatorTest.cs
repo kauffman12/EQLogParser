@@ -1,4 +1,4 @@
-namespace EQLogParser.Wpf.Test
+namespace EQLogParser
 {
   [TestClass]
   public class DamageValidatorTest

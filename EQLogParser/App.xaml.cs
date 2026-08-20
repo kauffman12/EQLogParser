@@ -79,6 +79,7 @@ namespace EQLogParser
         CombatRecordLookup.RogueClass = Resource.ROG;
         CombatRecordLookup.RangerClass = Resource.RNG;
         CombatRecordLookup.PaladinClass = Resource.PAL;
+        CombatRecordLookup.AnyClass = Resource.ANY_CLASS;
         CombatRecordLookup.ClassLabelByEnumName = name => Resource.ResourceManager.GetString(name, System.Globalization.CultureInfo.InvariantCulture);
         TriggerStorePlatform.IconIsValid = path => UiElementUtil.CreateBitmap(path) != null;
         TriggerStorePlatform.SoundExists = TriggerUtil.SoundFileExists;

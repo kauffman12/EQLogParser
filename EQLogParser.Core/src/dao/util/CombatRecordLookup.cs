@@ -29,5 +29,8 @@ namespace EQLogParser
     public static string RogueClass { get; set; }
     public static string RangerClass { get; set; }
     public static string PaladinClass { get; set; }
+
+    /// <summary>The resx label for the 'any class' stats option (host: resx labels).</summary>
+    public static string AnyClass { get; set; }
   }
 }

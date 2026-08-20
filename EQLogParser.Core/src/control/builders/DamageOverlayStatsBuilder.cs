@@ -180,7 +180,7 @@ namespace EQLogParser
               myIndex = list.Count;
             }
 
-            if (myIndex == list.Count || selectedClass == Resource.ANY_CLASS || selectedClass == playerStats.ClassName)
+            if (myIndex == list.Count || selectedClass == CombatRecordLookup.AnyClass || selectedClass == playerStats.ClassName)
             {
               list.Add(playerStats);
             }
