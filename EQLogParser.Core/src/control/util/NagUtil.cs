@@ -141,6 +141,11 @@ internal static class NagUtil
   // report/Comments but do not affect import status. True gaps still mark a trigger Partial.
   private static readonly HashSet<string> NonStatusDroppedFeatures = new() { InterruptSpeechNote };
 
+  // Action types whose phrase scoping the import routes per-phrase node (text/sound/TTS/clipboard
+  // values via RouteActionValue, variable effects via SetVariables/PhraseClearVariables). Every
+  // other scoped action type (timers, counters) still applies to all phrase nodes.
+  private static readonly HashSet<int> RouteablePhraseScopedTypes = new() { 0, 1, 2, 5, 7, 9 };
+
   // NAG ${varName} in regex phrases — not supported by EQLP, replace with (?<varName>.+?)
   // Exception: ${Character} maps to EQLP's native {c} (replaced with player name at runtime).
   private static readonly Regex DollarVarRegex = new(@"\$\{(\w+)\}", RegexOptions.Compiled);
@@ -862,10 +867,11 @@ internal static class NagUtil
     //   the trigger at priority 1 (top urgency) — the EQLP audio engine stops playing audio of
     //   lower priority and drops queued lower-priority events. Same convention as GINA import.
     // - secondaryPhrases: extra phrase IDs the same action also matches; no EQLP equivalent.
-    // - per-phrase action scoping: NAG fires an action only on the phrases listed in its
-    //   "phrases" array, but the import applies the merged action set to every phrase trigger.
-    //   When any action covers a strict subset of the trigger's phrases, extra phrase triggers
-    //   will also run it — flag the divergence so the report stays honest.
+    // - per-phrase action scoping: NAG actions can target specific phrases ("phrases" array).
+    //   Text/sound/TTS/clipboard values and variable effects are routed to exactly those phrase
+    //   nodes (see RouteActionValue / SetVariables). Timers and counters have no such routing —
+    //   they fan out to every phrase node — so a subset-scoped timer/counter is still flagged,
+    //   as is any routable action scoped to phrase ids that no longer exist in the trigger.
     var phraseIdSet = phrases.Where(p => p.phraseId != null).Select(p => p.phraseId!).ToHashSet();
     var hasInterruptSpeech = false;
     foreach (var action in element.GetProperty("actions").EnumerateArray())
@@ -885,8 +891,19 @@ internal static class NagUtil
           targetPhrases.ValueKind == JsonValueKind.Array && targetPhrases.GetArrayLength() > 0)
       {
         var scopedIds = targetPhrases.EnumerateArray().Select(e => e.GetString()).Where(s => s is not null).ToHashSet();
-        if (scopedIds.Count > 0 && scopedIds.Count < phraseIdSet.Count && scopedIds.IsSubsetOf(phraseIdSet))
+        var actionType = action.TryGetProperty("actionType", out var at2) && at2.ValueKind == JsonValueKind.Number
+          ? at2.GetInt32() : -1;
+        if (RouteablePhraseScopedTypes.Contains(actionType))
+        {
+          // The values were routed during ParseActions — the only divergence left to report is
+          // scoping onto phrase ids that no longer exist in this trigger (those were dropped).
+          if (scopedIds.Any(id => !phraseIdSet.Contains(id)))
+            droppedFeatures.Add("action targets phrase(s) missing from trigger");
+        }
+        else if (scopedIds.Count > 0 && scopedIds.Count < phraseIdSet.Count && scopedIds.IsSubsetOf(phraseIdSet))
+        {
           droppedFeatures.Add("per-phrase action scoping");
+        }
       }
     }
 
@@ -1042,13 +1059,17 @@ internal static class NagUtil
         // End-early phrases for this node: trigger-level merged with this timer variant's own.
         ApplyEndEarlyPatterns(triggerData, endEarlyByVariant[t]);
 
-        // Apply phrase-specific display texts from actions that target specific phrases.
-        // For example, a clear-variable action with displayText "Spell {var} was interrupted."
-        // should only show on the interrupt phrases, not on the begin-casting phrase — and only
-        // on the first timer variant (shared non-timer actions must not double-fire).
-        if (t == 0 && parsed.PhraseDisplayTexts.TryGetValue(currentPhraseId, out var phraseDisplayText))
+        // Apply this phrase's own action values. NAG actions can target specific capture phrases
+        // via "phrases"/"phraseId"; their display/speak/sound/share values apply only to this
+        // phrase's nodes, not the siblings' — and only on the first timer variant (shared
+        // non-timer actions must not double-fire). For example a clear-variable action with
+        // displayText "Spell {var} was interrupted." shows only on the interrupt phrases.
+        if (t == 0 && parsed.PhraseScoped.TryGetValue(currentPhraseId, out var phraseScoped))
         {
-          triggerData.TextToDisplay = phraseDisplayText;
+          if (phraseScoped.TextToDisplay.Length > 0) triggerData.TextToDisplay = phraseScoped.TextToDisplay;
+          if (phraseScoped.TextToSpeak.Length > 0) triggerData.TextToSpeak = phraseScoped.TextToSpeak;
+          if (phraseScoped.SoundToPlay.Length > 0) triggerData.SoundToPlay = phraseScoped.SoundToPlay;
+          if (phraseScoped.TextToShare.Length > 0) triggerData.TextToShare = phraseScoped.TextToShare;
         }
 
         // Add VariableActions for set-variable mappings on this phrase (first variant only —
@@ -1211,7 +1232,7 @@ internal static class NagUtil
     public List<(string phraseId, string variableName)> SetVariables = [];
     public List<(string phrase, bool useRegex, string variableName)> CounterResetPhrases = [];
     public List<(string phraseId, string variableName)> PhraseClearVariables = [];
-    public Dictionary<string, string> PhraseDisplayTexts = [];
+    public Dictionary<string, PhraseScopedValues> PhraseScoped = [];
     public List<TimerActionData> TimerActions = [];
   }
 
@@ -1406,11 +1427,83 @@ internal static class NagUtil
     }
   }
 
-  /* Parse a NAG trigger's actions into EQLP data. Non-timer actions (text, audio, TTS,
+  // Resolve which capture phrases a NAG action targets: its "phrases" array, then a single
+  // "phraseId", else null (unscoped — applies to every phrase). An empty "phrases" array means
+  // no restriction, i.e. unscoped.
+  private static List<string>? ActionPhraseTargets(JsonElement action)
+  {
+    if (action.TryGetProperty("phrases", out var ap) && ap.ValueKind == JsonValueKind.Array)
+    {
+      var ids = new List<string>();
+      foreach (var e in ap.EnumerateArray())
+      {
+        if (e.GetString() is { Length: > 0 } id)
+        {
+          ids.Add(id);
+        }
+      }
+      return ids.Count > 0 ? ids : null;
+    }
+
+    if (action.TryGetProperty("phraseId", out var pid) && pid.GetString() is { Length: > 0 } single)
+    {
+      return [single];
+    }
+
+    return null;
+  }
+
+  /* Route one action's value to the EQLP field it feeds. Unscoped actions merge into the shared
+   * trigger data (last wins, as before); actions scoped to specific phrases apply only to those
+   * phrase nodes — otherwise every phrase node would inherit whatever the last scoped action set
+   * (e.g. one phrase's audio leaking onto all of its siblings). */
+  private static void RouteActionValue(string value, List<string>? targets,
+      Dictionary<string, PhraseScopedValues> phraseScoped, string field, Action<string> setGlobal)
+  {
+    if (value.Length == 0)
+    {
+      return;
+    }
+
+    if (targets is null)
+    {
+      setGlobal(value);
+      return;
+    }
+
+    foreach (var target in targets)
+    {
+      if (!phraseScoped.TryGetValue(target, out var scoped))
+      {
+        phraseScoped[target] = scoped = new PhraseScopedValues();
+      }
+
+      switch (field)
+      {
+        case "display": scoped.TextToDisplay = value; break;
+        case "speak": scoped.TextToSpeak = value; break;
+        case "sound": scoped.SoundToPlay = value; break;
+        case "share": scoped.TextToShare = value; break;
+      }
+    }
+  }
+
+  /* Non-timer action values scoped to specific capture phrases (see RouteActionValue). Applied
+   * on top of the shared merge for exactly the matching phrase's nodes. */
+  private sealed class PhraseScopedValues
+  {
+    public string TextToDisplay = "";
+    public string TextToSpeak = "";
+    public string SoundToPlay = "";
+    public string TextToShare = "";
+  }
+
+  /* Parse a NAG trigger's actions into EQLP data. Unscoped non-timer actions (text, audio, TTS,
    * clipboard, counter, set/clear variable) merge into one shared Trigger — an EQLP node carries
-   * them all. Timer actions (3/4/6/10) are collected separately as TimerActionData: an EQLP
-   * trigger holds exactly one timer, so ParseTrigger emits one node per NAG timer action and
-   * applies each action's own fields to its node. */
+   * them all; actions scoped to specific phrases are routed to those phrase nodes only.
+   * Timer actions (3/4/6/10) are collected separately as TimerActionData: an EQLP trigger holds
+   * exactly one timer, so ParseTrigger emits one node per NAG timer action and applies each
+   * action's own fields to its node. */
   private static ParsedActions ParseActions(JsonElement actions, bool useRegEx)
   {
     var textToDisplay = "";
@@ -1424,9 +1517,9 @@ internal static class NagUtil
     var hasAction = false;
     var clearVariables = new List<string>();
     var phraseClearVariables = new List<(string phraseId, string variableName)>();
-    // Phrase-specific display texts from actions that target specific phrases.
-    // Keyed by phraseId; only applied to matching phrases, not globally.
-    var phraseDisplayTexts = new Dictionary<string, string>();
+    // Non-timer action values scoped by the action's "phrases"/"phraseId" target list, keyed by
+    // phraseId. Applied on top of the shared (unscoped) merge for exactly those phrase nodes.
+    var phraseScoped = new Dictionary<string, PhraseScopedValues>();
     var setVariables = new List<(string phraseId, string variableName)>();
     var counterResetPhrases = new List<(string phrase, bool useRegex, string variableName)>();
     var counterVarName = "";
@@ -1455,7 +1548,7 @@ internal static class NagUtil
           hasAction = true;
           if (action.TryGetProperty("displayText", out var dt) && dt.GetString() is { Length: > 0 } text)
           {
-            textToDisplay = ConvertTemplates(text);
+            RouteActionValue(ConvertTemplates(text), ActionPhraseTargets(action), phraseScoped, "display", v => textToDisplay = v);
           }
           // NAG's `duration` on a DisplayText action is only the number of seconds the
           // text stays on screen before auto-hiding (overlay.js: sendDisplayTextToOverlay).
@@ -1476,7 +1569,7 @@ internal static class NagUtil
           hasAction = true;
           if (action.TryGetProperty("audioFileId", out var af) && af.GetString() is { Length: > 0 } audio)
           {
-            soundToPlay = ResolveAudioFile(audio, missingAudioFiles);
+            RouteActionValue(ResolveAudioFile(audio, missingAudioFiles), ActionPhraseTargets(action), phraseScoped, "sound", v => soundToPlay = v);
           }
           // Collect overlayId (NAG audio actions can reference overlays for positioning)
           if (action.TryGetProperty("overlayId", out var ov1) && ov1.GetString() is { Length: > 0 } overlayId1)
@@ -1491,7 +1584,7 @@ internal static class NagUtil
           hasAction = true;
           if (action.TryGetProperty("displayText", out var st) && st.GetString() is { Length: > 0 } speak)
           {
-            textToSpeak = ConvertTemplates(speak);
+            RouteActionValue(ConvertTemplates(speak), ActionPhraseTargets(action), phraseScoped, "speak", v => textToSpeak = v);
           }
           // Collect overlayId for TTS overlay routing
           if (action.TryGetProperty("overlayId", out var ov2) && ov2.GetString() is { Length: > 0 } overlayId2)
@@ -1560,7 +1653,7 @@ internal static class NagUtil
           hasAction = true;
           if (action.TryGetProperty("displayText", out var cb) && cb.GetString() is { Length: > 0 } clip)
           {
-            textToShare = ConvertTemplates(clip);
+            RouteActionValue(ConvertTemplates(clip), ActionPhraseTargets(action), phraseScoped, "share", v => textToShare = v);
           }
           // Collect overlayId for clipboard overlay routing
           if (action.TryGetProperty("overlayId", out var ov9) && ov9.GetString() is { Length: > 0 } overlayId9)
@@ -1627,26 +1720,13 @@ internal static class NagUtil
           // that should only be shown when the specific phrase(s) listed in the action's "phrases"
           // array match — NOT applied globally to all phrases. For example, phrase [0] ("You begin casting")
           // should NOT show an interrupt message just because phrase [3] has one.
+          // The clear-variable action's display text (e.g. "Spell {var} was interrupted.") routes
+          // through the same per-phrase mechanism as every other action: only the phrases listed
+          // in its "phrases"/"phraseId" see it, unscoped applies to all. This is what keeps an
+          // interrupt message off the begin-casting phrase.
           if (action.TryGetProperty("displayText", out var dt7) && dt7.GetString() is { Length: > 0 } clearDisplayText)
           {
-            var convertedDisplayText = ConvertTemplates(clearDisplayText);
-            // Route display text to specific phrases listed in the action's "phrases" array.
-            if (action.TryGetProperty("phrases", out var actionPhrases) && actionPhrases.ValueKind == JsonValueKind.Array)
-            {
-              foreach (var ap in actionPhrases.EnumerateArray())
-              {
-                var apStr = ap.GetString();
-                if (!string.IsNullOrEmpty(apStr) && !phraseDisplayTexts.ContainsKey(apStr))
-                {
-                  phraseDisplayTexts[apStr] = convertedDisplayText;
-                }
-              }
-            }
-            else
-            {
-              // No specific phrase routing — apply globally (backward compatibility).
-              textToDisplay = convertedDisplayText;
-            }
+            RouteActionValue(ConvertTemplates(clearDisplayText), ActionPhraseTargets(action), phraseScoped, "display", v => textToDisplay = v);
           }
           // NAG can attach an alert overlay + duration to a clear-variable action.
           // EQLP has no per-action overlay for non-timer actions, so report it as dropped.
@@ -1802,7 +1882,7 @@ internal static class NagUtil
       SetVariables = setVariables,
       CounterResetPhrases = counterResetPhrases,
       PhraseClearVariables = phraseClearVariables,
-      PhraseDisplayTexts = phraseDisplayTexts,
+      PhraseScoped = phraseScoped,
       TimerActions = timerActions
     };
   }

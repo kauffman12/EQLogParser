@@ -2610,6 +2610,84 @@ namespace EQLogParser
       Assert.IsFalse(results[0].DroppedFeatures.Contains("per-phrase action scoping"));
     }
 
+    [TestMethod]
+    public void ConvertTriggers_PhraseScopedTextActions_RoutedToOwnPhrasesOnly()
+    {
+      // NAG actions target specific capture phrases; before this fix every phrase node inherited
+      // whichever scoped action came last (the bottom action's values on all triggers).
+      var json = CreateTriggerJson("Scoped", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase("phrase one", phraseId: "pA"),
+        CreateCapturePhrase("phrase two", phraseId: "pB")
+      ], actions:
+      [
+        CreateAction(0, displayText: "text A", phrases: ["pA"]),
+        CreateAction(1, audioFileId: "b.wav", phrases: ["pB"]),
+        CreateAction(2, displayText: "ready") // unscoped -> applies to every phrase
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      var nodeA = nodes[0];
+      var nodeB = nodes[1];
+
+      // pA sees its own display text only — pB's audio must not leak onto it.
+      Assert.AreEqual("text A", nodeA.TriggerData.TextToDisplay);
+      Assert.AreEqual("", nodeA.TriggerData.SoundToPlay);
+      // pB sees the audio only — not pA's display text (previously last-scoped-won for everyone).
+      Assert.AreEqual("", nodeB.TriggerData.TextToDisplay);
+      Assert.AreEqual("b.wav", nodeB.TriggerData.SoundToPlay);
+      // Unscoped actions still apply to every phrase node.
+      Assert.AreEqual("ready", nodeA.TriggerData.TextToSpeak);
+      Assert.AreEqual("ready", nodeB.TriggerData.TextToSpeak);
+      // Routing is honored, so the old "merged across phrases" note no longer applies.
+      CollectionAssert.DoesNotContain(results[0].DroppedFeatures, "per-phrase action scoping");
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionScopedViaPhraseId_RoutedToOwnPhrase()
+    {
+      // The single-field "phraseId" scoping (instead of the "phrases" array) routes too.
+      var json = CreateTriggerJson("Single Scope", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase("phrase one", phraseId: "pA"),
+        CreateCapturePhrase("phrase two", phraseId: "pB")
+      ], actions:
+      [
+        CreateAction(1, audioFileId: "a-only.wav", phraseId: "pA")
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      Assert.AreEqual("a-only.wav", nodes[0].TriggerData.SoundToPlay);
+      Assert.AreEqual("", nodes[1].TriggerData.SoundToPlay);
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionScopedToMissingPhrase_DroppedAndReported()
+    {
+      // Stale NAG data: an action scoped to a phrase that no longer exists in the trigger.
+      // Its values target nothing and must not fall back to "applies to all" — report it instead.
+      var json = CreateTriggerJson("Ghost Scope", "pattern", capturePhrases:
+      [
+        CreateCapturePhrase("phrase one", phraseId: "pA"),
+        CreateCapturePhrase("phrase two", phraseId: "pB")
+      ], actions:
+      [
+        CreateAction(0, displayText: "ghost text", phrases: ["MISSING"]),
+        CreateAction(0, displayText: "visible text")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(2, nodes);
+      Assert.AreEqual("visible text", nodes[0].TriggerData.TextToDisplay,
+        "The unscoped action still provides the value; the ghost scope targets nothing");
+      CollectionAssert.Contains(results[0].DroppedFeatures, "action targets phrase(s) missing from trigger");
+    }
+
     #endregion
 
     /// <summary>
