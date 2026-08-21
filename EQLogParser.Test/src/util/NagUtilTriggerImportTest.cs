@@ -344,6 +344,33 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void ConvertTriggers_TimerWithEndingDuration_WarnTimeRemainingMapped()
+    {
+      // NAG's endingDuration (seconds before the end at which warning text/sound fire) is EQLP's
+      // "Warn With Time Remaining". It was silently dropped before.
+      var json = CreateTriggerJson("Warn Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Cooldown", duration: 120.0, extraJson: "\"endingDuration\":30")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual(30L, nodes[0].TriggerData.WarningSeconds);
+      Assert.AreEqual("Imported", results[0].Status);
+
+      // No endingDuration -> no warning threshold (model default 0).
+      var jsonNoWarn = CreateTriggerJson("Plain Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Cooldown", duration: 120.0)
+      ]);
+
+      var (nodesNoWarn, _, _) = ConvertTriggersUnwrapped(jsonNoWarn);
+
+      Assert.AreEqual(0L, nodesNoWarn[0].TriggerData.WarningSeconds);
+    }
+
+    [TestMethod]
     public void ConvertTriggers_TextAndTimerActions_DoNotOverwriteEachOther()
     {
       // Text overlay and timer actions used to clobber each other's displayText — the timer's
@@ -2000,7 +2027,7 @@ namespace EQLogParser
       return sb.ToString();
     }
 
-    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null)
+    private string CreateActionString(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null, string? extraJson = null)
     {
       var sb = new StringBuilder();
       sb.Append("{\"actionType\":");
@@ -2065,13 +2092,19 @@ namespace EQLogParser
         sb.Append($",\"secondaryPhrases\":[{string.Join(",", secondaryPhrases.Select(p => $"\"{p}\""))}]");
       }
 
+      // Raw extra properties for fields without a dedicated parameter (e.g. "endingDuration":30).
+      if (extraJson != null)
+      {
+        sb.Append(',' + extraJson);
+      }
+
       sb.Append("}");
       return sb.ToString();
     }
 
-    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null)
+    private JsonElement CreateAction(int actionType, string? displayText = null, double? duration = null, bool durationNull = false, string? audioFileId = null, string? variableName = null, string? phraseId = null, int? restartBehavior = null, bool? repeatTimer = null, int? repeatCount = null, bool? interruptSpeech = null, string[]? phrases = null, string[]? secondaryPhrases = null, string? extraJson = null)
     {
-      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName, phraseId, restartBehavior, repeatTimer, repeatCount, interruptSpeech, phrases, secondaryPhrases);
+      var json = CreateActionString(actionType, displayText, duration, durationNull, audioFileId, variableName, phraseId, restartBehavior, repeatTimer, repeatCount, interruptSpeech, phrases, secondaryPhrases, extraJson);
       return JsonDocument.Parse(json).RootElement;
     }
 

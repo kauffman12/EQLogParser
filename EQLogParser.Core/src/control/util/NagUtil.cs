@@ -1024,6 +1024,7 @@ internal static class NagUtil
           triggerData.TimerType = timer.TimerType;
           triggerData.TimesToLoop = timer.TimesToLoop;
           triggerData.TriggerAgainOption = timer.TriggerAgainOption >= 0 ? timer.TriggerAgainOption : 0;
+          triggerData.WarningSeconds = timer.WarningSeconds;
           // NAG's displayText is the timer bar label — EQLP renders it from AltTimerName.
           triggerData.AltTimerName = timer.AltTimerName;
           triggerData.ActiveColor = timer.ActiveColor;
@@ -1185,6 +1186,9 @@ internal static class NagUtil
   {
     public int TimerType;
     public double DurationSeconds;
+    // NAG "ending soon" threshold — seconds before the end at which the timer enters its ending
+    // state (warning text/sound). EQLP's "Warn With Time Remaining" (WarningSeconds) is the match.
+    public long WarningSeconds;
     public long TimesToLoop;
     // -1 = not set on the NAG action (default to EQLP option 0)
     public int TriggerAgainOption = -1;
@@ -1260,6 +1264,10 @@ internal static class NagUtil
       action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
     {
       timer.EndTextToSpeak = ConvertTemplates(estext);
+    }
+    if (action.TryGetProperty("endingDuration", out var edur) && edur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
+    {
+      timer.WarningSeconds = (long)edur.GetDouble();
     }
     if (action.TryGetProperty("duration", out var tdur))
     {
