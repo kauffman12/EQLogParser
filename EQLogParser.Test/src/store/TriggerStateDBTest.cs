@@ -309,6 +309,60 @@ namespace EQLogParser
       Assert.AreEqual("timer-2", family.Single(n => n.Name == "P (Timer 2)").TriggerData.Pattern);
     }
 
+    /* Standard .ogf overlay import (file-based, no NAG/GINA involved). Exports carry the STORED
+     * id for overlay leaves only — folders export with Id == null — so re-import matches leaves by
+     * id and updates them in place; this pins that contract down. */
+    [TestMethod]
+    public async Task ImportOverlays_ReimportByStoredId_UpdatesInPlace()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      await db.GetOverlayTree();
+
+      var overlayId = Guid.NewGuid().ToString();
+      var childId = Guid.NewGuid().ToString();
+
+      static ExportTriggerNode Ogf(string id, string name, Overlay overlay) =>
+        new() { Id = id, Name = name, OverlayData = overlay };
+
+      // mirrors the .ogf shape: root wrapper + overlay leaves (folders would export with Id null)
+      var export = new List<ExportTriggerNode> { new()
+      {
+        Name = TriggerStateDB.Overlays,
+        Nodes =
+        [
+          Ogf(overlayId, "Bar Timer", new Overlay { FontSize = "12pt" }),
+          Ogf(childId, "Idle Box", new Overlay()),
+        ]
+      } };
+
+      await db.ImportOverlays(export);
+      var (root, nodes, _) = await db.GetOverlayTree();
+      // the two bootstrap default overlays plus the two imported ones
+      Assert.AreEqual(4, nodes.Count);
+      // the stored id must survive the insert — re-import matching depends on it
+      Assert.AreEqual(overlayId, nodes.Single(n => n.Name == "Bar Timer" && n.Parent == root.Id).Id);
+
+      // re-import: same ids, changed data and a display name — id match updates the data in
+      // place (name is not part of the update, same as master)
+      var export2 = new List<ExportTriggerNode> { new()
+      {
+        Name = TriggerStateDB.Overlays,
+        Nodes =
+        [
+          Ogf(overlayId, "Renamed Timer", new Overlay { FontSize = "16pt" }),
+          Ogf(childId, "Idle Box", new Overlay()),
+        ]
+      } };
+      await db.ImportOverlays(export2);
+
+      var (_, nodes2, _) = await db.GetOverlayTree();
+      Assert.AreEqual(4, nodes2.Count); // no duplicates for the re-imported ids
+      var timer = nodes2.Single(n => n.Id == overlayId);
+      Assert.AreEqual("16pt", timer.OverlayData.FontSize);
+      Assert.AreEqual("Bar Timer", timer.Name);
+    }
+
     [TestMethod]
     public async Task Import_MergeIntoExistingFolder_AddsAndUpdatesChildren()
     {
