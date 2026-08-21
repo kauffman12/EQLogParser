@@ -12,7 +12,7 @@ namespace EQLogParserTest
   [TestClass]
   public class TriggerImportPlannerTest
   {
-    private static TriggerNode ExistingTrigger(string name, string originalId = null) => new()
+    private static TriggerNode ExistingTrigger(string name, string? originalId = null) => new()
     {
       Id = Guid.NewGuid().ToString(),
       Name = name,
@@ -27,7 +27,7 @@ namespace EQLogParserTest
       Name = name
     };
 
-    private static ExportTriggerNode IncomingLeaf(string name, string originalId = null) => new()
+    private static ExportTriggerNode IncomingLeaf(string name, string? originalId = null) => new()
     {
       Name = name,
       OriginalId = originalId,

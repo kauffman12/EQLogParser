@@ -2731,7 +2731,7 @@ namespace EQLogParser
       var assembly = typeof(NagUtilTriggerImportTest).Assembly;
       var resourceName = assembly.GetManifestResourceNames()
         .FirstOrDefault(n => n.EndsWith($".{fixtureName}", StringComparison.OrdinalIgnoreCase));
-      using var stream = assembly.GetManifestResourceStream(resourceName);
+      Stream? stream = resourceName is not null ? assembly.GetManifestResourceStream(resourceName) : null;
       if (stream is null) throw new InvalidOperationException($"Embedded resource '{resourceName}' not found.");
       using var reader = new StreamReader(stream);
       var content = reader.ReadToEnd();

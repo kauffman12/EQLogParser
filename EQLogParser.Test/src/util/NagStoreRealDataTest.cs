@@ -40,7 +40,7 @@ namespace EQLogParser
     }
 
     /// <summary>Loads the real NAG dump if present. Returns false (test skips) when it is not.</summary>
-    private static bool TryLoadNagDump(out string databaseDirectory, out string triggerJson, out string overlayJson)
+    private static bool TryLoadNagDump(out string databaseDirectory, out string? triggerJson, out string? overlayJson)
     {
       databaseDirectory = FindRepoFile("local/nag");
       var triggers = Path.Combine(databaseDirectory, "trigger-database.json");

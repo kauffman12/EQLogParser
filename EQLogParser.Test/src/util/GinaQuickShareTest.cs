@@ -28,7 +28,7 @@ namespace EQLogParser
       }
     }
 
-    private static QuickShareRecord FindRecord(string key) =>
+    private static QuickShareRecord? FindRecord(string key) =>
       QuickShareState.Instance.Snapshot().FirstOrDefault(r => r.Key == key);
 
     [TestMethod]
@@ -39,8 +39,7 @@ namespace EQLogParser
 
       GinaUtil.CheckGina([new TrustedPlayer { Name = "somesender" }], chatType, $"hello {{GINA:{key}}}", 1234.0, "P1", "MyChar");
 
-      var record = FindRecord($"{{GINA:{key}}}");
-      Assert.IsNotNull(record, "expected a quick-share record in the shared state");
+      var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record in the shared state");
       Assert.AreEqual("Somesender", record.From);
       Assert.AreEqual("Group", record.To);
       Assert.IsFalse(record.IsMine);
@@ -56,8 +55,7 @@ namespace EQLogParser
       GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", "MyChar");
 
       // Tell channel: To is the receiving character (processorName) when not importing to the default user.
-      var record = FindRecord($"{{GINA:{key}}}");
-      Assert.IsNotNull(record);
+      var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
       Assert.AreEqual("MyChar", record.To);
     }
 
@@ -70,8 +68,7 @@ namespace EQLogParser
       GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", null);
 
       // Your own shares are recorded (marked IsMine) but never auto-processed.
-      var record = FindRecord($"{{GINA:{key}}}");
-      Assert.IsNotNull(record);
+      var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
       Assert.IsTrue(record.IsMine);
       Assert.AreEqual("You", record.To);
     }
@@ -86,8 +83,7 @@ namespace EQLogParser
 
       // Every GINA chat lands in history (channel names capitalized); only group/guild/raid/tell
       // are eligible for auto-import.
-      var record = FindRecord($"{{GINA:{key}}}");
-      Assert.IsNotNull(record);
+      var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
       Assert.AreEqual("Say", record.To);
     }
 

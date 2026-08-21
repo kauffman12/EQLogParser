@@ -30,7 +30,8 @@ namespace EQLogParser
     /// <summary>Store whose database lives in <paramref name="path"/>.</summary>
     private TriggerStateDB Store(string path)
     {
-      _dirs.Add(Path.GetDirectoryName(path));
+      var dir = Path.GetDirectoryName(path);
+      if (dir is not null) _dirs.Add(dir);
       return new TriggerStateDB(path, applyLegacyUpgrades: false);
     }
 
@@ -41,7 +42,7 @@ namespace EQLogParser
       return (Store(path), path);
     }
 
-    private static ExportTriggerNode ExportLeaf(string name, string pattern, string originalId = null, string sound = null) => new()
+    private static ExportTriggerNode ExportLeaf(string name, string pattern, string? originalId = null, string? sound = null) => new()
     {
       Name = name,
       OriginalId = originalId,

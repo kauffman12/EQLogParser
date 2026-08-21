@@ -1436,7 +1436,7 @@ internal static class NagUtil
   // Resolve which capture phrases a NAG action targets: its "phrases" array, then a single
   // "phraseId", else null (unscoped — applies to every phrase). An empty "phrases" array means
   // no restriction, i.e. unscoped.
-  private static List<string>? ActionPhraseTargets(JsonElement action)
+  private static List<string> ActionPhraseTargets(JsonElement action)
   {
     if (action.TryGetProperty("phrases", out var ap) && ap.ValueKind == JsonValueKind.Array)
     {
@@ -1463,7 +1463,7 @@ internal static class NagUtil
    * trigger data (last wins, as before); actions scoped to specific phrases apply only to those
    * phrase nodes — otherwise every phrase node would inherit whatever the last scoped action set
    * (e.g. one phrase's audio leaking onto all of its siblings). */
-  private static void RouteActionValue(string value, List<string>? targets,
+  private static void RouteActionValue(string value, List<string> targets,
       Dictionary<string, PhraseScopedValues> phraseScoped, string field, Action<string> setGlobal)
   {
     if (value.Length == 0)

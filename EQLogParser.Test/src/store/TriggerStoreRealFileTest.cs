@@ -52,7 +52,9 @@ namespace EQLogParser
       using var decompressionStream = new GZipStream(fs, CompressionMode.Decompress);
       using var reader = new StreamReader(decompressionStream);
       var json = reader.ReadToEndAsync().GetAwaiter().GetResult();
-      return JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+      var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(json, new JsonSerializerOptions { IncludeFields = true });
+      if (nodes is null) throw new InvalidOperationException($"fixture '{path}' did not deserialize to a node list");
+      return nodes;
     }
 
     [TestMethod]
