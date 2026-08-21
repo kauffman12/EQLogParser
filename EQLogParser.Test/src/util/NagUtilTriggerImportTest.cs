@@ -749,8 +749,11 @@ namespace EQLogParser
     #region Null Duration Handling
 
     [TestMethod]
-    public void ConvertTriggers_NullDuration_UsesDefault60()
+    public void ConvertTriggers_NullDuration_TimerLeftDisabledWithDefault()
     {
+      // NAG null duration = indefinite (ends via end-early phrases); EQLP has no such type.
+      // The timer imports disabled with the model's default duration so nothing runs at import
+      // time, while every other field still populates for whoever sets the real duration.
       var json = CreateTriggerJson("Null Dur Trigger", "pattern", actions:
       [
         CreateAction(3, displayText: "Dynamic Timer", durationNull: true)
@@ -759,8 +762,9 @@ namespace EQLogParser
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
-      Assert.AreEqual(60.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.IsFalse(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual(0.2, nodes[0].TriggerData.DurationSeconds, "model default duration");
+      Assert.AreEqual("Dynamic Timer", nodes[0].TriggerData.AltTimerName, "label still populates");
       Assert.AreEqual("Partial", results[0].Status);
       Assert.Contains("indefinite timer duration", results[0].Reason);
     }
@@ -784,7 +788,7 @@ namespace EQLogParser
       var (nodes, results, _) = ConvertTriggersUnwrapped(json);
 
       Assert.HasCount(1, nodes);
-      Assert.AreEqual(60.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.IsFalse(nodes[0].TriggerData.EnableTimer);
       Assert.AreEqual("Channel broken", nodes[0].TriggerData.EndEarlyPattern);
       Assert.AreEqual("Spell faded", nodes[0].TriggerData.EndEarlyPattern2);
     }

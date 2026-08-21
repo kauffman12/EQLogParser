@@ -1022,7 +1022,7 @@ internal static class NagUtil
         var timer = t < timerActions.Count ? timerActions[t] : null;
         if (timer is not null)
         {
-          triggerData.EnableTimer = timer.DurationSeconds > 0;
+          triggerData.EnableTimer = timer.Enabled && timer.DurationSeconds > 0;
           triggerData.DurationSeconds = timer.DurationSeconds;
           triggerData.TimerType = timer.TimerType;
           triggerData.TimesToLoop = timer.TimesToLoop;
@@ -1193,6 +1193,10 @@ internal static class NagUtil
    * never be merged across actions (last-wins overwriting silently dropped earlier timers). */
   private sealed class TimerActionData
   {
+    // False for NAG timers with a null (indefinite) duration: the timer imports disabled with
+    // the model's default duration, but every other field (end-early phrases, warning text/
+    // sound, end texts, label) is populated so enabling it later only takes setting a duration.
+    public bool Enabled = true;
     public int TimerType;
     public double DurationSeconds;
     // NAG "ending soon" threshold — seconds before the end at which the timer enters its ending
@@ -1313,11 +1317,13 @@ internal static class NagUtil
     {
       if (handleNullDuration && tdur.ValueKind == JsonValueKind.Null)
       {
-        // NAG null duration = indefinite timer ended by endEarlyPhrases.
-        // EQLP requires a fixed DurationSeconds; default to 60s and rely on
-        // EndEarlyPattern(s) to stop the timer when the spell fades.
-        timer.DurationSeconds = 60.0;
-        droppedFeatures.Add("indefinite timer duration (defaulted to 60s)");
+        // NAG null duration = indefinite timer ended by endEarlyPhrases; EQLP has no such
+        // timer type. Import it disabled with the model's default duration — the end-early
+        // phrases, warning and end data all still populate, so a user who knows the real
+        // duration can set it and flip EnableTimer without re-importing.
+        timer.Enabled = false;
+        timer.DurationSeconds = 0.2; // Trigger.DurationSeconds model default
+        droppedFeatures.Add("indefinite timer duration (timer left disabled)");
       }
       else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
       {
@@ -2030,7 +2036,7 @@ internal static class NagUtil
       }
       else if (trimmed.StartsWith("indefinite timer duration", StringComparison.OrdinalIgnoreCase))
       {
-        friendly.Add("Indefinite timer duration: NAG timer has no fixed duration and ends via end-early phrases. EQLP requires a fixed duration; defaulted to 60 seconds.");
+        friendly.Add("Indefinite timer duration: NAG timer has no fixed duration and ends via end-early phrases. Imported disabled (default duration) with its end-early, warning and end data populated — set a duration and enable the timer to use it.");
       }
       else
       {
