@@ -139,7 +139,53 @@ namespace EQLogParser
         var docs = check.GetCollection<BsonDocument>("Tree").FindAll().ToList();
         Assert.IsTrue(docs.Any(d => d.TryGetValue(nameKey, out var v) && v.AsString == TriggerStateDB.Overlays),
           "the legacy node itself must survive intact");
+
+        // the one-time stamp must now be present in the existing FixVersion collection
+        var stamped = check.GetCollection<BsonDocument>("FixVersion")
+          .FindAll().Any(d => d.TryGetValue("_id", out var id) && id.AsString == "legacy-export-trigger-node-marker-stripped");
+        Assert.IsTrue(stamped, "expected the marker-strip stamp in FixVersion after a clean sweep");
       }
+    }
+
+    /* The sweep must actually be one-time: after the stamp exists, a fresh stale marker must be
+     * left alone (the current code never writes markers again, so this is pure cost avoidance). */
+    [TestMethod]
+    public async Task LegacyExportTriggerNodeTypeMarker_SweepIsOneTime()
+    {
+      var dir = NewDir();
+      _dirs.Add(dir);
+      var path = Path.Combine(dir, "legacy2.db");
+      using (var raw = new LiteDatabase(path))
+      {
+        raw.GetCollection<BsonDocument>("Tree").Insert(new BsonDocument
+        {
+          ["_id"] = "legacy-node",
+          ["_type"] = "EQLogParser.ExportTriggerNode, EQLogParser",
+          ["Name"] = TriggerStateDB.Overlays
+        });
+      }
+
+      // first open runs the sweep and stamps the database
+      await using (var store = Store(path)) { }
+
+      // now seed a marker in a collection the app never touches with typed queries
+      const string StaleMarker = "EQLogParser.ExportTriggerNode, EQLogParser";
+      using (var raw = new LiteDatabase(path))
+      {
+        raw.GetCollection<BsonDocument>("OrphanLegacy").Insert(new BsonDocument
+        {
+          ["_id"] = "orphan-1",
+          ["_type"] = StaleMarker
+        });
+      }
+
+      // second open must skip the sweep entirely (stamp present)
+      await using (var store2 = Store(path)) { }
+
+      using var check = new LiteDatabase(path);
+      var orphan = check.GetCollection<BsonDocument>("OrphanLegacy").FindById("orphan-1");
+      Assert.IsTrue(orphan != null && orphan.TryGetValue("_type", out _),
+        "the sweep must not run again once the stamp is present");
     }
 
     [TestMethod]

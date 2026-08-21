@@ -77,6 +77,11 @@ namespace EQLogParser
             CheckpointSize = 10
           };
 
+          // Captured before StripLegacyTypeMarkers runs: its one-time stamp also lands in
+          // FixVersion, so an empty collection list is the only reliable "brand-new file"
+          // signal left by the time the bootstrap block below runs.
+          var isNewDb = _db.GetCollectionNames().Count() == 0;
+
           Log.Info($"Opening trigger database: {path}");
 
           // Must run before any typed query — see StripLegacyTypeMarkers for why.
@@ -166,7 +171,7 @@ namespace EQLogParser
           }
 
           var fixVersions = _db.GetCollection<VersionData>(VersionCol);
-          if (fixVersions.Count() == 0)
+          if (isNewDb)
           {
             fixVersions.Insert(new VersionData { Id = "1", Version = "1.0.1" });
 
@@ -1644,8 +1649,23 @@ namespace EQLogParser
      * nothing beyond TriggerNode itself. Nested child sub-documents are cleaned too. No-op for
      * every database the current build writes (it never emits the marker), so this reports and
      * writes only on the first launch after an upgrade. */
+    /* Stamp document marking this sweep as done, kept in the existing FixVersion collection
+     * (the old host stamped its own one-time upgrades there too). */
+    private const string LegacyMarkerStripStamp = "legacy-export-trigger-node-marker-stripped";
+
     private void StripLegacyTypeMarkers()
     {
+      /* One-time migration: while the stamp is missing, do the full sweep; after that every
+       * startup pays only for the tiny FindAll on FixVersion and skips. The stamp is written
+       * only after a complete pass, so an interrupted run simply retries on next launch. */
+      var stamps = _db.GetCollection<BsonDocument>(VersionCol);
+      if (stamps.FindAll().Any(d => d.TryGetValue("_id", out var stampId) &&
+                                    stampId.Type == BsonType.String &&
+                                    stampId.AsString == LegacyMarkerStripStamp))
+      {
+        return;
+      }
+
       const string StaleMarker = "EQLogParser.ExportTriggerNode, EQLogParser";
       foreach (var name in _db.GetCollectionNames())
       {
@@ -1674,6 +1694,13 @@ namespace EQLogParser
           Log.Error($"Failed to clean legacy type markers in the '{name}' collection.", ex);
         }
       }
+
+      // mirrors what the typed VersionData writer emits ({Id, Version} with Id as _id)
+      stamps.Insert(new BsonDocument
+      {
+        ["_id"] = LegacyMarkerStripStamp,
+        ["Version"] = "1"
+      });
     }
 
     /* Removes the stale marker from a document and any nested sub-documents; true if changed. */
