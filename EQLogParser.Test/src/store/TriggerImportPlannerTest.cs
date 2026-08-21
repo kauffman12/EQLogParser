@@ -123,6 +123,48 @@ namespace EQLogParserTest
       Assert.AreSame(existing, decision.Existing);
     }
 
+    // One NAG trigger can produce several sibling nodes sharing ONE OriginalId (phrase + timer
+    // variants, counter resets). Inside that family the name is the stable discriminator — the
+    // importer's deterministic "(n)" suffixes (UniquifySiblingNames) survive re-imports. Matching
+    // by id alone would let every incoming member overwrite the first sibling found.
+    [TestMethod]
+    public void Plan_OriginalId_SharedIdFamily_MatchesByName()
+    {
+      var first = ExistingTrigger("P", "id-x");
+      var timer = ExistingTrigger("P (Timer 2)", "id-x");
+      var decision = TriggerImportPlanner.Plan([first, timer], IncomingLeaf("P (Timer 2)", "id-x"));
+
+      Assert.AreEqual(ImportAction.UpdateInPlace, decision.Action);
+      Assert.AreSame(timer, decision.Existing);
+    }
+
+    // A family member the user renamed no longer matches by name. Inside a shared-id family we
+    // must not guess — insert a visible new sibling instead of overwriting another member's data.
+    [TestMethod]
+    public void Plan_OriginalId_SharedIdFamily_RenamedMember_InsertsNewLeaf()
+    {
+      var first = ExistingTrigger("P", "id-x");
+      var timer = ExistingTrigger("My Timer", "id-x");
+      var decision = TriggerImportPlanner.Plan([first, timer], IncomingLeaf("P (Timer 2)", "id-x"));
+
+      Assert.AreEqual(ImportAction.InsertLeaf, decision.Action);
+      Assert.IsNull(decision.Existing);
+    }
+
+    // First import of a shared-id family: the first member is already inserted into the live
+    // sibling set before the second is planned. The batch flag tells the planner the id occurs
+    // more than once this run, so the name must disambiguate even with exactly one stored sibling.
+    [TestMethod]
+    public void Plan_OriginalId_SharedIdInBatch_SingleStoredSibling_InsertsNewLeaf()
+    {
+      var first = ExistingTrigger("P", "id-x");
+      var decision = TriggerImportPlanner.Plan([first], IncomingLeaf("P (Timer 2)", "id-x"),
+        new HashSet<string> { "id-x" });
+
+      Assert.AreEqual(ImportAction.InsertLeaf, decision.Action);
+      Assert.IsNull(decision.Existing);
+    }
+
     // OriginalId matching is identity-based: a node without an OriginalId never matches an
     // incoming node that carries one.
     [TestMethod]

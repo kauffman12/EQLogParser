@@ -1206,7 +1206,15 @@ namespace EQLogParser
       var triggers = type == Triggers;
       string enableId = null;
 
-      foreach (var newNode in imported)
+      // One NAG trigger can export several siblings sharing a single OriginalId (phrase + timer
+      // variants, counter resets). The planner needs to know which ids occur more than once in
+      // THIS batch: an earlier member was already inserted into the live sibling set, so later
+      // members must disambiguate by name or they would overwrite each other.
+      var nodes = imported.ToList();
+      var batchSharedOriginalIds = nodes.Where(n => n.OriginalId != null)
+        .GroupBy(n => n.OriginalId).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.Ordinal);
+
+      foreach (var newNode in nodes)
       {
         if (triggers)
         {
@@ -1214,7 +1222,7 @@ namespace EQLogParser
           // platform). A leaf updates only an existing leaf and a folder wrapper merges only into
           // an existing folder — same-named siblings of the other kind are inserted as new nodes
           // instead of erasing or dropping the other. See the planner for the full rationale.
-          var decision = TriggerImportPlanner.Plan(tree.Find(n => n.Parent == parentId), newNode);
+          var decision = TriggerImportPlanner.Plan(tree.Find(n => n.Parent == parentId), newNode, batchSharedOriginalIds);
 
           switch (decision.Action)
           {

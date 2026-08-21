@@ -21,26 +21,45 @@ namespace EQLogParser
   internal readonly record struct ImportDecision(ImportAction Action, TriggerNode Existing);
 
   // Pure matching + branch selection for TriggerStateDB.Import: the store passes the existing
-  // sibling nodes under the target parent and applies the returned decision to LiteDB. Keeping
-  // this free of LiteDB/WPF makes the whole decision matrix unit-testable on any platform.
+  // sibling nodes under the target parent plus the OriginalIds that occur more than once in the
+  // SAME incoming batch and applies the returned decision to LiteDB. Keeping this free of
+  // LiteDB/WPF makes the whole decision matrix unit-testable on any platform.
   internal static class TriggerImportPlanner
   {
-    public static ImportDecision Plan(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming) =>
-      Decide(FindExisting(siblings, incoming), incoming);
+    public static ImportDecision Plan(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming,
+      ISet<string> batchSharedOriginalIds = null) =>
+      Decide(FindExisting(siblings, incoming, batchSharedOriginalIds), incoming);
 
     // Match an existing node to update in place on re-import. Nodes carrying an OriginalId
-    // (NAG imports) match by source id alone: NAG allows duplicate names for distinct triggers,
+    // (NAG imports) match by source id: NAG allows duplicate names for distinct triggers,
     // and name is not stable — the importer renames a same-name collision ("X" → "X (2)"),
-    // after which a name+id match would fail and every re-import would insert yet another
-    // duplicate. The OriginalId is the stable source identity and survives on the stored node.
-    // Name-only matches are kind-safe (MatchesReimportKind): without it, a folder wrapper could
-    // match an existing same-named trigger and reach the overwrite branch with TriggerData ==
-    // null, erasing the trigger's data.
-    public static TriggerNode FindExisting(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming)
+    // after which a strict name+id match would fail and every re-import would insert yet
+    // another duplicate. The OriginalId is the stable source identity and survives on the
+    // stored node.
+    // One NAG trigger can also produce SEVERAL siblings sharing one OriginalId (phrase + timer
+    // variants, counter resets). Inside such a family the name is the stable discriminator
+    // (the importer's deterministic "(n)" suffixes survive re-imports), so when more than one
+    // stored sibling carries the id — or the incoming batch itself carries it more than once
+    // (first import: an earlier member was already inserted into the same live sibling set)
+    // — the name must agree. Otherwise every incoming member would overwrite the first sibling
+    // found. A renamed family member then matches nothing and inserts as a new, visible
+    // sibling instead of guessing which stored node it came from.
+    // Name-only matches (no OriginalId) are kind-safe (MatchesReimportKind): without it, a
+    // folder wrapper could match an existing same-named trigger and reach the overwrite branch
+    // with TriggerData == null, erasing the trigger's data.
+    public static TriggerNode FindExisting(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming,
+      ISet<string> batchSharedOriginalIds = null)
     {
       if (incoming.OriginalId != null)
       {
-        return siblings.FirstOrDefault(n => n.OriginalId == incoming.OriginalId);
+        var family = siblings.Where(n => n.OriginalId == incoming.OriginalId).ToList();
+
+        var nameDisambiguates = family.Count > 1 ||
+          (batchSharedOriginalIds?.Contains(incoming.OriginalId) ?? false);
+
+        return nameDisambiguates ?
+          family.FirstOrDefault(n => n.Name == incoming.Name) :
+          family.FirstOrDefault();
       }
 
       return siblings.FirstOrDefault(n => n.Name == incoming.Name && MatchesReimportKind(n, incoming));

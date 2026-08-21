@@ -283,6 +283,32 @@ namespace EQLogParser
       Assert.AreEqual(1, dups2.Count(n => n.TriggerData.Pattern == "second"));
     }
 
+    /* One NAG trigger can produce several siblings sharing one OriginalId (phrase + timer variants).
+     * Re-import must update each stored member with ITS OWN data — matching by id alone would let
+     * every incoming member overwrite the first sibling found and leave the rest stale. */
+    [TestMethod]
+    public async Task Import_OriginalId_SharedIdFamily_ReimportUpdatesEachMember()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      var (root, _, _) = await db.GetTriggerTree("P1");
+      var export = Wrap(
+        ExportLeaf("P", "p-1", originalId: "fam"),
+        ExportLeaf("P (Timer 2)", "timer-1", originalId: "fam"));
+      await db.ImportTriggers(root, export);
+
+      // re-import with both patterns changed — each stored member must receive its own data
+      await db.ImportTriggers(root, Wrap(
+        ExportLeaf("P", "p-2", originalId: "fam"),
+        ExportLeaf("P (Timer 2)", "timer-2", originalId: "fam")));
+
+      var (_, nodes, _) = await db.GetTriggerTree("P1");
+      var family = nodes.Where(n => n.OriginalId == "fam").ToList();
+      Assert.AreEqual(2, family.Count); // no new duplicates inserted
+      Assert.AreEqual("p-2", family.Single(n => n.Name == "P").TriggerData.Pattern);
+      Assert.AreEqual("timer-2", family.Single(n => n.Name == "P (Timer 2)").TriggerData.Pattern);
+    }
+
     [TestMethod]
     public async Task Import_MergeIntoExistingFolder_AddsAndUpdatesChildren()
     {
