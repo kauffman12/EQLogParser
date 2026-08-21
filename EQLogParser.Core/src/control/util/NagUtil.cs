@@ -600,16 +600,7 @@ internal static class NagUtil
           if (action.TryGetProperty("actionType", out var at) && at.GetInt32() == 1 &&
               action.TryGetProperty("audioFileId", out var af) && !string.IsNullOrEmpty(af.GetString()))
           {
-            var audio = af.GetString();
-            var soundToPlay = _audioFileMap?.TryGetValue(audio, out var resolvedName) == true ? resolvedName : audio;
-            if (soundToPlay == "Speech ding")
-            {
-              soundToPlay = "alert1.wav";
-            }
-            if (!TriggerStorePlatform.SoundExists(soundToPlay))
-            {
-              devMissingAudio.Add(soundToPlay);
-            }
+            ResolveAudioFile(af.GetString(), devMissingAudio);
           }
         }
       }
@@ -1029,6 +1020,8 @@ internal static class NagUtil
           triggerData.AltTimerName = timer.AltTimerName;
           triggerData.ActiveColor = timer.ActiveColor;
           triggerData.IdleColor = timer.IdleColor;
+          triggerData.WarningSoundToPlay = timer.WarningSoundToPlay;
+          triggerData.EndSoundToPlay = timer.EndSoundToPlay;
           triggerData.WarningTextToDisplay = timer.WarningTextToDisplay;
           triggerData.WarningTextToSpeak = timer.WarningTextToSpeak;
           triggerData.EndTextToDisplay = timer.EndTextToDisplay;
@@ -1199,6 +1192,10 @@ internal static class NagUtil
     public string ActiveColor = "";
     public string IdleColor = "";
     public List<string> Overlays = [];
+    // NAG can play an audio clip when the timer enters its ending state and/or when it ends.
+    // EQLP has the matching warning/end sound slots.
+    public string WarningSoundToPlay = "";
+    public string EndSoundToPlay = "";
     public string WarningTextToDisplay = "";
     public string WarningTextToSpeak = "";
     public string EndTextToDisplay = "";
@@ -1223,11 +1220,28 @@ internal static class NagUtil
     public List<TimerActionData> TimerActions = [];
   }
 
+  /* Resolve a NAG audio file id to an EQLP sound name: look it up in the NAG database's
+   * files-database.json map when available, map NAG's built-in "Speech ding" to alert1.wav,
+   * and record unresolved/missing files for the import report. */
+  private static string ResolveAudioFile(string audioFileId, List<string> missingAudioFiles)
+  {
+    var soundToPlay = _audioFileMap?.TryGetValue(audioFileId, out var resolvedName) == true ? resolvedName : audioFileId;
+    if (soundToPlay == "Speech ding")
+    {
+      soundToPlay = "alert1.wav";
+    }
+    if (!TriggerStorePlatform.SoundExists(soundToPlay))
+    {
+      missingAudioFiles.Add(soundToPlay);
+    }
+    return soundToPlay;
+  }
+
   // Shared parsing for NAG timer actions (actionType 3/4, 6, 10). Extracts common fields: timer
-  // label (displayText), endEarlyPhrases, endingSoon/ended sub-action text, duration, restart
-  // behavior, colors, and overlayId — all onto this action's own TimerActionData.
+  // label (displayText), endEarlyPhrases, endingSoon/ended sub-action text and audio, duration,
+  // restart behavior, colors, and overlayId — all onto this action's own TimerActionData.
   private static void ParseTimerActionFields(JsonElement action, bool handleNullDuration,
-      TimerActionData timer, List<string> droppedFeatures)
+      TimerActionData timer, List<string> droppedFeatures, List<string> missingAudioFiles)
   {
     if (action.TryGetProperty("displayText", out var dt) && dt.GetString() is { Length: > 0 } timerText)
     {
@@ -1264,6 +1278,16 @@ internal static class NagUtil
       action.TryGetProperty("endedSpeakPhrase", out var espk) && espk.GetString() is { Length: > 0 } estext)
     {
       timer.EndTextToSpeak = ConvertTemplates(estext);
+    }
+    if (action.TryGetProperty("endingPlayAudio", out var epa) && epa.ValueKind == JsonValueKind.True &&
+        action.TryGetProperty("endingPlayAudioFileId", out var epaf) && epaf.GetString() is { Length: > 0 } endingAudio)
+    {
+      timer.WarningSoundToPlay = ResolveAudioFile(endingAudio, missingAudioFiles);
+    }
+    if (action.TryGetProperty("endedPlayAudio", out var da) && da.ValueKind == JsonValueKind.True &&
+        action.TryGetProperty("endedPlayAudioFileId", out var daf) && daf.GetString() is { Length: > 0 } endedAudio)
+    {
+      timer.EndSoundToPlay = ResolveAudioFile(endedAudio, missingAudioFiles);
     }
     if (action.TryGetProperty("endingDuration", out var edur) && edur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
     {
@@ -1435,18 +1459,7 @@ internal static class NagUtil
           hasAction = true;
           if (action.TryGetProperty("audioFileId", out var af) && af.GetString() is { Length: > 0 } audio)
           {
-            // Try to resolve via files-database.json
-            soundToPlay = _audioFileMap?.TryGetValue(audio, out var resolvedName) == true ? resolvedName : audio;
-            // Map NAG's "Speech ding" (ShortWarningPing) to EQLP's built-in alert1.wav
-            if (soundToPlay == "Speech ding")
-            {
-              soundToPlay = "alert1.wav";
-            }
-            // Track if the resolved file doesn't exist in data/sounds/
-            if (!TriggerStorePlatform.SoundExists(soundToPlay))
-            {
-              missingAudioFiles.Add(soundToPlay);
-            }
+            soundToPlay = ResolveAudioFile(audio, missingAudioFiles);
           }
           // Collect overlayId (NAG audio actions can reference overlays for positioning)
           if (action.TryGetProperty("overlayId", out var ov1) && ov1.GetString() is { Length: > 0 } overlayId1)
@@ -1476,7 +1489,7 @@ internal static class NagUtil
           hasAction = true;
           {
             var timer = new TimerActionData { TimerType = 3 }; // EQLP Progress (fills up); Countdown would drain
-            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures);
+            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures, missingAudioFiles);
             timerActions.Add(timer);
           }
           actionSummary.Add("Timer");
@@ -1507,7 +1520,7 @@ internal static class NagUtil
             {
               timer.TimerType = 1; // EQLP Countdown (drains like NAG Countdown)
             }
-            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures);
+            ParseTimerActionFields(action, handleNullDuration: true, timer, droppedFeatures, missingAudioFiles);
             timerActions.Add(timer);
           }
           actionSummary.Add(repeatTimer ? "Looping Timer" : "Timer");
@@ -1519,7 +1532,7 @@ internal static class NagUtil
           hasAction = true;
           {
             var timer = new TimerActionData { TimerType = 3 }; // EQLP Progress (fills up like NAG DotTimer)
-            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures);
+            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures, missingAudioFiles);
             timerActions.Add(timer);
           }
           droppedFeatures.Add("dot timer approximated (per-target ticks and remain-after-end lost)");
@@ -1547,7 +1560,7 @@ internal static class NagUtil
           hasAction = true;
           {
             var timer = new TimerActionData { TimerType = 1 }; // EQLP Countdown (depletes like NAG BeneficialTimer)
-            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures);
+            ParseTimerActionFields(action, handleNullDuration: false, timer, droppedFeatures, missingAudioFiles);
             timerActions.Add(timer);
           }
           droppedFeatures.Add("per-target buff timer (imported as a single timer)");

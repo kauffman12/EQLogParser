@@ -371,6 +371,40 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void ConvertTriggers_TimerWithEndingAndEndedAudio_SoundSlotsMapped()
+    {
+      // NAG can play an audio clip when the timer enters its ending state (warning sound) and/or
+      // when it ends (end sound). Both were silently dropped before.
+      var json = CreateTriggerJson("Audio Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Cooldown", duration: 60.0,
+          extraJson: "\"endingPlayAudio\":true,\"endingPlayAudioFileId\":\"warn-sfx.wav\",\"endedPlayAudio\":true,\"endedPlayAudioFileId\":\"end-sfx.wav\"")
+      ]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      // Without files-database.json, file ids are used as-is (same convention as regular audio).
+      Assert.AreEqual("warn-sfx.wav", nodes[0].TriggerData.WarningSoundToPlay);
+      Assert.AreEqual("end-sfx.wav", nodes[0].TriggerData.EndSoundToPlay);
+      // Unresolvable files are reported, same as regular action audio.
+      CollectionAssert.Contains(results[0].MissingAudioFiles, "warn-sfx.wav");
+      CollectionAssert.Contains(results[0].MissingAudioFiles, "end-sfx.wav");
+
+      // The audio flags stay off unless the NAG enable booleans are set.
+      var jsonNoAudio = CreateTriggerJson("Quiet Timer", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Cooldown", duration: 60.0,
+          extraJson: "\"endingPlayAudio\":false,\"endedPlayAudio\":false")
+      ]);
+
+      var (nodesNoAudio, _, _) = ConvertTriggersUnwrapped(jsonNoAudio);
+
+      Assert.AreEqual("", nodesNoAudio[0].TriggerData.WarningSoundToPlay);
+      Assert.AreEqual("", nodesNoAudio[0].TriggerData.EndSoundToPlay);
+    }
+
+    [TestMethod]
     public void ConvertTriggers_TextAndTimerActions_DoNotOverwriteEachOther()
     {
       // Text overlay and timer actions used to clobber each other's displayText — the timer's
