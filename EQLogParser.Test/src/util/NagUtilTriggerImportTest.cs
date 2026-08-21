@@ -766,7 +766,7 @@ namespace EQLogParser
       Assert.AreEqual(0.2, nodes[0].TriggerData.DurationSeconds, "model default duration");
       Assert.AreEqual("Dynamic Timer", nodes[0].TriggerData.AltTimerName, "label still populates");
       Assert.AreEqual("Partial", results[0].Status);
-      Assert.Contains("indefinite timer duration", results[0].Reason);
+      Assert.Contains("no set timer duration", results[0].Reason);
     }
 
     [TestMethod]

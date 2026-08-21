@@ -1323,7 +1323,7 @@ internal static class NagUtil
         // duration can set it and flip EnableTimer without re-importing.
         timer.Enabled = false;
         timer.DurationSeconds = 0.2; // Trigger.DurationSeconds model default
-        droppedFeatures.Add("indefinite timer duration (timer left disabled)");
+        droppedFeatures.Add("no set timer duration (timer left disabled)");
       }
       else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
       {
@@ -2034,9 +2034,9 @@ internal static class NagUtil
       {
         friendly.Add("Cast time tracking: NAG adjusts timer duration based on spell cast time; EQLP uses fixed durations only.");
       }
-      else if (trimmed.StartsWith("indefinite timer duration", StringComparison.OrdinalIgnoreCase))
+      else if (trimmed.StartsWith("no set timer duration", StringComparison.OrdinalIgnoreCase))
       {
-        friendly.Add("Indefinite timer duration: NAG timer has no fixed duration and ends via end-early phrases. Imported disabled (default duration) with its end-early, warning and end data populated — set a duration and enable the timer to use it.");
+        friendly.Add("No set timer duration: this NAG timer has no fixed length; it runs until its stop phrase matches. Imported disabled (placeholder duration) with its stop-phrase, warning and end data populated — set the real duration on the timer and enable it.");
       }
       else
       {
