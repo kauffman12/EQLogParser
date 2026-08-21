@@ -32,4 +32,11 @@
     <!-- NAG conversion fixtures loaded via GetManifestResourceStream (see NagUtilTriggerImportTest). -->
     <EmbeddedResource Include="src\util\fixtures\nag\*.json" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Checked-in mini import fixtures, derived from real user exports (kept small on purpose;
+         the full files stay under gitignored local/). Copied to bin as mini-data\... -->
+    <None Include="data\**" Link="mini-data\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
