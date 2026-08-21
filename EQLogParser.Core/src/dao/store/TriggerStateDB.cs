@@ -1288,7 +1288,6 @@ namespace EQLogParser
             // new overlay
             if (newNode.OverlayData != null)
             {
-              newNode.OverlayData = newNode.OverlayData;
               // fix alignment from old imports if needed
               SetVerticalAlignment(newNode);
               Insert(newNode, index, newNode.Id);

@@ -17,6 +17,15 @@ namespace EQLogParser
     /// blocked on the dialog before scheduling the next GINA task). Host must marshal to its UI thread.</summary>
     public static Func<string, string, Task> ShowMessage = (_, _) => Task.CompletedTask;
 
+    /// <summary>Asks whether to merge or import into a new folder. <paramref name="showMergeOption"/>
+    /// mirrors the original dialog's extra auto-merge option row (it passed characterIds.Count &gt; 0);
+    /// the Cancel button was always present in that dialog.</summary>
+    public static Func<string, bool, Task<ImportChoice>> AskImportChoice = async (_, _) =>
+    {
+      await Task.CompletedTask;
+      return ImportChoice.Cancel;
+    };
+
     internal enum ImportChoice
     {
       // User dismissed the question (or no host is wired) — import nothing.
@@ -26,14 +35,5 @@ namespace EQLogParser
       // Import into a freshly named folder.
       NewFolder
     }
-
-    /// <summary>Asks whether to merge or import into a new folder. <paramref name="showMergeOption"/>
-    /// mirrors the original dialog's extra auto-merge option row (it passed characterIds.Count &gt; 0);
-    /// the Cancel button was always present in that dialog.</summary>
-    public static Func<string, bool, Task<ImportChoice>> AskImportChoice = async (_, _) =>
-    {
-      await Task.CompletedTask;
-      return ImportChoice.Cancel;
-    };
   }
 }
