@@ -77,15 +77,15 @@ namespace EQLogParser
             CheckpointSize = 10
           };
 
-          // Captured before StripLegacyTypeMarkers runs: its one-time stamp also lands in
-          // FixVersion, so an empty collection list is the only reliable "brand-new file"
-          // signal left by the time the bootstrap block below runs.
+          // Captured before ApplyDatabaseMigrations runs: the migrations also write the
+          // FixVersion version document, so an empty collection list is the only reliable
+          // "brand-new file" signal left by the time the bootstrap block below runs.
           var isNewDb = _db.GetCollectionNames().Count() == 0;
 
           Log.Info($"Opening trigger database: {path}");
 
-          // Must run before any typed query — see StripLegacyTypeMarkers for why.
-          StripLegacyTypeMarkers();
+          // Must run before any typed query — see ApplyDatabaseMigrations for why.
+          ApplyDatabaseMigrations();
 
           /* print all data
           Directory.CreateDirectory(@"r:\dump");
@@ -170,10 +170,10 @@ namespace EQLogParser
             versions.DeleteAll();
           }
 
-          var fixVersions = _db.GetCollection<VersionData>(VersionCol);
           if (isNewDb)
           {
-            fixVersions.Insert(new VersionData { Id = "1", Version = "1.0.1" });
+            // the FixVersion version document is owned by ApplyDatabaseMigrations (which ran
+            // earlier), so a fresh database is stamped at CurrentDbVersion, not 1.0.1
 
             // add default overlays if none exist
             if (!tree.Find(n => n.OverlayData != null && n.Parent != null).Any())
@@ -1649,23 +1649,75 @@ namespace EQLogParser
      * nothing beyond TriggerNode itself. Nested child sub-documents are cleaned too. No-op for
      * every database the current build writes (it never emits the marker), so this reports and
      * writes only on the first launch after an upgrade. */
-    /* Stamp document marking this sweep as done, kept in the existing FixVersion collection
-     * (the old host stamped its own one-time upgrades there too). */
-    private const string LegacyMarkerStripStamp = "legacy-export-trigger-node-marker-stripped";
+    /* One-time database migrations, gated by the version number in the existing FixVersion
+     * collection (older builds seeded it as {Id:"1", Version:"1.0.1"}): a missing or older
+     * stored version applies every step below it; the current version does nothing and every
+     * startup pays only for a tiny read of FixVersion. When adding a migration, bump
+     * CurrentDbVersion and append a new ordered step here. */
+    private const string CurrentDbVersion = "1.0.2";
+
+    private void ApplyDatabaseMigrations()
+    {
+      var versions = _db.GetCollection<BsonDocument>(VersionCol);
+      var stored = ReadStoredDbVersion(versions) ?? (0, 0, 0);
+
+      /* v1.0.2 — strip the stale ExportTriggerNode type marker from every collection so
+       * pre-refactor databases stay readable (see StripLegacyTypeMarkers). ValueTuple has no
+       * ordering operators, hence the Comparer. */
+      if (Comparer<(int, int, int)>.Default.Compare(stored, (1, 0, 2)) < 0)
+      {
+        StripLegacyTypeMarkers();
+      }
+
+      // future migrations: else if (stored < (1, 0, 3)) { ... }
+
+      // written only after every step ran, so an interrupted run retries on next launch
+      WriteDbVersion(versions, CurrentDbVersion);
+    }
+
+    /* Major/Minor/Patch, in order; null when no (readable) version is stored. */
+    private static (int, int, int)? ReadStoredDbVersion(ILiteCollection<BsonDocument> versions)
+    {
+      foreach (var doc in versions.FindAll().ToList())
+      {
+        if (doc.TryGetValue("_id", out var id) && id.Type == BsonType.String && id.AsString == "1" &&
+            doc.TryGetValue("Version", out var raw) && raw.Type == BsonType.String)
+        {
+          var parts = raw.AsString.Split('.');
+          if (parts.Length >= 3 &&
+              int.TryParse(parts[0], out var major) &&
+              int.TryParse(parts[1], out var minor) &&
+              int.TryParse(parts[2], out var patch))
+          {
+            return (major, minor, patch);
+          }
+        }
+      }
+
+      return null;
+    }
+
+    /* Upserts the {Id:"1"} document older builds used for their version stamps. */
+    private static void WriteDbVersion(ILiteCollection<BsonDocument> versions, string version)
+    {
+      var doc = versions.FindById("1");
+      if (doc is null)
+      {
+        versions.Insert(new BsonDocument
+        {
+          ["_id"] = "1",
+          ["Version"] = version
+        });
+      }
+      else
+      {
+        doc["Version"] = version;
+        versions.Update(doc);
+      }
+    }
 
     private void StripLegacyTypeMarkers()
     {
-      /* One-time migration: while the stamp is missing, do the full sweep; after that every
-       * startup pays only for the tiny FindAll on FixVersion and skips. The stamp is written
-       * only after a complete pass, so an interrupted run simply retries on next launch. */
-      var stamps = _db.GetCollection<BsonDocument>(VersionCol);
-      if (stamps.FindAll().Any(d => d.TryGetValue("_id", out var stampId) &&
-                                    stampId.Type == BsonType.String &&
-                                    stampId.AsString == LegacyMarkerStripStamp))
-      {
-        return;
-      }
-
       const string StaleMarker = "EQLogParser.ExportTriggerNode, EQLogParser";
       foreach (var name in _db.GetCollectionNames())
       {
@@ -1694,13 +1746,6 @@ namespace EQLogParser
           Log.Error($"Failed to clean legacy type markers in the '{name}' collection.", ex);
         }
       }
-
-      // mirrors what the typed VersionData writer emits ({Id, Version} with Id as _id)
-      stamps.Insert(new BsonDocument
-      {
-        ["_id"] = LegacyMarkerStripStamp,
-        ["Version"] = "1"
-      });
     }
 
     /* Removes the stale marker from a document and any nested sub-documents; true if changed. */
@@ -1914,12 +1959,6 @@ namespace EQLogParser
     }
 
     private ILiteCollection<T> GetCol<T>(string colName) => _db?.GetCollection<T>(colName);
-
-    private class VersionData
-    {
-      public string Id { get; set; }
-      public string Version { get; set; }
-    }
   }
 
   /* Root + subtree data for the WPF view-tree builders (see TriggerTreeViewBuilder). */

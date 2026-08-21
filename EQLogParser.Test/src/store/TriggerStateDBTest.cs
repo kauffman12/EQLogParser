@@ -141,14 +141,16 @@ namespace EQLogParser
         Assert.IsTrue(docs.Any(d => d.TryGetValue(nameKey, out var v) && v.AsString == TriggerStateDB.Overlays),
           "the legacy node itself must survive intact");
 
-        // the one-time stamp must now be present in the existing FixVersion collection
-        var stamped = check.GetCollection<BsonDocument>("FixVersion")
-          .FindAll().Any(d => d.TryGetValue("_id", out var id) && id.AsString == "legacy-export-trigger-node-marker-stripped");
-        Assert.IsTrue(stamped, "expected the marker-strip stamp in FixVersion after a clean sweep");
+        // and the migration must have bumped the existing FixVersion version document to CurrentDbVersion
+        var versionDoc = check.GetCollection<BsonDocument>("FixVersion")
+          .FindAll().FirstOrDefault(d => d.TryGetValue("_id", out var id) &&
+                                         id.Type == BsonType.String && id.AsString == "1");
+        Assert.IsTrue(versionDoc is not null && versionDoc.TryGetValue("Version", out var v) && v.AsString == "1.0.2",
+          "expected FixVersion to be bumped to 1.0.2 after the marker sweep");
       }
     }
 
-    /* The sweep must actually be one-time: after the stamp exists, a fresh stale marker must be
+    /* The sweep must actually be one-time: once the database version is current, a fresh stale marker must be
      * left alone (the current code never writes markers again, so this is pure cost avoidance). */
     [TestMethod]
     public async Task LegacyExportTriggerNodeTypeMarker_SweepIsOneTime()
@@ -180,13 +182,13 @@ namespace EQLogParser
         });
       }
 
-      // second open must skip the sweep entirely (stamp present)
+      // second open must skip the sweep entirely (version already current)
       await using (var store2 = Store(path)) { }
 
       using var check = new LiteDatabase(path);
       var orphan = check.GetCollection<BsonDocument>("OrphanLegacy").FindById("orphan-1");
       Assert.IsTrue(orphan != null && orphan.TryGetValue("_type", out _),
-        "the sweep must not run again once the stamp is present");
+        "the sweep must not run again once the database version is current");
     }
 
     [TestMethod]
