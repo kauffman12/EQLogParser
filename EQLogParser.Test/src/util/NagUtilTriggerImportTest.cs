@@ -405,6 +405,53 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void ConvertTriggers_CaseSensitiveEndEarlyPhrases_SensitivityPreserved()
+    {
+      // NAG end-early phrases opt out of case-insensitivity per phrase; EQLP compiles every regex
+      // pattern with IgnoreCase, so a (?-i) prefix restores it (same convention as capture phrases).
+      var json = CreateTriggerJson("Sensitive End", "pattern",
+        endEarlyPhrases:
+        [
+          CreateCapturePhrase("^Wears off text.", useRegEx: true, ignoreCase: false),
+          CreateCapturePhrase("you are ready", useRegEx: true, ignoreCase: true)
+        ],
+        actions: [CreateAction(0, displayText: "text")]);
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("(?-i)^Wears off text.", nodes[0].TriggerData.EndEarlyPattern);
+      Assert.IsTrue(nodes[0].TriggerData.EndUseRegex);
+      Assert.AreEqual("you are ready", nodes[0].TriggerData.EndEarlyPattern2, "Case-insensitive regex phrases get no prefix");
+
+      // Non-regex case-sensitive cannot be expressed in EQLP — reported, not guessed at.
+      var jsonNonRegex = CreateTriggerJson("Sensitive End 2", "pattern",
+        endEarlyPhrases: [CreateCapturePhrase("Wears off exactly", useRegEx: false, ignoreCase: false)],
+        actions: [CreateAction(0, displayText: "text")]);
+
+      var (_, resultsNonRegex, _) = ConvertTriggersUnwrapped(jsonNonRegex);
+
+      CollectionAssert.Contains(resultsNonRegex[0].DroppedFeatures, "case-sensitive non-regex end-early phrase(s) imported as case-insensitive");
+    }
+
+    [TestMethod]
+    public void ConvertTriggers_ActionLevelCaseSensitiveEndEarly_SensitivityPreserved()
+    {
+      // End-early phrases on the timer action itself (they stop this timer only) need the same
+      // treatment as trigger-level ones.
+      var json = CreateTriggerJson("Timer Sensitive End", "pattern", actions:
+      [
+        CreateAction(4, displayText: "Channeling", duration: 60.0,
+          extraJson: "\"endEarlyPhrases\":[{\"phrase\":\"^You (have been slain|died)\",\"useRegEx\":true,\"ignoreCase\":false}]")
+      ]);
+
+      var (nodes, _, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual("(?-i)^You (have been slain|died)", nodes[0].TriggerData.EndEarlyPattern);
+    }
+
+    [TestMethod]
     public void ConvertTriggers_TextAndTimerActions_DoNotOverwriteEachOther()
     {
       // Text overlay and timer actions used to clobber each other's displayText — the timer's

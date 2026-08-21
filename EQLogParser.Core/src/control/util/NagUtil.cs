@@ -913,7 +913,7 @@ internal static class NagUtil
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
           var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
-          triggerEndEarly.Add((ConvertTemplates(phrase), useRegex));
+          triggerEndEarly.Add((ApplyEndEarlyCaseSensitivity(ee, ConvertTemplates(phrase), useRegex, droppedFeatures), useRegex));
         }
       }
     }
@@ -1254,8 +1254,8 @@ internal static class NagUtil
       {
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
-          timer.EndEarlyPhrases.Add((ConvertTemplates(phrase),
-            ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean()));
+          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
+          timer.EndEarlyPhrases.Add((ApplyEndEarlyCaseSensitivity(ee, ConvertTemplates(phrase), useRegex, droppedFeatures), useRegex));
         }
       }
     }
@@ -1340,6 +1340,28 @@ internal static class NagUtil
       if (!timer.Overlays.Contains(overlayId))
         timer.Overlays.Add(overlayId);
     }
+  }
+
+  // NAG end-early phrases are case-insensitive unless opted out per phrase. EQLP compiles every
+  // regex pattern with IgnoreCase, so re-enable sensitivity for opted-out regex phrases (same
+  // convention as capture phrases); non-regex case-sensitive phrases cannot be expressed and get
+  // a dropped-feature note instead.
+  private static string ApplyEndEarlyCaseSensitivity(JsonElement endEarlyPhrase, string convertedPhrase,
+      bool useRegex, List<string> droppedFeatures)
+  {
+    var ignoreCase = !(endEarlyPhrase.TryGetProperty("ignoreCase", out var ic) && !ic.GetBoolean());
+    if (ignoreCase)
+    {
+      return convertedPhrase;
+    }
+
+    if (useRegex)
+    {
+      return "(?-i)" + convertedPhrase;
+    }
+
+    droppedFeatures.Add("case-sensitive non-regex end-early phrase(s) imported as case-insensitive");
+    return convertedPhrase;
   }
 
   /* Merge trigger-level and a timer action's own end-early phrases (trigger-level first,
