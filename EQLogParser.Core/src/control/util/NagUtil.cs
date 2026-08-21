@@ -898,8 +898,10 @@ internal static class NagUtil
     }
 
     // Build Comments field content. The NAG author's own comment describes the trigger as a
-    // whole, so in a multi-timer fan-out it lands on each phrase's first timer variant only
-    // (see below); the import notes are per-node diagnostics and stay on every node.
+    // whole, so every split node carries it — each one is a full EQLP trigger in its own right
+    // and must stand on its own. Comments are inert metadata (unlike the shared non-timer
+    // actions, they cannot double-fire), so duplicating them costs nothing. The import notes
+    // are per-node diagnostics and stay on every node too.
     var importNotes = droppedFeatures.Count > 0
       ? $"EQLP Import Notes: {string.Join(", ", droppedFeatures)}"
       : null;
@@ -988,17 +990,10 @@ internal static class NagUtil
           triggerData.MatchVariableCondition = conditionStr;
         }
 
-        // Apply shared metadata. The NAG comment rides with the shared non-timer actions on the
-        // first variant of each phrase; import notes stay on every node.
-        if (t == 0)
-        {
-          triggerData.Comments = string.IsNullOrEmpty(comments) ? importNotes
-            : string.IsNullOrEmpty(importNotes) ? comments : $"{comments}\n{importNotes}";
-        }
-        else
-        {
-          triggerData.Comments = importNotes;
-        }
+        // The NAG author's comment describes the trigger as a whole; every node carries it (see
+        // the rationale at its construction above). Import notes stay on every node.
+        triggerData.Comments = string.IsNullOrEmpty(comments) ? importNotes
+          : string.IsNullOrEmpty(importNotes) ? comments : $"{comments}\n{importNotes}";
 
         // interruptSpeech triggers get top urgency so the audio engine preempts lower-priority
         // playback, approximating NAG's speech interruption (see note above). Priority 1 is also

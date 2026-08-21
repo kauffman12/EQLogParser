@@ -576,17 +576,20 @@ namespace EQLogParser
       var first = nodes.First(n => n.Name.EndsWith("(Timer 1)"));
       var second = nodes.First(n => n.Name.EndsWith("(Timer 2)"));
 
-      // Shared actions and the NAG author comment live on the first variant only...
+      // Shared actions live on the first variant only...
       Assert.AreEqual("Spell ready", first.TriggerData.TextToSpeak);
       Assert.AreEqual("Cooldowns", first.TriggerData.TextToDisplay, "Counter label is a shared text action");
       Assert.AreEqual(1, first.TriggerData.VariableActions.Count, "Counter increment must fire exactly once");
-      StringAssert.Contains(first.TriggerData.Comments ?? "", "author note");
 
       // ...and are absent from the sibling variant, which carries only its own timer.
       Assert.IsNull(second.TriggerData.TextToSpeak);
       Assert.IsNull(second.TriggerData.TextToDisplay);
       Assert.AreEqual(0, second.TriggerData.VariableActions.Count, "Counter must not increment on the sibling node");
-      Assert.IsFalse((second.TriggerData.Comments ?? "").Contains("author note"));
+
+      // The NAG author's comment is inert metadata — it describes the trigger as a whole and
+      // must stand on each split node (unlike the shared actions above, it cannot double-fire).
+      StringAssert.Contains(first.TriggerData.Comments ?? "", "author note");
+      StringAssert.Contains(second.TriggerData.Comments ?? "", "author note");
       Assert.IsTrue(second.TriggerData.EnableTimer);
       Assert.AreEqual(90.0, second.TriggerData.DurationSeconds);
       Assert.AreEqual("T2", second.TriggerData.AltTimerName);
