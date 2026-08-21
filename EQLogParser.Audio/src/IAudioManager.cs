@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser.Audio
@@ -43,5 +44,16 @@ namespace EQLogParser.Audio
 
     // --- TTS: play or export to WAV ---
     void SpeakOrSaveTtsAsync(string text, string voice, string deviceId, float volume, int rate, string fileName = null);
+
+    // --- Kokoro TTS (optional, on-demand neural voice model) ---
+    /// <summary>True if the Kokoro model has already been downloaded to local app data.</summary>
+    bool IsKokoroModelAvailable();
+
+    /// <summary>Downloads the Kokoro model to local app data. Takes effect after the app is restarted.</summary>
+    Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default);
+
+    // --- TTS engine selection ---
+    /// <summary>The engine actually in use for this running session. Changing the preferred engine requires a restart.</summary>
+    string GetActiveEngine();
   }
 }
