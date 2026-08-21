@@ -107,6 +107,34 @@ namespace EQLogParser
           // create default data
           var tree = _db.GetCollection<TriggerNode>(TreeCol);
 
+          // Databases written by pre-refactor builds stored imported nodes with LiteDB's
+          // polymorphic type marker "_type" = "EQLogParser.ExportTriggerNode, EQLogParser".
+          // That class now lives in EQLogParser.Core, so resolving the stale marker throws on
+          // the first tree query ("not found in current domain") and makes the whole DB unreadable.
+          // The marker is inert: nodes were always stored flat (Parent/Id links) and the export
+          // type persisted nothing beyond TriggerNode itself — strip it once so old databases
+          // open again. No-op for every database the current build writes.
+          {
+            var rawTree = _db.GetCollection<BsonDocument>(TreeCol);
+            var stripped = 0;
+            foreach (var doc in rawTree.FindAll())
+            {
+              if (doc.TryGetValue("_type", out var typeMarker) &&
+                  typeMarker.Type == BsonType.String &&
+                  typeMarker.AsString == "EQLogParser.ExportTriggerNode, EQLogParser")
+              {
+                doc.Remove("_type");
+                rawTree.Update(doc);
+                stripped++;
+              }
+            }
+
+            // one-time cleanup — a single summary line (databases hold thousands of nodes), and
+            // only on the first launch after an upgrade, since it never matches clean databases
+            if (stripped > 0)
+              Log.Info($"Removed stale ExportTriggerNode type marker from {stripped} legacy trigger document(s).");
+          }
+
           /* fix broken
           var parent = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
           var test = tree.FindOne(n => n.Id == n.Parent);

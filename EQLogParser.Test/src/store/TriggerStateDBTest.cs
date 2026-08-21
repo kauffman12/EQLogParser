@@ -1,3 +1,5 @@
+using LiteDB;
+
 namespace EQLogParser
 {
   /* Store-level tests that run against real LiteDB databases in temp directories. These run on
@@ -64,6 +66,52 @@ namespace EQLogParser
       // version 1.0.1 bootstrap creates the two default overlays
       var defaults = overlay.Nodes.Where(n => n.OverlayData?.IsDefault == true).Select(n => n.Name).OrderBy(x => x).ToList();
       CollectionAssert.AreEqual(new[] { "Default Text Overlay", "Default Timer Overlay" }, defaults);
+    }
+
+    [TestMethod]
+    public async Task LegacyExportTriggerNodeTypeMarker_StrippedSoOldDatabasesOpen()
+    {
+      // Databases written by pre-refactor builds carry LiteDB's polymorphic marker
+      // "_type": "EQLogParser.ExportTriggerNode, EQLogParser" on imported nodes. The class moved
+      // to EQLogParser.Core, so the stale marker used to make the first tree query throw
+      // "not found in current domain" — with such a document present, opening the store below
+      // reproduced exactly that crash (ctor FindOne on the overlays root).
+      var dir = NewDir();
+      _dirs.Add(dir);
+      var path = Path.Combine(dir, "legacy.db");
+
+      string nameKey;
+      using (var raw = new LiteDatabase(path))
+      {
+        // discover the stored field name for TriggerNode.Name by round-tripping through the mapper
+        raw.GetCollection<TriggerNode>("Tree").Insert(new TriggerNode { Id = "probe", Name = "probe" });
+        var probeDoc = raw.GetCollection<BsonDocument>("Tree").FindById("probe");
+        nameKey = probeDoc.TryGetValue("Name", out _) ? "Name" : "name";
+        raw.GetCollection<BsonDocument>("Tree").Delete("probe");
+
+        // legacy imported node: root-level (no Parent) with the stale type marker
+        raw.GetCollection<BsonDocument>("Tree").Insert(new BsonDocument
+        {
+          ["_id"] = "legacy-node",
+          ["_type"] = "EQLogParser.ExportTriggerNode, EQLogParser",
+          [nameKey] = TriggerStateDB.Overlays
+        });
+      }
+
+      var db = Store(path);
+      await using (var _ = db)
+      {
+        // pre-migration this constructor threw LiteException on its first tree query
+        var overlay = await db.GetOverlayTree();
+        Assert.AreEqual(TriggerStateDB.Overlays, overlay.Root.Name, "the legacy node itself must survive intact");
+      }
+
+      using (var check = new LiteDatabase(path))
+      {
+        var docs = check.GetCollection<BsonDocument>("Tree").FindAll().ToList();
+        CollectionAssert.DoesNotContain(docs.Select(d => d.TryGetValue("_type", out _)).ToList(), true);
+        Assert.IsTrue(docs.Any(d => d.TryGetValue(nameKey, out var v) && v.AsString == TriggerStateDB.Overlays));
+      }
     }
 
     [TestMethod]
