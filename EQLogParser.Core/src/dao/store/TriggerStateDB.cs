@@ -578,7 +578,8 @@ namespace EQLogParser
         if (GetCol<TriggerNode>(TreeCol) is { } tree)
         {
           var root = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
-          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name);
+          // LiteDB trims stored strings, so normalize the folder name to its storable form
+          var parent = string.IsNullOrEmpty(name) ? root : CreateNode(root.Id, name.Trim());
           Import(parent, imported, Triggers, characterIds);
         }
 
@@ -1183,8 +1184,19 @@ namespace EQLogParser
 
       var triggers = type == Triggers;
 
+      // LiteDB silently trims leading/trailing whitespace from stored strings (inner spaces are
+      // kept). Source data may contain padded names — the NAG dump has triggers like
+      // " Emollious colours..." — and re-imports match incoming names against stored ones, so a
+      // padded name would never match its trimmed stored twin and duplicate nodes. Normalize every
+      // incoming name to the form the store will actually keep before any planning happens.
+      var incoming = imported.ToList();
+      foreach (var node in incoming)
+      {
+        NormalizeName(node);
+      }
+
       // exports include the tree root so ignore
-      foreach (var newNode in imported)
+      foreach (var newNode in incoming)
       {
         if (newNode.Nodes?.Count > 0)
         {
@@ -1196,6 +1208,13 @@ namespace EQLogParser
           Import(tree, parentId, new[] { newNode }, type, characterStates);
         }
       }
+    }
+
+    // Trims a name and recurses into folder children (see caller comment for why the trim matters).
+    private static void NormalizeName(ExportTriggerNode node)
+    {
+      node.Name = node.Name?.Trim();
+      node.Nodes?.ForEach(NormalizeName);
     }
 
     private bool Import(ILiteCollection<TriggerNode> tree, string parentId,

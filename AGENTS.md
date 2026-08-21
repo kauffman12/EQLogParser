@@ -10,6 +10,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 proj
 
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
+- **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
 
 ## Post-Implementation Checklist
 After completing work, verify:

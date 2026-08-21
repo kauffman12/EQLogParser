@@ -290,6 +290,7 @@ foreach (var action in block.Actions.OfType<DamageRecord>())
 
 ## Documentation
 
+- Release/signing/installer work (sign.cmd, EQLogParserInstall) follows `docs/ReleaseChecklist.md`
 - Summary tags are used to describe purpose
 - Param tags document method parameters
 - Returns tags document return values

@@ -629,6 +629,50 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void ConvertTriggers_MultipleTriggersSameFolder_ShareOneFolderNode()
+    {
+      // Regression: each trigger used to get its own folder chain, so N triggers in
+      // "Common/Combat" produced N sibling chains renamed to "Common", "Common (2)"…
+      // All triggers under the same NAG folder must share a single folder node.
+      var json = @"{
+        ""folders"": [{""folderId"": ""F1"", ""name"": ""Common"", ""children"": [
+          {""folderId"": ""F2"", ""name"": ""Combat"", ""children"": []},
+          {""folderId"": ""F3"", ""name"": ""ADPS"", ""children"": []}]}],
+        ""triggers"": [
+          {""name"": ""A"", ""triggerId"": ""t1"", ""folderId"": ""F2"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""a"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]},
+          {""name"": ""B"", ""triggerId"": ""t2"", ""folderId"": ""F2"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""b"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]},
+          {""name"": ""C"", ""triggerId"": ""t3"", ""folderId"": ""F3"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""c"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]},
+          {""name"": ""D"", ""triggerId"": ""t4"", ""folderId"": ""GONE"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""d"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]},
+          {""name"": ""E"", ""triggerId"": ""t5"", ""folderId"": ""ALSO-GONE"", ""onlyExecuteInDev"": false,
+           ""capturePhrases"": [{""phrase"": ""e"", ""useRegEx"": false}], ""actions"": [{""actionType"": 0, ""displayText"": ""text""}]}
+        ]
+      }";
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      // Exactly one "Common" and one "Orphaned Triggers" at the top level — no "(2)" siblings.
+      Assert.HasCount(2, nodes);
+      var common = nodes.Single(n => n.Name == "Common");
+      Assert.HasCount(1, nodes.Where(n => n.Name.StartsWith("Orphaned", StringComparison.Ordinal)));
+
+      // Both sibling subfolders live under the single Common node.
+      var combat = common.Nodes.Single(n => n.Name == "Combat");
+      Assert.HasCount(2, combat.Nodes);
+      var adps = common.Nodes.Single(n => n.Name == "ADPS");
+      Assert.HasCount(1, adps.Nodes);
+
+      // Both dead folderIds share the one Orphaned Triggers node.
+      var orphaned = nodes.Single(n => n.Name == "Orphaned Triggers");
+      Assert.HasCount(2, orphaned.Nodes);
+      Assert.AreEqual("Orphaned Triggers", results.First(r => r.TriggerId == "t4").FolderPath);
+      Assert.AreEqual("Orphaned Triggers", results.First(r => r.TriggerId == "t5").FolderPath);
+    }
+
+    [TestMethod]
     public void ConvertTriggers_ActionType5_SetVariable_NoName_Dropped()
     {
       var json = CreateTriggerJson("Var Trigger", "pattern", actions:

@@ -260,6 +260,34 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public async Task Import_PaddedNames_ReimportIsIdempotent()
+    {
+      // LiteDB trims leading/trailing whitespace from stored strings, and source data contains
+      // padded names (the NAG dump has triggers like " Emollious colours..."). Without matching
+      // the incoming names against that storable form, phrase variants (#1..#4) sharing one
+      // OriginalId fail to match their trimmed stored twins on re-import and duplicate.
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      var (root, _, _) = await db.GetTriggerTree("P1");
+      List<ExportTriggerNode> BuildExport() => Wrap(new ExportTriggerNode
+        {
+          Name = " Padded Folder ",
+          Nodes = [ExportLeaf(" Boss #1 ", "regex1", "same-id"), ExportLeaf(" Boss #2 ", "regex2", "same-id")]
+        });
+
+      await db.ImportTriggers(root, BuildExport());
+      var (_, nodes, _) = await db.GetTriggerTree("P1");
+      var countAfterFirst = nodes.Count;
+      Assert.AreEqual(1, nodes.Count(n => n.Name == "Padded Folder"), "stored folder must be in its storable (trimmed) form");
+
+      // a fresh parse of the same source — padded names again on arrival
+      await db.ImportTriggers(root, BuildExport());
+      var (_, nodes2, _) = await db.GetTriggerTree("P1");
+      Assert.AreEqual(countAfterFirst, nodes2.Count, "re-import of padded names must not duplicate");
+      Assert.AreEqual(2, nodes2.Count(n => n.OriginalId == "same-id"));
+    }
+
+    [TestMethod]
     public async Task Import_OriginalId_DuplicateNames_DoNotCollapse()
     {
       var (db, _) = FreshStore();

@@ -440,6 +440,9 @@ internal static class NagUtil
       }
 
       var triggers = root.GetProperty("triggers");
+      // Folder nodes shared across all triggers (keyed by full path), so every trigger in the
+      // same NAG folder attaches to one chain instead of creating per-trigger duplicates.
+      var folderNodes = new Dictionary<string, ExportTriggerNode>(StringComparer.Ordinal);
       foreach (var trigger in triggers.EnumerateArray())
       {
         // Parse each trigger in its own try/catch so one malformed trigger is reported as
@@ -480,11 +483,12 @@ internal static class NagUtil
             parsedResult.FolderPath = "(root)";
           }
 
-          // Wrap trigger node in folder hierarchy if not at root level
+          // Attach trigger node to the shared folder tree (or the root) if not at root level.
+          // All triggers under one NAG folder reuse the same folder nodes, mirroring NAG's own
+          // hierarchy — per-trigger chains would produce siblings like "Common", "Common (2)"…
           if (parsedResult.FolderPath != "(root)")
           {
-            var wrapped = WrapInFolderHierarchy(parsedResult.FolderPath, n);
-            nodes.Add(wrapped);
+            EnsureFolderPath(folderNodes, nodes, parsedResult.FolderPath).Nodes.Add(n);
           }
           else
           {
@@ -560,29 +564,35 @@ internal static class NagUtil
     }
   }
 
-  // Wrap a trigger node in the folder hierarchy (creates parent folder nodes)
-  private static ExportTriggerNode WrapInFolderHierarchy(string folderPath, ExportTriggerNode triggerNode)
+  /// <summary>Returns the folder node for a path, creating it and any missing ancestors on first use.</summary>
+  // "Raids/Kunark" and "Raids/CoTF" both attach under one "Raids" node — ancestor nodes are
+  // created once and shared, never duplicated per trigger.
+  private static ExportTriggerNode EnsureFolderPath(
+    Dictionary<string, ExportTriggerNode> cache, List<ExportTriggerNode> roots, string folderPath)
   {
     var parts = folderPath.Split('/');
-    ExportTriggerNode current = null;
+    var children = roots;
+    var pathSoFar = "";
 
-    for (var i = parts.Length - 1; i >= 0; i--)
+    for (var i = 0; i < parts.Length; i++)
     {
-      if (current == null)
+      if (i > 0)
       {
-        // leaf: trigger node goes inside the last folder
-        var folderNode = new ExportTriggerNode { Name = parts[i], Nodes = [triggerNode] };
-        current = folderNode;
+        pathSoFar += '/';
       }
-      else
+
+      pathSoFar += parts[i];
+      if (!cache.TryGetValue(pathSoFar, out var node))
       {
-        // wrap in parent folder
-        var folderNode = new ExportTriggerNode { Name = parts[i], Nodes = [current] };
-        current = folderNode;
+        node = new ExportTriggerNode { Name = parts[i] };
+        cache[pathSoFar] = node;
+        children.Add(node);
       }
+
+      children = node.Nodes;
     }
 
-    return current ?? triggerNode;
+    return cache[folderPath];
   }
 
   private static (List<ExportTriggerNode> nodes, NagImportResult result) ParseTrigger(JsonElement element)

@@ -13,6 +13,7 @@ for %%F in (
     "%RELEASE_DIR%\DotLiquid.dll"
     "%RELEASE_DIR%\EQLogParser.dll"
     "%RELEASE_DIR%\EQLogParser.Audio.dll"
+    "%RELEASE_DIR%\EQLogParser.Core.dll"
     "%RELEASE_DIR%\EQLogParser.Utils.dll"
     "%RELEASE_DIR%\FontAwesome5.dll"
     "%RELEASE_DIR%\FontAwesome5.Net.dll"

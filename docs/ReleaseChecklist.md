@@ -1,0 +1,44 @@
+# Release Checklist: Signing & Installer
+
+## Rule of thumb
+
+`sign.cmd` and `EQLogParserInstall/EQLogParserInstall.iss` are **curated minimum sets**, not "everything in bin". We only install/sign the files the app actually needs to run — the list was built by trimming until it broke, so extra files in `bin\Release` that are missing from these lists are usually intentional.
+
+However: **whenever a new project or NuGet package reference is added, its output dll must be checked into both files.** A missing runtime-critical dll (e.g. a project reference like `EQLogParser.Core.dll`) will not fail the build — the app just crashes at runtime with `FileNotFoundException` on user machines.
+
+## When to update sign.cmd / EQLogParserInstall.iss
+
+- Adding or renaming a project that produces a dll shipped to `EQLogParser\bin\Release\...`
+- Adding a NuGet package that emits an app-local runtime assembly the code can touch
+- Adding a new sub-project that BackupUtil depends on (BackupUtil references the whole `EQLogParser` project and also loads `EQLogParser.dll` **reflectively** at runtime — `Assembly.Load("EQLogParser")` in `BackupUtil/Program.cs` — so everything that assembly needs must be present next to it too)
+
+## How to verify the list is complete (smarter than trial-and-error)
+
+### 1. Static check — what could the app load?
+
+Compute the transitive compile-time reference closure of the project dlls (`EQLogParser.dll`, `EQLogParser.Core.dll`, `EQLogParser.Audio.dll`, `EQLogParser.Utils.dll`), excluding shared-framework assemblies, and resolve against the release bin output:
+
+- Every file in that closure must appear in `.iss` (installed) — otherwise the code path that touches it crashes lazily.
+- Caveat: the closure is a *superset* (unused references don't load), and it misses reflectively loaded assemblies and pack-URI WPF resources (e.g. Syncfusion themes load via resource URI with no static reference) — so "installed but not in closure" does **not** mean removable.
+- A Python/dnfile one-off script can do this; the important part is walking `AssemblyRef` metadata tables transitively.
+
+### 2. Empirical check — what did the app actually load? (authoritative)
+
+`scripts/MeasureLoadedAssemblies.ps1` launches the built app, watches loaded PE modules while you exercise every feature, and reports:
+
+- `[LOADED]` — files that must ship
+- `[NOT LOADED]` — removal candidates
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\MeasureLoadedAssemblies.ps1
+# run again with -ExePath pointing at BackupUtil.exe; union the two reports
+```
+
+This is the modern replacement for "remove until it breaks": one non-breaking session gives the provable minimum set. Run it on a Release build on Windows (x64 PowerShell; elevated if the app is elevated).
+
+## Release steps
+
+1. `dotnet publish` / Release build of `EQLogParser` and `BackupUtil` (target: `net8.0-windows10.0.17763.0`)
+2. Run the static + empirical checks above; reconcile any delta against `sign.cmd` and `.iss`
+3. `sign.cmd` — signs all release dlls, BackupUtil, and `EQLogParserMSI\bin\Release\EQLogParser*.msi` (signtool + Sectigo timestamp)
+4. Build the Inno Setup installer from `EQLogParserInstall/EQLogParserInstall.iss` (note the optional `IncludePiperTTS` define and the `MyReleaseDir`/`BackupUtilDir` paths at the top of the script — adjust per machine)
