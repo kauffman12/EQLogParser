@@ -87,19 +87,6 @@ namespace EQLogParser
           // Must run before any typed query — see ApplyDatabaseMigrations for why.
           ApplyDatabaseMigrations();
 
-          /* print all data
-          Directory.CreateDirectory(@"r:\dump");
-          foreach (var name in _db.GetCollectionNames())
-          {
-            var safeName = string.Concat(name.Select(c =>
-                Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-
-            var output = Path.Combine(@"r:\dump", $"{safeName}.json");
-
-            _db.Execute($"select $ into $file('{output.Replace("\\", "\\\\")}') from {name}");
-          }
-          */
-
           _taskQueue = new LiteDbTaskQueue(_db);
 
           if (needUpgrade && applyLegacyUpgrades)
@@ -115,18 +102,6 @@ namespace EQLogParser
 
           // create default data
           var tree = _db.GetCollection<TriggerNode>(TreeCol);
-
-          /* legacy type-marker cleanup runs earlier, in StripLegacyTypeMarkers */
-
-          /* fix broken
-          var parent = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
-          var test = tree.FindOne(n => n.Id == n.Parent);
-          if (test != null)
-          {
-            test.Parent = parent?.Id;
-            tree.Update(test);
-          }
-          */
 
           // create overlay node if it doesn't exist
           if (tree.FindOne(n => n.Parent == null && n.Name == Overlays) == null)
@@ -1003,29 +978,53 @@ namespace EQLogParser
       TriggerConfigUpdateEvent?.Invoke(config);
     }
 
+    internal static string FixColor(string value)
+    {
+      if (!string.IsNullOrEmpty(value))
+      {
+        return NormalizeHexColor(value) ?? "#FFFFFF";
+      }
+
+      return value;
+    }
+
+    // Normalizes a legacy color to #AARRGGBB; null when the value is not a hex color (FixColor
+    // then falls back to #FFFFFF, same as the old non-parseable path). Replaces the Syncfusion
+    // ColorConverter — named colors in pre-1.0 data now fall back instead of being resolved.
+    internal static string NormalizeHexColor(string value)
+    {
+      var v = value.Trim();
+      if (v.StartsWith('#'))
+      {
+        v = v[1..];
+      }
+      else if (v.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+      {
+        v = v[2..];
+      }
+
+      switch (v.Length)
+      {
+        case 3: // #RGB
+          return AllHex(v) ? $"#FF{v[0]}{v[0]}{v[1]}{v[1]}{v[2]}{v[2]}".ToUpperInvariant() : null;
+        case 6: // #RRGGBB
+          return AllHex(v) ? $"#FF{v}".ToUpperInvariant() : null;
+        case 8: // #AARRGGBB
+          return AllHex(v) ? $"#{v}".ToUpperInvariant() : null;
+        default:
+          return null;
+      }
+
+      static bool AllHex(string s) => s.All(c =>
+        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+    }
+
     /* Persist config without notifying listeners (folder expand/rename). */
     private async Task UpdateConfigSilent(TriggerConfig config)
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
         GetCol<TriggerConfig>(ConfigCol)?.Update(config);
-        return Task.CompletedTask;
-      });
-    }
-
-    internal async void UpdateLastTriggered(string id, double updatedTime)
-    {
-      await _taskQueue.EnqueueTransaction(() =>
-      {
-        if (id is not null && GetCol<TriggerNode>(TreeCol) is { } tree)
-        {
-          if (tree.FindOne(n => n.Id == id && n.TriggerData != null) is { } found)
-          {
-            found.TriggerData.LastTriggered = updatedTime;
-            tree.Update(found);
-          }
-        }
-
         return Task.CompletedTask;
       });
     }
@@ -1922,47 +1921,6 @@ namespace EQLogParser
           UpgradeTree(old.Nodes[i], overlayIds, defaultEnabled, newNode.Id, i);
         }
       }
-    }
-
-    internal static string FixColor(string value)
-    {
-      if (!string.IsNullOrEmpty(value))
-      {
-        return NormalizeHexColor(value) ?? "#FFFFFF";
-      }
-
-      return value;
-    }
-
-    // Normalizes a legacy color to #AARRGGBB; null when the value is not a hex color (FixColor
-    // then falls back to #FFFFFF, same as the old non-parseable path). Replaces the Syncfusion
-    // ColorConverter — named colors in pre-1.0 data now fall back instead of being resolved.
-    internal static string NormalizeHexColor(string value)
-    {
-      var v = value.Trim();
-      if (v.StartsWith('#'))
-      {
-        v = v[1..];
-      }
-      else if (v.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-      {
-        v = v[2..];
-      }
-
-      switch (v.Length)
-      {
-        case 3: // #RGB
-          return AllHex(v) ? $"#FF{v[0]}{v[0]}{v[1]}{v[1]}{v[2]}{v[2]}".ToUpperInvariant() : null;
-        case 6: // #RRGGBB
-          return AllHex(v) ? $"#FF{v}".ToUpperInvariant() : null;
-        case 8: // #AARRGGBB
-          return AllHex(v) ? $"#{v}".ToUpperInvariant() : null;
-        default:
-          return null;
-      }
-
-      static bool AllHex(string s) => s.All(c =>
-        (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
     }
 
     private ILiteCollection<T> GetCol<T>(string colName) => _db?.GetCollection<T>(colName);

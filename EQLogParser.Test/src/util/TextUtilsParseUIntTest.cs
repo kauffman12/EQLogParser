@@ -52,7 +52,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void TestParseUInt_String_Null_ReturnsDefaultValue()
     {
-      var result = TextUtils.ParseUInt(null!);
+      var result = TextUtils.ParseUInt(null);
       Assert.AreEqual(uint.MaxValue, result);
     }
 

@@ -145,7 +145,7 @@ namespace EQLogParser
     [TestMethod]
     public void TestBuildVector_NullModifiers()
     {
-      var result = LineModifiersParser.BuildVector(null!);
+      var result = LineModifiersParser.BuildVector(null);
       Assert.AreEqual(0, result);
     }
 

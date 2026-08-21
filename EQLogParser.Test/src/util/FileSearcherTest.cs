@@ -15,7 +15,14 @@ namespace EQLogParser
     [TestCleanup]
     public void Cleanup()
     {
-      try { Directory.Delete(_dir, true); } catch (IOException) { }
+      try
+      {
+        Directory.Delete(_dir, true);
+      }
+      catch (IOException)
+      {
+        // best effort — a leftover temp dir must not fail the run
+      }
     }
 
     private string WriteFile(string name, params string[] lines)
@@ -49,13 +56,13 @@ namespace EQLogParser
       var a = WriteFile("a.txt", aLines);
       var b = WriteFile("b.txt", bLines);
 
-      // only even lines are "matches"
-      // the parser contract is "return null for no match" even though T is a non-nullable string
-      Func<string, string> processor = line => int.TryParse(line[^2..], out var n) && n % 2 == 0 ? line : null!;
+      // only even lines are "matches" — the processor contract is "return null for no match",
+      // which T = string? makes part of the type
+      Func<string, string?> processor = line => int.TryParse(line[^2..], out var n) && n % 2 == 0 ? line : null;
 
-      List<List<string>> batches = [];
-      List<List<FileSearcher<string>.LinePosition>> positionBatches = [];
-      var searcher = new FileSearcher<string>([a, b]);
+      List<List<string?>> batches = [];
+      List<List<FileSearcher<string?>.LinePosition>> positionBatches = [];
+      var searcher = new FileSearcher<string?>([a, b]);
       searcher.ResultsReady += (lines, positions) =>
       {
         batches.Add(lines);
@@ -93,11 +100,11 @@ namespace EQLogParser
       var range = new TimeRange();
       range.TimeSegments.Add(new TimeSegment(Ts(lines[1]), Ts(lines[3])));
 
-      List<string> found = [];
-      var searcher = new FileSearcher<string>([file]);
+      List<string?> found = [];
+      var searcher = new FileSearcher<string?>([file]);
       searcher.ResultsReady += (batch, _) => found.AddRange(batch);
 
-      await searcher.SearchLogsAsync(start: Ts(lines[0]), maxRange: range, line => line.Contains("gamma") ? line : null!);
+      await searcher.SearchLogsAsync(start: Ts(lines[0]), maxRange: range, line => line.Contains("gamma") ? line : null);
 
       // line 0 is before the window; lines 4..5 are past the last segment (exceeds -> stop)
       CollectionAssert.AreEquivalent(new[] { lines[1], lines[2], lines[3] }, found);
@@ -109,7 +116,7 @@ namespace EQLogParser
       var missing = Path.Combine(_dir, "does-not-exist.txt");
       int progressMax = 0;
 
-      var searcher = new FileSearcher<string>([missing]);
+      var searcher = new FileSearcher<string?>([missing]);
       var posted = false;
       searcher.ResultsReady += (_, _) => posted = true;
       searcher.ProgressUpdated += p => progressMax = Math.Max(progressMax, p);
@@ -127,12 +134,12 @@ namespace EQLogParser
       var file = WriteFile("d.txt", LogLines(40, "delta"));
       int progressMax = 0;
 
-      var searcher = new FileSearcher<string>([file]);
+      var searcher = new FileSearcher<string?>([file]);
       var posted = false;
       searcher.ResultsReady += (_, _) => posted = true;
       searcher.ProgressUpdated += p => progressMax = Math.Max(progressMax, p);
 
-      await searcher.SearchLogsAsync(start: 0, maxRange: null, _ => null!);
+      await searcher.SearchLogsAsync(start: 0, maxRange: null, _ => null);
 
       Assert.IsFalse(posted);
       // progress is cosmetic and buffer-dependent for small files — pin that updates fire at all

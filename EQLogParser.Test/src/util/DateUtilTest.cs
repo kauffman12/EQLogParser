@@ -252,7 +252,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void TestSimpleTimeToSeconds_Null()
     {
-      var result = DateUtil.SimpleTimeToSeconds(null!);
+      var result = DateUtil.SimpleTimeToSeconds(null);
       Assert.AreEqual(0u, result);
     }
 

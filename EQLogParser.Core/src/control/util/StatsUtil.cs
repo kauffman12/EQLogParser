@@ -216,19 +216,6 @@ namespace EQLogParser
       }
     }
 
-    private static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
-    {
-      if (ranges.TryGetValue(entry.Key, out var range))
-      {
-        range.Add(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
-      }
-      else
-      {
-        // make sure to copy the time segment and not just use the one in the Fight
-        ranges[entry.Key] = new TimeRange(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
-      }
-    }
-
     internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = double.NaN, double maxTime = double.NaN)
     {
@@ -784,21 +771,6 @@ namespace EQLogParser
       return isHitType;
     }
 
-    private static uint GetMin(uint to, uint from)
-    {
-      if (to == 0 && from > 0)
-      {
-        return from;
-      }
-
-      if (from == 0 && to > 0)
-      {
-        return to;
-      }
-
-      return Math.Min(to, from);
-    }
-
     internal static void ResetPlayerStats(PlayerStats stats)
     {
       stats.Total = 0;
@@ -846,6 +818,34 @@ namespace EQLogParser
       stats.TotalNonTwincastLucky = 0;
       stats.TotalRiposte = 0;
       stats.TotalSlay = 0;
+    }
+
+    private static void AddTimeEntry(ConcurrentDictionary<string, TimeRange> ranges, KeyValuePair<string, TimeSegment> entry)
+    {
+      if (ranges.TryGetValue(entry.Key, out var range))
+      {
+        range.Add(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
+      }
+      else
+      {
+        // make sure to copy the time segment and not just use the one in the Fight
+        ranges[entry.Key] = new TimeRange(new TimeSegment(entry.Value.BeginTime, entry.Value.EndTime));
+      }
+    }
+
+    private static uint GetMin(uint to, uint from)
+    {
+      if (to == 0 && from > 0)
+      {
+        return from;
+      }
+
+      if (from == 0 && to > 0)
+      {
+        return to;
+      }
+
+      return Math.Min(to, from);
     }
   }
 }

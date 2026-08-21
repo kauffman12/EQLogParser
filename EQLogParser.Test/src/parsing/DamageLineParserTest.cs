@@ -36,7 +36,7 @@ namespace EQLogParser
       _dataStore = null;
     }
 
-    private static DamageRecord ParseAction(string action)
+    private static DamageRecord ParseAction(string? action)
     {
       return DamageLineParser.ParseLine(action);
     }
@@ -598,7 +598,7 @@ namespace EQLogParser
     [TestMethod]
     public void TestParseLine_NullAction()
     {
-      var record = ParseAction(null!);
+      var record = ParseAction(null);
       Assert.IsNull(record);
     }
 

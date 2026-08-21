@@ -267,8 +267,8 @@ namespace EQLogParser
       return;
     }
 
-    internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
+    internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
 
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);

@@ -80,7 +80,7 @@ namespace EQLogParser
 
   internal class TankGroupCollection : RecordGroupCollection
   {
-    readonly int _damageType;
+    private readonly int _damageType;
     internal TankGroupCollection(List<List<ActionGroup>> recordGroups, int damageType) : base(recordGroups)
     {
       _damageType = damageType;
