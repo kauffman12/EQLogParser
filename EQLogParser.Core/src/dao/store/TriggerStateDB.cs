@@ -77,6 +77,10 @@ namespace EQLogParser
             CheckpointSize = 10
           };
 
+          Log.Info($"Opening trigger database: {path}");
+
+          // Must run before any typed query — see StripLegacyTypeMarkers for why.
+          StripLegacyTypeMarkers();
 
           /* print all data
           Directory.CreateDirectory(@"r:\dump");
@@ -107,33 +111,7 @@ namespace EQLogParser
           // create default data
           var tree = _db.GetCollection<TriggerNode>(TreeCol);
 
-          // Databases written by pre-refactor builds stored imported nodes with LiteDB's
-          // polymorphic type marker "_type" = "EQLogParser.ExportTriggerNode, EQLogParser".
-          // That class now lives in EQLogParser.Core, so resolving the stale marker throws on
-          // the first tree query ("not found in current domain") and makes the whole DB unreadable.
-          // The marker is inert: nodes were always stored flat (Parent/Id links) and the export
-          // type persisted nothing beyond TriggerNode itself — strip it once so old databases
-          // open again. No-op for every database the current build writes.
-          {
-            var rawTree = _db.GetCollection<BsonDocument>(TreeCol);
-            var stripped = 0;
-            foreach (var doc in rawTree.FindAll())
-            {
-              if (doc.TryGetValue("_type", out var typeMarker) &&
-                  typeMarker.Type == BsonType.String &&
-                  typeMarker.AsString == "EQLogParser.ExportTriggerNode, EQLogParser")
-              {
-                doc.Remove("_type");
-                rawTree.Update(doc);
-                stripped++;
-              }
-            }
-
-            // one-time cleanup — a single summary line (databases hold thousands of nodes), and
-            // only on the first launch after an upgrade, since it never matches clean databases
-            if (stripped > 0)
-              Log.Info($"Removed stale ExportTriggerNode type marker from {stripped} legacy trigger document(s).");
-          }
+          /* legacy type-marker cleanup runs earlier, in StripLegacyTypeMarkers */
 
           /* fix broken
           var parent = tree.FindOne(n => n.Parent == null && n.Name == Triggers);
@@ -263,7 +241,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          Log.Warn("Error opening Trigger Database.", ex);
+          Log.Error("Error opening Trigger Database.", ex);
         }
       }
     }
@@ -272,7 +250,12 @@ namespace EQLogParser
     internal Task<TriggerNode> GetDefaultTimerOverlay() => GetDefaultOverlay(false);
     internal Task<TreeData> GetOverlayTree() => GetTree(Overlays);
     internal Task<TreeData> GetTriggerTree(string playerId) => GetTree(Triggers, playerId);
-    internal async Task Dispose() => await _taskQueue.Stop();
+    /* null-safe: if the constructor failed before the task queue existed, Stop() is unavailable */
+    internal async Task Dispose()
+    {
+      if (_taskQueue is { } taskQueue)
+        await taskQueue.Stop();
+    }
 
     internal async Task AddCharacter(string name, string filePath, string voice, int voiceRate, int customVolume,
       string activeColor, string idleColor, string resetColor, string fontColor, string parentId = null)
@@ -1649,6 +1632,84 @@ namespace EQLogParser
     }
 
     // remove eventually
+    /* Databases written by pre-refactor builds stored imported nodes with LiteDB's polymorphic
+     * type marker "_type" = "EQLogParser.ExportTriggerNode, EQLogParser". That class now lives in
+     * EQLogParser.Core, so resolving the stale marker throws 'Type ... not found in current
+     * domain' and every typed query touching an affected document fails — the whole database
+     * becomes unreadable (ctor queries, GetTree/FixEnabledState, LoadOverlayStyles).
+     *
+     * The pass is raw (BsonDocument) so it cannot itself trip over the marker, and it runs in
+     * the constructor before any typed query, so no earlier failure can skip it. Stripping is
+     * lossless: nodes were always stored flat via Parent/Id links and the export type persisted
+     * nothing beyond TriggerNode itself. Nested child sub-documents are cleaned too. No-op for
+     * every database the current build writes (it never emits the marker), so this reports and
+     * writes only on the first launch after an upgrade. */
+    private void StripLegacyTypeMarkers()
+    {
+      const string StaleMarker = "EQLogParser.ExportTriggerNode, EQLogParser";
+      foreach (var name in _db.GetCollectionNames())
+      {
+        try
+        {
+          var removed = 0;
+          var raw = _db.GetCollection<BsonDocument>(name);
+          // The read must be fully materialized before any write: on the shared connection this
+          // store uses, starting a write aborts a live query cursor ("no more active transaction
+          // for this cursor") and would leave the rest of the collection un-cleaned.
+          foreach (var doc in raw.FindAll().ToList())
+          {
+            if (StripStaleMarker(doc, StaleMarker))
+            {
+              raw.Update(doc);
+              removed++;
+            }
+          }
+
+          if (removed > 0)
+            Log.Info($"Removed {removed} stale ExportTriggerNode type marker(s) from the '{name}' collection.");
+        }
+        catch (Exception ex)
+        {
+          // one bad collection must not block cleanup of the others or app startup
+          Log.Error($"Failed to clean legacy type markers in the '{name}' collection.", ex);
+        }
+      }
+    }
+
+    /* Removes the stale marker from a document and any nested sub-documents; true if changed. */
+    private static bool StripStaleMarker(BsonDocument doc, string staleMarker)
+    {
+      var changed = false;
+
+      if (doc.TryGetValue("_type", out var marker) &&
+          marker.Type == BsonType.String &&
+          marker.AsString == staleMarker)
+      {
+        doc.Remove("_type");
+        changed = true;
+      }
+
+      foreach (var (field, value) in doc)
+      {
+        if (value.Type is BsonType.Document && StripStaleMarker(value.AsDocument, staleMarker))
+        {
+          changed = true;
+        }
+        else if (value.Type == BsonType.Array)
+        {
+          foreach (var item in value.AsArray)
+          {
+            if (item.Type is BsonType.Document && StripStaleMarker(item.AsDocument, staleMarker))
+            {
+              changed = true;
+            }
+          }
+        }
+      }
+
+      return changed;
+    }
+
     private static void UpgradeConfig(ILiteCollection<TriggerConfig> configs)
     {
       if (configs.FindAll().FirstOrDefault() is { } config)

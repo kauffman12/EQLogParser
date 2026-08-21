@@ -89,13 +89,23 @@ namespace EQLogParser
         nameKey = probeDoc.TryGetValue("Name", out _) ? "Name" : "name";
         raw.GetCollection<BsonDocument>("Tree").Delete("probe");
 
-        // legacy imported node: root-level (no Parent) with the stale type marker
-        raw.GetCollection<BsonDocument>("Tree").Insert(new BsonDocument
-        {
-          ["_id"] = "legacy-node",
-          ["_type"] = "EQLogParser.ExportTriggerNode, EQLogParser",
-          [nameKey] = TriggerStateDB.Overlays
-        });
+        // legacy imported node: root-level (no Parent) with the stale type marker, plus a nested
+        // child carrying its own marker (pre-refactor documents may nest children)
+        var nested = new BsonDocument();
+        nested.Add("_id", "nested-1");
+        nested.Add("_type", "EQLogParser.ExportTriggerNode, EQLogParser");
+        var legacyDoc = new BsonDocument();
+        legacyDoc.Add("_id", "legacy-node");
+        legacyDoc.Add("_type", "EQLogParser.ExportTriggerNode, EQLogParser");
+        legacyDoc.Add(nameKey, TriggerStateDB.Overlays);
+        legacyDoc.Add("nodes", new BsonArray { nested });
+        raw.GetCollection<BsonDocument>("Tree").Insert(legacyDoc);
+
+        // the marker could in principle sit in any collection — the cleanup must sweep them all
+        var configDoc = new BsonDocument();
+        configDoc.Add("_id", "legacy-config");
+        configDoc.Add("_type", "EQLogParser.ExportTriggerNode, EQLogParser");
+        raw.GetCollection<BsonDocument>("Config").Insert(configDoc);
       }
 
       var db = Store(path);
@@ -108,9 +118,27 @@ namespace EQLogParser
 
       using (var check = new LiteDatabase(path))
       {
+        // no stale marker left anywhere — top-level or nested
+        foreach (var name in check.GetCollectionNames())
+        {
+          foreach (var doc in check.GetCollection<BsonDocument>(name).FindAll())
+          {
+            var id = doc["_id"].AsString;
+            Assert.IsFalse(doc.TryGetValue("_type", out _), $"marker survived in '{name}' document {id}");
+            if (doc.TryGetValue("nodes", out var nodes) && nodes.Type == BsonType.Array)
+            {
+              foreach (var item in nodes.AsArray)
+              {
+                Assert.IsFalse(item.Type == BsonType.Document && item.AsDocument.TryGetValue("_type", out _),
+                  $"marker survived nested in '{name}' document {id}");
+              }
+            }
+          }
+        }
+
         var docs = check.GetCollection<BsonDocument>("Tree").FindAll().ToList();
-        CollectionAssert.DoesNotContain(docs.Select(d => d.TryGetValue("_type", out _)).ToList(), true);
-        Assert.IsTrue(docs.Any(d => d.TryGetValue(nameKey, out var v) && v.AsString == TriggerStateDB.Overlays));
+        Assert.IsTrue(docs.Any(d => d.TryGetValue(nameKey, out var v) && v.AsString == TriggerStateDB.Overlays),
+          "the legacy node itself must survive intact");
       }
     }
 
