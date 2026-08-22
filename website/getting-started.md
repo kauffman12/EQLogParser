@@ -72,6 +72,18 @@ Important:
 - **All imported triggers start disabled**, and per-character enable states are not carried over from NAG — enable what you want for your characters in the Trigger Manager
 - Running the migration again creates a new timestamped folder; it never updates an earlier import, so delete old ones once you've organized your triggers
 
+## Moving to a New PC
+
+EQLogParser keeps all of its configuration — characters, triggers, custom variables, overlays, and app settings — in `%AppData%\EQLogParser`. The built-in backup tool packages that entire folder into a single zip file:
+
+1. On your old PC, select **Tools → Create Backup File**
+2. Save the `.zip` somewhere you can move it (USB drive, cloud storage, etc.) — the default filename includes the version and date/time
+3. Install EQLogParser on the new PC and launch it once
+4. Select **Tools → Restore From Backup** and choose your backup file
+5. Click OK on the confirmation dialog — EQLogParser replaces its configuration with the one from the backup and restarts automatically
+
+If a restore fails partway through, your existing configuration is rolled back automatically. Creating a fresh backup before big changes is also a good habit — just keep the `.zip` somewhere safe.
+
 ## Common Gotchas
 
 - **Game log filters**: Make sure EQ chat filters for DoT, spell, and combat messages are turned off (in-game: Options → Chat Settings). Otherwise, EQLogParser won't see the messages.
