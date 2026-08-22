@@ -185,7 +185,7 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.18-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.30-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 function ShowDotNetDownloadPage: Boolean;
@@ -217,7 +217,7 @@ begin
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.18-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.30-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;
