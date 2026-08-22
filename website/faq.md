@@ -116,7 +116,7 @@
 7. Do not extract the **.tgf.gz** files onto your computer.
 
 ## Coming from NAG?
-1. See **Migrating from NAG** in [Getting Started](getting-started.html#5-migrating-from-nag) — one menu command imports your entire trigger and overlay database
+1. See **Migrating from NAG** in [Getting Started](getting-started.html#6-migrating-from-nag) — one menu command imports your entire trigger and overlay database
 2. In short: **Tools → Migrate NAG Database**, pick the folder that contains `trigger-database.json`, and everything lands in a new `NAG Ingest - {date time}` folder under Triggers
 3. Imported triggers start **disabled** so you can enable what you want — check the HTML report from the summary dialog for any NAG features that have no EQLogParser equivalent
 
