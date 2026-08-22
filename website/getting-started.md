@@ -12,16 +12,14 @@ EQLogParser is a real-time combat analyzer and damage parsing application built 
 - **Visual overlays** (damage meter, timers, text displays) that can show in OBS for streaming
 - **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG databases
 
-## Quick Start
-
-### 1. Download & Install
+## 1. Download & Install
 
 1. Visit the [Download page](download.html) and grab the latest installer.
 2. Run `EQLogParser-install-{version}.exe` as Administrator (required for log file access).
 3. If `.NET 8.0 Desktop Runtime` is not already installed, the installer will prompt you to install it — follow the on-screen instructions.
 4. After installation, launch EQLogParser from the Start menu or desktop shortcut.
 
-### 2. Configure Your Character
+## 2. Configure Your Character
 
 1. Open the **Trigger Manager** (View → Triggers → Trigger Manager).
 2. In the **Manage Characters** pane on the left, click **Add** and enter your character name exactly as it appears in-game.
@@ -29,7 +27,7 @@ EQLogParser is a real-time combat analyzer and damage parsing application built 
 4. Click **Save**, then check the box next to the character in the list to enable monitoring.
 5. Repeat for each character you want to track.
 
-### 3. Enable Features
+## 3. Enable Features
 
 Once a log file is active, EQLogParser will automatically:
 
@@ -44,7 +42,7 @@ For audio triggers and overlays:
 3. Right-click → **New Trigger**, set a **Name**, enter a **Pattern** to match, and configure display/speak/timer options
 4. Enable the trigger by checking the box next to it
 
-### 4. Importing Triggers from GINA
+## 4. Importing Triggers from GINA
 
 If you're switching from GINA:
 
@@ -52,7 +50,7 @@ If you're switching from GINA:
 2. Select **Import** and choose your `.gtp` GINA package file
 3. Imported triggers will be highlighted — review and adjust patterns as needed
 
-### 5. Migrating from NAG
+## 5. Migrating from NAG
 
 If you're coming from NAG, EQLogParser can import your entire NAG database in one step:
 
