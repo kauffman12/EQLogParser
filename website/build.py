@@ -180,6 +180,34 @@ def build_toc(toc_title: str, toc_items: str) -> str:
 def build_empty_toc() -> str:
     return """<nav class="toc"></nav>"""
 
+# Release notes H1 format: "2.3.60 | 08/18/26" — used to group releases by year
+RELEASE_NOTES_HEADER_RE = re.compile(r'^\S+\s*\|\s*\d{2}/\d{2}/(\d{2})$')
+
+def build_releasenotes_year_toc(soup) -> str:
+    """Build a 'browse by year' nav for the release notes page.
+
+    A full TOC would list 60+ releases, so instead we anchor to the first
+    release of each year. Existing H1 id slugs are left untouched so the
+    version-hash anchor compatibility script keeps working."""
+    first_h1_by_year = {}
+    for h1 in soup.find_all('h1'):
+        match = RELEASE_NOTES_HEADER_RE.match(h1.get_text().strip())
+        if not match:
+            continue
+        year = 2000 + int(match.group(1))
+        if year not in first_h1_by_year:
+            anchor = soup.new_tag('span', attrs={'id': f'year-{year}'})
+            h1.insert_before(anchor)
+            first_h1_by_year[year] = h1
+    if not first_h1_by_year:
+        return build_empty_toc()
+
+    items = ''.join(f'<li><a href="#year-{year}">{year}</a></li>' for year in sorted(first_h1_by_year, reverse=True))
+    older = soup.find('h1', string=lambda s: s and s.strip().startswith('2.2.x'))
+    if older is not None:
+        items += f'<li><a href="#{older["id"]}">Older versions (2.1.x–2.2.x)</a></li>'
+    return build_toc('Browse by Year', items)
+
 def build_nav_header() -> str:
     """Build the inner nav content (without outer <nav> wrapper).
     The outer <nav class="topbar"> is added by the template or wrap_docs_html."""
@@ -198,7 +226,7 @@ def build_nav_header() -> str:
 </div>"""
     return links_start + all_links + nav_end
 
-def process_markdown_to_html(version: str, url: str, input_path: Path, output_path: Path, title: str, toc_title: str, nav_header_html: str, decorate_h2=False):
+def process_markdown_to_html(version: str, url: str, input_path: Path, output_path: Path, title: str, toc_title: str, nav_header_html: str, decorate_h2=False, toc_builder=None):
     md_text = input_path.read_text(encoding='utf-8')
     html_body = convert_markdown_to_html(md_text)
     soup = BeautifulSoup(html_body, 'html.parser')
@@ -223,7 +251,9 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
             h2.append(span)
 
     toc = ''
-    if toc_title != None and toc_items != '':
+    if toc_builder is not None:
+      toc = toc_builder(soup)
+    elif toc_title != None and toc_items != '':
       toc = build_toc(toc_title, toc_items)
     else:
       toc = build_empty_toc()
@@ -399,7 +429,7 @@ def main():
 
     DIST_DIR.mkdir(exist_ok=True)
 
-    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', None, header_html)
+    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', None, header_html, toc_builder=build_releasenotes_year_toc)
     process_markdown_to_html(version, url, Path('getting-started.md'), DIST_DIR / 'getting-started.html', 'Getting Started', 'Contents', header_html, decorate_h2=True)
     process_markdown_to_html(version, url, Path('triggers.md'), DIST_DIR / 'documentation.html', 'Triggers & Regex Reference', 'Contents', header_html, decorate_h2=True)
     process_markdown_to_html(version, url, Path('faq.md'), DIST_DIR / 'faq.html', 'FAQ & Support', 'Contents', header_html, decorate_h2=True)
