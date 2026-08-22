@@ -1,0 +1,10 @@
+# Dependencies for build.py — install into a venv from the website/ folder:
+#   python -m venv .venv
+#   .venv\Scripts\pip install -r requirements.txt    (Windows)
+#   .venv/bin/pip install -r requirements.txt        (Linux/macOS)
+# then run the build with the venv's python:
+#   .venv\Scripts\python build.py
+markdown
+beautifulsoup4
+# Bundles the pandoc executable, so no separate pandoc install is needed
+pypandoc-binary
