@@ -89,6 +89,7 @@ The `.padleft`, `.padright`, and `.center` modifiers allow you to format text wi
 - **`.center:width`** - Centers the value within the specified width by adding spaces on both sides
 
 Example Usage:
+
 - `{S1.padleft:20}` - Left-pads the captured value to 20 characters total
 - `{S1.padright:20}` - Right-pads the captured value to 20 characters total
 - `{S1.center:20}` - Centers the captured value within 20 characters
@@ -237,6 +238,7 @@ When the 3-minute buff timer ends, the display shows the caster name and the var
 The **Match Variables** field (found under *Basic Trigger Options*) lets you add an extra gate on top of the Pattern match. Even if the Pattern matches, the trigger will **only fire** if the condition expression evaluates to `true`.
 
 This is useful for situations like:
+
 - Only fire when a captured HP value is above 50
 - Only fire when a custom variable set by another trigger has a specific value
 - Combine multiple checks with `and` / `or` logic
@@ -281,6 +283,7 @@ All comparison operators are **case-insensitive**.
 | `contains` | — | Contains substring (case-insensitive) | `{name} contains dragon` |
 
 **Important notes:**
+
 - Numeric comparisons (`>`, `<`, `>=`, `<=`) attempt to parse both sides as numbers. If either side cannot be parsed as a number, the comparison returns `false`.
 - `contains` is case-insensitive. If the right-hand side resolves to `null` (unset variable), the result is `false`.
 - `=` and `==` treat `null` values correctly: `{unsetVar} = null` is `true`, `{setVar} = null` is `false`.
@@ -316,6 +319,7 @@ Quoted strings preserve spaces. Barewords cannot contain spaces.
 ### Standalone Variables
 
 A variable by itself (no comparison) is treated as a boolean check:
+
 - `{enabled}` → `true` if the variable is set and non-empty, `false` otherwise
 - `not {disabled}` → `true` if `disabled` is unset or empty
 

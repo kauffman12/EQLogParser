@@ -38,6 +38,7 @@ Once a log file is active, EQLogParser will automatically:
 - Show timers in the **Timeline** charts
 
 For audio triggers and overlays:
+
 1. Open the **Trigger Manager** (View → Triggers → Trigger Manager)
 2. Create a new trigger folder or use an existing one
 3. Right-click → **New Trigger**, set a **Name**, enter a **Pattern** to match, and configure display/speak/timer options
@@ -46,6 +47,7 @@ For audio triggers and overlays:
 ### 4. Importing Triggers from GINA
 
 If you're switching from GINA:
+
 1. In Trigger Manager, right-click the **Triggers** folder
 2. Select **Import** and choose your `.gtp` GINA package file
 3. Imported triggers will be highlighted — review and adjust patterns as needed
@@ -59,12 +61,14 @@ If you're coming from NAG, EQLogParser can import your entire NAG database in on
 3. Wait for the summary dialog (large databases take a moment)
 
 What you get:
+
 - A new **`NAG Ingest - {date time}`** folder under **Triggers** with your NAG folders replicated. Triggers whose NAG folder was deleted are placed in an **Orphaned Triggers** sub-folder so nothing is lost
 - Your NAG **overlays** are imported alongside the triggers (except FCT overlays, which have no EQLogParser equivalent — the dialog tells you how many were skipped)
 - A summary dialog and an **HTML report** ("Open Report" button) listing every trigger with any features that have no EQLogParser equivalent (e.g. class level filtering, per-phrase action scoping). Check it before enabling triggers
 - **Audio files are not copied** — NAG stores them separately. Triggers referencing missing audio are listed in the report; copy the `.wav`/`.mp3` files into EQLogParser's Sounds folder as needed (Tools → Open Sounds Folder)
 
 Important:
+
 - **All imported triggers start disabled**, and per-character enable states are not carried over from NAG — enable what you want for your characters in the Trigger Manager
 - Running the migration again creates a new timestamped folder; it never updates an earlier import, so delete old ones once you've organized your triggers
 
