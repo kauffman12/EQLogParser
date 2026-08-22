@@ -1059,6 +1059,12 @@ namespace EQLogParser
       window.ShowDialog();
     }
 
+    private void TtsEngineClick(object sender, RoutedEventArgs e)
+    {
+      var window = new TtsEngineWindow();
+      window.ShowDialog();
+    }
+
     private void QuickShareClick(object sender, RoutedEventArgs e)
     {
       var window = new QuickShareWindow();
