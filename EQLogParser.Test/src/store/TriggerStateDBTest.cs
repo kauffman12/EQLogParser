@@ -54,6 +54,22 @@ namespace EQLogParser
     private static List<ExportTriggerNode> Wrap(params ExportTriggerNode[] children) =>
       [new ExportTriggerNode { Name = TriggerStateDB.Triggers, Nodes = [..children] }];
 
+    /// <summary>Fails if <paramref name="value"> or anything nested in it is a document with a
+    /// LiteDB polymorphic "_type" marker (data must not depend on assembly identity).</summary>
+    private static void AssertNoTypeMarker(BsonValue value, string where)
+    {
+      switch (value)
+      {
+        case BsonDocument doc:
+          Assert.IsFalse(doc.TryGetValue("_type", out _), $"polymorphic marker found in {where}");
+          foreach (var pair in doc) AssertNoTypeMarker(pair.Value, $"{where}.{pair.Key}");
+          break;
+        case BsonArray arr:
+          for (var i = 0; i < arr.Count; i++) AssertNoTypeMarker(arr[i], $"{where}[{i}]");
+          break;
+      }
+    }
+
     [TestMethod]
     public async Task NewDb_Bootstraps_RootsAndDefaultOverlays()
     {
@@ -389,6 +405,89 @@ namespace EQLogParser
       var timer = nodes2.Single(n => n.Id == overlayId);
       Assert.AreEqual("16pt", timer.OverlayData.FontSize);
       Assert.AreEqual("Bar Timer", timer.Name);
+    }
+
+    /* Overlay import must persist plain TriggerNode documents. Inserting the ExportTriggerNode
+     * instance directly made LiteDB stamp "_type": "EQLogParser.ExportTriggerNode, <assembly>"
+     * onto each document, coupling every imported overlay to the assembly that class lives in —
+     * the same coupling whose stale markers forced the 1.0.2 legacy-marker migration. */
+    [TestMethod]
+    public async Task ImportOverlays_StoresPlainTriggerNodes_NoPolymorphicMarkerInDb()
+    {
+      var (db, path) = FreshStore();
+      await using (var _ = db)
+      {
+        await db.GetOverlayTree();
+        var export = new List<ExportTriggerNode> { new()
+        {
+          Name = TriggerStateDB.Overlays,
+          Nodes = [new ExportTriggerNode { Id = Guid.NewGuid().ToString(), Name = "Imported Bar", OverlayData = new Overlay { FontSize = "10pt" } }]
+        } };
+        await db.ImportOverlays(export);
+      }
+
+      using (var check = new LiteDatabase(path))
+      {
+        // no marker anywhere in the file — top-level or nested inside a folder's children array
+        foreach (var name in check.GetCollectionNames())
+        {
+          foreach (var doc in check.GetCollection<BsonDocument>(name).FindAll())
+          {
+            AssertNoTypeMarker(doc, $"'{name}' document {doc["_id"]}");
+          }
+        }
+      }
+
+      // and the marker-free document round-trips: the overlay is still fully readable after a
+      // full store reopen
+      var reopened = Store(path);
+      await using (var _ = reopened)
+      {
+        var (_, nodes, _) = await reopened.GetOverlayTree();
+        var bar = nodes.Single(n => n.Name == "Imported Bar");
+        Assert.AreEqual("10pt", bar.OverlayData?.FontSize);
+      }
+    }
+
+    /* Both NAG and GINA imports land in the store through ImportTriggers() with an
+     * ExportTriggerNode tree. Every branch of the import must persist plain TriggerNode
+     * documents — pins that none of them serializes the export type (see the overlay twin of
+     * this test for why a "_type" marker is poison). */
+    [TestMethod]
+    public async Task ImportTriggers_StoresPlainTriggerNodes_NoPolymorphicMarkerInDb()
+    {
+      var (db, path) = FreshStore();
+      await using (var _ = db)
+      {
+        var (root, _, _) = await db.GetTriggerTree("P1");
+        // NAG-shaped export: folders, leaves with OriginalIds and a same-name duplicate kept
+        // apart by id
+        var export = Wrap(
+          ExportLeaf("Dup", "first", originalId: "a"),
+          new ExportTriggerNode { Name = "Common", Nodes =
+            [
+              ExportLeaf("Boss #1", "regex-1", originalId: "fam"),
+              ExportLeaf("Boss #2 (Timer 2)", "timer-1", originalId: "fam"),
+            ] },
+          ExportLeaf("Dup", "second", originalId: "b"));
+        await db.ImportTriggers(root, export);
+
+        // and the overlay half of a NAG import, so one test covers both entry points
+        await db.ImportOverlays(new List<ExportTriggerNode> { new()
+        {
+          Name = TriggerStateDB.Overlays,
+          Nodes = [new ExportTriggerNode { Id = Guid.NewGuid().ToString(), Name = "Imported Bar", OverlayData = new Overlay() }]
+        } });
+      }
+
+      using var check = new LiteDatabase(path);
+      foreach (var name in check.GetCollectionNames())
+      {
+        foreach (var doc in check.GetCollection<BsonDocument>(name).FindAll())
+        {
+          AssertNoTypeMarker(doc, $"'{name}' document {doc["_id"]}");
+        }
+      }
     }
 
     [TestMethod]

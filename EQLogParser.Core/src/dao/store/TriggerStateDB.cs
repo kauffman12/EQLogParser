@@ -1315,8 +1315,11 @@ namespace EQLogParser
             if (newNode.OverlayData != null)
             {
               // fix alignment from old imports if needed
+              // Persist a plain TriggerNode (no ExportTriggerNode _type marker) so the
+              // document doesn't depend on which assembly the class lives in — the same
+              // coupling that required the 1.0.2 legacy-marker migration.
               SetVerticalAlignment(newNode);
-              Insert(newNode, index, newNode.Id);
+              Insert(newNode.ToTriggerNode(), index, newNode.Id);
             }
             // make sure it's a new directory
             else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node)
