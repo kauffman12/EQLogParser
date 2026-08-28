@@ -21,6 +21,8 @@ After completing work, verify:
 ## Agent Behavior
 - **Ask for Clarification**: If a feature requirement is ambiguous, ask before implementing.
 - **Read the Syncfusion PDF files**: If there's a question about Syncfusion APIs look under syncfusion-wpf for info.
+- **Never Use Claude/Anthropic Models**: Never use Claude or any other Anthropic model/provider for anything — no Claude Code, no Anthropic LLMs, no Anthropic VLMs.
+- **Vision / Image Inspection**: Handle vision requests with `read` (native vision) and local tools only. Never call external or remote VLM services (e.g., `inspect_image`).
 
 ## Important: Never Touch
 - `BackupUtil`

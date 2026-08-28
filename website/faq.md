@@ -74,8 +74,8 @@
 </a>
 
 ## How do I get overlays to show in OBS?
-1. Enable **Stream Mode** in the overlay settings within EQLogParser
-    - Open the overlay configuration and check the **Stream Mode** checkbox
+1. Enable **Streamer Mode** in the overlay settings within EQLogParser
+    - Open the overlay configuration and check the **Streamer Mode** checkbox
 2. In OBS, add a **Window Capture** source (not Game Capture)
     - Set the **Capture Method** to **Windows 10 or newer** by right-clicking the source → Properties
 3. Select the correct window from the dropdown in OBS
@@ -99,9 +99,9 @@
     - Open these windows from the **View** menu → **Windows**
     - Remove any entries that don't make sense (e.g. boss names in the players list, or your pet in the wrong owner)
 3. After cleaning up the lists, reload the log file so the parser can re-evaluate
-4. If a specific mob is misidentified during a fight, right-click it and select **Set As Pet** or **Set As NPC** to correct it
-5. For damage shields, DoTs, and environmental effects showing as monsters in the DPS Summary, try unchecking the **Tanking** checkbox
-    - This hides objects that damage players but are not actively attacking back
+4. If a specific mob is misidentified during a fight, right-click it and select **Assign Unknown as Pet of** or **Set as Verified Player** to correct it
+5. For damage shields, DoTs, and environmental effects showing as monsters in the DPS Summary, try unchecking the **Tanking** checkbox in the **Fight List**
+    - This hides fights that contain only tanking data
 
 ## How do I import a trigger package (.tgf.gz or .gtp)?
 1. Open the **Trigger Manager** window
@@ -180,7 +180,7 @@ Once installation is finished, simply click the **Run App** button to launch EQL
 ## Manually installing without Flatpak/Bottles
 
 ### Download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html).
-Use the following steps to install under Linx (tested on Ubuntu/Debian-based systems):
+Use the following steps to install under Linux (tested on Ubuntu/Debian-based systems):
 ```
 sudo apt install wine  # (version 10)
 sudo apt install winetricks  # (version 20250102-1)
