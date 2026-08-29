@@ -10,49 +10,11 @@ namespace EQLogParser
     public string Id { get; set; }
     public string Name { get; set; }
 
-    // Explicit port of the old Mapperly mapping (the mapper stays in the WPF host): copies all
-    // Overlay fields, drops the legacy-only Id/Name.
-    public Overlay ToOverlay()
-    {
-      return new Overlay
-      {
-        Source = Source,
-        OverlayComments = OverlayComments,
-        FontSize = FontSize,
-        FontWeight = FontWeight,
-        SortBy = SortBy,
-        HorizontalAlignment = HorizontalAlignment,
-        VerticalAlignment = VerticalAlignment,
-        FontColor = FontColor,
-        FontFamily = FontFamily,
-        ActiveColor = ActiveColor,
-        BackgroundColor = BackgroundColor,
-        IdleColor = IdleColor,
-        ResetColor = ResetColor,
-        OverlayColor = OverlayColor,
-        IdleTimeoutSeconds = IdleTimeoutSeconds,
-        FadeDelay = FadeDelay,
-        UseStandardTime = UseStandardTime,
-        ShowMillis = ShowMillis,
-        IsTimerOverlay = IsTimerOverlay,
-        IsTextOverlay = IsTextOverlay,
-        IsDefault = IsDefault,
-        ShowActive = ShowActive,
-        ShowIdle = ShowIdle,
-        ShowReset = ShowReset,
-        StreamerMode = StreamerMode,
-        HideDuplicates = HideDuplicates,
-        UseTextDropShadow = UseTextDropShadow,
-        TextOverlayWrap = TextOverlayWrap,
-        TimerMode = TimerMode,
-        Height = Height,
-        Width = Width,
-        Top = Top,
-        Left = Left,
-        ClosePattern = ClosePattern,
-        UseCloseRegex = UseCloseRegex
-      };
-    }
+    /* Port to the current model: Mapperly's generated deep clone of the base type copies every
+     * Overlay member and drops the legacy-only Id/Name. The hand-written field list this replaced
+     * silently dropped any Overlay field added later; the generated clone is rebuilt from the type
+     * on every compile, and OverlayCloneTest asserts full coverage. */
+    public Overlay ToOverlay() => ModelMapper.Clone(this);
   }
   internal class TriggerState
   {

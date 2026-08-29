@@ -17,8 +17,12 @@ namespace EQLogParser
     internal QuickShareManager()
     {
       BindingOperations.EnableCollectionSynchronization(Records, _lock);
-      // Mirror each accepted record into the bound collection on the UI thread.
-      QuickShareState.Instance.Accepted += record => _ = UiUtil.InvokeAsync(() => Records.Insert(0, record));
+      // Mirror each accepted record into the bound collection on the UI thread. The raiser is the
+      // chat-parsing thread, so this must stay fire-and-forget — InvokeAsyncLogged because a plain
+      // discarded post leaves a failure (e.g. collection torn down during shutdown) unobserved and
+      // silently stops the mirror.
+      QuickShareState.Instance.Accepted += record => UiUtil.InvokeAsyncLogged(
+        () => Records.Insert(0, record), "QuickShareManager: mirroring accepted record into the bound collection");
     }
 
     /* Legacy share call path; GINA adds directly through QuickShareState (Core can't see this class). */

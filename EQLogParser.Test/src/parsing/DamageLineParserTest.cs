@@ -2,6 +2,9 @@ using Moq;
 
 namespace EQLogParser
 {
+  /* Sets the process-wide CWD for data-file access, so it must not run concurrently with
+   * other test classes. */
+  [DoNotParallelize]
   [TestClass]
   public class DamageLineParserTest
   {

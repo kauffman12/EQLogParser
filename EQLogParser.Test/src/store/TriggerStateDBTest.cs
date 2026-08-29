@@ -3,7 +3,9 @@ using LiteDB;
 namespace EQLogParser
 {
   /* Store-level tests that run against real LiteDB databases in temp directories. These run on
-   * any OS (no WPF) now that the store lives in Core. */
+   * any OS (no WPF) now that the store lives in Core. Some tests swap the process-wide
+   * TriggerStorePlatform hooks, so the whole class is kept out of the parallel run. */
+  [DoNotParallelize]
   [TestClass]
   public sealed class TriggerStateDBTest
   {
@@ -353,6 +355,71 @@ namespace EQLogParser
       Assert.AreEqual("timer-2", family.Single(n => n.Name == "P (Timer 2)").TriggerData.Pattern);
     }
 
+    /* SelectedOverlays are validated down to existing overlay-leaf ids on BOTH import branches —
+     * the update-in-place branch used to skip validation entirely, so re-imports could revive
+     * dangling overlay references. */
+    [TestMethod]
+    public async Task Import_SelectedOverlays_StrippedToExistingOverlays_OnInsertAndUpdate()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      var root = (await db.GetTriggerTree("P1")).Root;
+      var overlayRoot = (await db.GetOverlayTree()).Root;
+      var overlay = await db.CreateOverlay(overlayRoot.Id, "My Overlay", isTextOverlay: true);
+
+      List<ExportTriggerNode> BuildExport(string pattern) => Wrap(new ExportTriggerNode
+      {
+        Name = "T",
+        TriggerData = new Trigger
+        {
+          Pattern = pattern,
+          SelectedOverlays = [overlay.Id, "missing-overlay-id"]
+        }
+      });
+
+      // insert branch
+      await db.ImportTriggers(root, BuildExport("p1"));
+      var (_, nodes, _) = await db.GetTriggerTree("P1");
+      CollectionAssert.AreEqual(new List<string> { overlay.Id }, nodes.Single(n => n.Name == "T").TriggerData.SelectedOverlays);
+
+      // update-in-place branch (same name, changed pattern)
+      await db.ImportTriggers(root, BuildExport("p2"));
+      var (_, nodes2, _) = await db.GetTriggerTree("P1");
+      var t = nodes2.Single(n => n.Name == "T");
+      Assert.AreEqual("p2", t.TriggerData.Pattern);
+      CollectionAssert.AreEqual(new List<string> { overlay.Id }, t.TriggerData.SelectedOverlays);
+    }
+
+    /* A folder wrapper whose OriginalId collides with a stored leaf's id must fall through to
+     * insert (kind-safe matching) instead of reaching the overwrite branch with
+     * TriggerData == null and erasing the leaf. */
+    [TestMethod]
+    public async Task Import_OriginalId_FolderWrapperCollidingWithLeaf_DoesNotErase()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      var root = (await db.GetTriggerTree("P1")).Root;
+
+      await db.ImportTriggers(root, Wrap(ExportLeaf("Boss", "boss-pat", originalId: "id-1")));
+
+      // corrupt/hand-edited export: the folder wrapper reuses the leaf's id
+      await db.ImportTriggers(root, Wrap(new ExportTriggerNode
+      {
+        Name = "Boss Wrapper",
+        OriginalId = "id-1",
+        Nodes = [ExportLeaf("Inside", "inside-pat")]
+      }));
+
+      var (_, nodes, _) = await db.GetTriggerTree("P1");
+      var leaf = nodes.Single(n => n.Name == "Boss");
+      Assert.IsNotNull(leaf.TriggerData, "stored leaf data must survive a kind-mismatched folder import");
+      Assert.AreEqual("boss-pat", leaf.TriggerData.Pattern);
+
+      var folder = nodes.SingleOrDefault(n => n.Name == "Boss Wrapper" && n.OverlayData is null && n.TriggerData is null);
+      Assert.IsNotNull(folder, "kind mismatch must fall back to inserting a new folder");
+      Assert.IsTrue(nodes.Any(n => n.Parent == folder!.Id && n.Name == "Inside"));
+    }
+
     /* Standard .ogf overlay import (file-based, no NAG/GINA involved). Exports carry the STORED
      * id for overlay leaves only — folders export with Id == null — so re-import matches leaves by
      * id and updates them in place; this pins that contract down. */
@@ -660,7 +727,7 @@ namespace EQLogParser
       var (db, _) = FreshStore();
       await using var _ = db;
       var events = new List<(string Id, bool Checked)>();
-      db.NodeCheckChanged += (id, isChecked) => events.Add((id, isChecked));
+      db.EventsNodeCheckChanged += (id, isChecked) => events.Add((id, isChecked));
 
       var (root, _, _) = await db.GetTriggerTree("P1");
       var folder = (await db.CreateFolder(root.Id, "Dir", "P1")).Node;
@@ -694,13 +761,84 @@ namespace EQLogParser
       Assert.AreEqual(null, TriggerStateDB.FixColor(null));
       Assert.AreEqual(string.Empty, TriggerStateDB.FixColor(""));
       // documented delta: named colors no longer resolve (Syncfusion-free Core)
-      Assert.AreEqual("#FFFFFF", TriggerStateDB.FixColor("Red"));
-      Assert.AreEqual("#FFFFFF", TriggerStateDB.FixColor("not a color"));
+      // opaque-white fallback: bare "#FFFFFF" would parse as transparent black under WPF's
+      // default ARGB binding, so the fallback must carry an explicit alpha
+      Assert.AreEqual("#FFFFFFFF", TriggerStateDB.FixColor("Red"));
+      Assert.AreEqual("#FFFFFFFF", TriggerStateDB.FixColor("not a color"));
       // #RGB / #RRGGBB get an alpha byte (#FF0 = red+green, opaque)
       Assert.AreEqual("#FFFFFF00", TriggerStateDB.FixColor("#FF0"));
       Assert.AreEqual("#FF112233", TriggerStateDB.FixColor("0xFF112233"));
       // already AARRGGBB passes through unchanged (case-normalized)
       Assert.AreEqual("#AABBCCDD", TriggerStateDB.FixColor("#aabbccdd"));
+    }
+
+    /* The singleton must fail fast when the host never wired GetDbFile, rather than build a store
+     * over a null path that silently persists nothing. ResolveDbFile is the extracted seam so this
+     * is testable without touching the lazily created Instance. */
+    [TestMethod]
+    public void ResolveDbFile_UnwiredHost_FailsFast()
+    {
+      var previous = TriggerStorePlatform.GetDbFile;
+      try
+      {
+        TriggerStorePlatform.GetDbFile = null;
+        Assert.Throws<InvalidOperationException>(TriggerStateDB.ResolveDbFile);
+
+        TriggerStorePlatform.GetDbFile = () => string.Empty;
+        Assert.Throws<InvalidOperationException>(TriggerStateDB.ResolveDbFile);
+
+        TriggerStorePlatform.GetDbFile = () => "/tmp/eqlp-test.db";
+        Assert.AreEqual("/tmp/eqlp-test.db", TriggerStateDB.ResolveDbFile());
+      }
+      finally
+      {
+        TriggerStorePlatform.GetDbFile = previous;
+      }
+    }
+
+    /* The outer overlay import hands Import() one leaf per call (the fast path matches by id and
+     * seeks the next sibling index without loading the folder). Re-importing the same ids must
+     * update in place: no duplicates, no colliding sibling indexes. */
+    [TestMethod]
+    public async Task ImportOverlays_OneLeafPerCall_ReimportUpdatesInPlace()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      var root = (await db.GetOverlayTree()).Root;
+      var baseCount = (await db.GetOverlayTree()).Nodes.Count(n => n.Parent == root.Id);
+
+      List<ExportTriggerNode> Leaves(string fontSize) =>
+      [
+        new ExportTriggerNode { Id = "ov-1", Name = "One", OverlayData = new Overlay { IsTextOverlay = true, FontSize = fontSize } },
+        new ExportTriggerNode { Id = "ov-2", Name = "Two", OverlayData = new Overlay { IsTimerOverlay = true } }
+      ];
+
+      foreach (var leaf in Leaves("10pt"))
+      {
+        await db.ImportOverlays([leaf]);
+      }
+
+      var firstImport = (await db.GetOverlayTree()).Nodes.Where(n => n.Name is "One" or "Two").ToList();
+
+      Assert.AreEqual(2, firstImport.Count);
+      Assert.AreEqual(firstImport.Count, firstImport.Select(n => n.Index).Distinct().Count(), "imported siblings must not share an index");
+
+      // second pass over the same ids (the outer walker's update path)
+      foreach (var leaf in Leaves("22pt"))
+      {
+        await db.ImportOverlays([leaf]);
+      }
+
+      var afterSecond = (await db.GetOverlayTree()).Nodes;
+      Assert.AreEqual(baseCount + 2, afterSecond.Count(n => n.Parent == root.Id), "re-import must match by id, not append");
+      Assert.AreEqual("22pt", afterSecond.Single(n => n.Name == "One").OverlayData.FontSize);
+
+      // updated in place: same nodes, same positions in the folder
+      var secondPass = afterSecond.Where(n => n.Name is "One" or "Two").ToDictionary(n => n.Name, n => n.Index);
+      foreach (var node in firstImport)
+      {
+        Assert.AreEqual(node.Index, secondPass[node.Name], $"{node.Name} must keep its sibling index across re-import");
+      }
     }
   }
 

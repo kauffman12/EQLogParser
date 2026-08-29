@@ -13,8 +13,9 @@ namespace EQLogParser
     /* Whether an icon file can be loaded as a bitmap. Default: assume valid. */
     internal static Func<string, bool> IconIsValid = _ => true;
 
-    /* Whether a trigger sound resolves to an existing file. Default: none exist. */
-    internal static Func<string, bool> SoundExists = _ => false;
+    /* Whether a trigger sound resolves to an existing file. Default: assume it exists — same
+     * contract as IconIsValid above (a host that wants the check wires a probe before first use). */
+    internal static Func<string, bool> SoundExists = _ => true;
 
     /* Re-validate an icon path, replacing it when the sprite was found in another EQ install.
      * Return null or an unchanged value for no update (host contract, see CheckMissingMedia). */

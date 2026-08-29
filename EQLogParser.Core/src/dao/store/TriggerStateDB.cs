@@ -25,7 +25,7 @@ namespace EQLogParser
     internal event Action<List<TrustedPlayer>> TrustedPlayersUpdateEvent;
     // Fired after SetStateFromParent resolves the parent's enabled value for the given player —
     // the WPF host applies it to the matching view node (replaces the old direct IsChecked poke).
-    internal event Action<string, bool> NodeCheckChanged;
+    internal event Action<string, bool> EventsNodeCheckChanged;
     internal const string DefaultUser = "Default";
     internal const string Overlays = "Overlays";
     internal const string Triggers = "Triggers";
@@ -47,7 +47,7 @@ namespace EQLogParser
     private const string BadVersionCol = "Version";
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Lazy<TriggerStateDB> Lazy = new(() => new TriggerStateDB(TriggerStorePlatform.GetDbFile?.Invoke()));
+    private static readonly Lazy<TriggerStateDB> Lazy = new(() => new TriggerStateDB(ResolveDbFile()));
     private static readonly JsonSerializerOptions SerializerOptions = new() { IncludeFields = true };
     internal static TriggerStateDB Instance => Lazy.Value; // instance
     private readonly LiteDbTaskQueue _taskQueue;
@@ -84,10 +84,21 @@ namespace EQLogParser
 
           Log.Info($"Opening trigger database: {path}");
 
-          // Must run before any typed query — see ApplyDatabaseMigrations for why.
-          ApplyDatabaseMigrations();
-
+          // The queue must exist even if migration throws below: a throw that left it null would
+          // NRE every later call on the cached singleton for the whole session.
           _taskQueue = new LiteDbTaskQueue(_db);
+
+          // Migration is retry-safe (idempotent, versioned) — isolate its failure so the store
+          // stays usable and next startup retries. Must run before any typed query — see
+          // ApplyDatabaseMigrations for why.
+          try
+          {
+            ApplyDatabaseMigrations();
+          }
+          catch (Exception ex)
+          {
+            Log.Error("Trigger database migration failed; store stays usable and migration retries on next startup.", ex);
+          }
 
           if (needUpgrade && applyLegacyUpgrades)
           {
@@ -224,6 +235,19 @@ namespace EQLogParser
           Log.Error("Error opening Trigger Database.", ex);
         }
       }
+    }
+
+    /* Fail fast when the host forgot to wire the db file: a null/empty path would build a no-op
+     * instance whose every later call throws. Split out of Lazy so it is unit-testable without
+     * touching (and permanently caching) the singleton. */
+    internal static string ResolveDbFile()
+    {
+      var path = TriggerStorePlatform.GetDbFile?.Invoke();
+      if (string.IsNullOrEmpty(path))
+        throw new InvalidOperationException(
+          "TriggerStorePlatform.GetDbFile is not wired — set it before first TriggerStateDB.Instance use.");
+
+      return path;
     }
 
     internal Task<TriggerNode> GetDefaultTextOverlay() => GetDefaultOverlay(true);
@@ -687,11 +711,15 @@ namespace EQLogParser
             tree.FindOne(n => n.Id == nodeId) is { OverlayData: null } &&
             GetCol<TriggerState>(StatesCol) is { } states)
         {
+          // Load the subtree once — shared by every character's state update below.
+          var childrenByParent = new Dictionary<string, List<TriggerNode>>();
+          LoadSubtree(tree, nodeId, childrenByParent);
+
           foreach (var playerId in playerIds)
           {
             if (states.FindOne(s => s.Id == playerId) is { } state)
             {
-              UpdateChildState(state, tree, nodeId, isChecked);
+              UpdateChildState(state, nodeId, isChecked, childrenByParent);
               states.Update(state);
             }
           }
@@ -983,14 +1011,16 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(value))
       {
-        return NormalizeHexColor(value) ?? "#FFFFFF";
+        // Opaque white fallback: bare "#FFFFFF" under WPF's default ARGB binding parses as
+        // transparent black (invisible text).
+        return NormalizeHexColor(value) ?? "#FFFFFFFF";
       }
 
       return value;
     }
 
     // Normalizes a legacy color to #AARRGGBB; null when the value is not a hex color (FixColor
-    // then falls back to #FFFFFF, same as the old non-parseable path). Replaces the Syncfusion
+    // then falls back to #FFFFFFFF, same as the old non-parseable path). Replaces the Syncfusion
     // ColorConverter — named colors in pre-1.0 data now fall back instead of being resolved.
     internal static string NormalizeHexColor(string value)
     {
@@ -1171,6 +1201,51 @@ namespace EQLogParser
       tree.Delete(id);
     }
 
+    /* Per-import caches: one instance per Import call (i.e. per LiteDB transaction), shared by the
+     * whole node loop and its folder recursion. The loop used to redo the same lookups for every
+     * single node — a full scan of the overlay collection per trigger (ValidateOverlays) plus a
+     * config read, an EQ-directory walk and a bitmap decode per trigger with an icon
+     * (CheckMissingMedia). None of those results can change during an import: a trigger import
+     * never inserts overlay leaves, the config document is only read here, and sprite/icon files do
+     * not appear or vanish mid-import — so caching for one call is exact, not approximate. */
+    private sealed class ImportCache
+    {
+      private readonly Dictionary<string, string> _spritePathByIcon = new(StringComparer.Ordinal);
+      private readonly Dictionary<string, bool> _iconValidByPath = new(StringComparer.Ordinal);
+      private HashSet<string> _overlayIds;
+      private TriggerConfig _config;
+      private bool _configRead;
+
+      /* Ids of every overlay leaf: SelectedOverlays may only reference those. */
+      internal HashSet<string> GetOverlayIds(ILiteCollection<TriggerNode> tree) =>
+        _overlayIds ??= tree.Find(node => node.OverlayData != null).Select(node => node.Id).ToHashSet();
+
+      /* The single TriggerConfig document, read directly because we are inside a transaction. */
+      internal TriggerConfig GetConfig(ILiteCollection<TriggerConfig> configs)
+      {
+        if (_configRead) return _config;
+
+        _configRead = true;
+        return _config = configs?.FindAll().FirstOrDefault();
+      }
+
+      /* Host probe that scans the EQ installs for a moved sprite file; keyed by exported path. */
+      internal string ValidateSpritePath(ILiteCollection<TriggerConfig> configs, string iconSource)
+      {
+        if (_spritePathByIcon.TryGetValue(iconSource, out var cached)) return cached;
+
+        return _spritePathByIcon[iconSource] = TriggerStorePlatform.ValidateSpritePath(GetConfig(configs), iconSource);
+      }
+
+      /* Host probe that loads the bitmap; keyed by the resolved path. */
+      internal bool IconIsValid(string iconSource)
+      {
+        if (_iconValidByPath.TryGetValue(iconSource, out var cached)) return cached;
+
+        return _iconValidByPath[iconSource] = TriggerStorePlatform.IconIsValid(iconSource);
+      }
+    }
+
     private void Import(TriggerNode parent, IEnumerable<ExportTriggerNode> imported, string type, HashSet<string> characterIds = null)
     {
       if (parent?.Id is not { } parentId || imported == null || GetCol<TriggerNode>(TreeCol) is not { } tree) return;
@@ -1195,17 +1270,20 @@ namespace EQLogParser
         NormalizeName(node);
       }
 
+      // one cache for the whole import (see ImportCache) — created here, at the single entry point
+      var cache = new ImportCache();
+
       // exports include the tree root so ignore
       foreach (var newNode in incoming)
       {
         if (newNode.Nodes?.Count > 0)
         {
-          Import(tree, parentId, newNode.Nodes, type, characterStates);
+          Import(tree, parentId, newNode.Nodes, type, characterStates, cache);
         }
         // Overlay leaf nodes (no child Nodes) — process directly via the second overload
         else if (!triggers && newNode.OverlayData != null)
         {
-          Import(tree, parentId, new[] { newNode }, type, characterStates);
+          Import(tree, parentId, new[] { newNode }, type, characterStates, cache);
         }
       }
     }
@@ -1218,11 +1296,10 @@ namespace EQLogParser
     }
 
     private bool Import(ILiteCollection<TriggerNode> tree, string parentId,
-      IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates)
+      IEnumerable<ExportTriggerNode> imported, string type, List<TriggerState> characterStates, ImportCache cache)
     {
       var hasMissingMedia = false;
       var triggers = type == Triggers;
-      string enableId = null;
 
       // One NAG trigger can export several siblings sharing a single OriginalId (phrase + timer
       // variants, counter resets). The planner needs to know which ids occur more than once in
@@ -1232,32 +1309,54 @@ namespace EQLogParser
       var batchSharedOriginalIds = nodes.Where(n => n.OriginalId != null)
         .GroupBy(n => n.OriginalId).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.Ordinal);
 
+      // Load the target folder's siblings ONCE instead of re-querying per node: an N-node import
+      // used to materialize all S siblings N times (O(N·S) deserializations). Nodes inserted below
+      // are appended so later matches see them — exactly like the old live Find calls did.
+      // Exception: the outer walker hands each overlay leaf to this method in its own call, where a
+      // full sibling load costs more than the indexed single-node seek it replaced. Keep that case
+      // cheap (GetNextIndex stays a descending index seek and needs no full list).
+      var singleOverlayLeaf = !triggers && nodes.Count == 1 && nodes[0].Id != null;
+      // LiteDB compiles the predicate to an index scan, and it cannot evaluate a captured array
+      // access inside the expression tree — keep the id in a local.
+      var overlayLeafId = singleOverlayLeaf ? nodes[0].Id : null;
+      var siblings = singleOverlayLeaf
+        ? tree.Find(n => n.Parent == parentId && n.Id == overlayLeafId).ToList()
+        : tree.Find(n => n.Parent == parentId).ToList();
+      var nextIndex = singleOverlayLeaf ?
+        GetNextIndex(tree, parentId) :
+        siblings.Count > 0 ? siblings.Max(n => n.Index) + 1 : 0;
+
       foreach (var newNode in nodes)
       {
+        // per-node: the block at the bottom of this iteration applies it to the node handled above
+        string enableId = null;
+
         if (triggers)
         {
           // Matching + branch selection lives in TriggerImportPlanner (pure, unit-tested on any
           // platform). A leaf updates only an existing leaf and a folder wrapper merges only into
-          // an existing folder — same-named siblings of the other kind are inserted as new nodes
-          // instead of erasing or dropping the other. See the planner for the full rationale.
-          var decision = TriggerImportPlanner.Plan(tree.Find(n => n.Parent == parentId), newNode, batchSharedOriginalIds);
+          // an existing folder — siblings of the other kind are inserted as new nodes instead of
+          // erasing or dropping the other. See the planner for the full rationale.
+          var decision = TriggerImportPlanner.Plan(siblings, newNode, batchSharedOriginalIds);
 
           switch (decision.Action)
           {
             case ImportAction.UpdateInPlace when decision.Existing is { } foundTrigger:
-              // update trigger data
-              if (foundTrigger.TriggerData != null)
+              // update trigger data — only a payload-carrying incoming node may overwrite (kind
+              // safety also lives in the planner; this guard is belt-and-braces)
+              if (foundTrigger.TriggerData != null && newNode.TriggerData is { } newTriggerData)
               {
-                foundTrigger.TriggerData = newNode.TriggerData;
+                newTriggerData.SelectedOverlays = ValidateOverlays(newTriggerData.SelectedOverlays, tree, cache);
+                foundTrigger.TriggerData = newTriggerData;
                 tree.Update(foundTrigger);
                 enableId = foundTrigger.Id;
-                hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger);
+                hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger, cache);
               }
 
               break;
 
             case ImportAction.MergeIntoFolder when decision.Existing is { } folder:
-              if (Import(tree, folder.Id, newNode.Nodes, type, characterStates))
+              if (Import(tree, folder.Id, newNode.Nodes, type, characterStates, cache))
               {
                 MissingMedia[folder.Id] = true;
                 hasMissingMedia = true;
@@ -1268,17 +1367,19 @@ namespace EQLogParser
 
             case ImportAction.InsertLeaf when newNode.ToTriggerNode() is { } node:
               // new trigger and replace the exported version
-              node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays);
-              Insert(node, GetNextIndex(tree, parentId));
+              node.TriggerData.SelectedOverlays = ValidateOverlays(newNode.TriggerData.SelectedOverlays, tree, cache);
+              Insert(node, nextIndex++);
+              siblings.Add(node);
               enableId = node.Id;
-              hasMissingMedia = CheckMissingMedia(tree, newNode, node);
+              hasMissingMedia = CheckMissingMedia(tree, newNode, node, cache);
               break;
 
             case ImportAction.InsertFolder when newNode.ToTriggerNode() is { } node2:
               // make sure it's a new directory and replace the exported version
-              Insert(node2, GetNextIndex(tree, parentId));
+              Insert(node2, nextIndex++);
+              siblings.Add(node2);
 
-              if (Import(tree, node2.Id, newNode.Nodes, type, characterStates))
+              if (Import(tree, node2.Id, newNode.Nodes, type, characterStates, cache))
               {
                 MissingMedia[node2.Id] = true;
                 hasMissingMedia = true;
@@ -1290,7 +1391,7 @@ namespace EQLogParser
         }
         else
         {
-          if (tree.FindOne(n => n.Parent == parentId && n.Id == newNode.Id) is { } foundOverlay)
+          if (siblings.FirstOrDefault(n => n.Id == newNode.Id) is { } foundOverlay)
           {
             // update overlay data
             if (foundOverlay.OverlayData != null)
@@ -1303,14 +1404,12 @@ namespace EQLogParser
             // directory but make sure it is one
             else if (foundOverlay.OverlayData == null && foundOverlay.TriggerData == null && newNode.Nodes?.Count > 0)
             {
-              Import(tree, foundOverlay.Id, newNode.Nodes, type, characterStates);
+              Import(tree, foundOverlay.Id, newNode.Nodes, type, characterStates, cache);
               enableId = foundOverlay.Id;
             }
           }
           else
           {
-            var index = GetNextIndex(tree, parentId);
-
             // new overlay
             if (newNode.OverlayData != null)
             {
@@ -1319,13 +1418,16 @@ namespace EQLogParser
               // document doesn't depend on which assembly the class lives in — the same
               // coupling that required the 1.0.2 legacy-marker migration.
               SetVerticalAlignment(newNode);
-              Insert(newNode.ToTriggerNode(), index, newNode.Id);
+              var inserted = newNode.ToTriggerNode();
+              Insert(inserted, nextIndex++, newNode.Id);
+              siblings.Add(inserted);
             }
             // make sure it's a new directory
             else if (newNode.OverlayData == null && newNode.TriggerData == null && newNode.ToTriggerNode() is { } node)
             {
-              Insert(node, index);
-              Import(tree, node.Id, newNode.Nodes, type, characterStates);
+              Insert(node, nextIndex++);
+              siblings.Add(node);
+              Import(tree, node.Id, newNode.Nodes, type, characterStates, cache);
               enableId = node.Id;
             }
           }
@@ -1358,7 +1460,8 @@ namespace EQLogParser
       }
     }
 
-    private bool CheckMissingMedia(ILiteCollection<TriggerNode> tree, ExportTriggerNode imported, TriggerNode stored)
+    private bool CheckMissingMedia(ILiteCollection<TriggerNode> tree, ExportTriggerNode imported, TriggerNode stored,
+      ImportCache cache)
     {
       if (!string.IsNullOrEmpty(stored.Id) && Check(imported, stored))
       {
@@ -1373,16 +1476,13 @@ namespace EQLogParser
         // check icon loads
         if (!string.IsNullOrEmpty(storedNode.TriggerData.IconSource))
         {
-          // get direct config reference as we are within a transaction
-          TriggerConfig config = null;
-          if (GetCol<TriggerConfig>(ConfigCol) is { } configs)
-          {
-            config = configs.FindAll().FirstOrDefault();
-          }
+          // config read + sprite/icon probes go through ImportCache: both host probes touch the
+          // filesystem (directory walk / bitmap decode) and their answers are stable for one import
+          var configs = GetCol<TriggerConfig>(ConfigCol);
 
           // validate path/replace value if similar sprite path found in a different EQ folder
           var updated = false;
-          var updatedPath = TriggerStorePlatform.ValidateSpritePath(config, storedNode.TriggerData.IconSource);
+          var updatedPath = cache.ValidateSpritePath(configs, storedNode.TriggerData.IconSource);
           if (updatedPath != null && !Equals(updatedPath, storedNode.TriggerData.IconSource))
           {
             storedNode.TriggerData.IconSource = updatedPath;
@@ -1390,7 +1490,7 @@ namespace EQLogParser
           }
 
           // make sure it actually works
-          var valid = TriggerStorePlatform.IconIsValid(storedNode.TriggerData.IconSource);
+          var valid = cache.IconIsValid(storedNode.TriggerData.IconSource);
           if (valid && updated)
           {
             tree.Update(storedNode);
@@ -1410,27 +1510,52 @@ namespace EQLogParser
       return false;
     }
 
-    // Store-side port of the old view-tree walk: applies isEnabled to the node and all its
-    // descendants (queried from the tree instead of walked through view ChildNodes — same set).
-    private static void UpdateChildState(TriggerState state, ILiteCollection<TriggerNode> tree, string nodeId, bool? isEnabled)
+    /* Applies isEnabled to the node and all its descendants. The caller loads the subtree once
+     * (LoadSubtree — one query per folder level) so this walk is pure in-memory; the old version
+     * issued one LiteDB query per node, leaves included. */
+    private static void UpdateChildState(TriggerState state, string nodeId, bool? isEnabled,
+      Dictionary<string, List<TriggerNode>> childrenByParent)
     {
       if (string.IsNullOrEmpty(nodeId)) return;
 
       state.Enabled[nodeId] = isEnabled;
-      foreach (var child in tree.Query().Where(n => n.Parent == nodeId).ToArray())
+      if (!childrenByParent.TryGetValue(nodeId, out var children)) return;
+
+      foreach (var child in children)
       {
-        UpdateChildState(state, tree, child.Id, isEnabled);
+        UpdateChildState(state, child.Id, isEnabled, childrenByParent);
+      }
+    }
+
+    /* Loads the subtree under nodeId (one query per folder level) into a parent→children map for
+     * the in-memory state walks. Leaf nodes have no entry. */
+    private static void LoadSubtree(ILiteCollection<TriggerNode> tree, string nodeId,
+      Dictionary<string, List<TriggerNode>> childrenByParent)
+    {
+      var children = tree.Query().Where(n => n.Parent == nodeId).OrderBy(n => n.Index).ToArray();
+      childrenByParent[nodeId] = children.ToList();
+
+      foreach (var child in children)
+      {
+        if (child.OverlayData == null && child.TriggerData == null)
+        {
+          LoadSubtree(tree, child.Id, childrenByParent);
+        }
       }
     }
 
     // Enables/disables the node's subtree to match the parent's enabled value. Returns the
     // resolved value for the calling player (null = no explicit parent entry for that player)
-    // so Create* can seed a new view node's IsChecked; also raises NodeCheckChanged for an
+    // so Create* can seed a new view node's IsChecked; also raises EventsNodeCheckChanged for an
     // already-visible node (drag-and-drop path).
     private bool? SetStateFromParentInternal(string parentId, string playerId, string nodeId)
     {
       if (GetCol<TriggerState>(StatesCol) is { } states && GetCol<TriggerNode>(TreeCol) is { } tree)
       {
+        // Load the subtree once — shared by every character's state update below.
+        var childrenByParent = new Dictionary<string, List<TriggerNode>>();
+        LoadSubtree(tree, nodeId, childrenByParent);
+
         bool? checkedFor = null;
         foreach (var state in states.FindAll().ToArray())
         {
@@ -1440,10 +1565,10 @@ namespace EQLogParser
             if (playerId == state.Id)
             {
               checkedFor = currentState is true;
-              NodeCheckChanged?.Invoke(nodeId, checkedFor.Value);
+              EventsNodeCheckChanged?.Invoke(nodeId, checkedFor.Value);
             }
 
-            UpdateChildState(state, tree, nodeId, currentState is true);
+            UpdateChildState(state, nodeId, currentState is true, childrenByParent);
             states.Update(state);
           }
         }
@@ -1475,32 +1600,40 @@ namespace EQLogParser
           {
             root = parent;
 
+            // Load the subtree once — one query per folder level — and share the parent→children
+            // map between node collection and state fix-up. The old code ran FixEnabledState and
+            // Collect as two separate per-folder query walks over the same tree.
+            var childrenByParent = new Dictionary<string, List<TriggerNode>>();
+            Collect(tree, parent.Id, nodes, childrenByParent);
+
             if (name == Triggers && state != null)
             {
               var needUpdate = false;
-              FixEnabledState(tree, parent, state, ref needUpdate);
+              FixEnabledState(parent, state, childrenByParent, ref needUpdate);
 
               if (needUpdate)
               {
                 GetCol<TriggerState>(StatesCol)?.Update(state);
               }
             }
-
-            Collect(tree, parent.Id, nodes);
           }
         }
 
         return Task.FromResult(new TreeData(root, nodes, state));
       });
 
-      static void Collect(ILiteCollection<TriggerNode> tree, string parentId, List<TriggerNode> nodes)
+      static void Collect(ILiteCollection<TriggerNode> tree, string parentId, List<TriggerNode> nodes,
+        Dictionary<string, List<TriggerNode>> childrenByParent)
       {
-        foreach (var child in tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToArray())
+        var children = tree.Query().Where(n => n.Parent == parentId).OrderBy(n => n.Index).ToArray();
+        childrenByParent[parentId] = children.ToList();
+
+        foreach (var child in children)
         {
           nodes.Add(child);
           if (child.OverlayData == null && child.TriggerData == null)
           {
-            Collect(tree, child.Id, nodes);
+            Collect(tree, child.Id, nodes, childrenByParent);
           }
         }
       }
@@ -1522,38 +1655,47 @@ namespace EQLogParser
       return state;
     }
 
-    private List<string> ValidateOverlays(IEnumerable<string> existing)
+    /* Filter a trigger's selected overlays down to ids that exist as overlay leaves —
+     * SelectedOverlays may only reference overlay leaves, so unknown and non-overlay ids are
+     * dropped. The id set comes from ImportCache: loaded once per import instead of scanning the
+     * whole overlay collection once per imported trigger. */
+    private static List<string> ValidateOverlays(IEnumerable<string> existing, ILiteCollection<TriggerNode> tree,
+      ImportCache cache)
     {
-      if (GetCol<TriggerNode>(TreeCol) is { } tree)
-      {
-        var allOverlays = tree.Find(node => node.OverlayData != null).ToList();
-        return existing?.Where(id => tree.FindOne(node => node.Id == id) != null).ToList() ?? [];
-      }
+      if (existing == null) return [];
 
-      return [];
+      return existing.Where(cache.GetOverlayIds(tree).Contains).ToList();
     }
 
-    // Store-side port of the old view-tree walk: re-derives a folder's saved enabled flag from
-    // its children (same computation; TriggerNode has no checked state of its own). A child's
-    // effective check mirrors CreateViewNode: Enabled value with a false default, null for overlays.
-    private static void FixEnabledState(ILiteCollection<TriggerNode> tree, TriggerNode folder, TriggerState state, ref bool needUpdate)
+    /* Store-side port of the old view-tree walk: re-derives a folder's saved enabled flag from
+     * its children (same computation; TriggerNode has no checked state of its own). A child's
+     * effective check mirrors CreateViewNode: Enabled value with a false default, null for
+     * overlays. Walks the already-loaded parent→children map (GetTree loads each folder level
+     * once) instead of re-querying LiteDB per folder. */
+    private static void FixEnabledState(TriggerNode folder, TriggerState state,
+      Dictionary<string, List<TriggerNode>> childrenByParent, ref bool needUpdate)
     {
       if (folder.OverlayData != null || folder.TriggerData != null) return;
 
-      var children = tree.Query().Where(n => n.Parent == folder.Id).OrderBy(n => n.Index).ToArray();
-      if (children.Length == 0) return;
+      if (!childrenByParent.TryGetValue(folder.Id, out var children) || children.Count == 0) return;
 
       foreach (var child in children)
       {
-        FixEnabledState(tree, child, state, ref needUpdate);
+        FixEnabledState(child, state, childrenByParent, ref needUpdate);
       }
 
-      var checkedCount = children.Count(child => ChildChecked(child) is true);
-      var uncheckCount = children.Count(child => ChildChecked(child) is false);
+      var checkedCount = 0;
+      var uncheckCount = 0;
+
+      foreach (var child in children)
+      {
+        if (ChildChecked(child) is true) checkedCount++;
+        else if (ChildChecked(child) is false) uncheckCount++;
+      }
       var viewChecked = state.Enabled.GetValueOrDefault(folder.Id, false);
       var changed = false;
 
-      if (checkedCount == children.Length)
+      if (checkedCount == children.Count)
       {
         if (viewChecked != true)
         {
@@ -1561,7 +1703,7 @@ namespace EQLogParser
           changed = true;
         }
       }
-      else if (uncheckCount == children.Length)
+      else if (uncheckCount == children.Count)
       {
         if (viewChecked != false)
         {
@@ -1664,42 +1806,40 @@ namespace EQLogParser
       return Math.Max(folderMax, characterMax) + 1;
     }
 
-    // remove eventually
-    /* Databases written by pre-refactor builds stored imported nodes with LiteDB's polymorphic
-     * type marker "_type" = "EQLogParser.ExportTriggerNode, EQLogParser". That class now lives in
-     * EQLogParser.Core, so resolving the stale marker throws 'Type ... not found in current
-     * domain' and every typed query touching an affected document fails — the whole database
-     * becomes unreadable (ctor queries, GetTree/FixEnabledState, LoadOverlayStyles).
-     *
-     * The pass is raw (BsonDocument) so it cannot itself trip over the marker, and it runs in
-     * the constructor before any typed query, so no earlier failure can skip it. Stripping is
-     * lossless: nodes were always stored flat via Parent/Id links and the export type persisted
-     * nothing beyond TriggerNode itself. Nested child sub-documents are cleaned too. No-op for
-     * every database the current build writes (it never emits the marker), so this reports and
-     * writes only on the first launch after an upgrade. */
     /* One-time database migrations, gated by the version number in the existing FixVersion
      * collection (older builds seeded it as {Id:"1", Version:"1.0.1"}): a missing or older
      * stored version applies every step below it; the current version does nothing and every
      * startup pays only for a tiny read of FixVersion. When adding a migration, bump
-     * CurrentDbVersion and append a new ordered step here. */
+     * CurrentDbVersion and append a new ordered step here.
+     *
+     * The new version is stamped only when every step reported success: an incomplete run leaves
+     * the stored version alone so the next launch retries, rather than recording a half-applied
+     * migration as done (which would strand the documents the failed step never reached). */
     private const string CurrentDbVersion = "1.0.2";
 
     private void ApplyDatabaseMigrations()
     {
       var versions = _db.GetCollection<BsonDocument>(VersionCol);
       var stored = ReadStoredDbVersion(versions) ?? (0, 0, 0);
+      var completed = true;
 
       /* v1.0.2 — strip the stale ExportTriggerNode type marker from every collection so
        * pre-refactor databases stay readable (see StripLegacyTypeMarkers). ValueTuple has no
        * ordering operators, hence the Comparer. */
       if (Comparer<(int, int, int)>.Default.Compare(stored, (1, 0, 2)) < 0)
       {
-        StripLegacyTypeMarkers();
+        completed = StripLegacyTypeMarkers();
       }
 
       // future migrations: else if (stored < (1, 0, 3)) { ... }
 
-      // written only after every step ran, so an interrupted run retries on next launch
+      if (!completed)
+      {
+        Log.Error("Trigger database migration did not complete; leaving the stored version unchanged so the next startup retries.");
+        return;
+      }
+
+      // written only after every step ran to completion, so an interrupted run retries on next launch
       WriteDbVersion(versions, CurrentDbVersion);
     }
 
@@ -1744,9 +1884,23 @@ namespace EQLogParser
       }
     }
 
-    private void StripLegacyTypeMarkers()
+    /* Databases written by pre-refactor builds stored imported nodes with LiteDB's polymorphic
+     * type marker "_type" = "EQLogParser.ExportTriggerNode, EQLogParser". That class now lives in
+     * EQLogParser.Core, so resolving the stale marker throws 'Type ... not found in current
+     * domain' and every typed query touching an affected document fails — the whole database
+     * becomes unreadable (ctor queries, GetTree/FixEnabledState, LoadOverlayStyles).
+     *
+     * The pass is raw (BsonDocument) so it cannot itself trip over the marker, and it runs in the
+     * constructor before any typed query. Stripping is lossless: nodes were always stored flat via
+     * Parent/Id links and the export type persisted nothing beyond TriggerNode itself. Nested child
+     * sub-documents are cleaned too. No-op for every database this build writes, so it reports and
+     * writes only on the first launch after an upgrade. Returns false when a collection could not
+     * be cleaned — the caller then leaves the stored version alone so the next start retries. */
+    private bool StripLegacyTypeMarkers()
     {
       const string StaleMarker = "EQLogParser.ExportTriggerNode, EQLogParser";
+      var completed = true;
+
       foreach (var name in _db.GetCollectionNames())
       {
         try
@@ -1770,10 +1924,14 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
-          // one bad collection must not block cleanup of the others or app startup
+          // one bad collection must not block cleanup of the others or app startup, but the
+          // migration is not finished either — ApplyDatabaseMigrations must not stamp it done
+          completed = false;
           Log.Error($"Failed to clean legacy type markers in the '{name}' collection.", ex);
         }
       }
+
+      return completed;
     }
 
     /* Removes the stale marker from a document and any nested sub-documents; true if changed. */

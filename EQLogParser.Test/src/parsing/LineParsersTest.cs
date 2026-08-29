@@ -4,6 +4,9 @@ namespace EQLogParser
    * Each parser is a static Process(LineData) that emits records into the RecordsStore;
    * assertions read the records back out of the store. Line fixtures are timestamp-stripped
    * action text, same convention as DamageLineParserTest. */
+  /* Sets the process-wide CWD for data-file access, so it must not run concurrently with
+   * other test classes. */
+  [DoNotParallelize]
   [TestClass]
   public sealed class LineParsersTest
   {

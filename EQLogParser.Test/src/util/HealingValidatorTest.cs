@@ -1,5 +1,8 @@
 namespace EQLogParser
 {
+  /* Sets the process-wide CWD and CombatRecordLookup hook, so it must not run concurrently
+   * with other test classes. */
+  [DoNotParallelize]
   [TestClass]
   public class HealingValidatorTest
   {

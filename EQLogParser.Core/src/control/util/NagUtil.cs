@@ -10,11 +10,23 @@ using System.Text.RegularExpressions;
 
 namespace EQLogParser;
 
-public class NagImportResult
+/* Import outcome of one NAG trigger. Fixed set of related values, so an enum rather than the
+ * "Imported"/"Partial"/"Skipped" magic strings it replaced (CodingStandards: Enums). */
+internal enum NagImportStatus
+{
+  Imported,
+  Partial,
+  Skipped
+}
+
+internal class NagImportResult
 {
   public string TriggerName { get; set; }
   public string TriggerId { get; set; }
-  public string Status { get; set; } // "Imported", "Partial", "Skipped"
+
+  /* The real status. Status is its text form for the HTML report and existing consumers. */
+  public NagImportStatus ImportStatus { get; set; } = NagImportStatus.Imported;
+  public string Status => ImportStatus.ToString();
   public string Reason { get; set; } // For skipped/partial: which features were unsupported
   public string FolderPath { get; set; }
   public string ActionsSummary { get; set; }
@@ -27,7 +39,7 @@ public class NagImportResult
 /// Metadata about a NAG trigger, keyed by NAG triggerId. Used for character state import
 /// and other profile-level operations that need to correlate NAG IDs with imported EQLP nodes.
 /// </summary>
-public class NagTriggerMetadata
+internal class NagTriggerMetadata
 {
   public string TriggerName { get; set; }
   public string FolderPath { get; set; }
@@ -40,6 +52,52 @@ public class NagTriggerMetadata
 internal static class NagUtil
 {
   private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+  /* NAG JSON readers that never throw. Every numeric/boolean property of a NAG dump goes through
+   * these: the raw JsonElement getters throw on kinds real dumps contain — String ("12.5"),
+   * fractional or out-of-range Numbers ("400.0", "5e1", "1e999"), JsonNull where a bool is
+   * expected — and any throw aborts the whole trigger (the import reports it "Skipped").
+   * Unrecognised input falls back to def. */
+  private static double ReadNumber(JsonElement e, double def)
+  {
+    switch (e.ValueKind)
+    {
+      // TryGetDouble instead of GetDouble: a Number token can be fractional/out of range ("1e999"
+      // parses as +infinity, which would lock a trigger forever); strings go through the fast,
+      // allocation-free invariant-culture parser rather than throwing.
+      case JsonValueKind.Number when e.TryGetDouble(out var value) && double.IsFinite(value):
+        return value;
+      case JsonValueKind.String:
+        return TextUtils.ParseDouble(e.GetString().AsSpan(), def);
+      default:
+        return def;
+    }
+  }
+
+  /* Truncates toward zero ("12.7" → 12); anything unparseable or outside the range is def. */
+  private static int ReadInt(JsonElement e, int def)
+  {
+    var value = ReadNumber(e, double.NaN);
+    return double.IsFinite(value) && value is >= int.MinValue and <= int.MaxValue ? (int)value : def;
+  }
+
+  private static long ReadLong(JsonElement e, long def)
+  {
+    var value = ReadNumber(e, double.NaN);
+    // 2^53: the largest integer range a double still represents exactly
+    return double.IsFinite(value) && value is >= -9007199254740992d and <= 9007199254740992d ? (long)value : def;
+  }
+
+  private static bool ReadBool(JsonElement e, bool def) =>
+    e.ValueKind switch
+    {
+      JsonValueKind.True => true,
+      JsonValueKind.False => false,
+      // tolerating the string/number forms of hand-edited dumps; GetBoolean() would throw on them
+      JsonValueKind.String when bool.TryParse(e.GetString(), out var flag) => flag,
+      JsonValueKind.Number when e.TryGetDouble(out var value) && double.IsFinite(value) => value != 0,
+      _ => def
+    };
 
   // NAG fontWeight (numeric) → EQLP FontWeight (string)
   private static string ConvertFontWeight(int weight) => weight switch
@@ -232,7 +290,7 @@ internal static class NagUtil
     var parts = new List<string>();
     foreach (var cond in element.EnumerateArray())
     {
-      var conditionType = cond.TryGetProperty("conditionType", out var ct) ? ct.GetInt32() : -1;
+      var conditionType = cond.TryGetProperty("conditionType", out var ct) ? ReadInt(ct, -1) : -1;
       if (conditionType != 1) // Only variable-based conditions are expressible in EQLP
       {
         droppedFeatures.Add(conditionType == 3 ? "counter condition" : $"condition type {conditionType}");
@@ -246,7 +304,7 @@ internal static class NagUtil
       }
 
       var operatorType = cond.TryGetProperty("operatorType", out var ot) && ot.ValueKind != JsonValueKind.Null
-        ? ot.GetInt32()
+        ? ReadInt(ot, -1)
         : -1;
       var value = cond.TryGetProperty("variableValue", out var vv) && vv.ValueKind == JsonValueKind.String
         ? vv.GetString()
@@ -461,7 +519,7 @@ internal static class NagUtil
           parsedResult = new NagImportResult
           {
             TriggerName = triggerName,
-            Status = "Skipped",
+            ImportStatus = NagImportStatus.Skipped,
             Reason = $"Error parsing trigger: {ex.Message}"
           };
         }
@@ -499,7 +557,7 @@ internal static class NagUtil
 
         // Build metadata dictionary keyed by NAG triggerId for profile-level operations.
         // Skipped triggers (dev-only, missing name, parse failures, etc.) are excluded from metadata.
-        if (!string.IsNullOrEmpty(parsedResult.TriggerId) && parsedResult.Status != "Skipped" && !metadata.ContainsKey(parsedResult.TriggerId))
+        if (!string.IsNullOrEmpty(parsedResult.TriggerId) && parsedResult.ImportStatus != NagImportStatus.Skipped && !metadata.ContainsKey(parsedResult.TriggerId))
         {
           metadata[parsedResult.TriggerId] = new NagTriggerMetadata
           {
@@ -600,11 +658,11 @@ internal static class NagUtil
     var name = element.GetProperty("name").GetString();
     if (string.IsNullOrEmpty(name))
     {
-      return ([], new NagImportResult { TriggerName = name ?? "(null)", Status = "Skipped", Reason = "Missing name" });
+      return ([], new NagImportResult { TriggerName = name ?? "(null)", ImportStatus = NagImportStatus.Skipped, Reason = "Missing name" });
     }
 
     // Skip dev-only triggers (but still track missing audio files for reporting)
-    if (element.TryGetProperty("onlyExecuteInDev", out var devProp) && devProp.GetBoolean())
+    if (element.TryGetProperty("onlyExecuteInDev", out var devProp) && ReadBool(devProp, false))
     {
       var devTriggerId = element.GetProperty("triggerId").GetString();
       List<string> devMissingAudio = [];
@@ -612,21 +670,21 @@ internal static class NagUtil
       {
         foreach (var action in devActions.EnumerateArray())
         {
-          if (action.TryGetProperty("actionType", out var at) && at.GetInt32() == 1 &&
+          if (action.TryGetProperty("actionType", out var at) && ReadInt(at, -1) == 1 &&
               action.TryGetProperty("audioFileId", out var af) && !string.IsNullOrEmpty(af.GetString()))
           {
             ResolveAudioFile(af.GetString(), devMissingAudio);
           }
         }
       }
-      return ([], new NagImportResult { TriggerName = name, TriggerId = devTriggerId, Status = "Skipped", Reason = "Dev-only trigger", MissingAudioFiles = devMissingAudio });
+      return ([], new NagImportResult { TriggerName = name, TriggerId = devTriggerId, ImportStatus = NagImportStatus.Skipped, Reason = "Dev-only trigger", MissingAudioFiles = devMissingAudio });
     }
 
     var triggerId = element.GetProperty("triggerId").GetString() ?? "";
     var comments = element.TryGetProperty("comments", out var c) ? c.GetString() : null;
-    var score = element.TryGetProperty("score", out var s) ? s.GetDouble() : 0.5;
-    var useCooldown = element.TryGetProperty("useCooldown", out var cd) && cd.GetBoolean();
-    var cooldownDuration = element.TryGetProperty("cooldownDuration", out var cdDur) ? cdDur.GetDouble() : 0;
+    var score = element.TryGetProperty("score", out var s) ? ReadNumber(s, 0.5) : 0.5;
+    var useCooldown = element.TryGetProperty("useCooldown", out var cd) && ReadBool(cd, false);
+    var cooldownDuration = element.TryGetProperty("cooldownDuration", out var cdDur) ? ReadNumber(cdDur, 0) : 0;
 
     // Check for classLevels — no EQLP equivalent, mark as dropped feature
     var hasClassLevels = element.TryGetProperty("classLevels", out var cl) && cl.ValueKind == JsonValueKind.Array && cl.GetArrayLength() > 0;
@@ -643,7 +701,7 @@ internal static class NagUtil
     var capturePhrases = element.GetProperty("capturePhrases");
     if (capturePhrases.GetArrayLength() == 0)
     {
-      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = "No capture phrases" });
+      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, ImportStatus = NagImportStatus.Skipped, Reason = "No capture phrases" });
     }
 
     // Collect all phrases — each becomes its own EQLP trigger (no alternation combining).
@@ -655,7 +713,7 @@ internal static class NagUtil
     {
       if (phrase.TryGetProperty("phrase", out var p) && p.GetString() is { Length: > 0 } text)
       {
-        var useRegex = phrase.TryGetProperty("useRegEx", out var re) && re.GetBoolean();
+        var useRegex = phrase.TryGetProperty("useRegEx", out var re) && ReadBool(re, false);
 
         // NAG uses several variable-reference syntaxes in capture phrases that need
         // special handling before the pattern is stored:
@@ -731,7 +789,7 @@ internal static class NagUtil
 
           // NAG phrases are case-insensitive by default but can opt out per phrase. EQLP compiles
           // every pattern with RegexOptions.IgnoreCase, so re-enable sensitivity for those.
-          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ignoreCase.GetBoolean())
+          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ReadBool(ignoreCase, true))
           {
             text = "(?-i)" + text;
           }
@@ -743,13 +801,13 @@ internal static class NagUtil
         {
           var phraseId2 = phrase.TryGetProperty("phraseId", out var pid2) ? pid2.GetString() : null;
           phrases.Add((ConvertTemplates(text), false, phraseId2));
-          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ignoreCase.GetBoolean())
+          if (phrase.TryGetProperty("ignoreCase", out var ignoreCase) && !ReadBool(ignoreCase, true))
           {
             hasCaseSensitiveNonRegexPhrase = true;
           }
         }
       }
-      else if (phrase.TryGetProperty("useRegEx", out var re2) && re2.GetBoolean())
+      else if (phrase.TryGetProperty("useRegEx", out var re2) && ReadBool(re2, false))
       {
         // Phrase text was empty/null but useRegEx is set — skip it
       }
@@ -757,7 +815,7 @@ internal static class NagUtil
 
     if (phrases.Count == 0)
     {
-      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = "No valid phrases" });
+      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, ImportStatus = NagImportStatus.Skipped, Reason = "No valid phrases" });
     }
 
     // Parse actions once — non-timer actions are shared across all nodes; timer actions are
@@ -765,7 +823,7 @@ internal static class NagUtil
     var parsed = ParseActions(element.GetProperty("actions"), phrases.Any(p => p.useRegex));
     if (parsed.BaseTriggerData is null)
     {
-      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, Status = "Skipped", Reason = parsed.SkipReason ?? "No supported actions" });
+      return ([], new NagImportResult { TriggerName = name, TriggerId = triggerId, ImportStatus = NagImportStatus.Skipped, Reason = parsed.SkipReason ?? "No supported actions" });
     }
 
     var baseTriggerData = parsed.BaseTriggerData;
@@ -886,7 +944,7 @@ internal static class NagUtil
     var hasInterruptSpeech = false;
     foreach (var action in element.GetProperty("actions").EnumerateArray())
     {
-      if (action.TryGetProperty("interruptSpeech", out var interruptSpeech) && interruptSpeech.GetBoolean())
+      if (action.TryGetProperty("interruptSpeech", out var interruptSpeech) && ReadBool(interruptSpeech, false))
       {
         hasInterruptSpeech = true;
         droppedFeatures.Add(InterruptSpeechNote);
@@ -901,8 +959,7 @@ internal static class NagUtil
           targetPhrases.ValueKind == JsonValueKind.Array && targetPhrases.GetArrayLength() > 0)
       {
         var scopedIds = targetPhrases.EnumerateArray().Select(e => e.GetString()).Where(s => s is not null).ToHashSet();
-        var actionType = action.TryGetProperty("actionType", out var at2) && at2.ValueKind == JsonValueKind.Number
-          ? at2.GetInt32() : -1;
+        var actionType = action.TryGetProperty("actionType", out var at2) ? ReadInt(at2, -1) : -1;
         if (RouteablePhraseScopedTypes.Contains(actionType))
         {
           // The values were routed during ParseActions — the only divergence left to report is
@@ -941,7 +998,7 @@ internal static class NagUtil
       {
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
-          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
+          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && ReadBool(useRe, false);
           triggerEndEarly.Add((ApplyEndEarlyCaseSensitivity(ee, ConvertTemplates(phrase), useRegex, droppedFeatures), useRegex));
         }
       }
@@ -1161,7 +1218,7 @@ internal static class NagUtil
     // as closely as EQLP allows, so they stay visible without burying real gaps in noise.
     var meaningfulDrops = droppedFeatures.Where(f => !NonStatusDroppedFeatures.Contains(f)).ToList();
     var hasMissingAudio = parsed.MissingAudioFiles?.Count > 0;
-    var status = hasMissingAudio || meaningfulDrops.Count > 0 ? "Partial" : "Imported";
+    var status = hasMissingAudio || meaningfulDrops.Count > 0 ? NagImportStatus.Partial : NagImportStatus.Imported;
     var reason = isSequential ? "Sequential capture method (not supported)" :
                  hasClassLevels ? "Class level filtering (not supported)" :
                  meaningfulDrops.Count > 0 ? string.Join(", ", meaningfulDrops) :
@@ -1175,7 +1232,7 @@ internal static class NagUtil
       {
         TriggerName = name,
         TriggerId = triggerId,
-        Status = "Skipped",
+        ImportStatus = NagImportStatus.Skipped,
         Reason = "Sequential capture method (not supported)",
         ActionsSummary = parsed.ActionSummary,
         MissingAudioFiles = parsed.MissingAudioFiles
@@ -1189,7 +1246,7 @@ internal static class NagUtil
     {
       TriggerName = name,
       TriggerId = triggerId,
-      Status = status,
+      ImportStatus = status,
       Reason = reason,
       ActionsSummary = actionSummary,
       Score = score,
@@ -1284,7 +1341,7 @@ internal static class NagUtil
       {
         if (ee.TryGetProperty("phrase", out var ep) && ep.GetString() is { Length: > 0 } phrase)
         {
-          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && useRe.GetBoolean();
+          var useRegex = ee.TryGetProperty("useRegEx", out var useRe) && ReadBool(useRe, false);
           timer.EndEarlyPhrases.Add((ApplyEndEarlyCaseSensitivity(ee, ConvertTemplates(phrase), useRegex, droppedFeatures), useRegex));
         }
       }
@@ -1321,7 +1378,9 @@ internal static class NagUtil
     }
     if (action.TryGetProperty("endingDuration", out var edur) && edur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
     {
-      timer.WarningSeconds = (long)edur.GetDouble();
+      // ReadLong, not a raw cast: a finite double past long.MaxValue would unchecked-cast to
+      // long.MinValue instead of keeping the default
+      timer.WarningSeconds = ReadLong(edur, (long)timer.WarningSeconds);
     }
     if (action.TryGetProperty("duration", out var tdur))
     {
@@ -1337,7 +1396,7 @@ internal static class NagUtil
       }
       else if (tdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
       {
-        timer.DurationSeconds = tdur.GetDouble();
+        timer.DurationSeconds = ReadNumber(tdur, timer.DurationSeconds);
       }
     }
     if (action.TryGetProperty("restartBehavior", out var rb) && rb.ValueKind is JsonValueKind.Number or JsonValueKind.String)
@@ -1347,7 +1406,7 @@ internal static class NagUtil
       //        2=RestartTimer (all timers of this action), 3=DoNothing
       //   EQLP: 0=new entry, 1=clear all timers, 2=stop same display name then start,
       //         3=skip if any timer exists
-      timer.TriggerAgainOption = rb.GetInt32() switch
+      timer.TriggerAgainOption = ReadInt(rb, 0) switch
       {
         0 => 0,
         1 => 2,
@@ -1356,7 +1415,7 @@ internal static class NagUtil
         var v => v // unknown values pass through as-is
       };
     }
-    if (action.TryGetProperty("useCustomColor", out var ucc) && ucc.GetBoolean())
+    if (action.TryGetProperty("useCustomColor", out var ucc) && ReadBool(ucc, false))
     {
       if (action.TryGetProperty("overrideTimerColor", out var otc) && otc.GetString() is { Length: > 0 } color)
       {
@@ -1381,7 +1440,7 @@ internal static class NagUtil
   private static string ApplyEndEarlyCaseSensitivity(JsonElement endEarlyPhrase, string convertedPhrase,
       bool useRegex, List<string> droppedFeatures)
   {
-    var ignoreCase = !(endEarlyPhrase.TryGetProperty("ignoreCase", out var ic) && !ic.GetBoolean());
+    var ignoreCase = !(endEarlyPhrase.TryGetProperty("ignoreCase", out var ic) && !ReadBool(ic, true));
     if (ignoreCase)
     {
       return convertedPhrase;
@@ -1549,7 +1608,7 @@ internal static class NagUtil
 
     foreach (var action in actions.EnumerateArray())
     {
-      var actionType = action.TryGetProperty("actionType", out var at) ? at.GetInt32() : -1;
+      var actionType = action.TryGetProperty("actionType", out var at) ? ReadInt(at, -1) : -1;
 
       // Skip blank/template actions that have no actionType (all fields null/default).
       // These appear in NAG data as empty template objects with no real behavior.
@@ -1623,14 +1682,13 @@ internal static class NagUtil
 
         case 4: // Countdown — drains in NAG, optionally repeating
           hasAction = true;
-          var repeatTimer = action.TryGetProperty("repeatTimer", out var rt) && rt.GetBoolean();
+          var repeatTimer = action.TryGetProperty("repeatTimer", out var rt) && ReadBool(rt, false);
           {
             var timer = new TimerActionData();
             if (repeatTimer)
             {
               timer.TimerType = 4; // EQLP Looping
-              var repeatCount = action.TryGetProperty("repeatCount", out var rc) && rc.ValueKind is JsonValueKind.Number or JsonValueKind.String
-                ? rc.GetInt32() : 0;
+              var repeatCount = action.TryGetProperty("repeatCount", out var rc) ? ReadInt(rc, 0) : 0;
               if (repeatCount > 0)
               {
                 timer.TimesToLoop = repeatCount;
@@ -1789,7 +1847,7 @@ internal static class NagUtil
           // NAG never shows and would clobber another action's duration.
           if (action.TryGetProperty("duration", out var cdur) && cdur.ValueKind is JsonValueKind.Number or JsonValueKind.String)
           {
-            repeatedResetTime = cdur.GetDouble();
+            repeatedResetTime = ReadNumber(cdur, repeatedResetTime);
           }
           // Map overlayId
           if (action.TryGetProperty("overlayId", out var cov8) && cov8.GetString() is { Length: > 0 } overlayId8)
@@ -1798,7 +1856,7 @@ internal static class NagUtil
               selectedOverlays.Add(overlayId8);
           }
           // Map colors (consistent with ParseTimerActionFields — check useCustomColor first)
-          if (action.TryGetProperty("useCustomColor", out var ucc8) && ucc8.GetBoolean())
+          if (action.TryGetProperty("useCustomColor", out var ucc8) && ReadBool(ucc8, false))
           {
             if (action.TryGetProperty("overrideTimerColor", out var ctc) && ctc.GetString() is { Length: > 0 } color8)
             {
@@ -1816,7 +1874,7 @@ internal static class NagUtil
             {
               if (rp.TryGetProperty("phrase", out var rpp) && rpp.GetString() is { Length: > 0 } resetPhrase)
               {
-                var useRegex = rp.TryGetProperty("useRegEx", out var rpr) && rpr.GetBoolean();
+                var useRegex = rp.TryGetProperty("useRegEx", out var rpr) && ReadBool(rpr, false);
                 counterResetPhrases.Add((ConvertTemplates(resetPhrase), useRegex, counterVarName));
               }
             }
@@ -1941,9 +1999,9 @@ internal static class NagUtil
       sb.AppendLine("</style>\n</head>\n<body>");
 
       var total = results.Count;
-      var imported = results.Count(r => r.Status == "Imported");
-      var partial = results.Count(r => r.Status == "Partial");
-      var skipped = results.Count(r => r.Status == "Skipped");
+      var imported = results.Count(r => r.ImportStatus == NagImportStatus.Imported);
+      var partial = results.Count(r => r.ImportStatus == NagImportStatus.Partial);
+      var skipped = results.Count(r => r.ImportStatus == NagImportStatus.Skipped);
 
       sb.AppendLine($"<h1>NAG Import Report</h1>");
       sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
@@ -1959,25 +2017,25 @@ internal static class NagUtil
       sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
 
       // Sort: Skipped first, then Partial, then Success (Imported)
-      var sorted = results.OrderBy(r => r.Status switch
+      var sorted = results.OrderBy(r => r.ImportStatus switch
       {
-        "Skipped" => 0,
-        "Partial" => 1,
-        "Imported" => 2,
+        NagImportStatus.Skipped => 0,
+        NagImportStatus.Partial => 1,
+        NagImportStatus.Imported => 2,
         _ => 3
       }).ToList();
 
       foreach (var r in sorted)
       {
-        var badgeClass = r.Status switch
+        var badgeClass = r.ImportStatus switch
         {
-          "Imported" => "badge-imported",
-          "Partial" => "badge-partial",
-          "Skipped" => "badge-skipped",
+          NagImportStatus.Imported => "badge-imported",
+          NagImportStatus.Partial => "badge-partial",
+          NagImportStatus.Skipped => "badge-skipped",
           _ => ""
         };
         // Display "Success" instead of "Imported" in the report
-        var displayStatus = r.Status == "Imported" ? "Success" : r.Status;
+        var displayStatus = r.ImportStatus == NagImportStatus.Imported ? "Success" : r.Status;
         var badge = $"<span class=\"badge {badgeClass}\">{displayStatus}</span>";
         var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
           ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
@@ -2085,8 +2143,7 @@ internal static class NagUtil
         // NAG 'Ascending' timer sort (most time remaining first — overlay.js sorts by dir * timeRemaining,
         // dir = -1 for Ascending) has no EQLP equivalent. The overlay still imports with 'Remaining Time'
         // sorting, so its timers display in the opposite order from NAG — note it for the import report.
-        if (overlay.TryGetProperty("timerSortType", out var sortProp) && sortProp.ValueKind == JsonValueKind.Number &&
-            sortProp.GetInt32() == 1)
+        if (overlay.TryGetProperty("timerSortType", out var sortProp) && ReadInt(sortProp, 0) == 1)
         {
           var overlayName = overlay.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "(unnamed)" : "(unnamed)";
           var note = $"Overlay \"{overlayName}\": NAG 'Ascending' timer sort (most time remaining first) has no" +
@@ -2125,12 +2182,12 @@ internal static class NagUtil
 
     var fontColor = element.TryGetProperty("fontColor", out var fc) ? fc.GetString() : "#ffffff";
     var backgroundColor = element.TryGetProperty("backgroundColor", out var bc) ? bc.GetString() : "#000000";
-    var backgroundTransparency = element.TryGetProperty("backgroundTransparency", out var bt) ? bt.GetDouble() : 0;
+    var backgroundTransparency = element.TryGetProperty("backgroundTransparency", out var bt) ? ReadNumber(bt, 0) : 0;
     var timerColor = element.TryGetProperty("timerColor", out var tc) ? tc.GetString() : "#008000";
     var timerBackgroundColor = element.TryGetProperty("timerBackgroundColor", out var tbc) ? tbc.GetString() : null;
     var fontFamily = element.TryGetProperty("fontFamily", out var ff) ? ff.GetString() : "Segoe UI";
-    var fontSize = element.TryGetProperty("fontSize", out var fs) ? fs.GetInt32() : 12;
-    var fontWeight = element.TryGetProperty("fontWeight", out var fw) ? fw.GetInt32() : 400;
+    var fontSize = element.TryGetProperty("fontSize", out var fs) ? ReadInt(fs, 12) : 12;
+    var fontWeight = element.TryGetProperty("fontWeight", out var fw) ? ReadInt(fw, 400) : 400;
     var horizontalAlignment = element.TryGetProperty("horizontalAlignment", out var ha) ? ha.GetString() : "center";
     var verticalAlignment = element.TryGetProperty("verticalAlignment", out var va) ? va.GetString() : "bottom";
 
@@ -2148,11 +2205,11 @@ internal static class NagUtil
     // EQLP: 0=Trigger Time, 1=Remaining Time (ending soonest first), 2/3=Timer Name.
     // NAG Descending matches EQLP Remaining Time exactly; Ascending has no equivalent and is kept as 1
     // (reversed order vs NAG — reported via ConvertOverlays' overlayNotes).
-    var nagSort = element.TryGetProperty("timerSortType", out var st) ? st.GetInt32() : 0;
+    var nagSort = element.TryGetProperty("timerSortType", out var st) ? ReadInt(st, 0) : 0;
     var sortBy = nagSort == 2 ? 1 : nagSort;
 
     // Map showTextGlow → UseTextDropShadow (default true for backward compat)
-    var useTextDropShadow = element.TryGetProperty("showTextGlow", out var stg) ? stg.GetBoolean() : true;
+    var useTextDropShadow = element.TryGetProperty("showTextGlow", out var stg) ? ReadBool(stg, true) : true;
 
     return new ExportTriggerNode
     {
@@ -2161,10 +2218,10 @@ internal static class NagUtil
       OverlayData = new Overlay
       {
         Source = $"nag:{overlayId}",
-        Width = element.TryGetProperty("windowWidth", out var ww) ? ww.GetInt64() : 300,
-        Height = element.TryGetProperty("windowHeight", out var wh) ? wh.GetInt64() : 400,
-        Left = element.TryGetProperty("x", out var x) ? x.GetInt64() : 100,
-        Top = element.TryGetProperty("y", out var y) ? y.GetInt64() : 200,
+        Width = element.TryGetProperty("windowWidth", out var ww) ? ReadLong(ww, 300) : 300,
+        Height = element.TryGetProperty("windowHeight", out var wh) ? ReadLong(wh, 400) : 400,
+        Left = element.TryGetProperty("x", out var x) ? ReadLong(x, 100) : 100,
+        Top = element.TryGetProperty("y", out var y) ? ReadLong(y, 200) : 200,
         FontFamily = fontFamily ?? "Segoe UI",
         FontSize = $"{fontSize}pt",
         FontWeight = ConvertFontWeight(fontWeight),

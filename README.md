@@ -6,7 +6,7 @@ https://github.com/kauffman12/EQLogParser/releases/download/2.3.60/EQLogParser-i
 
 Minimum Requirements:
 1. Windows 10 x64
-2. .Net 8.0.11 Desktop Runtime for x64 (or newer version of 8.0)
+2. .Net 8.0.30 Desktop Runtime for x64 (or newer version of 8.0)
 
 For More Info Visit:
 http://eqlogparser.kizant.net

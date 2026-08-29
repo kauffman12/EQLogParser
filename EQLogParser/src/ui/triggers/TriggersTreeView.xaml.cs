@@ -41,7 +41,7 @@ namespace EQLogParser
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
       findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
-      TriggerStateDB.Instance.NodeCheckChanged += TriggerNodeCheckChanged;
+      TriggerStateDB.Instance.EventsNodeCheckChanged += TriggerNodeCheckChanged;
       _findTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _findTimer.Tick += async (_, _) =>
       {
@@ -157,17 +157,20 @@ namespace EQLogParser
     }
 
     /* Store-side SetStateFromParent resolved the parent's enabled value for an already-visible
-     * node (drag-and-drop) — apply it to the matching view node. */
+     * node (drag-and-drop) — apply it to the matching view node. Posted, not InvokeNow: this event
+     * can fire from the store's queue thread inside a LiteDB transaction, and a blocking Invoke
+     * would make that thread wait on the UI dispatcher. InvokeAsyncLogged so a failure of the post
+     * or the callback is logged rather than dropped as an unobserved task exception. */
     private void TriggerNodeCheckChanged(string id, bool isChecked)
     {
-      UiUtil.InvokeNow(() =>
+      UiUtil.InvokeAsyncLogged(() =>
       {
         if (triggerTreeView?.Nodes.Count > 0 && triggerTreeView.Nodes[0] is TriggerTreeViewNode root &&
             FindNodeById(root, id) is { } node)
         {
           node.IsChecked = isChecked;
         }
-      });
+      }, $"TriggersTreeView: applying resolved check to view node {id}");
     }
 
     private static TriggerTreeViewNode FindNodeById(TriggerTreeViewNode node, string id)
@@ -1097,7 +1100,7 @@ namespace EQLogParser
       if (!_disposedValue)
       {
         _disposedValue = true;
-        TriggerStateDB.Instance.NodeCheckChanged -= TriggerNodeCheckChanged;
+        TriggerStateDB.Instance.EventsNodeCheckChanged -= TriggerNodeCheckChanged;
         triggerTreeView?.DragDropController.Dispose();
         triggerTreeView?.Dispose();
         overlayTreeView?.DragDropController.Dispose();

@@ -44,9 +44,10 @@ namespace EQLogParser
     // — the name must agree. Otherwise every incoming member would overwrite the first sibling
     // found. A renamed family member then matches nothing and inserts as a new, visible
     // sibling instead of guessing which stored node it came from.
-    // Name-only matches (no OriginalId) are kind-safe (MatchesReimportKind): without it, a
-    // folder wrapper could match an existing same-named trigger and reach the overwrite branch
-    // with TriggerData == null, erasing the trigger's data.
+    // ALL matches are kind-safe (MatchesReimportKind) — name-only and OriginalId alike: without
+    // it, a folder wrapper carrying an id could match an existing same-id trigger and reach the
+    // overwrite branch with TriggerData == null, erasing the trigger's data (or a leaf matching
+    // a folder would be silently dropped).
     public static TriggerNode FindExisting(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming,
       ISet<string> batchSharedOriginalIds = null)
     {
@@ -58,8 +59,8 @@ namespace EQLogParser
           (batchSharedOriginalIds?.Contains(incoming.OriginalId) ?? false);
 
         return nameDisambiguates ?
-          family.FirstOrDefault(n => n.Name == incoming.Name) :
-          family.FirstOrDefault();
+          family.FirstOrDefault(n => n.Name == incoming.Name && MatchesReimportKind(n, incoming)) :
+          family.FirstOrDefault(n => MatchesReimportKind(n, incoming));
       }
 
       return siblings.FirstOrDefault(n => n.Name == incoming.Name && MatchesReimportKind(n, incoming));

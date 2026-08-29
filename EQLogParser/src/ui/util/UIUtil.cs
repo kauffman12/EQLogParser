@@ -220,6 +220,27 @@ namespace EQLogParser
       }, priority, ct).Task;
     }
 
+    /* Fire-and-forget post that cannot lose a failure: the callback's exception, and a fault of the
+     * dispatcher post itself (shutdown races), are both logged. Use this instead of
+     * `_ = InvokeAsync(...)`, which leaves those as unobserved task exceptions. */
+    internal static void InvokeAsyncLogged(Action action, string context, DispatcherPriority priority = DispatcherPriority.Normal)
+    {
+      try
+      {
+        var task = InvokeAsync(action, priority);
+        if (!task.IsCompleted)
+        {
+          _ = task.ContinueWith(faulted => Log.Error($"{context} (dispatcher callback)", faulted.Exception?.GetBaseException()),
+            TaskContinuationOptions.OnlyOnFaulted);
+        }
+      }
+      catch (Exception ex)
+      {
+        // no dispatcher / ran inline and threw
+        Log.Error($"{context} (inline)", ex);
+      }
+    }
+
     private class SortablePetMappingComparer : IComparer<PetMapping>
     {
       public int Compare(PetMapping x, PetMapping y)

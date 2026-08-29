@@ -11,7 +11,10 @@ namespace EQLogParser
     {
       if (data.Root is not { } root) return null;
 
-      var childrenByParent = data.Nodes.GroupBy(node => node.Parent)
+      // "?? """: Dictionary rejects a null key, so one orphan document with no Parent would fail
+      // the whole trigger/overlay tree load. Such nodes are never collected by TriggerStateDB
+      // (it queries children by parent), but the builder must not depend on that.
+      var childrenByParent = data.Nodes.GroupBy(node => node.Parent ?? "")
         .ToDictionary(group => group.Key, group => group.OrderBy(node => node.Index).ToList());
       return CreateViewNode(root, data.State, childrenByParent);
     }

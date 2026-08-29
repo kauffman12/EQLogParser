@@ -152,9 +152,9 @@ namespace EQLogParser
             return;
           }
 
-          var imported = results.Count(r => r.Status == "Imported");
-          var partial = results.Count(r => r.Status == "Partial");
-          var skipped = results.Count(r => r.Status == "Skipped");
+          var imported = results.Count(r => r.ImportStatus == NagImportStatus.Imported);
+          var partial = results.Count(r => r.ImportStatus == NagImportStatus.Partial);
+          var skipped = results.Count(r => r.ImportStatus == NagImportStatus.Skipped);
 
           var overlayLine = $"Overlays imported: {overlayCount}" + (fctSkipped > 0 ? $" ({fctSkipped} FCT skipped — unsupported)" : "");
           var message = $"NAG Ingest Complete\n\n" +
@@ -166,7 +166,7 @@ namespace EQLogParser
 
           if (skipped > 0)
           {
-            var skipReasons = results.Where(r => r.Status == "Skipped")
+            var skipReasons = results.Where(r => r.ImportStatus == NagImportStatus.Skipped)
               .GroupBy(r => r.Reason)
               .Select(g => $"{g.Key}: {g.Count()}")
               .ToList();

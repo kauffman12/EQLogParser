@@ -7,6 +7,12 @@ namespace EQLogParser
   /// spell/class knowledge) and localization labels. Null/empty defaults let
   /// Core code degrade gracefully when the host has not wired the hooks (e.g.
   /// in tests). Wired by the WPF host in App.xaml.cs.
+  ///
+  /// NOTE: the EQDataStore-delegating members look redundant (same assembly) but are a
+  /// deliberate seam — calling EQDataStore.Instance directly here would make every Core
+  /// consumer lazily construct the real data store, and tests that rely on the no-op
+  /// defaults (LineModifiersParserTest, StatsBuildersTest) would then depend on statics set
+  /// by other test classes. Keep as-is.
   /// </summary>
   internal static class CombatRecordLookup
   {

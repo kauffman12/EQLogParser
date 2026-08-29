@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace EQLogParser
 {
@@ -8,9 +9,28 @@ namespace EQLogParser
   /// Covers: basic conversion, conditions, multi-phrase capture, null duration,
   /// action type handling, deduplication, and import result tracking.
   /// </summary>
+  /* Mutates the process-wide TriggerStorePlatform.SoundExists hook, so it must not run
+   * concurrently with any other test in this assembly. */
+  [DoNotParallelize]
   [TestClass]
   public class NagUtilTriggerImportTest
   {
+    /* Missing-audio metadata follows the host-provided SoundExists probe (the WPF app wires a real
+     * file check). These tests assert missing-audio detection, so pin the probe to "no file exists"
+     * for the whole class — matching both the pre-default-flip behavior and the test output, which
+     * has no data/sounds directory. */
+    [TestInitialize]
+    public void PinSoundExistsProbe()
+    {
+      _previousSoundExists = TriggerStorePlatform.SoundExists;
+      TriggerStorePlatform.SoundExists = _ => false;
+    }
+
+    [TestCleanup]
+    public void RestoreSoundExistsProbe() => TriggerStorePlatform.SoundExists = _previousSoundExists;
+
+    private Func<string, bool>? _previousSoundExists;
+
     /// <summary>
     /// Calls ConvertTriggers and unwraps the root wrapper node so tests can access trigger data directly.
     /// </summary>
@@ -184,6 +204,80 @@ namespace EQLogParser
       Assert.AreEqual(3, nodes[0].TriggerData.TimerType);
       Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
       Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    /* NAG dumps sometimes write numerics as JSON strings ("12.5" instead of 12.5). GetDouble/
+     * GetInt32 throw on String kind, which used to abort the whole trigger — re-encode a few
+     * numeric properties as strings and expect results identical to the numeric form. */
+    [TestMethod]
+    public void ConvertTriggers_StringNumerics_ParsedLikeNumbers()
+    {
+      var json = CreateTriggerJson("Stringy Timer", "pattern", score: 0.75, actions:
+      [
+        CreateAction(3, displayText: "Cooldown", duration: 30.0, restartBehavior: 1)
+      ]);
+
+      var root = JsonNode.Parse(json);
+      var trigger = root!["triggers"]![0] as JsonObject;
+      var action = trigger!["actions"]![0] as JsonObject;
+      trigger!["score"] = "0.75";
+      action!["actionType"] = "3";
+      action["duration"] = "30.0";
+      action["restartBehavior"] = "1";
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(root.ToJsonString());
+
+      Assert.HasCount(1, nodes);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual(30.0, nodes[0].TriggerData.DurationSeconds);
+      Assert.AreEqual(3, nodes[0].TriggerData.TimerType);
+      Assert.IsFalse(string.IsNullOrEmpty(nodes[0].TriggerData.Pattern));
+      Assert.AreEqual("Imported", results[0].Status);
+    }
+
+    /* Fractional and out-of-range NUMBER tokens are as hostile to GetInt32/GetInt64 as strings are
+     * ("400.0" and "99999999999" both throw FormatException), so the same tolerant readers must
+     * cover them: a trigger with "actionType": 3.0 imports like 3 instead of being lost, and a
+     * cooldown no double can hold falls back to its default instead of aborting the trigger or
+     * storing +infinity as LockoutTime. */
+    [TestMethod]
+    public void ConvertTriggers_FractionalAndOutOfRangeNumbers_DoNotAbortImport()
+    {
+      var json = "{" +
+        "\"triggers\":[{\"name\":\"Fractional\",\"triggerId\":\"t-frac\",\"useCooldown\":true,\"cooldownDuration\":1e999," +
+        "\"capturePhrases\":[{\"phrase\":\"pattern one\",\"useRegEx\":false}]," +
+        "\"actions\":[{\"actionType\":3.0,\"displayText\":\"Cooldown\",\"duration\":\"45\",\"restartBehavior\":1.0}]}]}";
+
+      var (nodes, results, _) = ConvertTriggersUnwrapped(json);
+
+      Assert.HasCount(1, nodes);
+      Assert.AreEqual(NagImportStatus.Imported, results[0].ImportStatus);
+      Assert.IsTrue(nodes[0].TriggerData.EnableTimer);
+      Assert.AreEqual(45.0, nodes[0].TriggerData.DurationSeconds);
+      // 1e999 is not representable, so the default (0) is used — never LockoutTime = +infinity
+      Assert.AreEqual(0, nodes[0].TriggerData.LockoutTime);
+    }
+
+    /* Overlay geometry used GetInt64() directly, which throws on both the string and the fractional
+     * number tokens real dumps contain; one bad value aborted the whole overlay conversion. */
+    [TestMethod]
+    public void ConvertOverlays_StringAndFractionalGeometry_AreParsed()
+    {
+      var json = "{" +
+        "\"overlays\":[{\"overlayId\":\"ov-geo\",\"name\":\"Geo\",\"overlayType\":\"Alert\"," +
+        "\"windowWidth\":\"640\",\"windowHeight\":480.7,\"x\":20.5,\"y\":\"30\"," +
+        "\"fontSize\":\"14\",\"fontWeight\":700.0,\"backgroundTransparency\":\"40\"}]}";
+
+      var overlays = NagUtil.ConvertOverlays(json, out _, out _);
+
+      Assert.HasCount(1, overlays);
+      var overlay = overlays[0].OverlayData;
+      Assert.AreEqual(640, overlay.Width);
+      Assert.AreEqual(480, overlay.Height);   // fractional part truncates toward zero
+      Assert.AreEqual(20, overlay.Left);
+      Assert.AreEqual(30, overlay.Top);
+      Assert.AreEqual("14pt", overlay.FontSize);
+      Assert.AreEqual("Bold", overlay.FontWeight);
     }
 
     [TestMethod]
@@ -1513,8 +1607,8 @@ namespace EQLogParser
     {
       var results = new List<NagImportResult>
       {
-        new() { TriggerName = "Test1", TriggerId = "t1", Status = "Imported", Reason = null, ActionsSummary = "Text", FolderPath = "/root/sub" },
-        new() { TriggerName = "Test2", TriggerId = "t2", Status = "Skipped", Reason = "Dev-only trigger", ActionsSummary = null, FolderPath = "/root" }
+        new() { TriggerName = "Test1", TriggerId = "t1", ImportStatus = NagImportStatus.Imported, Reason = null, ActionsSummary = "Text", FolderPath = "/root/sub" },
+        new() { TriggerName = "Test2", TriggerId = "t2", ImportStatus = NagImportStatus.Skipped, Reason = "Dev-only trigger", ActionsSummary = null, FolderPath = "/root" }
       };
 
       var tempFile = Path.GetTempFileName();
@@ -1542,9 +1636,9 @@ namespace EQLogParser
     {
       var results = new List<NagImportResult>
       {
-        new() { TriggerName = "Test1", TriggerId = "t1", Status = "Imported", Reason = null, FolderPath = "NAG Import - 2024-01-15 10:30/Orphaned Triggers", ActionsSummary = "Text", MissingAudioFiles = [] },
-        new() { TriggerName = "Test2", TriggerId = "t2", Status = "Skipped", Reason = "Dev-only trigger", FolderPath = "(root)", ActionsSummary = null, MissingAudioFiles = [] },
-        new() { TriggerName = "Has,Comma", TriggerId = "t3", Status = "Partial", Reason = "set variable", FolderPath = "NAG Import - 2024-01-15 10:30/Raids/Kunark", ActionsSummary = "Text, Audio", MissingAudioFiles = new List<string> { "missing.wav" } }
+        new() { TriggerName = "Test1", TriggerId = "t1", ImportStatus = NagImportStatus.Imported, Reason = null, FolderPath = "NAG Import - 2024-01-15 10:30/Orphaned Triggers", ActionsSummary = "Text", MissingAudioFiles = [] },
+        new() { TriggerName = "Test2", TriggerId = "t2", ImportStatus = NagImportStatus.Skipped, Reason = "Dev-only trigger", FolderPath = "(root)", ActionsSummary = null, MissingAudioFiles = [] },
+        new() { TriggerName = "Has,Comma", TriggerId = "t3", ImportStatus = NagImportStatus.Partial, Reason = "set variable", FolderPath = "NAG Import - 2024-01-15 10:30/Raids/Kunark", ActionsSummary = "Text, Audio", MissingAudioFiles = new List<string> { "missing.wav" } }
       };
 
       var tempFile = Path.GetTempFileName();
@@ -1605,7 +1699,7 @@ namespace EQLogParser
     {
       var results = new List<NagImportResult>
       {
-        new() { TriggerName = "Trigger <with> & \"quotes\"", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+        new() { TriggerName = "Trigger <with> & \"quotes\"", TriggerId = "t1", ImportStatus = NagImportStatus.Imported, FolderPath = "(root)", ActionsSummary = "" }
       };
 
       var tempFile = Path.GetTempFileName();
@@ -1631,7 +1725,7 @@ namespace EQLogParser
     {
       var results = new List<NagImportResult>
       {
-        new() { TriggerName = "Root Trig", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+        new() { TriggerName = "Root Trig", TriggerId = "t1", ImportStatus = NagImportStatus.Imported, FolderPath = "(root)", ActionsSummary = "" }
       };
 
       var tempFile = Path.GetTempFileName();
@@ -1654,10 +1748,10 @@ namespace EQLogParser
     {
       var results = new List<NagImportResult>
       {
-        new() { TriggerName = "ImportedOne", TriggerId = "t1", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" },
-        new() { TriggerName = "SkippedOne", TriggerId = "t2", Status = "Skipped", Reason = "dev", FolderPath = "(root)", ActionsSummary = null },
-        new() { TriggerName = "PartialOne", TriggerId = "t3", Status = "Partial", Reason = "dropped", FolderPath = "(root)", ActionsSummary = "" },
-        new() { TriggerName = "ImportedTwo", TriggerId = "t4", Status = "Imported", FolderPath = "(root)", ActionsSummary = "" }
+        new() { TriggerName = "ImportedOne", TriggerId = "t1", ImportStatus = NagImportStatus.Imported, FolderPath = "(root)", ActionsSummary = "" },
+        new() { TriggerName = "SkippedOne", TriggerId = "t2", ImportStatus = NagImportStatus.Skipped, Reason = "dev", FolderPath = "(root)", ActionsSummary = null },
+        new() { TriggerName = "PartialOne", TriggerId = "t3", ImportStatus = NagImportStatus.Partial, Reason = "dropped", FolderPath = "(root)", ActionsSummary = "" },
+        new() { TriggerName = "ImportedTwo", TriggerId = "t4", ImportStatus = NagImportStatus.Imported, FolderPath = "(root)", ActionsSummary = "" }
       };
 
       var tempFile = Path.GetTempFileName();
@@ -1709,7 +1803,8 @@ namespace EQLogParser
     [TestMethod]
     public void ConvertTriggers_MalformedActionType_TriggerSkippedOthersImported()
     {
-      // "Bad" has a non-numeric actionType, which makes ParseTrigger throw mid-conversion.
+      // "Bad" has a non-numeric actionType. ReadInt no longer throws on it — the action simply
+      // fails to match any supported type, so the trigger is skipped for lack of actions.
       // The import must report only that trigger as Skipped and still convert the rest.
       var json = "{\"triggers\":["
         + "{\"name\":\"Bad\",\"triggerId\":\"t-bad\",\"capturePhrases\":[{\"phrase\":\"bad pattern\",\"useRegEx\":false}],"
@@ -1730,7 +1825,7 @@ namespace EQLogParser
       Assert.HasCount(2, results);
       Assert.AreEqual("Bad", results[0].TriggerName);
       Assert.AreEqual("Skipped", results[0].Status);
-      StringAssert.Contains(results[0].Reason, "Error parsing trigger");
+      Assert.AreEqual("No supported actions", results[0].Reason);
       Assert.AreEqual("Good", results[1].TriggerName);
       Assert.AreEqual("Imported", results[1].Status);
     }

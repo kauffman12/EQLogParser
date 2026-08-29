@@ -35,7 +35,6 @@ namespace EQLogParser
     private StatsGenerationEvent _lastStatsEvent;
     private string _title;
     private bool _isLimited;
-    internal static readonly string[] Separator = [" @"];
 
     internal HealingStatsBuilder()
     {

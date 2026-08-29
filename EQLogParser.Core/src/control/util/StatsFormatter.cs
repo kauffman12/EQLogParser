@@ -7,8 +7,6 @@ namespace EQLogParser
 {
   internal static class StatsFormatter
   {
-    internal static readonly string[] separator = [" @"];
-
     internal static StatsSummary Build(string type, CombinedStats stats, List<PlayerStats> players, SummaryOptions opts, string customTitle)
     {
       if (stats == null)

@@ -216,28 +216,30 @@ namespace EQLogParser
 
       if (isPlayer)
       {
-        string classAbility = null;
+        // the ability name itself is not needed here — a class ability means "this player uses
+        // this class", so a flag plus the class label is all the registry call consumes
+        var hasClassAbility = false;
         string className = null;
         if (IsAssassinate(result))
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
-          classAbility = "Assassinate";
+          hasClassAbility = true;
           className = CombatRecordLookup.RogueClass;
         }
         else if (IsHeadshot(result) || IsDoubleBowShot(result))
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
-          classAbility = IsHeadshot(result) ? "Headshot" : "Double Bow Shot";
+          hasClassAbility = true;
           className = CombatRecordLookup.RangerClass;
         }
         else if (IsSlayUndead(result))
         {
           PlayerRegistry.Instance.AddVerifiedPlayer(player, currentTime);
-          classAbility = "Slay Undead";
+          hasClassAbility = true;
           className = CombatRecordLookup.PaladinClass;
         }
 
-        if (!string.IsNullOrEmpty(classAbility) && !string.IsNullOrEmpty(className))
+        if (hasClassAbility && !string.IsNullOrEmpty(className))
         {
           PlayerRegistry.Instance.SetActivePlayerClass(player, className, 1, currentTime);
         }

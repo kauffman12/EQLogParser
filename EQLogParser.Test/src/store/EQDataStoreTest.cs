@@ -4,15 +4,20 @@ namespace EQLogParser
    * Class-name registration comes from a host-provided label hook, so tests wire a tiny
    * deterministic mapping instead of the WPF resx. Data-file-backed tests rely on the real
    * data files linked into the test output directory (CWD = BaseDirectory). */
+  /* Swaps the process-wide CWD and CombatRecordLookup hooks, so it must not run
+   * concurrently with any other test in this assembly. */
+  [DoNotParallelize]
   [TestClass]
   public sealed class EQDataStoreTest
   {
     private string? _originalCwd;
+    private Func<string, string>? _originalClassLabels;
 
     [TestInitialize]
     public void Setup()
     {
       _originalCwd = Environment.CurrentDirectory;
+      _originalClassLabels = CombatRecordLookup.ClassLabelByEnumName;
       Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
     }
 
@@ -23,7 +28,8 @@ namespace EQLogParser
       {
         Environment.CurrentDirectory = _originalCwd!;
       }
-      CombatRecordLookup.ClassLabelByEnumName = _ => null;
+      // restore rather than reset — other test classes may carry their own wiring
+      CombatRecordLookup.ClassLabelByEnumName = _originalClassLabels ?? (_ => null);
     }
 
     private static EQDataStore StoreWithClasses(params (string enumName, string label)[] classes)

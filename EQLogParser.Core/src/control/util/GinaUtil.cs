@@ -192,24 +192,27 @@ namespace EQLogParser
           var postData = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><DownloadPackageChunk xmlns=\"http://tempuri.org/\"><sessionId>" +
                          ginaKey + "</sessionId><chunkNumber>" + chunk + "</chunkNumber></DownloadPackageChunk></s:Body></s:Envelope>";
 
-          var content = new StringContent(postData, Encoding.UTF8, "text/xml");
+          using var content = new StringContent(postData, Encoding.UTF8, "text/xml");
           content.Headers.Add("Content-Length", postData.Length.ToString(CultureInfo.InvariantCulture));
 
-          var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
+          using var message = new HttpRequestMessage(HttpMethod.Post, @"http://eq.gimasoft.com/GINAServices/Package.svc");
           message.Content = content;
           message.Headers.Add("SOAPAction", "http://tempuri.org/IPackageService/DownloadPackageChunk");
           message.Headers.Add("Accept-Encoding", "gzip, deflate");
-          var response = _httpClient.Send(message);
+          // dispose the response — it owns the socket; leaking it exhausts sockets over time
+          using var response = _httpClient.Send(message);
           if (response.IsSuccessStatusCode)
           {
             string xml = null;
             using var data = response.Content.ReadAsStream();
-            var buffer = new byte[data.Length];
-            var read = data.Read(buffer, 0, buffer.Length);
-            if (read > 0)
+            using var compressed = new MemoryStream();
+            // CopyTo, not a single Read: Stream.Read may return fewer bytes than requested, which
+            // used to truncate a chunk and abort the download with "No data found".
+            data.CopyTo(compressed);
+            if (compressed.Length > 0)
             {
-              using var bufferStream = new MemoryStream(buffer);
-              using var gzip = new GZipStream(bufferStream, CompressionMode.Decompress);
+              compressed.Position = 0;
+              using var gzip = new GZipStream(compressed, CompressionMode.Decompress);
               using var memory = new MemoryStream();
               gzip.CopyTo(memory);
               xml = Encoding.UTF8.GetString(memory.ToArray());

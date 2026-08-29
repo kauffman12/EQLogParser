@@ -237,5 +237,57 @@ namespace EQLogParserTest
 
       Assert.IsFalse(TriggerImportPlanner.MatchesReimportKind(ExistingFolder("Foo"), incoming));
     }
+
+    /* Kind-safety applies to the OriginalId path as well: without it, a folder wrapper carrying
+     * an id that collides with a stored leaf's id would reach the overwrite branch with
+     * TriggerData == null (erasing the leaf), and a leaf matching a folder's id would be
+     * silently dropped. */
+    [TestMethod]
+    public void Plan_OriginalId_FolderWrapperMatchingLeaf_InsertsNewFolder()
+    {
+      var storedLeaf = ExistingTrigger("Boss", "id-1");
+      var incoming = new ExportTriggerNode
+      {
+        Name = "Boss Wrapper",
+        OriginalId = "id-1",
+        Nodes = [IncomingLeaf("Inside")]
+      };
+
+      var decision = TriggerImportPlanner.Plan([storedLeaf], incoming);
+
+      Assert.AreEqual(ImportAction.InsertFolder, decision.Action);
+      Assert.IsNull(decision.Existing);
+    }
+
+    [TestMethod]
+    public void Plan_OriginalId_LeafMatchingFolder_InsertsNewLeaf()
+    {
+      var storedFolder = ExistingFolder("Boss");
+      storedFolder.OriginalId = "id-1";
+
+      var decision = TriggerImportPlanner.Plan([storedFolder], IncomingLeaf("Boss Leaf", "id-1"));
+
+      Assert.AreEqual(ImportAction.InsertLeaf, decision.Action);
+      Assert.IsNull(decision.Existing);
+    }
+
+    [TestMethod]
+    public void Plan_OriginalId_NameAndIdBothMatchOtherKind_InsertsNewFolder()
+    {
+      // same name AND same id — both match paths must kind-reject the folder wrapper rather than
+      // let it erase the leaf
+      var storedLeaf = ExistingTrigger("X", "id-9");
+      var incoming = new ExportTriggerNode
+      {
+        Name = "X",
+        OriginalId = "id-9",
+        Nodes = [IncomingLeaf("Inside")]
+      };
+
+      var decision = TriggerImportPlanner.Plan([storedLeaf], incoming);
+
+      Assert.AreEqual(ImportAction.InsertFolder, decision.Action);
+      Assert.IsNull(decision.Existing);
+    }
   }
 }
