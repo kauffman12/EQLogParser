@@ -82,9 +82,101 @@ namespace EQLogParser
 
       var overlay = await db.GetOverlayTree();
       Assert.AreEqual(TriggerStateDB.Overlays, overlay.Root.Name);
-      // version 1.0.1 bootstrap creates the two default overlays
+      // first-run bootstrap creates the two default overlays
       var defaults = overlay.Nodes.Where(n => n.OverlayData?.IsDefault == true).Select(n => n.Name).OrderBy(x => x).ToList();
       CollectionAssert.AreEqual(new[] { "Default Text Overlay", "Default Timer Overlay" }, defaults);
+    }
+
+    /* Pre-branch, the bootstrap block keyed off "no FixVersion document" rather than "empty file": a
+     * populated database that was never version-stamped still got its first-run treatment. */
+    [TestMethod]
+    public async Task ExistingDbWithoutVersionDoc_FirstVersionedRun_BootstrapsDefaultsAndStamps()
+    {
+      var dir = NewDir();
+      _dirs.Add(dir);
+      var path = Path.Combine(dir, "unversioned.db");
+
+      string nameKey;
+      using (var raw = new LiteDatabase(path))
+      {
+        // discover the stored field name for TriggerNode.Name by round-tripping through the mapper
+        raw.GetCollection<TriggerNode>("Tree").Insert(new TriggerNode { Id = "probe", Name = "probe" });
+        var probeDoc = raw.GetCollection<BsonDocument>("Tree").FindById("probe");
+        nameKey = probeDoc.TryGetValue("Name", out _) ? "Name" : "name";
+        raw.GetCollection<BsonDocument>("Tree").Delete("probe");
+
+        // populated tree with root nodes but no version document at all
+        var overlayRoot = new BsonDocument();
+        overlayRoot.Add("_id", "root-overlays");
+        overlayRoot.Add(nameKey, TriggerStateDB.Overlays);
+        raw.GetCollection<BsonDocument>("Tree").Insert(overlayRoot);
+
+        var triggerRoot = new BsonDocument();
+        triggerRoot.Add("_id", "root-triggers");
+        triggerRoot.Add(nameKey, TriggerStateDB.Triggers);
+        raw.GetCollection<BsonDocument>("Tree").Insert(triggerRoot);
+      }
+
+      var db = Store(path);
+      await using (var _ = db)
+      {
+        // no child overlays exist yet, so the first-versioned-run bootstrap adds the defaults
+        var overlay = await db.GetOverlayTree();
+        var defaults = overlay.Nodes.Where(n => n.OverlayData?.IsDefault == true).Select(n => n.Name).OrderBy(x => x).ToList();
+        CollectionAssert.AreEqual(new[] { "Default Text Overlay", "Default Timer Overlay" }, defaults);
+      }
+
+      using (var check = new LiteDatabase(path))
+      {
+        // and the migration stamped the version chain at the current version
+        var versionDoc = check.GetCollection<BsonDocument>("FixVersion")
+          .FindAll().FirstOrDefault(d => d.TryGetValue("_id", out var id) &&
+                                         id.Type == BsonType.String && id.AsString == "1");
+        Assert.IsTrue(versionDoc is not null && versionDoc.TryGetValue("Version", out var v) && v.AsString == "1.0.2",
+          "expected FixVersion to be stamped to 1.0.2 on first versioned run");
+      }
+    }
+
+    /* The contrast: a database that was already version-stamped is an existing user's data — even with no
+     * child overlays it must not be re-bootstrapped (the pre-branch count==0 gate guaranteed this). */
+    [TestMethod]
+    public async Task ExistingDbWithVersionDoc_MissingOverlays_NotRebootstrapped()
+    {
+      var dir = NewDir();
+      _dirs.Add(dir);
+      var path = Path.Combine(dir, "versioned.db");
+
+      string nameKey;
+      using (var raw = new LiteDatabase(path))
+      {
+        raw.GetCollection<TriggerNode>("Tree").Insert(new TriggerNode { Id = "probe", Name = "probe" });
+        var probeDoc = raw.GetCollection<BsonDocument>("Tree").FindById("probe");
+        nameKey = probeDoc.TryGetValue("Name", out _) ? "Name" : "name";
+        raw.GetCollection<BsonDocument>("Tree").Delete("probe");
+
+        var overlayRoot = new BsonDocument();
+        overlayRoot.Add("_id", "root-overlays");
+        overlayRoot.Add(nameKey, TriggerStateDB.Overlays);
+        raw.GetCollection<BsonDocument>("Tree").Insert(overlayRoot);
+
+        var triggerRoot = new BsonDocument();
+        triggerRoot.Add("_id", "root-triggers");
+        triggerRoot.Add(nameKey, TriggerStateDB.Triggers);
+        raw.GetCollection<BsonDocument>("Tree").Insert(triggerRoot);
+
+        var versionDoc = new BsonDocument();
+        versionDoc.Add("_id", "1");
+        versionDoc.Add("Version", "1.0.2");
+        raw.GetCollection<BsonDocument>("FixVersion").Insert(versionDoc);
+      }
+
+      var db = Store(path);
+      await using (var _ = db)
+      {
+        var overlay = await db.GetOverlayTree();
+        var defaults = overlay.Nodes.Where(n => n.OverlayData?.IsDefault == true).ToList();
+        Assert.AreEqual(0, defaults.Count, "an existing versioned database must not gain default overlays");
+      }
     }
 
     [TestMethod]
@@ -472,6 +564,54 @@ namespace EQLogParser
       var timer = nodes2.Single(n => n.Id == overlayId);
       Assert.AreEqual("16pt", timer.OverlayData.FontSize);
       Assert.AreEqual("Bar Timer", timer.Name);
+    }
+
+    /* NAG overlay contract: export nodes carry no id (EQLP ids are store-generated) — the source
+     * identity travels in OverlayData.Source ("nag:{overlayId}"). Re-importing with the same
+     * Source must update the existing node, name included, instead of adding a second copy. */
+    [TestMethod]
+    public async Task ImportOverlays_NagSource_UpdatesExistingOverlayInPlace()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      await db.GetOverlayTree();
+
+      static ExportTriggerNode Nag(string name, string fontSize) =>
+        new() { Name = name, OverlayData = new Overlay { Source = "nag:ov-1", FontSize = fontSize } };
+
+      await db.ImportOverlays([new() { Name = TriggerStateDB.Overlays, Nodes = [Nag("Combat", "12pt")] }]);
+      var (root, nodes, _) = await db.GetOverlayTree();
+      var imported = nodes.Single(n => n.Name == "Combat");
+      Assert.IsTrue(Guid.TryParse(imported.Id, out var generatedId), "node id must be store-generated");
+
+      // re-migration of the same NAG overlay: same Source, name and payload changed
+      await db.ImportOverlays([new() { Name = TriggerStateDB.Overlays, Nodes = [Nag("Combat v2", "16pt")] }]);
+
+      var (_, nodes2, _) = await db.GetOverlayTree();
+      Assert.AreEqual(1, nodes2.Count(n => n.Name is "Combat" or "Combat v2"), "re-import must not create a second overlay");
+      var updated = nodes2.Single(n => n.Parent == root.Id && n.OverlayData?.Source == "nag:ov-1");
+      Assert.AreEqual("Combat v2", updated.Name);
+      Assert.AreEqual("16pt", updated.OverlayData.FontSize);
+      Assert.AreEqual(imported.Id, updated.Id); // same node, updated in place
+    }
+
+    /* Source matching must not over-match across distinct NAG overlays: two same-named overlays
+     * from two migrated databases (different Sources) are both kept. */
+    [TestMethod]
+    public async Task ImportOverlays_DistinctNagSources_KeptSeparate()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      await db.GetOverlayTree();
+
+      static ExportTriggerNode Nag(string name, string source) =>
+        new() { Name = name, OverlayData = new Overlay { Source = source } };
+
+      await db.ImportOverlays([new() { Name = TriggerStateDB.Overlays, Nodes = [Nag("Combat", "nag:ov-1")] }]);
+      await db.ImportOverlays([new() { Name = TriggerStateDB.Overlays, Nodes = [Nag("Combat", "nag:ov-2")] }]);
+
+      var (_, nodes, _) = await db.GetOverlayTree();
+      Assert.AreEqual(2, nodes.Count(n => n.Name == "Combat"));
     }
 
     /* Overlay import must persist plain TriggerNode documents. Inserting the ExportTriggerNode

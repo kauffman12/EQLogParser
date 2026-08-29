@@ -44,6 +44,23 @@ namespace EQLogParser
     private const string TreeCol = "Tree";
     private const string LexiconCol = "Lexicon";
     private const string TrustedPlayersCol = "TrustedPlayers";
+    /* Database-versioning history (read before changing anything here):
+     *
+     * "Version" (BadVersionCol) — the original mechanism, in use until July 2024: a single
+     * System.Version(1,0,0) document whose only job was flagging "database initialized"
+     * (first run created the default overlays). Reading those documents back proved
+     * unreliable, so current code treats the collection as garbage: it is deleted whole at
+     * startup and never deserialized. Only one value ever existed in it, so nothing needs
+     * translating into the new scheme — a database without a FixVersion document simply means
+     * "older than 1.0.2", and the idempotent steps in ApplyDatabaseMigrations handle that.
+     *
+     * "FixVersion" (VersionCol) — the current version chain: one {_id:"1",
+     * Version:"<major.minor.patch>"} document per database, stored as a plain string so the
+     * document stays trivially readable by any build. Older builds seeded it with "1.0.1";
+     * it is now owned exclusively by ApplyDatabaseMigrations, which rewrites it to
+     * CurrentDbVersion only after every migration step succeeds. All other code may read it,
+     * never write or re-stamp it — one owner per document is the invariant that keeps this
+     * collection from repeating what went wrong with the old one. */
     private const string BadVersionCol = "Version";
     private const string VersionCol = "FixVersion";
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -78,9 +95,13 @@ namespace EQLogParser
           };
 
           // Captured before ApplyDatabaseMigrations runs: the migrations also write the
-          // FixVersion version document, so an empty collection list is the only reliable
-          // "brand-new file" signal left by the time the bootstrap block below runs.
-          var isNewDb = _db.GetCollectionNames().Count() == 0;
+          // FixVersion version document, so the absence of a pre-existing version document is
+          // the reliable "first versioned run" signal left by the time the bootstrap block
+          // below runs (a brand-new file is just the empty special case of that).
+          // Do not move this check past ApplyDatabaseMigrations or re-derive it from the
+          // collection after migration: once migrations have run, every database — fresh or
+          // ancient — has a version document and the signal is gone.
+          var firstVersionedRun = _db.GetCollection<BsonDocument>(VersionCol).FindById("1") is not BsonDocument;
 
           Log.Info($"Opening trigger database: {path}");
 
@@ -149,17 +170,26 @@ namespace EQLogParser
           var states = _db.GetCollection<TriggerState>(StatesCol);
           states.EnsureIndex(x => x.Id);
 
-          // remove old bad version
-          var versions = _db.GetCollection<Version>(BadVersionCol);
+          // Remove the legacy "Version" collection (see BadVersionCol). It is deleted whole,
+          // never read or translated: every pre-2024 database holds the same single
+          // System.Version(1,0,0) flag, which carries no information the FixVersion chain does
+          // not supersede. Typed as BsonDocument on purpose — legacy documents may be
+          // unreadable System.Version values, and only Count/DeleteAll ever touch this
+          // collection; never query it with a predicate that would force deserialization.
+          var versions = _db.GetCollection<BsonDocument>(BadVersionCol);
           if (versions.Count() > 0)
           {
             versions.DeleteAll();
           }
 
-          if (isNewDb)
+          if (firstVersionedRun)
           {
             // the FixVersion version document is owned by ApplyDatabaseMigrations (which ran
-            // earlier), so a fresh database is stamped at CurrentDbVersion, not 1.0.1
+            // earlier), so a first-versioned database is stamped at CurrentDbVersion, not 1.0.1.
+            // The gate mirrors the pre-branch fixVersions.Count()==0 check on purpose: it fires
+            // for brand-new databases AND for populated databases that were never version-
+            // stamped (users jumping in from a pre-2024 build), but never for an already-
+            // versioned user database — even one with no overlays.
 
             // add default overlays if none exist
             if (!tree.Find(n => n.OverlayData != null && n.Parent != null).Any())
