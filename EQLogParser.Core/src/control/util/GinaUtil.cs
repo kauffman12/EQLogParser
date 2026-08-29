@@ -21,7 +21,7 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, CharacterData> GinaCache = new();
     private static readonly HttpClient _httpClient = new();
 
-    internal static List<ExportTriggerNode> CovertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
+    internal static List<ExportTriggerNode> ConvertToTriggerNodes(byte[] data) => Convert(ReadXml(data));
 
     internal static void CheckGina(List<TrustedPlayer> trust, ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {

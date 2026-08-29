@@ -28,8 +28,10 @@ namespace EQLogParser
       {
         Environment.CurrentDirectory = _originalCwd!;
       }
-      // restore rather than reset — other test classes may carry their own wiring
-      CombatRecordLookup.ClassLabelByEnumName = _originalClassLabels ?? (_ => null);
+      // restore rather than reset — other test classes may carry their own wiring.
+      // "" (not null): the hook's consumers only test IsNullOrEmpty, and it keeps this
+      // NRT-enabled test project warning-free (the hook type is nullable-oblivious in Core).
+      CombatRecordLookup.ClassLabelByEnumName = _originalClassLabels ?? (_ => "");
     }
 
     private static EQDataStore StoreWithClasses(params (string enumName, string label)[] classes)

@@ -107,11 +107,17 @@ namespace EQLogParser
 
         var json = await File.ReadAllTextAsync(filePath);
         // Conversion is CPU-bound (JSON + regex work over the whole database) — run it off the UI thread.
-        var (nodes, results, _) = await Task.Run(() => NagUtil.ConvertTriggers(json, databaseDirectory));
+        var (nodes, results) = await Task.Run(() => NagUtil.ConvertTriggers(json, databaseDirectory));
 
         // Import overlays BEFORE triggers so that ValidateOverlays() can find them
         // when triggers reference overlay IDs. Triggers must be imported after overlays.
         var (overlayCount, fctSkipped, overlayNotes) = await ImportNagOverlays(databaseDirectory);
+
+        // NAG actions reference overlays by their NAG id, but EQLP node ids are store-generated
+        // UUIDs (matched back through OverlayData.Source) — rewrite the references now or
+        // ValidateOverlays strips every one during the trigger import.
+        var overlayRemap = NagUtil.BuildOverlayIdRemap(await TriggerStateDB.Instance.GetAllOverlays());
+        NagUtil.RemapOverlayReferences(nodes, overlayRemap);
 
         // Count earlier NAG imports so the summary can warn this adds another copy.
         var priorImports = await TriggerStateDB.Instance.CountChildren(TriggerStateDB.Triggers, NagImportRootPrefix);
@@ -240,7 +246,7 @@ namespace EQLogParser
         var data = ms.ToArray();
         if (data.Length > 0)
         {
-          var imported = GinaUtil.CovertToTriggerNodes(data);
+          var imported = GinaUtil.ConvertToTriggerNodes(data);
           await TriggerStateDB.Instance.ImportTriggers(parent, imported);
         }
       }

@@ -35,23 +35,475 @@ internal class NagImportResult
   public List<string> MissingAudioFiles { get; set; } = [];
 }
 
-/// <summary>
-/// Metadata about a NAG trigger, keyed by NAG triggerId. Used for character state import
-/// and other profile-level operations that need to correlate NAG IDs with imported EQLP nodes.
-/// </summary>
-internal class NagTriggerMetadata
-{
-  public string TriggerName { get; set; }
-  public string FolderPath { get; set; }
-  public double Score { get; set; }
-  public string ActionsSummary { get; set; }
-  public List<string> DroppedFeatures { get; set; }
-  public List<string> MissingAudioFiles { get; set; } = [];
-}
-
 internal static class NagUtil
 {
   private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+  // NAG template syntax: ${var} or {groupName} → EQLP: {$var} or {$groupName}
+  private static readonly Regex VarPattern = new(@"\$\{([^}]+)\}", RegexOptions.Compiled);
+
+  private static readonly Regex GroupPattern = new(@"(?<!\$)\{([a-zA-Z][^}]*)\}", RegexOptions.Compiled);
+
+  // NAG "unlimited" countdown repeat has no finite EQLP equivalent — approximate
+  // with a very large loop count.
+  private const long UnlimitedRepeatLoops = 999999;
+
+  // NAG interruptSpeech note. Listed in droppedFeatures for report transparency, but it is an
+  // implemented approximation (priority 1) rather than a missing feature, so it does not
+  // downgrade the trigger's status to Partial on its own.
+  internal const string InterruptSpeechNote = "speech interruption (approximated as priority 1)";
+
+  // OverlayData.Source prefix for NAG-imported overlays: "nag:{overlayId}". EQLP node ids are
+  // always store-generated UUIDs, so the NAG identity travels in Source instead — the store
+  // matches it on re-import to update the existing overlay (see TriggerStateDB.Import).
+  internal const string NagSourcePrefix = "nag:";
+
+  // Dropped-feature notes that are approximations of implemented behavior — they stay in the
+  // report/Comments but do not affect import status. True gaps still mark a trigger Partial.
+  private static readonly HashSet<string> NonStatusDroppedFeatures = new() { InterruptSpeechNote };
+
+  // Action types whose phrase scoping the import routes per-phrase node (text/sound/TTS/clipboard
+  // values via RouteActionValue, variable effects via SetVariables/PhraseClearVariables). Every
+  // other scoped action type (timers, counters) still applies to all phrase nodes.
+  private static readonly HashSet<int> RouteablePhraseScopedTypes = new() { 0, 1, 2, 5, 7, 9 };
+
+  // NAG ${varName} in regex phrases — not supported by EQLP, replace with (?<varName>.+?)
+  // Exception: ${Character} maps to EQLP's native {c} (replaced with player name at runtime).
+  private static readonly Regex DollarVarRegex = new(@"\$\{(\w+)\}", RegexOptions.Compiled);
+
+  // NAG {VAR} in regex phrases that EQLP does NOT handle at runtime.
+  // Excluded (passed through for EQLP runtime handling):
+  //   {S}/{s}/{N}/{n} + digit suffixes — CheckOptions() string/number captures
+  //   {TS}/{ts} — CheckOptions() timer duration
+  //   {C}/{c} — TriggerProcessor replaces with player character name at runtime
+  // Everything else becomes a named capture group:
+  //   {LN} → (?<LN>\w+) (player/NPC name, single word)
+  //   {target} → (?<target>.+?) (NPC names can have spaces, commas, quotes)
+  //   ${SpellBeingCast} → {SpellBeingCast} in display text (handled by VarPattern above)
+  private static readonly Regex UnhandledVarRegex = new(
+    @"(?<!\$)\{(?!S\d?|s\d?|N\d?|n\d?|TS|ts|[Cc])[a-zA-Z][^}]*\}",
+    RegexOptions.Compiled);
+
+  private static Dictionary<string, string> _audioFileMap;
+
+  // Parse NAG conditions into EQLP MatchVariableCondition syntax.
+  //
+  // NAG OperatorTypes (verified against the NAG v0.2.26 engine source —
+  // src/electron/data/models/trigger.js and checkCondition in log-watcher.js):
+  //   0=IsNull, 1=Equals, 2=DoesNotEqual, 4=LessThan, 8=GreaterThan, 16=Contains.
+  // Equals matches a stored value exactly against NAG's pipe-separated condition values
+  // (case-sensitive in NAG); Contains is a case-insensitive substring check. EQLP's
+  // condition evaluator treats both "=" and "contains" case-insensitively, so the mapping is:
+  //   0 (IsNull)       → !{var}                        (variable has no stored value)
+  //   1 (Equals)       → {var} = "A" || {var} = "B"    (per-value equality, OR-combined)
+  //   2 (DoesNotEqual) → with values: !({var} = "A" || ...); without a value: {var} (must be set)
+  //   16 (Contains)    → {var} contains "A" || ...     (per-value substring, OR-combined)
+  // Operators and condition types EQLP cannot express are reported through droppedFeatures.
+  internal static string ParseConditions(JsonElement element, ICollection<string> droppedFeatures)
+  {
+    if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() == 0)
+    {
+      return null;
+    }
+
+    var parts = new List<string>();
+    foreach (var cond in element.EnumerateArray())
+    {
+      var conditionType = cond.TryGetProperty("conditionType", out var ct) ? ReadInt(ct, -1) : -1;
+      if (conditionType != 1) // Only variable-based conditions are expressible in EQLP
+      {
+        droppedFeatures.Add(conditionType == 3 ? "counter condition" : $"condition type {conditionType}");
+        continue;
+      }
+
+      var varName = cond.TryGetProperty("variableName", out var vn) ? vn.GetString() : null;
+      if (string.IsNullOrEmpty(varName))
+      {
+        continue;
+      }
+
+      var operatorType = cond.TryGetProperty("operatorType", out var ot) && ot.ValueKind != JsonValueKind.Null
+        ? ReadInt(ot, -1)
+        : -1;
+      var value = cond.TryGetProperty("variableValue", out var vv) && vv.ValueKind == JsonValueKind.String
+        ? vv.GetString()
+        : null;
+
+      // NAG separates multiple condition values with |. Split them and OR-combine the
+      // clauses; callers parenthesize multi-clause results so they cannot leak across a
+      // larger "&&" join (EQLP's condition grammar binds AND tighter than OR).
+      (string Joined, bool Multiple) OrClauses(Func<string, string> clause)
+      {
+        var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        if (values.Length == 0)
+        {
+          return (null, false);
+        }
+
+        return (string.Join(" || ", values.Select(clause)), values.Length > 1);
+      }
+
+      static string Escaped(string v) => v.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+      (string Joined, bool Multiple) orClauses = (null, false);
+      string part = null;
+      switch (operatorType)
+      {
+        // IsNull: passes while the variable has no stored value.
+        case 0:
+          part = $"!{{{varName}}}";
+          break;
+
+        // Equals: exact match against any of NAG's pipe-separated values.
+        case 1:
+          {
+            orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+            part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
+            break;
+          }
+
+        // DoesNotEqual: with values, no stored value may equal a condition value (an unset
+        // variable passes); without a value, NAG passes only when the variable has at
+        // least one stored value.
+        case 2:
+          {
+            if (string.IsNullOrEmpty(value))
+            {
+              part = $"{{{varName}}}";
+            }
+            else
+            {
+              // The negation must bind to the whole OR group, so always parenthesize.
+              orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
+              part = orClauses.Joined is null ? null : $"!({orClauses.Joined})";
+            }
+            break;
+          }
+
+        // Contains: case-insensitive substring of any pipe-separated value.
+        case 16:
+          {
+            orClauses = OrClauses(v => $"{{{varName}}} contains \"{Escaped(v)}\"");
+            part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
+            break;
+          }
+      }
+
+      if (part is null)
+      {
+        droppedFeatures.Add($"condition operator {operatorType} on {varName}");
+      }
+      else
+      {
+        parts.Add(part);
+      }
+    }
+
+    return parts.Count > 0 ? string.Join(" && ", parts) : null;
+  }
+
+  internal static (List<ExportTriggerNode> nodes, List<NagImportResult> results) ConvertTriggers(string json, string databaseDirectory = null)
+  {
+    var nodes = new List<ExportTriggerNode>();
+    var results = new List<NagImportResult>();
+
+    try
+    {
+      // Always reset so a call without a database directory can't inherit the previous
+      // caller's map (stale resolution would corrupt SoundToPlay and missing-audio tracking).
+      _audioFileMap = null;
+      if (!string.IsNullOrEmpty(databaseDirectory))
+      {
+        LoadAudioFileMap(databaseDirectory);
+      }
+
+      using var doc = JsonDocument.Parse(json);
+      var root = doc.RootElement;
+
+      // Parse folder structure for tree hierarchy
+      var folderPaths = new Dictionary<string, string>();
+      if (root.TryGetProperty("folders", out var foldersElem))
+      {
+        foreach (var folder in foldersElem.EnumerateArray())
+        {
+          ParseFolderStructure(folder, "", folderPaths);
+        }
+      }
+
+      var triggers = root.GetProperty("triggers");
+      // Folder nodes shared across all triggers (keyed by full path), so every trigger in the
+      // same NAG folder attaches to one chain instead of creating per-trigger duplicates.
+      var folderNodes = new Dictionary<string, ExportTriggerNode>(StringComparer.Ordinal);
+      foreach (var trigger in triggers.EnumerateArray())
+      {
+        // Parse each trigger in its own try/catch so one malformed trigger is reported as
+        // Skipped instead of aborting the import of every remaining trigger.
+        List<ExportTriggerNode> triggerNodes;
+        NagImportResult parsedResult;
+        try
+        {
+          (triggerNodes, parsedResult) = ParseTrigger(trigger);
+        }
+        catch (Exception ex)
+        {
+          var triggerName = GetTriggerDisplayName(trigger);
+          Log.Warn($"NAG import: failed to parse trigger '{triggerName}': {ex.Message}");
+          triggerNodes = [];
+          parsedResult = new NagImportResult
+          {
+            TriggerName = triggerName,
+            ImportStatus = NagImportStatus.Skipped,
+            Reason = $"Error parsing trigger: {ex.Message}"
+          };
+        }
+
+        foreach (var n in triggerNodes)
+        {
+          // Set folder path on the result for reporting. Triggers whose parent folder no
+          // longer exists (e.g. after a package uninstall) go to "Orphaned Triggers",
+          // mirroring NAG's own startup re-filing (trigger-database.js findOrphanedTriggers).
+          // Flattening them to the root instead would merge same-named triggers from
+          // different former folders into one import dedup bucket.
+          if (trigger.TryGetProperty("folderId", out var fid) &&
+              fid.GetString() is { } folderId)
+          {
+            parsedResult.FolderPath = folderPaths.TryGetValue(folderId, out var fpath) ? fpath : "Orphaned Triggers";
+          }
+          else
+          {
+            parsedResult.FolderPath = "(root)";
+          }
+
+          // Attach trigger node to the shared folder tree (or the root) if not at root level.
+          // All triggers under one NAG folder reuse the same folder nodes, mirroring NAG's own
+          // hierarchy — per-trigger chains would produce siblings like "Common", "Common (2)"…
+          if (parsedResult.FolderPath != "(root)")
+          {
+            EnsureFolderPath(folderNodes, nodes, parsedResult.FolderPath).Nodes.Add(n);
+          }
+          else
+          {
+            nodes.Add(n);
+          }
+        }
+        results.Add(parsedResult);
+      }
+    }
+    catch (Exception ex)
+    {
+      Log.Error("Error Parsing NAG Triggers", ex);
+    }
+
+    // Wrap all nodes in a root node — consistent with GINA export format
+    // so the first Import() overload skips the root and processes folders correctly
+    var rootNode = new ExportTriggerNode { Nodes = nodes };
+
+    // NAG allows several children with the same name under one parent. The trigger store keys
+    // children by (kind, name), so duplicate names would merge into or shadow each other on
+    // re-import — normalize to unique sibling names here, the same normalization the app's own
+    // .tgf exports already contain.
+    UniquifySiblingNames(rootNode);
+
+    return (new List<ExportTriggerNode> { rootNode }, results);
+  }
+
+  internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath, int skippedFctOverlays = 0,
+      List<string> overlayNotes = null)
+  {
+    try
+    {
+      var sb = new StringBuilder();
+      sb.AppendLine("<!DOCTYPE html>");
+      sb.AppendLine("<html lang=\"en\">\n<head>");
+      sb.AppendLine("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NAG Import Report</title>");
+      sb.AppendLine("<style>");
+      sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #333; }");
+      sb.AppendLine("h1 { color: #1976d2; margin-bottom: 5px; }");
+      sb.AppendLine(".summary { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }");
+      sb.AppendLine(".stat { background: #fff; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 100px; }");
+      sb.AppendLine(".stat .num { font-size: 28px; font-weight: bold; display: block; }");
+      sb.AppendLine(".stat .label { font-size: 12px; color: #666; text-transform: uppercase; }");
+      sb.AppendLine(".stat.imported .num { color: #388e3c; }");
+      sb.AppendLine(".stat.partial .num { color: #f57c00; }");
+      sb.AppendLine(".stat.skipped .num { color: #d32f2f; }");
+      sb.AppendLine(".note { margin: 0 0 16px; font-size: 13px; color: #555; }");
+      sb.AppendLine("table { border-collapse: collapse; width: 100%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }");
+      sb.AppendLine("th { background: #e3f2fd; color: #1976d2; padding: 10px 12px; text-align: left; font-size: 13px; position: sticky; top: 0; border-bottom: 1px solid #ddd; }");
+      sb.AppendLine("td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }");
+      sb.AppendLine("tr:hover td { background: #f5faff; }");
+      sb.AppendLine(".badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }");
+      sb.AppendLine(".badge-imported { background: #c8e6c9; color: #1b5e20; }");
+      sb.AppendLine(".badge-partial { background: #fff9c4; color: #f57f17; }");
+      sb.AppendLine(".badge-skipped { background: #ffcdd2; color: #b71c1c; }");
+      sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #666; }");
+      sb.AppendLine(".missing-audio { font-size: 11px; color: #b71c1c; font-weight: bold; }");
+      sb.AppendLine(".actions { max-width: 300px; word-break: break-word; }");
+      sb.AppendLine(".reason { max-width: 250px; word-break: break-word; font-size: 12px; }");
+      sb.AppendLine("th .folder-col { width: 220px; }");
+      sb.AppendLine("th .actions-col { width: 280px; }");
+      sb.AppendLine("th .reason-col { width: 200px; }");
+      sb.AppendLine("</style>\n</head>\n<body>");
+
+      var total = results.Count;
+      var imported = results.Count(r => r.ImportStatus == NagImportStatus.Imported);
+      var partial = results.Count(r => r.ImportStatus == NagImportStatus.Partial);
+      var skipped = results.Count(r => r.ImportStatus == NagImportStatus.Skipped);
+
+      sb.AppendLine($"<h1>NAG Import Report</h1>");
+      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
+      var fctNote = skippedFctOverlays > 0 ? $" {skippedFctOverlays} FCT overlay(s) were not imported (no EQLP equivalent)." : "";
+      sb.AppendLine($"<div class=\"note\">All imported triggers start <b>disabled</b>. NAG per-character enable states are not imported — enable what you need in the Triggers view.{fctNote}</div>");
+
+      // Reduced-fidelity overlay notes (e.g. timer sort order reversed vs NAG)
+      if (overlayNotes is { Count: > 0 })
+      {
+        sb.AppendLine($"<div class=\"note\">{string.Join("<br>", overlayNotes.Select(HtmlEncode))}</div>");
+      }
+
+      sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
+
+      // Sort: Skipped first, then Partial, then Success (Imported)
+      var sorted = results.OrderBy(r => r.ImportStatus switch
+      {
+        NagImportStatus.Skipped => 0,
+        NagImportStatus.Partial => 1,
+        NagImportStatus.Imported => 2,
+        _ => 3
+      }).ToList();
+
+      foreach (var r in sorted)
+      {
+        var badgeClass = r.ImportStatus switch
+        {
+          NagImportStatus.Imported => "badge-imported",
+          NagImportStatus.Partial => "badge-partial",
+          NagImportStatus.Skipped => "badge-skipped",
+          _ => ""
+        };
+        // Display "Success" instead of "Imported" in the report
+        var displayStatus = r.ImportStatus == NagImportStatus.Imported ? "Success" : r.Status;
+        var badge = $"<span class=\"badge {badgeClass}\">{displayStatus}</span>";
+        var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
+          ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
+        var actions = HtmlEncode(r.ActionsSummary ?? "");
+        var reason = string.IsNullOrEmpty(r.Reason) ? "—" : FormatDroppedFeaturesForReport(r.Reason);
+        var missingAudio = r.MissingAudioFiles?.Count > 0
+          ? $"<div class=\"missing-audio\">{string.Join("<br>", r.MissingAudioFiles.Select(HtmlEncode))}</div>"
+          : "—";
+        sb.AppendLine($"<tr><td>{HtmlEncode(r.TriggerName)}</td><td>{badge}</td><td>{folder}</td><td class=\"actions\">{actions}</td><td class=\"reason\">{reason}</td><td>{missingAudio}</td></tr>");
+      }
+
+      sb.AppendLine("</tbody>\n</table>\n</body>\n</html>");
+      File.WriteAllText(outputPath, sb.ToString());
+    }
+    catch (Exception ex)
+    {
+      Log.Error("Error writing HTML import report", ex);
+    }
+  }
+
+  /// <summary>
+  /// Converts NAG overlay JSON to EQLP export trigger nodes (overlay definitions only, no trigger links).
+  /// </summary>
+  internal static List<ExportTriggerNode> ConvertOverlays(string json, out int skippedFctOverlays, out List<string> overlayNotes)
+  {
+    var result = new List<ExportTriggerNode>();
+    skippedFctOverlays = 0;
+    // Notes for features imported with reduced fidelity (e.g. reversed timer sort order),
+    // surfaced in the import report and completion dialog.
+    overlayNotes = [];
+
+    try
+    {
+      using var doc = JsonDocument.Parse(json);
+      var overlays = doc.RootElement.GetProperty("overlays");
+
+      foreach (var overlay in overlays.EnumerateArray())
+      {
+        // FCT (Fight Combat Tracker) overlays have no EQLP equivalent — skip and report them.
+        var overlayType = overlay.TryGetProperty("overlayType", out var t) ? t.GetString() : null;
+        if (overlayType?.Equals("FCT", StringComparison.OrdinalIgnoreCase) == true)
+        {
+          skippedFctOverlays++;
+          continue;
+        }
+
+        // NAG 'Ascending' timer sort (most time remaining first — overlay.js sorts by dir * timeRemaining,
+        // dir = -1 for Ascending) has no EQLP equivalent. The overlay still imports with 'Remaining Time'
+        // sorting, so its timers display in the opposite order from NAG — note it for the import report.
+        if (overlay.TryGetProperty("timerSortType", out var sortProp) && ReadInt(sortProp, 0) == 1)
+        {
+          var overlayName = overlay.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "(unnamed)" : "(unnamed)";
+          var note = $"Overlay \"{overlayName}\": NAG 'Ascending' timer sort (most time remaining first) has no" +
+            " EQLP equivalent — imported as 'Remaining Time', so timers display in reversed order.";
+          overlayNotes.Add(note);
+        }
+
+        var nagOverlay = ParseOverlay(overlay);
+        if (nagOverlay is not null)
+        {
+          result.Add(nagOverlay);
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      Log.Error("Error Parsing NAG Overlays", ex);
+    }
+
+    return result;
+  }
+
+  /* Builds the NAG overlayId → stored EQLP overlay node id map from the store's overlay list.
+   * Only overlays whose Source starts with NagSourcePrefix are included — user-created and
+   * GINA/Quick Share overlays carry no such marker and are ignored. */
+  internal static Dictionary<string, string> BuildOverlayIdRemap(IEnumerable<OtData> storedOverlays)
+  {
+    var remap = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (var overlay in storedOverlays ?? [])
+    {
+      var source = overlay?.OverlayData?.Source;
+      if (source is not null && source.Length > NagSourcePrefix.Length &&
+          source.StartsWith(NagSourcePrefix, StringComparison.Ordinal))
+      {
+        remap[source[NagSourcePrefix.Length..]] = overlay.Id;
+      }
+    }
+
+    return remap;
+  }
+
+  /* Rewrites trigger → overlay references from NAG overlayIds to stored EQLP node ids (see
+   * BuildOverlayIdRemap). NAG actions reference overlays by their NAG id, but after the overlay
+   * import the store only knows its own generated UUIDs — without this rewrite every reference
+   * would be stripped by ValidateOverlays during the trigger import. Ids absent from the map
+   * (e.g. FCT overlays skipped on conversion) are left as-is and dropped safely there.
+   * Returns the number of references rewritten. */
+  internal static int RemapOverlayReferences(IEnumerable<ExportTriggerNode> nodes, IReadOnlyDictionary<string, string> nagIdToNodeId)
+  {
+    var remapped = 0;
+    foreach (var node in nodes ?? [])
+    {
+      if (node?.Nodes is { Count: > 0 } children)
+      {
+        remapped += RemapOverlayReferences(children, nagIdToNodeId);
+      }
+
+      if (node?.TriggerData?.SelectedOverlays is { Count: > 0 } overlays && nagIdToNodeId.Count > 0)
+      {
+        for (var i = 0; i < overlays.Count; i++)
+        {
+          if (overlays[i] is { } reference && nagIdToNodeId.TryGetValue(reference, out var storedId))
+          {
+            overlays[i] = storedId;
+            remapped++;
+          }
+        }
+      }
+    }
+
+    return remapped;
+  }
 
   /* NAG JSON readers that never throw. Every numeric/boolean property of a NAG dump goes through
    * these: the raw JsonElement getters throw on kinds real dumps contain — String ("12.5"),
@@ -182,45 +634,6 @@ internal static class NagUtil
     return ConvertColor(color);
   }
 
-  // NAG template syntax: ${var} or {groupName} → EQLP: {$var} or {$groupName}
-  private static readonly Regex VarPattern = new(@"\$\{([^}]+)\}", RegexOptions.Compiled);
-  private static readonly Regex GroupPattern = new(@"(?<!\$)\{([a-zA-Z][^}]*)\}", RegexOptions.Compiled);
-
-  // NAG "unlimited" countdown repeat has no finite EQLP equivalent — approximate
-  // with a very large loop count.
-  private const long UnlimitedRepeatLoops = 999999;
-
-  // NAG interruptSpeech note. Listed in droppedFeatures for report transparency, but it is an
-  // implemented approximation (priority 1) rather than a missing feature, so it does not
-  // downgrade the trigger's status to Partial on its own.
-  internal const string InterruptSpeechNote = "speech interruption (approximated as priority 1)";
-
-  // Dropped-feature notes that are approximations of implemented behavior — they stay in the
-  // report/Comments but do not affect import status. True gaps still mark a trigger Partial.
-  private static readonly HashSet<string> NonStatusDroppedFeatures = new() { InterruptSpeechNote };
-
-  // Action types whose phrase scoping the import routes per-phrase node (text/sound/TTS/clipboard
-  // values via RouteActionValue, variable effects via SetVariables/PhraseClearVariables). Every
-  // other scoped action type (timers, counters) still applies to all phrase nodes.
-  private static readonly HashSet<int> RouteablePhraseScopedTypes = new() { 0, 1, 2, 5, 7, 9 };
-
-  // NAG ${varName} in regex phrases — not supported by EQLP, replace with (?<varName>.+?)
-  // Exception: ${Character} maps to EQLP's native {c} (replaced with player name at runtime).
-  private static readonly Regex DollarVarRegex = new(@"\$\{(\w+)\}", RegexOptions.Compiled);
-
-  // NAG {VAR} in regex phrases that EQLP does NOT handle at runtime.
-  // Excluded (passed through for EQLP runtime handling):
-  //   {S}/{s}/{N}/{n} + digit suffixes — CheckOptions() string/number captures
-  //   {TS}/{ts} — CheckOptions() timer duration
-  //   {C}/{c} — TriggerProcessor replaces with player character name at runtime
-  // Everything else becomes a named capture group:
-  //   {LN} → (?<LN>\w+) (player/NPC name, single word)
-  //   {target} → (?<target>.+?) (NPC names can have spaces, commas, quotes)
-  //   ${SpellBeingCast} → {SpellBeingCast} in display text (handled by VarPattern above)
-  private static readonly Regex UnhandledVarRegex = new(
-    @"(?<!\$)\{(?!S\d?|s\d?|N\d?|n\d?|TS|ts|[Cc])[a-zA-Z][^}]*\}",
-    RegexOptions.Compiled);
-
   // Convert NAG template syntax to EQLP syntax
   private static string ConvertTemplates(string input)
   {
@@ -267,122 +680,6 @@ internal static class NagUtil
     return Math.Clamp((long)(inverted * 4) + 1, 1, 5);
   }
 
-  // Parse NAG conditions into EQLP MatchVariableCondition syntax.
-  //
-  // NAG OperatorTypes (verified against the NAG v0.2.26 engine source —
-  // src/electron/data/models/trigger.js and checkCondition in log-watcher.js):
-  //   0=IsNull, 1=Equals, 2=DoesNotEqual, 4=LessThan, 8=GreaterThan, 16=Contains.
-  // Equals matches a stored value exactly against NAG's pipe-separated condition values
-  // (case-sensitive in NAG); Contains is a case-insensitive substring check. EQLP's
-  // condition evaluator treats both "=" and "contains" case-insensitively, so the mapping is:
-  //   0 (IsNull)       → !{var}                        (variable has no stored value)
-  //   1 (Equals)       → {var} = "A" || {var} = "B"    (per-value equality, OR-combined)
-  //   2 (DoesNotEqual) → with values: !({var} = "A" || ...); without a value: {var} (must be set)
-  //   16 (Contains)    → {var} contains "A" || ...     (per-value substring, OR-combined)
-  // Operators and condition types EQLP cannot express are reported through droppedFeatures.
-  internal static string ParseConditions(JsonElement element, ICollection<string> droppedFeatures)
-  {
-    if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() == 0)
-    {
-      return null;
-    }
-
-    var parts = new List<string>();
-    foreach (var cond in element.EnumerateArray())
-    {
-      var conditionType = cond.TryGetProperty("conditionType", out var ct) ? ReadInt(ct, -1) : -1;
-      if (conditionType != 1) // Only variable-based conditions are expressible in EQLP
-      {
-        droppedFeatures.Add(conditionType == 3 ? "counter condition" : $"condition type {conditionType}");
-        continue;
-      }
-
-      var varName = cond.TryGetProperty("variableName", out var vn) ? vn.GetString() : null;
-      if (string.IsNullOrEmpty(varName))
-      {
-        continue;
-      }
-
-      var operatorType = cond.TryGetProperty("operatorType", out var ot) && ot.ValueKind != JsonValueKind.Null
-        ? ReadInt(ot, -1)
-        : -1;
-      var value = cond.TryGetProperty("variableValue", out var vv) && vv.ValueKind == JsonValueKind.String
-        ? vv.GetString()
-        : null;
-
-      // NAG separates multiple condition values with |. Split them and OR-combine the
-      // clauses; callers parenthesize multi-clause results so they cannot leak across a
-      // larger "&&" join (EQLP's condition grammar binds AND tighter than OR).
-      (string Joined, bool Multiple) OrClauses(Func<string, string> clause)
-      {
-        var values = value.Split('|', StringSplitOptions.RemoveEmptyEntries);
-        if (values.Length == 0)
-        {
-          return (null, false);
-        }
-
-        return (string.Join(" || ", values.Select(clause)), values.Length > 1);
-      }
-
-      static string Escaped(string v) => v.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
-      (string Joined, bool Multiple) orClauses = (null, false);
-      string part = null;
-      switch (operatorType)
-      {
-        // IsNull: passes while the variable has no stored value.
-        case 0:
-          part = $"!{{{varName}}}";
-          break;
-
-        // Equals: exact match against any of NAG's pipe-separated values.
-        case 1:
-          {
-            orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
-            part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
-            break;
-          }
-
-        // DoesNotEqual: with values, no stored value may equal a condition value (an unset
-        // variable passes); without a value, NAG passes only when the variable has at
-        // least one stored value.
-        case 2:
-          {
-            if (string.IsNullOrEmpty(value))
-            {
-              part = $"{{{varName}}}";
-            }
-            else
-            {
-              // The negation must bind to the whole OR group, so always parenthesize.
-              orClauses = OrClauses(v => $"{{{varName}}} = \"{Escaped(v)}\"");
-              part = orClauses.Joined is null ? null : $"!({orClauses.Joined})";
-            }
-            break;
-          }
-
-        // Contains: case-insensitive substring of any pipe-separated value.
-        case 16:
-          {
-            orClauses = OrClauses(v => $"{{{varName}}} contains \"{Escaped(v)}\"");
-            part = orClauses.Joined is null ? null : orClauses.Multiple ? $"({orClauses.Joined})" : orClauses.Joined;
-            break;
-          }
-      }
-
-      if (part is null)
-      {
-        droppedFeatures.Add($"condition operator {operatorType} on {varName}");
-      }
-      else
-      {
-        parts.Add(part);
-      }
-    }
-
-    return parts.Count > 0 ? string.Join(" && ", parts) : null;
-  }
-
   // Resolve audio file ID to filename using files-database.json if available
   /// <summary>Renames duplicate child names under each parent ("X", "X" → "X", "X (2)").</summary>
   private static void UniquifySiblingNames(ExportTriggerNode parent)
@@ -427,7 +724,6 @@ internal static class NagUtil
     }
   }
 
-  private static Dictionary<string, string> _audioFileMap;
   private static void LoadAudioFileMap(string databaseDirectory)
   {
     // Clear any previous cache so importing from a different directory works correctly
@@ -466,127 +762,6 @@ internal static class NagUtil
     {
       Log.Debug("Error loading files-database.json", ex);
     }
-  }
-
-  internal static (List<ExportTriggerNode> nodes, List<NagImportResult> results, Dictionary<string, NagTriggerMetadata> metadata) ConvertTriggers(string json, string databaseDirectory = null)
-  {
-    var nodes = new List<ExportTriggerNode>();
-    var results = new List<NagImportResult>();
-    var metadata = new Dictionary<string, NagTriggerMetadata>();
-
-    try
-    {
-      // Always reset so a call without a database directory can't inherit the previous
-      // caller's map (stale resolution would corrupt SoundToPlay and missing-audio tracking).
-      _audioFileMap = null;
-      if (!string.IsNullOrEmpty(databaseDirectory))
-      {
-        LoadAudioFileMap(databaseDirectory);
-      }
-
-      using var doc = JsonDocument.Parse(json);
-      var root = doc.RootElement;
-
-      // Parse folder structure for tree hierarchy
-      var folderPaths = new Dictionary<string, string>();
-      if (root.TryGetProperty("folders", out var foldersElem))
-      {
-        foreach (var folder in foldersElem.EnumerateArray())
-        {
-          ParseFolderStructure(folder, "", folderPaths);
-        }
-      }
-
-      var triggers = root.GetProperty("triggers");
-      // Folder nodes shared across all triggers (keyed by full path), so every trigger in the
-      // same NAG folder attaches to one chain instead of creating per-trigger duplicates.
-      var folderNodes = new Dictionary<string, ExportTriggerNode>(StringComparer.Ordinal);
-      foreach (var trigger in triggers.EnumerateArray())
-      {
-        // Parse each trigger in its own try/catch so one malformed trigger is reported as
-        // Skipped instead of aborting the import of every remaining trigger.
-        List<ExportTriggerNode> triggerNodes;
-        NagImportResult parsedResult;
-        try
-        {
-          (triggerNodes, parsedResult) = ParseTrigger(trigger);
-        }
-        catch (Exception ex)
-        {
-          var triggerName = GetTriggerDisplayName(trigger);
-          Log.Warn($"NAG import: failed to parse trigger '{triggerName}': {ex.Message}");
-          triggerNodes = [];
-          parsedResult = new NagImportResult
-          {
-            TriggerName = triggerName,
-            ImportStatus = NagImportStatus.Skipped,
-            Reason = $"Error parsing trigger: {ex.Message}"
-          };
-        }
-
-        foreach (var n in triggerNodes)
-        {
-          // Set folder path on the result for reporting. Triggers whose parent folder no
-          // longer exists (e.g. after a package uninstall) go to "Orphaned Triggers",
-          // mirroring NAG's own startup re-filing (trigger-database.js findOrphanedTriggers).
-          // Flattening them to the root instead would merge same-named triggers from
-          // different former folders into one import dedup bucket.
-          if (trigger.TryGetProperty("folderId", out var fid) &&
-              fid.GetString() is { } folderId)
-          {
-            parsedResult.FolderPath = folderPaths.TryGetValue(folderId, out var fpath) ? fpath : "Orphaned Triggers";
-          }
-          else
-          {
-            parsedResult.FolderPath = "(root)";
-          }
-
-          // Attach trigger node to the shared folder tree (or the root) if not at root level.
-          // All triggers under one NAG folder reuse the same folder nodes, mirroring NAG's own
-          // hierarchy — per-trigger chains would produce siblings like "Common", "Common (2)"…
-          if (parsedResult.FolderPath != "(root)")
-          {
-            EnsureFolderPath(folderNodes, nodes, parsedResult.FolderPath).Nodes.Add(n);
-          }
-          else
-          {
-            nodes.Add(n);
-          }
-        }
-        results.Add(parsedResult);
-
-        // Build metadata dictionary keyed by NAG triggerId for profile-level operations.
-        // Skipped triggers (dev-only, missing name, parse failures, etc.) are excluded from metadata.
-        if (!string.IsNullOrEmpty(parsedResult.TriggerId) && parsedResult.ImportStatus != NagImportStatus.Skipped && !metadata.ContainsKey(parsedResult.TriggerId))
-        {
-          metadata[parsedResult.TriggerId] = new NagTriggerMetadata
-          {
-            TriggerName = parsedResult.TriggerName,
-            FolderPath = parsedResult.FolderPath,
-            Score = parsedResult.Score,
-            ActionsSummary = parsedResult.ActionsSummary,
-            DroppedFeatures = parsedResult.DroppedFeatures,
-            MissingAudioFiles = parsedResult.MissingAudioFiles
-          };
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      Log.Error("Error Parsing NAG Triggers", ex);
-    }
-
-    // Wrap all nodes in a root node — consistent with GINA export format
-    // so the first Import() overload skips the root and processes folders correctly
-    var rootNode = new ExportTriggerNode { Nodes = nodes };
-
-    // NAG allows several children with the same name under one parent. The trigger store keys
-    // children by (kind, name), so duplicate names would merge into or shadow each other on
-    // re-import — normalize to unique sibling names here, the same normalization the app's own
-    // .tgf exports already contain.
-    UniquifySiblingNames(rootNode);
-
-    return (new List<ExportTriggerNode> { rootNode }, results, metadata);
   }
 
   // Best-effort display name for a NAG trigger element, used when reporting per-trigger parse failures.
@@ -1961,101 +2136,6 @@ internal static class NagUtil
     };
   }
 
-  internal static void WriteImportReportHtml(List<NagImportResult> results, string outputPath, int skippedFctOverlays = 0,
-      List<string> overlayNotes = null)
-  {
-    try
-    {
-      var sb = new StringBuilder();
-      sb.AppendLine("<!DOCTYPE html>");
-      sb.AppendLine("<html lang=\"en\">\n<head>");
-      sb.AppendLine("<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>NAG Import Report</title>");
-      sb.AppendLine("<style>");
-      sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #333; }");
-      sb.AppendLine("h1 { color: #1976d2; margin-bottom: 5px; }");
-      sb.AppendLine(".summary { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }");
-      sb.AppendLine(".stat { background: #fff; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 100px; }");
-      sb.AppendLine(".stat .num { font-size: 28px; font-weight: bold; display: block; }");
-      sb.AppendLine(".stat .label { font-size: 12px; color: #666; text-transform: uppercase; }");
-      sb.AppendLine(".stat.imported .num { color: #388e3c; }");
-      sb.AppendLine(".stat.partial .num { color: #f57c00; }");
-      sb.AppendLine(".stat.skipped .num { color: #d32f2f; }");
-      sb.AppendLine(".note { margin: 0 0 16px; font-size: 13px; color: #555; }");
-      sb.AppendLine("table { border-collapse: collapse; width: 100%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }");
-      sb.AppendLine("th { background: #e3f2fd; color: #1976d2; padding: 10px 12px; text-align: left; font-size: 13px; position: sticky; top: 0; border-bottom: 1px solid #ddd; }");
-      sb.AppendLine("td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }");
-      sb.AppendLine("tr:hover td { background: #f5faff; }");
-      sb.AppendLine(".badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }");
-      sb.AppendLine(".badge-imported { background: #c8e6c9; color: #1b5e20; }");
-      sb.AppendLine(".badge-partial { background: #fff9c4; color: #f57f17; }");
-      sb.AppendLine(".badge-skipped { background: #ffcdd2; color: #b71c1c; }");
-      sb.AppendLine(".folder { font-family: monospace; font-size: 12px; color: #666; }");
-      sb.AppendLine(".missing-audio { font-size: 11px; color: #b71c1c; font-weight: bold; }");
-      sb.AppendLine(".actions { max-width: 300px; word-break: break-word; }");
-      sb.AppendLine(".reason { max-width: 250px; word-break: break-word; font-size: 12px; }");
-      sb.AppendLine("th .folder-col { width: 220px; }");
-      sb.AppendLine("th .actions-col { width: 280px; }");
-      sb.AppendLine("th .reason-col { width: 200px; }");
-      sb.AppendLine("</style>\n</head>\n<body>");
-
-      var total = results.Count;
-      var imported = results.Count(r => r.ImportStatus == NagImportStatus.Imported);
-      var partial = results.Count(r => r.ImportStatus == NagImportStatus.Partial);
-      var skipped = results.Count(r => r.ImportStatus == NagImportStatus.Skipped);
-
-      sb.AppendLine($"<h1>NAG Import Report</h1>");
-      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
-      var fctNote = skippedFctOverlays > 0 ? $" {skippedFctOverlays} FCT overlay(s) were not imported (no EQLP equivalent)." : "";
-      sb.AppendLine($"<div class=\"note\">All imported triggers start <b>disabled</b>. NAG per-character enable states are not imported — enable what you need in the Triggers view.{fctNote}</div>");
-
-      // Reduced-fidelity overlay notes (e.g. timer sort order reversed vs NAG)
-      if (overlayNotes is { Count: > 0 })
-      {
-        sb.AppendLine($"<div class=\"note\">{string.Join("<br>", overlayNotes.Select(HtmlEncode))}</div>");
-      }
-
-      sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
-
-      // Sort: Skipped first, then Partial, then Success (Imported)
-      var sorted = results.OrderBy(r => r.ImportStatus switch
-      {
-        NagImportStatus.Skipped => 0,
-        NagImportStatus.Partial => 1,
-        NagImportStatus.Imported => 2,
-        _ => 3
-      }).ToList();
-
-      foreach (var r in sorted)
-      {
-        var badgeClass = r.ImportStatus switch
-        {
-          NagImportStatus.Imported => "badge-imported",
-          NagImportStatus.Partial => "badge-partial",
-          NagImportStatus.Skipped => "badge-skipped",
-          _ => ""
-        };
-        // Display "Success" instead of "Imported" in the report
-        var displayStatus = r.ImportStatus == NagImportStatus.Imported ? "Success" : r.Status;
-        var badge = $"<span class=\"badge {badgeClass}\">{displayStatus}</span>";
-        var folder = string.IsNullOrEmpty(r.FolderPath) || r.FolderPath == "(root)"
-          ? "<em>(root)</em>" : $"<span class=\"folder\">{HtmlEncode(r.FolderPath)}</span>";
-        var actions = HtmlEncode(r.ActionsSummary ?? "");
-        var reason = string.IsNullOrEmpty(r.Reason) ? "—" : FormatDroppedFeaturesForReport(r.Reason);
-        var missingAudio = r.MissingAudioFiles?.Count > 0
-          ? $"<div class=\"missing-audio\">{string.Join("<br>", r.MissingAudioFiles.Select(HtmlEncode))}</div>"
-          : "—";
-        sb.AppendLine($"<tr><td>{HtmlEncode(r.TriggerName)}</td><td>{badge}</td><td>{folder}</td><td class=\"actions\">{actions}</td><td class=\"reason\">{reason}</td><td>{missingAudio}</td></tr>");
-      }
-
-      sb.AppendLine("</tbody>\n</table>\n</body>\n</html>");
-      File.WriteAllText(outputPath, sb.ToString());
-    }
-    catch (Exception ex)
-    {
-      Log.Error("Error writing HTML import report", ex);
-    }
-  }
-
   private static string HtmlEncode(string value)
   {
     return string.IsNullOrEmpty(value) ? "" : System.Net.WebUtility.HtmlEncode(value);
@@ -2114,58 +2194,6 @@ internal static class NagUtil
     return string.Join("<br>", friendly);
   }
 
-  /// <summary>
-  /// Converts NAG overlay JSON to EQLP export trigger nodes (overlay definitions only, no trigger links).
-  /// </summary>
-  internal static List<ExportTriggerNode> ConvertOverlays(string json, out int skippedFctOverlays, out List<string> overlayNotes)
-  {
-    var result = new List<ExportTriggerNode>();
-    skippedFctOverlays = 0;
-    // Notes for features imported with reduced fidelity (e.g. reversed timer sort order),
-    // surfaced in the import report and completion dialog.
-    overlayNotes = [];
-
-    try
-    {
-      using var doc = JsonDocument.Parse(json);
-      var overlays = doc.RootElement.GetProperty("overlays");
-
-      foreach (var overlay in overlays.EnumerateArray())
-      {
-        // FCT (Fight Combat Tracker) overlays have no EQLP equivalent — skip and report them.
-        var overlayType = overlay.TryGetProperty("overlayType", out var t) ? t.GetString() : null;
-        if (overlayType?.Equals("FCT", StringComparison.OrdinalIgnoreCase) == true)
-        {
-          skippedFctOverlays++;
-          continue;
-        }
-
-        // NAG 'Ascending' timer sort (most time remaining first — overlay.js sorts by dir * timeRemaining,
-        // dir = -1 for Ascending) has no EQLP equivalent. The overlay still imports with 'Remaining Time'
-        // sorting, so its timers display in the opposite order from NAG — note it for the import report.
-        if (overlay.TryGetProperty("timerSortType", out var sortProp) && ReadInt(sortProp, 0) == 1)
-        {
-          var overlayName = overlay.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "(unnamed)" : "(unnamed)";
-          var note = $"Overlay \"{overlayName}\": NAG 'Ascending' timer sort (most time remaining first) has no" +
-            " EQLP equivalent — imported as 'Remaining Time', so timers display in reversed order.";
-          overlayNotes.Add(note);
-        }
-
-        var nagOverlay = ParseOverlay(overlay);
-        if (nagOverlay is not null)
-        {
-          result.Add(nagOverlay);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      Log.Error("Error Parsing NAG Overlays", ex);
-    }
-
-    return result;
-  }
-
   private static ExportTriggerNode ParseOverlay(JsonElement element)
   {
     var name = element.GetProperty("name").GetString();
@@ -2211,13 +2239,16 @@ internal static class NagUtil
     // Map showTextGlow → UseTextDropShadow (default true for backward compat)
     var useTextDropShadow = element.TryGetProperty("showTextGlow", out var stg) ? ReadBool(stg, true) : true;
 
+    // No Id on the export node: EQLP node ids are always generated by the store (UUIDs) —
+    // external systems' ids never become node ids. The NAG identity goes into Source, which
+    // doubles as the re-import key: re-migrating a NAG database updates this overlay's stored
+    // node in place instead of inserting a second copy.
     return new ExportTriggerNode
     {
-      Id = overlayId,
       Name = name,
       OverlayData = new Overlay
       {
-        Source = $"nag:{overlayId}",
+        Source = NagSourcePrefix + overlayId,
         Width = element.TryGetProperty("windowWidth", out var ww) ? ReadLong(ww, 300) : 300,
         Height = element.TryGetProperty("windowHeight", out var wh) ? ReadLong(wh, 400) : 400,
         Left = element.TryGetProperty("x", out var x) ? ReadLong(x, 100) : 100,

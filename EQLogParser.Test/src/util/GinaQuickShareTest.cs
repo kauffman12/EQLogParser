@@ -138,7 +138,7 @@ namespace EQLogParser
         </SharedData>
         """;
 
-      var nodes = GinaUtil.CovertToTriggerNodes(MakeGinaPackage(xml));
+      var nodes = GinaUtil.ConvertToTriggerNodes(MakeGinaPackage(xml));
 
       // GINA conversion produces the same root-wrapped shape Import expects.
       Assert.AreEqual(1, nodes.Count);

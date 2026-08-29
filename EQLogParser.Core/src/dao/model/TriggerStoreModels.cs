@@ -45,7 +45,9 @@ namespace EQLogParser
 
   internal class Overlay
   {
-    // TODO: Source is used by local NagUtil.cs — remove if NagUtil is discarded
+    // Provenance marker. NAG import stores "nag:{overlayId}" here so a re-migration of the same
+    // database updates this overlay in place (TriggerStateDB.Import matches by Source) instead of
+    // adding a second copy. User-created and GINA/Quick Share overlays leave it null.
     public string Source { get; set; }
     public string OverlayComments { get; set; }
     public string FontSize { get; set; } = "12pt";

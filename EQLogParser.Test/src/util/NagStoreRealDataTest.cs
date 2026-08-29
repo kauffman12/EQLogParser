@@ -75,14 +75,13 @@ namespace EQLogParser
       }
 
       // The databaseDirectory arg lets NagUtil resolve audio names via files-database.json.
-      var (nodes, results, metadata) = NagUtil.ConvertTriggers(json, dir);
+      var (nodes, results) = NagUtil.ConvertTriggers(json, dir);
 
       Assert.AreEqual(1, nodes.Count, "expected the single root-wrapped export shape");
       var root = nodes[0];
       Assert.IsNull(root.TriggerData, "root wrapper must not be a trigger leaf");
       Assert.IsTrue(root.Nodes is { Count: > 0 }, "real dump converted to an empty tree");
       Assert.IsTrue(results.Count > 0, "no import results reported for a non-empty database");
-      Assert.IsNotNull(metadata);
 
       var skipped = results.Count(r => r.Status == "Skipped");
       Console.WriteLine($"NAG dump: {root.Nodes.Count} top-level nodes, {results.Count} triggers converted, {skipped} skipped");
@@ -96,7 +95,7 @@ namespace EQLogParser
         return;
       }
 
-      var (nodes, _, _) = NagUtil.ConvertTriggers(json, dir);
+      var (nodes, _) = NagUtil.ConvertTriggers(json, dir);
       Assert.AreEqual(1, nodes.Count);
 
       var db = NewStore();

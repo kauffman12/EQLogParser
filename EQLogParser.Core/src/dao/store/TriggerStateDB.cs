@@ -563,7 +563,8 @@ namespace EQLogParser
       return await _taskQueue.Enqueue(() => Task.FromResult(GetCol<TriggerNode>(TreeCol)?.FindOne(n => n.Id == id && n.OverlayData != null)));
     }
 
-    // from GINA or Quick Share
+    // from GINA, Quick Share, or NAG import (NAG overlays carry their source identity in
+    // OverlayData.Source and update the existing node on re-import — see the leaf branch in Import)
     internal async Task ImportOverlays(IEnumerable<ExportTriggerNode> imported)
     {
       await _taskQueue.EnqueueTransaction(() =>
@@ -1391,12 +1392,30 @@ namespace EQLogParser
         }
         else
         {
-          if (siblings.FirstOrDefault(n => n.Id == newNode.Id) is { } foundOverlay)
+          // Exported node ids are only trusted for GINA/Quick Share re-exports (the exporter wrote
+          // them). External sources like NAG never provide a node id — the store generates UUIDs
+          // and the source identity travels in OverlayData.Source instead. A Source match updates
+          // the existing overlay in place on re-import, so re-migrating a NAG database refreshes an
+          // earlier import's overlays (name included) rather than adding a second copy.
+          var matchedBySource = false;
+          TriggerNode foundOverlay = siblings.FirstOrDefault(n => n.Id == newNode.Id);
+          if (foundOverlay is null && newNode.OverlayData?.Source is { Length: > 0 } source)
+          {
+            matchedBySource = true;
+            foundOverlay = siblings.FirstOrDefault(n => n.OverlayData?.Source == source);
+          }
+
+          if (foundOverlay is not null)
           {
             // update overlay data
             if (foundOverlay.OverlayData != null)
             {
               foundOverlay.OverlayData = newNode.OverlayData;
+              if (matchedBySource && newNode.Name is { Length: > 0 })
+              {
+                // the overlay's content follows the latest migration of its NAG source
+                foundOverlay.Name = newNode.Name;
+              }
               // fix alignment from old imports if needed
               SetVerticalAlignment(foundOverlay);
               tree.Update(foundOverlay);
