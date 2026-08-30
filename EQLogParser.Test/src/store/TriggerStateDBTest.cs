@@ -905,6 +905,48 @@ namespace EQLogParser
       }
     }
 
+    /* An imported overlay keeps the id from the file, so ids are data we don't control — one holding
+     * a quote broke the expand/collapse command text and threw LiteException on every toggle of that
+     * node, permanently (the id is stored). Values must be bound as parameters. */
+    [TestMethod]
+    public async Task SetExpanded_ImportedIdWithQuote_PersistsAcrossReopen()
+    {
+      const string quotedId = "evil'id";
+      var (db, path) = FreshStore();
+      try
+      {
+        await db.GetOverlayTree();
+        await db.ImportOverlays([new()
+        {
+          Name = TriggerStateDB.Overlays,
+          Nodes = [new ExportTriggerNode { Id = quotedId, Name = "Quoted", OverlayData = new Overlay() }]
+        }]);
+
+        var (_, nodes, _) = await db.GetOverlayTree();
+        Assert.AreEqual(quotedId, nodes.Single(n => n.Name == "Quoted").Id); // the imported id is kept
+
+        await db.SetExpanded(quotedId, true);
+
+        (_, nodes, _) = await db.GetOverlayTree();
+        Assert.IsTrue(nodes.Single(n => n.Id == quotedId).IsExpanded);
+      }
+      finally
+      {
+        await db.Dispose();
+      }
+
+      var reopened = Store(path);
+      try
+      {
+        var (_, nodes, _) = await reopened.GetOverlayTree();
+        Assert.IsTrue(nodes.Single(n => n.Id == quotedId).IsExpanded, "expand state must survive the reopen");
+      }
+      finally
+      {
+        await reopened.Dispose();
+      }
+    }
+
     [TestMethod]
     public async Task Delete_RemovesSubtreeAndCleanUpStateEntries()
     {

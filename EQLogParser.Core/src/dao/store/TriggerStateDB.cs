@@ -715,18 +715,24 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {expanded}");
+        _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = @0", expanded);
         return Task.CompletedTask;
       });
     }
 
+    /* Values are bound as parameters, never interpolated: Execute() runs LiteDB's command parser, so
+     * an id containing a quote (imported overlay ids come straight from the shared file) broke the
+     * text and threw LiteException on every expand/collapse of that node, permanently — the id lives
+     * in the database. Binding stores the identical Boolean/string and removes the whole class.
+     * Placeholders must be @0/@1; LiteDB 5 rejects the "?" form. The collection name stays
+     * interpolated because it is a constant, never data. */
     internal async Task SetExpanded(string id, bool isExpanded)
     {
       await _taskQueue.Enqueue(() =>
       {
         if (id is not null)
         {
-          _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {isExpanded} WHERE _id = '{id}'");
+          _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = @0 WHERE _id = @1", isExpanded, id);
         }
 
         return Task.CompletedTask;
