@@ -92,7 +92,7 @@ Each interface has only the methods relevant to its responsibility. Classes that
 - `ValueTask` is used for performance-critical async operations
 - Try-catch blocks with empty catch blocks are only used for expected exceptions
 - Graceful degradation when errors occur
-- Logging for important events and errors
+- Logging is reserved for exceptions plus a few startup milestones (see **Logging**)
 - Null checks before accessing properties/methods
 
 ### Implementation Patterns
@@ -113,6 +113,25 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
 - **Standard Phrases**:
     - Instead of "Error loading...", use `"Problem loading [Component]. Check Error Log for details."`
     - Instead of "Failed to save...", use `"Problem saving [Component]. Check Error Log for details."`
+
+### Logging
+Logging exists to explain failures and identify a session, not to narrate normal operation. It is reserved for:
+- **Exceptions**: every caught exception, via `Log.Error(ex)` (see **Logging** under Implementation Patterns).
+- **Session milestones**: a handful of `Log.Info` lines that make a bug report interpretable — version, OS, render mode, and database migrations/repairs that change stored data.
+
+Do **not** log:
+- **Expected behaviour**: re-imports that match existing data, cache hits, "already up to date", items skipped because they are valid, or a fallback taken because a feature has no equivalent. These occur on every ordinary run and bury the entries that matter.
+- **Per-line or per-record paths**: log parsing loops, chat-record handling, overlay refreshes. Raid traffic multiplies one line into thousands and measurably slows parsing.
+
+`Log.Debug` is not a loophole: log4net builds the message **before** it checks the level, so `Log.Debug($"… {id} …")` allocates even when Debug output is off. Reserve `Debug` for diagnostics a developer deliberately switches on, and guard anything expensive with `if (Log.IsDebugEnabled)`.
+
+```csharp
+// Wrong — a routine outcome, emitted per imported overlay, message built even when logging is off
+Log.Debug($"Overlay id '{exportedId}' already exists; inserting with a new id.");
+
+// Right — no log entry: the comment above the code explains the fallback
+var exportedId = tree.FindById(importedId) is null ? importedId : null; // null lets Insert() generate one
+```
 
 ## WPF & XAML Standards
 
