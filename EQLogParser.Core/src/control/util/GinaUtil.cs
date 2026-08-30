@@ -176,9 +176,15 @@ namespace EQLogParser
       }
     }
 
+    /* ConfigureAwait(false) below is load-bearing, not style. The chunk loop in this method is
+     * synchronous (_httpClient.Send + ReadAsStream + CopyTo, up to 100 round trips, no cancellation
+     * token) and QuickShareWindow's Import button calls in from the dispatcher, where await would
+     * capture it and resume the download on the UI thread — frozen window for the whole transfer.
+     * Resuming on the thread pool instead is safe: nothing after this point touches WPF directly,
+     * the GinaPlatform hooks marshal themselves and TriggerStateDB has its own queue. */
     private static async Task RunGinaTaskAsync(string ginaKey, bool autoMerge, int tries = 0)
     {
-      await Task.Delay(1000);
+      await Task.Delay(1000).ConfigureAwait(false);
 
       try
       {
