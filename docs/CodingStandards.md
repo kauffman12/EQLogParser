@@ -1,5 +1,9 @@
 # EQLogParser C# Coding Standards
 
+> Behaviour that is deliberate but not obvious from the code is recorded in
+> [DesignNotes.md](DesignNotes.md). Read the relevant section before changing import, sharing or
+> migration behaviour, and add to it when a decision is worth remembering.
+
 ## File Encoding
 
 - All `.cs` files must be saved as **UTF-8 without BOM** (Byte Order Mark)
@@ -316,6 +320,7 @@ foreach (var action in block.Actions.OfType<DamageRecord>())
 ## Documentation
 
 - Release/signing/installer work (sign.cmd, EQLogParserInstall) follows `docs/ReleaseChecklist.md`
+- **Design rationale belongs in `docs/DesignNotes.md`, not in long code comments.** A comment states the constraint in a line or two and points at the note (`// See docs/DesignNotes.md → Trigger and Overlay Import.`); the reasoning, the alternatives we rejected and the accepted warts go in the note. When a decision changes, update the entry — and delete it when it no longer applies.
 - Summary tags are used to describe purpose
 - Param tags document method parameters
 - Returns tags document return values
