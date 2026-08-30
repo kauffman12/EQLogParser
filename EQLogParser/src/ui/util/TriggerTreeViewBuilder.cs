@@ -35,22 +35,29 @@ namespace EQLogParser
     private static TriggerTreeViewNode CreateViewNode(TriggerNode node, TriggerState state,
       Dictionary<string, List<TriggerNode>> childrenByParent)
     {
+      // Databases older than the id-owning migrations can hold a node without one (UpgradeTree
+      // tolerates that elsewhere), and every lookup below throws on a null key — so an id-less node
+      // used to take down the whole tree build instead of just rendering without flags.
+      var hasId = !string.IsNullOrEmpty(node.Id);
+      // mirrors the store's view flags (dictionaries live on the Core instance, reachable via IVT)
+      var recentlyMerged = TriggerStateDB.Instance.RecentlyMerged;
+      var missingMedia = TriggerStateDB.Instance.MissingMedia;
+
       var viewNode = new TriggerTreeViewNode
       {
         Content = node.Name,
         IsExpanded = node.IsExpanded,
         SerializedData = node,
-        // mirrors the store's view flags (dictionaries live on the Core instance, reachable via IVT)
-        IsRecentlyMerged = TriggerStateDB.Instance.RecentlyMerged.ContainsKey(node.Id) && !TriggerStateDB.Instance.MissingMedia.ContainsKey(node.Id),
-        HasMissingMedia = TriggerStateDB.Instance.MissingMedia.ContainsKey(node.Id)
+        IsRecentlyMerged = hasId && recentlyMerged.ContainsKey(node.Id) && !missingMedia.ContainsKey(node.Id),
+        HasMissingMedia = hasId && missingMedia.ContainsKey(node.Id)
       };
 
-      if (node.OverlayData is null && state is not null)
+      if (hasId && node.OverlayData is null && state is not null)
       {
         viewNode.IsChecked = state.Enabled.GetValueOrDefault(node.Id, false);
       }
 
-      if (node.OverlayData is null && node.TriggerData is null &&
+      if (hasId && node.OverlayData is null && node.TriggerData is null &&
           childrenByParent is { } && childrenByParent.TryGetValue(node.Id, out var children))
       {
         foreach (var child in children)

@@ -383,7 +383,9 @@ namespace EQLogParser
             var arr = new char[stop];
             for (var j = 0; j < stop; j++)
             {
-              arr[j] = char.ToLower(span[j]);
+              // invariant: channel names are matched ordinally later, so they must not depend on
+              // the user's culture (the classic Turkish dotted-I case)
+              arr[j] = char.ToLowerInvariant(span[j]);
             }
 
             channel = new string(arr);

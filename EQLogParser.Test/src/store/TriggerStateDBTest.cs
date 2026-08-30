@@ -7,39 +7,19 @@ namespace EQLogParser
    * TriggerStorePlatform hooks, so the whole class is kept out of the parallel run. */
   [DoNotParallelize]
   [TestClass]
-  public sealed class TriggerStateDBTest
+  public sealed class TriggerStateDBTest : TempDirFixture
   {
-    private readonly List<string> _dirs = [];
-
-    [TestCleanup]
-    public void Cleanup()
-    {
-      foreach (var dir in _dirs)
-      {
-        try
-        {
-          Directory.Delete(dir, true);
-        }
-        catch
-        {
-          // best effort — temp dirs are harmless if a file handle is still open
-        }
-      }
-    }
-
-    private string NewDir() => Directory.CreateDirectory(Path.Combine(TestTemp.Root, Guid.NewGuid().ToString("N"))).FullName;
-
     /// <summary>Store whose database lives in <paramref name="path"/>.</summary>
     private TriggerStateDB Store(string path)
     {
       var dir = Path.GetDirectoryName(path);
-      if (dir is not null) _dirs.Add(dir);
+      TrackDir(dir);
       return new TriggerStateDB(path, applyLegacyUpgrades: false);
     }
 
     private (TriggerStateDB Db, string Path) FreshStore()
     {
-      var dir = NewDir();
+      var dir = NewTempDir();
       var path = Path.Combine(dir, "test.db");
       return (Store(path), path);
     }
@@ -92,8 +72,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task ExistingDbWithoutVersionDoc_FirstVersionedRun_BootstrapsDefaultsAndStamps()
     {
-      var dir = NewDir();
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       var path = Path.Combine(dir, "unversioned.db");
 
       string nameKey;
@@ -142,8 +121,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task ExistingDbWithVersionDoc_MissingOverlays_NotRebootstrapped()
     {
-      var dir = NewDir();
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       var path = Path.Combine(dir, "versioned.db");
 
       string nameKey;
@@ -187,8 +165,7 @@ namespace EQLogParser
       // to EQLogParser.Core, so the stale marker used to make the first tree query throw
       // "not found in current domain" — with such a document present, opening the store below
       // reproduced exactly that crash (ctor FindOne on the overlays root).
-      var dir = NewDir();
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       var path = Path.Combine(dir, "legacy.db");
 
       string nameKey;
@@ -265,8 +242,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task LegacyExportTriggerNodeTypeMarker_SweepIsOneTime()
     {
-      var dir = NewDir();
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       var path = Path.Combine(dir, "legacy2.db");
       using (var raw = new LiteDatabase(path))
       {
@@ -1102,8 +1078,4 @@ namespace EQLogParser
     }
   }
 
-  internal static class TestTemp
-  {
-    public static readonly string Root = Path.Combine(Path.GetTempPath(), "eqlp-core-tests");
-  }
 }

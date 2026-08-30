@@ -937,17 +937,7 @@ namespace EQLogParser
       var type = match.Groups[1].Value.Trim();
       var quickShareKey = match.Groups[2].Value.Trim();
       var fullKey = $"{{{type}:{quickShareKey}}}";
-      var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
-
-      var record = new QuickShareRecord
-      {
-        BeginTime = dateTime,
-        Key = fullKey,
-        From = chatType.Sender,
-        To = (to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser) ? processorName : TextUtils.CapitalizeFirst(to),
-        IsMine = chatType.SenderIsYou,
-        Type = type
-      };
+      var record = QuickShareRecord.FromChat(chatType, type, fullKey, dateTime, characterId, processorName);
 
       QuickShareManager.Instance.Add(record);
 

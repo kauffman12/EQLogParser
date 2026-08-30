@@ -33,7 +33,8 @@ namespace EQLogParser
 
       if (!_swarmPetsEnabled)
       {
-        if (record.Healed?.EndsWith("`s pet") is true || record.Healed?.EndsWith("`s ward") is true)
+        if (record.Healed?.EndsWith("`s pet", StringComparison.Ordinal) is true
+            || record.Healed?.EndsWith("`s ward", StringComparison.Ordinal) is true)
         {
           return false;
         }
@@ -56,7 +57,8 @@ namespace EQLogParser
 
       if (!_swarmPetsEnabled)
       {
-        if (record.Healed?.EndsWith("`s pet") is true || record.Healed?.EndsWith("`s ward") is true)
+        if (record.Healed?.EndsWith("`s pet", StringComparison.Ordinal) is true
+            || record.Healed?.EndsWith("`s ward", StringComparison.Ordinal) is true)
         {
           return false;
         }

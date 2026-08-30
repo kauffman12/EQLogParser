@@ -2,11 +2,16 @@ using LiteDB;
 using log4net;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
+  /* Resources are released by Stop() (called from TriggerStateDB.Dispose) rather than through
+   * IDisposable, so the queue's owner decides when the database may be closed. */
+  [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable",
+    Justification = "Torn down explicitly by Stop(), which is driven by TriggerStateDB.Dispose. See class comment.")]
   internal class LiteDbTaskQueue
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);

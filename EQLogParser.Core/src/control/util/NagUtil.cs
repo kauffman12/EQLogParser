@@ -1,6 +1,7 @@
 using log4net;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -349,15 +350,17 @@ internal static class NagUtil
       var partial = results.Count(r => r.ImportStatus == NagImportStatus.Partial);
       var skipped = results.Count(r => r.ImportStatus == NagImportStatus.Skipped);
 
-      sb.AppendLine($"<h1>NAG Import Report</h1>");
-      sb.AppendLine($"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
+      // InvariantCulture: the report is generated text (counts and already-encoded markup),
+      // never culture-formatted output — CA1305 would otherwise pick up the UI culture.
+      sb.AppendLine(CultureInfo.InvariantCulture, $"<h1>NAG Import Report</h1>");
+      sb.AppendLine(CultureInfo.InvariantCulture, $"<div class=\"summary\">\n<div class=\"stat imported\"><span class=\"num\">{imported}</span><span class=\"label\">Success</span></div>\n<div class=\"stat partial\"><span class=\"num\">{partial}</span><span class=\"label\">Partial</span></div>\n<div class=\"stat skipped\"><span class=\"num\">{skipped}</span><span class=\"label\">Skipped</span></div>\n<div class=\"stat\"><span class=\"num\">{total}</span><span class=\"label\">Total</span></div>\n</div>");
       var fctNote = skippedFctOverlays > 0 ? $" {skippedFctOverlays} FCT overlay(s) were not imported (no EQLP equivalent)." : "";
-      sb.AppendLine($"<div class=\"note\">All imported triggers start <b>disabled</b>. NAG per-character enable states are not imported — enable what you need in the Triggers view.{fctNote}</div>");
+      sb.AppendLine(CultureInfo.InvariantCulture, $"<div class=\"note\">All imported triggers start <b>disabled</b>. NAG per-character enable states are not imported — enable what you need in the Triggers view.{fctNote}</div>");
 
       // Reduced-fidelity overlay notes (e.g. timer sort order reversed vs NAG)
       if (overlayNotes is { Count: > 0 })
       {
-        sb.AppendLine($"<div class=\"note\">{string.Join("<br>", overlayNotes.Select(HtmlEncode))}</div>");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"<div class=\"note\">{string.Join("<br>", overlayNotes.Select(HtmlEncode))}</div>");
       }
 
       sb.AppendLine("<table>\n<thead>\n<tr><th>Trigger</th><th>Status</th><th class=\"folder-col\">Folder Path</th><th class=\"actions-col\">Actions</th><th class=\"reason-col\">Details / Reason</th><th>Missing Audio</th></tr>\n</thead>\n<tbody>");
@@ -390,7 +393,7 @@ internal static class NagUtil
         var missingAudio = r.MissingAudioFiles?.Count > 0
           ? $"<div class=\"missing-audio\">{string.Join("<br>", r.MissingAudioFiles.Select(HtmlEncode))}</div>"
           : "—";
-        sb.AppendLine($"<tr><td>{HtmlEncode(r.TriggerName)}</td><td>{badge}</td><td>{folder}</td><td class=\"actions\">{actions}</td><td class=\"reason\">{reason}</td><td>{missingAudio}</td></tr>");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"<tr><td>{HtmlEncode(r.TriggerName)}</td><td>{badge}</td><td>{folder}</td><td class=\"actions\">{actions}</td><td class=\"reason\">{reason}</td><td>{missingAudio}</td></tr>");
       }
 
       sb.AppendLine("</tbody>\n</table>\n</body>\n</html>");
@@ -675,11 +678,7 @@ internal static class NagUtil
   }
 
   // Checks if a regex pattern contains any named capture groups (e.g., (?<name>...)).
-  private static bool HasNamedCaptureGroup(string pattern)
-  {
-    var idx = pattern.IndexOf("?<", StringComparison.Ordinal);
-    return idx >= 0;
-  }
+  private static bool HasNamedCaptureGroup(string pattern) => pattern.Contains("?<", StringComparison.Ordinal);
 
   // NAG score (0-1, higher = more important) → EQLP Priority (lower = more important)
   private static long ConvertScore(double score)

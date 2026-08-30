@@ -11,26 +11,8 @@ namespace EQLogParserTest
    * warning slots, regex patterns with escaped dots, overlay ids) without depending on the
    * full, gitignored files under local/. */
   [TestClass]
-  public sealed class MiniFixtureImportTest
+  public sealed class MiniFixtureImportTest : TempDirFixture
   {
-    private readonly List<string> _dirs = [];
-
-    [TestCleanup]
-    public void Cleanup()
-    {
-      foreach (var dir in _dirs)
-      {
-        try
-        {
-          Directory.Delete(dir, true);
-        }
-        catch
-        {
-          // best effort
-        }
-      }
-    }
-
     private static string FixturePath(string name)
     {
       var path = Path.Combine(AppContext.BaseDirectory, "mini-data", name);
@@ -51,8 +33,7 @@ namespace EQLogParserTest
 
     private TriggerStateDB NewStore()
     {
-      var dir = Directory.CreateDirectory(Path.Combine(TestTemp.Root, Guid.NewGuid().ToString("N"))).FullName;
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       return new TriggerStateDB(Path.Combine(dir, "test.db"), applyLegacyUpgrades: false);
     }
 

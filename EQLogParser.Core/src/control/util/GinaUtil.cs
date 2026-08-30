@@ -18,6 +18,9 @@ namespace EQLogParser
   internal static class GinaUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    // the chat marker and history label of a GINA share
+    private const string GinaKeyPrefix = "{GINA:";
+    private const string GinaType = "GINA";
     private static readonly ConcurrentDictionary<string, CharacterData> GinaCache = new();
     private static readonly HttpClient _httpClient = new();
 
@@ -26,55 +29,38 @@ namespace EQLogParser
     internal static void CheckGina(List<TrustedPlayer> trust, ChatType chatType, string action, double dateTime, string characterId, string processorName)
     {
       // if GINA data is recent then try to handle it
-      if (chatType.Sender != null && action.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          action.IndexOf('}') is var end && end > (index + 10))
+      if (chatType.Sender != null && TryGetGinaKey(action, out var ginaKey))
       {
-        var start = index + 6;
-        var finish = end - start;
-        if (action.Length > (start + finish))
+        var fullKey = GinaKeyPrefix + ginaKey + "}";
+        var record = QuickShareRecord.FromChat(chatType, GinaType, fullKey, dateTime, characterId, processorName);
+
+        QuickShareState.Instance.Add(record);
+
+        // don't handle immediately unless enabled
+        if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
+              or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
+            !QuickShareState.Instance.IsMine(fullKey))
         {
-          var ginaKey = action.Substring(start, finish);
-          var fullKey = $"{{GINA:{ginaKey}}}";
-          if (!string.IsNullOrEmpty(ginaKey))
+          // ignore if we're still processing a bunch
+          if (GinaCache.Count > 5)
           {
-            var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
-            var record = new QuickShareRecord
+            return;
+          }
+
+          lock (GinaCache)
+          {
+            if (!GinaCache.TryGetValue(ginaKey, out var value))
             {
-              BeginTime = dateTime,
-              Key = fullKey,
-              From = chatType.Sender,
-              To = (to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser) ? processorName : TextUtils.CapitalizeFirst(to),
-              IsMine = chatType.SenderIsYou,
-              Type = "GINA"
-            };
-
-            QuickShareState.Instance.Add(record);
-
-            // don't handle immediately unless enabled
-            if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild
-                  or ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") &&
-                !QuickShareState.Instance.IsMine(fullKey))
+              // trust can be null (TriggerProcessor re-assigns it from a TrustedPlayers update)
+              var autoMerge = chatType.Channel != ChatChannels.Tell &&
+                trust?.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) is true;
+              GinaCache[ginaKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge };
+              GinaCache[ginaKey].CharacterIds.Add(characterId);
+              _ = RunGinaTaskAsync(ginaKey, autoMerge);
+            }
+            else
             {
-              // ignore if we're still processing a bunch
-              if (GinaCache.Count > 5)
-              {
-                return;
-              }
-
-              lock (GinaCache)
-              {
-                if (!GinaCache.TryGetValue(ginaKey, out var value))
-                {
-                  var autoMerge = chatType.Channel != ChatChannels.Tell && trust.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase));
-                  GinaCache[ginaKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge };
-                  GinaCache[ginaKey].CharacterIds.Add(characterId);
-                  _ = RunGinaTaskAsync(ginaKey, autoMerge);
-                }
-                else
-                {
-                  value.CharacterIds.Add(characterId);
-                }
-              }
+              value.CharacterIds.Add(characterId);
             }
           }
         }
@@ -83,23 +69,13 @@ namespace EQLogParser
 
     internal static void ImportQuickShare(string shareKey, string from)
     {
-      // if Quick Share data is recent then try to handle it
-      if (shareKey.IndexOf("{GINA:", StringComparison.OrdinalIgnoreCase) is var index and > -1 &&
-          shareKey.IndexOf('}') is var end && end > (index + 10))
+      // queued the same way as a share seen in chat, without the auto-merge decision
+      if (TryGetGinaKey(shareKey, out var quickShareKey))
       {
-        var start = index + 6;
-        var finish = end - start;
-        if (shareKey.Length > (start + finish))
+        GinaCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
+        if (GinaCache.Count == 1)
         {
-          var quickShareKey = shareKey.Substring(start, finish);
-          if (!string.IsNullOrEmpty(quickShareKey))
-          {
-            GinaCache.TryAdd(quickShareKey, new CharacterData { Sender = from });
-            if (GinaCache.Count == 1)
-            {
-              _ = RunGinaTaskAsync(quickShareKey, false);
-            }
-          }
+          _ = RunGinaTaskAsync(quickShareKey, false);
         }
       }
     }
@@ -151,6 +127,34 @@ namespace EQLogParser
 
         NextGinaTask(ginaKey);
       }
+    }
+
+    /* Pulls the share id out of a "{GINA:<id>}" marker — chat detection and the manual import each
+     * carried their own copy of this substring arithmetic. The index guards are kept as they were: the
+     * closing brace must sit past the prefix (the original used a fixed minimum length of 10) and the
+     * whole marker must be inside the text. */
+    private static bool TryGetGinaKey(string text, out string ginaKey)
+    {
+      ginaKey = null;
+      if (string.IsNullOrEmpty(text))
+      {
+        return false;
+      }
+
+      var index = text.IndexOf(GinaKeyPrefix, StringComparison.OrdinalIgnoreCase);
+      if (index < 0)
+      {
+        return false;
+      }
+
+      var end = text.IndexOf('}');
+      if (end <= index + 10 || text.Length <= end)
+      {
+        return false;
+      }
+
+      ginaKey = text.Substring(index + GinaKeyPrefix.Length, end - index - GinaKeyPrefix.Length);
+      return !string.IsNullOrEmpty(ginaKey);
     }
 
     private static string ReadXml(byte[] data)

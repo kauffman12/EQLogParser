@@ -6,42 +6,11 @@ namespace EQLogParser
   /* File-driven round-trip tests against real export files the user keeps under local/ (gitignored).
    * They skip cleanly when the fixture is absent so CI on a fresh checkout stays green. */
   [TestClass]
-  public sealed class TriggerStoreRealFileTest
+  public sealed class TriggerStoreRealFileTest : TempDirFixture
   {
-    private readonly List<string> _dirs = [];
-
-    [TestCleanup]
-    public void Cleanup()
-    {
-      foreach (var dir in _dirs)
-      {
-        try
-        {
-          Directory.Delete(dir, true);
-        }
-        catch
-        {
-          // best effort
-        }
-      }
-    }
-
-    /// <summary>Finds a file under the repository root (works no matter where the test bin lives).</summary>
-    private static string FindRepoFile(string relativePath)
-    {
-      var dir = new DirectoryInfo(AppContext.BaseDirectory);
-      while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "EQLogParser.sln")))
-      {
-        dir = dir.Parent;
-      }
-
-      return dir is null ? Path.Combine(Directory.GetCurrentDirectory(), relativePath) : Path.Combine(dir.FullName, relativePath);
-    }
-
     private TriggerStateDB NewStore()
     {
-      var dir = Directory.CreateDirectory(Path.Combine(TestTemp.Root, Guid.NewGuid().ToString("N"))).FullName;
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       return new TriggerStateDB(Path.Combine(dir, "test.db"), applyLegacyUpgrades: false);
     }
 
@@ -60,7 +29,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task Import_WizardTgfGz_RoundTrips()
     {
-      var path = FindRepoFile("local/wizard.tgf.gz");
+      var path = TestTemp.RepoFile("local/wizard.tgf.gz");
       if (!File.Exists(path))
       {
         Console.WriteLine($"skipping — optional fixture missing: {path}");
@@ -104,7 +73,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task Import_AllraidTgfGz_RoundTrips()
     {
-      var path = FindRepoFile("local/allraid.tgf.gz");
+      var path = TestTemp.RepoFile("local/allraid.tgf.gz");
       if (!File.Exists(path))
       {
         Console.WriteLine($"skipping — optional fixture missing: {path}");
@@ -146,7 +115,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task Import_WizardOgfGz_RoundTrips()
     {
-      var path = FindRepoFile("local/wizard.ogf.gz");
+      var path = TestTemp.RepoFile("local/wizard.ogf.gz");
       if (!File.Exists(path))
       {
         Console.WriteLine($"skipping — optional fixture missing: {path}");
@@ -174,7 +143,7 @@ namespace EQLogParser
     [TestMethod]
     public async Task Import_CooldownOverlayOgfGz_RoundTrips()
     {
-      var path = FindRepoFile("local/cooldownOverlay.ogf.gz");
+      var path = TestTemp.RepoFile("local/cooldownOverlay.ogf.gz");
       if (!File.Exists(path))
       {
         Console.WriteLine($"skipping — optional fixture missing: {path}");

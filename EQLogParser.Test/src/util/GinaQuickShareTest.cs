@@ -8,26 +8,8 @@ namespace EQLogParser
    * No network: CheckGina only starts downloads when TriggersWatchForQuickShare is enabled, which
    * these tests never do (fresh ConfigUtil settings). */
   [TestClass]
-  public sealed class GinaQuickShareTest
+  public sealed class GinaQuickShareTest : TempDirFixture
   {
-    private readonly List<string> _dirs = [];
-
-    [TestCleanup]
-    public void Cleanup()
-    {
-      foreach (var dir in _dirs)
-      {
-        try
-        {
-          Directory.Delete(dir, true);
-        }
-        catch
-        {
-          // best effort
-        }
-      }
-    }
-
     private static QuickShareRecord? FindRecord(string key) =>
       QuickShareState.Instance.Snapshot().FirstOrDefault(r => r.Key == key);
 
@@ -120,6 +102,46 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void QuickShareState_SubscribeLate_ReplaysHistoryThenLiveRecords()
+    {
+      // Regression: nothing constructs QuickShareManager at startup, so the window's collection used
+      // to be mirrored purely from Accepted and every record accepted before the window was first
+      // opened was lost. Subscribe must replay the history exactly once, oldest-first, so a handler
+      // that inserts at index 0 ends up with the same newest-first order as the state itself.
+      var state = new QuickShareState();
+      var first = new QuickShareRecord { Key = "{GINA:old}", BeginTime = 1.0, From = "A" };
+      var second = new QuickShareRecord { Key = "{GINA:newer}", BeginTime = 2.0, From = "B" };
+      state.Add(first);
+      state.Add(second);
+
+      var mirrored = new List<QuickShareRecord>();
+      state.Subscribe(r => mirrored.Insert(0, r));
+
+      CollectionAssert.AreEqual(new[] { second, first }, mirrored, "replayed history must arrive newest-first");
+
+      // and the live path keeps appending on top of the replayed rows, exactly once each
+      var third = new QuickShareRecord { Key = "{GINA:live}", BeginTime = 3.0, From = "C" };
+      state.Add(third);
+
+      CollectionAssert.AreEqual(new[] { third, second, first }, mirrored);
+      CollectionAssert.AreEqual(state.Snapshot(), mirrored, "mirrored order must match the shared state");
+    }
+
+    [TestMethod]
+    public void QuickShareState_SubscribeReplaysNothing_WhenHistoryIsEmpty()
+    {
+      var state = new QuickShareState();
+      var mirrored = new List<QuickShareRecord>();
+      state.Subscribe(mirrored.Add);
+
+      Assert.IsEmpty(mirrored);
+
+      var record = new QuickShareRecord { Key = "{GINA:first}", BeginTime = 1.0 };
+      Assert.IsTrue(state.Add(record));
+      CollectionAssert.AreEqual(new[] { record }, mirrored);
+    }
+
+    [TestMethod]
     public async Task GinaPackage_ConvertAndImport_RoundTrips()
     {
       const string xml = """
@@ -151,8 +173,7 @@ namespace EQLogParser
       Assert.AreEqual("Fireball!", trigger.TriggerData.TextToDisplay);
 
       // End-to-end into a real (temporary) store, the same call GINA's import path makes.
-      var dir = Directory.CreateDirectory(Path.Combine(TestTemp.Root, Guid.NewGuid().ToString("N"))).FullName;
-      _dirs.Add(dir);
+      var dir = NewTempDir();
       await using var db = new TriggerStateDB(Path.Combine(dir, "test.db"), applyLegacyUpgrades: false);
 
       await db.ImportTriggers("", nodes, new HashSet<string> { "P1" });

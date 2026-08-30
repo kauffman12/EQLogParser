@@ -20,9 +20,10 @@ namespace EQLogParser
   /* Represents a single variable action (set or clear) configured on a trigger. */
   internal class VariableAction
   {
-    // Stored as int (not enum) to match TimerType/TriggerAgainOption pattern — immune to renames
-    public int ActionType { get; set; } = 0; // 0=Set, 1=Clear
-    public int DataType { get; set; } = 0;   // 0=Value, 1=Counter
+    // Stored as int (not enum) to match TimerType/TriggerAgainOption pattern — immune to renames.
+    // Left at the default (0): 0=Set / 0=Value, see the Is* helpers below.
+    public int ActionType { get; set; } // 0=Set, 1=Clear
+    public int DataType { get; set; }   // 0=Value, 1=Counter
 
     // Convenience helpers so callers don't use magic numbers
     public bool IsSetAction => ActionType == 0;
@@ -39,8 +40,8 @@ namespace EQLogParser
     public double Step { get; set; } = 1;
     public double InitialValue { get; set; }
 
-    // TTL field (applies to both Value and Counter)
-    public double TimeToLiveSeconds { get; set; } = 0; // 0 = no expiration
+    // TTL field (applies to both Value and Counter); the default 0 means "no expiration"
+    public double TimeToLiveSeconds { get; set; }
   }
 
   internal class Overlay

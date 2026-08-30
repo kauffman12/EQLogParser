@@ -15,7 +15,6 @@ namespace EQLogParser
   {
     private readonly List<ViewOption> _options = [];
     private ViewOption _selectedOption;
-    private int _selectedIndex = -1;
 
     public void AddOption(string name, Action<int> handler)
     {
@@ -37,24 +36,13 @@ namespace EQLogParser
       if (selectedIndex < 0 || selectedIndex >= _options.Count)
         return;
 
-      _selectedIndex = selectedIndex;
       _selectedOption = _options[selectedIndex];
       _selectedOption.Handler(selectedIndex);
-    }
-
-    public ViewOption GetSelectedOption()
-    {
-      return _selectedOption;
     }
 
     public string GetSelectedOptionName()
     {
       return _selectedOption?.Name;
-    }
-
-    public int GetSelectedIndex()
-    {
-      return _selectedIndex;
     }
 
     public int TrySetSelectedByName(string name)

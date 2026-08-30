@@ -69,15 +69,6 @@ namespace EQLogParser
       }
     }
 
-    internal void UpdateLandsOnYou(string landsOn, uint rate)
-    {
-      lock (_adpsLock)
-      {
-        _adpsActive["#DoTCritRate"][landsOn] = rate;
-        Recalculate();
-      }
-    }
-
     internal void UpdateAdps(SpellData spellData)
     {
       lock (_adpsLock)
@@ -144,12 +135,6 @@ namespace EQLogParser
         MyDoTCritRateMod = 0;
         MyNukeCritRateMod = 0;
       }
-    }
-
-    internal void SetCritRateMods(uint dot, uint nuke)
-    {
-      MyDoTCritRateMod = dot;
-      MyNukeCritRateMod = nuke;
     }
 
     internal IReadOnlyCollection<SpellData> GetLandsOnSpells(string landsOnKey)

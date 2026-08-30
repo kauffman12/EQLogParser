@@ -15,6 +15,27 @@ namespace EQLogParser
     public string Key { get; set; }
 
     public bool IsMine { get; set; }
+
+    /* Builds the history row for a share seen in chat. Both producers — GINA detection and the legacy
+     * share flow — applied the same ownership and "To" rules from two verbatim copies of this block;
+     * one copy means the history cannot drift between them (GINA passes Type = "GINA"). */
+    public static QuickShareRecord FromChat(ChatType chatType, string type, string key, double beginTime,
+      string characterId, string processorName)
+    {
+      var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
+
+      return new QuickShareRecord
+      {
+        BeginTime = beginTime,
+        Key = key,
+        From = chatType.Sender,
+        To = to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser
+          ? processorName
+          : TextUtils.CapitalizeFirst(to),
+        IsMine = chatType.SenderIsYou,
+        Type = type
+      };
+    }
   }
 
   // Per-quick-share context accumulated as characters see the same share key in chat.

@@ -49,6 +49,31 @@ namespace EQLogParser
       }
     }
 
+    /* Attaches a view owner (the WPF window's bound collection) without losing history: the records
+     * accepted so far are handed to the handler, then it receives every later one. Both steps happen
+     * under one lock so nothing can slip through between the replay and the subscription — a view
+     * that is constructed lazily (a GINA share seen long before the Quick Share window is opened)
+     * used to miss everything accepted before its construction. Handlers run on the accepting
+     * thread, oldest-replay-first, so a handler that inserts at index 0 ends up newest-first; it is
+     * the subscriber's job to marshal to the UI thread. */
+    internal void Subscribe(Action<QuickShareRecord> handler)
+    {
+      if (handler == null) return;
+
+      List<QuickShareRecord> replay;
+      lock (_lock)
+      {
+        replay = [.. _records];
+        Accepted += handler;
+      }
+
+      // outside the lock, like Accepted itself, so a handler may re-enter (IsMine, Add)
+      for (var i = replay.Count - 1; i >= 0; i--)
+      {
+        handler(replay[i]);
+      }
+    }
+
     // Point-in-time copy for any-thread readers that don't bind the WPF collection (tests, the
     // share-status lookup in TriggerUtil).
     internal List<QuickShareRecord> Snapshot()

@@ -166,7 +166,6 @@ namespace EQLogParser
                 {
                   if (allHeals[j].Item1 >= beginTime && allHeals[j].Item1 <= endTime)
                   {
-                    start = j;
                     // copy
                     var newBlock = new ActionGroup { BeginTime = allHeals[j].Item1 };
                     filtered.Add(newBlock);

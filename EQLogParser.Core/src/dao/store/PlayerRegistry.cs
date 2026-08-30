@@ -2,13 +2,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 
 namespace EQLogParser
 {
+  /* Process-lifetime singleton: its Timer is stopped by Shutdown() when LifecycleManager tears the app
+   * down (and it is never re-created afterwards), so it is deliberately not IDisposable. */
+  [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable",
+    Justification = "Singleton owned by LifecycleManager; the save timer is stopped in Shutdown(). See class comment.")]
   class PlayerRegistry : ILifecycle
   {
     internal event Action<PetMapping> EventsNewPetMapping;
@@ -277,11 +281,6 @@ namespace EQLogParser
       }
 
       return player;
-    }
-
-    internal ImmutableDictionary<string, string> GetPetPlayerMappings()
-    {
-      return _petToPlayer.ToImmutableDictionary();
     }
 
     internal bool IsVerifiedPet(string name)

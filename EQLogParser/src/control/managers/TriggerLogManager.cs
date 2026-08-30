@@ -78,23 +78,6 @@ namespace EQLogParser
       }
     }
 
-    internal void ClearCharacter(string characterId)
-    {
-      BulkObservableCollection<TriggerLogEntry> log;
-      lock (_globalLock)
-      {
-        if (!_logs.TryGetValue(characterId, out log))
-        {
-          return;
-        }
-      }
-
-      lock (log)
-      {
-        log.Clear();
-      }
-    }
-
     /// <summary>
     /// Clears all trigger logs. Should only be called from user-initiated clear action.
     /// </summary>

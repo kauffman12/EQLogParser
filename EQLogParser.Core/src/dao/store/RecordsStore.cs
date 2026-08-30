@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 
 namespace EQLogParser
 {
+  /* Process-lifetime singleton: its Timer is disposed by Shutdown() when LifecycleManager tears the app
+   * down (and it is never re-created afterwards), so it is deliberately not IDisposable. */
+  [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable",
+    Justification = "Singleton owned by LifecycleManager; the event timer is disposed in Shutdown(). See class comment.")]
   internal class RecordsStore : ILifecycle
   {
     internal event Action<string> RecordsUpdatedEvent;
