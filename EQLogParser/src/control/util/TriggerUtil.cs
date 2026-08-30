@@ -1085,7 +1085,9 @@ namespace EQLogParser
     internal static async Task OpenQuickShareStatusAsync(string selected)
     {
       List<string> keys = [];
-      foreach (var share in QuickShareManager.Instance.Records)
+      // Snapshot of the shared state rather than the window's bound collection: this runs off the UI
+      // thread and wants a point-in-time view, not a live WPF collection that may be updating.
+      foreach (var share in QuickShareState.Instance.Snapshot())
       {
         if (MatchQuickShare(share.Key) is { } match)
         {

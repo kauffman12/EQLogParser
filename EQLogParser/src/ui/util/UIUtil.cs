@@ -220,23 +220,30 @@ namespace EQLogParser
       }, priority, ct).Task;
     }
 
-    /* Fire-and-forget post that cannot lose a failure: the callback's exception, and a fault of the
-     * dispatcher post itself (shutdown races), are both logged. Use this instead of
-     * `_ = InvokeAsync(...)`, which leaves those as unobserved task exceptions. */
+    /* Fire-and-forget post that cannot lose a failure: the callback's exception, plus a fault or a
+     * cancellation of the dispatcher post itself, all reach the log. Use this instead of
+     * `_ = InvokeAsync(...)`, which leaves them as unobserved task exceptions. */
     internal static void InvokeAsyncLogged(Action action, string context, DispatcherPriority priority = DispatcherPriority.Normal)
     {
       try
       {
-        var task = InvokeAsync(action, priority);
-        if (!task.IsCompleted)
-        {
-          _ = task.ContinueWith(faulted => Log.Error($"{context} (dispatcher callback)", faulted.Exception?.GetBaseException()),
-            TaskContinuationOptions.OnlyOnFaulted);
-        }
+        // NotOnRanToCompletion (not OnlyOnFaulted): a post cancelled by dispatcher shutdown never
+        // runs and never faults, and a silently dropped UI callback is exactly the kind of thing a
+        // bug report cannot explain. Runs for already-completed tasks too, so an inline failure is
+        // observed as well. Cancellation only happens at teardown, hence Debug.
+        _ = InvokeAsync(action, priority).ContinueWith(
+          t =>
+          {
+            if (t.Exception is { } ex) Log.Error($"{context} (dispatcher callback)", ex.GetBaseException());
+            else if (t.IsCanceled) Log.Debug($"{context}: dispatcher post cancelled (shutting down?)");
+          },
+          CancellationToken.None,
+          TaskContinuationOptions.NotOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
+          TaskScheduler.Default);
       }
       catch (Exception ex)
       {
-        // no dispatcher / ran inline and threw
+        // no dispatcher / ran inline and threw before a task existed
         Log.Error($"{context} (inline)", ex);
       }
     }

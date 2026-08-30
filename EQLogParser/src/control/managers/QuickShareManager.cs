@@ -9,12 +9,14 @@ namespace EQLogParser
    * event, so the bound collection can never fall out of sync with the state. */
   internal class QuickShareManager
   {
-    internal static QuickShareManager Instance { get; set; } = new();
+    internal static QuickShareManager Instance { get; } = new();
 
     internal ObservableCollection<QuickShareRecord> Records { get; } = [];
     private readonly object _lock = new();
 
-    internal QuickShareManager()
+    // One instance only: each constructor subscribes to Accepted, so a second one would mirror every
+    // accepted record into a bound collection twice.
+    private QuickShareManager()
     {
       BindingOperations.EnableCollectionSynchronization(Records, _lock);
       // Mirror each accepted record into the bound collection on the UI thread. The raiser is the
