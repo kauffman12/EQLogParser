@@ -680,8 +680,7 @@ internal static class NagUtil
     return Math.Clamp((long)(inverted * 4) + 1, 1, 5);
   }
 
-  // Resolve audio file ID to filename using files-database.json if available
-  /// <summary>Renames duplicate child names under each parent ("X", "X" → "X", "X (2)").</summary>
+  // Renames duplicate child names under each parent ("X", "X" → "X", "X (2)").
   private static void UniquifySiblingNames(ExportTriggerNode parent)
   {
     if (parent?.Nodes is not { Count: > 1 } children)
@@ -724,6 +723,7 @@ internal static class NagUtil
     }
   }
 
+  // Resolve audio file ID to filename using files-database.json if available
   private static void LoadAudioFileMap(string databaseDirectory)
   {
     // Clear any previous cache so importing from a different directory works correctly

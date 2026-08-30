@@ -2,9 +2,13 @@ using System;
 
 namespace EQLogParser
 {
-  // Platform-dependent behavior used by TriggerStateDB, injected by the WPF host at startup.
-  // Defaults keep the store runnable (and testable) without a UI: icons are treated as valid,
-  // sounds as absent, and sprite paths pass through unchanged.
+  // Platform-dependent behavior used by TriggerStateDB, injected by the WPF host at startup
+  // (App.OnStartup, ahead of the first TriggerStateDB.Instance use).
+  //
+  // The defaults are deliberately permissive so the store stays runnable (and testable) without a
+  // UI: icons and sounds are assumed to exist and sprite paths pass through unchanged. That means
+  // an unwired probe reports "no missing media" instead of failing loudly — keep the host wiring
+  // in front of any first use if the import warnings matter to you.
   internal static class TriggerStorePlatform
   {
     /* File path of the user's trigger database (WPF host sets this before first Instance use). */
