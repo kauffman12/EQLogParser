@@ -651,18 +651,29 @@ internal static class NagUtil
     return input;
   }
 
-  /// <summary>
-  /// Checks if a regex pattern string contains an un-named capture group.
-  /// Looks for '(' not followed by '?' (which would indicate named, non-capturing, etc.).
-  /// </summary>
-  private static bool HasUnnamedCaptureGroup(string pattern)
+  // Index of the first capture group that is not a "(?…" construct (named, non-capturing,
+  // lookaround), or -1 when the pattern has none.
+  private static int FindFirstUnnamedGroup(string pattern)
   {
     var idx = pattern.IndexOf('(');
     while (idx >= 0 && idx + 1 < pattern.Length && pattern[idx + 1] == '?')
     {
       idx = pattern.IndexOf('(', idx + 1);
     }
-    return idx >= 0;
+    return idx;
+  }
+
+  // Checks if a regex pattern string contains an un-named capture group.
+  private static bool HasUnnamedCaptureGroup(string pattern) => FindFirstUnnamedGroup(pattern) >= 0;
+
+  // Names the first unnamed capture group: "(.+?)" → "(?<s2>.+?)". Returns null when there is no
+  // unnamed capture group, in which case the caller leaves the pattern untouched.
+  private static string NameFirstUnnamedGroup(string pattern, string groupName)
+  {
+    var openParenIdx = FindFirstUnnamedGroup(pattern);
+    return openParenIdx < 0
+      ? null
+      : pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
   }
 
   // Checks if a regex pattern contains any named capture groups (e.g., (?<name>...)).
@@ -726,8 +737,8 @@ internal static class NagUtil
   // Resolve audio file ID to filename using files-database.json if available
   private static void LoadAudioFileMap(string databaseDirectory)
   {
-    // Clear any previous cache so importing from a different directory works correctly
-    _audioFileMap = null;
+    // ConvertTriggers owns the reset of this field: it always clears it, then calls here only when
+    // a database directory was supplied.
     try
     {
       var filePath = Path.Combine(databaseDirectory, "files-database.json");
@@ -861,12 +872,9 @@ internal static class NagUtil
     var useCooldown = element.TryGetProperty("useCooldown", out var cd) && ReadBool(cd, false);
     var cooldownDuration = element.TryGetProperty("cooldownDuration", out var cdDur) ? ReadNumber(cdDur, 0) : 0;
 
-    // Check for classLevels — no EQLP equivalent, mark as dropped feature
+    // Check for classLevels — no EQLP equivalent: the restriction is silently lost and the
+    // trigger fires for all classes. hasClassLevels only feeds the import result's reason text.
     var hasClassLevels = element.TryGetProperty("classLevels", out var cl) && cl.ValueKind == JsonValueKind.Array && cl.GetArrayLength() > 0;
-    if (hasClassLevels)
-    {
-      // Note: class level filtering is silently lost — trigger will fire for all classes
-    }
 
     // Check capture method
     var captureMethod = element.TryGetProperty("captureMethod", out var cm) ? cm.GetString() : "Any match";
@@ -1029,20 +1037,15 @@ internal static class NagUtil
         lastSetVarName = varName;
         var pattern = phrases[i].pattern;
         // Convert the next un-named capture group to a simple named group
-        var openParenIdx = pattern.IndexOf('(');
-        while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
+        var setVarGroupName = "s" + (i + 1);
+        if (NameFirstUnnamedGroup(pattern, setVarGroupName) is { } namedPattern)
         {
-          openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
-        }
-        if (openParenIdx >= 0)
-        {
-          var groupName = "s" + (i + 1);
-          pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
+          pattern = namedPattern;
           if (!phraseVarMap.TryGetValue(phrases[i].phraseId ?? "", out var list))
           {
             phraseVarMap[phrases[i].phraseId ?? ""] = list = new List<(string, string)>();
           }
-          list.Add((groupName, varName));
+          list.Add((setVarGroupName, varName));
         }
         phrases[i] = (pattern, true, phrases[i].phraseId);
       }
@@ -1069,20 +1072,15 @@ internal static class NagUtil
         if (!HasUnnamedCaptureGroup(pattern) || HasNamedCaptureGroup(pattern)) continue;
 
         // Convert the next un-named capture group to a simple named group
-        var openParenIdx = pattern.IndexOf('(');
-        while (openParenIdx >= 0 && openParenIdx + 1 < pattern.Length && pattern[openParenIdx + 1] == '?')
+        var fallbackGroupName = "s" + (i + 1);
+        if (NameFirstUnnamedGroup(pattern, fallbackGroupName) is { } namedFallback)
         {
-          openParenIdx = pattern.IndexOf('(', openParenIdx + 1);
-        }
-        if (openParenIdx >= 0)
-        {
-          var groupName = "s" + (i + 1);
-          pattern = pattern.Substring(0, openParenIdx) + "(?<" + groupName + ">" + pattern.Substring(openParenIdx + 1);
+          pattern = namedFallback;
           if (!phraseVarMap.TryGetValue(currentPhraseId, out var list))
           {
             phraseVarMap[currentPhraseId] = list = new List<(string, string)>();
           }
-          list.Add((groupName, lastSetVarName));
+          list.Add((fallbackGroupName, lastSetVarName));
         }
         phrases[i] = (pattern, true, phrases[i].phraseId);
       }
@@ -1387,20 +1385,8 @@ internal static class NagUtil
     // De-duplicate notes — the same feature can be flagged by multiple actions.
     droppedFeatures = droppedFeatures.Distinct().ToList();
 
-    // Determine import status and reason
-    // Triggers with missing audio files are Partial (imported but incomplete).
-    // Approximation notes (NonStatusDroppedFeatures) don't count — the behavior is implemented
-    // as closely as EQLP allows, so they stay visible without burying real gaps in noise.
-    var meaningfulDrops = droppedFeatures.Where(f => !NonStatusDroppedFeatures.Contains(f)).ToList();
-    var hasMissingAudio = parsed.MissingAudioFiles?.Count > 0;
-    var status = hasMissingAudio || meaningfulDrops.Count > 0 ? NagImportStatus.Partial : NagImportStatus.Imported;
-    var reason = isSequential ? "Sequential capture method (not supported)" :
-                 hasClassLevels ? "Class level filtering (not supported)" :
-                 meaningfulDrops.Count > 0 ? string.Join(", ", meaningfulDrops) :
-                 hasMissingAudio ? $"{parsed.MissingAudioFiles.Count} missing audio file(s)" :
-                 null;
-
-    // Sequential capture triggers cannot be reliably converted — skip them entirely
+    // Sequential capture triggers cannot be reliably converted — skip them entirely, before any
+    // status/reason work (those results are discarded along with the nodes).
     if (isSequential)
     {
       return ([], new NagImportResult
@@ -1413,6 +1399,18 @@ internal static class NagUtil
         MissingAudioFiles = parsed.MissingAudioFiles
       });
     }
+
+    // Determine import status and reason
+    // Triggers with missing audio files are Partial (imported but incomplete).
+    // Approximation notes (NonStatusDroppedFeatures) don't count — the behavior is implemented
+    // as closely as EQLP allows, so they stay visible without burying real gaps in noise.
+    var meaningfulDrops = droppedFeatures.Where(f => !NonStatusDroppedFeatures.Contains(f)).ToList();
+    var hasMissingAudio = parsed.MissingAudioFiles?.Count > 0;
+    var status = hasMissingAudio || meaningfulDrops.Count > 0 ? NagImportStatus.Partial : NagImportStatus.Imported;
+    var reason = hasClassLevels ? "Class level filtering (not supported)" :
+                 meaningfulDrops.Count > 0 ? string.Join(", ", meaningfulDrops) :
+                 hasMissingAudio ? $"{parsed.MissingAudioFiles.Count} missing audio file(s)" :
+                 null;
 
     // Build actions summary
     var actionSummary = parsed.ActionSummary;
@@ -1647,7 +1645,8 @@ internal static class NagUtil
       }
     }
 
-    if (merged.Select(x => x.phrase).Distinct().Count() > 3)
+    // merged is already unique by phrase (the loop above drops duplicates), so the count is the check
+    if (merged.Count > 3)
     {
       droppedFeatures.Add("extra end-early phrases dropped (max 3)");
     }
