@@ -133,6 +133,12 @@ Log.Debug($"Overlay id '{exportedId}' already exists; inserting with a new id.")
 var exportedId = tree.FindById(importedId) is null ? importedId : null; // null lets Insert() generate one
 ```
 
+## Data Access
+
+### LiteDB Commands
+- **Bind values as parameters.** `IDatabase.Execute` parses command text, so pass values instead of building them into the string: `_db.Execute($"UPDATE {TreeCol} SET IsExpanded = @0 WHERE _id = @1", isExpanded, id)`. Placeholders are `@0`/`@1`; LiteDB 5 rejects the `?` form.
+- Ids and names can come from imported files (an overlay keeps the `_id` from the shared `.ogf`), so no value is safe to splice — one containing a quote made every expand/collapse of that node throw. Names of collections/columns are constants and may still be interpolated.
+
 ## WPF & XAML Standards
 
 ### Resource Management
