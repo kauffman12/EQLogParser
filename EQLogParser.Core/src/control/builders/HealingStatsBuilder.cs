@@ -156,48 +156,46 @@ namespace EQLogParser
               var filtered = new List<ActionGroup>();
 
               // start at 0 — FindIndex treats the argument as a 0-based index, so starting at 1
-              // silently dropped the first heal record of every full stats build
-              var start = 0;
-              if (start < allHeals.Count)
+              // silently dropped the first heal record of every full stats build. No "start < Count"
+              // guard is needed either: FindIndex returns -1 for an empty list and start > -1 below
+              // already handles that case.
+              var start = allHeals.FindIndex(0, special => special.Item1 >= beginTime);
+              if (start > -1)
               {
-                start = allHeals.FindIndex(start, special => special.Item1 >= beginTime);
-                if (start > -1)
+                for (var j = start; j < allHeals.Count; j++)
                 {
-                  for (var j = start; j < allHeals.Count; j++)
+                  if (allHeals[j].Item1 >= beginTime && allHeals[j].Item1 <= endTime)
                   {
-                    if (allHeals[j].Item1 >= beginTime && allHeals[j].Item1 <= endTime)
+                    start = j;
+                    // copy
+                    var newBlock = new ActionGroup { BeginTime = allHeals[j].Item1 };
+                    filtered.Add(newBlock);
+
+                    if (currentSpellCounts.Count > 0)
                     {
-                      start = j;
-                      // copy
-                      var newBlock = new ActionGroup { BeginTime = allHeals[j].Item1 };
-                      filtered.Add(newBlock);
+                      previousSpellCounts[currentTime] = currentSpellCounts;
+                    }
 
-                      if (currentSpellCounts.Count > 0)
+                    currentTime = allHeals[j].Item1;
+                    currentSpellCounts = [];
+
+                    foreach (var timeKey in previousSpellCounts.Keys)
+                    {
+                      if (previousSpellCounts.ContainsKey(timeKey))
                       {
-                        previousSpellCounts[currentTime] = currentSpellCounts;
-                      }
-
-                      currentTime = allHeals[j].Item1;
-                      currentSpellCounts = [];
-
-                      foreach (var timeKey in previousSpellCounts.Keys)
-                      {
-                        if (previousSpellCounts.ContainsKey(timeKey))
+                        if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
                         {
-                          if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
-                          {
-                            previousSpellCounts.Remove(timeKey);
-                          }
+                          previousSpellCounts.Remove(timeKey);
                         }
                       }
+                    }
 
-                      if (PlayerRegistry.Instance.IsPetOrPlayerOrMerc(allHeals[j].Item2.Healed) ||
-                        PlayerRegistry.IsPossiblePlayerName(allHeals[j].Item2.Healed))
+                    if (PlayerRegistry.Instance.IsPetOrPlayerOrMerc(allHeals[j].Item2.Healed) ||
+                      PlayerRegistry.IsPossiblePlayerName(allHeals[j].Item2.Healed))
+                    {
+                      if (healingValidator.IsValid(allHeals[j].Item1, allHeals[j].Item2, currentSpellCounts, previousSpellCounts, ignoreRecords))
                       {
-                        if (healingValidator.IsValid(allHeals[j].Item1, allHeals[j].Item2, currentSpellCounts, previousSpellCounts, ignoreRecords))
-                        {
-                          newBlock.Actions.Add(allHeals[j].Item2);
-                        }
+                        newBlock.Actions.Add(allHeals[j].Item2);
                       }
                     }
                   }
