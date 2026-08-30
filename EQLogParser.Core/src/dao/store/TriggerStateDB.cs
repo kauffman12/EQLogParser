@@ -720,12 +720,8 @@ namespace EQLogParser
       });
     }
 
-    /* Values are bound as parameters, never interpolated: Execute() runs LiteDB's command parser, so
-     * an id containing a quote (imported overlay ids come straight from the shared file) broke the
-     * text and threw LiteException on every expand/collapse of that node, permanently — the id lives
-     * in the database. Binding stores the identical Boolean/string and removes the whole class.
-     * Placeholders must be @0/@1; LiteDB 5 rejects the "?" form. The collection name stays
-     * interpolated because it is a constant, never data. */
+    /* Bound, never interpolated: an imported overlay id containing a quote used to throw LiteException
+     * on every expand/collapse of that node. See docs/CodingStandards.md → LiteDB Commands. */
     internal async Task SetExpanded(string id, bool isExpanded)
     {
       await _taskQueue.Enqueue(() =>
@@ -1476,10 +1472,8 @@ namespace EQLogParser
               // coupling that required the 1.0.2 legacy-marker migration.
               SetVerticalAlignment(newNode);
               var inserted = newNode.ToTriggerNode();
-              // Reuse the exported id only while it is still free: _id is unique across the whole
-              // collection, so an id already stored under another parent (importing the same share
-              // into a second folder — routine) would throw and roll back the import. Nothing to
-              // report here; Insert() generates the id when we pass null.
+              // Keep the exported id only while it is free (_id is unique across the collection, and
+              // re-importing a share is routine). See docs/DesignNotes.md → Node ids when inserting.
               var exportedId = newNode.Id is { Length: > 0 } exportId && tree.FindById(exportId) is null
                 ? exportId
                 : null;
