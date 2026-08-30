@@ -24,7 +24,7 @@ namespace EQLogParser
     public static TriggerTreeViewNode Build(TriggerNode node, bool? isChecked = null)
     {
       var viewNode = CreateViewNode(node, null, null);
-      if (isChecked != null)
+      if (isChecked is not null)
       {
         viewNode.IsChecked = isChecked;
       }
@@ -45,12 +45,12 @@ namespace EQLogParser
         HasMissingMedia = TriggerStateDB.Instance.MissingMedia.ContainsKey(node.Id)
       };
 
-      if (node.OverlayData == null && state != null)
+      if (node.OverlayData is null && state is not null)
       {
         viewNode.IsChecked = state.Enabled.GetValueOrDefault(node.Id, false);
       }
 
-      if (node.OverlayData == null && node.TriggerData == null &&
+      if (node.OverlayData is null && node.TriggerData is null &&
           childrenByParent is { } && childrenByParent.TryGetValue(node.Id, out var children))
       {
         foreach (var child in children)

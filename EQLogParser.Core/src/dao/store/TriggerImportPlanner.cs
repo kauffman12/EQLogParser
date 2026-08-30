@@ -51,7 +51,7 @@ namespace EQLogParser
     public static TriggerNode FindExisting(IEnumerable<TriggerNode> siblings, ExportTriggerNode incoming,
       ISet<string> batchSharedOriginalIds = null)
     {
-      if (incoming.OriginalId != null)
+      if (incoming.OriginalId is not null)
       {
         var family = siblings.Where(n => n.OriginalId == incoming.OriginalId).ToList();
 
@@ -76,7 +76,7 @@ namespace EQLogParser
       HasDataPayload(existing) == HasDataPayload(incoming);
 
     private static bool HasDataPayload(TriggerNode node) =>
-      node.TriggerData != null || node.OverlayData != null;
+      node.TriggerData is not null || node.OverlayData is not null;
 
     // Branch selection for one incoming node — mirrors the update/merge/insert logic in
     // TriggerStateDB.Import exactly:
@@ -87,15 +87,15 @@ namespace EQLogParser
     // - anything else                           → no-op
     public static ImportDecision Decide(TriggerNode existing, ExportTriggerNode incoming)
     {
-      if (existing != null)
+      if (existing is not null)
       {
-        if (existing.TriggerData != null)
+        if (existing.TriggerData is not null)
         {
           return new ImportDecision(ImportAction.UpdateInPlace, existing);
         }
 
         // directory but make sure it is one
-        if (existing.OverlayData == null && existing.TriggerData == null && incoming.Nodes?.Count > 0)
+        if (existing.OverlayData is null && existing.TriggerData is null && incoming.Nodes?.Count > 0)
         {
           return new ImportDecision(ImportAction.MergeIntoFolder, existing);
         }
@@ -103,13 +103,13 @@ namespace EQLogParser
         return new ImportDecision(ImportAction.Skip, existing);
       }
 
-      if (incoming.TriggerData != null)
+      if (incoming.TriggerData is not null)
       {
         return new ImportDecision(ImportAction.InsertLeaf, existing);
       }
 
       // make sure it's a new directory
-      if (incoming.OverlayData == null && incoming.TriggerData == null)
+      if (incoming.OverlayData is null && incoming.TriggerData is null)
       {
         return new ImportDecision(ImportAction.InsertFolder, existing);
       }

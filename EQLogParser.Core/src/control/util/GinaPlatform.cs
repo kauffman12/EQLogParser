@@ -13,13 +13,13 @@ namespace EQLogParser
     public const string CaptionReceivedGina = "ReceivedGina";
     public const string CaptionShareError = "ShareError";
 
-    /// <summary>Shows a modal message and completes when the user dismisses it (the original flow
-    /// blocked on the dialog before scheduling the next GINA task). Host must marshal to its UI thread.</summary>
+    // Shows a modal message and completes when the user dismisses it (the original flow blocked on
+    // the dialog before scheduling the next GINA task). Host must marshal to its UI thread.
     public static Func<string, string, Task> ShowMessage = (_, _) => Task.CompletedTask;
 
-    /// <summary>Asks whether to merge or import into a new folder. <paramref name="showMergeOption"/>
-    /// mirrors the original dialog's extra auto-merge option row (it passed characterIds.Count &gt; 0);
-    /// the Cancel button was always present in that dialog.</summary>
+    // Asks whether to merge or import into a new folder. showMergeOption mirrors the original
+    // dialog's extra auto-merge option row (it passed characterIds.Count > 0); the Cancel button
+    // was always present in that dialog.
     public static Func<string, bool, Task<ImportChoice>> AskImportChoice = async (_, _) =>
     {
       await Task.CompletedTask;

@@ -402,9 +402,7 @@ internal static class NagUtil
     }
   }
 
-  /// <summary>
-  /// Converts NAG overlay JSON to EQLP export trigger nodes (overlay definitions only, no trigger links).
-  /// </summary>
+  // Converts NAG overlay JSON to EQLP export trigger nodes (overlay definitions only, no trigger links).
   internal static List<ExportTriggerNode> ConvertOverlays(string json, out int skippedFctOverlays, out List<string> overlayNotes)
   {
     var result = new List<ExportTriggerNode>();
@@ -808,7 +806,7 @@ internal static class NagUtil
     }
   }
 
-  /// <summary>Returns the folder node for a path, creating it and any missing ancestors on first use.</summary>
+  // Returns the folder node for a path, creating it and any missing ancestors on first use.
   // "Raids/Kunark" and "Raids/CoTF" both attach under one "Raids" node — ancestor nodes are
   // created once and shared, never duplicated per trigger.
   private static ExportTriggerNode EnsureFolderPath(
@@ -1055,7 +1053,7 @@ internal static class NagUtil
     // but have un-named capture groups and no ${var} references, inherit the last
     // matched set-variable action. This ensures all capture phrases in triggers like
     // "Capture spell casting" get VariableActions to store captured values.
-    if (lastSetVarName != null)
+    if (lastSetVarName is not null)
     {
       for (var i = 0; i < phrases.Count; i++)
       {

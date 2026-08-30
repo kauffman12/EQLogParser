@@ -14,12 +14,12 @@ namespace EQLogParser
     private readonly List<QuickShareRecord> _records = [];
     private readonly object _lock = new();
 
-    /// <summary>Raised on the accepting thread after a record is inserted, so view owners (e.g.
-    /// the WPF window's bound collection) can mirror it. Fires at most once per unique record.</summary>
+    // Raised on the accepting thread after a record is inserted, so view owners (e.g. the WPF
+    // window's bound collection) can mirror it. Fires at most once per unique record.
     internal event Action<QuickShareRecord> Accepted;
 
-    /// <summary>Applies the insert-once-at-top rule. Returns true when the record was added, so
-    /// view owners can mirror it into their own collections.</summary>
+    // Applies the insert-once-at-top rule. Returns true when the record was added, so view owners
+    // can mirror it into their own collections.
     internal bool Add(QuickShareRecord record)
     {
       var added = false;
@@ -45,11 +45,12 @@ namespace EQLogParser
     {
       lock (_lock)
       {
-        return _records.FirstOrDefault(r => r.IsMine && r.Key == key) != null;
+        return _records.Any(r => r.IsMine && r.Key == key);
       }
     }
 
-    /// <summary>Point-in-time copy for readers (tests, future views) that don't bind the WPF collection.</summary>
+    // Point-in-time copy for any-thread readers that don't bind the WPF collection (tests, the
+    // share-status lookup in TriggerUtil).
     internal List<QuickShareRecord> Snapshot()
     {
       lock (_lock)

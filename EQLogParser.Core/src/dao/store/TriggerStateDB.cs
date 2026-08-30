@@ -13,7 +13,7 @@ namespace EQLogParser
 {
   internal class TriggerStateDB : IAsyncDisposable
   {
-    /// <summary>Closes the LiteDB handle — call before re-opening the same file or on app exit.</summary>
+    // Closes the LiteDB handle — call before re-opening the same file or on app exit.
     async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose();
 
     internal event Action<string> DeleteEvent;
@@ -354,12 +354,12 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (nodeId != null && GetCol<TriggerNode>(TreeCol) is { } tree &&
+        if (nodeId is not null && GetCol<TriggerNode>(TreeCol) is { } tree &&
             tree.FindOne(n => n.Id == nodeId) is { } node && GetCol<TriggerState>(StatesCol) is { } states)
         {
           var fromState = states.FindOne(s => s.Id == from);
           var toState = states.FindOne(s => s.Id == to);
-          if (fromState != null && toState != null)
+          if (fromState is not null && toState is not null)
           {
             CopyState(node, fromState, toState);
             states.Update(toState);
@@ -724,7 +724,7 @@ namespace EQLogParser
     {
       await _taskQueue.Enqueue(() =>
       {
-        if (id != null)
+        if (id is not null)
         {
           _db?.Execute($"UPDATE {TreeCol} SET IsExpanded = {isExpanded} WHERE _id = '{id}'");
         }
@@ -737,7 +737,7 @@ namespace EQLogParser
     {
       await _taskQueue.EnqueueTransaction(() =>
       {
-        if (nodeId != null && GetCol<TriggerNode>(TreeCol) is { } tree &&
+        if (nodeId is not null && GetCol<TriggerNode>(TreeCol) is { } tree &&
             // overlays have no state
             tree.FindOne(n => n.Id == nodeId) is { OverlayData: null } &&
             GetCol<TriggerState>(StatesCol) is { } states)
