@@ -1346,7 +1346,7 @@ namespace EQLogParser
       // Exception: the outer walker hands each overlay leaf to this method in its own call, where a
       // full sibling load costs more than the indexed single-node seek it replaced. Keep that case
       // cheap (GetNextIndex stays a descending index seek and needs no full list).
-      var singleOverlayLeaf = !triggers && nodes.Count == 1 && nodes[0].Id != null;
+      var singleOverlayLeaf = !triggers && nodes.Count == 1 && nodes[0].Id is not null;
       // LiteDB compiles the predicate to an index scan, and it cannot evaluate a captured array
       // access inside the expression tree — keep the id in a local.
       var overlayLeafId = singleOverlayLeaf ? nodes[0].Id : null;
@@ -1381,7 +1381,9 @@ namespace EQLogParser
                 foundTrigger.TriggerData = newTriggerData;
                 tree.Update(foundTrigger);
                 enableId = foundTrigger.Id;
-                hasMissingMedia = CheckMissingMedia(tree, newNode, foundTrigger, cache);
+                // OR, not assign: the return value is what flags the CONTAINING folder as having
+                // missing media, so a later clean sibling must not clear an earlier hit.
+                hasMissingMedia |= CheckMissingMedia(tree, newNode, foundTrigger, cache);
               }
 
               break;
@@ -1402,7 +1404,7 @@ namespace EQLogParser
               Insert(node, nextIndex++);
               siblings.Add(node);
               enableId = node.Id;
-              hasMissingMedia = CheckMissingMedia(tree, newNode, node, cache);
+              hasMissingMedia |= CheckMissingMedia(tree, newNode, node, cache);
               break;
 
             case ImportAction.InsertFolder when newNode.ToTriggerNode() is { } node2:
@@ -1468,7 +1470,15 @@ namespace EQLogParser
               // coupling that required the 1.0.2 legacy-marker migration.
               SetVerticalAlignment(newNode);
               var inserted = newNode.ToTriggerNode();
-              Insert(inserted, nextIndex++, newNode.Id);
+              // Reuse the exported id only while it is still free: _id is unique across the whole
+              // collection, so an id already stored under another parent (importing the same share
+              // into a second folder — routine) would throw and roll back the import. Nothing to
+              // report here; Insert() generates the id when we pass null.
+              var exportedId = newNode.Id is { Length: > 0 } exportId && tree.FindById(exportId) is null
+                ? exportId
+                : null;
+
+              Insert(inserted, nextIndex++, exportedId);
               siblings.Add(inserted);
             }
             // make sure it's a new directory

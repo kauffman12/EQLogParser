@@ -743,6 +743,84 @@ namespace EQLogParser
       }
     }
 
+    /* What flags the CONTAINING folder is the OR of its children's results, so a clean sibling
+     * imported after a broken one must not clear the flag (assigning the per-node result instead of
+     * OR-ing it did exactly that, leaving the folder without its missing-media badge). */
+    [TestMethod]
+    public async Task Import_MissingMedia_CleanSiblingDoesNotClearFolderFlag()
+    {
+      var previous = TriggerStorePlatform.SoundExists;
+      TriggerStorePlatform.SoundExists = path => !path.EndsWith("bad.ogg", StringComparison.Ordinal);
+      var (db, _) = FreshStore();
+      try
+      {
+        var (root, _, _) = await db.GetTriggerTree("P1");
+        await db.ImportTriggers(root, Wrap(new ExportTriggerNode
+        {
+          Name = "Dir",
+          Nodes =
+          [
+            ExportLeaf("Broken", "p1", sound: "bad.ogg"),
+            ExportLeaf("Clean", "p2", sound: "good.ogg")
+          ]
+        }));
+
+        var (_, nodes, _) = await db.GetTriggerTree("P1");
+        var folder = nodes.Single(n => n.Name == "Dir");
+        Assert.IsTrue(db.MissingMedia.TryGetValue(folder.Id, out var folderFlag) && folderFlag,
+          "folder must stay flagged: one of its children references a sound that is not on disk");
+
+        // the per-node flags stay per node (only offenders are recorded)
+        Assert.IsTrue(db.MissingMedia[nodes.Single(n => n.Name == "Broken").Id]);
+        Assert.IsFalse(db.MissingMedia.ContainsKey(nodes.Single(n => n.Name == "Clean").Id));
+      }
+      finally
+      {
+        TriggerStorePlatform.SoundExists = previous;
+        await db.Dispose();
+      }
+    }
+
+    /* _id is unique across the whole overlay collection, so an exported id that is already stored
+     * under a DIFFERENT parent cannot be reused: re-importing the same share into a second folder
+     * inserts a copy with a store-generated id. Reusing it threw on insert and rolled the entire
+     * import back, which is the bug this pins. */
+    [TestMethod]
+    public async Task ImportOverlays_ExportedIdTakenUnderAnotherFolder_InsertsCopy()
+    {
+      var (db, _) = FreshStore();
+      await using var _ = db;
+      await db.GetOverlayTree();
+
+      var exportedId = Guid.NewGuid().ToString();
+
+      // one overlay inside a folder of its own, the way a share grouped into a folder arrives
+      List<ExportTriggerNode> Export(string folderName) =>
+      [
+        new()
+        {
+          Name = TriggerStateDB.Overlays,
+          Nodes = [new ExportTriggerNode { Name = folderName, Nodes = [new ExportTriggerNode
+          {
+            Id = exportedId,
+            Name = "Shared",
+            OverlayData = new Overlay { FontSize = "12pt" }
+          }] }]
+        }
+      ];
+
+      await db.ImportOverlays(Export("First"));
+      await db.ImportOverlays(Export("Second"));
+
+      var (_, nodes, _) = await db.GetOverlayTree();
+      var copies = nodes.Where(n => n.Name == "Shared").ToList();
+      Assert.AreEqual(2, copies.Count, "the second import must add a copy, not fail or overwrite");
+      var ids = copies.Select(c => c.Id).ToList();
+      CollectionAssert.Contains(ids, exportedId); // the first import keeps the id it was given
+      Assert.AreEqual(2, ids.Distinct().Count(), "the copy must get a fresh id");
+      Assert.AreEqual(2, copies.Select(c => c.Parent).Distinct().Count(), "each copy sits under its own folder");
+    }
+
     [TestMethod]
     public async Task SetState_UpdatesSubtree_PersistsAcrossReopen()
     {
