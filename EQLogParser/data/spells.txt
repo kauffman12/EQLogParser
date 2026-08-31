@@ -34329,7 +34329,7 @@
 45529^Stormcloud^255^0^0^0^4^0^1^0^1^0^0^0^0^0^0^^^
 4553^Doppelganger II^254^0^0^0^5^8192^0^0^0^0^0^0^2^0^0^^^
 45530^Ekron's Grip^255^6^0^0^5^0^1^0^6^0^0^0^0^0^0^You are gripped by frozen claws.^^
-45531^The Protector's Ward^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^^^
+45531^The Protector's Ward^255^0^1^0^6^0^0^0^0^0^2^0^0^0^0^^^
 45532^Touch of Azeron^255^4^0^0^5^0^1^0^6^0^0^0^0^0^0^You are touched by Azreon's fire.^^
 45533^Dragoflux^255^3^0^0^8^0^1^0^2^0^0^0^0^0^0^Magma rains down on you.^^
 45534^Shardstubble's Stone Grasp^255^5^0^0^5^0^0^0^0^0^0^0^0^0^0^Stone grasps at your feet.^^
@@ -36549,7 +36549,7 @@
 4796^Nature's Boon I^254^0^1^0^6^32^0^0^0^0^0^0^1^0^1^^ commands the blessing of nature.^
 47960^Teleport: Frontier^255^0^1^0^6^0^0^0^0^0^0^0^0^0^1^^ fades away.^
 47961^Summon Familiar: Drogan Goblin^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^You summon forth a goblin^^The goblin runs off into the distance.
-47962^Familiar: Drogan Goblin^255^0^1^0^6^0^0^0^0^0^1^0^0^1^0^You summon forth a goblin.^^The goblin runs off into the distance.
+47962^Familiar: Drogan Goblin^255^0^1^0^6^0^0^0^0^0^3^0^0^1^0^You summon forth a goblin.^^The goblin runs off into the distance.
 47963^Summon Familiar: Succulent^255^0^1^0^6^0^0^0^0^0^0^0^0^1^0^You summon forth a succulent.^^The succulent withers into compost.
 47964^Familiar: Succulent^255^0^1^0^6^0^0^0^0^0^0^0^0^1^0^You summon forth a succulent.^^The succulent withers into compost.
 47965^Removed Fortitude^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^^^
@@ -38959,9 +38959,9 @@
 50331^Chromatic Fulmination^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
 50332^Chromatic Fulmination II^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
 50333^Chromatic Fulmination III^255^0^0^0^5^8192^1^0^6^0^0^0^0^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
-50334^Enticer's Auspice^102^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-50335^Enticer's Auspice Rk. II^102^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-50336^Enticer's Auspice Rk. III^102^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+50334^Enticer's Auspice^102^720^1^0^3^8192^0^0^0^0^6^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+50335^Enticer's Auspice Rk. II^102^720^1^0^3^8192^0^0^0^0^6^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+50336^Enticer's Auspice Rk. III^102^720^1^0^3^8192^0^0^0^0^6^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 50337^Enticer's Demand^104^100^0^0^5^8192^0^0^1^0^0^0^1^1^1^You lose control of yourself.^ has been charmed.^You regain control of yourself.
 50338^Enticer's Demand Rk. II^104^100^0^0^5^8192^0^0^1^0^0^0^5^1^1^You lose control of yourself.^ has been charmed.^You regain control of yourself.
 50339^Enticer's Demand Rk. III^104^100^0^0^5^8192^0^0^1^0^0^0^10^1^1^You lose control of yourself.^ has been charmed.^You regain control of yourself.
@@ -46791,9 +46791,9 @@
 5822^Reflective Sheen^255^10^1^0^6^0^0^0^0^0^0^0^0^1^1^Your body takes on a reflective sheen.^'s body takes on a reflective sheen.^The sheen loses its luster.
 58220^Dissident Reinforced Strike 5^255^0^0^0^5^0^1^0^6^0^0^0^9^1^1^You are struck by dissident magic.^ is struck by dissident magic.^
 58221^Dissident Reinforced Strike 6^255^0^0^0^5^0^1^0^6^0^0^0^10^1^1^You are struck by dissident magic.^ is struck by dissident magic.^
-58222^Transfixer's Auspice^107^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-58223^Transfixer's Auspice Rk. II^107^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-58224^Transfixer's Auspice Rk. III^107^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+58222^Transfixer's Auspice^107^720^1^0^3^8192^0^0^0^0^6^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+58223^Transfixer's Auspice Rk. II^107^720^1^0^3^8192^0^0^0^0^6^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+58224^Transfixer's Auspice Rk. III^107^720^1^0^3^8192^0^0^0^0^6^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 58225^Chromatic Covenant^108^3^0^6^5^8192^0^0^6^1^0^0^1^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 58226^Chromatic Covenant Rk. II^108^3^0^6^5^8192^0^0^6^1^0^0^5^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 58227^Chromatic Covenant Rk. III^108^3^0^6^5^8192^0^0^6^1^0^0^10^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
@@ -48026,9 +48026,9 @@
 59432^Frostblurred Apparition^111^2^1^0^5^64^0^1^0^0^0^0^1^0^1^^ looks around, confused.^
 59433^Frostblurred Apparition Rk. II^111^2^1^0^5^64^0^1^0^0^0^0^5^0^1^^ looks around, confused.^
 59434^Frostblurred Apparition Rk. III^111^2^1^0^5^64^0^1^0^0^0^0^10^0^1^^ looks around, confused.^
-59435^Eagle's Poise^112^20^1^0^6^64^0^2^0^1^0^0^1^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
-59436^Eagle's Poise Rk. II^112^20^1^0^6^64^0^2^0^1^0^0^5^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
-59437^Eagle's Poise Rk. III^112^20^1^0^6^64^0^2^0^1^0^0^10^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
+59435^Eagle's Poise^112^20^1^0^6^64^0^2^0^1^2^0^1^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
+59436^Eagle's Poise Rk. II^112^20^1^0^6^64^0^2^0^1^2^0^5^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
+59437^Eagle's Poise Rk. III^112^20^1^0^6^64^0^2^0^1^2^0^10^1^1^You adopt the balanced ways of the eagle.^ adopts the balanced ways of the eagle.^You resume your normal stance.
 59438^Eagle's Poised Strike^255^0^0^0^5^0^0^0^0^0^0^0^1^1^1^You are struck by an eagle's claw.^ is struck by an eagle's claw.^
 59439^Eagle's Poised Strike II^255^0^0^0^5^0^0^0^0^0^0^0^5^1^1^You are struck by an eagle's claw.^ is struck by an eagle's claw.^
 5944^Mind Crash II^254^0^0^0^5^2048^0^0^1^0^0^0^2^1^1^You stagger from a blow to the head.^ staggers from a blow to the head.^
@@ -50094,9 +50094,9 @@
 61573^Gravity Roil^111^0^0^0^8^8192^1^0^1^0^0^0^1^1^1^You experience chaotic weightlessness.^ rises chaotically into the air.^
 61574^Gravity Roil Rk. II^111^0^0^0^8^8192^1^0^1^0^0^0^5^1^1^You experience chaotic weightlessness.^ rises chaotically into the air.^
 61575^Gravity Roil Rk. III^111^0^0^0^8^8192^1^0^1^0^0^0^10^1^1^You experience chaotic weightlessness.^ rises chaotically into the air.^
-61576^Deviser's Auspice^112^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-61577^Deviser's Auspice Rk. II^112^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-61578^Deviser's Auspice Rk. III^112^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+61576^Deviser's Auspice^112^720^1^0^3^8192^0^0^0^0^6^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+61577^Deviser's Auspice Rk. II^112^720^1^0^3^8192^0^0^0^0^6^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+61578^Deviser's Auspice Rk. III^112^720^1^0^3^8192^0^0^0^0^6^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 61579^Chromatic Coalition^113^3^0^6^5^8192^0^0^6^1^0^0^1^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 6158^Boulder Toss^255^0^0^0^5^0^1^0^1^0^0^0^0^1^1^You are smashed by a boulder.^'s body is smashed by a large boulder.^You regain your senses.
 61580^Chromatic Coalition Rk. II^113^3^0^6^5^8192^0^0^6^1^0^0^5^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
@@ -51477,9 +51477,9 @@
 62927^Sting of the Netherbian^116^0^0^0^5^64^0^1^0^0^0^0^1^1^1^You are struck by three shuriken.^ is struck by three shuriken.^
 62928^Sting of the Netherbian Rk. II^116^0^0^0^5^64^0^1^0^0^0^0^5^1^1^You are struck by three shuriken.^ is struck by three shuriken.^
 62929^Sting of the Netherbian Rk. III^116^0^0^0^5^64^0^1^0^0^0^0^10^1^1^You are struck by three shuriken.^ is struck by three shuriken.^
-62930^Dragon's Poise^117^20^1^0^6^64^0^2^0^1^0^0^1^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
-62931^Dragon's Poise Rk. II^117^20^1^0^6^64^0^2^0^1^0^0^5^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
-62932^Dragon's Poise Rk. III^117^20^1^0^6^64^0^2^0^1^0^0^10^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
+62930^Dragon's Poise^117^20^1^0^6^64^0^2^0^1^2^0^1^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
+62931^Dragon's Poise Rk. II^117^20^1^0^6^64^0^2^0^1^2^0^5^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
+62932^Dragon's Poise Rk. III^117^20^1^0^6^64^0^2^0^1^2^0^10^1^1^You adopt the balanced ways of the dragon.^ adopts the balanced ways of the dragon.^You resume your normal stance.
 62933^Dragon's Poised Strike^255^0^0^0^5^0^0^0^0^0^0^0^1^1^1^You are struck by a dragon's claw.^ is struck by a dragon's claw.^
 62934^Dragon's Poised Strike II^255^0^0^0^5^0^0^0^0^0^0^0^5^1^1^You are struck by a dragon's claw.^ is struck by a dragon's claw.^
 62935^Dragon's Poised Strike III^255^0^0^0^5^0^0^0^0^0^0^0^10^1^1^You are struck by a dragon's claw.^ is struck by a dragon's claw.^
@@ -53489,9 +53489,9 @@
 65541^Ecliptic Reinforced Strike 4^255^0^0^0^5^0^1^0^6^0^0^0^7^1^1^You are struck by dissident magic.^ is struck by dissident magic.^
 65542^Ecliptic Reinforced Strike 5^255^0^0^0^5^0^1^0^6^0^0^0^9^1^1^You are struck by dissident magic.^ is struck by dissident magic.^
 65543^Ecliptic Reinforced Strike 6^255^0^0^0^5^0^1^0^6^0^0^0^10^1^1^You are struck by dissident magic.^ is struck by dissident magic.^
-65544^Marvel's Auspice^117^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-65545^Marvel's Auspice Rk. II^117^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-65546^Marvel's Auspice Rk. III^117^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+65544^Marvel's Auspice^117^720^1^0^3^8192^0^0^0^0^6^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+65545^Marvel's Auspice Rk. II^117^720^1^0^3^8192^0^0^0^0^6^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+65546^Marvel's Auspice Rk. III^117^720^1^0^3^8192^0^0^0^0^6^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 65547^Chromatic Conjunction^118^3^0^6^5^8192^0^0^6^1^0^0^1^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 65548^Chromatic Conjunction Rk. II^118^3^0^6^5^8192^0^0^6^1^0^0^5^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
 65549^Chromatic Conjunction Rk. III^118^3^0^6^5^8192^0^0^6^1^0^0^10^1^1^You become the target of a chromatic alliance.^ becomes the target of a chromatic alliance.^The chromatic alliance fades.
@@ -54808,9 +54808,9 @@
 66898^Defy Death Rk. II^125^10^1^0^6^64^-1^2^0^1^0^0^5^1^1^You negate the concept of death.^ negates the concept of death.^Your body reassumes normal mortality.
 66899^Defy Death Rk. III^125^10^1^0^6^64^-1^2^0^1^0^0^10^1^1^You negate the concept of death.^ negates the concept of death.^Your body reassumes normal mortality.
 669^Enchant Gold^24^0^1^0^6^8192^0^0^0^0^0^0^0^0^0^^^
-66900^Tiger's Symmetry^122^20^1^0^6^64^0^2^0^1^0^0^1^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
-66901^Tiger's Symmetry Rk. II^122^20^1^0^6^64^0^2^0^1^0^0^5^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
-66902^Tiger's Symmetry Rk. III^122^20^1^0^6^64^0^2^0^1^0^0^10^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+66900^Tiger's Symmetry^122^20^1^0^6^64^0^2^0^1^2^0^1^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+66901^Tiger's Symmetry Rk. II^122^20^1^0^6^64^0^2^0^1^2^0^5^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+66902^Tiger's Symmetry Rk. III^122^20^1^0^6^64^0^2^0^1^2^0^10^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
 66903^Tiger's Symmetry Strike^255^0^0^0^5^0^0^0^0^0^0^0^1^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
 66904^Tiger's Symmetry Strike II^255^0^0^0^5^0^0^0^0^0^0^0^5^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
 66905^Tiger's Symmetry Strike III^255^0^0^0^5^0^0^0^0^0^0^0^10^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
@@ -58325,9 +58325,9 @@
 70564^Chromatic Convergence V Azia^255^0^0^0^5^8192^1^0^6^0^0^0^1^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
 70565^Chromatic Convergence V Beza^255^0^0^0^5^8192^1^0^6^0^0^0^5^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
 70566^Chromatic Convergence V Caza^255^0^0^0^5^8192^1^0^6^0^0^0^10^1^1^Your chromatic alliance is fulfilled!^'s chromatic alliance is fulfilled.^
-70567^Stupefier's Auspice^122^720^1^0^3^8192^0^0^0^0^4^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-70568^Stupefier's Auspice Rk. II^122^720^1^0^3^8192^0^0^0^0^4^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
-70569^Stupefier's Auspice Rk. III^122^720^1^0^3^8192^0^0^0^0^4^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+70567^Stupefier's Auspice^122^720^1^0^3^8192^0^0^0^0^6^1^1^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+70568^Stupefier's Auspice Rk. II^122^720^1^0^3^8192^0^0^0^0^6^1^5^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
+70569^Stupefier's Auspice Rk. III^122^720^1^0^3^8192^0^0^0^0^6^1^10^1^1^You are protected by a shimmering auspice.^ is protected by a shimmering auspice.^The auspice fades.
 7057^Puncture^255^0^0^0^4^0^1^0^4^0^0^0^0^0^0^The drachnid's legs bore into your flesh.^ is gored by the drachnid's legs.^
 70570^Stupefier's Demand^124^100^0^0^5^8192^0^0^1^0^0^0^1^1^1^You lose control of yourself.^ has been charmed.^You regain control of yourself.
 70571^Stupefier's Demand Rk. II^124^100^0^0^5^8192^0^0^1^0^0^0^5^1^1^You lose control of yourself.^ has been charmed.^You regain control of yourself.
@@ -59712,10 +59712,10 @@
 71865^Delay Death XI^130^10^1^0^6^64^-1^2^0^1^0^0^1^1^1^You negate the concept of death.^ negates the concept of death.^Your body reassumes normal mortality.
 71866^Delay Death XI Rk. II^130^10^1^0^6^64^-1^2^0^1^0^0^5^1^1^You negate the concept of death.^ negates the concept of death.^Your body reassumes normal mortality.
 71867^Delay Death XI Rk. III^130^10^1^0^6^64^-1^2^0^1^0^0^10^1^1^You negate the concept of death.^ negates the concept of death.^Your body reassumes normal mortality.
-71868^Eagle's Symmetry^127^20^1^0^6^64^0^2^0^1^0^0^1^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
-71869^Eagle's Symmetry Rk. II^127^20^1^0^6^64^0^2^0^1^0^0^5^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+71868^Eagle's Symmetry^127^20^1^0^6^64^0^2^0^1^2^0^1^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+71869^Eagle's Symmetry Rk. II^127^20^1^0^6^64^0^2^0^1^2^0^5^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
 7187^Dark Bellow II^254^5^0^0^5^65407^0^1^1^0^0^0^2^1^1^You are weakened by the orc's bellow.^ is weakened by the deafening bellow.^You feel normal.
-71870^Eagle's Symmetry Rk. III^127^20^1^0^6^64^0^2^0^1^0^0^10^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
+71870^Eagle's Symmetry Rk. III^127^20^1^0^6^64^0^2^0^1^2^0^10^1^1^You adopt the balanced ways of the tiger.^ adopts the balanced ways of the tiger.^You resume your normal stance.
 71871^Eagle's Symmetry Strike^255^0^0^0^5^0^0^0^0^0^0^0^1^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
 71872^Eagle's Symmetry Strike II^255^0^0^0^5^0^0^0^0^0^0^0^5^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
 71873^Eagle's Symmetry Strike III^255^0^0^0^5^0^0^0^0^0^0^0^10^1^1^You are struck by a tiger's claw.^ is struck by a tiger's claw.^
