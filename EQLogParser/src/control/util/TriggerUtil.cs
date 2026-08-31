@@ -398,12 +398,13 @@ namespace EQLogParser
         }
         else if (fromTrigger is TriggerPropertyModel fromModel)
         {
-          // Colors already copied above from base Trigger properties;
-          // override with brush-derived values only if source is a TriggerPropertyModel.
-          toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString() ?? toTrigger.ActiveColor;
-          toTrigger.IdleColor = fromModel.TriggerIdleBrush?.Color.ToHexString() ?? toTrigger.IdleColor;
-          toTrigger.ResetColor = fromModel.TriggerResetBrush?.Color.ToHexString() ?? toTrigger.ResetColor;
-          toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString() ?? toTrigger.FontColor;
+          // The property model's brushes are authoritative for these: they were loaded from the
+          // stored colors when the trigger was selected, so a null brush means the user reset the
+          // color and the stored value must be cleared, not kept.
+          toTrigger.ActiveColor = fromModel.TriggerActiveBrush?.Color.ToHexString();
+          toTrigger.IdleColor = fromModel.TriggerIdleBrush?.Color.ToHexString();
+          toTrigger.ResetColor = fromModel.TriggerResetBrush?.Color.ToHexString();
+          toTrigger.FontColor = fromModel.TriggerFontBrush?.Color.ToHexString();
 
           var selectedOverlays = fromModel.SelectedTextOverlays.Where(item => item.IsChecked).Select(item => item.Value).ToList();
           selectedOverlays.AddRange(fromModel.SelectedTimerOverlays.Where(item => item.IsChecked).Select(item => item.Value));
