@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,13 @@ namespace EQLogParser
     private List<TriggerCharacter> _selectedCharacters;
     private IEnumerator<TriggerTreeViewNode> _findTriggerEnumerator;
     private bool _shiftDown;
+
+    /* Rebuilds of one tree must not overlap: refresh is Clear -> await store -> Add, and two
+     * interleaved refreshes (e.g. the import event plus the caller's own refresh) would each add
+     * a root, duplicating the whole tree visually until restart. Serializing makes each rebuild
+     * atomic; a waiter simply rebuilds from current data after the first one finishes. */
+    private readonly SemaphoreSlim _triggerRefreshLock = new(1, 1);
+    private readonly SemaphoreSlim _overlayRefreshLock = new(1, 1);
 
     public TriggersTreeView()
     {
@@ -327,22 +335,40 @@ namespace EQLogParser
 
     private async Task RefreshTriggerNode()
     {
-      triggerTreeView?.Nodes?.Clear();
-      if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetTriggerTree(CurrentCharacterId)) is { } viewNode)
+      await _triggerRefreshLock.WaitAsync();
+
+      try
       {
-        triggerTreeView?.Nodes?.Add(viewNode);
+        triggerTreeView?.Nodes?.Clear();
+        if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetTriggerTree(CurrentCharacterId)) is { } viewNode)
+        {
+          triggerTreeView?.Nodes?.Add(viewNode);
+        }
+      }
+      finally
+      {
+        _triggerRefreshLock.Release();
       }
     }
 
     private async Task RefreshOverlayNode()
     {
-      if (overlayTreeView?.Nodes.Count > 0)
+      await _overlayRefreshLock.WaitAsync();
+
+      try
       {
-        overlayTreeView.Nodes.Clear();
-        if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetOverlayTree()) is { } viewNode)
+        if (overlayTreeView?.Nodes.Count > 0)
         {
-          overlayTreeView.Nodes.Add(viewNode);
+          overlayTreeView.Nodes.Clear();
+          if (TriggerTreeViewBuilder.Build(await TriggerStateDB.Instance.GetOverlayTree()) is { } viewNode)
+          {
+            overlayTreeView.Nodes.Add(viewNode);
+          }
         }
+      }
+      finally
+      {
+        _overlayRefreshLock.Release();
       }
     }
 
