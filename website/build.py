@@ -20,7 +20,7 @@ DIST_DIR = Path('dist')
 RTF_OUT = Path('../EQLogParser/data/releasenotes.rtf')
 SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
 SITE_BASE_URL = 'https://eqlogparser.kizant.net'
-CSS_VERSION = '15'
+CSS_VERSION = '16'
 GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
 
 # Pages advertised in sitemap.xml, as (url path, source file whose change date

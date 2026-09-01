@@ -40,7 +40,9 @@ html.dark {
    Base / Global styles
    ============================================================ */
 body {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  /* Nothing loads the Inter webfont, so the first name that matches a locally installed
+     family wins: Inter if present, Segoe UI on Windows, system-ui on macOS/Linux. */
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   background: var(--bg-body);
   color: var(--color-text);
@@ -69,7 +71,7 @@ code {
   background: var(--color-code-bg);
   padding: 0.1em 0.3em;
   border-radius: 4px;
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: 'Consolas', ui-monospace, 'Cascadia Mono', 'Monaco', 'DejaVu Sans Mono', monospace;
 }
 
 pre {
