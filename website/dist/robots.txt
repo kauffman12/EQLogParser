@@ -1,2 +1,4 @@
 User-agent: *
 Disallow: /status.html
+
+Sitemap: https://eqlogparser.kizant.net/sitemap.xml

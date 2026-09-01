@@ -10,15 +10,24 @@
   <meta name="version" />
   <meta name="download" />  
   <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="canonical" href="https://eqlogparser.kizant.net/" />
+  <link rel="sitemap" type="application/xml" href="https://eqlogparser.kizant.net/sitemap.xml" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
   <link rel="preconnect" href="https://www.googletagmanager.com" />
   <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
   <link rel="preconnect" href="https://www.google-analytics.com" />
   <meta property="og:title" content="EQLogParser - Real-time combat analyzer for EverQuest" />
   <meta property="og:description" content="EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO." />
+  <meta property="og:url" content="https://eqlogparser.kizant.net/" />
+  <meta property="og:site_name" content="EQLogParser" />
   <meta property="og:image" content="https://eqlogparser.kizant.net/img/logo.png" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="stylesheet" href="css/style.css?v=12" />
+  <meta name="twitter:image" content="https://eqlogparser.kizant.net/img/logo.png" />
+  <link rel="preload" as="image" href="img/logo.png" fetchpriority="high" />
+  <link rel="stylesheet" href="css/style.css?v=13" />
+  <link rel="sitemap" type="application/xml" href="https://eqlogparser.kizant.net/sitemap.xml" />
 </head>
 <body>
   <nav id="nav-bar" class="topbar" />
@@ -27,7 +36,7 @@
     <main class="container">
       <!-- Hero Section -->
       <section class="hero center-section">
-        <img src="img/logo.png" class="hero-logo" loading="lazy" />
+        <img src="img/logo.png" alt="EQLogParser — real-time combat analyzer for EverQuest" class="hero-logo" loading="eager" fetchpriority="high" width="400" height="211" />
         <p class="hero-subtitle">Real-time combat analyzer &amp; damage parser for EverQuest</p>
         <a href="download.html" class="btn btn-hero">
           Download v<span id="version-text"></span>
@@ -72,10 +81,10 @@
       <section class="center-section">
         <div class="image-row">
           <a href="img/example1.png" target="_blank">
-            <img src="img/example1.png" title="EQLogParser Main Window" class="thumbnail" loading="lazy" />
+            <img src="img/example1.png" alt="EQLogParser main window with damage meter, events and raid log tabs" title="EQLogParser Main Window" class="thumbnail" loading="lazy" width="1920" height="1079" />
           </a>
           <a href="img/example2.png" target="_blank">
-            <img src="img/example2.png" title="Damage Meter and Timer Overlay" class="thumbnail" loading="lazy" />
+            <img src="img/example2.png" alt="EQLogParser damage meter with a countdown timer overlay above EverQuest" title="Damage Meter and Timer Overlay" class="thumbnail" loading="lazy" width="1920" height="1080" />
           </a>
         </div>
       </section>

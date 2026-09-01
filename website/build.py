@@ -1,15 +1,38 @@
+# Builds the static site under dist/ (see website/requirements.txt for the venv).
+#
+#   python build.py            full build: HTML pages, sitemap.xml, release notes RTF
+#   python build.py sitemap    regenerate dist/sitemap.xml only
+
 from pathlib import Path
 from bs4 import BeautifulSoup
+import datetime
 import markdown
 import pypandoc  # Requires Pandoc installed
 import re
+import subprocess
+import sys
+from xml.sax.saxutils import escape
 
 # Constants
 INNO_FILE = Path('../EQLogParserInstall/EQLogParserInstall.iss')
 DIST_DIR = Path('dist')
 RTF_OUT = Path('../EQLogParser/data/releasenotes.rtf')
-CSS_VERSION = '12'
-GA_MEASUREMENT_ID = "G-XXXXXXXXXX"  # Replace with your actual GA4 Measurement ID
+SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
+SITE_BASE_URL = 'https://eqlogparser.kizant.net'
+CSS_VERSION = '14'
+GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
+
+# Pages advertised in sitemap.xml, as (url path, source file whose change date
+# becomes <lastmod>). status.html is excluded because robots.txt disallows it.
+SITEMAP_PAGES = [
+    ('/', Path('index.tmpl')),
+    ('/getting-started.html', Path('getting-started.md')),
+    ('/documentation.html', Path('triggers.md')),
+    ('/faq.html', Path('faq.md')),
+    ('/releasenotes.html', Path('releasenotes.md')),
+    ('/download.html', INNO_FILE),  # generated inline; its content tracks the version
+    ('/policy.html', Path('policy.md')),
+]
 
 # Inline script to restore theme preference before CSS loads (prevents flash of wrong theme)
 THEME_HEAD_SCRIPT = '''<script>
@@ -22,6 +45,16 @@ THEME_HEAD_SCRIPT = '''<script>
   var savedTheme = getTheme();
   if (savedTheme === 'dark') {
     document.documentElement.classList.add('dark');
+  }
+
+  // Restore the saved table-of-contents preference the same way, before the first paint.
+  // Collapsed is the CSS default, so the page never shifts while scripts load.
+  try {
+    if (localStorage.getItem('toc-open') === '1') {
+      document.documentElement.classList.add('toc-open');
+    }
+  } catch (e) {
+    // private browsing: stay with the CSS default
   }
 })();
 </script>'''
@@ -71,27 +104,27 @@ THEME_SCRIPT = '''<script>
     });
   }
 
-  // TOC toggle for narrow screens — collapse by default, expand on button click
-  const toc = document.querySelector('.toc');
+  // TOC toggle for narrow screens. CSS keeps it collapsed by default and the head
+  // script applies the saved preference before paint, so only a click ever moves
+  // content (user-initiated shifts are not penalised as layout shift).
   const tocBtn = document.getElementById('toc-toggle-btn');
-  if (toc && tocBtn) {
-    // Collapse TOC by default on narrow screens
-    if (window.innerWidth <= 900)
-      document.body.classList.add('toc-collapsed');
-
+  function syncTocLabel() {
+    const open = document.documentElement.classList.contains('toc-open');
+    tocBtn.textContent = open ? '❌ Hide Contents' : '\u25B6\ufe0f Show Contents';
+    tocBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  if (tocBtn) {
     tocBtn.addEventListener('click', function() {
-      document.body.classList.toggle('toc-collapsed');
-      this.textContent = document.body.classList.contains('toc-collapsed')
-        ? '\u25B6\ufe0f Show Contents'
-        : '❌ Hide Contents';
+      document.documentElement.classList.toggle('toc-open');
+      const open = document.documentElement.classList.contains('toc-open');
+      try {
+        localStorage.setItem('toc-open', open ? '1' : '0');
+      } catch (e) {
+        // private browsing: the preference just will not stick
+      }
+      syncTocLabel();
     });
-
-    // Restore saved TOC preference
-    const tocState = localStorage.getItem('toc-collapsed');
-    if (tocState === 'true') {
-      document.body.classList.add('toc-collapsed');
-      tocBtn.textContent = '\u25B6\ufe0f Show Contents';
-    }
+    syncTocLabel();
   }
 })();
 </script>'''
@@ -111,8 +144,12 @@ def adsense_skyscraper():
       <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'''
 
 
-def build_head(title: str, description: str, version: str, url: str) -> str:
-    """Build the shared HTML <head> section used by all pages."""
+def build_head(title: str, description: str, version: str, url: str, canonical: str = '') -> str:
+    """Build the shared HTML <head> section used by all pages.
+
+    `canonical` is the page's own path (empty for the home page) so every URL points
+    at exactly one preferred address; `url` stays the installer download link.
+    """
     return f"""  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EQLogParser - {title}</title>
@@ -122,12 +159,21 @@ def build_head(title: str, description: str, version: str, url: str) -> str:
   <meta name="version" content="{version}" />
   <meta name="download" content="{url}" />
   <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="canonical" href="{SITE_BASE_URL}/{canonical}" />
+  <link rel="sitemap" type="application/xml" href="{SITE_BASE_URL}/sitemap.xml" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
   {PRECONNECT_LINKS}
   <meta property="og:title" content="EQLogParser - {title}" />
   <meta property="og:description" content="{description}" />
+  <meta property="og:url" content="{SITE_BASE_URL}/{canonical}" />
   <meta property="og:image" content="https://eqlogparser.kizant.net/img/logo.png" />
+  <meta property="og:image:width" content="400" />
+  <meta property="og:image:height" content="211" />
+  <meta property="og:site_name" content="EQLogParser" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eqlogparser.kizant.net/img/logo.png" />
   {THEME_HEAD_SCRIPT}
   <link rel="stylesheet" href="css/style.css?v={CSS_VERSION}" />
   {GA_SCRIPT}"""
@@ -145,12 +191,12 @@ def slugify(text: str) -> str:
 def convert_markdown_to_html(md_text: str) -> str:
     return markdown.markdown(md_text, extensions=["extra"])
 
-def wrap_docs_html(version: str, url: str, title: str, nav_header_html: str, toc: str, content: str) -> str:
+def wrap_docs_html(version: str, url: str, title: str, nav_header_html: str, toc: str, content: str, canonical: str = '') -> str:
     description = "EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
-{build_head(title, description, version, url)}
+{build_head(title, description, version, url, canonical)}
 </head>
 <body>
   <nav class="topbar">{nav_header_html}</nav>
@@ -170,6 +216,136 @@ def wrap_docs_html(version: str, url: str, title: str, nav_header_html: str, toc
   {THEME_SCRIPT}
 </body>
 </html>"""
+
+# ============================================================
+# sitemap.xml
+# ============================================================
+def get_last_modified(source: Path) -> str:
+    """Return an ISO-8601 timestamp (with offset) for the last real change to source.
+
+    Uses the git commit date so a fresh checkout does not report every page as
+    freshly changed, and falls back to the file mtime for uncommitted files or
+    when git is unavailable.
+    """
+    mtime = datetime.datetime.fromtimestamp(source.stat().st_mtime).astimezone()
+    try:
+        status = subprocess.run(['git', 'status', '--porcelain', '--', str(source)],
+                                capture_output=True, text=True, timeout=10)
+        if status.returncode != 0 or status.stdout.strip():
+            return format_iso_timestamp(mtime)  # uncommitted edit: newer than the last commit
+        log = subprocess.run(['git', 'log', '-1', '--format=%cI', '--', str(source)],
+                             capture_output=True, text=True, timeout=10)
+        if log.returncode == 0 and log.stdout.strip():
+            return format_iso_timestamp(datetime.datetime.fromisoformat(log.stdout.strip()))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return format_iso_timestamp(mtime)
+
+
+def format_iso_timestamp(when: datetime.datetime) -> str:
+    """Format a datetime the way <lastmod> wants it (W3C date-time, second precision)."""
+    return when.replace(microsecond=0).isoformat()
+
+
+def build_sitemap(pages=SITEMAP_PAGES) -> None:
+    """Write dist/sitemap.xml for Google Search Console."""
+    DIST_DIR.mkdir(exist_ok=True)
+    entries = []
+    for path, source in pages:
+        built = DIST_DIR / ('index.html' if path == '/' else Path(path).name)
+        if not built.exists():
+            print(f'⚠️  Warning: {built} not built yet; the sitemap still lists {path}')
+        entries.append('  <url>\n'
+                       f'    <loc>{escape(SITE_BASE_URL + path)}</loc>\n'
+                       f'    <lastmod>{get_last_modified(source)}</lastmod>\n'
+                       '  </url>')
+
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+           + '\n'.join(entries) + '\n</urlset>\n')
+    SITEMAP_OUT.write_text(xml, encoding='utf-8')
+    print(f'✅ Sitemap generated: {SITEMAP_OUT.resolve()} ({len(entries)} URLs)')
+
+
+# ============================================================
+# Layout shift (CLS) helpers
+# ============================================================
+def read_image_size(image_path: Path):
+    """Return (width, height) for a PNG, GIF or JPEG, or None if not measurable."""
+    try:
+        data = image_path.read_bytes()
+    except OSError:
+        return None
+    if data[:8] == b'\x89PNG\r\n\x1a\n' and len(data) >= 24:
+        return int.from_bytes(data[16:20], 'big'), int.from_bytes(data[20:24], 'big')
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return int.from_bytes(data[6:8], 'little'), int.from_bytes(data[8:10], 'little')
+    if data[:2] == b'\xff\xd8':  # JPEG: walk the segment headers to a start-of-frame marker
+        start_of_frame = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+        i = 2
+        while i + 9 < len(data):
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            if marker in start_of_frame:
+                height = int.from_bytes(data[i + 5:i + 7], 'big')
+                width = int.from_bytes(data[i + 7:i + 9], 'big')
+                return (width, height) if width and height else None
+            if marker in (0x01, 0xD8) or 0xD0 <= marker <= 0xD7:
+                i += 2
+                continue
+            segment_length = int.from_bytes(data[i + 2:i + 4], 'big')
+            if segment_length < 2:
+                return None
+            i += 2 + segment_length
+    return None
+
+
+def parse_pixels(value) -> int:
+    """Return the pixel count of an HTML length attribute, or 0 when absent or odd."""
+    match = re.fullmatch(r'\s*(\d+(?:\.\d+)?)\s*(?:px)?\s*', str(value if value is not None else ''))
+    return round(float(match.group(1))) if match else 0
+
+
+def stamp_image_dimensions(page_path: Path) -> int:
+    """Add matching width/height attributes to the images of a built page.
+
+    A browser reserves an image's box as soon as it sees both attributes, so the
+    screenshots on the home page no longer push the rest of the page down when
+    they finish loading (that shift was the source of the desktop CLS failure).
+    An existing width/height pair is left alone; a lone attribute is completed
+    from the file's aspect ratio so the rendered box keeps its size.
+    """
+    soup = BeautifulSoup(page_path.read_text(encoding='utf-8'), 'html.parser')
+    stamped = 0
+    for img in soup.find_all('img'):
+        src = (img.get('src') or '').split('#')[0].split('?')[0]
+        if not src or src.startswith(('http://', 'https://', 'data:')):
+            continue
+        if 'alt' not in img.attrs:
+            print(f'⚠️  Warning: {page_path.name}: <img src="{src}"> has no alt text '
+                  f'(alt="" is correct for decorative images)')
+        declared_width = parse_pixels(img.get('width'))
+        declared_height = parse_pixels(img.get('height'))
+        if declared_width and declared_height:
+            continue
+        size = read_image_size(DIST_DIR / src)
+        if size is None or not all(size):
+            print(f'⚠️  Warning: cannot measure {src} (missing or unsupported format); '
+                  f'{page_path.name} will reserve no space for it')
+            continue
+        width, height = size
+        if declared_height:  # honour the author's sizing, derive the matching partner
+            width, height = round(width * declared_height / height), declared_height
+        elif declared_width:
+            width, height = declared_width, round(height * declared_width / width)
+        img['width'], img['height'] = width, height
+        stamped += 1
+    if stamped:
+        page_path.write_text(str(soup), encoding='utf-8')
+    return stamped
+
 
 def build_toc(toc_title: str, toc_items: str) -> str:
     return f"""<nav class="toc">
@@ -258,7 +434,7 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
     else:
       toc = build_empty_toc()
 
-    final_html = wrap_docs_html(version, url, title, nav_header_html, toc, str(soup))
+    final_html = wrap_docs_html(version, url, title, nav_header_html, toc, str(soup), output_path.name)
     output_path.write_text(final_html, encoding='utf-8')
     print(f'✅ HTML generated: {output_path.resolve()}')
 
@@ -310,18 +486,20 @@ def update_index_html(version: str, url: str, index_path: Path, output_path: Pat
     # Note: the home page download button points to download.html directly in the template.
     # The actual GitHub URL is used on the download landing page itself.
 
-    # Inject theme restoration script into <head> (before CSS) to prevent flash of wrong theme
+    # Theme restoration goes first in <head>, before the CSS link, so there is no flash of
+    # the wrong theme; the GA tag follows it inside <head> exactly where Google tells you to
+    # put it (a body placement fires later and can miss quick bounces).
     head = soup.find('head')
     if head:
-        head_script = BeautifulSoup(THEME_HEAD_SCRIPT, 'html.parser')
-        for script in head_script.find_all('script'):
+        for script in BeautifulSoup(GA_SCRIPT, 'html.parser').find_all('script'):
+            head.append(script)
+        for script in BeautifulSoup(THEME_HEAD_SCRIPT, 'html.parser').find_all('script'):
             head.insert(0, script)
 
-    # Inject GA tracking and theme scripts before </body> using BeautifulSoup
+    # The theme/menu/TOC handlers need the DOM, so they stay before </body>
     body = soup.find('body')
     if body:
-        script_tags = BeautifulSoup(GA_SCRIPT + THEME_SCRIPT, 'html.parser')
-        for script in script_tags.find_all('script'):
+        for script in BeautifulSoup(THEME_SCRIPT, 'html.parser').find_all('script'):
             body.append(script)
     output_path.write_text(str(soup), encoding='utf-8')
     print(f"✅ HTML updated: {output_path.resolve()}")
@@ -333,7 +511,8 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
-{build_head(title, description, version, url)}
+{build_head(title, description, version, url, 'download.html')}
+  <link rel="preload" as="image" href="img/logo.png" fetchpriority="high" />
 </head>
 <body>
   <nav class="topbar">{nav_header_html}</nav>
@@ -341,7 +520,7 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
     <main class="container">
       <!-- Hero Section (same as home page, without download button) -->
       <section class="hero center-section">
-        <img src="img/logo.png" class="hero-logo" loading="lazy" />
+        <img src="img/logo.png" alt="EQLogParser — real-time combat analyzer for EverQuest" class="hero-logo" loading="eager" fetchpriority="high" width="400" height="211" />
         <p class="hero-subtitle">Real-time combat analyzer &amp; damage parser for EverQuest</p>
       </section>
 
@@ -421,7 +600,11 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
 </body>
 </html>"""
 
-def main():
+def main(argv):
+    if 'sitemap' in argv[1:]:
+        build_sitemap()
+        return
+
     version = get_version_from_inno(INNO_FILE)
     home_header_html = build_nav_header()
     header_html = build_nav_header()
@@ -443,7 +626,11 @@ def main():
     (DIST_DIR / 'download.html').write_text(download_html, encoding='utf-8')
     print(f'✅ HTML generated: {(DIST_DIR / "download.html").resolve()}')
 
+    # Reserve space for every image so late-loading screenshots cannot shift the page
+    stamped = sum(stamp_image_dimensions(page) for page in sorted(DIST_DIR.glob('*.html')))
+    print(f'✅ Image dimensions stamped on {stamped} <img> tags')
 
+    build_sitemap()
 
     # Inject backward-compatible version hash resolution into releasenotes.html
     # The app generates URLs like #2-3-58 but the actual anchors include dates (e.g. #2-3-58-07-25-26)
@@ -487,4 +674,4 @@ def main():
     patch_rtf_in_place(RTF_OUT)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)

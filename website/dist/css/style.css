@@ -57,6 +57,14 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Images keep their aspect ratio whenever CSS resizes them. build.py stamps width and
+   height on every <img> so the browser reserves the box before the file loads (layout
+   shift fix); without height:auto that stamped height would squash the picture instead. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 code {
   background: var(--color-code-bg);
   padding: 0.1em 0.3em;
@@ -158,15 +166,6 @@ pre code {
   align-items: start;
   margin-top: 60px;
   padding: 0 1rem;
-}
-
-.layout.toc-collapsed {
-  grid-template-columns: 0 1fr 160px;
-}
-
-.layout.toc-collapsed .toc {
-  width: 0;
-  overflow: hidden;
 }
 
 /* Pages without a TOC — use full-width main + right ad only */
@@ -649,9 +648,12 @@ html.dark tr.row-highlight td {
 
 /* Tablet/narrow desktop: collapsible TOC with toggle button */
 @media (max-width: 900px) {
-  /* Two-column layout: TOC + Main (hide right ad) */
-  .layout {
-    grid-template-columns: 200px 1fr;
+  /* Single stacked column: toggle button, then TOC, then content. One column keeps
+     the TOC from stealing a grid track and squeezing the article when it opens. */
+  .layout,
+  .layout.no-toc {
+    grid-template-columns: 1fr;
+    row-gap: 0.75rem;
   }
 
   .rightad {
@@ -663,9 +665,19 @@ html.dark tr.row-highlight td {
     display: block;
   }
 
-  /* Collapse TOC by default on narrow screens — user clicks button to expand */
-  body.toc-collapsed .toc {
+  /* Collapsed until the user opens it — the html.toc-open class is set before the
+     first paint (head script) or by the toggle, so nothing ever jumps. */
+  html:not(.toc-open) .layout > .toc {
     display: none;
+  }
+
+  /* Full-width, non-sticky table of contents in the stacked layout */
+  .layout > .toc {
+    width: auto;
+    position: static;
+    top: auto;
+    border-top: 1px solid var(--color-border);
+    padding-top: 0.5rem;
   }
 
   /* Show mobile menu toggle */
@@ -738,13 +750,9 @@ html.dark tr.row-highlight td {
   }
 }
 
-/* Mobile phone: keep TOC toggle, hide right ad */
+/* Mobile phone: already stacked by the 900px rules; just tighten the gutters */
 @media (max-width: 700px) {
   .layout {
-    grid-template-columns: 180px 1fr;
-  }
-
-  .rightad {
-    display: none;
+    padding: 0 0.5rem;
   }
 }
