@@ -30,7 +30,18 @@
 
     <StackPanel Grid.Row="0" Orientation="Horizontal">
       <TextBlock Text="TTS Engine:" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}" />
-      <ComboBox x:Name="engineList" Width="160" Margin="8,0,0,0" SelectionChanged="EngineSelectionChanged" />
+      <ComboBox x:Name="engineList" Width="160" Margin="8,0,0,0" SelectionChanged="EngineSelectionChanged">
+        <!--
+          Rows the machine cannot use are greyed out where the choice is made, from EngineOption.CanPick. BasedOn keeps
+          the themed ComboBoxItem style: a bare Style here would win over the Syncfusion theme and hand back a WPF
+          default item, which is invisible in the dark theme.
+        -->
+        <ComboBox.ItemContainerStyle>
+          <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="IsEnabled" Value="{Binding CanPick}" />
+          </Style>
+        </ComboBox.ItemContainerStyle>
+      </ComboBox>
     </StackPanel>
     <TextBlock Grid.Row="1" x:Name="engineHintText" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource EQContentSize}" />
 

@@ -1,6 +1,7 @@
 using EQLogParser.Audio;
 using log4net;
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,30 +32,44 @@ namespace EQLogParser
       RefreshState();
     }
 
-    private string SelectedEngine => engineList.SelectedItem as string;
+    /* One row in the picker. CanPick is what greys an entry out in the drop down. */
+    private sealed record EngineOption(string Name, bool CanPick)
+    {
+      public override string ToString() => Name;
+    }
+
+    private string SelectedEngine => (engineList.SelectedItem as EngineOption)?.Name;
 
     private void RefreshState()
     {
       _ready = false;
 
       // Every engine is listed, installed or not: this is the only place a runtime pack gets downloaded from, so an
-      // engine that needs one has to be reachable here.
-      var engines = AudioManager.GetAllEngines();
-      engineList.ItemsSource = engines;
+      // engine that needs one has to be reachable here. One row is greyed out only when there is neither a way to use
+      // it nor a way to get it, which in practice means the Windows voices are missing from this machine.
+      var options = AudioManager.GetAllEngines()
+        .Select(name => new EngineOption(name, CanPick(name)))
+        .ToList();
+      engineList.ItemsSource = options;
 
       var active = AudioManager.Instance.GetActiveEngine();
+      var names = options.Select(option => option.Name).ToList();
       var saved = ConfigUtil.GetSetting(SettingKey);
-      var selected = !string.IsNullOrEmpty(saved) && engines.Contains(saved) ? saved : active;
-      if (!engines.Contains(selected))
+      var selected = !string.IsNullOrEmpty(saved) && names.Contains(saved) ? saved : active;
+      if (!names.Contains(selected))
       {
-        selected = engines.Contains(active) ? active : AudioManager.WindowsEngine;
+        selected = names.Contains(active) ? active : AudioManager.WindowsEngine;
       }
 
-      engineList.SelectedItem = selected;
+      engineList.SelectedItem = options.First(option => option.Name == selected);
       UpdateEngineText();
       UpdateButtons(selected);
       _ready = true;
     }
+
+    /* An engine you can speak with now, or download and then speak with, is an engine worth selecting. */
+    private static bool CanPick(string engine) =>
+      AudioManager.Instance.IsEngineAvailable(engine) || AudioManager.Instance.GetEngineDownloadBytes(engine) > 0;
 
     /*
      * What each engine is like to live with, because three names in a dropdown decide both the sound and whether the
@@ -70,8 +85,8 @@ namespace EQLogParser
         "The best sounding voices here, and the heaviest: a few hundred MB of memory and real CPU, so it takes a moment " +
         "to start speaking. An older machine may fall behind.",
       AudioManager.WindowsEngine =>
-        "The voices already in Windows: nothing to download and no cost at all. How good that sounds depends on which " +
-        "voices this machine has.",
+        "Nothing to download and no cost at all. These voices come from Windows itself, so a Linux or Wine session " +
+        "usually has none of them, and how good they sound varies with what is installed.",
       _ => "Speech runs locally on this machine."
     };
 
@@ -85,18 +100,27 @@ namespace EQLogParser
 
       infoText.Text = GetEngineDescription(selected);
 
+      var available = AudioManager.Instance.IsEngineAvailable(selected);
+      var downloadable = AudioManager.Instance.GetEngineDownloadBytes(selected) > 0;
+
       if (selected == AudioManager.Instance.GetActiveEngine())
       {
         engineHintText.Text = "This is the engine currently in use.";
       }
-      else if (!AudioManager.Instance.IsEngineAvailable(selected))
+      else if (available)
+      {
+        engineHintText.Text = "Takes effect right away, starting with the next callout.";
+      }
+      else if (downloadable)
       {
         engineHintText.Text = $"{selected} is not installed. Enabling it downloads about " +
           $"{FormatSize(AudioManager.Instance.GetEngineDownloadBytes(selected))} from GitHub into your local app data.";
       }
       else
       {
-        engineHintText.Text = "Takes effect right away, starting with the next callout.";
+        // Proven unusable rather than merely unused: something asked these voices to speak and they could not.
+        engineHintText.Text = $"The {selected} voices are not usable on this machine. Add Windows voice packs, or " +
+          "enable Piper or Kokoro below.";
       }
     }
 
@@ -222,7 +246,7 @@ namespace EQLogParser
       // once and switch explicitly, because assigning it may or may not raise the handler
       _ready = false;
       ConfigUtil.SetSetting(SettingKey, engine);
-      engineList.SelectedItem = engine;
+      engineList.SelectedItem = new EngineOption(engine, true);
       _ready = true;
       await ApplyEngineAsync(engine);
     }
