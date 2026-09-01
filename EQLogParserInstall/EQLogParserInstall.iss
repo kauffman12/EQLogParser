@@ -96,9 +96,10 @@ Source: "{#MyReleaseDir}\NAudio.WinMM.dll"; DestDir: "{app}"; Flags: ignoreversi
 Source: "{#MyReleaseDir}\SoundTouch.Net.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\SoundTouch.Net.NAudioSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
 
-; Kokoro TTS engine (KokoroSharp.CPU). The ~320MB model is downloaded on demand into %LocalAppData%\EQLogParser\kokoro-tts;
-; the voice embeddings are copied next to the exe by KokoroSharp's build targets and read from <app>\voices at runtime.
-Source: "{#MyReleaseDir}\voices\*"; DestDir: "{app}\voices"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Kokoro TTS engine (KokoroSharp.CPU). The ~156MB fp16 model is downloaded on demand into
+; %LocalAppData%\EQLogParser\kokoro-tts. Only the voice embeddings we ship land in <app>\voices -- the set is chosen
+; by KokoroVoiceMasks in Directory.Build.targets; Excludes keeps Mandarin voices out even if a build produced them.
+Source: "{#MyReleaseDir}\voices\*"; DestDir: "{app}\voices"; Excludes: "voices-zh,voices-zh\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyReleaseDir}\KokoroSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\MisakiSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\NumSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
