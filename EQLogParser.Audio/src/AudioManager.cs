@@ -82,6 +82,10 @@ namespace EQLogParser.Audio
       _deviceUpdateTimer = new Timer(DoUpdateDeviceList, null, Timeout.Infinite, Timeout.Infinite);
       _ = InitAudio();
 
+      // The speech runtimes are downloaded rather than installed, so the loaders need to know where a pack lives
+      // before an engine built against it reaches for a type or a native library.
+      TtsPackManager.EnsureResolversRegistered();
+
       _tts = TtsEngineFactory.Create(_preferredEngine);
 
       // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
@@ -91,35 +95,46 @@ namespace EQLogParser.Audio
       }
     }
 
-    public bool IsKokoroModelAvailable() => KokoroTtsEngine.IsModelDownloaded();
+    public bool IsEngineAvailable(string engine) => EngineIsAvailable(engine);
 
-    public Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default) =>
-      KokoroTtsEngine.DownloadModelAsync(onProgress, cancellationToken);
+    public bool IsEngineDownloaded(string engine) => TtsPackManager.IsPackOnDisk(engine);
 
-    /// <summary>Engines that can currently be selected: Windows is always available; Piper/Kokoro only if their
-    /// voice data has been installed/downloaded.</summary>
-    public static List<string> GetAvailableEngines()
+    public long GetEngineDownloadBytes(string engine) => TtsPackManager.GetDownloadBytes(engine);
+
+    public Task<bool> InstallEngineAsync(string engine, IProgress<float> progress, CancellationToken cancellationToken = default) =>
+      TtsPackManager.InstallAsync(engine, progress, cancellationToken);
+
+    /*
+     * Reclaims the space a pack uses. The engine currently speaking keeps its native libraries mapped for the life of
+     * the process on Windows, so removing that one would leave a directory half deleted and an engine that still
+     * claims to work; the caller picks another engine first.
+     */
+    public bool RemoveEngineFiles(string engine)
     {
-      var list = new List<string> { WindowsEngine };
-
-      if (PiperTtsEngine.IsInstalled())
+      if (string.IsNullOrEmpty(engine) || engine == GetActiveEngine())
       {
-        list.Add(PiperEngine);
+        return false;
       }
 
-      if (KokoroTtsEngine.IsModelDownloaded())
-      {
-        list.Add(KokoroEngine);
-      }
-
-      return list;
+      return TtsPackManager.Remove(engine);
     }
+
+    /// <summary>Every engine the app knows how to drive, whether or not its runtime pack is installed. The picker
+    /// lists these so a download can be offered from the same place the engine is chosen.</summary>
+    public static List<string> GetAllEngines() => [PiperEngine, KokoroEngine, WindowsEngine];
+
+    /// <summary>Engines that can currently be selected: Windows is always available; Piper/Kokoro only once their
+    /// runtime pack (or, for Piper, an older app installed copy) is on disk.</summary>
+    public static List<string> GetAvailableEngines() => GetAllEngines().Where(EngineIsAvailable).ToList();
+
+    private static bool EngineIsAvailable(string engine) =>
+      engine == WindowsEngine || TtsPackManager.ResolveRoot(engine) is not null;
 
     /// <summary>The engine actually in use for this running session.</summary>
     public string GetActiveEngine() => _tts.Name;
 
-    /// <summary>Switches the speech engine without a restart; only engines whose components are already on disk can
-    /// be selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
+    /// <summary>Switches the speech engine without a restart; only engines whose runtime pack is installed can be
+    /// selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
     public async Task<bool> SwitchEngineAsync(string engine)
     {
       if (_disposed || string.IsNullOrEmpty(engine))

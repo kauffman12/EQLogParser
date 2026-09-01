@@ -45,12 +45,23 @@ namespace EQLogParser.Audio
     // --- TTS: play or export to WAV ---
     void SpeakOrSaveTtsAsync(string text, string voice, string deviceId, float volume, int rate, string fileName = null);
 
-    // --- Kokoro TTS (optional, on-demand neural voice model) ---
-    /// <summary>True if the Kokoro model has already been downloaded to local app data.</summary>
-    bool IsKokoroModelAvailable();
+    // --- Speech runtime packs (Piper and Kokoro download their engines on demand) ---
+    /// <summary>True when the engine's runtime files are on disk, so it can be selected now.</summary>
+    bool IsEngineAvailable(string engine);
 
-    /// <summary>Downloads the Kokoro model to local app data.</summary>
-    Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default);
+    /// <summary>True when this engine's files live in local app data, which is the only place the app can delete
+    /// them. A voice pack that came from an older installer sits beside the program instead.</summary>
+    bool IsEngineDownloaded(string engine);
+
+    /// <summary>Rough archive size in bytes, for wording a download button with.</summary>
+    long GetEngineDownloadBytes(string engine);
+
+    /// <summary>Downloads an engine's runtime pack into local app data and installs it. Progress is 0..1 across the
+    /// whole job; false leaves whatever was installed before untouched.</summary>
+    Task<bool> InstallEngineAsync(string engine, IProgress<float> progress, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes an installed runtime pack to reclaim disk space. Refuses for the engine in use.</summary>
+    bool RemoveEngineFiles(string engine);
 
     // --- TTS engine selection ---
     /// <summary>The engine actually in use for this running session.</summary>

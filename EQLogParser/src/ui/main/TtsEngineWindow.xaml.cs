@@ -9,6 +9,11 @@ using System.Windows.Controls;
 
 namespace EQLogParser
 {
+  /*
+   * Speech engine picker. Piper and Kokoro are not carried by the installer: selecting one of them offers a download
+   * of its runtime pack, and an installed engine can be removed again to reclaim the space. Whatever is on disk is
+   * switched to live, so the change applies to the next callout rather than after a restart. See docs/TtsPacks.md.
+   */
   public partial class TtsEngineWindow
   {
     private const string SettingKey = "TtsEngine";
@@ -26,38 +31,34 @@ namespace EQLogParser
       RefreshState();
     }
 
+    private string SelectedEngine => engineList.SelectedItem as string;
+
     private void RefreshState()
     {
       _ready = false;
 
-      var engines = AudioManager.GetAvailableEngines();
+      // Every engine is listed, installed or not: this is the only place a runtime pack gets downloaded from, so an
+      // engine that needs one has to be reachable here.
+      var engines = AudioManager.GetAllEngines();
       engineList.ItemsSource = engines;
 
+      var active = AudioManager.Instance.GetActiveEngine();
       var saved = ConfigUtil.GetSetting(SettingKey);
-      var selected = !string.IsNullOrEmpty(saved) && engines.Contains(saved) ? saved : AudioManager.Instance.GetActiveEngine();
-      engineList.SelectedItem = engines.Contains(selected) ? selected : engines[0];
+      var selected = !string.IsNullOrEmpty(saved) && engines.Contains(saved) ? saved : active;
+      if (!engines.Contains(selected))
+      {
+        selected = engines.Contains(active) ? active : AudioManager.WindowsEngine;
+      }
 
+      engineList.SelectedItem = selected;
       UpdateEngineHint();
-
-      if (AudioManager.Instance.IsKokoroModelAvailable())
-      {
-        downloadButton.IsEnabled = false;
-        downloadButton.Content = "Already Downloaded";
-        statusText.Text = string.Empty;
-      }
-      else
-      {
-        downloadButton.IsEnabled = true;
-        downloadButton.Content = "Download Kokoro";
-        statusText.Text = string.Empty;
-      }
-
+      UpdateButtons(selected);
       _ready = true;
     }
 
     private void UpdateEngineHint()
     {
-      if (engineList.SelectedItem is not string selected)
+      if (SelectedEngine is not string selected)
       {
         return;
       }
@@ -66,9 +67,10 @@ namespace EQLogParser
       {
         engineHintText.Text = "This is the engine currently in use.";
       }
-      else if (selected == AudioManager.KokoroEngine && !AudioManager.Instance.IsKokoroModelAvailable())
+      else if (!AudioManager.Instance.IsEngineAvailable(selected))
       {
-        engineHintText.Text = "Download Kokoro below. The switch happens as soon as the download finishes.";
+        engineHintText.Text = $"{selected} is not installed. Enabling it downloads about " +
+          $"{FormatSize(AudioManager.Instance.GetEngineDownloadBytes(selected))} from GitHub into your local app data.";
       }
       else
       {
@@ -76,23 +78,46 @@ namespace EQLogParser
       }
     }
 
+    /* The download and remove buttons belong to whichever engine is selected. */
+    private void UpdateButtons(string engine)
+    {
+      var hasPack = AudioManager.Instance.GetEngineDownloadBytes(engine) > 0;
+      var available = AudioManager.Instance.IsEngineAvailable(engine);
+
+      downloadButton.Visibility = hasPack ? Visibility.Visible : Visibility.Collapsed;
+      downloadButton.Content = available ? "Installed" : $"Download {engine} ({FormatSize(AudioManager.Instance.GetEngineDownloadBytes(engine))})";
+      downloadButton.IsEnabled = hasPack && !available && !_downloading && !_switching;
+
+      // Only files we downloaded ourselves can be deleted, and only by a quiet engine: a voice pack that came from an
+      // older installer sits beside the program, where uninstalling is the way to get rid of it.
+      var downloaded = AudioManager.Instance.IsEngineDownloaded(engine);
+      removeButton.Visibility = hasPack && downloaded ? Visibility.Visible : Visibility.Collapsed;
+      removeButton.IsEnabled = downloaded && engine != AudioManager.Instance.GetActiveEngine() && !_downloading && !_switching;
+    }
+
     private async void EngineSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (!_ready || _downloading || engineList.SelectedItem is not string selected)
+      if (!_ready || _downloading || SelectedEngine is not string selected)
       {
+        return;
+      }
+
+      UpdateEngineHint();
+      UpdateButtons(selected);
+
+      // An engine with nothing on disk cannot be switched to and is not remembered either: the saved setting decides
+      // what the next start uses, so it has to name something that can actually speak.
+      if (!AudioManager.Instance.IsEngineAvailable(selected))
+      {
+        statusText.Text = string.Empty;
         return;
       }
 
       ConfigUtil.SetSetting(SettingKey, selected);
 
-      // anything already on disk can be switched to live; the saved setting still decides what the next start uses
       if (selected != AudioManager.Instance.GetActiveEngine())
       {
         await ApplyEngineAsync(selected);
-      }
-      else
-      {
-        UpdateEngineHint();
       }
     }
 
@@ -110,13 +135,12 @@ namespace EQLogParser
 
       _switching = true;
       engineList.IsEnabled = false;
-      downloadButton.IsEnabled = false;
+      UpdateButtons(selected);
       statusText.Text = $"Switching to {selected}...";
 
       try
       {
         var switched = await AudioManager.Instance.SwitchEngineAsync(selected);
-        RefreshState();
 
         if (switched)
         {
@@ -136,50 +160,69 @@ namespace EQLogParser
       {
         _switching = false;
         engineList.IsEnabled = true;
-        downloadButton.IsEnabled = !AudioManager.Instance.IsKokoroModelAvailable();
+        RefreshState();
       }
     }
 
     private async void DownloadClicked(object sender, RoutedEventArgs e)
     {
-      if (_downloading)
+      if (_downloading || SelectedEngine is not { } engine)
       {
         return;
       }
 
       _downloading = true;
       _cts = new CancellationTokenSource();
-      downloadButton.IsEnabled = false;
       engineList.IsEnabled = false;
+      UpdateButtons(engine);
       progressBar.Visibility = Visibility.Visible;
       progressBar.Value = 0;
-      statusText.Text = "Downloading...";
+      statusText.Text = $"Downloading {engine}...";
 
-      var success = await AudioManager.Instance.DownloadKokoroModelAsync(
-        progress => Dispatcher.Invoke(() => progressBar.Value = Math.Clamp(progress * 100, 0, 100)), _cts.Token);
+      // Progress<T> posts back to the UI thread it was created on, which is what makes the bar move.
+      var progress = new Progress<float>(value => progressBar.Value = Math.Clamp(value * 100, 0, 100));
+      var success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
 
       _downloading = false;
       progressBar.Visibility = Visibility.Collapsed;
       engineList.IsEnabled = true;
 
-      if (success)
-      {
-        RefreshState();
-        statusText.Text = "Download complete.";
-
-        // a downloaded Kokoro is what the user wanted, so start speaking with it now rather than after a restart
-        // switch once, explicitly: setting the selection may or may not raise the handler
-        _ready = false;
-        ConfigUtil.SetSetting(SettingKey, AudioManager.KokoroEngine);
-        engineList.SelectedItem = AudioManager.KokoroEngine;
-        _ready = true;
-        await ApplyEngineAsync(AudioManager.KokoroEngine);
-      }
-      else
+      if (!success)
       {
         statusText.Text = "Download failed. Check the Error Log for details and try again.";
-        downloadButton.IsEnabled = true;
+        UpdateButtons(engine);
+        return;
       }
+
+      RefreshState();
+
+      // having chosen the engine, the user wants to speak with it now rather than after a restart; set the selection
+      // once and switch explicitly, because assigning it may or may not raise the handler
+      _ready = false;
+      ConfigUtil.SetSetting(SettingKey, engine);
+      engineList.SelectedItem = engine;
+      _ready = true;
+      await ApplyEngineAsync(engine);
+    }
+
+    private void RemoveClicked(object sender, RoutedEventArgs e)
+    {
+      if (SelectedEngine is not { } engine)
+      {
+        return;
+      }
+
+      if (AudioManager.Instance.RemoveEngineFiles(engine))
+      {
+        RefreshState();
+        statusText.Text = $"{engine} files removed. The engine can be downloaded again at any time.";
+        return;
+      }
+
+      // Either the active engine, which AudioManager refuses for, or a running copy has the native libraries mapped.
+      statusText.Text = $"Could not remove the {engine} files. They are in use by a running copy of EQLogParser; " +
+        "close it and start again to free the space.";
+      UpdateButtons(engine);
     }
 
     // a selection that could not be applied must not claim to be in use
@@ -189,6 +232,13 @@ namespace EQLogParser
       engineHintText.Text = $"EQLogParser is still using {active}.";
       statusText.Text = $"Could not switch. {active} keeps speaking.";
     }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+      <= 0 => string.Empty,
+      >= 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024 * 1024):0.#} GB",
+      _ => $"{bytes / (1024.0 * 1024):0} MB"
+    };
 
     private void CloseClicked(object sender, RoutedEventArgs e) => Close();
 

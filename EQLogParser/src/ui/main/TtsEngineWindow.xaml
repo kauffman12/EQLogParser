@@ -18,7 +18,7 @@
   WindowStartupLocation="CenterOwner"
   SizeToContent="WidthAndHeight"
   Title="TTS Engine">
-  <Grid Margin="16,16,16,10" Width="380">
+  <Grid Margin="16,16,16,10" Width="420">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -37,13 +37,15 @@
     <Separator Grid.Row="2" Margin="0,14,0,0" />
 
     <TextBlock Grid.Row="3" x:Name="infoText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}"
-      Text="Kokoro is a free, high quality, local neural Text-to-Speech engine. It requires a one-time download of about 160MB before it can be used." />
+      Text="Piper and Kokoro are free, high quality, local speech engines. Neither is carried by the installer: enable one and EQLogParser downloads its runtime from GitHub into your local app data, then switches to it without a restart." />
     <ProgressBar Grid.Row="4" x:Name="progressBar" Height="18" Minimum="0" Maximum="100" Margin="0,14,0,0" Visibility="Collapsed" />
     <TextBlock Grid.Row="4" x:Name="statusText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}" />
 
     <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+      <Button x:Name="removeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
+        FontSize="{DynamicResource EQContentSize}" Click="RemoveClicked" Margin="2,0,4,0" Padding="16,0,16,0" Content="Remove Files" Visibility="Collapsed" />
       <Button x:Name="downloadButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
-        FontSize="{DynamicResource EQContentSize}" Click="DownloadClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Download Kokoro" />
+        FontSize="{DynamicResource EQContentSize}" Click="DownloadClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Download" />
       <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
         FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Close" />
     </StackPanel>
