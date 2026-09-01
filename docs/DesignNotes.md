@@ -149,3 +149,24 @@ Recorded so they are not mistaken for open bugs — each was reviewed and left a
 - Consulting `Source` before `Id`, or always loading all siblings to find a `Source` match.
 - Logging overlay id collisions, re-imports, or other expected outcomes of normal sharing.
 - Adding folder-merge semantics to overlay import without a product decision.
+
+## Speech synthesis and TTS engines
+
+The audio subsystem can speak trigger callouts with one of three engines: the Windows speech API, Piper, or
+Kokoro. Only one is active per session; `AudioManager` resolves it once at startup and keeps using it.
+
+### Kokoro model integrity
+
+The Kokoro graph (156 MB) is not part of the installer. It is fetched over HTTPS into
+`%LocalAppData%\EQLogParser\kokoro-tts` the first time a user opts in, which means the file the app later executes
+with its own privileges arrives from the network rather than from a signed package.
+
+- `KokoroTts` pins the SHA-256 that GitHub publishes for the release asset and refuses to load anything else.
+  A downloaded file is hashed before it is moved into place; on mismatch the temporary file is deleted.
+- A verified model gets a `kokoro-fp16.onnx.sha256` marker beside it, so the hash pass costs nothing at every
+  start. A hand-placed or previously downloaded model pays for it once, then writes the marker.
+- We do not delete a model that fails verification, and we do not re-hash on every load: a mismatch is reported in
+  the log once, the engine reports itself unavailable, and the existing fallback chain picks up. Deleting a user's
+  156 MB download over a checksum we could have mispinned is the worse failure.
+- Changing `ModelFileName` (for example back to the fp32 graph) means updating `ModelSha256` in the same commit.
+  The two constants are the pin.
