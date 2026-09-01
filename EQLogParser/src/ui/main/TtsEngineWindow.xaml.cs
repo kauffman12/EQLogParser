@@ -51,17 +51,39 @@ namespace EQLogParser
       }
 
       engineList.SelectedItem = selected;
-      UpdateEngineHint();
+      UpdateEngineText();
       UpdateButtons(selected);
       _ready = true;
     }
 
-    private void UpdateEngineHint()
+    /*
+     * What each engine is like to live with, because three names in a dropdown decide both the sound and whether the
+     * machine keeps up. One line each, tradeoff first: a user should be able to pick correctly without reading a
+     * manual, and the reason to keep Kokoro off a ten year old box has to be visible before the download, not after.
+     */
+    private static string GetEngineDescription(string engine) => engine switch
+    {
+      AudioManager.PiperEngine =>
+        "Fast and light: speaks the instant a callout fires and costs almost nothing. The voices sound synthetic next " +
+        "to Kokoro.",
+      AudioManager.KokoroEngine =>
+        "The best sounding voices here, and the heaviest: a few hundred MB of memory and real CPU, so it takes a moment " +
+        "to start speaking. An older machine may fall behind.",
+      AudioManager.WindowsEngine =>
+        "The voices already in Windows: nothing to download and no cost at all. How good that sounds depends on which " +
+        "voices this machine has.",
+      _ => "Speech runs locally on this machine."
+    };
+
+    /* Both text lines under the picker follow the selection: what the engine is like, then whether it can be used. */
+    private void UpdateEngineText()
     {
       if (SelectedEngine is not string selected)
       {
         return;
       }
+
+      infoText.Text = GetEngineDescription(selected);
 
       if (selected == AudioManager.Instance.GetActiveEngine())
       {
@@ -102,7 +124,7 @@ namespace EQLogParser
         return;
       }
 
-      UpdateEngineHint();
+      UpdateEngineText();
       UpdateButtons(selected);
 
       // An engine with nothing on disk cannot be switched to and is not remembered either: the saved setting decides

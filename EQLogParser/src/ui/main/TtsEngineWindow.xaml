@@ -36,8 +36,9 @@
 
     <Separator Grid.Row="2" Margin="0,14,0,0" />
 
+    <!-- Replaced with a per engine description whenever the selection changes; see GetEngineDescription. -->
     <TextBlock Grid.Row="3" x:Name="infoText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}"
-      Text="Piper and Kokoro are free, high quality, local speech engines. Neither is carried by the installer: enable one and EQLogParser downloads its runtime from GitHub into your local app data, then switches to it without a restart." />
+      Text="Speech runs locally on this machine." />
     <ProgressBar Grid.Row="4" x:Name="progressBar" Height="18" Minimum="0" Maximum="100" Margin="0,14,0,0" Visibility="Collapsed" />
     <TextBlock Grid.Row="4" x:Name="statusText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}" />
 
