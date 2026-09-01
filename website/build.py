@@ -34,6 +34,42 @@ SITEMAP_PAGES = [
     ('/policy.html', Path('policy.md')),
 ]
 
+# <title> and meta description for each page, in one place: search results are how anyone
+# new finds this site, and every page used to share one generic description. Keep titles
+# under ~60 characters and descriptions under ~160 so Google does not truncate them, and
+# avoid raw '&' (it belongs escaped in HTML attributes).
+PAGE_META = {
+    'index.html': ('EQLogParser - EverQuest Combat Log Analyzer and DPS Meter',
+              'Free Windows tool that turns your EverQuest combat log into a real-time '
+              'damage meter, raid event list, timer overlays and audio triggers.'),
+    'getting-started.html': ('Getting Started - Install and Setup Guide | EQLogParser',
+                             'Install EQLogParser, open your first EverQuest log, set up audio triggers and overlays, '
+                             'import GINA triggers, migrate from NAG and avoid the common gotchas.'),
+    'documentation.html': ('Triggers and Regex Reference | EQLogParser',
+                           'Regex basics plus the EQLogParser trigger reference: patterns, capture variables, timers, '
+                           'text overlays, sounds, custom colours and .NET regex performance tips.'),
+    'faq.html': ('FAQ and Support | EQLogParser',
+                 'Answers to common EQLogParser problems: spells missing from counts, triggers that never fire, '
+                 'overlay colours, OBS capture, EMU servers and Linux support.'),
+    'releasenotes.html': ('Release Notes | EQLogParser',
+                          'What changed in every EQLogParser release: damage meter fixes, trigger features, timer '
+                          'overlays, NAG migration and quality of life updates.'),
+    'policy.html': ('Privacy Policy | EQLogParser',
+                    'How the EQLogParser website uses cookies and Google AdSense, what is collected, and how to '
+                    'reach us about privacy or business questions.'),
+    # The download page interpolates the current version into both strings.
+    'download.html': ('Download {version} for Windows | EQLogParser',
+                      'Download EQLogParser {version} for Windows 10 and 11: free real-time EverQuest combat log '
+                      'analyzer with a damage meter, audio triggers and timer overlays.'),
+}
+
+
+def page_meta(output_name: str, version: str) -> tuple:
+    """Return (title, description) for a built page, formatted with the release version."""
+    title, description = PAGE_META[output_name]
+    return title.format(version=version), description.format(version=version)
+
+
 # Inline script to restore theme preference before CSS loads (prevents flash of wrong theme)
 THEME_HEAD_SCRIPT = '''<script>
 (function() {
@@ -147,12 +183,13 @@ def adsense_skyscraper():
 def build_head(title: str, description: str, version: str, url: str, canonical: str = '') -> str:
     """Build the shared HTML <head> section used by all pages.
 
-    `canonical` is the page's own path (empty for the home page) so every URL points
-    at exactly one preferred address; `url` stays the installer download link.
+    `title` is the complete <title> text (see PAGE_META) and `canonical` is the page's own
+    path (empty for the home page) so every URL points at exactly one preferred address;
+    `url` stays the installer download link.
     """
     return f"""  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EQLogParser - {title}</title>
+  <title>{title}</title>
   <meta name="description" content="{description}" />
   <meta name="robots" content="index, follow" />
   <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
@@ -164,7 +201,7 @@ def build_head(title: str, description: str, version: str, url: str, canonical: 
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
   {PRECONNECT_LINKS}
-  <meta property="og:title" content="EQLogParser - {title}" />
+  <meta property="og:title" content="{title}" />
   <meta property="og:description" content="{description}" />
   <meta property="og:url" content="{SITE_BASE_URL}/{canonical}" />
   <meta property="og:image" content="https://eqlogparser.kizant.net/img/logo.png" />
@@ -191,8 +228,8 @@ def slugify(text: str) -> str:
 def convert_markdown_to_html(md_text: str) -> str:
     return markdown.markdown(md_text, extensions=["extra"])
 
-def wrap_docs_html(version: str, url: str, title: str, nav_header_html: str, toc: str, content: str, canonical: str = '') -> str:
-    description = "EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the EverQuest MMO. It monitors and processes in-game log files to provide detailed statistics as well as various utility functions"
+def wrap_docs_html(version: str, url: str, title: str, description: str, nav_header_html: str,
+                   toc: str, content: str, canonical: str = '') -> str:
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -402,7 +439,7 @@ def build_nav_header() -> str:
 </div>"""
     return links_start + all_links + nav_end
 
-def process_markdown_to_html(version: str, url: str, input_path: Path, output_path: Path, title: str, toc_title: str, nav_header_html: str, decorate_h2=False, toc_builder=None):
+def process_markdown_to_html(version: str, url: str, input_path: Path, output_path: Path, title: str, description: str, toc_title: str, nav_header_html: str, decorate_h2=False, toc_builder=None):
     md_text = input_path.read_text(encoding='utf-8')
     html_body = convert_markdown_to_html(md_text)
     soup = BeautifulSoup(html_body, 'html.parser')
@@ -434,7 +471,7 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
     else:
       toc = build_empty_toc()
 
-    final_html = wrap_docs_html(version, url, title, nav_header_html, toc, str(soup), output_path.name)
+    final_html = wrap_docs_html(version, url, title, description, nav_header_html, toc, str(soup), output_path.name)
     output_path.write_text(final_html, encoding='utf-8')
     print(f'✅ HTML generated: {output_path.resolve()}')
 
@@ -470,6 +507,19 @@ def update_index_html(version: str, url: str, index_path: Path, output_path: Pat
     download_meta = soup.find("meta", attrs={"name": "download"})
     if download_meta:
        download_meta["content"] = url
+    # <title> and description come from PAGE_META so the copy lives in exactly one place;
+    # the template keeps a fallback for anyone previewing index.tmpl directly. status.html
+    # has no entry, so it keeps whatever its template says.
+    if output_path.name in PAGE_META:
+        title, description = page_meta(output_path.name, version)
+        if soup.title:
+            soup.title.string = title
+        for property_name in ('og:title', 'og:description'):
+            expected = title if property_name == 'og:title' else description
+            meta_tag = soup.find('meta', attrs={'property': property_name})
+            if meta_tag:
+                meta_tag['content'] = expected
+
     nav_bar = soup.find('nav', id='nav-bar')
     if nav_bar:
         nav_bar.clear()
@@ -506,8 +556,7 @@ def update_index_html(version: str, url: str, index_path: Path, output_path: Pat
 
 def build_download_page(version: str, url: str, nav_header_html: str) -> str:
     """Generate the download landing page with auto-download and tracking."""
-    title = f"Download v{version}"
-    description = f"Download EQLogParser v{version} for Windows. Real-time combat analyzer and damage parser for EverQuest."
+    title, description = page_meta('download.html', version)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -612,11 +661,19 @@ def main(argv):
 
     DIST_DIR.mkdir(exist_ok=True)
 
-    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', 'Release Notes', None, header_html, toc_builder=build_releasenotes_year_toc)
-    process_markdown_to_html(version, url, Path('getting-started.md'), DIST_DIR / 'getting-started.html', 'Getting Started', 'Contents', header_html, decorate_h2=True)
-    process_markdown_to_html(version, url, Path('triggers.md'), DIST_DIR / 'documentation.html', 'Triggers & Regex Reference', 'Contents', header_html, decorate_h2=True)
-    process_markdown_to_html(version, url, Path('faq.md'), DIST_DIR / 'faq.html', 'FAQ & Support', 'Contents', header_html, decorate_h2=True)
-    process_markdown_to_html(version, url, Path('policy.md'), DIST_DIR / 'policy.html', 'Privacy Policy', 'Contents', header_html)
+    def meta(page_name):
+        return page_meta(page_name, version)
+
+    title, description = meta('releasenotes.html')
+    process_markdown_to_html(version, url, Path('releasenotes.md'), DIST_DIR / 'releasenotes.html', title, description, None, header_html, toc_builder=build_releasenotes_year_toc)
+    title, description = meta('getting-started.html')
+    process_markdown_to_html(version, url, Path('getting-started.md'), DIST_DIR / 'getting-started.html', title, description, 'Contents', header_html, decorate_h2=True)
+    title, description = meta('documentation.html')
+    process_markdown_to_html(version, url, Path('triggers.md'), DIST_DIR / 'documentation.html', title, description, 'Contents', header_html, decorate_h2=True)
+    title, description = meta('faq.html')
+    process_markdown_to_html(version, url, Path('faq.md'), DIST_DIR / 'faq.html', title, description, 'Contents', header_html, decorate_h2=True)
+    title, description = meta('policy.html')
+    process_markdown_to_html(version, url, Path('policy.md'), DIST_DIR / 'policy.html', title, description, 'Contents', header_html)
 
     update_index_html(version, url, Path('index.tmpl'), DIST_DIR / 'index.html', home_header_html)
     update_index_html(version, url, Path('status.tmpl'), DIST_DIR / 'status.html', header_html)
