@@ -145,7 +145,9 @@ namespace EQLogParser.Audio
 
     public async Task LoadValidVoicesAsync()
     {
-      if (!PiperTts.Initialize() && !_useKokoro && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
+      // Windows voices only matter when neither neural engine is running; use the already-resolved flags so this
+      // does not call PiperTts.Initialize(), which mutates the native dll search path as a side effect.
+      if (!_usePiper && !_useKokoro && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
       {
         SpeechSynthesizer synth = null;
         IReadOnlyList<VoiceInformation> voices;
