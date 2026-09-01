@@ -200,6 +200,31 @@ Two things make swapping safe rather than merely convenient:
   a name it does not have: a stale name would otherwise cling to a player for the rest of its life and be spoken
   quietly as a different voice.
 
+### Windows voices are proven, not assumed
+
+Windows is the only engine with no files to check: the voices live in the operating system, so "is it available?" has no
+answer short of asking one to speak. Historically the code answered *yes* unconditionally and swallowed whatever came
+back, which reads as silence with nothing in the log.
+
+Now `LoadVoicesAsync` records the verdict (`WindowsTtsEngine.IsAvailable`) and everything downstream — engine choice at
+startup, what the picker lets you click, whether a switch is honored — reads it:
+
+- **Unknown counts as available.** The probe only runs for the engine that actually starts, so an unprobed engine must
+  not be hidden. This is the last engine standing; hiding it on a guess would silence someone who is fine.
+- **False means both APIs came back empty.** WinRT `SpeechSynthesizer` and legacy SAPI are checked independently and
+  either one is enough: a machine with only legacy voices installed stays available. Wine and Linux emulators, and
+  Windows images with the speech runtime removed, produce nothing from both.
+- **An engine with no voices is not a switch target.** `SwitchEngineAsync` asks the new engine for its voice list after
+  `LoadVoicesAsync` and refuses it if empty, staying on the current engine instead of reporting a successful switch
+  into silence.
+- If nothing at startup turns out to be usable, `LoadValidVoicesAsync` logs it. That line is the difference between a
+  bug report saying "no audio" and one that says what to fix.
+
+The picker greys an engine out only when there is neither a way to use it nor a way to get it: Piper and Kokoro stay
+clickable while not installed because clicking them is how they get downloaded, and Windows goes grey when it has been
+caught having no voices. `GetEngineDescription` in the dialog says so in words too — the Windows voices come from the
+OS, which is why a Wine or Linux session usually has none.
+
 ### What installs and what downloads
 
 The installer carries the app plus two small assemblies that `EQLogParser.Audio.dll` is compiled against
