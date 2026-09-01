@@ -209,11 +209,18 @@ back, which reads as silence with nothing in the log.
 Now `LoadVoicesAsync` records the verdict (`WindowsTtsEngine.IsAvailable`) and everything downstream — engine choice at
 startup, what the picker lets you click, whether a switch is honored — reads it:
 
+- **Wine is answered before anything has to fail.** `ntdll.dll` exports `wine_get_version` and real Windows never has,
+  so asking for that export is not a heuristic about build numbers or registry keys a service pack can move. The check
+  is worth its cost because the two errors are not equally bad: wrongly concluding "this is Wine" switches off the only
+  engine a machine has, while a wrong answer in the other direction just leaves the runtime probe below to catch it.
+  Loading `ntdll.dll` pinned to System32 keeps that from being spoofable by a planted copy next to the executable, and
+  the result is cached. Whisky, Bottles and CrossOver are all Wine underneath and land here too; a real Windows install
+  in a VM on Linux keeps its voices, which is the correct answer.
 - **Unknown counts as available.** The probe only runs for the engine that actually starts, so an unprobed engine must
   not be hidden. This is the last engine standing; hiding it on a guess would silence someone who is fine.
-- **False means both APIs came back empty.** WinRT `SpeechSynthesizer` and legacy SAPI are checked independently and
-  either one is enough: a machine with only legacy voices installed stays available. Wine and Linux emulators, and
-  Windows images with the speech runtime removed, produce nothing from both.
+- **False from the runtime probe means both APIs came back empty.** WinRT `SpeechSynthesizer` and legacy SAPI are
+  checked independently and either one is enough: a machine with only legacy voices installed stays available. Windows
+  images with the speech runtime removed produce nothing from both, which is the case this catches that Wine does not.
 - **An engine with no voices is not a switch target.** `SwitchEngineAsync` asks the new engine for its voice list after
   `LoadVoicesAsync` and refuses it if empty, staying on the current engine instead of reporting a successful switch
   into silence.
