@@ -164,6 +164,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <!-- Piper's native SDK binaries only (piperApi, piper_phonemize, espeak-ng, onnxruntime). They are here so a
+         Release build has something for sign.cmd to sign and for scripts/Build-TtsPack.ps1 -Sync to pick up; they are
+         not installed. The voice models and espeak-ng-data this folder used to carry live in the EQLogParser-TTS
+         data repo and reach users as a runtime pack. See piper-tts\README.md and docs/TtsPacks.md. -->
     <None Include="piper-tts\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
