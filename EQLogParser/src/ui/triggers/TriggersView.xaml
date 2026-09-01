@@ -55,6 +55,7 @@
           <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" LabelOrientation="Horizontal" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" PreviewMouseLeftButtonUp="VolumeSliderChanged"/>
         </Border>
       </Popup>
+      <Button x:Name="ttsEngineButton" Margin="0,0,4,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" ToolTip="Choose the Text-to-Speech engine and download the free, local, neural Kokoro voices" Click="TtsEngineClick">TTS Engine</Button>
       <Button x:Name="dictButton" Margin="0,0,4,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Phonetic Dictionary" Click="DictionaryClick">Dictionary</Button>
       <Button x:Name="quickShareButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Quick Share Settings and Received Log" Click="QuickShareClick">Quick Shares</Button>
     </StackPanel>

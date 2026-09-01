@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="KokoroSharp.CPU" Version="0.8.4" />
     <PackageReference Include="log4net" Version="3.3.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.19" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.11" />

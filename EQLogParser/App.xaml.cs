@@ -142,7 +142,7 @@ namespace EQLogParser
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
 
         MainActions.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
-        AudioManager.Initialize(AppCache);
+        AudioManager.Initialize(AppCache, null, ConfigUtil.GetSetting("TtsEngine"));
         await LoadVoicesSafe();
 
         // preload trigger DB

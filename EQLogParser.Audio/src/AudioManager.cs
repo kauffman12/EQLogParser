@@ -27,6 +27,9 @@ namespace EQLogParser.Audio
   public partial class AudioManager : IAudioManager, IDisposable
   {
     public const string AudioCacheKey = "audio-cache:";
+    public const string WindowsEngine = "Windows";
+    public const string PiperEngine = "Piper";
+    public const string KokoroEngine = "Kokoro";
     public event Action<bool> DeviceListChanged;
     public static AudioManager Instance => Lazy.Value;
 
@@ -39,6 +42,7 @@ namespace EQLogParser.Audio
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly object _deviceLock = new();
     private readonly bool _usePiper;
+    private readonly bool _useKokoro;
     private readonly List<VoiceInformation> _validVoices = [];
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
@@ -50,12 +54,17 @@ namespace EQLogParser.Audio
     // Dependencies injected by host application
     private static IMemoryCache _cache;
     private static Action<string> _showError;
+    private static string _preferredEngine;
 
     /// <summary>Call once at app startup to inject dependencies.</summary>
-    public static void Initialize(IMemoryCache cache, Action<string> showError = null)
+    /// <param name="preferredEngine">One of <see cref="WindowsEngine"/>, <see cref="PiperEngine"/>, or
+    /// <see cref="KokoroEngine"/>. If null/empty or the engine isn't available, falls back to the first
+    /// available engine in Piper, Kokoro, Windows order.</param>
+    public static void Initialize(IMemoryCache cache, Action<string> showError = null, string preferredEngine = null)
     {
       _cache = cache;
       _showError = showError;
+      _preferredEngine = preferredEngine;
     }
 
     private AudioManager()
@@ -64,11 +73,66 @@ namespace EQLogParser.Audio
       _deviceUpdateTimer = new Timer(DoUpdateDeviceList, null, Timeout.Infinite, Timeout.Infinite);
       _ = InitAudio();
 
-      if (PiperTts.Initialize())
+      if (_preferredEngine == KokoroEngine)
+      {
+        _useKokoro = KokoroTts.Initialize();
+        _usePiper = !_useKokoro && PiperTts.Initialize();
+      }
+      else if (_preferredEngine == WindowsEngine)
+      {
+        // explicit opt-out of both Piper and Kokoro
+      }
+      else if (_preferredEngine == PiperEngine)
+      {
+        _usePiper = PiperTts.Initialize();
+      }
+      else
+      {
+        // no preference saved yet (fresh install / upgrade) -- keep the legacy auto-detect order
+        _usePiper = PiperTts.Initialize();
+        _useKokoro = !_usePiper && KokoroTts.Initialize();
+      }
+
+      if (_usePiper)
       {
         Log.Info("Using piper-tts");
-        _usePiper = true;
       }
+      else if (_useKokoro)
+      {
+        Log.Info("Using kokoro-tts");
+      }
+    }
+
+    public bool IsKokoroModelAvailable() => KokoroTts.IsModelDownloaded();
+
+    public Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default) =>
+      KokoroTts.DownloadModelAsync(onProgress, cancellationToken);
+
+    /// <summary>Engines that can currently be selected: Windows is always available; Piper/Kokoro only if their
+    /// voice data has been installed/downloaded.</summary>
+    public static List<string> GetAvailableEngines()
+    {
+      var list = new List<string> { WindowsEngine };
+
+      if (PiperTts.IsVoicePackAvailable())
+      {
+        list.Add(PiperEngine);
+      }
+
+      if (KokoroTts.IsModelDownloaded())
+      {
+        list.Add(KokoroEngine);
+      }
+
+      return list;
+    }
+
+    /// <summary>The engine actually in use for this running session (selecting a different engine requires a restart).</summary>
+    public string GetActiveEngine()
+    {
+      if (_usePiper) return PiperEngine;
+      if (_useKokoro) return KokoroEngine;
+      return WindowsEngine;
     }
 
     private static void ShowAudioError()
@@ -81,7 +145,7 @@ namespace EQLogParser.Audio
 
     public async Task LoadValidVoicesAsync()
     {
-      if (!PiperTts.Initialize() && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
+      if (!PiperTts.Initialize() && !_useKokoro && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
       {
         SpeechSynthesizer synth = null;
         IReadOnlyList<VoiceInformation> voices;
@@ -125,6 +189,7 @@ namespace EQLogParser.Audio
     public List<string> GetVoiceList()
     {
       if (_usePiper) return PiperTts.GetVoiceList();
+      if (_useKokoro) return KokoroTts.GetVoiceList();
       var list = new List<string>();
 
       try
@@ -162,6 +227,7 @@ namespace EQLogParser.Audio
     public string GetDefaultVoice()
     {
       if (_usePiper) return PiperTts.GetDefaultVoice();
+      if (_useKokoro) return KokoroTts.GetDefaultVoice();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && GetVoiceInfo(null) is VoiceInformation { } voiceInfo)
       {
@@ -441,6 +507,17 @@ namespace EQLogParser.Audio
               audio = PiperTts.SynthesizeText(id, tts);
               sample = playerAudio.PiperSampleRate;
             }
+            else if (_useKokoro)
+            {
+              string kokoroVoice;
+              lock (playerAudio)
+              {
+                kokoroVoice = playerAudio.KokoroVoiceName;
+              }
+
+              audio = KokoroTts.SynthesizeText(kokoroVoice, tts);
+              sample = KokoroTts.SampleRate;
+            }
             else
             {
               SpeechSynthesizer synth = null;
@@ -691,6 +768,10 @@ namespace EQLogParser.Audio
           playerAudio.PiperSampleRate = piperVoice.Sample;
         }
       }
+      else if (_useKokoro)
+      {
+        playerAudio.KokoroVoiceName = voice;
+      }
       else
       {
         if (IsLegacyVoice(voice))
@@ -937,6 +1018,11 @@ namespace EQLogParser.Audio
           sample = voiceData.Sample;
           PiperTts.RemoveVoice(testSpeaker);
         }
+      }
+      else if (_useKokoro)
+      {
+        audio = KokoroTts.SynthesizeText(voice, tts);
+        sample = KokoroTts.SampleRate;
       }
       else
       {
@@ -1324,6 +1410,10 @@ namespace EQLogParser.Audio
         {
           PiperTts.Release();
         }
+        else if (_useKokoro)
+        {
+          KokoroTts.Release();
+        }
       }
 
       _disposed = true;
@@ -1344,6 +1434,7 @@ namespace EQLogParser.Audio
       internal SpeechSynthesizer Synth { get; set; }
       internal System.Speech.Synthesis.SpeechSynthesizer SapiSynth { get; set; }
       internal int PiperSampleRate { get; set; }
+      internal string KokoroVoiceName { get; set; }
       internal bool PlayerRequestStop { get; set; }
     }
 

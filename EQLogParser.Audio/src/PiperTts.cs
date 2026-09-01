@@ -19,6 +19,8 @@ namespace EQLogParser.Audio
 
     private PiperTts() { }
 
+    internal static bool IsVoicePackAvailable() => File.Exists(Path.Combine(PiperTtsPath, "voices", "voices.json"));
+
     internal static bool Initialize()
     {
       try
