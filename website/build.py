@@ -15,6 +15,8 @@ import subprocess
 import sys
 from xml.sax.saxutils import escape
 
+from sitecheck import find_problems
+
 # Constants
 INNO_FILE = Path('../EQLogParserInstall/EQLogParserInstall.iss')
 DIST_DIR = Path('dist')
@@ -891,6 +893,15 @@ def main(argv):
 })();'''
             body.append(script_tag)
         rn_path.write_text(str(soup), encoding='utf-8')
+
+    # Final gate: a broken link, a missing nav bar or an image with no reserved box should
+    # stop the build here instead of turning into a deployed regression.
+    problems = find_problems(DIST_DIR)
+    for problem in problems:
+        print(f'❌ {problem}')
+    if problems:
+        raise SystemExit(f'❌ {len(problems)} site check problem(s); fix them before deploying')
+    print('✅ Site checks passed')
 
     convert_md_to_rtf(Path('releasenotes.md'), RTF_OUT)
     patch_rtf_in_place(RTF_OUT)
