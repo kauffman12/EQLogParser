@@ -56,7 +56,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; If include PiperTTS
+; Piper is downloaded on demand into %LOCALAPPDATA%\EQLogParser\piper-tts and is NOT part of the installer. The
+; IncludePiperTTS define only exists to bundle it anyway, as an escape hatch for a release cut before the runtime pack
+; downloader exists (or for a LAN install with no internet). Default 0 keeps ~65 MB out of every download.
 #if IncludePiperTTS
 Source: "{#MyReleaseDir}\piper-tts\*"; DestDir: "{app}\piper-tts"; Flags: ignoreversion recursesubdirs createallsubdirs
 #endif
@@ -96,20 +98,13 @@ Source: "{#MyReleaseDir}\NAudio.WinMM.dll"; DestDir: "{app}"; Flags: ignoreversi
 Source: "{#MyReleaseDir}\SoundTouch.Net.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\SoundTouch.Net.NAudioSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
 
-; Kokoro TTS engine (KokoroSharp.CPU). The ~156MB fp16 model is downloaded on demand into
-; %LocalAppData%\EQLogParser\kokoro-tts. Only the voice embeddings we ship land in <app>\voices -- the set is chosen
-; by KokoroVoiceMasks in Directory.Build.targets; Excludes keeps Mandarin voices out even if a build produced them.
-Source: "{#MyReleaseDir}\voices\*"; DestDir: "{app}\voices"; Excludes: "voices-zh,voices-zh\*"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Kokoro TTS engine. Only the two small assemblies that EQLogParser.Audio.dll is compiled against install here, so
+; the seam types resolve with no pack present and the engine simply reports itself unavailable. Everything heavy --
+; MisakiSharp (66MB of English dictionaries), NumSharp, OpenTK, System.Numerics.Tensors, the win-x64 onnxruntime and
+; the voice embeddings -- is downloaded on demand into %LOCALAPPDATA%\EQLogParser\kokoro and found through the
+; assembly and native import resolvers. ~93MB out of the installer. See docs/DesignNotes.md -> Speech synthesis.
 Source: "{#MyReleaseDir}\KokoroSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\MisakiSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\NumSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.ML.OnnxRuntime.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\System.Numerics.Tensors.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\OpenTK.Audio.OpenAL.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\OpenTK.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\OpenTK.Mathematics.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\runtimes\win-x64\native\onnxruntime.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\runtimes\win-x64\native\onnxruntime_providers_shared.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Compression.Base.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Data.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.DocIO.Base.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -162,6 +157,19 @@ Type: files; Name: "{app}\WPFTextBoxAutoComplete.dll"
 Type: files; Name: "{app}\data\releasenotes.pdf"
 Type: files; Name: "{app}\data\triggerVariables.pdf"
 Type: files; Name: "{app}\data\triggerVariables.rtf"
+
+; Left alone on purpose: installs that bundled Piper or the Kokoro voices still have them under {app}, and the engines
+; keep reading those paths as a fallback, so deleting here would silence an upgrade until the pack is downloaded.
+; Once the downloader has shipped for a release or two, add:
+;   Type: filesandordirs; Name: "{app}\piper-tts"
+;   Type: filesandordirs; Name: "{app}\voices"
+;   Type: files; Name: "{app}\MisakiSharp.dll"
+;   Type: files; Name: "{app}\NumSharp.dll"
+;   Type: files; Name: "{app}\OpenTK.Audio.OpenAL.dll"
+;   Type: files; Name: "{app}\OpenTK.Core.dll"
+;   Type: files; Name: "{app}\OpenTK.Mathematics.dll"
+;   Type: files; Name: "{app}\System.Numerics.Tensors.dll"
+;   Type: filesandordirs; Name: "{app}\runtimes\win-x64"
 
 [Code]
 // Delete old logs

@@ -200,6 +200,36 @@ Two things make swapping safe rather than merely convenient:
   a name it does not have: a stale name would otherwise cling to a player for the rest of its life and be spoken
   quietly as a different voice.
 
+### What installs and what downloads
+
+The installer carries the app plus two small assemblies that `EQLogParser.Audio.dll` is compiled against
+(`KokoroSharp.dll`, `Microsoft.ML.OnnxRuntime.dll`) so the seam types resolve and an engine reports itself unavailable
+rather than failing. Everything heavy is fetched into per-user storage on demand:
+
+```
+%LOCALAPPDATA%\EQLogParser\kokoro\   bin\ (MisakiSharp, NumSharp, OpenTK, Numerics.Tensors)
+                                     native\ (onnxruntime.dll, providers_shared)
+                                     voices\ (*.npy + LICENSE)
+                                     model\kokoro-fp16.onnx
+%LOCALAPPDATA%\EQLogParser\piper-tts\  piperApi.dll and friends, voices\, espeak-ng-data\
+```
+
+`LocalApplicationData`, not `ApplicationData`: the Roaming folder is copied at logon and logoff on profile-redirected
+machines, and 230 MB of re-downloadable binaries is the worst possible thing to put on that path. EQLP's own state
+(`config\`, `logs\`, `archive\`) stays in Roaming where it belongs — roam what the user made, download what we ship.
+Both engines still read `{app}\piper-tts` and `{app}\voices` as a fallback so installs that predate this keep speaking
+after an upgrade; `[InstallDelete]` in the script records when those fallbacks can be removed.
+
+Nothing here needs to load at startup: .NET resolves assembly references on first use, so an availability check can be
+a plain file and hash check, with the pack located later through an assembly-resolve handler and the same native import
+resolver pattern Piper already uses.
+
+**Status:** the installer and `sign.cmd` are set up for this layout; the loader side (pack paths, resolvers, downloader)
+is the next change. Until it lands the engines still read `{app}\piper-tts`, `{app}\voices` and
+`%LOCALAPPDATA%\EQLogParser\kokoro-tts\kokoro-fp16.onnx`. Publish order is fixed by one fact either way — signing
+rewrites a file's tail, so the SHA-256 manifest the app verifies has to be generated from the signed bytes
+(`sign.cmd`, then manifest, then upload).
+
 ### Kokoro model integrity
 
 The Kokoro graph (156 MB) is not part of the installer. It is fetched over HTTPS into
