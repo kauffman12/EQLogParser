@@ -171,13 +171,21 @@ PRECONNECT_LINKS = '''<link rel="preconnect" href="https://www.googletagmanager.
 <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
 <link rel="preconnect" href="https://www.google-analytics.com" />'''
 
-# AdSense right-rail skyscraper ad unit (reused across pages)
 def adsense_skyscraper():
+    """AdSense right-rail skyscraper, reused across pages.
+
+    The box is deliberately fixed size (inline width/height plus
+    data-full-width-responsive="false") so AdSense cannot swap in a wider or taller unit
+    than the space reserved for it. Injected slots that resize after they render are the
+    most common cause of ad-driven layout shift, and unlike our own markup they cannot be
+    tested locally because AdSense serves nothing on a non-approved origin.
+    """
     return '''<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4428145487599357" crossorigin="anonymous"></script>
       <ins class="adsbygoogle"
         style="display:inline-block; width:160px; height:600px"
         data-ad-client="ca-pub-4428145487599357"
-        data-ad-slot="9757256233"></ins>
+        data-ad-slot="9757256233"
+        data-full-width-responsive="false"></ins>
       <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'''
 
 
