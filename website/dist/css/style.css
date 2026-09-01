@@ -189,6 +189,22 @@ pre code {
   padding-left: 0;
 }
 
+/* Nested (H2) entries inherit .toc ul indentation; keep the sub list tight. */
+.toc li > ul {
+  margin-top: 0.2rem;
+  margin-bottom: 0.3rem;
+}
+
+/* A two-level TOC is long enough to overflow a laptop viewport, so let it scroll in
+   place instead of hiding its tail. Narrow screens skip this: the TOC is full width
+   there and the page itself scrolls. */
+@media (min-width: 901px) {
+  .toc {
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+}
+
 .toc-toggle-btn {
   display: none;
   width: 100%;

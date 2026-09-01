@@ -20,7 +20,7 @@ DIST_DIR = Path('dist')
 RTF_OUT = Path('../EQLogParser/data/releasenotes.rtf')
 SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
 SITE_BASE_URL = 'https://eqlogparser.kizant.net'
-CSS_VERSION = '14'
+CSS_VERSION = '15'
 GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
 
 # Pages advertised in sitemap.xml, as (url path, source file whose change date
@@ -257,6 +257,52 @@ def get_version_from_inno(file_path: Path) -> str:
 def slugify(text: str) -> str:
     return re.sub(r'\W+', '-', text.strip().lower()).strip('-')
 
+
+def assign_heading_ids(soup) -> None:
+    """Give every H1/H2 a unique id so TOC links and direct anchors resolve.
+
+    Duplicate heading text used to produce duplicate ids, which made every link to it
+    jump to the first match only; a numeric suffix keeps both reachable.
+    """
+    used = {}
+    for heading in soup.find_all(['h1', 'h2']):
+        if heading.get('id'):
+            used[heading['id']] = used.get(heading['id'], 0) + 1
+            continue
+        base = slugify(heading.get_text()) or 'section'
+        count = used.get(base, 0)
+        used[base] = count + 1
+        heading['id'] = base if count == 0 else f'{base}-{count + 1}'
+
+
+def build_section_toc(soup) -> str:
+    """Build a two-level TOC: one entry per H1 with its H2 sections nested underneath.
+
+    The single-level TOC listed only H1s, which left pages such as getting-started.html
+    with one link for ten sections. Sub-entries use the .toc a.sub styling that already
+    existed in style.css but had no markup using it.
+    """
+    groups = []  # [(h1_or_None, [h2, ...])]
+    for heading in soup.find_all(['h1', 'h2']):
+        if heading.name == 'h1':
+            groups.append((heading, []))
+        elif groups:
+            groups[-1][1].append(heading)
+        else:
+            groups.insert(0, (None, [heading]))  # H2 before any H1: keep it reachable anyway
+
+    items = ''
+    for top, children in groups:
+        if top is not None:
+            items += f'<li><a href="#{top["id"]}">{escape(top.get_text())}</a>'
+        nested = ''.join(f'<li><a class="sub" href="#{child["id"]}">{escape(child.get_text())}</a></li>'
+                         for child in children)
+        if nested:
+            items += f'<ul>{nested}</ul>'
+        if top is not None:
+            items += '</li>'
+    return items
+
 def convert_markdown_to_html(md_text: str) -> str:
     return markdown.markdown(md_text, extensions=["extra"])
 
@@ -476,17 +522,8 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
     html_body = convert_markdown_to_html(md_text)
     soup = BeautifulSoup(html_body, 'html.parser')
 
-    toc_items = ''
-    for h1 in soup.find_all('h1'):
-        item = h1.get_text()
-        anchor_id = slugify(item)
-        h1['id'] = anchor_id
-        toc_items += f'<li><a href="#{anchor_id}">{item}</a></li>'
-
-    # Ensure H2 elements have IDs for anchor linking (but don't add to TOC)
-    for h2 in soup.find_all('h2'):
-        if not h2.get('id'):
-            h2['id'] = slugify(h2.get_text())
+    assign_heading_ids(soup)
+    toc_items = build_section_toc(soup)
 
     if decorate_h2:
         for h2 in soup.find_all('h2'):
