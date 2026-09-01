@@ -1,7 +1,8 @@
 # Builds the static site under dist/ (see website/requirements.txt for the venv).
 #
-#   python build.py            full build: HTML pages, sitemap.xml, release notes RTF
+#   python build.py            full build: HTML pages, sitemap.xml, feed.xml, release notes RTF
 #   python build.py sitemap    regenerate dist/sitemap.xml only
+#   python build.py feed       regenerate dist/feed.xml only (needs a built releasenotes.html)
 
 from pathlib import Path
 from bs4 import BeautifulSoup
@@ -19,6 +20,8 @@ INNO_FILE = Path('../EQLogParserInstall/EQLogParserInstall.iss')
 DIST_DIR = Path('dist')
 RTF_OUT = Path('../EQLogParser/data/releasenotes.rtf')
 SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
+FEED_OUT = DIST_DIR / 'feed.xml'
+FEED_ENTRY_LIMIT = 20
 SITE_BASE_URL = 'https://eqlogparser.kizant.net'
 CSS_VERSION = '16'
 GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
@@ -207,6 +210,8 @@ def build_head(title: str, description: str, version: str, url: str, canonical: 
   <link rel="shortcut icon" href="/favicon.ico" />
   <link rel="canonical" href="{SITE_BASE_URL}/{canonical}" />
   <link rel="sitemap" type="application/xml" href="{SITE_BASE_URL}/sitemap.xml" />
+  <link rel="alternate" type="application/atom+xml" title="EQLogParser release notes"
+        href="{SITE_BASE_URL}/feed.xml" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
   {PRECONNECT_LINKS}
@@ -505,7 +510,82 @@ def build_releasenotes_year_toc(soup) -> str:
     older = soup.find('h1', string=lambda s: s and s.strip().startswith('2.2.x'))
     if older is not None:
         items += f'<li><a href="#{older["id"]}">Older versions (2.1.x–2.2.x)</a></li>'
+    items += '<li><a class="sub" href="feed.xml">Subscribe (Atom / RSS)</a></li>'
     return build_toc('Browse by Year', items)
+
+
+# ============================================================
+# Atom feed for release notes
+# ============================================================
+# Release notes headings look like "2.3.61 | 08/31/26"; the feed needs both halves.
+RELEASE_FEED_HEADER_RE = re.compile(r'^(?P<version>\S+)\s*\|\s*(?P<date>\d{2}/\d{2}/\d{2})$')
+
+
+def build_release_feed() -> None:
+    """Write dist/feed.xml, an Atom feed of the most recent releases.
+
+    Generated from dist/releasenotes.html rather than the markdown on purpose: the entry
+    permalinks then reuse the anchors the page really has instead of re-deriving slugs in a
+    second place and drifting from them.
+    """
+    page = DIST_DIR / 'releasenotes.html'
+    if not page.exists():
+        print(f'⚠️  Warning: {page} is not built yet; skipping {FEED_OUT.name}')
+        return
+
+    soup = BeautifulSoup(page.read_text(encoding='utf-8'), 'html.parser')
+    headings = [h for h in soup.find_all('h1') if RELEASE_FEED_HEADER_RE.match(h.get_text().strip())]
+
+    entries, timestamps = [], []
+    local_zone = datetime.datetime.now().astimezone().tzinfo
+    for position, heading in enumerate(headings[:FEED_ENTRY_LIMIT]):
+        meta = RELEASE_FEED_HEADER_RE.match(heading.get_text().strip())
+        try:
+            published = datetime.datetime.strptime(meta['date'], '%m/%d/%y').replace(tzinfo=local_zone)
+        except ValueError:
+            print(f'⚠️  Warning: unreadable date in release heading "{heading.get_text().strip()}"')
+            continue
+
+        stop_at = headings[position + 1] if position + 1 < len(headings) else None
+        body = []
+        for sibling in heading.next_siblings:
+            if sibling is stop_at:
+                break
+            name = getattr(sibling, 'name', None)
+            if name is None:  # whitespace text node between blocks
+                continue
+            if name == 'span' and (sibling.get('id') or '').startswith('year-'):
+                continue  # a year marker sits before the heading it introduces
+            body.append(str(sibling))
+
+        permalink = f'{SITE_BASE_URL}/releasenotes.html#{heading["id"]}'
+        timestamps.append(published)
+        entries.append('  <entry>\n'
+                       f'    <title>EQLogParser {escape(meta["version"])}</title>\n'
+                       f'    <link href="{escape(permalink)}" />\n'
+                       f'    <id>{escape(permalink)}</id>\n'
+                       f'    <published>{format_iso_timestamp(published)}</published>\n'
+                       f'    <updated>{format_iso_timestamp(published)}</updated>\n'
+                       f'    <content type="html">{escape("".join(body))}</content>\n'
+                       '  </entry>')
+
+    if not entries:
+        print(f'⚠️  Warning: no release headings matched in {page.name}; feed not written')
+        return
+
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<feed xmlns="http://www.w3.org/2005/Atom">\n'
+           '  <title>EQLogParser release notes</title>\n'
+           '  <subtitle>New versions of the EverQuest combat log analyzer and DPS meter.</subtitle>\n'
+           f'  <link href="{escape(SITE_BASE_URL)}/releasenotes.html" />\n'
+           f'  <link rel="self" href="{escape(SITE_BASE_URL)}/feed.xml" />\n'
+           f'  <id>{escape(SITE_BASE_URL)}/feed.xml</id>\n'
+           f'  <updated>{format_iso_timestamp(max(timestamps))}</updated>\n'
+           '  <author><name>EQLogParser</name></author>\n'
+           + '\n'.join(entries) + '\n</feed>\n')
+    FEED_OUT.write_text(xml, encoding='utf-8')
+    print(f'✅ Feed generated: {FEED_OUT.resolve()} ({len(entries)} entries)')
+
 
 def build_nav_header() -> str:
     """Build the inner nav content (without outer <nav> wrapper).
@@ -734,6 +814,9 @@ def main(argv):
     if 'sitemap' in argv[1:]:
         build_sitemap()
         return
+    if 'feed' in argv[1:]:
+        build_release_feed()
+        return
 
     version = get_version_from_inno(INNO_FILE)
     home_header_html = build_nav_header()
@@ -769,6 +852,7 @@ def main(argv):
     print(f'✅ Image dimensions stamped on {stamped} <img> tags')
 
     build_sitemap()
+    build_release_feed()
 
     # Inject backward-compatible version hash resolution into releasenotes.html
     # The app generates URLs like #2-3-58 but the actual anchors include dates (e.g. #2-3-58-07-25-26)

@@ -46,6 +46,7 @@ call :upload policy.html
 call :upload status.html
 call :upload download.html
 call :uploadxml sitemap.xml
+call :uploadxml feed.xml
 call :uploadtxt robots.txt
 call :uploadcss
 call :uploadassets img
