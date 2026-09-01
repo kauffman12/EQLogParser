@@ -29,7 +29,9 @@
 #
 # Switches:
 #   -Inventory            report what is present, missing and unexpected; pack nothing
-#   -Sync                 copy runtime binaries (and Kokoro voices) from -AppRelease into the data dirs first
+#   -Sync                 fill the data dirs from -AppRelease: runtime binaries for both engines, espeak-ng-data,
+#                         Piper voices and the Kokoro .npy embeddings; hash-compared, so re-running is cheap
+#   -ModelSource <path>    kokoro-fp16.onnx to stage with -Sync (defaults to %LOCALAPPDATA%\EQLogParser\kokoro-tts)
 #   -Pack kokoro|piper|both
 #   -PiperVoices a,b      limit which voice folders go in (default: all found)
 #   -GenerateVoicesJson   rebuild voices.json from the voice folders (name and sample rate come from each .onnx.json)
@@ -41,6 +43,7 @@ param(
     [ValidateSet('kokoro', 'piper', 'both')] [string]$Pack = 'both',
     [string]$DataRoot = $PSScriptRoot,
     [string]$AppRelease = '',
+    [string]$ModelSource = '',
     [string]$OutDir = '',
     [string]$PackVersion = '1.0',
     [string[]]$PiperVoices = @('all'),
@@ -204,7 +207,7 @@ function Write-PackResult([string]$Label, [string]$ZipPath, [string]$Hex, [int]$
     $tag = "$Label-$PackVersion"
     Write-Host ''
     Write-Host "=== $Label ==="
-    Write-Host ("  {0}  ({1} MB, {2} files)" -f $leaf, $mb, $FileCount)
+    Write-Host ("  {0}  ({1} MB, {2} payload files + manifest.json)" -f $leaf, $mb, $FileCount)
     Write-Host "  sha256        $Hex"
     Write-Host "  release tag   $tag"
     Write-Host "  url to pin    https://github.com/$Repo/releases/download/$tag/$leaf"
@@ -224,13 +227,22 @@ $KokoroDir = Join-Path $DataRoot 'kokoro'
 if (-not $OutDir) { $OutDir = Join-Path $DataRoot 'out' }
 
 function Sync-FromBuild {
-    if (-not $AppRelease) { throw '-Sync needs -AppRelease <EQLogParser bin\Release\net8.0-windows... path>' }
+    if ($AppRelease -and -not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
     if (-not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
     $AppRelease = (Resolve-Path -LiteralPath $AppRelease).Path
     $copied = 0
     foreach ($n in $PiperBin) {
         $s = Join-Path $AppRelease "piper-tts\$n"
         if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $PiperDir $n); $copied++ }
+    }
+    # espeak-ng-data and the voice folders live in the app repo today (that is where the installer used to pick them up),
+    # so first run needs them too. Per-file compare because espeak-ng-data is 355 small files.
+    $copied += Sync-Tree (Join-Path $AppRelease 'piper-tts\espeak-ng-data') (Join-Path $PiperDir 'espeak-ng-data')
+    $srcVoices = Join-Path $AppRelease 'piper-tts\voices'
+    if (Test-Path -LiteralPath $srcVoices) {
+        foreach ($d in Get-ChildItem -LiteralPath $srcVoices -Directory) {
+            $copied += Sync-Tree $d.FullName (Join-Path $PiperDir "voices\$($d.Name)")
+        }
     }
     foreach ($n in $KokoroBin) {
         $s = Join-Path $AppRelease $n
@@ -248,13 +260,65 @@ function Sync-FromBuild {
             $copied++
         }
     }
-    Write-Host "sync: examined $copied runtime file(s) from $(Split-Path -Leaf $AppRelease)"
+    # The Kokoro model is not in the build output; whoever tested Kokoro has it in local app data.
+    # The Kokoro model is not in the build output; whoever last tested Kokoro has it in local app data.
+    $modelSrc = $ModelSource
+    if (-not $modelSrc) { $modelSrc = Join-Path $env:LOCALAPPDATA 'EQLogParser\kokoro-tts\kokoro-fp16.onnx' }
+    if ($modelSrc -and (Test-Path -LiteralPath $modelSrc)) {
+        if (Copy-IfChanged $modelSrc (Join-Path $KokoroDir 'model\kokoro-fp16.onnx')) { $copied++ }
+    } else {
+        Write-Host "  no kokoro model found ($modelSrc); the app can download it from upstream, or pass -ModelSource"
+    }
+    Write-Host "sync: $copied file(s) new or changed"
 }
 
-function Copy-IfChanged([string]$Source, [string]$Target) {
-    if ((Test-Path -LiteralPath $Target) -and (Get-Sha256Hex $Target) -eq (Get-Sha256Hex $Source)) { return }
+function Sync-Tree([string]$SourceDir, [string]$TargetDir) {
+    if (-not (Test-Path -LiteralPath $SourceDir)) { return 0 }
+    $count = 0
+    foreach ($f in Get-ChildItem -LiteralPath $SourceDir -Recurse -File) {
+        $rel = Get-RelativePath $SourceDir $f.FullName
+        if (Copy-IfChanged $f.FullName (Join-Path $TargetDir ($rel -replace '/', '\')) -Quiet) { $count++ }
+    }
+    if ($count -gt 0) { Write-Host ("  {0}: {1} file(s) new or changed" -f (Split-Path -Leaf $SourceDir), $count) }
+    return $count
+}
+
+# Checked before anything is staged, so a half-populated data dir produces one readable list instead of an exception from
+# three functions deep -- after the other pack has already been built.
+function Get-KokoroMissing {
+    $m = @()
+    foreach ($n in $KokoroBin) { if (-not (Test-Path -LiteralPath (Join-Path $KokoroDir "bin\$n"))) { $m += "kokoro/bin/$n" } }
+    foreach ($n in $KokoroNative) { if (-not (Test-Path -LiteralPath (Join-Path $KokoroDir "native\$n"))) { $m += "kokoro/native/$n" } }
+    $v = Join-Path $KokoroDir 'voices'
+    if (@(Get-ChildItem -LiteralPath $v -Filter *.npy -File -ErrorAction SilentlyContinue).Count -eq 0) { $m += 'kokoro/voices/*.npy' }
+    return $m
+}
+
+function Get-PiperMissing {
+    $m = @()
+    foreach ($n in $PiperBin) { if (-not (Test-Path -LiteralPath (Join-Path $PiperDir $n))) { $m += "piper-tts/$n" } }
+    if (-not (Test-Path -LiteralPath (Join-Path $PiperDir 'espeak-ng-data'))) { $m += 'piper-tts/espeak-ng-data/  (355 files: phoneme tables and language data Piper needs to speak at all)' }
+    $vd = Join-Path $PiperDir 'voices'
+    if (@(Get-VoiceDirs $vd).Count -eq 0) { $m += 'piper-tts/voices/<name>/*.onnx  (at least one voice folder holding a model)' }
+    if (-not $GenerateVoicesJson -and -not (Test-Path -LiteralPath (Join-Path $vd 'voices.json'))) { $m += "piper-tts/voices/voices.json  (or pass -GenerateVoicesJson to build it from the voice folders)" }
+    return $m
+}
+
+function Assert-PackInputs([string]$Engine, [object[]]$Missing) {
+    if ($Missing.Count -eq 0) { Write-Host "$Engine inputs: complete"; return }
+    $lines = @("$Engine pack is missing input(s):")
+    foreach ($x in $Missing) { $lines += "  $x" }
+    $lines += 'fix by copying them into the data dirs, or run:'
+    $lines += "  .\Build-TtsPack.ps1 -Sync -AppRelease <EQLogParser bin\Release\net8.0-windows10.0.17763.0>"
+    $lines += 'then: .\Build-TtsPack.ps1 -Inventory'
+    throw ($lines -join [Environment]::NewLine)
+}
+
+function Copy-IfChanged([string]$Source, [string]$Target, [switch]$Quiet) {
+    if ((Test-Path -LiteralPath $Target) -and (Get-Sha256Hex $Target) -eq (Get-Sha256Hex $Source)) { return $false }
     Copy-FileTo $Source (Split-Path -Parent $Target) (Split-Path -Leaf $Target)
-    Write-Host "  copied $(Split-Path -Leaf $Source)"
+    if (-not $Quiet) { Write-Host "  copied $(Split-Path -Leaf $Source)" }
+    return $true
 }
 
 # ------------------------------------------------------------------- verify
@@ -288,39 +352,33 @@ if ($Verify) {
 }
 
 # ------------------------------------------------------------------- inventory
-$missing = @()
 if ($Inventory -or $Sync) { Sync-FromBuild }
 
 if ($Inventory) {
     Write-Host "data root: $DataRoot"
-    foreach ($n in $PiperBin) { $p = Join-Path $PiperDir $n; if (-not (Test-Path $p)) { $missing += "piper-tts/$n" } }
-    $ed = Join-Path $PiperDir 'espeak-ng-data'
-    if (-not (Test-Path $ed)) { $missing += 'piper-tts/espeak-ng-data/' }
-    foreach ($n in $KokoroBin) { $p = Join-Path $KokoroDir "bin\$n"; if (-not (Test-Path $p)) { $missing += "kokoro/bin/$n" } }
-    foreach ($n in $KokoroNative) { $p = Join-Path $KokoroDir "native\$n"; if (-not (Test-Path $p)) { $missing += "kokoro/native/$n" } }
-    $kv = Join-Path $KokoroDir 'voices'
-    $npy = @()
-    if (Test-Path -LiteralPath $kv) { $npy = @(Get-ChildItem -LiteralPath $kv -Filter *.npy -File) }
-    if ($npy.Count -eq 0) { $missing += 'kokoro/voices/*.npy' }
-
     Write-Host ''
     Write-Host 'piper voices:'
     foreach ($v in Get-VoiceDirs (Join-Path $PiperDir 'voices')) {
         Write-Host ("  {0,-26} {1,7:N1} MB" -f $v.Name, ((Get-DirBytes $v.FullName) / 1MB))
     }
-    Write-Host ''
+    $kv = Join-Path $KokoroDir 'voices'
+    $npy = @(Get-ChildItem -LiteralPath $kv -Filter *.npy -File -ErrorAction SilentlyContinue)
     if ($npy.Count -gt 0) {
         Write-Host ("kokoro voices: {0} .npy, {1:N1} MB" -f $npy.Count, ((Get-DirBytes $kv) / 1MB))
-    } else {
-        Write-Host 'kokoro voices: none'
-    }
+    } else { Write-Host 'kokoro voices: none' }
     $model = Join-Path $KokoroDir 'model\kokoro-fp16.onnx'
     if (Test-Path -LiteralPath $model) {
         Write-Host ("kokoro model : {0:N1} MB  sha256 {1}" -f ((Get-Item $model).Length / 1MB), (Get-Sha256Hex $model))
-    } else { Write-Host 'kokoro model : not present (the app can download it instead)' }
+    } else { Write-Host 'kokoro model : not present (the app downloads it from upstream instead)' }
     Write-Host ''
-    if ($missing.Count -eq 0) { Write-Host 'inventory: complete' }
-    else { Write-Host 'inventory: missing'; $missing | ForEach-Object { Write-Host "  $_" } }
+    $missing = @()
+    if ($Pack -eq 'piper' -or $Pack -eq 'both') { $missing += Get-PiperMissing }
+    if ($Pack -eq 'kokoro' -or $Pack -eq 'both') { $missing += Get-KokoroMissing }
+    if ($missing.Count -eq 0) { Write-Host "inventory: complete for $Pack" }
+    else {
+        Write-Host "inventory: missing for $Pack"
+        $missing | ForEach-Object { Write-Host "  $_" }
+    }
     return
 }
 
@@ -337,9 +395,7 @@ function New-StagedDir([string]$Name) {
 }
 
 if ($Pack -eq 'kokoro' -or $Pack -eq 'both') {
-    if (-not (Test-Path -LiteralPath $KokoroDir)) {
-        throw "no kokoro data dir at $KokoroDir -- run -Inventory to list what is missing, -Sync -AppRelease <build> to fill in the binaries, or -DataRoot to point somewhere else"
-    }
+    Assert-PackInputs 'kokoro' (Get-KokoroMissing)
     $stage = New-StagedDir 'kokoro'
     try {
         foreach ($n in $KokoroBin) { Copy-FileTo (Join-Path $KokoroDir "bin\$n") $stage "bin/$n" }
@@ -372,11 +428,8 @@ if ($Pack -eq 'kokoro' -or $Pack -eq 'both') {
 }
 
 if ($Pack -eq 'piper' -or $Pack -eq 'both') {
-    if (-not (Test-Path -LiteralPath $PiperDir)) {
-        throw "no piper-tts data dir at $PiperDir -- run -Inventory to list what is missing, -Sync -AppRelease <build> to fill in the binaries, or -DataRoot to point somewhere else"
-    }
+    Assert-PackInputs 'piper' (Get-PiperMissing)
     $voices = Get-VoiceDirs (Join-Path $PiperDir 'voices')
-    if ($voices.Count -eq 0) { throw "no voice folders with a .onnx model under $(Join-Path $PiperDir 'voices')" }
 
     $stage = New-StagedDir 'piper'
     try {
@@ -412,21 +465,53 @@ if ($Pack -eq 'piper' -or $Pack -eq 'both') {
                 }
             }
             if ($entries.Count -eq 0) { throw 'generated voices.json would list nothing' }
-            [IO.File]::WriteAllText((Join-Path $stage 'voices\voices.json'), (@{ Voices = $entries } | ConvertTo-Json -Depth 5))
-            Write-Host "  voices.json generated for $($entries.Count) model(s)"
+            # Names come from each model's _meta.name; paths stay voices-relative with forward slashes, matching the
+            # format PiperTtsEngine expects.
+            $text = (@{ Voices = $entries } | ConvertTo-Json -Depth 5)
+            [IO.File]::WriteAllText((Join-Path $stage 'voices\voices.json'), $text)
+            # Keep the data dir in step with the pack, so the mapping that ships is the one in git.
+            [IO.File]::WriteAllText((Join-Path $PiperDir 'voices\voices.json'), $text)
+            Write-Host "  voices.json generated for $($entries.Count) model(s) and written to piper-tts\voices\"
         } else {
             $vj = Join-Path $PiperDir 'voices\voices.json'
             if (-not (Test-Path -LiteralPath $vj)) { throw "no voices.json at $vj (or use -GenerateVoicesJson)" }
             Copy-FileTo $vj $stage 'voices/voices.json'
         }
 
-        # A name in voices.json whose files are not in the pack is silence on a user's machine, so make it a build error.
+        # A name in voices.json whose files are not in the pack is silence on a user's machine, so it fails the build --
+        # and says what is actually on disk, because the usual cause is a voice folder whose files are named differently
+        # than the entry claims. -GenerateVoicesJson builds the mapping from the files themselves and cannot drift.
         $doc = Get-Content -LiteralPath (Join-Path $stage 'voices\voices.json') -Raw | ConvertFrom-Json
-        foreach ($v in $doc.Voices) {
-            foreach ($rel in @($v.Model, $v.Config)) {
-                if (-not (Test-Path -LiteralPath (Join-Path $stage ($rel -replace '/', '\')))) {
-                    throw "voices.json lists '$($v.Name)' -> $rel which is not in the pack"
+        foreach ($entry in $doc.Voices) {
+            foreach ($rel in @($entry.Model, $entry.Config)) {
+                # voices.json paths are relative to the voices directory (that is how PiperTtsEngine resolves them), so
+                # they land under voices/ inside the pack -- not at the pack root.
+                $inPack = Join-Path $stage ('voices\' + ($rel -replace '/', '\'))
+                if (Test-Path -LiteralPath $inPack) { continue }
+
+                $folder = Split-Path -Parent $rel
+                $srcFolder = Join-Path $PiperDir ('voices\' + ($folder -replace '/', '\'))
+                $lines = @("voices.json lists '$($entry.Name)' -> $rel which is not in the pack")
+                if (-not (Test-Path -LiteralPath $srcFolder)) {
+                    $have = @(Get-VoiceDirs (Join-Path $PiperDir 'voices')).Name -join ', '
+                    $lines += "  there is no voice folder '$folder' under piper-tts\voices (found: $have)"
+                } else {
+                    $listing = @()
+                    foreach ($f in Get-ChildItem -LiteralPath $srcFolder -File | Select-Object -First 6) { $listing += $f.Name }
+                    $lines += "  piper-tts\voices\$folder actually contains: $($listing -join ', ')"
+                    $wantExt = [IO.Path]::GetExtension($rel)
+                    $key = [IO.Path]::GetFileNameWithoutExtension($rel)
+                    $near = Get-ChildItem -LiteralPath $srcFolder -File |
+                        Where-Object { $_.Name -like "*$key*" -or $_.Extension -eq $wantExt } |
+                        Select-Object -First 3
+                    foreach ($c in $near) {
+                        if ($c.Extension -eq $wantExt -and $c.Name -ne [IO.Path]::GetFileName($rel)) {
+                            $lines += "    did you mean: $folder/$($c.Name)"
+                        }
+                    }
                 }
+                $lines += 'fix the entry, or run with -GenerateVoicesJson to build voices.json from the files on disk'
+                throw ($lines -join [Environment]::NewLine)
             }
         }
 
@@ -434,7 +519,7 @@ if ($Pack -eq 'piper' -or $Pack -eq 'both') {
         Write-Host ''
         Write-Host ("piper: {0} voice(s), {1:N0} MB of voice data" -f $voices.Count, ($voiceBytes / 1MB))
         Test-PackSignatures $stage
-        $files = New-ManifestIn $stage 'piper' @{ voiceCount = $doc.Voices.Count }
+        $files = New-ManifestIn $stage 'piper' @{ voiceCount = @($doc.Voices).Count }
         $zip = Join-Path $OutDir "piper-$PackVersion.zip"
         Write-PackResult 'piper' $zip (New-PackZip $stage $zip) $files.Count
     } finally { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }
