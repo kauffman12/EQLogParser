@@ -40,6 +40,15 @@ SITEMAP_PAGES = [
     ('/policy.html', Path('policy.md')),
 ]
 
+# H1 sections whose sub-sections stay out of the TOC (the heading itself is still listed,
+# so its anchor remains reachable from elsewhere). The FAQ questions are full sentences of
+# up to 100 characters, which wrapped to three or five lines each and made the sidebar
+# taller than a laptop viewport; the shorter headings elsewhere nest fine, so this is
+# scoped to the one page that needed it.
+TOC_HIDE_CHILDREN = {
+    'faq.html': ('F.A.Q',),
+}
+
 # <title> and meta description for each page, in one place: search results are how anyone
 # new finds this site, and every page used to share one generic description. Keep titles
 # under ~60 characters and descriptions under ~160 so Google does not truncate them, and
@@ -299,12 +308,15 @@ def assign_heading_ids(soup) -> None:
         heading['id'] = base if count == 0 else f'{base}-{count + 1}'
 
 
-def build_section_toc(soup) -> str:
+def build_section_toc(soup, hide_children=()) -> str:
     """Build a two-level TOC: one entry per H1 with its H2 sections nested underneath.
 
     The single-level TOC listed only H1s, which left pages such as getting-started.html
     with one link for ten sections. Sub-entries use the .toc a.sub styling that already
     existed in style.css but had no markup using it.
+
+    `hide_children` names H1 sections whose nested links should be left out; the heading
+    itself still appears, so its anchor stays reachable from elsewhere.
     """
     groups = []  # [(h1_or_None, [h2, ...])]
     for heading in soup.find_all(['h1', 'h2']):
@@ -319,6 +331,8 @@ def build_section_toc(soup) -> str:
     for top, children in groups:
         if top is not None:
             items += f'<li><a href="#{top["id"]}">{escape(top.get_text())}</a>'
+            if top.get_text().strip() in hide_children:
+                children = []
         nested = ''.join(f'<li><a class="sub" href="#{child["id"]}">{escape(child.get_text())}</a></li>'
                          for child in children)
         if nested:
@@ -622,7 +636,7 @@ def process_markdown_to_html(version: str, url: str, input_path: Path, output_pa
     soup = BeautifulSoup(html_body, 'html.parser')
 
     assign_heading_ids(soup)
-    toc_items = build_section_toc(soup)
+    toc_items = build_section_toc(soup, TOC_HIDE_CHILDREN.get(output_path.name, ()))
 
     if decorate_h2:
         for h2 in soup.find_all('h2'):
