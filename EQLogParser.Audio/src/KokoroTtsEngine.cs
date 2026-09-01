@@ -84,9 +84,21 @@ namespace EQLogParser.Audio
 
     public void SetVoice(string playerId, string voice)
     {
-      if (!string.IsNullOrEmpty(playerId))
+      if (string.IsNullOrEmpty(playerId))
+      {
+        return;
+      }
+
+      // Bind only names this engine actually has. A name left over from another engine, or from a voice that was
+      // removed, would otherwise stick to the player forever and quietly be spoken as the default voice.
+      if (!string.IsNullOrEmpty(voice) && FindVoice(voice) is { } found &&
+          string.Equals(found.Name, voice, StringComparison.OrdinalIgnoreCase))
       {
         _playerVoices[playerId] = voice;
+      }
+      else
+      {
+        _playerVoices.TryRemove(playerId, out _);
       }
     }
 
@@ -115,9 +127,19 @@ namespace EQLogParser.Audio
 
     public void Dispose()
     {
-      _synth?.Dispose();
-      _synth = null;
-      _playerVoices.Clear();
+      try
+      {
+        _synth?.Dispose();
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Unable to dispose the kokoro-tts session", ex);
+      }
+      finally
+      {
+        _synth = null;
+        _playerVoices.Clear();
+      }
     }
 
     internal static bool IsModelDownloaded() => File.Exists(ModelPath);

@@ -1063,6 +1063,30 @@ namespace EQLogParser
     {
       var window = new TtsEngineWindow();
       window.ShowDialog();
+
+      // voices belong to the engine, and the engine can change while that dialog is open
+      RefreshVoiceList();
+    }
+
+    // Repopulates the voice combo after an engine switch. Selection changes here are suppressed: OptionsChanged writes
+    // the config and speaks a preview.
+    private void RefreshVoiceList()
+    {
+      var available = AudioManager.Instance.GetVoiceList();
+
+      if (voices.ItemsSource is List<string> current && current.SequenceEqual(available))
+      {
+        return;
+      }
+
+      _ready = false;
+      voices.ItemsSource = available;
+
+      var index = !string.IsNullOrEmpty(_theConfig?.Voice) ? available.IndexOf(_theConfig.Voice) : -1;
+      voices.SelectedIndex = index >= 0
+        ? index
+        : Math.Max(available.IndexOf(AudioManager.Instance.GetDefaultVoice()), 0);
+      _ready = true;
     }
 
     private void QuickShareClick(object sender, RoutedEventArgs e)

@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 namespace EQLogParser.Audio
 {
   /*
-   * A speech engine turns callout text into 16 bit mono PCM. AudioManager resolves exactly one engine at startup
-   * and talks to nothing else, so adding an engine means adding a class instead of branching through the manager.
+   * A speech engine turns callout text into 16 bit mono PCM. AudioManager talks to exactly one engine at a time and
+   * swaps that instance when the user picks another one, so adding an engine means adding a class instead of
+   * branching through the manager.
    *
    * Threading: SynthesizeForPlayerAsync / SynthesizeVoiceAsync are serialized by AudioManager. Piper keeps a
    * process-wide native voice table and Kokoro runs a single inference session; neither is documented as safe to
@@ -30,7 +31,11 @@ namespace EQLogParser.Audio
     /* The voice a player will actually speak with, empty resolved to the default. Used for cache keys and logs. */
     string GetVoice(string playerId);
 
-    /* Bind a player to a voice, called when the player is registered and whenever the user changes it. */
+    /*
+     * Bind a player to a voice, called when the player is registered, whenever the user changes it, and again for
+     * every player when a new engine takes over. A name this engine does not have must be dropped rather than kept,
+     * so the player falls back to this engine's default voice.
+     */
     void SetVoice(string playerId, string voice);
 
     /* Drop everything held for a player. Safe to call for an unknown player. */
@@ -72,8 +77,8 @@ namespace EQLogParser.Audio
       return new WindowsTtsEngine();
     }
 
-    /* Returns the engine, or null when it is not usable on this machine. */
-    private static ITtsEngine CreateNamed(string name) => name switch
+    /* Returns the engine with this exact name, or null when it is not usable on this machine. */
+    internal static ITtsEngine CreateNamed(string name) => name switch
     {
       AudioManager.KokoroEngine => KokoroTtsEngine.TryCreate(),
       AudioManager.PiperEngine => PiperTtsEngine.TryCreate(),

@@ -153,7 +153,8 @@ Recorded so they are not mistaken for open bugs — each was reviewed and left a
 ## Speech synthesis and TTS engines
 
 The audio subsystem can speak trigger callouts with one of three engines: the Windows speech API, Piper, or
-Kokoro. Only one is active per session; `AudioManager` resolves it once at startup and keeps using it.
+Kokoro. One speaks at a time. Which one is a user setting (`TtsEngine`), applied at startup and switchable while the
+app runs.
 
 ### One engine behind ITtsEngine
 
@@ -176,8 +177,28 @@ the neural engines are CPU-bound and overlapping calls only slow every caller do
 
 Synthesized PCM is cached in the same memory cache used for audio files, keyed by engine, voice and a hash of the text
 (60 minute sliding expiry, sized in bytes so the existing 100 MB budget accounts for it). A line like `Got the level
-90` plays dozens of times a raid, so only the first occurrence pays for inference; a cache hit takes no engine lock at
-all. The text is hashed rather than used verbatim so a long custom callout cannot produce an unbounded key.
+90` plays dozens of times a raid, so only the first occurrence pays for inference. The text is hashed rather than used
+verbatim so a long custom callout cannot produce an unbounded key. Even the cache lookup runs under the gate: doing it
+outside would mean reading `_tts` without the lock that keeps synthesis and engine swaps apart.
+
+### Switching engines while running
+
+`AudioManager.SwitchEngineAsync` builds the requested engine, lets it discover its voices, re-binds every player, swaps
+it in and disposes the one it replaced. `Tools > Select TTS engine...` calls it on selection change and after a Kokoro
+download finishes, so picking an engine takes effect on the next callout instead of on the next start. The saved
+setting still decides what a fresh launch uses, and a switch that cannot be honored (model missing, native library
+refusing to load) leaves the current engine speaking rather than leaving the app without speech.
+
+Two things make swapping safe rather than merely convenient:
+
+- The whole switch runs under the synthesis `SemaphoreSlim`, so an engine is created and destroyed while nothing can
+  be speaking through it. Synthesis re-reads `_tts` *after* acquiring that gate, which is why a callout that arrives
+  mid switch cannot end up using a retired engine, nor cache PCM under the wrong engine's key.
+- A voice name from one engine means nothing to another, so `AudioManager` remembers what the host asked each player
+  to speak with (`_requestedVoices`) and replays those names to the new engine. The engine binds the names it has and
+  drops the rest, which sends that player back to the engine's default voice. Kokoro deliberately refuses to remember
+  a name it does not have: a stale name would otherwise cling to a player for the rest of its life and be spoken
+  quietly as a different voice.
 
 ### Kokoro model integrity
 

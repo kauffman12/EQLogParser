@@ -49,11 +49,15 @@ namespace EQLogParser.Audio
     /// <summary>True if the Kokoro model has already been downloaded to local app data.</summary>
     bool IsKokoroModelAvailable();
 
-    /// <summary>Downloads the Kokoro model to local app data. Takes effect after the app is restarted.</summary>
+    /// <summary>Downloads the Kokoro model to local app data.</summary>
     Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default);
 
     // --- TTS engine selection ---
-    /// <summary>The engine actually in use for this running session. Changing the preferred engine requires a restart.</summary>
+    /// <summary>The engine actually in use for this running session.</summary>
     string GetActiveEngine();
+
+    /// <summary>Switches the speech engine without a restart; only engines whose components are already on disk can
+    /// be selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
+    Task<bool> SwitchEngineAsync(string engine);
   }
 }

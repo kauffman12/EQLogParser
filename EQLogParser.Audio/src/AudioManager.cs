@@ -44,7 +44,15 @@ namespace EQLogParser.Audio
     private readonly SemaphoreSlim _synthGate = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly object _deviceLock = new();
-    private readonly ITtsEngine _tts;
+
+    /* Swapped in place when the user picks another engine mid session; read it under _synthGate when it matters. */
+    private ITtsEngine _tts;
+
+    /*
+     * What the host asked each player to speak with. The engine decides whether it can honor that name, and this is
+     * what gets handed to the next engine when the user switches engines without restarting.
+     */
+    private readonly ConcurrentDictionary<string, string> _requestedVoices = [];
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
     private bool _disposed;
@@ -107,8 +115,67 @@ namespace EQLogParser.Audio
       return list;
     }
 
-    /// <summary>The engine actually in use for this running session (selecting a different engine requires a restart).</summary>
+    /// <summary>The engine actually in use for this running session.</summary>
     public string GetActiveEngine() => _tts.Name;
+
+    /// <summary>Switches the speech engine without a restart; only engines whose components are already on disk can
+    /// be selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
+    public async Task<bool> SwitchEngineAsync(string engine)
+    {
+      if (_disposed || string.IsNullOrEmpty(engine))
+      {
+        return false;
+      }
+
+      var previous = _tts;
+
+      if (engine == previous.Name || !GetAvailableEngines().Contains(engine))
+      {
+        return engine == previous.Name;
+      }
+
+      // held for the whole switch: creation and disposal both touch process wide native state, and no synthesis may
+      // run against an engine that is being created or torn down
+      await _synthGate.WaitAsync().ConfigureAwait(false);
+
+      try
+      {
+        // Creation is where the cost is: Kokoro builds an inference session over a 156 MB graph and Windows proves
+        // every voice by synthesizing a word into a stream. Callouts that arrive meanwhile wait on this gate, which
+        // is still kinder than speaking half of one engine and half of the other.
+        var next = await Task.Run(() => TtsEngineFactory.CreateNamed(engine)).ConfigureAwait(false);
+
+        if (next is null)
+        {
+          Log.Debug($"Unable to switch the TTS engine to {engine}; staying on {previous.Name}.");
+          return false;
+        }
+
+        await next.LoadVoicesAsync().ConfigureAwait(false);
+
+        foreach (var requested in _requestedVoices)
+        {
+          next.SetVoice(requested.Key, requested.Value);
+        }
+
+        _tts = next;
+
+        // retired under the gate on purpose: every call into an engine happens under this gate, so an engine that
+        // nobody can reach any more is the only one safe to hand to the native release
+        previous.Dispose();
+
+        if (next.Name is KokoroEngine or PiperEngine)
+        {
+          Log.Info($"Using {next.Name.ToLowerInvariant()}-tts");
+        }
+
+        return true;
+      }
+      finally
+      {
+        _synthGate.Release();
+      }
+    }
 
     private static void ShowAudioError()
     {
@@ -137,15 +204,16 @@ namespace EQLogParser.Audio
     {
       if (!string.IsNullOrEmpty(voice) && _playerAudios.ContainsKey(id))
       {
+        _requestedVoices[id] = voice;
         _tts.SetVoice(id, voice);
       }
     }
 
     public void Add(string id, string voice)
     {
+      _requestedVoices[id] = voice;
       _tts.SetVoice(id, voice);
       _playerAudios.TryAdd(id, new PlayerAudio());
-
     }
 
     public void StartAudio(string id)
@@ -190,6 +258,8 @@ namespace EQLogParser.Audio
 
         if (remove)
         {
+          _requestedVoices.TryRemove(id, out _);
+
           // whatever the engine held for this player is the engine's to release, outside this lock
           _tts.RemoveVoice(id);
         }
@@ -205,7 +275,8 @@ namespace EQLogParser.Audio
       }
     }
 
-    public void TestSpeakFileAsync(string filePath, int adjustedVolume = 4) => _ = TestSpeakFileCoreAsync(filePath, adjustedVolume);
+    public void TestSpeakFileAsync(string filePath, int adjustedVolume = 4) =>
+      _ = TestSpeakFileCoreAsync(filePath, adjustedVolume);
 
     private async Task TestSpeakFileCoreAsync(string filePath, int adjustedVolume)
     {
@@ -232,7 +303,8 @@ namespace EQLogParser.Audio
       }
     }
 
-    public void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4) =>
+    public void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1,
+      int adjustedVolume = 4) =>
       _ = TestSpeakTtsCoreAsync(tts, voice, rate, playerVolume, adjustedVolume);
 
     private async Task TestSpeakTtsCoreAsync(string tts, string voice, int rate, int playerVolume, int adjustedVolume)
@@ -244,8 +316,7 @@ namespace EQLogParser.Audio
 
       try
       {
-        (var audio, var sample) = await SynthesizeCachedAsync(voice, tts,
-          () => _tts.SynthesizeVoiceAsync(voice, tts)).ConfigureAwait(false);
+        (var audio, var sample) = await SynthesizeVoiceCachedAsync(voice, tts).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -264,15 +335,16 @@ namespace EQLogParser.Audio
       }
     }
 
-    public void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null) =>
+    public void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate,
+      string fileName = null) =>
       _ = SpeakOrSaveTtsCoreAsync(tts, voice, id, specificVolume, rate, fileName);
 
-    private async Task SpeakOrSaveTtsCoreAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName)
+    private async Task SpeakOrSaveTtsCoreAsync(string tts, string voice, string id, float specificVolume, int rate,
+      string fileName)
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        (var audio, var sample) = await SynthesizeCachedAsync(voice, tts,
-          () => _tts.SynthesizeVoiceAsync(voice, tts)).ConfigureAwait(false);
+        (var audio, var sample) = await SynthesizeVoiceCachedAsync(voice, tts).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -378,7 +450,8 @@ namespace EQLogParser.Audio
     public void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume) =>
       _ = SpeakTtsCoreAsync(id, tts, priority, rate, playerVolume, adjustedVolume);
 
-    private async Task SpeakTtsCoreAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
+    private async Task SpeakTtsCoreAsync(string id, string tts, long priority, int rate, int playerVolume,
+      int adjustedVolume)
     {
       if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(tts) || !_playerAudios.ContainsKey(id))
       {
@@ -387,8 +460,7 @@ namespace EQLogParser.Audio
 
       try
       {
-        (var audio, var sample) = await SynthesizeCachedAsync(_tts.GetVoice(id), tts,
-          () => _tts.SynthesizeForPlayerAsync(id, tts)).ConfigureAwait(false);
+        (var audio, var sample) = await SynthesizeForPlayerCachedAsync(id, tts).ConfigureAwait(false);
 
         if (audio is { Length: > 0 })
         {
@@ -402,34 +474,47 @@ namespace EQLogParser.Audio
       }
     }
 
+    // Speaks for a registered player; that player's voice resolves against the engine doing the speaking.
+    private Task<(byte[] pcm, int sampleRate)> SynthesizeForPlayerCachedAsync(string playerId, string text) =>
+      SynthesizeCachedAsync(playerId, null, text, (engine, voice) => engine.SynthesizeForPlayerAsync(playerId, text));
+
+    // Preview and WAV export speak voices no player owns.
+    private Task<(byte[] pcm, int sampleRate)> SynthesizeVoiceCachedAsync(string voice, string text) =>
+      SynthesizeCachedAsync(null, voice, text, (engine, name) => engine.SynthesizeVoiceAsync(name, text));
+
     /*
      * Trigger callouts come from a small set of sentences and speech does not change for a given engine, voice and
-     * text, so the PCM is cached. A hit skips the engine entirely, which matters most for Kokoro where synthesis
-     * costs real CPU; only fresh text pays for it. The text is hashed so a long custom callout cannot produce an
-     * unbounded cache key.
+     * text, so the PCM is cached: only fresh text pays for inference, which matters most for Kokoro. The text is
+     * hashed so a long custom callout cannot produce an unbounded cache key.
+     *
+     * Everything, cache lookup included, happens under the gate. The engine can be swapped while this waits, and
+     * resolving voice, key and synthesis against one local copy means cached PCM never crosses engines and an engine
+     * that is being disposed is never spoken with: SwitchEngineAsync takes it out under this same gate.
      */
-    private async Task<(byte[] pcm, int sampleRate)> SynthesizeCachedAsync(string voice, string text,
-      Func<Task<(byte[] pcm, int sampleRate)>> synthesize)
+    private async Task<(byte[] pcm, int sampleRate)> SynthesizeCachedAsync(string playerId, string voice, string text,
+      Func<ITtsEngine, string, Task<(byte[] pcm, int sampleRate)>> synthesize)
     {
-      var key = _cache is null
-        ? null
-        : $"{AudioCacheKey}tts:{_tts.Name}:{voice}:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))}";
-
-      if (key is not null && _cache.TryGetValue(key, out object entry) &&
-          entry is CachedAudio { Data.Length: > 0 } cached)
-      {
-        return (cached.Data, cached.WaveFormat?.SampleRate ?? 0);
-      }
-
       await _synthGate.WaitAsync().ConfigureAwait(false);
 
       try
       {
-        var (pcm, sampleRate) = await synthesize().ConfigureAwait(false);
+        var engine = _tts;
+        var spokenVoice = playerId is not null ? engine.GetVoice(playerId) : voice;
+        var textHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+        var key = _cache is null ? null : $"{AudioCacheKey}tts:{engine.Name}:{spokenVoice}:{textHash}";
+
+        if (key is not null && _cache.TryGetValue(key, out object entry) &&
+            entry is CachedAudio { Data.Length: > 0 } cached)
+        {
+          return (cached.Data, cached.WaveFormat?.SampleRate ?? 0);
+        }
+
+        var (pcm, sampleRate) = await synthesize(engine, spokenVoice).ConfigureAwait(false);
 
         if (key is not null && pcm is { Length: > 0 })
         {
-          var options = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(60)).SetSize(pcm.Length);
+          var options = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(60));
+          options.SetSize(pcm.Length);
           _cache.Set(key, new CachedAudio
           {
             Data = pcm,
