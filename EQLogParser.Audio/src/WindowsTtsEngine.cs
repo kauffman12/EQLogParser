@@ -34,6 +34,9 @@ namespace EQLogParser.Audio
      */
     private static bool? _usableVoicesProven;
 
+    // 0 = not looked, 1 = Wine, 2 = not Wine. A pinnable export lookup, so it is asked once.
+    private static int _wineState;
+
     private readonly List<VoiceInformation> _validVoices = [];
     private readonly Dictionary<string, PlayerSynths> _players = [];
     private readonly object _lock = new();
@@ -45,7 +48,55 @@ namespace EQLogParser.Audio
      * installed), so each candidate is proven by synthesizing a word into a stream. Expensive, which is why it
      * runs once and only for this engine.
      */
-    internal static bool IsAvailable() => _usableVoicesProven != false;
+    internal static bool IsAvailable() => !IsRunningUnderWine() && _usableVoicesProven != false;
+
+    /*
+     * Wine answers the question before anything has to fail. wine_get_version is an ntdll export Wine added long ago
+     * and real Windows has never had, so this is not a heuristic about build numbers or registry keys that a service
+     * pack can move: either the export is there or it is not. That matters because the direction of the error is not
+     * symmetric -- wrongly saying "this is Wine" would switch off the only engine a machine has -- and a wrong yes
+     * needs Windows to grow an export it does not have. A wrong no costs nothing either: the runtime probe below is
+     * still the backstop.
+     *
+     * Covers Wine itself and the wrappers built on it (Whisky, Bottles, CrossOver). A real Windows install in a VM on
+     * Linux keeps its voices, which is right: those are ordinary Windows voice packs running on ordinary Windows.
+     */
+    private static bool IsRunningUnderWine()
+    {
+      switch (_wineState)
+      {
+        case 1:
+          return true;
+        case 2:
+          return false;
+      }
+
+      var isWine = false;
+      try
+      {
+        // System32 only: a searched-for ntdll.dll would mean anything could plant one next to the executable and make
+        // this answer whatever it liked. The handle is deliberately not released; ntdll stays mapped for the life of
+        // the process, and the answer is cached either way.
+        if (NativeLibrary.TryLoad("ntdll.dll", typeof(WindowsTtsEngine).Assembly, DllImportSearchPath.System32, out var ntdll))
+        {
+          isWine = NativeLibrary.TryGetExport(ntdll, "wine_get_version", out _);
+        }
+      }
+      catch (Exception ex)
+      {
+        // Not knowing is not the same as knowing: leave the runtime probe to decide.
+        Log.Debug("Unable to check for Wine", ex);
+        return false;
+      }
+
+      _wineState = isWine ? 1 : 2;
+      if (isWine)
+      {
+        Log.Warn("Running under Wine: the Windows voices are not offered. Enable Piper or Kokoro instead.");
+      }
+
+      return isWine;
+    }
 
     public async Task LoadVoicesAsync()
     {
