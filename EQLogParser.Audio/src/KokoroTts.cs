@@ -12,20 +12,23 @@ using System.Threading.Tasks;
 
 namespace EQLogParser.Audio
 {
-  // Wraps the KokoroSharp neural TTS engine (https://github.com/Lyrcaxis/KokoroSharp). Unlike Piper, the ~320MB
-  // model isn't bundled with the app -- it's fetched on demand into local app data the first time a user opts in.
+  // Wraps the KokoroSharp neural TTS engine (https://github.com/Lyrcaxis/KokoroSharp). Unlike Piper, the model
+  // isn't bundled with the app -- it's fetched on demand into local app data the first time a user opts in.
   internal static class KokoroTts
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    // Pinned to the release that backs the KokoroSharp NuGet version referenced by this project.
-    private const string ModelDownloadUrl = "https://github.com/Lyrcaxis/KokoroSharpBinaries/releases/download/v2.0.0/kokoro.onnx";
+    // Half precision: 156MB instead of the 310MB fp32 graph, and the loss is not audible on trigger callouts.
+    // Both names are served by the release that backs the KokoroSharp version referenced by this project.
+    private const string ModelFileName = "kokoro-fp16.onnx";
+    private const string ModelDownloadUrl =
+      "https://github.com/Lyrcaxis/KokoroSharpBinaries/releases/download/v2.0.0/" + ModelFileName;
     private const string PreferredDefaultVoice = "af_heart";
     internal const int SampleRate = 24000;
 
     private static readonly string DataDir = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EQLogParser", "kokoro-tts");
-    private static readonly string ModelPath = Path.Combine(DataDir, "kokoro.onnx");
+    private static readonly string ModelPath = Path.Combine(DataDir, ModelFileName);
 
     private static readonly object Lock = new();
     private static KokoroWavSynthesizer _synth;

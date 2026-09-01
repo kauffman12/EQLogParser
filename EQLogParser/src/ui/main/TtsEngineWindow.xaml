@@ -37,7 +37,7 @@
     <Separator Grid.Row="2" Margin="0,14,0,0" />
 
     <TextBlock Grid.Row="3" x:Name="infoText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}"
-      Text="Kokoro is a free, high quality, local neural Text-to-Speech engine with dozens of voices. It requires a one-time download of about 320MB before it can be used." />
+      Text="Kokoro is a free, high quality, local neural Text-to-Speech engine. It requires a one-time download of about 160MB before it can be used." />
     <ProgressBar Grid.Row="4" x:Name="progressBar" Height="18" Minimum="0" Maximum="100" Margin="0,14,0,0" Visibility="Collapsed" />
     <TextBlock Grid.Row="4" x:Name="statusText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}" />
 
