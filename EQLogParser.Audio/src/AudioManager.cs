@@ -8,15 +8,11 @@ using SoundTouch.Net.NAudioSupport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Media.SpeechSynthesis;
-using Windows.Storage.Streams;
 
 namespace EQLogParser.Audio
 {
@@ -27,9 +23,9 @@ namespace EQLogParser.Audio
   public partial class AudioManager : IAudioManager, IDisposable
   {
     public const string AudioCacheKey = "audio-cache:";
-    public const string WindowsEngine = "Windows";
-    public const string PiperEngine = "Piper";
-    public const string KokoroEngine = "Kokoro";
+    public const string WindowsEngine = WindowsTtsEngine.EngineName;
+    public const string PiperEngine = PiperTtsEngine.EngineName;
+    public const string KokoroEngine = KokoroTtsEngine.EngineName;
     public event Action<bool> DeviceListChanged;
     public static AudioManager Instance => Lazy.Value;
 
@@ -38,12 +34,15 @@ namespace EQLogParser.Audio
     private const int LATENCY = 72;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = [];
     private readonly ConcurrentDictionary<string, bool> _isRenderDevice = new();
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    /*
+     * Engines hold process wide native state (Piper's voice table, Kokoro's inference session), so only one
+     * synthesis runs at a time. Cached phrases never take the gate. See docs/DesignNotes.md -> Speech synthesis
+     * and TTS engines.
+     */
+    private readonly SemaphoreSlim _synthGate = new(1, 1);
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly object _deviceLock = new();
-    private readonly bool _usePiper;
-    private readonly bool _useKokoro;
-    private readonly List<VoiceInformation> _validVoices = [];
+    private readonly ITtsEngine _tts;
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
     private bool _disposed;
@@ -73,40 +72,19 @@ namespace EQLogParser.Audio
       _deviceUpdateTimer = new Timer(DoUpdateDeviceList, null, Timeout.Infinite, Timeout.Infinite);
       _ = InitAudio();
 
-      if (_preferredEngine == KokoroEngine)
-      {
-        _useKokoro = KokoroTts.Initialize();
-        _usePiper = !_useKokoro && PiperTts.Initialize();
-      }
-      else if (_preferredEngine == WindowsEngine)
-      {
-        // explicit opt-out of both Piper and Kokoro
-      }
-      else if (_preferredEngine == PiperEngine)
-      {
-        _usePiper = PiperTts.Initialize();
-      }
-      else
-      {
-        // no preference saved yet (fresh install / upgrade) -- keep the legacy auto-detect order
-        _usePiper = PiperTts.Initialize();
-        _useKokoro = !_usePiper && KokoroTts.Initialize();
-      }
+      _tts = TtsEngineFactory.Create(_preferredEngine);
 
-      if (_usePiper)
+      // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
+      if (_tts.Name is KokoroEngine or PiperEngine)
       {
-        Log.Info("Using piper-tts");
-      }
-      else if (_useKokoro)
-      {
-        Log.Info("Using kokoro-tts");
+        Log.Info($"Using {_tts.Name.ToLowerInvariant()}-tts");
       }
     }
 
-    public bool IsKokoroModelAvailable() => KokoroTts.IsModelDownloaded();
+    public bool IsKokoroModelAvailable() => KokoroTtsEngine.IsModelDownloaded();
 
     public Task<bool> DownloadKokoroModelAsync(Action<float> onProgress, CancellationToken cancellationToken = default) =>
-      KokoroTts.DownloadModelAsync(onProgress, cancellationToken);
+      KokoroTtsEngine.DownloadModelAsync(onProgress, cancellationToken);
 
     /// <summary>Engines that can currently be selected: Windows is always available; Piper/Kokoro only if their
     /// voice data has been installed/downloaded.</summary>
@@ -114,12 +92,12 @@ namespace EQLogParser.Audio
     {
       var list = new List<string> { WindowsEngine };
 
-      if (PiperTts.IsVoicePackAvailable())
+      if (PiperTtsEngine.IsInstalled())
       {
         list.Add(PiperEngine);
       }
 
-      if (KokoroTts.IsModelDownloaded())
+      if (KokoroTtsEngine.IsModelDownloaded())
       {
         list.Add(KokoroEngine);
       }
@@ -128,12 +106,7 @@ namespace EQLogParser.Audio
     }
 
     /// <summary>The engine actually in use for this running session (selecting a different engine requires a restart).</summary>
-    public string GetActiveEngine()
-    {
-      if (_usePiper) return PiperEngine;
-      if (_useKokoro) return KokoroEngine;
-      return WindowsEngine;
-    }
+    public string GetActiveEngine() => _tts.Name;
 
     private static void ShowAudioError()
     {
@@ -143,101 +116,11 @@ namespace EQLogParser.Audio
     public int GetVolume() => (int)(_appVolume * 100.0f);
     public void SetVolume(int volume) => _appVolume = volume / 100.0f;
 
-    public async Task LoadValidVoicesAsync()
-    {
-      // Windows voices only matter when neither neural engine is running; use the already-resolved flags so this
-      // does not call PiperTts.Initialize(), which mutates the native dll search path as a side effect.
-      if (!_usePiper && !_useKokoro && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && _validVoices.Count == 0)
-      {
-        SpeechSynthesizer synth = null;
-        IReadOnlyList<VoiceInformation> voices;
+    public Task LoadValidVoicesAsync() => _tts.LoadVoicesAsync();
 
-        try
-        {
-          synth = new SpeechSynthesizer();
-          voices = SpeechSynthesizer.AllVoices; // this can also throw on some machines
-        }
-        catch
-        {
-          synth?.Dispose();
-          return;
-        }
+    public List<string> GetVoiceList() => _tts.GetVoices();
 
-        try
-        {
-          foreach (var voice in voices)
-          {
-            if (await IsVoicePlayableAsync(synth, voice))
-            {
-              // prefer default first
-              if (SpeechSynthesizer.DefaultVoice?.Id == voice?.Id)
-              {
-                _validVoices.Insert(0, voice);
-              }
-              else
-              {
-                _validVoices.Add(voice);
-              }
-            }
-          }
-        }
-        finally
-        {
-          synth.Dispose();
-        }
-      }
-    }
-
-    public List<string> GetVoiceList()
-    {
-      if (_usePiper) return PiperTts.GetVoiceList();
-      if (_useKokoro) return KokoroTts.GetVoiceList();
-      var list = new List<string>();
-
-      try
-      {
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-        {
-          foreach (var voice in _validVoices)
-          {
-            if (voice?.DisplayName is string name)
-            {
-              list.Add(name);
-            }
-          }
-        }
-
-        using var sapi = new System.Speech.Synthesis.SpeechSynthesizer();
-#pragma warning disable CA1304 // If culture info is used then not all voices are returned
-        foreach (var voice in sapi.GetInstalledVoices())
-        {
-          if (voice is not null && voice.VoiceInfo is System.Speech.Synthesis.VoiceInfo info && !string.IsNullOrEmpty(info.Name))
-          {
-            list.Add("(Legacy) " + info.Name);
-          }
-        }
-#pragma warning restore CA1304 // Specify CultureInfo
-      }
-      catch (Exception)
-      {
-        Log.Error("Unable to read Voices from Windows SpeechSynthesizer.");
-      }
-
-      return list;
-    }
-
-    public string GetDefaultVoice()
-    {
-      if (_usePiper) return PiperTts.GetDefaultVoice();
-      if (_useKokoro) return KokoroTts.GetDefaultVoice();
-
-      if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && GetVoiceInfo(null) is VoiceInformation { } voiceInfo)
-      {
-        return voiceInfo.DisplayName;
-      }
-
-      return string.Empty;
-    }
+    public string GetDefaultVoice() => _tts.GetDefaultVoice();
 
     public void SelectDevice(string id)
     {
@@ -250,20 +133,16 @@ namespace EQLogParser.Audio
 
     public void SetVoice(string id, string voice)
     {
-      if (!string.IsNullOrEmpty(voice) && _playerAudios.TryGetValue(id, out var playerAudio))
+      if (!string.IsNullOrEmpty(voice) && _playerAudios.ContainsKey(id))
       {
-        lock (playerAudio)
-        {
-          LoadVoice(id, voice, playerAudio);
-        }
+        _tts.SetVoice(id, voice);
       }
     }
 
     public void Add(string id, string voice)
     {
-      var audio = new PlayerAudio();
-      LoadVoice(id, voice, audio);
-      _playerAudios.TryAdd(id, audio);
+      _tts.SetVoice(id, voice);
+      _playerAudios.TryAdd(id, new PlayerAudio());
 
     }
 
@@ -292,8 +171,6 @@ namespace EQLogParser.Audio
     {
       if (!string.IsNullOrEmpty(id) && _playerAudios.TryGetValue(id, out var playerAudio))
       {
-        SpeechSynthesizer cleanupSynth = null;
-        System.Speech.Synthesis.SpeechSynthesizer cleanupSapi = null;
         CancellationTokenSource cts = null;
 
         lock (playerAudio)
@@ -306,50 +183,18 @@ namespace EQLogParser.Audio
           {
             cts = playerAudio.ProcessingToken;
             _playerAudios.TryRemove(id, out _);
-
-            try
-            {
-              if (_usePiper)
-              {
-                PiperTts.RemoveVoice(id);
-              }
-              else
-              {
-                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-                {
-                  cleanupSynth = playerAudio.Synth;
-                  playerAudio.Synth = null;
-                }
-
-                cleanupSapi = playerAudio.SapiSynth;
-                playerAudio.SapiSynth = null;
-              }
-            }
-            catch (Exception)
-            {
-              // ignore
-            }
           }
+        }
+
+        if (remove)
+        {
+          // whatever the engine held for this player is the engine's to release, outside this lock
+          _tts.RemoveVoice(id);
         }
 
         try
         {
           cts?.Cancel();
-        }
-        catch (Exception)
-        {
-          // ignore
-        }
-
-        // dispose outside of locking
-        try
-        {
-          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && cleanupSynth != null)
-          {
-            cleanupSynth?.Dispose();
-          }
-
-          cleanupSapi?.Dispose();
         }
         catch (Exception)
         {
@@ -375,7 +220,7 @@ namespace EQLogParser.Audio
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        (var audio, var sample) = await SynthesizeTextAsync(voice, tts);
+        (var audio, var sample) = await _tts.SynthesizeVoiceAsync(voice, tts).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -394,7 +239,7 @@ namespace EQLogParser.Audio
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        (var audio, var sample) = await SynthesizeTextAsync(voice, tts);
+        (var audio, var sample) = await _tts.SynthesizeVoiceAsync(voice, tts).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -494,67 +339,33 @@ namespace EQLogParser.Audio
 
     public async void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
     {
-      if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(tts))
+      if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(tts) || !_playerAudios.ContainsKey(id))
       {
-        byte[] audio = null;
-        var sample = 0;
-        await _semaphore.WaitAsync();
+        return;
+      }
 
-        try
-        {
-          if (_playerAudios.TryGetValue(id, out var playerAudio))
-          {
-            if (_usePiper)
-            {
-              audio = PiperTts.SynthesizeText(id, tts);
-              sample = playerAudio.PiperSampleRate;
-            }
-            else if (_useKokoro)
-            {
-              string kokoroVoice;
-              lock (playerAudio)
-              {
-                kokoroVoice = playerAudio.KokoroVoiceName;
-              }
+      byte[] audio = null;
+      var sample = 0;
 
-              audio = KokoroTts.SynthesizeText(kokoroVoice, tts);
-              sample = KokoroTts.SampleRate;
-            }
-            else
-            {
-              SpeechSynthesizer synth = null;
-              System.Speech.Synthesis.SpeechSynthesizer sapiSynth = null;
-              lock (playerAudio)
-              {
-                synth = playerAudio.Synth;
-                sapiSynth = playerAudio.SapiSynth;
-              }
+      await _synthGate.WaitAsync().ConfigureAwait(false);
 
-              if (synth != null)
-              {
-                (audio, sample) = await SynthesizeTextToByteArrayAsync(tts, synth);
-              }
-              else if (sapiSynth != null)
-              {
-                (audio, sample) = await SynthesizeTextToByteArrayAsync(tts, sapiSynth);
-              }
-            }
-          }
-        }
-        catch (Exception ex)
-        {
-          Log.Debug("Error synthesizing text.", ex);
-        }
-        finally
-        {
-          _semaphore.Release();
-        }
+      try
+      {
+        (audio, sample) = await _tts.SynthesizeForPlayerAsync(id, tts).ConfigureAwait(false);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Error synthesizing text.", ex);
+      }
+      finally
+      {
+        _synthGate.Release();
+      }
 
-        if (audio is { Length: > 0 })
-        {
-          var waveFormat = new WaveFormat(sample, 16, 1);
-          SpeakAsync(id, audio, waveFormat, rate, priority, playerVolume, adjustedVolume);
-        }
+      if (audio is { Length: > 0 })
+      {
+        var waveFormat = new WaveFormat(sample, 16, 1);
+        SpeakAsync(id, audio, waveFormat, rate, priority, playerVolume, adjustedVolume);
       }
     }
 
@@ -758,45 +569,6 @@ namespace EQLogParser.Audio
       }
 
       return null;
-    }
-
-    // load voice. note not synchronized
-    private void LoadVoice(string id, string voice, PlayerAudio playerAudio)
-    {
-      if (_usePiper)
-      {
-        if (PiperTts.LoadVoice(id, voice, out var piperVoice))
-        {
-          playerAudio.PiperSampleRate = piperVoice.Sample;
-        }
-      }
-      else if (_useKokoro)
-      {
-        playerAudio.KokoroVoiceName = voice;
-      }
-      else
-      {
-        if (IsLegacyVoice(voice))
-        {
-          playerAudio.SapiSynth?.Dispose();
-          playerAudio.SapiSynth = CreateSapiSpeechSynthesizer(voice);
-          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-          {
-            playerAudio.Synth?.Dispose();
-            playerAudio.Synth = null;
-          }
-        }
-        else
-        {
-          if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-          {
-            playerAudio.Synth?.Dispose();
-            playerAudio.Synth = CreateSpeechSynthesizer(voice);
-            playerAudio.SapiSynth?.Dispose();
-            playerAudio.SapiSynth = null;
-          }
-        }
-      }
     }
 
     private async Task ProcessAsync(PlayerAudio playerAudio, CancellationTokenSource cancellationTokenSource)
@@ -1006,88 +778,6 @@ namespace EQLogParser.Audio
       }, cancellationTokenSource.Token);
     }
 
-    private async Task<(byte[], int)> SynthesizeTextAsync(string voice, string tts)
-    {
-      byte[] audio = null;
-      var sample = 0;
-
-      if (_usePiper)
-      {
-        const string testSpeaker = "testSpeaker";
-        if (PiperTts.LoadVoice(testSpeaker, voice, out var voiceData))
-        {
-          audio = PiperTts.SynthesizeText(testSpeaker, tts);
-          sample = voiceData.Sample;
-          PiperTts.RemoveVoice(testSpeaker);
-        }
-      }
-      else if (_useKokoro)
-      {
-        audio = KokoroTts.SynthesizeText(voice, tts);
-        sample = KokoroTts.SampleRate;
-      }
-      else
-      {
-        if (IsLegacyVoice(voice))
-        {
-          if (CreateSapiSpeechSynthesizer(voice) is { } synth)
-          {
-            (audio, sample) = await SynthesizeTextToByteArrayAsync(tts, synth);
-            synth.Dispose();
-          }
-        }
-        else
-        {
-          if (CreateSpeechSynthesizer(voice) is { } synth)
-          {
-            (audio, sample) = await SynthesizeTextToByteArrayAsync(tts, synth);
-            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240)) synth.Dispose();
-          }
-        }
-      }
-
-      return (audio, sample);
-    }
-
-    private SpeechSynthesizer CreateSpeechSynthesizer(string voice)
-    {
-      SpeechSynthesizer synth = null;
-
-      try
-      {
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-        {
-          synth = new SpeechSynthesizer();
-          if (GetVoiceInfo(voice) is { } voiceInfo)
-          {
-            synth.Voice = voiceInfo;
-          }
-        }
-      }
-      catch (Exception)
-      {
-        // not supported
-      }
-
-      return synth;
-    }
-
-    private VoiceInformation GetVoiceInfo(string name)
-    {
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) || _validVoices.Count == 0) return null;
-      if (name == null) return _validVoices[0];
-
-      foreach (var voice in _validVoices)
-      {
-        if (voice.DisplayName == name || name.StartsWith(voice.DisplayName, StringComparison.OrdinalIgnoreCase))
-        {
-          return voice;
-        }
-      }
-
-      return _validVoices[0];
-    }
-
     private bool IsRenderDevice(string deviceId)
     {
       if (_isRenderDevice.TryGetValue(deviceId, out var render))
@@ -1118,29 +808,6 @@ namespace EQLogParser.Audio
       {
         return _selectedDeviceGuid;
       }
-    }
-
-    private static System.Speech.Synthesis.SpeechSynthesizer CreateSapiSpeechSynthesizer(string voice)
-    {
-      System.Speech.Synthesis.SpeechSynthesizer synth = null;
-
-      try
-      {
-        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-        {
-          synth = new System.Speech.Synthesis.SpeechSynthesizer();
-          if (GetSapiVoiceInfo(voice) is { } voiceInfo)
-          {
-            synth.SelectVoice(voiceInfo.Name);
-          }
-        }
-      }
-      catch (Exception)
-      {
-        // not supported
-      }
-
-      return synth;
     }
 
     private static DirectSoundOut CreateDirectSoundOut(Guid device, float volume, RawSourceWaveStream stream, int rate)
@@ -1187,37 +854,6 @@ namespace EQLogParser.Audio
       return foundGuid;
     }
 
-    private static System.Speech.Synthesis.VoiceInfo GetSapiVoiceInfo(string name)
-    {
-      System.Speech.Synthesis.VoiceInfo voiceInfo = null;
-
-      try
-      {
-        using var synth = new System.Speech.Synthesis.SpeechSynthesizer();
-        voiceInfo = synth.Voice;
-        if (!string.IsNullOrEmpty(name))
-        {
-          // do not pass null for culture
-#pragma warning disable CA1304 // Specify CultureInfo
-          foreach (var voice in synth.GetInstalledVoices())
-          {
-            if (!string.IsNullOrEmpty(name) && name.Contains(voice.VoiceInfo.Name, StringComparison.OrdinalIgnoreCase))
-            {
-              voiceInfo = voice.VoiceInfo;
-              break;
-            }
-          }
-#pragma warning restore CA1304 // Specify CultureInfo
-        }
-      }
-      catch (Exception)
-      {
-        // not supported
-      }
-
-      return voiceInfo;
-    }
-
     private static async Task<byte[]> ReadFileToByteArrayAsync(AudioFileReader reader)
     {
       try
@@ -1231,70 +867,6 @@ namespace EQLogParser.Audio
         Log.Debug($"Error reading file to byte array: {reader.FileName}", ex);
         return null;
       }
-    }
-
-    private static async Task<(byte[], int)> SynthesizeTextToByteArrayAsync(string tts, SpeechSynthesizer synth)
-    {
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-      {
-        return (null, 0);
-      }
-
-      SpeechSynthesisStream stream = null;
-
-      try
-      {
-        stream = await synth.SynthesizeTextToStreamAsync(tts);
-        using var reader = new WaveFileReader(stream.AsStream());
-        return await ReadPcmAsync(reader);
-      }
-      catch (Exception ex)
-      {
-        Log.Debug("Error synthesizing text to byte array.", ex);
-      }
-      finally
-      {
-        try
-        {
-          stream?.Dispose();
-        }
-        catch (Exception)
-        {
-          // ignore dispose errors
-        }
-      }
-
-      return (null, 0);
-    }
-
-    private static async Task<(byte[], int)> SynthesizeTextToByteArrayAsync(string tts, System.Speech.Synthesis.SpeechSynthesizer synth)
-    {
-      try
-      {
-        using var mem = new MemoryStream();
-        synth.SetOutputToWaveStream(mem);
-        synth.Speak(tts);
-        synth.SetOutputToNull(); // release reference to mem
-        mem.Position = 0;
-        using var reader = new WaveFileReader(mem);
-        return await ReadPcmAsync(reader);
-      }
-      catch (Exception ex)
-      {
-        Log.Debug("Error synthesizing text to byte array.", ex);
-      }
-
-      return (null, 0);
-    }
-
-    private static async Task<(byte[], int)> ReadPcmAsync(WaveFileReader reader)
-    {
-      using var pcm = WaveFormatConversionStream.CreatePcmStream(reader);
-      using var ms = pcm.Length > 0 ? new MemoryStream((int)pcm.Length) : new MemoryStream();
-      await pcm.CopyToAsync(ms);
-      var data = ms.ToArray();
-      var sample = pcm.WaveFormat.SampleRate;
-      return (data, sample);
     }
 
     private static async Task CleanupHelperAsync(DirectSoundOut output, Stream stream, MemoryStream stream2 = null)
@@ -1359,39 +931,6 @@ namespace EQLogParser.Audio
       return current * floatIncrease;
     }
 
-    private static bool IsLegacyVoice(string voice)
-    {
-      return !string.IsNullOrEmpty(voice) && voice.StartsWith("(Legacy) ", StringComparison.OrdinalIgnoreCase);
-    }
-
-    [DebuggerNonUserCode]
-    private static async Task<bool> IsVoicePlayableAsync(SpeechSynthesizer synth, VoiceInformation voice)
-    {
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
-      {
-        return false;
-      }
-
-      try
-      {
-        synth.Voice = voice;
-        using IRandomAccessStream stream = await synth.SynthesizeTextToStreamAsync("test");
-        return true;
-      }
-      catch (FileNotFoundException)
-      {
-        return false;
-      }
-      catch (COMException)
-      {
-        return false;
-      }
-      catch (InvalidOperationException)
-      {
-        return false;
-      }
-    }
-
     public void Dispose()
     {
       Dispose(true);
@@ -1404,18 +943,10 @@ namespace EQLogParser.Audio
 
       if (disposing)
       {
-        _semaphore?.Dispose();
+        _synthGate?.Dispose();
         _deviceEnumerator?.UnregisterEndpointNotificationCallback(_notificationClient);
         _deviceEnumerator?.Dispose();
-
-        if (_usePiper)
-        {
-          PiperTts.Release();
-        }
-        else if (_useKokoro)
-        {
-          KokoroTts.Release();
-        }
+        _tts?.Dispose();
       }
 
       _disposed = true;
@@ -1428,15 +959,12 @@ namespace EQLogParser.Audio
       internal double Seconds { get; init; }
     }
 
+    // queue state only; whatever a speech engine holds for a player lives with the engine
     private sealed class PlayerAudio
     {
       internal List<PlaybackEvent> Events { get; set; } = [];
       internal PlaybackEvent CurrentEvent { get; set; }
       internal CancellationTokenSource ProcessingToken { get; set; }
-      internal SpeechSynthesizer Synth { get; set; }
-      internal System.Speech.Synthesis.SpeechSynthesizer SapiSynth { get; set; }
-      internal int PiperSampleRate { get; set; }
-      internal string KokoroVoiceName { get; set; }
       internal bool PlayerRequestStop { get; set; }
     }
 
