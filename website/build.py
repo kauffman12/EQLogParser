@@ -6,6 +6,7 @@
 from pathlib import Path
 from bs4 import BeautifulSoup
 import datetime
+import json
 import markdown
 import pypandoc  # Requires Pandoc installed
 import re
@@ -214,6 +215,37 @@ def build_head(title: str, description: str, version: str, url: str, canonical: 
   {THEME_HEAD_SCRIPT}
   <link rel="stylesheet" href="css/style.css?v={CSS_VERSION}" />
   {GA_SCRIPT}"""
+
+
+def build_structured_data(version: str, url: str) -> str:
+    """JSON-LD describing the application, for rich results on the home/download pages.
+
+    Version and installer URL come from the same values the rest of the build uses, so the
+    markup cannot drift out of date. No aggregateRating: we have no ratings to describe and
+    inventing one is a structured-data penalty.
+    """
+    data = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        'name': 'EQLogParser',
+        'url': f'{SITE_BASE_URL}/',
+        'image': f'{SITE_BASE_URL}/img/logo.png',
+        'description': PAGE_META['index.html'][1],
+        'operatingSystem': 'Windows 10, Windows 11',
+        'applicationCategory': 'Game',
+        'softwareVersion': version,
+        'downloadUrl': url,
+        'codeRepository': 'https://github.com/kauffman12/EQLogParser',
+        'license': 'https://www.apache.org/licenses/LICENSE-2.0',
+        'isAccessibleForFree': True,
+        'featureList': ['Real-time damage meter', 'Raid event tracking', 'Audio triggers',
+                        'Timer and text overlays', 'Trigger import from GINA and NAG'],
+        'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'USD'},
+    }
+    # '<' stays escaped so a '</script>' inside a string cannot end the block early.
+    payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+    return f'<script type="application/ld+json">{payload}</script>'
+
 
 def get_version_from_inno(file_path: Path) -> str:
     content = file_path.read_text(encoding='utf-8')
@@ -543,6 +575,9 @@ def update_index_html(version: str, url: str, index_path: Path, output_path: Pat
     if head:
         for script in BeautifulSoup(GA_SCRIPT, 'html.parser').find_all('script'):
             head.append(script)
+        if output_path.name in PAGE_META:
+            for tag in BeautifulSoup(build_structured_data(version, url), 'html.parser').contents:
+                head.append(tag)
         for script in BeautifulSoup(THEME_HEAD_SCRIPT, 'html.parser').find_all('script'):
             head.insert(0, script)
 
@@ -561,6 +596,7 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
 <html lang="en">
 <head>
 {build_head(title, description, version, url, 'download.html')}
+  {build_structured_data(version, url)}
   <link rel="preload" as="image" href="img/logo.png" fetchpriority="high" />
 </head>
 <body>
