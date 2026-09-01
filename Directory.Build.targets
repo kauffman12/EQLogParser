@@ -1,0 +1,46 @@
+<Project>
+
+  <!--
+    KokoroSharp ships all 157 bundled voice embeddings (~79MB) and its buildTransitive/KokoroSharp.targets
+    CopyContent target drops them into the OutputPath of every project that consumes the package transitively.
+    Microsoft.Common.targets imports NuGet's *.nuget.g.targets before this file, so redefining CopyContent here wins
+    and lets us copy only the set we want to ship.
+
+    KokoroVoiceManager.LoadVoicesFromPath() lists whatever .npy files exist under <app>\voices, so an unshipped voice
+    is simply never offered and nothing in the app needs to know about the set. The work happens only in outputs that
+    actually received KokoroSharp.dll (the app, the WPF tests, BackupUtil); class libraries don't copy package
+    assemblies locally, so they get neither the dll nor a voices folder.
+
+    KokoroVoicePrefixes selects the shipped voices by filename prefix; add prefixes to widen the picker:
+      bf bm  British English   ef em  Spanish     ff fm  French     hf hm  Hindi
+      if im  Italian           pf pm  Portuguese  jf jm  Japanese   zf zm  Mandarin
+    Mandarin lives in voices\voices-zh (+51MB) and is also excluded by name in EQLogParserInstall.iss.
+    MisakiSharp already carries the phonemizer data for every language, so a wider set costs embeddings only
+    (~0.5MB per voice); the model itself speaks all locales either way.
+  -->
+  <PropertyGroup>
+    <KokoroVoicePrefixes>af;am</KokoroVoicePrefixes>
+  </PropertyGroup>
+
+  <Target Name="CopyContent" AfterTargets="Build">
+    <ItemGroup Condition="Exists('$(OutputPath)KokoroSharp.dll')">
+      <_KokoroPrefix Include="$(KokoroVoicePrefixes)" />
+      <!-- ItemGroup batching, one glob per prefix: wildcards only expand in a literal Include, so the prefixes
+           themselves must not contain '*'. -->
+      <_KokoroWantedFile Include="$(NuGetPackageRoot)kokorosharp\*\content\voices\%(_KokoroPrefix.Identity)_*.npy" />
+      <_KokoroAttributionFile Include="$(NuGetPackageRoot)kokorosharp\*\content\voices\LICENSE" />
+      <!-- Apache-2.0 attribution for the Kokoro model and voices -->
+      <_KokoroLocalVoiceFile Include="$(OutputPath)voices\%(_KokoroPrefix.Identity)_*.npy" />
+      <_KokoroStrayFile Include="$(OutputPath)voices\**\*.*"
+                       Exclude="@(_KokoroLocalVoiceFile);$(OutputPath)voices\LICENSE" />
+    </ItemGroup>
+
+    <!-- Self-healing: keeps the folder in step with KokoroVoicePrefixes across builds. -->
+    <Delete Files="@(_KokoroStrayFile)" Condition="Exists('$(OutputPath)KokoroSharp.dll')" />
+    <!-- voices-zh is the one subfolder the package ships; Delete leaves directories behind, so drop it explicitly. -->
+    <RemoveDir Directories="$(OutputPath)voices\voices-zh" Condition="Exists('$(OutputPath)voices\voices-zh')" />
+    <Copy SourceFiles="@(_KokoroWantedFile);@(_KokoroAttributionFile)" DestinationFolder="$(OutputPath)voices"
+          SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)KokoroSharp.dll')" />
+  </Target>
+
+</Project>
