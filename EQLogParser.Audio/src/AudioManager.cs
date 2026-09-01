@@ -127,8 +127,13 @@ namespace EQLogParser.Audio
     /// runtime pack (or, for Piper, an older app installed copy) is on disk.</summary>
     public static List<string> GetAvailableEngines() => GetAllEngines().Where(EngineIsAvailable).ToList();
 
-    private static bool EngineIsAvailable(string engine) =>
-      engine == WindowsEngine || TtsPackManager.ResolveRoot(engine) is not null;
+    private static bool EngineIsAvailable(string engine) => engine switch
+    {
+      // Not assumed: the Windows voices are available until something proves otherwise, which they do on Wine and on
+      // Windows images with the speech runtime removed. See WindowsTtsEngine.IsAvailable.
+      WindowsEngine => WindowsTtsEngine.IsAvailable(),
+      _ => TtsPackManager.ResolveRoot(engine) is not null
+    };
 
     /// <summary>The engine actually in use for this running session.</summary>
     public string GetActiveEngine() => _tts.Name;
@@ -168,6 +173,15 @@ namespace EQLogParser.Audio
 
         await next.LoadVoicesAsync().ConfigureAwait(false);
 
+        // An engine that has no voice at all cannot speak, whatever its name is. Switching to one would report success
+        // and then deliver silence; the current engine keeps the microphone.
+        if (next.GetVoices().Count == 0)
+        {
+          Log.Debug($"{engine} has no usable voices; staying on {previous.Name}.");
+          next.Dispose();
+          return false;
+        }
+
         foreach (var requested in _requestedVoices)
         {
           next.SetVoice(requested.Key, requested.Value);
@@ -200,7 +214,19 @@ namespace EQLogParser.Audio
     public int GetVolume() => (int)(_appVolume * 100.0f);
     public void SetVolume(int volume) => _appVolume = volume / 100.0f;
 
-    public Task LoadValidVoicesAsync() => _tts.LoadVoicesAsync();
+    public async Task LoadValidVoicesAsync()
+    {
+      await _tts.LoadVoicesAsync().ConfigureAwait(false);
+
+      // By now the engine that started the session has been asked to prove its voices, which is the earliest point
+      // where "there is no speech on this machine" is knowable. Worth a log line: from the user's side it is only
+      // silence, and that makes for a bug report with nothing in it.
+      if (!EngineIsAvailable(_tts.Name))
+      {
+        Log.Warn($"{_tts.Name} TTS has no usable voices on this machine. Callouts stay silent until an engine is " +
+          "enabled on the TTS Engine screen.");
+      }
+    }
 
     public List<string> GetVoiceList() => _tts.GetVoices();
 

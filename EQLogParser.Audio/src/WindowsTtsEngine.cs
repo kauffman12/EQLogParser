@@ -26,6 +26,14 @@ namespace EQLogParser.Audio
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
+    /*
+     * Whether this machine can actually speak through Windows. Null until LoadVoicesAsync has looked: the engine is
+     * assumed to work until it is caught not working, because it is the last engine standing and hiding it on a
+     * hunch would silence someone. Proven false where these voices do not exist at all -- Wine and Linux emulators,
+     * a stripped Windows image, a speech runtime the user turned off.
+     */
+    private static bool? _usableVoicesProven;
+
     private readonly List<VoiceInformation> _validVoices = [];
     private readonly Dictionary<string, PlayerSynths> _players = [];
     private readonly object _lock = new();
@@ -37,10 +45,18 @@ namespace EQLogParser.Audio
      * installed), so each candidate is proven by synthesizing a word into a stream. Expensive, which is why it
      * runs once and only for this engine.
      */
+    internal static bool IsAvailable() => _usableVoicesProven != false;
+
     public async Task LoadVoicesAsync()
     {
-      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) || _validVoices.Count > 0)
+      if (_validVoices.Count > 0)
       {
+        return;
+      }
+
+      if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
+      {
+        MarkUnavailable("Windows speech needs Windows 10 or newer");
         return;
       }
 
@@ -52,9 +68,10 @@ namespace EQLogParser.Audio
         synth = new SpeechSynthesizer();
         voices = SpeechSynthesizer.AllVoices; // this can also throw on some machines
       }
-      catch (Exception)
+      catch (Exception ex)
       {
         synth?.Dispose();
+        MarkUnavailable($"Windows speech is not usable here: {ex.Message}");
         return;
       }
 
@@ -84,6 +101,28 @@ namespace EQLogParser.Audio
       {
         synth.Dispose();
       }
+
+      // Nothing playable through the modern API is only fatal if the legacy SAPI voices are missing too; plenty of
+      // machines have one and not the other, and either is enough to speak with.
+      if (_validVoices.Count == 0 && GetVoices().Count == 0)
+      {
+        MarkUnavailable("no Windows voice could be made to speak");
+      }
+      else
+      {
+        _usableVoicesProven = true;
+      }
+    }
+
+    private static void MarkUnavailable(string reason)
+    {
+      if (_usableVoicesProven == false)
+      {
+        return;
+      }
+
+      _usableVoicesProven = false;
+      Log.Warn($"Windows TTS is not available: {reason}.");
     }
 
     public List<string> GetVoices()

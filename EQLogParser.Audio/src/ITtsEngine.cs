@@ -61,7 +61,11 @@ namespace EQLogParser.Audio
       {
         AudioManager.KokoroEngine => new[] { AudioManager.KokoroEngine, AudioManager.PiperEngine, AudioManager.WindowsEngine },
         AudioManager.PiperEngine => new[] { AudioManager.PiperEngine, AudioManager.WindowsEngine },
-        AudioManager.WindowsEngine => new[] { AudioManager.WindowsEngine },
+        // Someone who asked for Windows voices on a machine that turns out not to have them (Wine, a stripped image)
+        // is better off with an engine that can speak than with the preference honored and silence delivered.
+        AudioManager.WindowsEngine => WindowsTtsEngine.IsAvailable()
+          ? new[] { AudioManager.WindowsEngine }
+          : new[] { AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine },
         _ => new[] { AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine }
       };
 
@@ -73,7 +77,9 @@ namespace EQLogParser.Audio
         }
       }
 
-      // WindowsTtsEngine always constructs, so this is unreachable.
+      // Last resort even when the Windows voices are known to be broken: AudioManager needs something to talk to, and
+      // a named engine that stays quiet is easier to reason about than a null in every caller. The picker disables it
+      // and says why, which is where this user goes next.
       return new WindowsTtsEngine();
     }
 
