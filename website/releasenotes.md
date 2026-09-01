@@ -1,5 +1,11 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.61 | 08/31/26
+1. Updated melee ADPS list to include SPA 467.
+2. Fixed a number of NAG migration bugs.
+3. Improved performance of importing triggers.
+4. Misc library updates and bug fixes.
+
 # 2.3.60 | 08/18/26
 1. Updated Trigger Manager **Character List** to allow folders to be created for organization. Code provided by **Neclub**.
 2. Some fixes to migrating NAG databases. You may want to re-run this.
