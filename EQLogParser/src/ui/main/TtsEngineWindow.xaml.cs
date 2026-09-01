@@ -85,8 +85,8 @@ namespace EQLogParser
         "The best sounding voices here, and the heaviest: a few hundred MB of memory and real CPU, so it takes a moment " +
         "to start speaking. An older machine may fall behind.",
       AudioManager.WindowsEngine =>
-        "Nothing to download and no cost at all. These voices come from Windows itself, so a Linux or Wine session " +
-        "usually has none of them, and how good they sound varies with what is installed.",
+        "Nothing to download and no cost at all. These voices come from Windows itself: they are not there under Wine, " +
+        "and how good they sound varies with the voice packs a machine has.",
       _ => "Speech runs locally on this machine."
     };
 
@@ -118,9 +118,10 @@ namespace EQLogParser
       }
       else
       {
-        // Proven unusable rather than merely unused: something asked these voices to speak and they could not.
-        engineHintText.Text = $"The {selected} voices are not usable on this machine. Add Windows voice packs, or " +
-          "enable Piper or Kokoro below.";
+        // Proven unusable rather than merely unused: this is either not real Windows -- Wine has no voices to give --
+        // or the speech runtime is missing. One of those has no fix at all, so say what the way out is.
+        engineHintText.Text = $"The {selected} voices are not available here: they come from Windows itself, and " +
+          "neither Wine nor a Windows image without the speech runtime has any. Enable Piper or Kokoro below.";
       }
     }
 
