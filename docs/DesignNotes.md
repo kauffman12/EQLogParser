@@ -217,27 +217,38 @@ rather than failing. Everything heavy is fetched into per-user storage on demand
 `LocalApplicationData`, not `ApplicationData`: the Roaming folder is copied at logon and logoff on profile-redirected
 machines, and 230 MB of re-downloadable binaries is the worst possible thing to put on that path. EQLP's own state
 (`config\`, `logs\`, `archive\`) stays in Roaming where it belongs — roam what the user made, download what we ship.
-Both engines still read `{app}\piper-tts` and `{app}\voices` as a fallback so installs that predate this keep speaking
-after an upgrade; `[InstallDelete]` in the script records when those fallbacks can be removed.
+`TtsPackManager` owns those directories: it resolves them, downloads and verifies packs, and deletes them. Publish order
+is fixed by one fact — signing rewrites a file's tail, so the SHA-256 manifest the app verifies has to be generated from
+the signed bytes (`sign.cmd`, then manifest, then upload).
 
-Nothing here needs to load at startup: .NET resolves assembly references on first use, so an availability check can be
-a plain file and hash check, with the pack located later through an assembly-resolve handler and the same native import
-resolver pattern Piper already uses.
+Nothing here needs to load at startup: .NET resolves assembly references on first use, which is what makes hosting the
+engines remotely possible at all. Two hooks cover a pack once it exists:
 
-**Status:** the installer and `sign.cmd` are set up for this layout; the loader side (pack paths, resolvers, downloader)
-is the next change. Until it lands the engines still read `{app}\piper-tts`, `{app}\voices` and
-`%LOCALAPPDATA%\EQLogParser\kokoro-tts\kokoro-fp16.onnx`. Publish order is fixed by one fact either way — signing
-rewrites a file's tail, so the SHA-256 manifest the app verifies has to be generated from the signed bytes
-(`sign.cmd`, then manifest, then upload).
+- `AssemblyLoadContext.Default.Resolving` answers `MisakiSharp`, `NumSharp`, `OpenTK*` and `System.Numerics.Tensors`
+  from `<kokoro>\bin`, using `Assembly.LoadFrom` on the default context rather than a private `AssemblyLoadContext`.
+  A second copy of a shared dependency in another context would not bind to the KokoroSharp that installs beside the
+  executable, and type identity across the seam matters more than isolation here.
+- `ResolvingUnmanagedDll` answers `onnxruntime.dll` and its provider stub from `<kokoro>\native`, which is what
+  `Microsoft.ML.OnnxRuntime`'s own P/Invoke stubs ask for. Piper needs neither: its import resolver loads
+  `piperApi.dll` by full path and the OS takes the dependencies sitting beside it.
+
+Both return "not mine" (null / `IntPtr.Zero`) for anything they do not have, so unrelated loads are untouched.
+The hooks are registered once, before any engine is constructed.
+
+Piper additionally still reads `{app}\piper-tts` when a release-installed copy is there, because installers before packs
+put it there and nobody should have to re-download 347 MB after an upgrade. Kokoro has no such fallback — it never
+shipped that way. `[InstallDelete]` in the script records when the `{app}` copies can be removed for good.
 
 ### Kokoro model integrity
 
-The Kokoro graph (156 MB) is not part of the installer. It is fetched over HTTPS into
-`%LocalAppData%\EQLogParser\kokoro-tts` the first time a user opts in, which means the file the app later executes
-with its own privileges arrives from the network rather than from a signed package.
+The Kokoro graph (156 MB) is not part of the installer. It arrives over HTTPS inside the Kokoro runtime pack the first
+time a user opts in, which means the file the app later executes with its own privileges came off the network rather
+than out of a signed package.
 
-- `KokoroTtsEngine` pins the SHA-256 that GitHub publishes for the release asset and refuses to load anything else.
-  A downloaded file is hashed before it is moved into place; on mismatch the temporary file is deleted.
+- `TtsPackManager` pins the SHA-256 of the archive and verifies every file in it against the pack's `manifest.json`
+  before promoting it into place, and `KokoroTtsEngine` independently pins the graph itself
+  (`ModelSha256`) and re-checks it before handing the path to onnxruntime. Two independent pins: a pack that was
+  built wrong, or changed after install, still does not get to run.
 - A verified model gets a `kokoro-fp16.onnx.sha256` marker beside it, so the hash pass costs nothing at every
   start. A hand-placed or previously downloaded model pays for it once, then writes the marker.
 - We do not delete a model that fails verification, and we do not re-hash on every load: a mismatch is reported in
@@ -248,12 +259,15 @@ with its own privileges arrives from the network rather than from a signed packa
 
 ### Piper native lookup
 
-`piperApi.dll` lives in `<app>\piper-tts`, not beside the executable, so it needs a search path of its own. The
+`piperApi.dll` lives in the Piper runtime pack (`%LOCALAPPDATA%\EQLogParser\piper-tts`, or `{app}\piper-tts` on
+installs that predate packs), never beside the executable, so it needs a search path of its own. The
 first implementation called `SetDllDirectory`, which is process-global and single-slot: it applied to every later
 native load by anyone in the process, silently replaced any other caller's directory, and was the cause of a real
 bug where listing Windows voices initialized Piper as a side effect.
 
 `PiperTtsEngine` now registers a `NativeLibrary` import resolver that answers exactly one library name, `piperApi.dll`,
-from `piper-tts`. Everything else returns `IntPtr.Zero` and resolves normally. Piper's own dependencies
-(`onnxruntime.dll`, `espeak-ng.dll`, `piper_phonemize.dll`) sit beside `piperApi.dll`, which the altered search
-path used by `NativeLibrary.Load` covers.
+from whichever pack directory is in play (the engine's own copy is captured when it is built, so downloading a pack
+while an older Piper is alive cannot move files out from under it — and `initialize()` re-runs against the new
+espeak-ng data when the directory changes). Everything else returns `IntPtr.Zero` and resolves normally. Piper's own
+dependencies (`onnxruntime.dll`, `espeak-ng.dll`, `piper_phonemize.dll`) sit beside `piperApi.dll`, which the altered
+search path used by `NativeLibrary.Load` covers.

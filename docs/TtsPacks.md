@@ -58,14 +58,28 @@ machine: a required binary missing from a data dir, `voices.json` naming a model
 (in `-Strict`) a binary we were supposed to sign that is still unsigned. Microsoft-signed files — both `onnxruntime`
 copies, `System.Numerics.Tensors` — are left alone instead of re-signed over.
 
+## What the app pins
+
+`EQLogParser.Audio/src/TtsPackManager.cs` holds one entry per engine: tag, asset name, archive SHA-256, install folder.
+Changing a pack means editing this table and shipping an app build that carries it.
+
+| engine | tag / asset | archive SHA-256 |
+|---|---|---|
+| Piper | `piper-1.0` → `piper-1.0.zip` | `059241c0fe2a34bf9b8762c5c17113c82a5b98356c3f21656b89ca9abcc10078` |
+| Kokoro | `kokoro-1.0` → `kokoro-1.0.zip` | `b1070b9e231dd0d08203fc89f6540c6de3d13de479bd506f63f6902194241788` |
+
 ## Publishing rules
 
-- **Never overwrite a published asset.** A released app pins its tag URL. Publish `kokoro-1.1` and ship an app build
-  that points at it.
+- **Never overwrite a published asset.** A released app pins its tag URL and its archive digest. Publish `kokoro-1.1`
+  and ship an app build whose `TtsPackManager` points at it.
 - Keep the version in the tag, the file name and `manifest.json` in step.
 - Kokoro model bytes must match the digest pinned in `KokoroTtsEngine` (see DesignNotes → Kokoro model integrity).
   Mirroring the model here is fine — same bytes, same digest, existing users unaffected — and removes someone else's
   uptime from your critical path.
+- **Bumping `Microsoft.ML.OnnxRuntime` in the app means republishing the Kokoro pack.** The managed wrapper installs
+  with the app and the native `onnxruntime.dll` comes from the pack; ONNX Runtime requires the two to be the same
+  version. Same reasoning for KokoroSharp itself: it installs with the app and runs against everything in the pack.
+  A mismatch shows up as Kokoro refusing to start, in the log, not as a crash.
 
 ## What goes in git versus releases
 
@@ -92,19 +106,30 @@ each model's `audio.sample_rate` and `_meta.name`, so there is nothing to hand-e
 the single pack lands around 350–400 MB, which every user who enables Piper downloads in one piece; that is a deliberate
 tradeoff over per-voice packs. `-PiperVoices a,b` lets you ship a subset without deleting anything.
 
-**Kokoro** — edit `KokoroVoiceMasks` in the app repo's `Directory.Build.targets` (default `af;am`, American English;
+**Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am`, American English;
 the same property stops KokoroSharp's build target from copying all 79 MB of voices into every build output), rebuild,
 `-Sync`, repack. Each `.npy` is ~0.5 MB. Anything beyond English prefixes will not work regardless: MisakiSharp's 66 MB
 is English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly one file.
 
-## Current status
+## Installing at run time
 
-The installer and `sign.cmd` are set up for this layout; the loader side — pack paths, assembly and native resolvers,
-the download flow in the TTS dialog — is not implemented yet, so today the engines read `{app}\piper-tts`, `{app}\voices`
-and `%LOCALAPPDATA%\EQLogParser\kokoro-tts\kokoro-fp16.onnx`.
-Until the loader lands, a fresh install has Windows voices only; build the installer with `IncludePiperTTS=1` for a
-release that must speak out of the box.
+The TTS Engine dialog is the whole UI: it lists all three engines, offers **Download Piper (347 MB)** / **Download
+Kokoro (224 MB)** for the ones with nothing on disk, and **Remove Files** for an installed engine that is not currently
+speaking. A finished download switches to the new engine without a restart.
 
-That is also why the app repo still carries ~87 MB under `EQLogParser/piper-tts/`: it feeds the `{app}` fallback, local
-dev builds and `IncludePiperTTS` bundles. When the loader lands, that copy can move to this repo for good and
-`-Sync -AppRelease` keeps filling in only the binaries.
+`TtsPackManager.InstallAsync` does the rest, and each step is there because the alternative is worse:
+
+1. stream the zip to `%LOCALAPPDATA%\EQLogParser\_download\<asset>.tmp`, reporting progress — nothing is touched in the
+   engine directory yet, so a dropped connection costs a retry and nothing else.
+2. hash the archive and compare it to the pin. A CDN, proxy or DNS that hands back other bytes is discarded here.
+3. extract into `<engine>.staging` and verify every `manifest.json` entry (path, size, SHA-256). Entries that resolve
+   outside the target directory abort the install — archive paths are treated as hostile even from a digest-matched zip.
+4. move any existing install aside to `<engine>.retired`, promote staging, write `.pack-ready` (`<tag> <digest>`),
+   then delete the retired copy.
+
+Startup does no hashing: an engine counts as installed when its directory holds what the engine needs (`voices\
+voices.json` + `piperApi.dll`, or `model\kokoro-fp16.onnx` + at least one `.npy`). Kokoro additionally re-checks its
+own model hash, cached in a sidecar marker.
+
+The app repo carries neither engine's data. What remains under `EQLogParser/piper-tts/` is five native SDK binaries
+(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. An old build directory still has the deleted `espeak-ng-data\` and `voices\` folders until it is cleaned — harmless, just not what a fresh build produces.

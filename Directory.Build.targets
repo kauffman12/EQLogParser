@@ -6,15 +6,18 @@
     Microsoft.Common.targets imports NuGet's *.nuget.g.targets before this file, so redefining CopyContent here wins
     and lets us copy only the set we want to ship.
 
-    KokoroVoiceManager.LoadVoicesFromPath() lists whatever .npy files exist under <app>\voices, so an unshipped voice
-    is simply never offered and nothing in the app needs to know about the set. The work happens only in outputs that
-    actually received KokoroSharp.dll (the app, the WPF tests, BackupUtil); class libraries don't copy package
-    assemblies locally, so they get neither the dll nor a voices folder.
+    KokoroVoiceManager.LoadVoicesFromPath(path) lists whatever .npy files exist in the directory it is given, and at
+    run time that directory is the downloaded Kokoro pack, so an unshipped voice is simply never offered and nothing
+    in the app needs to know about the set. What lands here in the build output is the staging source for
+    scripts/Build-TtsPack.ps1 -Sync: this is how the shipped voice set gets into the published pack rather than into
+    the installer. The work happens only in outputs that actually received KokoroSharp.dll (the app, the WPF tests,
+    BackupUtil); class libraries don't copy package assemblies locally, so they get neither the dll nor a voices
+    folder.
 
     KokoroVoicePrefixes selects the shipped voices by filename prefix; add prefixes to widen the picker:
       bf bm  British English   ef em  Spanish     ff fm  French     hf hm  Hindi
       if im  Italian           pf pm  Portuguese  jf jm  Japanese   zf zm  Mandarin
-    Mandarin lives in voices\voices-zh (+51MB) and is also excluded by name in EQLogParserInstall.iss.
+    Mandarin lives in voices\voices-zh (+51MB), which is why it is left out here as well as by prefix.
     MisakiSharp already carries the phonemizer data for every language, so a wider set costs embeddings only
     (~0.5MB per voice); the model itself speaks all locales either way.
   -->

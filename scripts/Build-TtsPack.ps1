@@ -16,9 +16,10 @@
 #                        voices\af_*.npy am_*.npy LICENSE   <- built by the app repo (KokoroVoiceMasks)
 #                        model\kokoro-fp16.onnx             <- optional, -SkipModel leaves it out
 #
-# Only the binaries come from a build. Everything else is data you keep here; -Sync copies the binaries in from an
-# EQLogParser Release output (sign them there first -- signing rewrites the tail of a PE file, so a manifest built
-# before signing will not match what users download).
+# Only the binaries come from a build. Everything else is data you keep here: espeak-ng-data, the Piper voices and
+# the Kokoro model are no longer in the app repo at all, so -Sync copies binaries (plus whatever data an older app
+# checkout still carries) and nothing else (sign them there first -- signing rewrites the tail of a PE file, so a
+# manifest built before signing will not match what users download).
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Inventory
@@ -29,9 +30,11 @@
 #
 # Switches:
 #   -Inventory            report what is present, missing and unexpected; pack nothing
-#   -Sync                 fill the data dirs from -AppRelease: runtime binaries for both engines, espeak-ng-data,
-#                         Piper voices and the Kokoro .npy embeddings; hash-compared, so re-running is cheap
-#   -ModelSource <path>    kokoro-fp16.onnx to stage with -Sync (defaults to %LOCALAPPDATA%\EQLogParser\kokoro-tts)
+#   -Sync                 fill the data dirs from -AppRelease: runtime binaries for both engines and the Kokoro .npy
+#                         embeddings, plus espeak-ng-data and Piper voices if that build still carries them;
+#                         hash-compared, so re-running is cheap
+#   -ModelSource <path>    kokoro-fp16.onnx to stage with -Sync. Default: an installed Kokoro pack in local app data,
+#                         then the older %LOCALAPPDATA%\EQLogParser\kokoro-tts copy
 #   -Pack kokoro|piper|both
 #   -PiperVoices a,b      limit which voice folders go in (default: all found)
 #   -GenerateVoicesJson   rebuild voices.json from the voice folders (name and sample rate come from each .onnx.json)
@@ -235,8 +238,8 @@ function Sync-FromBuild {
         $s = Join-Path $AppRelease "piper-tts\$n"
         if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $PiperDir $n); $copied++ }
     }
-    # espeak-ng-data and the voice folders live in the app repo today (that is where the installer used to pick them up),
-    # so first run needs them too. Per-file compare because espeak-ng-data is 355 small files.
+    # espeak-ng-data and the voice folders used to be in the app repo, which is where the old installer picked them
+    # up. They are this repo's data now, so a current build contributes nothing here; an older checkout still does.
     $copied += Sync-Tree (Join-Path $AppRelease 'piper-tts\espeak-ng-data') (Join-Path $PiperDir 'espeak-ng-data')
     $srcVoices = Join-Path $AppRelease 'piper-tts\voices'
     if (Test-Path -LiteralPath $srcVoices) {
@@ -260,14 +263,20 @@ function Sync-FromBuild {
             $copied++
         }
     }
-    # The Kokoro model is not in the build output; whoever tested Kokoro has it in local app data.
-    # The Kokoro model is not in the build output; whoever last tested Kokoro has it in local app data.
+    # The graph is not in the build output. Whoever last ran Kokoro has it: an installed runtime pack, or the local
+    # app data copy written before packs existed. Neither exists on a machine that never spoke Kokoro, hence -ModelSource.
     $modelSrc = $ModelSource
-    if (-not $modelSrc) { $modelSrc = Join-Path $env:LOCALAPPDATA 'EQLogParser\kokoro-tts\kokoro-fp16.onnx' }
+    if (-not $modelSrc) {
+        foreach ($guess in @(
+            (Join-Path $env:LOCALAPPDATA 'EQLogParser\kokoro\model\kokoro-fp16.onnx'),
+            (Join-Path $env:LOCALAPPDATA 'EQLogParser\kokoro-tts\kokoro-fp16.onnx'))) {
+            if (Test-Path -LiteralPath $guess) { $modelSrc = $guess; break }
+        }
+    }
     if ($modelSrc -and (Test-Path -LiteralPath $modelSrc)) {
         if (Copy-IfChanged $modelSrc (Join-Path $KokoroDir 'model\kokoro-fp16.onnx')) { $copied++ }
     } else {
-        Write-Host "  no kokoro model found ($modelSrc); the app can download it from upstream, or pass -ModelSource"
+        Write-Host "  no kokoro model found ($modelSrc); pass -ModelSource <path> to stage one"
     }
     Write-Host "sync: $copied file(s) new or changed"
 }
