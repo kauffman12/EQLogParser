@@ -170,3 +170,15 @@ with its own privileges arrives from the network rather than from a signed packa
   156 MB download over a checksum we could have mispinned is the worse failure.
 - Changing `ModelFileName` (for example back to the fp32 graph) means updating `ModelSha256` in the same commit.
   The two constants are the pin.
+
+### Piper native lookup
+
+`piperApi.dll` lives in `<app>\piper-tts`, not beside the executable, so it needs a search path of its own. The
+first implementation called `SetDllDirectory`, which is process-global and single-slot: it applied to every later
+native load by anyone in the process, silently replaced any other caller's directory, and was the cause of a real
+bug where listing Windows voices initialized Piper as a side effect.
+
+`PiperTts` now registers a `NativeLibrary` import resolver that answers exactly one library name, `piperApi.dll`,
+from `piper-tts`. Everything else returns `IntPtr.Zero` and resolves normally. Piper's own dependencies
+(`onnxruntime.dll`, `espeak-ng.dll`, `piper_phonemize.dll`) sit beside `piperApi.dll`, which the altered search
+path used by `NativeLibrary.Load` covers.
