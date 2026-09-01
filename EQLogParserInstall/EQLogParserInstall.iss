@@ -61,7 +61,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#MyReleaseDir}\piper-tts\*"; DestDir: "{app}\piper-tts"; Flags: ignoreversion recursesubdirs createallsubdirs
 #endif
 
-Source: "{#MyReleaseDir}\voices\*"; DestDir: "{app}\voices"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyReleaseDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\DotLiquid.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\EQLogParser.deps.json"; DestDir: "{app}"; Flags: ignoreversion
@@ -96,6 +95,20 @@ Source: "{#MyReleaseDir}\NAudio.Wasapi.dll"; DestDir: "{app}"; Flags: ignorevers
 Source: "{#MyReleaseDir}\NAudio.WinMM.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\SoundTouch.Net.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\SoundTouch.Net.NAudioSupport.dll"; DestDir: "{app}"; Flags: ignoreversion
+
+; Kokoro TTS engine (KokoroSharp.CPU). The ~320MB model is downloaded on demand into %LocalAppData%\EQLogParser\kokoro-tts;
+; the voice embeddings are copied next to the exe by KokoroSharp's build targets and read from <app>\voices at runtime.
+Source: "{#MyReleaseDir}\voices\*"; DestDir: "{app}\voices"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyReleaseDir}\KokoroSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\MisakiSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\NumSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Microsoft.ML.OnnxRuntime.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\System.Numerics.Tensors.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\OpenTK.Audio.OpenAL.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\OpenTK.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\OpenTK.Mathematics.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\runtimes\win-x64\native\onnxruntime.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\runtimes\win-x64\native\onnxruntime_providers_shared.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Compression.Base.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Data.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.DocIO.Base.dll"; DestDir: "{app}"; Flags: ignoreversion
