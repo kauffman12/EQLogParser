@@ -25,7 +25,7 @@ SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
 FEED_OUT = DIST_DIR / 'feed.xml'
 FEED_ENTRY_LIMIT = 20
 SITE_BASE_URL = 'https://eqlogparser.kizant.net'
-CSS_VERSION = '16'
+CSS_VERSION = '17'
 GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
 
 # Pages advertised in sitemap.xml, as (url path, source file whose change date

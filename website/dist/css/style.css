@@ -197,13 +197,26 @@ pre code {
   margin-bottom: 0.3rem;
 }
 
-/* A two-level TOC is long enough to overflow a laptop viewport, so let it scroll in
-   place instead of hiding its tail. Narrow screens skip this: the TOC is full width
-   there and the page itself scrolls. */
+/* A two-level TOC is long enough to overflow a laptop viewport, so it needs to scroll in
+   place. Only the link list scrolls though — the "Contents" heading is pinned above it,
+   the way a native sidebar behaves. Narrow screens skip this: the TOC is full width there
+   and the page itself scrolls. */
 @media (min-width: 901px) {
   .toc {
+    display: flex;
+    flex-direction: column;
     max-height: calc(100vh - 90px);
+  }
+
+  .toc > h1 {
+    flex: none; /* never squeezed by a long list */
+  }
+
+  .toc > ul {
     overflow-y: auto;
+    min-height: 0; /* required for a flex child to shrink and scroll */
+    padding-right: 0.35rem; /* keeps the scrollbar off the longest link */
+    scrollbar-width: thin;
   }
 }
 
