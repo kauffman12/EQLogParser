@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -203,24 +205,47 @@ namespace EQLogParser.Audio
       }
     }
 
-    public async void TestSpeakFileAsync(string filePath, int adjustedVolume = 4)
+    public void TestSpeakFileAsync(string filePath, int adjustedVolume = 4) => _ = TestSpeakFileCoreAsync(filePath, adjustedVolume);
+
+    private async Task TestSpeakFileCoreAsync(string filePath, int adjustedVolume)
     {
-      await using var reader = new AudioFileReader(filePath);
-      if (!string.IsNullOrEmpty(filePath) && await ReadFileToByteArrayAsync(reader) is { Length: > 0 } data)
+      try
       {
-        var volume = ConvertVolume(_appVolume, adjustedVolume);
-        if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), volume, 0))
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
         {
-          ShowAudioError();
+          return;
         }
+
+        await using var reader = new AudioFileReader(filePath);
+        if (await ReadFileToByteArrayAsync(reader).ConfigureAwait(false) is { Length: > 0 } data)
+        {
+          var volume = ConvertVolume(_appVolume, adjustedVolume);
+          if (!PlayAudioData(data, reader.WaveFormat, GetDevice(), volume, 0))
+          {
+            ShowAudioError();
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug($"Error while previewing file: {filePath}", ex);
       }
     }
 
-    public async void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4)
+    public void TestSpeakTtsAsync(string tts, string voice = null, int rate = 0, int playerVolume = -1, int adjustedVolume = 4) =>
+      _ = TestSpeakTtsCoreAsync(tts, voice, rate, playerVolume, adjustedVolume);
+
+    private async Task TestSpeakTtsCoreAsync(string tts, string voice, int rate, int playerVolume, int adjustedVolume)
     {
-      if (!string.IsNullOrEmpty(tts))
+      if (string.IsNullOrEmpty(tts))
       {
-        (var audio, var sample) = await _tts.SynthesizeVoiceAsync(voice, tts).ConfigureAwait(false);
+        return;
+      }
+
+      try
+      {
+        (var audio, var sample) = await SynthesizeCachedAsync(voice, tts,
+          () => _tts.SynthesizeVoiceAsync(voice, tts)).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -233,13 +258,21 @@ namespace EQLogParser.Audio
           }
         }
       }
+      catch (Exception ex)
+      {
+        Log.Debug("Error synthesizing text.", ex);
+      }
     }
 
-    public async void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null)
+    public void SpeakOrSaveTtsAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName = null) =>
+      _ = SpeakOrSaveTtsCoreAsync(tts, voice, id, specificVolume, rate, fileName);
+
+    private async Task SpeakOrSaveTtsCoreAsync(string tts, string voice, string id, float specificVolume, int rate, string fileName)
     {
       if (!string.IsNullOrEmpty(tts))
       {
-        (var audio, var sample) = await _tts.SynthesizeVoiceAsync(voice, tts).ConfigureAwait(false);
+        (var audio, var sample) = await SynthesizeCachedAsync(voice, tts,
+          () => _tts.SynthesizeVoiceAsync(voice, tts)).ConfigureAwait(false);
 
         if (audio?.Length > 0)
         {
@@ -337,35 +370,78 @@ namespace EQLogParser.Audio
       }
     }
 
-    public async void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
+    /*
+     * The public entry points hand the work to the thread pool and return. Callers (the trigger processor and several
+     * buttons) fire and forget, so nothing here may resume on the caller's context: a neural synthesis costs a few
+     * hundred milliseconds and it used to run on the UI thread, freezing the window mid callout.
+     */
+    public void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume) =>
+      _ = SpeakTtsCoreAsync(id, tts, priority, rate, playerVolume, adjustedVolume);
+
+    private async Task SpeakTtsCoreAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume)
     {
       if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(tts) || !_playerAudios.ContainsKey(id))
       {
         return;
       }
 
-      byte[] audio = null;
-      var sample = 0;
-
-      await _synthGate.WaitAsync().ConfigureAwait(false);
-
       try
       {
-        (audio, sample) = await _tts.SynthesizeForPlayerAsync(id, tts).ConfigureAwait(false);
+        (var audio, var sample) = await SynthesizeCachedAsync(_tts.GetVoice(id), tts,
+          () => _tts.SynthesizeForPlayerAsync(id, tts)).ConfigureAwait(false);
+
+        if (audio is { Length: > 0 })
+        {
+          var waveFormat = new WaveFormat(sample, 16, 1);
+          SpeakAsync(id, audio, waveFormat, rate, priority, playerVolume, adjustedVolume);
+        }
       }
       catch (Exception ex)
       {
         Log.Debug("Error synthesizing text.", ex);
       }
+    }
+
+    /*
+     * Trigger callouts come from a small set of sentences and speech does not change for a given engine, voice and
+     * text, so the PCM is cached. A hit skips the engine entirely, which matters most for Kokoro where synthesis
+     * costs real CPU; only fresh text pays for it. The text is hashed so a long custom callout cannot produce an
+     * unbounded cache key.
+     */
+    private async Task<(byte[] pcm, int sampleRate)> SynthesizeCachedAsync(string voice, string text,
+      Func<Task<(byte[] pcm, int sampleRate)>> synthesize)
+    {
+      var key = _cache is null
+        ? null
+        : $"{AudioCacheKey}tts:{_tts.Name}:{voice}:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))}";
+
+      if (key is not null && _cache.TryGetValue(key, out object entry) &&
+          entry is CachedAudio { Data.Length: > 0 } cached)
+      {
+        return (cached.Data, cached.WaveFormat?.SampleRate ?? 0);
+      }
+
+      await _synthGate.WaitAsync().ConfigureAwait(false);
+
+      try
+      {
+        var (pcm, sampleRate) = await synthesize().ConfigureAwait(false);
+
+        if (key is not null && pcm is { Length: > 0 })
+        {
+          var options = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(60)).SetSize(pcm.Length);
+          _cache.Set(key, new CachedAudio
+          {
+            Data = pcm,
+            WaveFormat = new WaveFormat(sampleRate, 16, 1)
+          }, options);
+        }
+
+        return (pcm, sampleRate);
+      }
       finally
       {
         _synthGate.Release();
-      }
-
-      if (audio is { Length: > 0 })
-      {
-        var waveFormat = new WaveFormat(sample, 16, 1);
-        SpeakAsync(id, audio, waveFormat, rate, priority, playerVolume, adjustedVolume);
       }
     }
 

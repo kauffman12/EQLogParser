@@ -155,13 +155,37 @@ Recorded so they are not mistaken for open bugs — each was reviewed and left a
 The audio subsystem can speak trigger callouts with one of three engines: the Windows speech API, Piper, or
 Kokoro. Only one is active per session; `AudioManager` resolves it once at startup and keeps using it.
 
+### One engine behind ITtsEngine
+
+Each engine implements `ITtsEngine` (`EQLogParser.Audio/src`) and owns its own per player voice state. A factory walks
+the configured preference (`Tools > Select TTS engine...`, settings key `TtsEngine`) and falls back to Piper and then
+the Windows voices, so a missing model or voice pack is a silent downgrade rather than an error dialog.
+
+Before this seam `AudioManager` carried `_usePiper` / `_useKokoro` booleans consulted at a dozen sites — voice listing,
+default voice, per player voice binding, synthesis, sample rates, shutdown — and kept a synth object per engine inside
+its player records. Every engine therefore touched every other engine's code, and none of it could be exercised
+without the native library behind it.
+
+### Synthesis threading and cache
+
+`SpeakTtsAsync`, `TestSpeakTtsAsync`, `SpeakOrSaveTtsAsync` and `TestSpeakFileAsync` are fire-and-forget for their
+callers, so they hand the work to the thread pool and never resume on the caller's context. Synthesis happens inside
+the engine behind `Task.Run`, because ONNX Runtime and SAPI block: a Kokoro sentence costs a few hundred milliseconds
+and used to run on the UI thread, freezing the window mid callout. One `SemaphoreSlim` still serializes synthesis —
+the neural engines are CPU-bound and overlapping calls only slow every caller down.
+
+Synthesized PCM is cached in the same memory cache used for audio files, keyed by engine, voice and a hash of the text
+(60 minute sliding expiry, sized in bytes so the existing 100 MB budget accounts for it). A line like `Got the level
+90` plays dozens of times a raid, so only the first occurrence pays for inference; a cache hit takes no engine lock at
+all. The text is hashed rather than used verbatim so a long custom callout cannot produce an unbounded key.
+
 ### Kokoro model integrity
 
 The Kokoro graph (156 MB) is not part of the installer. It is fetched over HTTPS into
 `%LocalAppData%\EQLogParser\kokoro-tts` the first time a user opts in, which means the file the app later executes
 with its own privileges arrives from the network rather than from a signed package.
 
-- `KokoroTts` pins the SHA-256 that GitHub publishes for the release asset and refuses to load anything else.
+- `KokoroTtsEngine` pins the SHA-256 that GitHub publishes for the release asset and refuses to load anything else.
   A downloaded file is hashed before it is moved into place; on mismatch the temporary file is deleted.
 - A verified model gets a `kokoro-fp16.onnx.sha256` marker beside it, so the hash pass costs nothing at every
   start. A hand-placed or previously downloaded model pays for it once, then writes the marker.
@@ -178,7 +202,7 @@ first implementation called `SetDllDirectory`, which is process-global and singl
 native load by anyone in the process, silently replaced any other caller's directory, and was the cause of a real
 bug where listing Windows voices initialized Piper as a side effect.
 
-`PiperTts` now registers a `NativeLibrary` import resolver that answers exactly one library name, `piperApi.dll`,
+`PiperTtsEngine` now registers a `NativeLibrary` import resolver that answers exactly one library name, `piperApi.dll`,
 from `piper-tts`. Everything else returns `IntPtr.Zero` and resolves normally. Piper's own dependencies
 (`onnxruntime.dll`, `espeak-ng.dll`, `piper_phonemize.dll`) sit beside `piperApi.dll`, which the altered search
 path used by `NativeLibrary.Load` covers.
