@@ -1,0 +1,14 @@
+# built packs
+out/
+*.zip
+*.zip.sha256
+
+# Generated output of the app build; re-create with -Sync -AppRelease <path>.
+# Comment these out if you would rather keep the binaries in git (all but the Kokoro
+# model fit under GitHub's 100 MB per-file push limit, but every version stays in
+# every clone forever).
+kokoro/bin/
+kokoro/native/
+
+# Never worth a commit: 156 MB, and GitHub refuses to push files that large without LFS.
+kokoro/model/

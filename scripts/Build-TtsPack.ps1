@@ -1,43 +1,53 @@
 # Build-TtsPack.ps1
 #
-# Builds the GitHub-hosted runtime packs that hold everything the optional speech engines need: the Piper runtime plus
-# its voices, and the Kokoro runtime plus its voice embeddings. None of this is in the installer any more (see
-# docs/TtsPacks.md), so a pack is the only way an engine becomes usable, and every file inside it is checked against a
-# SHA-256 manifest by the app before anything is loaded.
+# Builds the GitHub-hosted runtime packs for EQLogParser's optional speech engines. Everything the Piper and Kokoro
+# engines need lives here rather than in the app installer, so this script is the only thing standing between an
+# incomplete folder and silence on someone's machine: it refuses to pack when a required file is missing and writes a
+# manifest of every file's size and SHA-256 that the app verifies before loading any of it.
 #
-# Order matters: sign first, build the pack second. Signing rewrites the tail of a PE file, so a manifest generated
-# before signing will not match what users download.
+# Expected layout, with this script at the root of the TTS repo (or anywhere, pointing -DataRoot at it):
 #
-# Usage (from anywhere, Windows PowerShell 5.1 or newer):
-#   powershell -ExecutionPolicy Bypass -File scripts\Build-TtsPack.ps1
-#   powershell -ExecutionPolicy Bypass -File scripts\Build-TtsPack.ps1 -Pack kokoro -IncludeModel
-#   powershell -ExecutionPolicy Bypass -File scripts\Build-TtsPack.ps1 -Pack piper -PiperVoices all -SplitVoices
-#   powershell -ExecutionPolicy Bypass -File scripts\Build-TtsPack.ps1 -Verify build\tts-packs\piper-1.0.zip
+#   piper-tts\           piperApi.dll piper_phonemize.dll espeak-ng.dll onnxruntime*.dll
+#                        espeak-ng-data\**                  <- 355 files, keep the tree exactly as shipped
+#                        voices\voices.json                 <- or let -GenerateVoicesJson write it
+#                        voices\<name>\*.onnx *.onnx.json   <- one folder per voice
+#   kokoro\              bin\MisakiSharp.dll NumSharp.dll System.Numerics.Tensors.dll OpenTK*.dll
+#                        native\onnxruntime.dll onnxruntime_providers_shared.dll
+#                        voices\af_*.npy am_*.npy LICENSE   <- built by the app repo (KokoroVoiceMasks)
+#                        model\kokoro-fp16.onnx             <- optional, -SkipModel leaves it out
 #
-# Useful switches:
-#   -Pack kokoro|piper|both     which pack to build (default both)
-#   -PiperVoices a,b,c|all      which voice folders under piper-tts\voices go into the pack (default all found)
-#   -GenerateVoicesJson         rebuild voices.json from the voice folders present (name + sample rate read from each
-#                               model's .onnx.json), instead of trusting the checked-in one
-#   -SplitVoices                emit a runtime-only pack plus one zip per Piper voice, so users fetch only what they
-#                               pick instead of every voice you maintain
-#   -IncludeModel               put kokoro-fp16.onnx in the Kokoro pack (looked up in -ModelPath, then LocalAppData)
-#   -Strict                     fail if a file we expect to sign is still unsigned
-#   -Upload                     run "gh release upload" for each finished pack
+# Only the binaries come from a build. Everything else is data you keep here; -Sync copies the binaries in from an
+# EQLogParser Release output (sign them there first -- signing rewrites the tail of a PE file, so a manifest built
+# before signing will not match what users download).
 #
-# Output: one zip + one .sha256 sidecar per pack in -OutDir, each containing manifest.json. Prints the digest, the
-# release tag to publish under, and the URL to pin in code.
+# Usage:
+#   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Inventory
+#   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Sync -AppRelease C:\src\EQLogParser\EQLogParser\bin\Release\net8.0-windows10.0.17763.0
+#   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1                     # both packs
+#   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Pack piper -GenerateVoicesJson
+#   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Verify out\piper-1.0.zip
+#
+# Switches:
+#   -Inventory            report what is present, missing and unexpected; pack nothing
+#   -Sync                 copy runtime binaries (and Kokoro voices) from -AppRelease into the data dirs first
+#   -Pack kokoro|piper|both
+#   -PiperVoices a,b      limit which voice folders go in (default: all found)
+#   -GenerateVoicesJson   rebuild voices.json from the voice folders (name and sample rate come from each .onnx.json)
+#   -SkipModel            leave kokoro\model\kokoro-fp16.onnx out of the Kokoro pack
+#   -Strict               fail if a binary we are expected to sign is unsigned, instead of warning
+#   -Upload               run gh release upload for each finished pack
 
 param(
     [ValidateSet('kokoro', 'piper', 'both')] [string]$Pack = 'both',
-    [string]$ReleaseDir = "$PSScriptRoot\..\EQLogParser\bin\Release\net8.0-windows10.0.17763.0",
-    [string]$OutDir = "$PSScriptRoot\..\build\tts-packs",
+    [string]$DataRoot = $PSScriptRoot,
+    [string]$AppRelease = '',
+    [string]$OutDir = '',
     [string]$PackVersion = '1.0',
-    [string]$ModelPath = '',
     [string[]]$PiperVoices = @('all'),
     [switch]$GenerateVoicesJson,
-    [switch]$SplitVoices,
-    [switch]$IncludeModel,
+    [switch]$SkipModel,
+    [switch]$Sync,
+    [switch]$Inventory,
     [switch]$Strict,
     [switch]$Upload,
     [string]$Repo = 'kauffman12/EQLogParser-TTS',
@@ -47,11 +57,9 @@ param(
 $ErrorActionPreference = 'Stop'
 try { Add-Type -AssemblyName System.IO.Compression } catch { }
 try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch { }
-if (-not ('System.IO.Compression.ZipFile' -as [type])) { throw 'System.IO.Compression.ZipFile is not available in this PowerShell host' }
+if (-not ('System.IO.Compression.ZipFile' -as [type])) { throw 'System.IO.Compression.ZipFile is unavailable in this PowerShell host' }
 
-# Binaries the pack needs. A file missing from this list lands in the zip unannounced; a file listed and absent fails
-# the build, which is the point -- an incomplete pack shows up as silence on someone else's machine.
-$KokoroRequired = @(
+$KokoroBin = @(
     'MisakiSharp.dll',
     'NumSharp.dll',
     'System.Numerics.Tensors.dll',
@@ -60,15 +68,10 @@ $KokoroRequired = @(
     'OpenTK.Mathematics.dll'
 )
 $KokoroNative = @('onnxruntime.dll', 'onnxruntime_providers_shared.dll')
-$PiperRequired = @(
-    'piperApi.dll',
-    'piper_phonemize.dll',
-    'espeak-ng.dll',
-    'onnxruntime.dll',
-    'onnxruntime_providers_shared.dll'
-)
+$PiperBin = @('piperApi.dll', 'piper_phonemize.dll', 'espeak-ng.dll', 'onnxruntime.dll', 'onnxruntime_providers_shared.dll')
 
-# Files we are expected to have signed ourselves. Anything Microsoft ships keeps its own signature.
+# Files we are expected to have signed ourselves. Microsoft's onnxruntime and System.Numerics.Tensors keep their own
+# signatures; re-signing them would replace upstream attribution with ours for no benefit.
 $MustBeSigned = @(
     'MisakiSharp.dll', 'NumSharp.dll', 'OpenTK.Audio.OpenAL.dll', 'OpenTK.Core.dll', 'OpenTK.Mathematics.dll',
     'piperApi.dll', 'piper_phonemize.dll', 'espeak-ng.dll'
@@ -79,57 +82,54 @@ Third-party notices for EQLogParser speech runtime packs
 ========================================================
 
 Kokoro pack
-  KokoroSharp            MIT                     https://github.com/Lyrcaxis/KokoroSharp
-  MisakiSharp            Apache-2.0              https://github.com/Larysak/MisakiSharp
-  NumSharp               Apache-2.0              https://github.com/WenqingDai/NumSharp
-  OpenTK                 MIT                     https://github.com/opentk/opentk
-  System.Numerics.Tensors MIT                    https://github.com/dotnet/machinelearning
-  Microsoft.ML.OnnxRuntime MIT                   https://github.com/microsoft/onnxruntime
-  Kokoro model + voices  Apache-2.0              https://huggingface.co/hexgrad/Kokoro-82M
+  KokoroSharp                 MIT             https://github.com/Lyrcaxis/KokoroSharp
+  MisakiSharp                 Apache-2.0      https://github.com/Larysak/MisakiSharp
+  NumSharp                    Apache-2.0      https://github.com/WenqingDai/NumSharp
+  OpenTK                      MIT             https://github.com/opentk/opentk
+  System.Numerics.Tensors     MIT             https://github.com/dotnet/machinelearning
+  Microsoft.ML.OnnxRuntime    MIT             https://github.com/microsoft/onnxruntime
+  Kokoro model + voice data   Apache-2.0      https://huggingface.co/hexgrad/Kokoro-82M
 
 Piper pack
-  Piper (piperApi)       MIT                     https://github.com/rhasspy/piper
-  piper_phonemize        MIT                     https://github.com/espeak-ng/espeak-ng-phomemize
-  eSpeak / eSpeak-NG     GPL-3.0                 https://github.com/espeak-ng/espeak-ng
-  Microsoft.ML.OnnxRuntime MIT                   https://github.com/microsoft/onnxruntime
+  Piper (piperApi)            MIT             https://github.com/rhasspy/piper
+  piper_phonemize             MIT             https://github.com/espeak-ng/phomemize
+  eSpeak / eSpeak-NG          GPL-3.0         https://github.com/espeak-ng/espeak-ng
+  Microsoft.ML.OnnxRuntime    MIT             https://github.com/microsoft/onnxruntime
 
-Voice models carry their own licenses; keep the LICENSE files that came with them next to the model.
-The full license text for each component is available from the project pages above.
+Individual voice models carry their own licenses; keep the LICENSE file that came with each one beside it.
+Full license text is available from the project pages above.
 '@
 
-function Get-Sha256Hex([string]$Path) {
-    (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower()
+# ------------------------------------------------------------------- helpers
+function Get-Sha256Hex([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower() }
+
+function Get-RelativePath([string]$Root, [string]$Full) {
+    $root = (Get-Item -LiteralPath $Root).FullName.TrimEnd('\')
+    return $Full.Substring($root.Length).TrimStart('\').Replace('\', '/')
 }
 
-function Copy-StageFile([string]$Source, [string]$Stage, [string]$Relative) {
+function Copy-FileTo([string]$Source, [string]$TargetDir, [string]$Relative) {
     if (-not (Test-Path -LiteralPath $Source)) { throw "missing input: $Source" }
-    $target = Join-Path $Stage ($Relative -replace '/', '\')
+    $target = Join-Path $TargetDir ($Relative -replace '/', '\')
     $dir = Split-Path -Parent $target
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     Copy-Item -LiteralPath $Source -Destination $target -Force
-    return Get-Item -LiteralPath $target
 }
 
-function Copy-StageTree([string]$Source, [string]$Stage, [string]$RelativePrefix) {
+function Copy-TreeTo([string]$Source, [string]$TargetDir, [string]$Prefix) {
     if (-not (Test-Path -LiteralPath $Source)) { throw "missing input tree: $Source" }
-    $root = (Get-Item -LiteralPath $Source).FullName.TrimEnd('\')
     foreach ($f in Get-ChildItem -LiteralPath $Source -Recurse -File) {
-        $rel = $RelativePrefix.TrimEnd('/') + '/' + $f.FullName.Substring($root.Length).TrimStart('\').Replace('\', '/')
-        Copy-StageFile $f.FullName $Stage $rel | Out-Null
+        Copy-FileTo $f.FullName $TargetDir ($Prefix.TrimEnd('/') + '/' + (Get-RelativePath $Source $f.FullName))
     }
 }
 
-function Write-Manifest([string]$Stage, [string]$Engine, [object[]]$Extra) {
+function New-ManifestIn([string]$Dir, [string]$Engine, [hashtable]$Extra) {
     $files = @()
-    foreach ($f in Get-ChildItem -LiteralPath $Stage -Recurse -File | Where-Object { $_.Name -ne 'manifest.json' }) {
-        $rel = $f.FullName.Substring((Get-Item -LiteralPath $Stage).FullName.Length + 1).Replace('\', '/')
-        $files += [pscustomobject]@{
-            path   = $rel
-            size   = [int64]$f.Length
-            sha256 = (Get-Sha256Hex $f.FullName)
-        }
+    foreach ($f in Get-ChildItem -LiteralPath $Dir -Recurse -File | Where-Object { $_.Name -ne 'manifest.json' }) {
+        $files += [pscustomobject]@{ path = (Get-RelativePath $Dir $f.FullName); size = [int64]$f.Length; sha256 = (Get-Sha256Hex $f.FullName) }
     }
     $files = @($files | Sort-Object path)
+    if ($files.Count -eq 0) { throw "nothing to manifest in $Dir" }
     $manifest = [ordered]@{
         engine      = $Engine
         packVersion = $PackVersion
@@ -139,286 +139,309 @@ function Write-Manifest([string]$Stage, [string]$Engine, [object[]]$Extra) {
         files       = $files
     }
     if ($Extra) { foreach ($k in $Extra.Keys) { $manifest[$k] = $Extra[$k] } }
-    # No BOM: the app reads these with System.Text.Json.
-    [IO.File]::WriteAllText((Join-Path $Stage 'manifest.json'), ($manifest | ConvertTo-Json -Depth 6))
+    # Written without a BOM: the app parses this with System.Text.Json.
+    [IO.File]::WriteAllText((Join-Path $Dir 'manifest.json'), ($manifest | ConvertTo-Json -Depth 6))
     return $files
 }
 
-function New-PackZip([string]$Stage, [string]$ZipPath) {
+function New-PackZip([string]$Dir, [string]$ZipPath) {
     if (Test-Path -LiteralPath $ZipPath) { Remove-Item -LiteralPath $ZipPath -Force }
     $zip = [System.IO.Compression.ZipFile]::Open($ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)
     try {
-        foreach ($f in Get-ChildItem -LiteralPath $Stage -Recurse -File) {
-            $rel = $f.FullName.Substring((Get-Item -LiteralPath $Stage).FullName.Length + 1).Replace('\', '/')
-            $entry = $zip.CreateEntry($rel, [System.IO.Compression.CompressionLevel]::Optimal)
+        foreach ($f in Get-ChildItem -LiteralPath $Dir -Recurse -File) {
+            $entry = $zip.CreateEntry((Get-RelativePath $Dir $f.FullName), [System.IO.Compression.CompressionLevel]::Optimal)
             $es = $entry.Open()
-            try {
-                $fs = [IO.File]::OpenRead($f.FullName)
-                try { $fs.CopyTo($es) } finally { $fs.Dispose() }
-            } finally { $es.Dispose() }
+            try { $fs = [IO.File]::OpenRead($f.FullName); try { $fs.CopyTo($es) } finally { $fs.Dispose() } }
+            finally { $es.Dispose() }
         }
     } finally { $zip.Dispose() }
-
     $hex = Get-Sha256Hex $ZipPath
-    $name = Split-Path -Leaf $ZipPath
-    [IO.File]::WriteAllText("$ZipPath.sha256", "$hex  $name`n")
+    [IO.File]::WriteAllText("$ZipPath.sha256", "$hex  $(Split-Path -Leaf $ZipPath)`n")
     return $hex
 }
 
-function Report-Signatures([string]$Stage) {
-    $problems = @()
-    foreach ($f in Get-ChildItem -LiteralPath $Stage -Recurse -File |
-            Where-Object { $_.Extension -eq '.dll' -or $_.Extension -eq '.exe' }) {
-        if ($MustBeSigned -notcontains $f.Name) { continue }
+function Test-PackSignatures([string]$Dir) {
+    $unsigned = @()
+    foreach ($f in Get-ChildItem -LiteralPath $Dir -Recurse -File |
+            Where-Object { $_.Extension -eq '.dll' -and $MustBeSigned -contains $_.Name }) {
+        $status = (Get-AuthenticodeSignature -LiteralPath $f.FullName).Status
         $sig = Get-AuthenticodeSignature -LiteralPath $f.FullName
         if ($sig.Status -eq 'NotSigned') {
-            $problems += $f.Name
-            Write-Warning "$($f.Name) is unsigned. Run sign.cmd first -- users get a publisher-less DLL."
+            $unsigned += $f.Name
+            Write-Warning "$(Get-RelativePath $Dir $f.FullName) is unsigned; sign it in the app repo (sign.cmd) and run -Sync again"
         } else {
-            $who = if ($sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { 'unknown' }
-            Write-Host ("  signed: {0,-32} {1}" -f $f.Name, $who)
+            $who = 'unknown'
+            if ($sig.SignerCertificate) { $who = $sig.SignerCertificate.Subject }
+            Write-Host ("  signed {0,-32} {1}" -f $f.Name, $who)
         }
     }
-    if ($problems.Count -gt 0 -and $Strict) {
-        throw "unsigned pack files: $($problems -join ', ') (rerun without -Strict to build anyway)"
-    }
+    if ($unsigned.Count -gt 0 -and $Strict) { throw "unsigned pack files: $($unsigned -join ', ')" }
 }
 
-function Find-KokoroModel() {
-    if ($ModelPath) { return $ModelPath }
-    $candidates = @(
-        "$env:LOCALAPPDATA\EQLogParser\kokoro-tts\kokoro-fp16.onnx",
-        (Join-Path $ReleaseDir 'kokoro-fp16.onnx')
-    )
-    foreach ($c in $candidates) { if (Test-Path -LiteralPath $c) { return $c } }
-    return ''
-}
-
-function Get-PiperVoiceFolders() {
-    $root = Join-Path $ReleaseDir 'piper-tts\voices'
-    if (-not (Test-Path -LiteralPath $root)) { throw "no piper voices at $root" }
-    $all = @(Get-ChildItem -LiteralPath $root -Directory | Where-Object { Get-ChildItem -LiteralPath $_.FullName -Filter *.onnx -File | Select-Object -First 1 })
-    if ($all.Count -eq 0) { throw "no voice folders containing a .onnx model under $root" }
-    if ($PiperVoices.Count -eq 1 -and $PiperVoices[0] -eq 'all') { return , $all }
+function Get-VoiceDirs([string]$VoicesRoot) {
+    if (-not (Test-Path -LiteralPath $VoicesRoot)) { return @() }
+    $found = @(Get-ChildItem -LiteralPath $VoicesRoot -Directory |
+        Where-Object { @(Get-ChildItem -LiteralPath $_.FullName -Filter *.onnx -File).Count -gt 0 })
+    if ($PiperVoices.Count -eq 1 -and $PiperVoices[0] -eq 'all') { return $found }
     $picked = @()
     foreach ($name in $PiperVoices) {
-        $d = $all | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
-        if (-not $d) { throw "voice '$name' not found under $root (have: $($all.Name -join ', '))" }
+        $d = $found | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
+        if (-not $d) { throw "voice '$name' not under $VoicesRoot (have: $($found.Name -join ', '))" }
         $picked += $d
     }
-    return , $picked
+    return $picked
 }
 
-function New-PiperVoicesJson([string]$Stage, [object[]]$VoiceDirs) {
-    $entries = @()
-    foreach ($d in $VoiceDirs) {
-        foreach ($model in Get-ChildItem -LiteralPath $d.FullName -Filter *.onnx -File) {
-            $jsonPath = "$($model.FullName).json"
-            if (-not (Test-Path -LiteralPath $jsonPath)) {
-                Write-Warning "$($d.Name): $($model.Name) has no .onnx.json beside it, skipping"
-                continue
-            }
-            $sample = 22050
-            $name = $d.Name
-            try {
-                $j = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-Json
-                if ($j.audio.sample_rate) { $sample = [int]$j.audio.sample_rate }
-                if ($j._meta.name) { $name = [string]$j._meta.name }
-            } catch { Write-Warning "$($d.Name): could not read $($model.Name).json ($_)" }
-            $entries += [ordered]@{
-                Name   = $name
-                Config = "$($d.Name)/$([IO.Path]::GetFileName($jsonPath))"
-                Model  = "$($d.Name)/$($model.Name)"
-                Sample = $sample
-            }
-        }
-    }
-    if ($entries.Count -eq 0) { throw 'voices.json would be empty' }
-    $doc = [ordered]@{ Voices = $entries }
-    [IO.File]::WriteAllText((Join-Path $Stage 'voices\voices.json'), ($doc | ConvertTo-Json -Depth 5))
-    return $entries
+function Get-DirBytes([string]$Path) {
+    $sum = 0
+    foreach ($f in Get-ChildItem -LiteralPath $Path -Recurse -File) { $sum += $f.Length }
+    return $sum
 }
 
-function Assert-VoicesJsonComplete([string]$Stage) {
-    $path = Join-Path $Stage 'voices\voices.json'
-    if (-not (Test-Path -LiteralPath $path)) { throw "no voices.json in $Stage\voices" }
-    $doc = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-    foreach ($v in $doc.Voices) {
-        foreach ($rel in @($v.Model, $v.Config)) {
-            if (-not (Test-Path -LiteralPath (Join-Path $Stage ($rel -replace '/', '\')))) {
-                throw "voices.json lists '$($v.Name)' -> $rel but that file is not in the pack"
-            }
-        }
-    }
-    return $doc.Voices.Count
-}
-
-function Write-PackSummary([string]$Label, [string]$ZipPath, [string]$Hex, [int]$FileCount) {
+function Write-PackResult([string]$Label, [string]$ZipPath, [string]$Hex, [int]$FileCount) {
+    $leaf = Split-Path -Leaf $ZipPath
     $mb = [math]::Round((Get-Item -LiteralPath $ZipPath).Length / 1MB, 1)
     $tag = "$Label-$PackVersion"
     Write-Host ''
     Write-Host "=== $Label ==="
-    Write-Host ("  {0}  ({1} MB, {2} files)" -f (Split-Path -Leaf $ZipPath), $mb, $FileCount)
-    Write-Host "  sha256 $Hex"
-    Write-Host "  release tag   : $tag"
-    Write-Host "  asset name    : $(Split-Path -Leaf $ZipPath)"
-    Write-Host "  url to pin    : https://github.com/$Repo/releases/download/$tag/$(Split-Path -Leaf $ZipPath)"
+    Write-Host ("  {0}  ({1} MB, {2} files)" -f $leaf, $mb, $FileCount)
+    Write-Host "  sha256        $Hex"
+    Write-Host "  release tag   $tag"
+    Write-Host "  url to pin    https://github.com/$Repo/releases/download/$tag/$leaf"
     if ($Upload) {
         Write-Host '  uploading...'
-        $zipArgs = @($ZipPath, "$ZipPath.sha256")
-        & gh release upload $tag $zipArgs --repo $Repo
+        & gh release upload $tag $ZipPath "$ZipPath.sha256" --repo $Repo
         if ($LASTEXITCODE -ne 0) { throw "gh release upload failed for $tag" }
     } else {
-        Write-Host "  publish with  : gh release create $tag `"$ZipPath`" `"$ZipPath.sha256`" --repo $Repo --title `"$Label $PackVersion`""
+        Write-Host "  publish with  gh release create $tag `"$ZipPath`" `"$ZipPath.sha256`" --repo $Repo --title `"$Label $PackVersion`""
     }
 }
 
-# ---------------------------------------------------------------- verify mode
+# ------------------------------------------------------------------- sources
+$DataRoot = (Resolve-Path -LiteralPath $DataRoot).Path
+$PiperDir = Join-Path $DataRoot 'piper-tts'
+$KokoroDir = Join-Path $DataRoot 'kokoro'
+if (-not $OutDir) { $OutDir = Join-Path $DataRoot 'out' }
+
+function Sync-FromBuild {
+    if (-not $AppRelease) { throw '-Sync needs -AppRelease <EQLogParser bin\Release\net8.0-windows... path>' }
+    if (-not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
+    $AppRelease = (Resolve-Path -LiteralPath $AppRelease).Path
+    $copied = 0
+    foreach ($n in $PiperBin) {
+        $s = Join-Path $AppRelease "piper-tts\$n"
+        if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $PiperDir $n); $copied++ }
+    }
+    foreach ($n in $KokoroBin) {
+        $s = Join-Path $AppRelease $n
+        if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $KokoroDir "bin\$n"); $copied++ }
+    }
+    foreach ($n in $KokoroNative) {
+        $s = Join-Path $AppRelease "runtimes\win-x64\native\$n"
+        if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $KokoroDir "native\$n"); $copied++ }
+    }
+    # Kokoro voice embeddings are produced by the app build; KokoroVoiceMasks in Directory.Build.targets chooses them.
+    $vs = Join-Path $AppRelease 'voices'
+    if (Test-Path -LiteralPath $vs) {
+        foreach ($f in Get-ChildItem -LiteralPath $vs -File | Where-Object { $_.Extension -eq '.npy' -or $_.Name -ieq 'LICENSE' }) {
+            Copy-IfChanged $f.FullName (Join-Path $KokoroDir "voices\$($f.Name)")
+            $copied++
+        }
+    }
+    Write-Host "sync: examined $copied runtime file(s) from $(Split-Path -Leaf $AppRelease)"
+}
+
+function Copy-IfChanged([string]$Source, [string]$Target) {
+    if ((Test-Path -LiteralPath $Target) -and (Get-Sha256Hex $Target) -eq (Get-Sha256Hex $Source)) { return }
+    Copy-FileTo $Source (Split-Path -Parent $Target) (Split-Path -Leaf $Target)
+    Write-Host "  copied $(Split-Path -Leaf $Source)"
+}
+
+# ------------------------------------------------------------------- verify
 if ($Verify) {
     if (-not (Test-Path -LiteralPath $Verify)) { throw "no such zip: $Verify" }
-    $tmp = Join-Path ([IO.Path]::GetTempPath()) ("ttsverify_" + [Guid]::NewGuid().ToString('N'))
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ('ttsverify_' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp | Out-Null
     try {
         [System.IO.Compression.ZipFile]::ExtractToDirectory($Verify, $tmp)
-        $manifestPath = Join-Path $tmp 'manifest.json'
-        if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'zip has no manifest.json' }
-        $m = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        $mp = Join-Path $tmp 'manifest.json'
+        if (-not (Test-Path -LiteralPath $mp)) { throw 'zip contains no manifest.json' }
+        $m = Get-Content -LiteralPath $mp -Raw | ConvertFrom-Json
         $bad = 0
         foreach ($e in $m.files) {
             $p = Join-Path $tmp ($e.path -replace '/', '\')
-            if (-not (Test-Path -LiteralPath $p)) { Write-Host "MISSING  $($e.path)"; $bad++; continue }
-            if ((Get-Item -LiteralPath $p).Length -ne $e.size) { Write-Host "SIZE     $($e.path)"; $bad++; continue }
-            if ((Get-Sha256Hex $p) -ne $e.sha256) { Write-Host "HASH     $($e.path)"; $bad++; continue }
+            if (-not (Test-Path -LiteralPath $p)) { Write-Host "MISSING $($e.path)"; $bad++; continue }
+            if ((Get-Item -LiteralPath $p).Length -ne $e.size) { Write-Host "SIZE    $($e.path)"; $bad++; continue }
+            if ((Get-Sha256Hex $p) -ne $e.sha256.ToLower()) { Write-Host "HASH    $($e.path)"; $bad++ }
         }
-        Write-Host ''
-        Write-Host ("verified {0}: {1} files, engine={2} packVersion={3}" -f (Split-Path -Leaf $Verify), $m.files.Count, $m.engine, $m.packVersion)
+        Write-Host ("verified {0}: engine={1} packVersion={2} files={3}" -f (Split-Path -Leaf $Verify), $m.engine, $m.packVersion, $m.files.Count)
         if ($bad -gt 0) { throw "$bad file(s) did not match the manifest" }
         Write-Host 'all files match'
         if (Test-Path -LiteralPath "$Verify.sha256") {
-            $expected = (Get-Content -LiteralPath "$Verify.sha256" -TotalCount 1).Split(' ')[0].ToLower()
-            $actual = Get-Sha256Hex $Verify
-            if ($expected -ne $actual) { throw "sidecar digest mismatch: $expected vs $actual" }
-            Write-Host 'sidecar digest matches'
-        } else {
-            Write-Warning 'no .sha256 sidecar beside this zip'
-        }
+            $want = (Get-Content -LiteralPath "$Verify.sha256" -TotalCount 1).Split(' ')[0].ToLower()
+            $have = Get-Sha256Hex $Verify
+            if ($want -ne $have) { throw "sidecar mismatch: sidecar=$want zip=$have" }
+            Write-Host "sidecar matches  $have"
+        } else { Write-Warning 'no .sha256 sidecar beside this zip' }
     } finally { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue }
     return
 }
 
-# ---------------------------------------------------------------- build mode
-if (-not (Test-Path -LiteralPath $ReleaseDir)) { throw "release output not found: $ReleaseDir (build Release first)" }
-$ReleaseDir = (Get-Item -LiteralPath $ReleaseDir).FullName
+# ------------------------------------------------------------------- inventory
+$missing = @()
+if ($Inventory -or $Sync) { Sync-FromBuild }
+
+if ($Inventory) {
+    Write-Host "data root: $DataRoot"
+    foreach ($n in $PiperBin) { $p = Join-Path $PiperDir $n; if (-not (Test-Path $p)) { $missing += "piper-tts/$n" } }
+    $ed = Join-Path $PiperDir 'espeak-ng-data'
+    if (-not (Test-Path $ed)) { $missing += 'piper-tts/espeak-ng-data/' }
+    foreach ($n in $KokoroBin) { $p = Join-Path $KokoroDir "bin\$n"; if (-not (Test-Path $p)) { $missing += "kokoro/bin/$n" } }
+    foreach ($n in $KokoroNative) { $p = Join-Path $KokoroDir "native\$n"; if (-not (Test-Path $p)) { $missing += "kokoro/native/$n" } }
+    $kv = Join-Path $KokoroDir 'voices'
+    $npy = @()
+    if (Test-Path -LiteralPath $kv) { $npy = @(Get-ChildItem -LiteralPath $kv -Filter *.npy -File) }
+    if ($npy.Count -eq 0) { $missing += 'kokoro/voices/*.npy' }
+
+    Write-Host ''
+    Write-Host 'piper voices:'
+    foreach ($v in Get-VoiceDirs (Join-Path $PiperDir 'voices')) {
+        Write-Host ("  {0,-26} {1,7:N1} MB" -f $v.Name, ((Get-DirBytes $v.FullName) / 1MB))
+    }
+    Write-Host ''
+    if ($npy.Count -gt 0) {
+        Write-Host ("kokoro voices: {0} .npy, {1:N1} MB" -f $npy.Count, ((Get-DirBytes $kv) / 1MB))
+    } else {
+        Write-Host 'kokoro voices: none'
+    }
+    $model = Join-Path $KokoroDir 'model\kokoro-fp16.onnx'
+    if (Test-Path -LiteralPath $model) {
+        Write-Host ("kokoro model : {0:N1} MB  sha256 {1}" -f ((Get-Item $model).Length / 1MB), (Get-Sha256Hex $model))
+    } else { Write-Host 'kokoro model : not present (the app can download it instead)' }
+    Write-Host ''
+    if ($missing.Count -eq 0) { Write-Host 'inventory: complete' }
+    else { Write-Host 'inventory: missing'; $missing | ForEach-Object { Write-Host "  $_" } }
+    return
+}
+
+# ------------------------------------------------------------------- packing
 if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 $OutDir = (Get-Item -LiteralPath $OutDir).FullName
-Write-Host "source: $ReleaseDir"
-Write-Host "output: $OutDir"
+Write-Host "data root: $DataRoot"
+Write-Host "output    : $OutDir"
+
+function New-StagedDir([string]$Name) {
+    $s = Join-Path $env:TEMP ('ttsstage_' + $Name + '_' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $s | Out-Null
+    return $s
+}
 
 if ($Pack -eq 'kokoro' -or $Pack -eq 'both') {
-    $stage = Join-Path $OutDir "stage-kokoro"
-    if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
-    New-Item -ItemType Directory -Path $stage | Out-Null
-
-    foreach ($dll in $KokoroRequired) { Copy-StageFile (Join-Path $ReleaseDir $dll) $stage "bin/$dll" | Out-Null }
-    foreach ($nat in $KokoroNative) {
-        Copy-StageFile (Join-Path $ReleaseDir "runtimes\win-x64\native\$nat") $stage "native/$nat" | Out-Null
+    if (-not (Test-Path -LiteralPath $KokoroDir)) {
+        throw "no kokoro data dir at $KokoroDir -- run -Inventory to list what is missing, -Sync -AppRelease <build> to fill in the binaries, or -DataRoot to point somewhere else"
     }
+    $stage = New-StagedDir 'kokoro'
+    try {
+        foreach ($n in $KokoroBin) { Copy-FileTo (Join-Path $KokoroDir "bin\$n") $stage "bin/$n" }
+        foreach ($n in $KokoroNative) { Copy-FileTo (Join-Path $KokoroDir "native\$n") $stage "native/$n" }
 
-    $voiceSrc = Join-Path $ReleaseDir 'voices'
-    if (-not (Test-Path -LiteralPath $voiceSrc)) { throw "no kokoro voices at $voiceSrc (check KokoroVoiceMasks in Directory.Build.targets)" }
-    foreach ($v in Get-ChildItem -LiteralPath $voiceSrc -Recurse -File |
-            Where-Object { $_.FullName -notmatch '\\voices-zh(\\|$)' }) {
-        if (Test-Path -LiteralPath (Join-Path $stage "voices\$($v.Name)")) {
-            throw "duplicate kokoro voice file name: $($v.Name)"
+        $voiceSrc = Join-Path $KokoroDir 'voices'
+        $npyCount = 0
+        foreach ($f in Get-ChildItem -LiteralPath $voiceSrc -Recurse -File | Where-Object { $_.FullName -notmatch '\\voices-zh(\\|$)' }) {
+            if ($f.Extension -ne '.npy' -and $f.Name -inotmatch 'LICENSE|COPYING|README') { continue }
+            Copy-FileTo $f.FullName $stage "voices/$($f.Name)"
+            if ($f.Extension -eq '.npy') { $npyCount++ }
         }
-        Copy-StageFile $v.FullName $stage ("voices/" + $v.Name) | Out-Null
-    }
-    $npy = @(Get-ChildItem -LiteralPath (Join-Path $stage 'voices') -Filter *.npy -File)
-    if ($npy.Count -eq 0) { throw 'no .npy voice embeddings staged' }
+        if ($npyCount -eq 0) { throw "no kokoro .npy voices under $voiceSrc" }
 
-    $model = Find-KokoroModel
-    if ($IncludeModel) {
-        if (-not $model) { throw '-IncludeModel given but kokoro-fp16.onnx was not found (pass -ModelPath)' }
-        Copy-StageFile $model $stage 'model/kokoro-fp16.onnx' | Out-Null
-        Write-Host "  model: $model"
-    } elseif ($model) {
-        Write-Host "  model left out ($model); add -IncludeModel to ship it inside the pack"
-    }
+        $model = Join-Path $KokoroDir 'model\kokoro-fp16.onnx'
+        $haveModel = $false
+        if (Test-Path -LiteralPath $model) {
+            if ($SkipModel) { Write-Host "  kokoro model left out ($(Split-Path -Leaf $model))" }
+            else { Copy-FileTo $model $stage 'model/kokoro-fp16.onnx'; $haveModel = $true }
+        }
 
-    [IO.File]::WriteAllText((Join-Path $stage 'THIRD-PARTY-NOTICES.txt'), $Notices)
-    Report-Signatures $stage
-    $files = Write-Manifest $stage 'kokoro' @{ modelIncluded = [bool]$IncludeModel }
-    $zip = Join-Path $OutDir "kokoro-$PackVersion.zip"
-    $hex = New-PackZip $stage $zip
-    Write-PackSummary 'kokoro' $zip $hex $files.Count
-    Remove-Item -LiteralPath $stage -Recurse -Force
+        [IO.File]::WriteAllText((Join-Path $stage 'THIRD-PARTY-NOTICES.txt'), $Notices)
+        Write-Host ''
+        Write-Host "kokoro: $npyCount voices, model $(if ($haveModel) { 'included' } else { 'not included' })"
+        Test-PackSignatures $stage
+        $files = New-ManifestIn $stage 'kokoro' @{ modelIncluded = [bool]$haveModel; voiceCount = $npyCount }
+        $zip = Join-Path $OutDir "kokoro-$PackVersion.zip"
+        Write-PackResult 'kokoro' $zip (New-PackZip $stage $zip) $files.Count
+    } finally { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 if ($Pack -eq 'piper' -or $Pack -eq 'both') {
-    $voices = Get-PiperVoiceFolders
-    Write-Host ''
-    Write-Host 'piper voices found:'
-    $totalBytes = 0
-    foreach ($v in $voices) {
-        $bytes = (Get-ChildItem -LiteralPath $v.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum
-        $totalBytes += $bytes
-        Write-Host ("  {0,-24} {1,7:N1} MB" -f $v.Name, ($bytes / 1MB))
+    if (-not (Test-Path -LiteralPath $PiperDir)) {
+        throw "no piper-tts data dir at $PiperDir -- run -Inventory to list what is missing, -Sync -AppRelease <build> to fill in the binaries, or -DataRoot to point somewhere else"
     }
-    Write-Host ("  {0,-24} {1,7:N1} MB in {2} voice(s)" -f 'total', ($totalBytes / 1MB), $voices.Count)
-    if (-not $SplitVoices -and $totalBytes -gt 150MB) {
-        Write-Warning ("this pack carries {0:N0} MB of voices; every Piper user downloads all of them. Consider -SplitVoices." -f ($totalBytes / 1MB))
-    }
+    $voices = Get-VoiceDirs (Join-Path $PiperDir 'voices')
+    if ($voices.Count -eq 0) { throw "no voice folders with a .onnx model under $(Join-Path $PiperDir 'voices')" }
 
-    $runtimeStage = Join-Path $OutDir 'stage-piper'
-    if (Test-Path -LiteralPath $runtimeStage) { Remove-Item -LiteralPath $runtimeStage -Recurse -Force }
-    New-Item -ItemType Directory -Path $runtimeStage | Out-Null
-
-    foreach ($dll in $PiperRequired) { Copy-StageFile (Join-Path $ReleaseDir "piper-tts\$dll") $runtimeStage $dll | Out-Null }
-    Copy-StageTree (Join-Path $ReleaseDir 'piper-tts\espeak-ng-data') $runtimeStage 'espeak-ng-data'
-
-    foreach ($v in $voices) { Copy-StageTree $v.FullName $runtimeStage "voices/$($v.Name)" }
-    if ($GenerateVoicesJson) {
-        New-PiperVoicesJson $runtimeStage $voices | Out-Null
-        Write-Host "  voices.json generated from $($voices.Count) voice folder(s)"
-    } else {
-        $vj = Join-Path $ReleaseDir 'piper-tts\voices\voices.json'
-        if (-not (Test-Path -LiteralPath $vj)) { throw "no voices.json at $vj (or use -GenerateVoicesJson)" }
-        Copy-StageFile $vj $runtimeStage 'voices/voices.json' | Out-Null
-    }
-    $voiceCount = Assert-VoicesJsonComplete $runtimeStage
-    [IO.File]::WriteAllText((Join-Path $runtimeStage 'THIRD-PARTY-NOTICES.txt'), $Notices)
-
-    if ($SplitVoices) {
-        # One zip per voice plus a runtime pack without any models, so enabling Piper costs ~25 MB and each extra voice is
-        # its own download. voices.json in the runtime pack lists only what it can actually speak; the app adds entries as
-        # voice packs land.
+    $stage = New-StagedDir 'piper'
+    try {
+        foreach ($n in $PiperBin) { Copy-FileTo (Join-Path $PiperDir $n) $stage $n }
+        Copy-TreeTo (Join-Path $PiperDir 'espeak-ng-data') $stage 'espeak-ng-data'
+        $voiceBytes = 0
         foreach ($v in $voices) {
-            $vstage = Join-Path $OutDir "stage-piper-voice-$($v.Name)"
-            if (Test-Path -LiteralPath $vstage) { Remove-Item -LiteralPath $vstage -Recurse -Force }
-            New-Item -ItemType Directory -Path $vstage | Out-Null
-            Copy-StageTree $v.FullName $vstage "voices/$($v.Name)"
-            $vfiles = Write-Manifest $vstage "piper-voice-$($v.Name)" $null
-            $vzip = Join-Path $OutDir "piper-voice-$($v.Name)-$PackVersion.zip"
-            $vhex = New-PackZip $vstage $vzip
-            Write-PackSummary "piper-voice-$($v.Name)" $vzip $vhex $vfiles.Count
-            Remove-Item -LiteralPath $vstage -Recurse -Force
+            Copy-TreeTo $v.FullName $stage "voices/$($v.Name)"
+            $vb = Get-DirBytes $v.FullName
+            $voiceBytes += $vb
+            Write-Host ("  voice {0,-26} {1,7:N1} MB" -f $v.Name, ($vb / 1MB))
         }
-        foreach ($v in $voices) {
-            Get-ChildItem -LiteralPath (Join-Path $runtimeStage "voices\$($v.Name)") -Recurse -File |
-                Remove-Item -Force
-        }
-    }
 
-    Report-Signatures $runtimeStage
-    $files = Write-Manifest $runtimeStage 'piper' @{ voices = $voiceCount; splitVoices = [bool]$SplitVoices }
-    $zip = Join-Path $OutDir "piper-$PackVersion.zip"
-    $hex = New-PackZip $runtimeStage $zip
-    Write-PackSummary 'piper' $zip $hex $files.Count
-    Remove-Item -LiteralPath $runtimeStage -Recurse -Force
+        if ($GenerateVoicesJson) {
+            $entries = @()
+            foreach ($v in $voices) {
+                foreach ($model in Get-ChildItem -LiteralPath $v.FullName -Filter *.onnx -File) {
+                    $json = "$($model.FullName).json"
+                    if (-not (Test-Path -LiteralPath $json)) { Write-Warning "$($v.Name): $($model.Name) has no .onnx.json beside it, skipping"; continue }
+                    $sample = 22050
+                    $name = $v.Name
+                    try {
+                        $j = Get-Content -LiteralPath $json -Raw | ConvertFrom-Json
+                        if ($j.audio.sample_rate) { $sample = [int]$j.audio.sample_rate }
+                        if ($j._meta.name) { $name = [string]$j._meta.name }
+                    } catch { Write-Warning "$($v.Name): unreadable $($model.Name).json" }
+                    $entries += [ordered]@{
+                        Name   = $name
+                        Config = "$($v.Name)/$(Split-Path -Leaf $json)"
+                        Model  = "$($v.Name)/$($model.Name)"
+                        Sample = $sample
+                    }
+                }
+            }
+            if ($entries.Count -eq 0) { throw 'generated voices.json would list nothing' }
+            [IO.File]::WriteAllText((Join-Path $stage 'voices\voices.json'), (@{ Voices = $entries } | ConvertTo-Json -Depth 5))
+            Write-Host "  voices.json generated for $($entries.Count) model(s)"
+        } else {
+            $vj = Join-Path $PiperDir 'voices\voices.json'
+            if (-not (Test-Path -LiteralPath $vj)) { throw "no voices.json at $vj (or use -GenerateVoicesJson)" }
+            Copy-FileTo $vj $stage 'voices/voices.json'
+        }
+
+        # A name in voices.json whose files are not in the pack is silence on a user's machine, so make it a build error.
+        $doc = Get-Content -LiteralPath (Join-Path $stage 'voices\voices.json') -Raw | ConvertFrom-Json
+        foreach ($v in $doc.Voices) {
+            foreach ($rel in @($v.Model, $v.Config)) {
+                if (-not (Test-Path -LiteralPath (Join-Path $stage ($rel -replace '/', '\')))) {
+                    throw "voices.json lists '$($v.Name)' -> $rel which is not in the pack"
+                }
+            }
+        }
+
+        [IO.File]::WriteAllText((Join-Path $stage 'THIRD-PARTY-NOTICES.txt'), $Notices)
+        Write-Host ''
+        Write-Host ("piper: {0} voice(s), {1:N0} MB of voice data" -f $voices.Count, ($voiceBytes / 1MB))
+        Test-PackSignatures $stage
+        $files = New-ManifestIn $stage 'piper' @{ voiceCount = $doc.Voices.Count }
+        $zip = Join-Path $OutDir "piper-$PackVersion.zip"
+        Write-PackResult 'piper' $zip (New-PackZip $stage $zip) $files.Count
+    } finally { Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 Write-Host ''
-Write-Host 'done. Rules for publishing:'
-Write-Host '  - the .sha256 sidecar goes up next to the zip; users can compare it against the digest GitHub prints'
-Write-Host '  - never overwrite a published asset: an installed app pins its tag, so fix mistakes with a new version'
-Write-Host '  - check a downloaded pack with: -Verify <zip>'
+Write-Host 'publishing rules:'
+Write-Host '  - upload the .sha256 sidecar next to each zip; it is also the digest GitHub shows for the asset'
+Write-Host '  - never overwrite a published asset: released apps pin the tag, so fix mistakes with a new version'
+Write-Host '  - re-check what came back down with: -Verify <zip>'
