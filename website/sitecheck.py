@@ -11,8 +11,9 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
-# robots.txt disallows this page, so it is not held to indexable-page rules.
-NON_INDEXABLE = {'status.html'}
+# Pages that are not meant to be indexed: status.html is disallowed by robots.txt and
+# 404.html is an error page. Neither belongs in the sitemap.
+NON_INDEXABLE = {'status.html', '404.html'}
 
 # Keep in sync with the client id used by build.py and dist/ads.txt.
 ADSENSE_PUBLISHER_ID = 'ca-pub-4428145487599357'

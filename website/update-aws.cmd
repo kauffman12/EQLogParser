@@ -45,6 +45,7 @@ call :upload faq.html
 call :upload policy.html
 call :upload status.html
 call :upload download.html
+call :upload 404.html
 call :uploadxml sitemap.xml
 call :uploadxml feed.xml
 call :uploadtxt robots.txt

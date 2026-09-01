@@ -18,3 +18,5 @@ website/dist/feed.xml
 
 # Local virtualenv for the website build script
 website/.venv/
+
+__pycache__/

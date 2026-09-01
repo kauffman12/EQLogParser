@@ -67,6 +67,10 @@ PAGE_META = {
     'download.html': ('Download {version} for Windows | EQLogParser',
                       'Download EQLogParser {version} for Windows 10 and 11: free real-time EverQuest combat log '
                       'analyzer with a damage meter, audio triggers and timer overlays.'),
+    # Not indexed and not advertised anywhere; CloudFront serves it for missing URLs.
+    '404.html': ('Page Not Found | EQLogParser',
+                 'That page is not here any more. Reach the download, the getting started guide, the triggers '
+                 'reference or the release notes from here.'),
 }
 
 
@@ -194,23 +198,28 @@ def adsense_skyscraper():
       <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'''
 
 
-def build_head(title: str, description: str, version: str, url: str, canonical: str = '') -> str:
+def build_head(title: str, description: str, version: str, url: str, canonical: str = '',
+               indexable: bool = True) -> str:
     """Build the shared HTML <head> section used by all pages.
 
     `title` is the complete <title> text (see PAGE_META) and `canonical` is the page's own
     path (empty for the home page) so every URL points at exactly one preferred address;
-    `url` stays the installer download link.
+    `url` stays the installer download link. `indexable=False` marks an error page: no
+    canonical, and robots told to stay away.
     """
+    robots = 'index, follow' if indexable else 'noindex, nofollow'
+    canonical_link = (f'  <link rel="canonical" href="{SITE_BASE_URL}/{canonical}" />'
+                      if indexable else '')
     return f"""  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content="{description}" />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="{robots}" />
   <meta name="google-adsense-account" content="ca-pub-4428145487599357" />
   <meta name="version" content="{version}" />
   <meta name="download" content="{url}" />
   <link rel="shortcut icon" href="/favicon.ico" />
-  <link rel="canonical" href="{SITE_BASE_URL}/{canonical}" />
+{canonical_link}
   <link rel="sitemap" type="application/xml" href="{SITE_BASE_URL}/sitemap.xml" />
   <link rel="alternate" type="application/atom+xml" title="EQLogParser release notes"
         href="{SITE_BASE_URL}/feed.xml" />
@@ -812,6 +821,59 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
 </body>
 </html>"""
 
+
+def build_404_page(version: str, nav_header_html: str) -> str:
+    """Page CloudFront serves for missing URLs (distribution custom error response).
+
+    Deliberately carries no AdSense unit: Google's policies do not allow ads on error pages,
+    and a 404 that renders the ad rail also invites an invalid-traffic complaint. Analytics
+    does run, plus a file_not_found event, so links that rot out there show up in the reports
+    instead of vanishing.
+    """
+    title, description = page_meta('404.html', version)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+{build_head(title, description, version, '', indexable=False)}
+</head>
+<body>
+  <nav class="topbar">{nav_header_html}</nav>
+  <main class="container">
+    <section class="hero center-section">
+      <img src="img/logo.png" alt="EQLogParser — real-time combat analyzer for EverQuest" class="hero-logo" width="400" height="211" />
+      <h1>404 &mdash; page not found</h1>
+      <p class="muted">That page is not here. It may have moved, or the link may be out of date.</p>
+      <p class="center">
+        <a class="btn btn-download" href="download.html">Download EQLogParser {version}</a>
+      </p>
+      <p class="center small">
+        <a href="index.html">Home</a> &middot;
+        <a href="getting-started.html">Getting started</a> &middot;
+        <a href="documentation.html">Triggers and regex</a> &middot;
+        <a href="faq.html">FAQ</a> &middot;
+        <a href="releasenotes.html">Release notes</a> &middot;
+        <a href="feed.xml">Release notes feed</a>
+      </p>
+      <p class="center small muted">A link that should work? <a target="_blank" href="https://github.com/kauffman12/EQLogParser/discussions">Tell us on GitHub</a>.</p>
+    </section>
+  </main>
+  <script>
+    if (typeof gtag === 'function') {{
+      gtag('event', 'file_not_found', {{
+        'page_path': window.location.pathname,
+        'page_location': window.location.href,
+        'referring_url': document.referrer || '(none)'
+      }});
+    }}
+  </script>
+  <footer class="site-footer">
+    <a href="policy.html">Privacy Policy</a> | © 2025 EQLogParser
+  </footer>
+  {THEME_SCRIPT}
+</body>
+</html>"""
+
+
 def main(argv):
     if 'sitemap' in argv[1:]:
         build_sitemap()
@@ -848,6 +910,10 @@ def main(argv):
     download_html = build_download_page(version, url, header_html)
     (DIST_DIR / 'download.html').write_text(download_html, encoding='utf-8')
     print(f'✅ HTML generated: {(DIST_DIR / "download.html").resolve()}')
+
+    # Served by the CloudFront custom error response for missing URLs (403/404).
+    (DIST_DIR / '404.html').write_text(build_404_page(version, header_html), encoding='utf-8')
+    print(f'✅ HTML generated: {(DIST_DIR / "404.html").resolve()}')
 
     # Reserve space for every image so late-loading screenshots cannot shift the page
     stamped = sum(stamp_image_dimensions(page) for page in sorted(DIST_DIR.glob('*.html')))
