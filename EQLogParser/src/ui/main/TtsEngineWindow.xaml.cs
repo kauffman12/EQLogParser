@@ -117,15 +117,18 @@ namespace EQLogParser
     private static string GetEngineDescription(string engine) => engine switch
     {
       AudioManager.PiperEngine =>
-        "Fast and light: speaks the instant a callout fires and costs almost nothing. The voices sound synthetic next " +
-        "to Kokoro.",
+        "Fast and lightweight. Speech starts almost instantly and uses very few system resources, but the voices sound " +
+        "more synthetic than Kokoro.",
+
       AudioManager.KokoroEngine =>
-        "The best sounding voices here, and the heaviest: a few hundred MB of memory and real CPU, so it takes a moment " +
-        "to start speaking. An older machine may fall behind.",
+        "The most natural-sounding voices, but also the most demanding. Uses a few hundred MB of memory and more CPU, " +
+        "so speech may take a moment to start and slower systems may struggle to keep up.",
+
       AudioManager.WindowsEngine =>
-        "Nothing to download and no cost at all. These voices come from Windows itself: they are not there under Wine, " +
-        "and how good they sound varies with the voice packs a machine has.",
-      _ => "Speech runs locally on this machine."
+        "Built into Windows with nothing extra to download. Voice quality depends on the installed Windows voice. " +
+        "This engine is not available when running under Linux/Wine.",
+
+      _ => "Speech is generated locally on this machine."
     };
 
     /* Both text lines under the picker follow the selection: what the engine is like, then whether it can be used. */
@@ -325,7 +328,7 @@ namespace EQLogParser
       {
         progressBar.Value = Math.Clamp(value * 100, 0, 100);
         SetStatus(value < VerifyPhaseFraction
-          ? $"{FormatSize((long) (totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)}"
+          ? $"{FormatSize((long)(totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)}"
           : "validating files...");
       });
       var success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
