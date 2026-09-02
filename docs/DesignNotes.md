@@ -184,8 +184,8 @@ outside would mean reading `_tts` without the lock that keeps synthesis and engi
 ### Switching engines while running
 
 `AudioManager.SwitchEngineAsync` builds the requested engine, lets it discover its voices, re-binds every player, swaps
-it in and disposes the one it replaced. `Tools > Select TTS engine...` calls it on selection change and after a Kokoro
-download finishes, so picking an engine takes effect on the next callout instead of on the next start. The saved
+it in and disposes the one it replaced. `Tools > Select TTS engine...` calls it when you press **Use**, and after a
+runtime pack finishes downloading, so switching takes effect on the next callout instead of on the next start. The saved
 setting still decides what a fresh launch uses, and a switch that cannot be honored (model missing, native library
 refusing to load) leaves the current engine speaking rather than leaving the app without speech.
 
@@ -199,6 +199,34 @@ Two things make swapping safe rather than merely convenient:
   drops the rest, which sends that player back to the engine's default voice. Kokoro deliberately refuses to remember
   a name it does not have: a stale name would otherwise cling to a player for the rest of its life and be spoken
   quietly as a different voice.
+
+### Warming a voice before anything has to wait on it
+
+Speaking costs time in three separate places, and only some of it is the model: building a Piper voice is an ONNX
+session over the voice model plus the espeak-ng dictionaries; *any* engine's first synthesis warms the runtime behind it
+(arena sizing, kernel selection, the phonemizer's tables); and the audio device opens lazily on first playback. Cached
+phrases skip all of it, so a trigger that says the same dozen sentences pays once per session — the delay is on the
+first thing said with a voice, which is usually the trigger someone is waiting for.
+
+`AudioManager.WarmUpVoice` covers the parts that can be paid in advance:
+
+- **When:** a player is registered (`Add`), its voice changes (`SetVoice` — this is what the voice dropdown does, both
+  when you pick one and when an engine switch repopulates the list and selects a default) and after an engine switch,
+  for each distinct voice still bound to a player.
+- **What:** `ITtsEngine.WarmUpVoiceAsync`. Piper builds the native voice; Kokoro and Windows have nothing per voice to
+  build — every embedding arrives with the session made at engine creation — so they speak one short word into memory
+  and throw it away, which is what warms inference.
+- **Never audible and never in the way:** warm-up enters the synthesis gate only when it is free, retries briefly if
+  something is talking, and gives up rather than standing in line. Choosing a voice also speaks an audible preview, and
+  waiting behind a warm-up for that would be worse than staying cold. Whatever the retry window misses costs speed and
+  nothing else.
+
+Piper holds **one** prepared voice outside the players, under a reserved id in the native table. Previews used to build
+a voice, speak and destroy it, so every different text paid for the model again; now `ResolveAdHocSpeaker` keeps it,
+and takes the previous one out when the selection moves — which is the whole point, since otherwise an afternoon of
+trying voices leaks a hundred megabyte model per change. Two further rules keep memory flat: a preview of a voice that
+some player already speaks uses *that player's* session rather than building a second copy, and rebinding a player to a
+different voice removes the old native voice first, because replacing a table entry is not documented as releasing it.
 
 ### Windows voices are proven, not assumed
 
