@@ -114,25 +114,59 @@ namespace EQLogParser
       if (selected == AudioManager.Instance.GetActiveEngine())
       {
         var saved = ConfigUtil.GetSetting(SettingKey);
-        engineHintText.Text = string.IsNullOrEmpty(saved) || saved == selected
-          ? "This is the engine currently in use."
-          : $"{selected} is what EQLogParser speaks with. The saved choice, {saved}, would not start here.";
+        if (string.IsNullOrEmpty(saved) || saved == selected)
+        {
+          SetHint("This is the engine currently in use.");
+        }
+        else
+        {
+          // Something is speaking that is not what was asked for, which is worth colouring: it means an engine failed
+          // to come up and the fallback took over quietly.
+          SetHint($"{selected} is in use; the saved choice, {saved}, would not start.", WarnBrush);
+        }
       }
       else if (available)
       {
-        engineHintText.Text = "Takes effect right away, starting with the next callout.";
+        SetHint("Applies at once, from the next callout.");
       }
       else if (downloadable)
       {
-        engineHintText.Text = $"{selected} is not installed. Enabling it downloads about " +
-          $"{FormatSize(AudioManager.Instance.GetEngineDownloadBytes(selected))} from GitHub into your local app data.";
+        // Size and action both live on the button, so this only has to say why the button is there.
+        SetHint($"{selected} is not installed. Use Download below.");
       }
       else
       {
-        // Proven unusable rather than merely unused: this is either not real Windows -- Wine has no voices to give --
-        // or the speech runtime is missing. One of those has no fix at all, so say what the way out is.
-        engineHintText.Text = $"The {selected} voices are not available here: they come from Windows itself, and " +
-          "neither Wine nor a Windows image without the speech runtime has any. Enable Piper or Kokoro below.";
+        // Proven unusable rather than merely unused: not real Windows -- Wine has no voices to give -- or the speech
+        // runtime is missing. One of those has no fix at all, so say what the way out is.
+        SetHint($"The {selected} voices come from Windows itself and are absent under Wine. Enable Piper or Kokoro below.", WarnBrush);
+      }
+    }
+
+    /*
+     * Body text and status lines resolve their colour through the theme dictionaries rather than picking one up in
+     * code, so switching themes mid-session repaints them. Passing no brush key hands the element back to the theme's
+     * own text colour: ClearValue restores inheritance, where assigning a colour would not.
+     */
+    private void SetHint(string text, string brushKey = null) => SetText(engineHintText, text, brushKey);
+
+    private void SetStatus(string text, string brushKey = null) => SetText(statusText, text, brushKey);
+
+    private const string GoodBrush = "EQGoodForegroundBrush";
+    private const string WarnBrush = "EQWarnForegroundBrush";
+    private const string StopBrush = "EQStopForegroundBrush";
+
+    private static void SetText(TextBlock target, string text, string brushKey)
+    {
+      target.Text = text;
+      if (string.IsNullOrEmpty(brushKey))
+      {
+        // Body text as the skin defines it, which is what the XAML opens with. ClearValue would do something similar by
+        // inheriting from the window, but this keeps one obvious answer for "plain text in a dialog".
+        target.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
+      }
+      else
+      {
+        target.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
       }
     }
 
@@ -167,7 +201,7 @@ namespace EQLogParser
       // what the next start uses, so it has to name something that can actually speak.
       if (!AudioManager.Instance.IsEngineAvailable(selected))
       {
-        statusText.Text = string.Empty;
+        SetStatus(string.Empty);
         return;
       }
 
@@ -208,7 +242,7 @@ namespace EQLogParser
       _switching = true;
       engineList.IsEnabled = false;
       UpdateButtons(selected);
-      statusText.Text = $"Switching to {selected}...";
+      SetStatus("switching...");
 
       try
       {
@@ -216,7 +250,7 @@ namespace EQLogParser
 
         if (switched)
         {
-          statusText.Text = $"Now using {selected}.";
+          SetStatus($"Now using {selected}.", GoodBrush);
         }
         else
         {
@@ -250,19 +284,19 @@ namespace EQLogParser
       var totalBytes = AudioManager.Instance.GetEngineDownloadBytes(engine);
       progressBar.Visibility = Visibility.Visible;
       progressBar.Value = 0;
-      statusText.Text = $"Downloading {engine}, about {FormatSize(totalBytes)} from GitHub...";
+      SetStatus($"Downloading {FormatSize(totalBytes)}...");
 
       /*
-       * Progress<T> posts back to the UI thread it was created on, which is what makes the bar move. The byte count is
-       * spelled out as well because a bar on its own cannot say whether 348 MB is nearly there or barely started, and
-       * because the last tenth of the run is hashing and unpacking rather than the network.
+       * Progress<T> posts back to the UI thread it was created on, which is what makes the bar move. Bytes rather than
+       * a percentage because a bar alone cannot say whether 224 MB is nearly there or barely started. Nothing names the
+       * engine: they clicked its Download button, and this row has room for one short line.
        */
       var progress = new Progress<float>(value =>
       {
         progressBar.Value = Math.Clamp(value * 100, 0, 100);
-        statusText.Text = value < VerifyPhaseFraction
-          ? $"{engine}: about {FormatSize((long) (totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)} downloaded"
-          : $"{engine}: checking the files and installing them...";
+        SetStatus(value < VerifyPhaseFraction
+          ? $"{FormatSize((long) (totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)}"
+          : "validating files...");
       });
       var success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
 
@@ -272,7 +306,7 @@ namespace EQLogParser
 
       if (!success)
       {
-        statusText.Text = "Download failed. Check the Error Log for details and try again.";
+        SetStatus("Download failed. See the Error Log and try again.", StopBrush);
         UpdateButtons(engine);
         return;
       }
@@ -295,13 +329,12 @@ namespace EQLogParser
       if (AudioManager.Instance.RemoveEngineFiles(engine))
       {
         RefreshState();
-        statusText.Text = $"{engine} files removed. The engine can be downloaded again at any time.";
+        SetStatus($"{engine} files removed.", GoodBrush);
         return;
       }
 
       // Either the active engine, which AudioManager refuses for, or a running copy has the native libraries mapped.
-      statusText.Text = $"Could not remove the {engine} files. They are in use by a running copy of EQLogParser; " +
-        "close it and start again to free the space.";
+      SetStatus($"Could not remove the {engine} files: another copy of EQLogParser is using them. Close it and try again.", StopBrush);
       UpdateButtons(engine);
     }
 
@@ -315,7 +348,7 @@ namespace EQLogParser
     {
       var active = AudioManager.Instance.GetActiveEngine();
       ConfigUtil.SetSetting(SettingKey, active);
-      statusText.Text = $"Could not switch. {active} keeps speaking.";
+      SetStatus($"Could not switch: {active} keeps speaking.", StopBrush);
     }
 
     private static string FormatSize(long bytes) => bytes switch

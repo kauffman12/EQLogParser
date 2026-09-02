@@ -30,7 +30,8 @@
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0" Orientation="Horizontal">
-      <TextBlock Text="TTS Engine:" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}" />
+      <TextBlock Text="TTS Engine:" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}"
+        Foreground="{DynamicResource ContentForeground}" />
       <ComboBox x:Name="engineList" Width="160" Margin="8,0,0,0" SelectionChanged="EngineSelectionChanged">
         <!--
           Rows the machine cannot use are greyed out where the choice is made, from EngineOption.CanPick. BasedOn keeps
@@ -38,25 +39,30 @@
           default item, which is invisible in the dark theme.
         -->
         <ComboBox.ItemContainerStyle>
-          <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+          <Style TargetType="ComboBoxItem" BasedOn="{DynamicResource {x:Type ComboBoxItem}}">
             <Setter Property="IsEnabled" Value="{Binding CanPick}" />
           </Style>
         </ComboBox.ItemContainerStyle>
       </ComboBox>
     </StackPanel>
-    <TextBlock Grid.Row="1" x:Name="engineHintText" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource EQContentSize}" />
+    <TextBlock Grid.Row="1" x:Name="engineHintText" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource EQContentSize}"
+      Foreground="{DynamicResource ContentForeground}" />
 
     <Separator Grid.Row="2" Margin="0,14,0,0" />
 
     <!-- Replaced with a per engine description whenever the selection changes; see GetEngineDescription. -->
     <TextBlock Grid.Row="3" x:Name="infoText" TextWrapping="Wrap" Margin="0,14,0,0" FontSize="{DynamicResource EQContentSize}"
-      Text="Speech runs locally on this machine." />
+      Foreground="{DynamicResource ContentForeground}" Text="Speech runs locally on this machine." />
     <!--
       The bar gets a row of its own and the status line sits under it. Sharing a row with the bar put white text over a
-      fill that grows through it, so the words went unread at exactly the moment anyone wanted to read them.
+      fill that grows through it, so the words went unread at exactly the moment anyone wanted to read them. Neither
+      takes colors of its own beyond the theme: this is the app's only progress bar, and letting the skin paint it is
+      what keeps it legible when someone switches to MaterialLight. statusText picks up the feedback colors the rest of
+      the app uses (green for work done, red for work that failed) from code as each message is written.
     -->
     <ProgressBar Grid.Row="4" x:Name="progressBar" Height="18" Minimum="0" Maximum="100" Margin="0,14,0,0" Visibility="Collapsed" />
-    <TextBlock Grid.Row="5" x:Name="statusText" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="{DynamicResource EQContentSize}" />
+    <TextBlock Grid.Row="5" x:Name="statusText" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="{DynamicResource EQContentSize}"
+      Foreground="{DynamicResource ContentForeground}" />
 
     <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
       <Button x:Name="removeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
