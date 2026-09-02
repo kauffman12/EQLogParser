@@ -37,6 +37,9 @@ namespace EQLogParser.Audio
     private const string ModelSha256 = "027a25b14aef7d3ae57fd09301ebefbec868e79d55213d07e4f3af442f5ba352";
     private const string PreferredDefaultVoice = "af_heart";
 
+    // Word run through a session that has not spoken yet. Nobody hears it; see WarmUpVoiceAsync.
+    private const string WarmUpText = "test";
+
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // KokoroSharp holds the loaded embeddings in process wide state, so they can only be read once. Remembered here
@@ -125,6 +128,20 @@ namespace EQLogParser.Audio
       // Inference is synchronous CPU work; keep it off whatever thread asked for the audio.
       var pcm = await Task.Run(() => _synth.Synthesize(text, found)).ConfigureAwait(false);
       return pcm is { Length: > 0 } ? (pcm, SampleRate) : (null, 0);
+    }
+
+    public async Task WarmUpVoiceAsync(string voice)
+    {
+      if (_synth is null || FindVoice(voice) is not { } found)
+      {
+        return;
+      }
+
+      // Unlike Piper there is nothing to build per voice here - the embeddings all arrive with the one session made at
+      // engine creation, so there is no previous voice to unload either. What a first callout pays for is warming: the
+      // phonemizer building its tables and ONNX Runtime sizing its arenas on the first run through the graph. One
+      // throwaway synthesis covers that, and it is worth doing before a trigger has to wait on it.
+      _ = await Task.Run(() => _synth.Synthesize(WarmUpText, found)).ConfigureAwait(false);
     }
 
     public void Dispose()

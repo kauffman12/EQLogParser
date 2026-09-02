@@ -24,6 +24,9 @@ namespace EQLogParser.Audio
     internal const string EngineName = "Windows";
     private const string LegacyPrefix = "(Legacy) ";
 
+    // Word spoken into memory by an engine that has not spoken yet. See WarmUpVoiceAsync.
+    private const string WarmUpText = "test";
+
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     /*
@@ -342,6 +345,14 @@ namespace EQLogParser.Audio
       {
         DisposeWinRt(synth);
       }
+    }
+
+    public async Task WarmUpVoiceAsync(string voice)
+    {
+      // Nothing is held per voice: a synthesizer object is cheap next to a neural model, and the players that will
+      // actually talk already keep one each. What is slow is the very first speak - SAPI spinning up, WinRT resolving
+      // its voice - so say one word into memory through the same path a callout uses and throw the audio away.
+      _ = await SynthesizeVoiceAsync(voice, WarmUpText).ConfigureAwait(false);
     }
 
     public void Dispose()

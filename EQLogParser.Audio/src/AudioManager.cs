@@ -34,6 +34,13 @@ namespace EQLogParser.Audio
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Lazy<AudioManager> Lazy = new(() => new AudioManager());
     private const int LATENCY = 72;
+
+    /*
+     * Warm-up takes the synthesis gate only when nothing else holds it, retrying briefly in case a preview is playing,
+     * and gives up rather than getting in line ahead of real speech. See WarmUpVoice.
+     */
+    private const int WarmUpAttempts = 6;
+    private const int WarmUpRetryDelayMs = 400;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = [];
     private readonly ConcurrentDictionary<string, bool> _isRenderDevice = new();
     /*
@@ -53,6 +60,13 @@ namespace EQLogParser.Audio
      * what gets handed to the next engine when the user switches engines without restarting.
      */
     private readonly ConcurrentDictionary<string, string> _requestedVoices = [];
+
+    /*
+     * Engine and voice most recently prepared by WarmUpVoice, so being asked for the same voice twice does nothing.
+     * Cleared when another engine takes over, because the new one has to be warmed on its own terms.
+     */
+    private string _warmedVoice;
+
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
     private bool _disposed;
@@ -189,6 +203,15 @@ namespace EQLogParser.Audio
 
         _tts = next;
 
+        // The new engine has nothing prepared yet whatever the old one had warmed. Distinct voices only: a machine
+        // with six characters configured speaks with up to six of them, and each of these is one short word.
+        _warmedVoice = null;
+
+        foreach (var voice in _requestedVoices.Values.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+          WarmUpVoice(voice);
+        }
+
         // retired under the gate on purpose: every call into an engine happens under this gate, so an engine that
         // nobody can reach any more is the only one safe to hand to the native release
         previous.Dispose();
@@ -247,6 +270,7 @@ namespace EQLogParser.Audio
       {
         _requestedVoices[id] = voice;
         _tts.SetVoice(id, voice);
+        WarmUpVoice(voice);
       }
     }
 
@@ -255,6 +279,95 @@ namespace EQLogParser.Audio
       _requestedVoices[id] = voice;
       _tts.SetVoice(id, voice);
       _playerAudios.TryAdd(id, new PlayerAudio());
+      WarmUpVoice(voice);
+    }
+
+    /*
+     * Get a voice ready to speak so the first thing said with it is not slow: building a Piper voice is an ONNX
+     * session plus espeak-ng dictionaries, and any engine's first synthesis also warms the runtime behind it. Called
+     * when a player is registered, when its voice changes - which is what the voice dropdown does - and after an
+     * engine switch. Nothing plays, and the work happens in the background.
+     *
+     * This is a nicety, not a requirement: every path here still synthesizes correctly if warm-up never ran, only the
+     * first utterance pays for it.
+     */
+    public void WarmUpVoice(string voice)
+    {
+      if (_disposed)
+      {
+        return;
+      }
+
+      var target = string.IsNullOrEmpty(voice) ? _tts.GetDefaultVoice() : voice;
+      var key = $"{_tts.Name}:{target}";
+
+      if (string.IsNullOrEmpty(target) || string.Equals(_warmedVoice, key, StringComparison.OrdinalIgnoreCase))
+      {
+        return;
+      }
+
+      _warmedVoice = key;
+
+      /*
+       * Opportunistic by design. It slips into the synthesis gate only when that gate is free, which is what keeps it
+       * from building or releasing a native voice while another thread speaks through one and from holding up anything
+       * audible - choosing a voice speaks a preview straight away, and that preview would otherwise wait behind this.
+       * If speech is busy for a moment the warm-up retries, then gives up; the voice stays cold until the next change,
+       * which costs nothing but speed.
+       */
+      _ = Task.Run(async () =>
+      {
+        for (var attempt = 0; attempt < WarmUpAttempts; attempt++)
+        {
+          if (_disposed)
+          {
+            return;
+          }
+
+          bool taken;
+
+          try
+          {
+            taken = await _synthGate.WaitAsync(0).ConfigureAwait(false);
+          }
+          catch (ObjectDisposedException)
+          {
+            // The app is closing and nothing needs warming.
+            return;
+          }
+
+          if (!taken)
+          {
+            await Task.Delay(WarmUpRetryDelayMs).ConfigureAwait(false);
+            continue;
+          }
+
+          try
+          {
+            // The engine may have changed since this was queued. Warm what is speaking now rather than what was
+            // selected then; an engine handed a voice it does not have falls back to its own default.
+            await _tts.WarmUpVoiceAsync(target).ConfigureAwait(false);
+          }
+          catch (Exception ex)
+          {
+            // A voice that will not warm is not worth reporting: the trigger that follows synthesizes normally, just
+            // without the head start.
+            Log.Debug($"Unable to warm up the {target} voice", ex);
+          }
+          finally
+          {
+            _synthGate.Release();
+          }
+
+          return;
+        }
+
+        // Something was talking the whole time. Forget that this ran so a later change gets another chance.
+        if (string.Equals(_warmedVoice, key, StringComparison.OrdinalIgnoreCase))
+        {
+          _warmedVoice = null;
+        }
+      });
     }
 
     public void StartAudio(string id)

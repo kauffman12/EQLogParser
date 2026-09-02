@@ -26,8 +26,12 @@ namespace EQLogParser.Audio
     /* Native library name, answered by the import resolver below. */
     internal const string PiperApiLibrary = "piperApi.dll";
 
-    // The native voice table is keyed by id, so preview and WAV export need an id no player can have.
+    // The native voice table is keyed by id, so preview and WAV export need an id no player can have. It doubles as
+    // the prepared voice slot, which holds one voice at a time: see ResolveAdHocSpeaker.
     private const string AdHocVoiceId = "testSpeaker";
+
+    // One short word to run a freshly built session through. Its content does not matter and nobody hears it.
+    private const string WarmUpText = "Ready.";
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -37,6 +41,9 @@ namespace EQLogParser.Audio
     private static readonly object _nativeLock = new();
 
     private readonly ConcurrentDictionary<string, PlayerVoice> _players = new();
+
+    // Voice currently loaded under AdHocVoiceId, null when that slot is empty or unusable.
+    private string _preparedVoice;
     private readonly PiperVoiceData _voiceData;
 
     // Captured for the life of this instance: installing or removing a pack while running must not move the files
@@ -75,7 +82,28 @@ namespace EQLogParser.Audio
 
     public void SetVoice(string playerId, string voice)
     {
-      if (!string.IsNullOrEmpty(playerId) && LoadNativeVoice(playerId, voice) is { } voiceInfo)
+      if (string.IsNullOrEmpty(playerId))
+      {
+        return;
+      }
+
+      // Rebinding the voice the player already speaks is a waste of exactly the time this is all about: a config write
+      // touches every setting, and rebuilding an ONNX session to end up with the same voice would be worse than doing
+      // nothing.
+      if (_players.TryGetValue(playerId, out var current) && string.Equals(current.Name, voice, StringComparison.OrdinalIgnoreCase))
+      {
+        return;
+      }
+
+      // The old voice goes out first. Replacing a table entry is not documented as releasing the session behind it, so
+      // rebinding without removing would leak a voice model per dropdown change - which is how an afternoon of trying
+      // voices ends with several hundred megabytes of voices nobody selected.
+      if (current is not null)
+      {
+        TryRemoveNativeVoice(playerId);
+      }
+
+      if (LoadNativeVoice(playerId, voice) is { } voiceInfo)
       {
         _players[playerId] = new PlayerVoice { Name = voiceInfo.Name, SampleRate = voiceInfo.Sample };
       }
@@ -89,10 +117,14 @@ namespace EQLogParser.Audio
       }
 
       _players.TryRemove(playerId, out _);
+      TryRemoveNativeVoice(playerId);
+    }
 
+    private static void TryRemoveNativeVoice(string id)
+    {
       try
       {
-        _ = PiperInterop.removeVoice(playerId);
+        _ = PiperInterop.removeVoice(id);
       }
       catch (Exception ex)
       {
@@ -109,32 +141,74 @@ namespace EQLogParser.Audio
 
     public async Task<(byte[] pcm, int sampleRate)> SynthesizeVoiceAsync(string voice, string text)
     {
-      if (LoadNativeVoice(AdHocVoiceId, voice) is not { } voiceInfo)
+      var (speaker, sampleRate) = ResolveAdHocSpeaker(voice);
+
+      if (string.IsNullOrEmpty(speaker))
       {
         return (null, 0);
       }
 
-      try
+      var pcm = await Task.Run(() => SynthesizeNative(speaker, text)).ConfigureAwait(false);
+      return (pcm, sampleRate);
+    }
+
+    public async Task WarmUpVoiceAsync(string voice)
+    {
+      var (speaker, _) = ResolveAdHocSpeaker(voice);
+
+      if (string.IsNullOrEmpty(speaker))
       {
-        var pcm = await Task.Run(() => SynthesizeNative(AdHocVoiceId, text)).ConfigureAwait(false);
-        return (pcm, voiceInfo.Sample);
+        return;
       }
-      finally
+
+      // Building the session is most of the cost and ResolveAdHocSpeaker has just done it. The throwaway synthesis is
+      // for the rest: ONNX Runtime allocates its arenas and settles on kernels the first time it runs something, so a
+      // trigger should not be the first thing through a brand new session.
+      _ = await Task.Run(() => SynthesizeNative(speaker, WarmUpText)).ConfigureAwait(false);
+    }
+
+    /*
+     * Which native voice speaks for a preview, and at what rate. A voice that some player already speaks reuses that
+     * player's session rather than building a second one over the same model - selecting a voice in the UI has loaded
+     * it already, and a preview of it should cost inference and nothing else. Otherwise the single prepared slot is
+     * retargeted, releasing the voice that was in it.
+     *
+     * Either way the session stays loaded afterwards. Previews come in bursts - pick a voice, hear it, edit the text,
+     * hear it again - and the old behaviour of dropping the voice when each one finished meant paying for the model
+     * again on every single one.
+     */
+    private (string speaker, int sampleRate) ResolveAdHocSpeaker(string voice)
+    {
+      if (_voiceData?.Voices is not { Count: > 0 } voices)
       {
-        try
-        {
-          _ = PiperInterop.removeVoice(AdHocVoiceId);
-        }
-        catch (Exception ex)
-        {
-          Log.Debug("Unable to remove piper preview voice", ex);
-        }
+        return (null, 0);
       }
+
+      var wanted = voices.FirstOrDefault(v => string.Equals(v.Name, voice, StringComparison.OrdinalIgnoreCase)) ?? voices[0];
+
+      var owned = _players.FirstOrDefault(player => string.Equals(player.Value.Name, wanted.Name, StringComparison.OrdinalIgnoreCase));
+
+      if (owned.Value is not null)
+      {
+        return (owned.Key, owned.Value.SampleRate);
+      }
+
+      if (!string.Equals(_preparedVoice, wanted.Name, StringComparison.OrdinalIgnoreCase))
+      {
+        TryRemoveNativeVoice(AdHocVoiceId);
+        _preparedVoice = LoadNativeVoice(AdHocVoiceId, wanted.Name)?.Name;
+      }
+
+      return _preparedVoice is not null ? (_preparedVoice, wanted.Sample) : (null, 0);
     }
 
     public void Dispose()
     {
       _players.Clear();
+
+      // release() below empties the whole native table, prepared voice included; this only keeps this instance from
+      // believing a slot is still loaded after another instance has released it.
+      _preparedVoice = null;
 
       lock (_nativeLock)
       {

@@ -9,8 +9,9 @@ namespace EQLogParser.Audio
    * swaps that instance when the user picks another one, so adding an engine means adding a class instead of
    * branching through the manager.
    *
-   * Threading: SynthesizeForPlayerAsync / SynthesizeVoiceAsync are serialized by AudioManager. Piper keeps a
-   * process-wide native voice table and Kokoro runs a single inference session; neither is documented as safe to
+   * Threading: SynthesizeForPlayerAsync / SynthesizeVoiceAsync / WarmUpVoiceAsync are serialized by AudioManager.
+   * Piper keeps a process-wide native voice table and Kokoro runs a single inference session; neither is documented
+   * as safe to
    * call concurrently, so engines may assume one synthesis at a time. Everything else must tolerate being called
    * from the UI thread. See docs/DesignNotes.md -> Speech synthesis and TTS engines.
    */
@@ -46,6 +47,15 @@ namespace EQLogParser.Audio
 
     /* Speak a voice no player owns: the preview button and WAV export. Returns null when nothing was synthesized. */
     Task<(byte[] pcm, int sampleRate)> SynthesizeVoiceAsync(string voice, string text);
+
+    /*
+     * Make this voice ready so the next synthesis does not pay to build it, and let go of whatever was prepared
+     * before: preparation is one voice at a time because an ONNX session is tens of megabytes. What "ready" means
+     * differs per engine - Piper builds the native voice, Kokoro and Windows run one short synthesis through the
+     * existing path to warm inference. Never audible. Called on a background thread under AudioManager's synthesis
+     * gate, and allowed to fail quietly: synthesis still works without it, only slower.
+     */
+    Task WarmUpVoiceAsync(string voice);
   }
 
   internal static class TtsEngineFactory
