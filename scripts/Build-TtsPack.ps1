@@ -1,5 +1,8 @@
 # Build-TtsPack.ps1
 #
+# # Worked:
+#   powershell -NoProfile -ExecutionPolicy Bypass .\Build-TtsPack.ps1 -AppRelease ..\EQLogParser\EQLogParser\bin\Release\net8.0-windows10.0.17763.0
+#
 # Builds the GitHub-hosted runtime packs for EQLogParser's optional speech engines. Everything the Piper and Kokoro
 # engines need lives here rather than in the app installer, so this script is the only thing standing between an
 # incomplete folder and silence on someone's machine: it refuses to pack when a required file is missing and writes a
