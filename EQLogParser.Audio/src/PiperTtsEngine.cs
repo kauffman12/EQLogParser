@@ -87,6 +87,12 @@ namespace EQLogParser.Audio
 
     public string GetDefaultVoice() => _voiceData?.Voices?.FirstOrDefault()?.Name;
 
+    public string GetVoiceDisplayName(string voice) =>
+      _voiceData?.Voices?.FirstOrDefault(candidate =>
+        string.Equals(candidate.Name, voice, StringComparison.OrdinalIgnoreCase)) is { } found
+        ? FormatDisplayName(found.Name, found.Locale)
+        : voice;
+
     public string GetVoice(string playerId) =>
       playerId is not null && _players.TryGetValue(playerId, out var player) && !string.IsNullOrEmpty(player.Name)
         ? player.Name
@@ -278,6 +284,15 @@ namespace EQLogParser.Audio
           return null;
         }
 
+        /*
+         * The locale each voice is labelled with, settled once here rather than while a dropdown renders: it costs one
+         * small file read per voice and nothing about speaking depends on the answer.
+         */
+        foreach (var voice in voiceData.Voices ?? [])
+        {
+          voice.Locale = ResolveLocale(root, voice);
+        }
+
         return InitializeNative(root) ? new PiperTtsEngine(root, voiceData) : null;
       }
       catch (Exception ex)
@@ -286,6 +301,125 @@ namespace EQLogParser.Audio
         return null;
       }
     }
+
+    /*
+     * Which locale to print beside a Piper voice's name. A pack may say so in voices.json; almost always the model's
+     * own metadata does (language.code, "en_US"); and where neither can be read the file name still tells it, since
+     * piper voices are named locale first (en_US-lessac-medium.onnx). Nothing spoken depends on any of this, so a
+     * voice whose metadata cannot be read simply goes without the suffix.
+     */
+    private static string ResolveLocale(string root, PiperVoice voice)
+    {
+      // A pack that declares the locale outright needs no file read at all.
+      if (voice.Locale is { Length: > 0 } && RegionOf(voice.Locale) is { Length: > 0 } declared)
+      {
+        return declared;
+      }
+
+      if (voice.Config is { Length: > 0 })
+      {
+        var path = Path.Combine(root, "voices", voice.Config);
+        try
+        {
+          if (File.Exists(path) && LocaleFromMetadata(File.ReadAllText(path)) is { Length: > 0 } fromModel)
+          {
+            return fromModel;
+          }
+        }
+        catch (Exception ex)
+        {
+          Log.Debug($"Unable to read the language of piper voice {voice.Config}", ex);
+        }
+      }
+
+      return LocaleFromPath(voice.Model) ?? LocaleFromPath(voice.Config);
+    }
+
+    /* The language block of a piper model config: { "language": { "code": "en_US", ... } }. */
+    internal static string LocaleFromMetadata(string jsonText)
+    {
+      try
+      {
+        using var document = JsonDocument.Parse(jsonText);
+        if (document.RootElement.ValueKind == JsonValueKind.Object &&
+            document.RootElement.TryGetProperty("language", out var language) &&
+            language.ValueKind == JsonValueKind.Object)
+        {
+          foreach (var property in new[] { "code", "region" })
+          {
+            if (language.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String &&
+                RegionOf(value.GetString()) is { Length: > 0 } region)
+            {
+              return region;
+            }
+          }
+        }
+      }
+      catch (JsonException ex)
+      {
+        Log.Debug("Unable to parse piper voice metadata", ex);
+      }
+
+      return null;
+    }
+
+    /* en_US-lessac-medium.onnx -> US, the naming convention of every piper voice release. */
+    internal static string LocaleFromPath(string path)
+    {
+      if (path is not { Length: > 0 })
+      {
+        return null;
+      }
+
+      var stem = Path.GetFileName(path);
+      var dash = stem.IndexOf('-');
+
+      if (dash > 0)
+      {
+        stem = stem[..dash];
+      }
+
+      var underscore = stem.IndexOf('_');
+
+      if (underscore <= 0 || underscore == stem.Length - 1)
+      {
+        return null;
+      }
+
+      return stem[(underscore + 1)..].ToUpperInvariant();
+    }
+
+    /*
+     * The part worth printing: "en_US" and "US" both read US and "zh_CN" reads CN. A token with no region in it - a
+     * bare language, or free text somebody typed into voices.json - gives nothing, so that voice goes without a suffix
+     * rather than showing something made up.
+     */
+    internal static string RegionOf(string locale)
+    {
+      if (locale is not { Length: > 0 })
+      {
+        return null;
+      }
+
+      var trimmed = locale.Trim();
+      var underscore = trimmed.LastIndexOf('_');
+
+      if (underscore >= 0)
+      {
+        trimmed = trimmed[(underscore + 1)..];
+      }
+
+      if (trimmed.Length is < 2 or > 4 || !trimmed.All(char.IsLetter))
+      {
+        return null;
+      }
+
+      return trimmed.ToUpperInvariant();
+    }
+
+    /* Picker text for one voice: "HFC Male (US)", or just the name when no locale is known. */
+    internal static string FormatDisplayName(string name, string locale) =>
+      name is not { Length: > 0 } || locale is not { Length: > 0 } ? name : $"{name} ({locale})";
 
     // Returning IntPtr.Zero falls through to the default resolver, so every other native import is untouched.
     private static IntPtr ResolveDllImport(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)

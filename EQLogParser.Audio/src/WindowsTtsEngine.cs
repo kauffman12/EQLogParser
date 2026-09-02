@@ -296,6 +296,12 @@ namespace EQLogParser.Audio
         ? voiceInfo.DisplayName
         : string.Empty;
 
+    /*
+     * Windows hands out the name a person would use - "Microsoft David" - so there is nothing to translate, and the
+     * "(Legacy) " a System.Speech voice carries is worth keeping in sight: it tells you why that one sounds different.
+     */
+    public string GetVoiceDisplayName(string voice) => voice;
+
     public string GetVoice(string playerId)
     {
       lock (_lock)

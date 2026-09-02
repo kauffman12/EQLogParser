@@ -15,6 +15,7 @@
   <UserControl.Resources>
     <!-- Variable input width - can be themed if needed -->
     <sys:Double x:Key="VariableInputWidth">160</sys:Double>
+    <local:VoiceNameConverter x:Key="VoiceNameConverter" />
   </UserControl.Resources>
 
   <Grid>
@@ -38,7 +39,13 @@
           <TextBlock x:Name="advancedText" Text="Switch to Advanced" Cursor="Hand" TextWrapping="Wrap" FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource EQWarnForegroundBrush}" VerticalAlignment="Bottom" Padding="0,0,0,1"/>
         </Border>
       </Grid>
-      <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="voices" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
+        <ComboBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Converter={StaticResource VoiceNameConverter}}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
         <ComboBoxItem>Increased Rate 1</ComboBoxItem>

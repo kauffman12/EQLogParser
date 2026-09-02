@@ -24,6 +24,9 @@ namespace EQLogParser.Audio
     // --- Voice enumeration ---
     List<string> GetVoiceList();
     string GetDefaultVoice();
+
+    /// <summary>How a voice from GetVoiceList reads in a picker ("Nicole (US)"). Never the stored value.</summary>
+    string GetVoiceDisplayName(string voice);
     void SetVoice(string playerId, string voiceName);
 
     // --- Device selection ---

@@ -36,6 +36,18 @@ namespace EQLogParser.Audio
     private const string ModelSha256 = "027a25b14aef7d3ae57fd09301ebefbec868e79d55213d07e4f3af442f5ba352";
     private const string PreferredDefaultVoice = "af_heart";
 
+    /*
+     * The locale letters in Kokoro's voice ids: [locale][gender]_name, so af_heart is an American woman and bf_emma a
+     * British one. Every locale upstream publishes is listed even though a pack usually carries a few, because which
+     * ones ship is a build time choice (KokoroVoicePrefixes in Directory.Build.targets) and the model speaks all of
+     * them either way.
+     */
+    private static readonly Dictionary<char, string> _voiceLocales = new()
+    {
+      ['a'] = "US", ['b'] = "GB", ['e'] = "ES", ['f'] = "FR", ['h'] = "HI", ['i'] = "IT", ['j'] = "JP", ['p'] = "PT",
+      ['z'] = "CN"
+    };
+
     // Word run through a session that has not spoken yet. Nobody hears it; see WarmUpVoiceAsync.
     private const string WarmUpText = "test";
 
@@ -89,6 +101,8 @@ namespace EQLogParser.Audio
         string.Equals(voice.Name, PreferredDefaultVoice, StringComparison.OrdinalIgnoreCase))?.Name
         ?? KokoroVoiceManager.Voices.FirstOrDefault()?.Name;
     }
+
+    public string GetVoiceDisplayName(string voice) => DisplayNameFor(voice);
 
     public string GetVoice(string playerId)
     {
@@ -224,6 +238,28 @@ namespace EQLogParser.Audio
      * normal startup path; a hand-placed model pays for it once. The pack download already checked both the archive
      * and this file against its manifest, so a mismatch here means the bytes changed after installation.
      */
+    /*
+     * af_nicole reads "Nicole (US)" and bm_george "George (GB)", which is what somebody picking a voice wants to know:
+     * the name they will hear, and whose English it is. Anything that is not shaped like one of this engine's ids - a
+     * voice kept from another engine, or an embedding named by hand - comes back exactly as stored rather than being
+     * dressed up into something no longer matches the config.
+     */
+    internal static string DisplayNameFor(string voice)
+    {
+      if (voice is not { Length: > 3 } || voice[1] is not ('f' or 'm') || voice[2] != '_')
+      {
+        return voice;
+      }
+
+      if (!_voiceLocales.TryGetValue(char.ToLowerInvariant(voice[0]), out var locale))
+      {
+        return voice;
+      }
+
+      var name = char.ToUpperInvariant(voice[3]) + voice[4..].Replace('_', ' ');
+      return $"{name} ({locale})";
+    }
+
     private bool VerifyModel()
     {
       try

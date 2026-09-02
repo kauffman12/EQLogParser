@@ -31,6 +31,15 @@ namespace EQLogParser.Audio
     /* The voice used when a player has none configured. */
     string GetDefaultVoice();
 
+    /*
+     * How a voice is written to a person. Display only: the value a voice is stored under, matched against a config
+     * and handed to SetVoice stays exactly what GetVoices returned. Kokoro decorates its ids with the accent they
+     * carry (af_nicole reads "Nicole (US)"), Piper adds the locale its models declare, and an engine whose names are
+     * already what somebody would call them returns the name untouched - which is also the right answer for a voice
+     * this engine does not have. Called per dropdown row while it renders, so it has to be a lookup.
+     */
+    string GetVoiceDisplayName(string voice);
+
     /* The voice a player will actually speak with, empty resolved to the default. Used for cache keys and logs. */
     string GetVoice(string playerId);
 

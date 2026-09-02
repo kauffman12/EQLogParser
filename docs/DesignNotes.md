@@ -169,6 +169,21 @@ default voice, per player voice binding, synthesis, sample rates, shutdown — a
 its player records. Every engine therefore touched every other engine's code, and none of it could be exercised
 without the native library behind it.
 
+### What a voice is called
+
+`GetVoices()` hands out ids - `af_nicole`, `en_US-lessac-medium`, `Microsoft David Desktop` - and those exact strings are
+what a character's config stores and what an engine is told to speak. The pickers show something shorter through
+`ITtsEngine.GetVoiceDisplayName`, reached from the view layer by one converter (`VoiceNameConverter`) on the three voice
+dropdowns, so the item itself stays the id: whatever saves, matches or speaks a voice never sees the label, and no stored
+value changed.
+
+Where the label comes from is each engine's business. Kokoro reads the accent straight out of its own naming convention,
+`[locale][gender]_name`, which turns `af_nicole` into "Nicole (US)" and `bf_emma` into "Emma (GB)" - worth showing now
+that the pack carries British voices too. Piper labels a voice with the locale its model declares in `language.code`
+(`voices.json` may say so outright), settled once when the engine starts because it costs a small file read per voice;
+a name that cannot be located goes without a suffix. Windows answers with the name it was handed: "Microsoft David
+Desktop" needs no improvement, and the `(Legacy) ` marking on a System.Speech voice is information rather than noise.
+
 ### Synthesis threading and cache
 
 `SpeakTtsAsync`, `TestSpeakTtsAsync`, `SpeakOrSaveTtsAsync` and `TestSpeakFileAsync` are fire-and-forget for their

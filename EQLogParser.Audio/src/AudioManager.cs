@@ -391,6 +391,16 @@ namespace EQLogParser.Audio
       }
     }
 
+    public string GetVoiceDisplayName(string voice)
+    {
+      var engine = _tts;
+
+      lock (_engineLock)
+      {
+        return engine.GetVoiceDisplayName(voice);
+      }
+    }
+
     public void SelectDevice(string id)
     {
       var device = GetDeviceOrDefault(id);

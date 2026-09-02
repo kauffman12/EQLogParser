@@ -27,7 +27,16 @@
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0">
       <Label Content="Enter Text to Speak:" Style="{StaticResource EQTitleStyle}" />
-      <ComboBox x:Name="voices" SelectedIndex="0" Margin="40,0,8,2" SelectionChanged="OptionsChanged" />
+      <ComboBox x:Name="voices" SelectedIndex="0" Margin="40,0,8,2" SelectionChanged="OptionsChanged">
+        <ComboBox.Resources>
+          <local:VoiceNameConverter x:Key="VoiceNameConverter" />
+        </ComboBox.Resources>
+        <ComboBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Converter={StaticResource VoiceNameConverter}}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
       <ComboBox x:Name="rateOption" SelectedIndex="0" Margin="0,0,8,2" SelectionChanged="OptionsChanged">
         <ComboBoxItem>Default Voice Rate</ComboBoxItem>
         <ComboBoxItem>Increased Rate 1</ComboBoxItem>
