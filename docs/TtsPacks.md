@@ -123,9 +123,15 @@ is English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly 
 
 ## Installing at run time
 
-The TTS Engine dialog is the whole UI: it lists all three engines, offers **Download Piper (347 MB)** / **Download
-Kokoro (224 MB)** for the ones with nothing on disk, and **Remove Files** for an installed engine that is not currently
-speaking. A finished download switches to the new engine without a restart.
+The TTS Engine dialog is the whole UI: it lists all three engines and puts one button on whatever comes next —
+**Download Piper (347 MB)** / **Download Kokoro (224 MB)** for an engine with nothing on disk, **Use Piper** to start an
+installed one, **In use** when it is already speaking. Looking at a row applies nothing; switching is the button, and it
+takes effect without a restart. A finished download does switch on its own, since that is plainly why it was fetched.
+
+**Remove Files** reclaims an installed pack, and only for one that is not the engine in use — that one holds its native
+libraries mapped until EQLogParser closes, so its directory cannot be deleted cleanly. This is why browsing does not
+switch: when selecting a row applied it, every row on screen was by definition the active one, and the button could never
+become available for anything.
 
 `TtsPackManager.InstallAsync` does the rest, and each step is there because the alternative is worse:
 
