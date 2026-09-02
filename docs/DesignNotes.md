@@ -267,9 +267,13 @@ engines remotely possible at all. Two hooks cover a pack once it exists:
 Both return "not mine" (null / `IntPtr.Zero`) for anything they do not have, so unrelated loads are untouched.
 The hooks are registered once, before any engine is constructed.
 
-Piper additionally still reads `{app}\piper-tts` when a release-installed copy is there, because installers before packs
-put it there and nobody should have to re-download 347 MB after an upgrade. Kokoro has no such fallback — it never
-shipped that way. `[InstallDelete]` in the script records when the `{app}` copies can be removed for good.
+There is no fallback to a copy beside the executable, and there deliberately is not one. Reading `{app}\piper-tts` when it
+was complete -- which earlier releases did, so that upgrading did not cost a re-download -- meant an engine could be
+running off files the dialog cannot update, cannot remove, and cannot match against a pinned digest, and worse: those
+files are still sitting in old build outputs, so development runs reported a working Piper nobody had downloaded. One
+location per engine, `%LOCALAPPDATA%\EQLogParser\<engine>`, owned end to end by `TtsPackManager`. `[InstallDelete]` now
+deletes what installs before packs left under `{app}`; the files are inert whether or not they are removed, so that entry
+is about reclaiming space, not about behavior.
 
 ### Kokoro model integrity
 
@@ -291,8 +295,8 @@ than out of a signed package.
 
 ### Piper native lookup
 
-`piperApi.dll` lives in the Piper runtime pack (`%LOCALAPPDATA%\EQLogParser\piper-tts`, or `{app}\piper-tts` on
-installs that predate packs), never beside the executable, so it needs a search path of its own. The
+`piperApi.dll` lives in the Piper runtime pack (`%LOCALAPPDATA%\EQLogParser\piper-tts`) and nowhere else, so it needs a
+search path of its own. The
 first implementation called `SetDllDirectory`, which is process-global and single-slot: it applied to every later
 native load by anyone in the process, silently replaced any other caller's directory, and was the cause of a real
 bug where listing Windows voices initialized Piper as a side effect.

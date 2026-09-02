@@ -142,4 +142,4 @@ voices.json` + `piperApi.dll`, or `model\kokoro-fp16.onnx` + at least one `.npy`
 own model hash, cached in a sidecar marker.
 
 The app repo carries neither engine's data. What remains under `EQLogParser/piper-tts/` is five native SDK binaries
-(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. An old build directory still has the deleted `espeak-ng-data\` and `voices\` folders until it is cleaned — harmless, just not what a fresh build produces.
+(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. The app never reads a speech runtime from under the program folder, so an old build directory that still holds `espeak-ng-data\` and `voices\` cannot pass itself off as an installed pack — it is dead weight until that directory is cleaned, and the installer deletes what pre-pack installs left in `{app}`.

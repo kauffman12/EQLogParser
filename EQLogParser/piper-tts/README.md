@@ -7,7 +7,7 @@ Piper's native SDK binaries, kept here for the **build**, not shipped in the ins
 | `piperApi.dll` | the C API EQLogParser.Audio P/Invokes |
 | `piper_phonemize.dll` | phonemizer used by the above |
 | `espeak-ng.dll` | espeak-ng runtime that `piper_phonemize` links against |
-| `onnxruntime.dll`, `onnxruntime_providers_shared.dll` | Microsoft's ONNX inference runtime, Piper copy |
+| `onnxruntime.dll`, `onnxruntime_providers_shared.dll` | Microsoft's ONNX inference runtime; keep the same version Kokoro ships (1.22.0), because Windows holds one `onnxruntime.dll` per process |
 
 ## What used to be here and is not
 
@@ -16,8 +16,8 @@ keeping them in git meant every clone carried 80MB that only Piper needs. Both n
 <https://github.com/kauffman12/EQLogParser-TTS> (`piper-tts/espeak-ng-data/`, `piper-tts/voices/`).
 
 At run time Piper reads its data from `%LOCALAPPDATA%\EQLogParser\piper-tts`, which the app downloads on demand from
-that repo. Installs made before packs existed keep a complete copy under `{app}\piper-tts`; that path is still honored,
-which is why an old install keeps speaking without a re-download.
+that repo. That is the only place it looks: nothing under the program folder is adopted, so finding a `piper-tts` in a
+build output means nothing at run time. The installer deletes what pre-pack installs left under `{app}`.
 
 ## Why keep these five files then
 
