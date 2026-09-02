@@ -1,6 +1,7 @@
 using log4net;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -42,6 +43,7 @@ namespace EQLogParser.Audio
     private const string ReleaseRepo = "kauffman12/EQLogParser-TTS";
     private const string MarkerName = ".pack-ready";
     private const string ManifestName = "manifest.json";
+    private const string OnnxRuntimeFileName = "onnxruntime.dll";
 
     private sealed record Pack(string Engine, string Tag, string AssetName, string Sha256, string FolderName, long DownloadBytes);
 
@@ -89,10 +91,12 @@ namespace EQLogParser.Audio
     internal static string ResolveRoot(string engine) => InstalledDirectory(engine) ?? LegacyDirectoryIfComplete(engine);
 
     /*
-     * Directories that may hold native libraries a pack provides, most specific first. Kokoro's copy of onnxruntime
-     * comes first because it is the one published against the managed Microsoft.ML.OnnxRuntime wrapper that installs
-     * with the app; Piper's copy exists only to be loaded by piperApi.dll from its own folder and should never be what
-     * the wrapper binds to.
+     * Directories that may hold native libraries a pack provides, most specific first.
+     *
+     * This order only decides anything for the first load of a name. Windows keeps one module per base name, so once
+     * some onnxruntime.dll is resident every later request for that name gets that module no matter which folder this
+     * lists -- see PreferMatchingOnnxRuntime. Kokoro's copy is first because it is the one published against the managed
+     * wrapper installed with the app.
      */
     internal static IEnumerable<string> NativeSearchDirectories()
     {
@@ -348,6 +352,64 @@ namespace EQLogParser.Audio
       public string Engine { get; set; }
       public string PackVersion { get; set; }
       public List<PackFile> Files { get; set; }
+    }
+
+    /*
+     * Map the onnxruntime.dll that belongs with the managed wrapper before Piper gets the chance to load its own.
+     *
+     * Both engines ship that file and only one can be resident, because Windows keys modules by base name: whichever
+     * loads first holds the name for the life of the process, and every later request for it is answered from memory.
+     * So the winner has to be chosen deliberately rather than fall out of which engine the user spoke from first.
+     *
+     * The right winner is Kokoro's copy, because that one is published alongside the Microsoft.ML.OnnxRuntime wrapper
+     * installed with the app and repacked whenever the wrapper version moves. Piper vendors its own build (1.14 today,
+     * against a 1.22 wrapper) and it is the side that loses harmlessly: the ORT C API is versioned and old models keep
+     * running on a newer runtime, while the older one refuses Kokoro's graphs outright -- "Unsupported model IR
+     * version: 9" about a download that is perfectly fine. Loading a newer Piper build over a newer wrapper would be
+     * just as wrong the other way round, which is why this matches rather than compares versions.
+     */
+    internal static void PreferMatchingOnnxRuntime()
+    {
+      if (ResolveRoot(AudioManager.KokoroEngine) is not string root) return;
+
+      var path = Path.Combine(root, "native", OnnxRuntimeFileName);
+      if (!File.Exists(path)) return;
+
+      // An absolute path loads that file and lets its own dependencies come from the same folder.
+      if (NativeLibrary.TryLoad(path, typeof(TtsPackManager).Assembly,
+            DllImportSearchPath.UseDllDirectoryForDependencies, out _))
+      {
+        Log.Debug($"onnxruntime claimed for this process by {path}");
+      }
+      else
+      {
+        Log.Warn($"Unable to load the pack's onnxruntime from {path}; Piper may claim the name first");
+      }
+    }
+
+    /*
+     * Which onnxruntime.dll the process actually has mapped, with its version. Exists because a model rejected by an
+     * older runtime reads as "the download is broken" unless something reports which dll answered.
+     */
+    internal static string DescribeLoadedOnnxRuntime()
+    {
+      try
+      {
+        using var current = Process.GetCurrentProcess();
+        foreach (ProcessModule module in current.Modules)
+        {
+          if (string.Equals(module.ModuleName, OnnxRuntimeFileName, StringComparison.OrdinalIgnoreCase))
+          {
+            return $"{module.FileName} version {module.FileVersionInfo?.FileVersion}";
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Unable to inspect the loaded onnxruntime module", ex);
+      }
+
+      return "none loaded";
     }
 
     private static HttpClient CreateClient()

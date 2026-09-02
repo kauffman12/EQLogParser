@@ -218,6 +218,10 @@ namespace EQLogParser.Audio
       {
         try
         {
+          // Claim the onnxruntime name for the build matching our managed wrapper before piperApi.dll pulls in the one
+          // sitting next to it: both engines need that module and only the first loaded can serve them.
+          TtsPackManager.PreferMatchingOnnxRuntime();
+
           // One initialize() per pack directory: downloading a pack while an app-local Piper is live means the new
           // espeak-ng data has to be handed to the native side before its voices can be loaded from it.
           if (string.Equals(_nativeInitializedRoot, root, StringComparison.OrdinalIgnoreCase))
@@ -237,7 +241,7 @@ namespace EQLogParser.Audio
         }
         catch (Exception ex)
         {
-          Log.Error("Error initializing piper-tts", ex);
+          Log.Error($"Error initializing piper-tts (onnxruntime in use: {TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
           return false;
         }
       }

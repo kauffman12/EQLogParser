@@ -172,7 +172,9 @@ namespace EQLogParser.Audio
       }
       catch (Exception ex)
       {
-        Log.Error("Error initializing kokoro-tts", ex);
+        // The runtime that answered is part of the error: a model can be refused by an older onnxruntime than the one
+        // this engine ships, and without this the log points at the download instead of at the loaded module.
+        Log.Error($"Error initializing kokoro-tts (onnxruntime in use: {TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
         engine.Dispose();
         return null;
       }
