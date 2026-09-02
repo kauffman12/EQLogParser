@@ -12,9 +12,10 @@ using System.Windows.Controls;
 namespace EQLogParser
 {
   /*
-   * Speech engine picker. Piper and Kokoro are not carried by the installer: selecting one of them offers a download
-   * of its runtime pack, and an installed engine can be removed again to reclaim the space. Whatever is on disk is
-   * switched to live, so the change applies to the next callout rather than after a restart. See docs/TtsPacks.md.
+   * Speech engine picker. Piper and Kokoro are not carried by the installer: an engine with no runtime offers to
+   * download one, an installed engine is started with Use, and either can be removed again to reclaim the space.
+   * Switching is live, so it applies to the next callout rather than after a restart. Looking around the list changes
+   * nothing on its own. See docs/TtsPacks.md.
    */
   public partial class TtsEngineWindow
   {
@@ -160,7 +161,7 @@ namespace EQLogParser
       }
       else if (available)
       {
-        SetHint("Applies at once, from the next callout.");
+        SetHint("Press Use to switch, starting with the next callout.");
       }
       else if (downloadable)
       {
@@ -206,44 +207,56 @@ namespace EQLogParser
     /* The download and remove buttons belong to whichever engine is selected. */
     private void UpdateButtons(string engine)
     {
-      var hasPack = AudioManager.Instance.GetEngineDownloadBytes(engine) > 0;
+      var bytes = AudioManager.Instance.GetEngineDownloadBytes(engine);
       var available = AudioManager.Instance.IsEngineAvailable(engine);
+      var active = engine == AudioManager.Instance.GetActiveEngine();
+      var busy = _downloading || _switching;
 
-      downloadButton.Visibility = hasPack ? Visibility.Visible : Visibility.Collapsed;
-      downloadButton.Content = available ? "Installed" : $"Download {engine} ({FormatSize(AudioManager.Instance.GetEngineDownloadBytes(engine))})";
-      downloadButton.IsEnabled = hasPack && !available && !_downloading && !_switching;
+      // One button for whatever comes next, because two would mean a second one that is disabled half the time.
+      actionButton.Visibility = bytes > 0 ? Visibility.Visible : Visibility.Collapsed;
+      actionButton.Content = DescribeAction(engine, bytes, available, active);
+      actionButton.IsEnabled = !busy && (!available || !active);
 
-      // Only files we downloaded ourselves can be deleted, and only by a quiet engine: a voice pack that came from an
-      // older installer sits beside the program, where uninstalling is the way to get rid of it.
+      // Reclaiming a pack is only possible while nothing is speaking with it: the engine in use keeps its native
+      // libraries mapped until EQLogParser closes, so deleting that directory would leave half of it behind. Packs
+      // downloaded by an older installer sit beside the program and are not offered here either.
       var downloaded = AudioManager.Instance.IsEngineDownloaded(engine);
-      removeButton.Visibility = hasPack && downloaded ? Visibility.Visible : Visibility.Collapsed;
-      removeButton.IsEnabled = downloaded && engine != AudioManager.Instance.GetActiveEngine() && !_downloading && !_switching;
+      removeButton.Visibility = bytes > 0 && downloaded ? Visibility.Visible : Visibility.Collapsed;
+      removeButton.IsEnabled = downloaded && !active && !busy;
     }
 
-    private async void EngineSelectionChanged(object sender, SelectionChangedEventArgs e)
+    /* Browsing changes nothing. Applying is a deliberate press of Use. */
+    private void EngineSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       if (!_ready || _downloading || SelectedEngine is not string selected)
       {
         return;
       }
 
+      // Selecting used to switch engines on its own, which made an installed engine impossible to reach for removal:
+      // whichever row was on screen had just become the active one, and Remove refuses the active engine because its
+      // libraries stay mapped until the app closes. Browsing is free now, so there is a way to stand next to an engine
+      // without speaking through it.
       UpdateEngineText();
       UpdateButtons(selected);
+      SetStatus(string.Empty);
+    }
 
-      // An engine with nothing on disk cannot be switched to and is not remembered either: the saved setting decides
-      // what the next start uses, so it has to name something that can actually speak.
-      if (!AudioManager.Instance.IsEngineAvailable(selected))
+    /* The one action button: get the runtime if it is missing, otherwise speak with this engine from here on. */
+    private async void ActionClicked(object sender, RoutedEventArgs e)
+    {
+      if (_downloading || _switching || SelectedEngine is not { } engine)
       {
-        SetStatus(string.Empty);
         return;
       }
 
-      ConfigUtil.SetSetting(SettingKey, selected);
-
-      if (selected != AudioManager.Instance.GetActiveEngine())
+      if (!AudioManager.Instance.IsEngineAvailable(engine))
       {
-        await ApplyEngineAsync(selected);
+        await DownloadEngineAsync(engine);
+        return;
       }
+
+      await ApplyEngineAsync(engine);
     }
 
     /*
@@ -274,6 +287,11 @@ namespace EQLogParser
 
       _switching = true;
       engineList.IsEnabled = false;
+
+      // The setting decides which engine the next start uses, so it is written where using one has actually been asked
+      // for rather than merely highlighted. A switch that fails unwinds it again.
+      ConfigUtil.SetSetting(SettingKey, selected);
+
       UpdateButtons(selected);
       SetStatus("switching...");
 
@@ -303,13 +321,8 @@ namespace EQLogParser
       }
     }
 
-    private async void DownloadClicked(object sender, RoutedEventArgs e)
+    private async Task DownloadEngineAsync(string engine)
     {
-      if (_downloading || SelectedEngine is not { } engine)
-      {
-        return;
-      }
-
       _downloading = true;
       _cts = new CancellationTokenSource();
       engineList.IsEnabled = false;
@@ -346,8 +359,8 @@ namespace EQLogParser
 
       RefreshState();
 
-      // Having chosen the engine, the user wants to speak with it now rather than after a restart.
-      ConfigUtil.SetSetting(SettingKey, engine);
+      // Someone who just downloaded an engine wants to speak with it, not to press one more button for it. This is the
+      // one path that applies without Use, and it only runs on an engine they chose a moment ago.
       SelectRow(engine);
       await ApplyEngineAsync(engine);
     }
@@ -361,6 +374,13 @@ namespace EQLogParser
 
       if (AudioManager.Instance.RemoveEngineFiles(engine))
       {
+        // The saved setting decides the next start; leaving it pointing at a directory that no longer exists buys a
+        // silent session and a warning about a choice that can no longer be made.
+        if (string.Equals(ConfigUtil.GetSetting(SettingKey), engine, StringComparison.OrdinalIgnoreCase))
+        {
+          ConfigUtil.SetSetting(SettingKey, AudioManager.Instance.GetActiveEngine());
+        }
+
         RefreshState();
         SetStatus($"{engine} files removed.", GoodBrush);
         return;
@@ -382,6 +402,17 @@ namespace EQLogParser
       var active = AudioManager.Instance.GetActiveEngine();
       ConfigUtil.SetSetting(SettingKey, active);
       SetStatus($"Could not switch: {active} keeps speaking.", StopBrush);
+    }
+
+    // What the next press would do, on the button that does it.
+    private static string DescribeAction(string engine, long bytes, bool available, bool active)
+    {
+      if (!available)
+      {
+        return $"Download {engine} ({FormatSize(bytes)})";
+      }
+
+      return active ? "In use" : $"Use {engine}";
     }
 
     private static string FormatSize(long bytes) => bytes switch
