@@ -63,15 +63,25 @@ copies, `System.Numerics.Tensors` — are left alone instead of re-signed over.
 `EQLogParser.Audio/src/TtsPackManager.cs` holds one entry per engine: tag, asset name, archive SHA-256, install folder.
 Changing a pack means editing this table and shipping an app build that carries it.
 
+The digest lives in compiled code on purpose. A hash downloaded from the same server as the payload proves nothing --
+whoever can replace the zip can replace the file describing it -- so the only anchor worth checking is one that arrives
+inside the signed installer and moves only when the app itself is released. The sidecar next to an asset exists for
+humans and for `-Verify`, not as the app's reference.
+
 | engine | tag / asset | archive SHA-256 |
 |---|---|---|
-| Piper | `piper-1.0` → `piper-1.0.zip` | `059241c0fe2a34bf9b8762c5c17113c82a5b98356c3f21656b89ca9abcc10078` |
+| Piper | `piper-1.0` → `piper-1.0.zip` | `dc24d7f9673b28b9e18a0801f0492107ad8c2b6e6ba6645ca67488b703f76451` |
 | Kokoro | `kokoro-1.0` → `kokoro-1.0.zip` | `b1070b9e231dd0d08203fc89f6540c6de3d13de479bd506f63f6902194241788` |
 
 ## Publishing rules
 
 - **Never overwrite a published asset.** A released app pins its tag URL and its archive digest. Publish `kokoro-1.1`
-  and ship an app build whose `TtsPackManager` points at it.
+  and ship an app build whose `TtsPackManager` points at it. The one exception is before any app build that pins the
+  pack has shipped: nothing out there can then be left pointing at bytes that no longer exist, so replacing a pack under
+  its own tag is fine as long as the pin and this table move with it.
+- The digest to pin is GitHub's own: `GET /repos/kauffman12/EQLogParser-TTS/releases/assets/{id}` reports
+  `"digest": "sha256:..."`, and the `.zip.sha256` sidecar should agree with it. An app whose pin and asset disagree
+  fails closed with "checksum mismatch. The download was discarded", which is the pack working as intended, not loading
 - Keep the version in the tag, the file name and `manifest.json` in step.
 - Kokoro model bytes must match the digest pinned in `KokoroTtsEngine` (see DesignNotes → Kokoro model integrity).
   Mirroring the model here is fine — same bytes, same digest, existing users unaffected — and removes someone else's

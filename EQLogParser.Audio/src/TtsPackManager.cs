@@ -48,11 +48,13 @@ namespace EQLogParser.Audio
     private sealed record Pack(string Engine, string Tag, string AssetName, string Sha256, string FolderName, long DownloadBytes);
 
     // Bumping a pack means publishing the new tag and changing Tag and Sha256 together; old releases are never
-    // overwritten, so an installed app keeps pointing at bytes that will still exist.
+    // overwritten once an app build that pins them exists, so an installed app keeps pointing at bytes that will still
+    // exist. The packs below were still free to be replaced under their own tag, which is how the first piper-1.0
+    // digest (059241c0...) differs from the one here: it was rebuilt with onnxruntime aligned to Kokoro's.
     private static readonly Dictionary<string, Pack> Packs = new(StringComparer.OrdinalIgnoreCase)
     {
       [AudioManager.PiperEngine] = new Pack(AudioManager.PiperEngine, "piper-1.0", "piper-1.0.zip",
-        "059241c0fe2a34bf9b8762c5c17113c82a5b98356c3f21656b89ca9abcc10078", "piper-tts", 347L * 1024 * 1024),
+        "dc24d7f9673b28b9e18a0801f0492107ad8c2b6e6ba6645ca67488b703f76451", "piper-tts", 348L * 1024 * 1024),
       [AudioManager.KokoroEngine] = new Pack(AudioManager.KokoroEngine, "kokoro-1.0", "kokoro-1.0.zip",
         "b1070b9e231dd0d08203fc89f6540c6de3d13de479bd506f63f6902194241788", "kokoro", 224L * 1024 * 1024)
     };
@@ -158,10 +160,15 @@ namespace EQLogParser.Audio
         }
 
         // The archive is only as trustworthy as its digest: GitHub, the CDN and the connection are all trusted
-        // transports here, so a mismatch means we were handed something else and it never touches disk again.
-        if (!string.Equals(ComputeSha256(tempArchive), pack.Sha256, StringComparison.OrdinalIgnoreCase))
+        // transports here, so a mismatch means we were handed something else and it never touches disk again. Both
+        // digests belong in the message because the usual cause is mundane -- the asset was rebuilt and the pin in this
+        // file is the old one -- and without the numbers that reads like a corrupt upload.
+        var downloaded = ComputeSha256(tempArchive);
+        if (!string.Equals(downloaded, pack.Sha256, StringComparison.OrdinalIgnoreCase))
         {
-          Log.Error($"{engine} runtime pack checksum mismatch. The download was discarded.");
+          Log.Error($@"{engine} runtime pack checksum mismatch; the download was discarded.
+  {pack.AssetName} from tag {pack.Tag}: pinned {pack.Sha256}, downloaded {downloaded}.
+  If the asset was rebuilt rather than corrupted, change this pin and the table in docs/TtsPacks.md together.");
           return false;
         }
 
