@@ -16,7 +16,7 @@
 #                        voices\<name>\*.onnx *.onnx.json   <- one folder per voice
 #   kokoro\              bin\MisakiSharp.dll NumSharp.dll System.Numerics.Tensors.dll OpenTK*.dll
 #                        native\onnxruntime.dll onnxruntime_providers_shared.dll
-#                        voices\af_*.npy am_*.npy LICENSE   <- built by the app repo (KokoroVoiceMasks)
+#                        voices\af_* am_* bf_* bm_*.npy LICENSE   <- built by the app repo (KokoroVoicePrefixes)
 #                        model\kokoro-fp16.onnx             <- optional, -SkipModel leaves it out
 #
 # Only the binaries come from a build. Everything else is data you keep here: espeak-ng-data, the Piper voices and

@@ -116,16 +116,35 @@ each model's `audio.sample_rate` and `_meta.name`, so there is nothing to hand-e
 the single pack lands around 350–400 MB, which every user who enables Piper downloads in one piece; that is a deliberate
 tradeoff over per-voice packs. `-PiperVoices a,b` lets you ship a subset without deleting anything.
 
-**Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am`, American English;
-the same property stops KokoroSharp's build target from copying all 79 MB of voices into every build output — only the
-app's own output gets the folder, since that is the one `-Sync` reads, and a stray `voices\` in another output is
-deleted), rebuild, `-Sync`, repack. Each `.npy` is ~0.5 MB. Anything beyond English prefixes will not work regardless:
-MisakiSharp's 66 MB is English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly one file.
+**Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am;bf;bm`, the
+English voices both sides of the Atlantic; the same property stops KokoroSharp's build target from copying all 79 MB of
+voices into every build output — only the app's own output gets the folder, since that is the one `-Sync` reads, and a
+stray `voices\` in another output is deleted), rebuild, `-Sync`, repack. Each `.npy` is ~0.5 MB, so the eight British
+voices cost 4 MB on a 228 MB download. Anything beyond English prefixes will not work regardless: MisakiSharp's 66 MB is
+English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly one file.
+
+### More voices in a pack that is already published
+
+The voice embeddings and the model are data, and nothing signs an archive: a signature covers the bytes of one PE
+file, so unpacking a published pack, adding `.npy` files and rezipping leaves every signature inside it exactly as it
+was. What does change is the digest the app pins. A pack's `manifest.json` is self describing — size and SHA-256 of
+every file in it, paths sorted, voices-relative with forward slashes — and the app verifies against that file rather
+than against a copy of it, so regenerating the manifest from the directory keeps per file verification honest. Three
+things then have to move together:
+
+1. `manifest.json` regenerated from the pack directory (everything else in it untouched, byte for byte).
+2. The zip rehashed and its `.sha256` sidecar rewritten, so GitHub's asset digest and the sidecar still agree.
+3. `TtsPackManager.Packs` given the new zip digest and size — that pin is what an installed app checks the download
+   against, which is why replacing an asset under its existing tag is only open while no shipped build pins the old
+   digest (see the comment on that table).
+
+A pack rebuilt this way needs no signing pass. `-Verify` still works on it: it checks entries against the manifest and
+the sidecar against the archive, neither of which knows or cares that the directory was assembled by hand.
 
 ## Installing at run time
 
 The TTS Engine dialog is the whole UI: it lists all three engines and puts one button on whatever comes next —
-**Download Piper (348 MB)** / **Download Kokoro (224 MB)** for an engine with nothing on disk, **Use Piper** to start an
+**Download Piper (348 MB)** / **Download Kokoro (228 MB)** for an engine with nothing on disk, **Use Piper** to start an
 installed one, **In use** when it is already speaking. Looking at a row applies nothing; switching is the button, and it
 takes effect without a restart. A finished download does switch on its own, since that is plainly why it was fetched.
 While something is downloading a **Cancel** button appears next to Close; closing the window cancels as well.

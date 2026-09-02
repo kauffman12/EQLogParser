@@ -70,8 +70,12 @@ namespace EQLogParser.Audio
     {
       [AudioManager.PiperEngine] = new Pack(AudioManager.PiperEngine, "piper-1.0", "piper-1.0.zip",
         "dc24d7f9673b28b9e18a0801f0492107ad8c2b6e6ba6645ca67488b703f76451", "piper-tts", 348L * 1024 * 1024),
+      // Voices added to a pack change its bytes, so the pin changes with them. Replacing this asset under its own tag
+      // was open because nothing shipped pins the old digest: the downloader first exists in this branch, and master -
+      // every build users have - has no pack code at all. The files already inside were left byte for byte alone, which
+      // is what keeps their signatures valid; only manifest.json and the archive digest are new.
       [AudioManager.KokoroEngine] = new Pack(AudioManager.KokoroEngine, "kokoro-1.0", "kokoro-1.0.zip",
-        "b1070b9e231dd0d08203fc89f6540c6de3d13de479bd506f63f6902194241788", "kokoro", 224L * 1024 * 1024)
+        "6f4728392c15fe6da8cbb115ed3a227c334f426e12598bd4482e9863abc48783", "kokoro", 228L * 1024 * 1024)
     };
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);

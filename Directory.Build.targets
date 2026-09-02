@@ -13,18 +13,19 @@
     the installer.
 
     Only the app's own output is that staging source, so only the app gets the folder. KokoroSharp reaches the WPF test
-    and BackupUtil outputs transitively as well, and copying embeddings there too bought nothing but ~11MB per output
+    and BackupUtil outputs transitively as well, and copying embeddings there too bought nothing but ~15MB per output
     that no code reads; a stray folder in one of those outputs is now deleted rather than refreshed.
 
-    KokoroVoicePrefixes selects the shipped voices by filename prefix; add prefixes to widen the picker:
-      bf bm  British English   ef em  Spanish     ff fm  French     hf hm  Hindi
-      if im  Italian           pf pm  Portuguese  jf jm  Japanese   zf zm  Mandarin
+    KokoroVoicePrefixes selects the shipped voices by filename prefix. English both sides of the Atlantic ships today
+    (af am bf bm); the rest are one edit away:
+      ef em  Spanish     ff fm  French     hf hm  Hindi   if im  Italian
+      pf pm  Portuguese  jf jm  Japanese   zf zm  Mandarin
     Mandarin lives in voices\voices-zh (+51MB), which is why it is left out here as well as by prefix.
     MisakiSharp already carries the phonemizer data for every language, so a wider set costs embeddings only
     (~0.5MB per voice); the model itself speaks all locales either way.
   -->
   <PropertyGroup>
-    <KokoroVoicePrefixes>af;am</KokoroVoicePrefixes>
+    <KokoroVoicePrefixes>af;am;bf;bm</KokoroVoicePrefixes>
   </PropertyGroup>
 
   <Target Name="CopyContent" AfterTargets="Build">
