@@ -159,8 +159,10 @@ app runs.
 ### One engine behind ITtsEngine
 
 Each engine implements `ITtsEngine` (`EQLogParser.Audio/src`) and owns its own per player voice state. A factory walks
-the configured preference (`Tools > Select TTS engine...`, settings key `TtsEngine`) and falls back to Piper and then
-the Windows voices, so a missing model or voice pack is a silent downgrade rather than an error dialog.
+the configured preference (settings key `TtsEngine`, set from the **TTS Engine** button on the Triggers toolbar) and
+falls back to Piper and then the Windows voices, so a missing model or voice pack is a silent downgrade rather than an
+error dialog. Engine names are matched case insensitively at every boundary (`TtsEngineFactory.Normalize`) because the
+setting is plain text somebody can edit.
 
 Before this seam `AudioManager` carried `_usePiper` / `_useKokoro` booleans consulted at a dozen sites — voice listing,
 default voice, per player voice binding, synthesis, sample rates, shutdown — and kept a synth object per engine inside
@@ -178,22 +180,38 @@ the neural engines are CPU-bound and overlapping calls only slow every caller do
 Synthesized PCM is cached in the same memory cache used for audio files, keyed by engine, voice and a hash of the text
 (60 minute sliding expiry, sized in bytes so the existing 100 MB budget accounts for it). A line like `Got the level
 90` plays dozens of times a raid, so only the first occurrence pays for inference. The text is hashed rather than used
-verbatim so a long custom callout cannot produce an unbounded key. Even the cache lookup runs under the gate: doing it
-outside would mean reading `_tts` without the lock that keeps synthesis and engine swaps apart.
+verbatim so a long custom callout cannot produce an unbounded key.
+
+A cached phrase needs neither the gate nor an engine: those bytes belong to an engine, a voice and a text, not to
+whichever engine happens to be speaking, so the first lookup answers from the cache alone. That is what keeps twenty
+familiar callouts from queueing behind one new sentence being synthesized. Everything that can miss runs under the gate,
+where the engine cannot change underneath it.
+
+Synthesis is not the only thing that touches an engine, and the gate alone was not enough: `SetVoice`, `RemoveVoice`,
+`GetVoices` and `GetVoice` are called by the UI, synchronously, and one of them arriving while a switch releases an
+engine's native state is a use-after-free in Piper's voice table rather than a caught exception. They now run under a
+separate `_engineLock`, which the swap and the retirement also take. It is deliberately not held across synthesis — a
+callout must never wait behind a dropdown, and a dropdown must never wait behind a model.
 
 ### Switching engines while running
 
 `AudioManager.SwitchEngineAsync` builds the requested engine, lets it discover its voices, re-binds every player, swaps
-it in and disposes the one it replaced. `Tools > Select TTS engine...` calls it when you press **Use**, and after a
-runtime pack finishes downloading, so switching takes effect on the next callout instead of on the next start. The saved
+it in, disposes the one it replaced, and then warms the voices that are still bound. The **TTS Engine** dialog calls it
+when you press **Use**, and after a runtime pack finishes downloading, so switching takes effect on the next callout
+instead of on the next start. The saved
 setting still decides what a fresh launch uses, and a switch that cannot be honored (model missing, native library
 refusing to load) leaves the current engine speaking rather than leaving the app without speech.
 
 Two things make swapping safe rather than merely convenient:
 
-- The whole switch runs under the synthesis `SemaphoreSlim`, so an engine is created and destroyed while nothing can
-  be speaking through it. Synthesis re-reads `_tts` *after* acquiring that gate, which is why a callout that arrives
-  mid switch cannot end up using a retired engine, nor cache PCM under the wrong engine's key.
+- The whole switch runs under the synthesis `SemaphoreSlim`, so an engine is created and destroyed while nothing can be
+  speaking through it. Synthesis re-reads `_tts` *after* acquiring that gate, which is why a callout that arrives mid
+  switch cannot end up using a retired engine, nor cache PCM under the wrong engine's key. The swap itself and the
+  disposal of the retired engine additionally run under `_engineLock`, so the quick UI-side engine calls described above
+  cannot straddle them either. An engine that was built but never became active is disposed at the same point, which is
+  why a switch that fails part way through does not leak a 300 MB inference session.
+- Warm-up happens *after* the switch returns the gate, never inside it. Warm-up enters that gate only when it is free,
+  so asking from a method that already holds it means every warm-up after a switch quietly gives up.
 - A voice name from one engine means nothing to another, so `AudioManager` remembers what the host asked each player
   to speak with (`_requestedVoices`) and replays those names to the new engine. The engine binds the names it has and
   drops the rest, which sends that player back to the engine's default voice. Kokoro deliberately refuses to remember
@@ -220,6 +238,10 @@ first thing said with a voice, which is usually the trigger someone is waiting f
   something is talking, and gives up rather than standing in line. Choosing a voice also speaks an audible preview, and
   waiting behind a warm-up for that would be worse than staying cold. Whatever the retry window misses costs speed and
   nothing else.
+- **One worker, one voice at a time:** requests queue rather than each starting a task of its own, deduped by engine and
+  voice, because registering thirty characters at a zone-in is thirty voices asking for CPU at the same moment. A voice
+  counts as prepared only when it actually got through; recording one that gave up would suppress the next attempt and
+  leave a player cold for the rest of the evening.
 
 Piper holds **one** prepared voice outside the players, under a reserved id in the native table. Previews used to build
 a voice, speak and destroy it, so every different text paid for the model again; now `ResolveAdHocSpeaker` keeps it,
@@ -254,6 +276,10 @@ startup, what the picker lets you click, whether a switch is honored — reads i
   into silence.
 - If nothing at startup turns out to be usable, `LoadValidVoicesAsync` logs it. That line is the difference between a
   bug report saying "no audio" and one that says what to fix.
+- **What this engine holds per player is two synthesizer objects, not a lock.** `_lock` covers the player table only;
+  nothing in this class serializes an utterance, on either API. Concurrency belongs to `AudioManager`, which lets one
+  synthesis run at a time across all engines — worth knowing before adding a second gate here, and before assuming a
+  second callout can be synthesized concurrently through `System.Speech`, which it cannot.
 
 The picker greys an engine out only when there is neither a way to use it nor a way to get it: Piper and Kokoro stay
 clickable while not installed because clicking them is how they get downloaded, and Windows goes grey when it has been
@@ -302,6 +328,27 @@ files are still sitting in old build outputs, so development runs reported a wor
 location per engine, `%LOCALAPPDATA%\EQLogParser\<engine>`, owned end to end by `TtsPackManager`. `[InstallDelete]` now
 deletes what installs before packs left under `{app}`; the files are inert whether or not they are removed, so that entry
 is about reclaiming space, not about behavior.
+
+### Downloading a pack, and getting out of one
+
+An install is four jobs wearing one progress bar, and the bar is divided the way the work is: nine tenths for bytes off
+the network, then slices for hashing the archive, unpacking it, and checking every extracted file against
+`manifest.json`. Nothing sits at 90 % for a minute while the app works, which is the part people could not otherwise
+distinguish from a freeze — reading a few hundred megabytes back takes tens of seconds after a fast download.
+
+Every one of those loops watches the Cancel button through one `CancellationToken`: the transfer, the archive digest,
+each extracted entry, each verified file. `ZipArchiveEntry.ExtractToFile` is deliberately not used, because it neither
+reports bytes nor aborts before an entry finishes and one entry here is the 156 MB model. Cancellation is worth this much
+because of where the work happens: unpacking and verification run in `<engine>.staging`, an existing pack moves to
+`<engine>.retired` only once the new copy is complete and verified, and a promotion that fails puts the old copy back.
+Give up halfway and the only trace is a deleted temp archive; a pack that spoke this morning still speaks.
+
+Two free-space checks guard the job rather than one. Room for the archive is checked before the download begins — that
+check exists to save somebody's bandwidth, so it refuses only the case that cannot possibly work. Room for the extracted
+tree is checked afterwards from the zip's own central directory, which states the uncompressed size of every entry, so it
+is a measured number rather than a guessed compression ratio and it fires before files start landing. An unreadable drive
+or an unmeasurable archive counts as room enough in both: this is not the place where a disk gets argued with, and a
+disk that fills up anyway reports the real figure itself.
 
 ### Kokoro model integrity
 

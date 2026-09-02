@@ -13,9 +13,10 @@ namespace EQLogParser.Audio
 {
   /*
    * Piper voices. The native library, its espeak-ng data and the voice models come from a GitHub hosted runtime pack
-   * in local app data (docs/TtsPacks.md); installs made before packs had the same files beside the executable and are
-   * still read from there, so nobody has to re-download 347MB. TtsPackManager picks the directory and answers the
-   * native imports that live inside it. The native library keeps a process wide table of loaded voices keyed by an id,
+   * in local app data (docs/TtsPacks.md) and from nowhere else: nothing beside the executable is read or adopted, so
+   * an engine with no pack on disk stays out of the picker until somebody downloads one. TtsPackManager picks the
+   * directory and answers the native imports that live inside it. The native library keeps a process wide table of
+   * loaded voices keyed by an id,
    * so each player registers its voice under its own id and the preview path registers one of its own under a
    * reserved id.
    */
@@ -76,7 +77,7 @@ namespace EQLogParser.Audio
     public string GetDefaultVoice() => _voiceData?.Voices?.FirstOrDefault()?.Name;
 
     public string GetVoice(string playerId) =>
-      playerId != null && _players.TryGetValue(playerId, out var player) && !string.IsNullOrEmpty(player.Name)
+      playerId is not null && _players.TryGetValue(playerId, out var player) && !string.IsNullOrEmpty(player.Name)
         ? player.Name
         : GetDefaultVoice();
 
@@ -90,7 +91,9 @@ namespace EQLogParser.Audio
       // Rebinding the voice the player already speaks is a waste of exactly the time this is all about: a config write
       // touches every setting, and rebuilding an ONNX session to end up with the same voice would be worse than doing
       // nothing.
-      if (_players.TryGetValue(playerId, out var current) && string.Equals(current.Name, voice, StringComparison.OrdinalIgnoreCase))
+      var bound = _players.TryGetValue(playerId, out var current);
+
+      if (bound && string.Equals(current.Name, voice, StringComparison.OrdinalIgnoreCase))
       {
         return;
       }
@@ -106,6 +109,15 @@ namespace EQLogParser.Audio
       if (LoadNativeVoice(playerId, voice) is { } voiceInfo)
       {
         _players[playerId] = new PlayerVoice { Name = voiceInfo.Name, SampleRate = voiceInfo.Sample };
+      }
+      else
+      {
+        /*
+         * The native voice above was removed, so nothing is loaded under this id any more and nothing may claim
+         * otherwise. Leaving the old binding behind gives a player that reports a voice it cannot speak: silent on
+         * every callout, and worth borrowing by the preview path for a voice that produces nothing.
+         */
+        _ = _players.TryRemove(playerId, out _);
       }
     }
 
@@ -134,7 +146,7 @@ namespace EQLogParser.Audio
 
     public async Task<(byte[] pcm, int sampleRate)> SynthesizeForPlayerAsync(string playerId, string text)
     {
-      var sample = playerId != null && _players.TryGetValue(playerId, out var player) ? player.SampleRate : 0;
+      var sample = playerId is not null && _players.TryGetValue(playerId, out var player) ? player.SampleRate : 0;
       var pcm = await Task.Run(() => SynthesizeNative(playerId, text)).ConfigureAwait(false);
       return (pcm, sample);
     }
@@ -184,9 +196,10 @@ namespace EQLogParser.Audio
         return (null, 0);
       }
 
-      var wanted = voices.FirstOrDefault(v => string.Equals(v.Name, voice, StringComparison.OrdinalIgnoreCase)) ?? voices[0];
-
-      var owned = _players.FirstOrDefault(player => string.Equals(player.Value.Name, wanted.Name, StringComparison.OrdinalIgnoreCase));
+      var wanted = voices.FirstOrDefault(v =>
+        string.Equals(v.Name, voice, StringComparison.OrdinalIgnoreCase)) ?? voices[0];
+      var owned = _players.FirstOrDefault(player =>
+        string.Equals(player.Value.Name, wanted.Name, StringComparison.OrdinalIgnoreCase));
 
       if (owned.Value is not null)
       {
@@ -263,26 +276,15 @@ namespace EQLogParser.Audio
         return IntPtr.Zero;
       }
 
-      // The pack is not on any search path the loader knows, so name its folder. Looping over the candidates keeps this
-      // working if the resolution ever has more than one answer again; today there is exactly one.
-      foreach (var dir in CandidateDirectories())
+      // The pack is on no search path the loader knows, so name its folder. The files piperApi.dll imports sit beside
+      // it, which the altered search path NativeLibrary.Load uses covers.
+      if (TtsPackManager.ResolveRoot(EngineName) is { } root &&
+          NativeLibrary.TryLoad(Path.Combine(root, libraryName), out var handle))
       {
-        if (NativeLibrary.TryLoad(Path.Combine(dir, libraryName), out var handle))
-        {
-          return handle;
-        }
+        return handle;
       }
 
       return IntPtr.Zero;
-    }
-
-    /* Piper lives in its pack and nowhere else: nothing beside the executable is read, installed or adopted. */
-    private static IEnumerable<string> CandidateDirectories()
-    {
-      if (TtsPackManager.ResolveRoot(EngineName) is { } resolved)
-      {
-        yield return resolved;
-      }
     }
 
     private static bool InitializeNative(string root)
@@ -314,7 +316,8 @@ namespace EQLogParser.Audio
         }
         catch (Exception ex)
         {
-          Log.Error($"Error initializing piper-tts (onnxruntime in use: {TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
+          Log.Error($"Error initializing piper-tts (onnxruntime in use: " +
+            $"{TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
           return false;
         }
       }
@@ -328,8 +331,8 @@ namespace EQLogParser.Audio
       }
 
       // fall back to the first voice in the pack so there is always something to speak with
-      var voiceInfo = voices.FirstOrDefault(voice => string.Equals(voice.Name, name, StringComparison.OrdinalIgnoreCase))
-        ?? voices[0];
+      var voiceInfo = voices.FirstOrDefault(
+          voice => string.Equals(voice.Name, name, StringComparison.OrdinalIgnoreCase)) ?? voices[0];
 
       var modelPath = Path.Combine(_root, "voices", voiceInfo.Model);
       var configPath = Path.Combine(_root, "voices", voiceInfo.Config);
@@ -383,7 +386,8 @@ namespace EQLogParser.Audio
     }
   }
 
-  public static class PiperInterop
+  /* Raw piperApi.dll entry points. Nothing outside this assembly needs them and nothing outside should own them. */
+  internal static class PiperInterop
   {
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
     internal static extern void initialize([MarshalAs(UnmanagedType.LPStr)] string espeakDataPath);
@@ -392,13 +396,15 @@ namespace EQLogParser.Audio
     internal static extern void release();
 
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int loadVoice([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string modelPath, [MarshalAs(UnmanagedType.LPStr)] string configPath);
+    internal static extern int loadVoice([MarshalAs(UnmanagedType.LPStr)] string id,
+      [MarshalAs(UnmanagedType.LPStr)] string modelPath, [MarshalAs(UnmanagedType.LPStr)] string configPath);
 
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int removeVoice([MarshalAs(UnmanagedType.LPStr)] string id);
 
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern long synthesize([MarshalAs(UnmanagedType.LPStr)] string id, [MarshalAs(UnmanagedType.LPStr)] string text, out IntPtr audioBuffer);
+    internal static extern long synthesize([MarshalAs(UnmanagedType.LPStr)] string id,
+      [MarshalAs(UnmanagedType.LPStr)] string text, out IntPtr audioBuffer);
 
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
     internal static extern void freeAudioData(IntPtr buffer);

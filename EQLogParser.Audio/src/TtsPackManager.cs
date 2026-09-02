@@ -45,7 +45,22 @@ namespace EQLogParser.Audio
     private const string ManifestName = "manifest.json";
     private const string OnnxRuntimeFileName = "onnxruntime.dll";
 
-    private sealed record Pack(string Engine, string Tag, string AssetName, string Sha256, string FolderName, long DownloadBytes);
+    // One buffer for every bulk read and write in an install: hashing, unpacking and the download all move whole
+    // megabytes, and 4MB is what makes per-chunk cancellation and progress cheap enough to bother with.
+    private const int BulkBufferSize = 1 << 22;
+
+    /*
+     * How the progress bar is earned. Nine tenths is bytes off the network; the last tenth is split between reading
+     * them back (the archive digest), unpacking them, and checking every extracted file against the manifest. Without
+     * the split the bar sits still for the better part of a minute at the end of a download and looks like a job that
+     * stopped answering.
+     */
+    private const float VerifyStart = 0.9f;
+    private const float DigestEnd = 0.93f;
+    private const float ExtractEnd = 0.97f;
+
+    private sealed record Pack(string Engine, string Tag, string AssetName, string Sha256, string FolderName,
+      long DownloadBytes);
 
     // Bumping a pack means publishing the new tag and changing Tag and Sha256 together; old releases are never
     // overwritten once an app build that pins them exists, so an installed app keeps pointing at bytes that will still
@@ -76,9 +91,6 @@ namespace EQLogParser.Audio
 
     private static int _resolversRegistered;
 
-    /* True when a complete, verified pack sits in local app data. Cheap: no hashing, only existence checks. */
-    internal static bool IsInstalled(string engine) => InstalledDirectory(engine) is not null;
-
     /*
      * True when this engine's own directory is here, complete or not. Only used to word the result of a remove:
      * "nothing was downloaded here" and "the files are locked" are different problems for the user.
@@ -104,8 +116,8 @@ namespace EQLogParser.Audio
      *
      * This order only decides anything for the first load of a name. Windows keeps one module per base name, so once
      * some onnxruntime.dll is resident every later request for that name gets that module no matter which folder this
-     * lists -- see PreferMatchingOnnxRuntime. Kokoro's copy is first because it is the one published against the managed
-     * wrapper installed with the app.
+     * lists -- see PreferMatchingOnnxRuntime. Kokoro's copy is first because it is the one published against the
+     * managed wrapper installed with the app.
      */
     internal static IEnumerable<string> NativeSearchDirectories()
     {
@@ -133,15 +145,17 @@ namespace EQLogParser.Audio
       AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolvePackNative;
     }
 
-    /* Approximate archive size, for "this will download about 347 MB" style wording. */
-    internal static long GetDownloadBytes(string engine) => Packs.TryGetValue(engine, out var pack) ? pack.DownloadBytes : 0;
+    /* Approximate archive size, for "Download Piper (348 MB)" style button wording. */
+    internal static long GetDownloadBytes(string engine) =>
+      Packs.TryGetValue(engine, out var pack) ? pack.DownloadBytes : 0;
 
     /*
      * Downloads and installs an engine's pack. progress is 0..1 across the whole job: the archive transfer earns most
      * of it and verification the rest, so a stalled download never looks finished. Returns false without touching an
      * existing installation when anything fails.
      */
-    internal static async Task<bool> InstallAsync(string engine, IProgress<float> progress, CancellationToken cancellationToken)
+    internal static async Task<bool> InstallAsync(string engine, IProgress<float> progress,
+      CancellationToken cancellationToken)
     {
       if (!Packs.TryGetValue(engine, out var pack))
       {
@@ -155,9 +169,24 @@ namespace EQLogParser.Audio
       var downloadDir = Path.Combine(StorageRoot, "_download");
       var tempArchive = Path.Combine(downloadDir, pack.AssetName + ".tmp");
 
-      await _installGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+      // Refuses only the case that cannot possibly work, before spending anybody's bandwidth on it: room for the
+      // archive and nothing more. Unpacking gets its own check further down against the real extracted size, because
+      // guessing a compression ratio here would turn away machines that manage fine.
+      if (!HasRoom(pack.Engine, pack.DownloadBytes, "download"))
+      {
+        return false;
+      }
+
+      var gated = false;
+
       try
       {
+        // Inside the try: waiting here can be cancelled by whoever pressed the button a second time, and that has to
+        // read as a failed install rather than as an unhandled exception on a UI handler. Only a wait that succeeded
+        // may release the gate below; releasing one that was never taken would let two installs run at once.
+        await _installGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        gated = true;
+
         Directory.CreateDirectory(downloadDir);
         EnsureResolversRegistered();
 
@@ -170,7 +199,10 @@ namespace EQLogParser.Audio
         // transports here, so a mismatch means we were handed something else and it never touches disk again. Both
         // digests belong in the message because the usual cause is mundane -- the asset was rebuilt and the pin in this
         // file is the old one -- and without the numbers that reads like a corrupt upload.
-        var downloaded = ComputeSha256(tempArchive);
+        var digest = new StageProgress(progress, VerifyStart, DigestEnd);
+        digest.Begin(new FileInfo(tempArchive).Length);
+        var downloaded = ComputeSha256(tempArchive, digest.Advance, cancellationToken);
+        digest.Finish();
         if (!string.Equals(downloaded, pack.Sha256, StringComparison.OrdinalIgnoreCase))
         {
           Log.Error($@"{engine} runtime pack checksum mismatch; the download was discarded.
@@ -179,18 +211,45 @@ namespace EQLogParser.Audio
           return false;
         }
 
-        progress?.Report(0.9f);
-        ReplaceDirectory(staging);
-        ExtractAndVerify(tempArchive, staging, engine);
+        // Room for the tree that is about to come out of it. The archive's own central directory carries the
+        // uncompressed size of every entry, so this is the real number rather than a guessed ratio, and "the disk is
+        // full" said here beats an IOException halfway through a few hundred megabytes of extracted files.
+        if (!HasRoom(pack.Engine, UncompressedBytes(tempArchive, pack.Engine), "unpack"))
+        {
+          return false;
+        }
+
+        CleanDirectory(staging);
+        ExtractAndVerify(tempArchive, staging, engine, progress, cancellationToken);
 
         // The old copy is moved aside rather than deleted first, so a failure above leaves the working pack alone.
-        ReplaceDirectory(retired);
+        CleanDirectory(retired);
         if (Directory.Exists(target))
         {
           Directory.Move(target, retired);
         }
 
-        Directory.Move(staging, target);
+        try
+        {
+          Directory.Move(staging, target);
+        }
+        catch (Exception ex)
+        {
+          /*
+           * The new copy could not be put in place and the old one is parked under another name, which would leave the
+           * engine that worked this morning unable to start. Put it back before anything else: the retired directory
+           * keeps its own copy of every file, so restoring is a rename and not a re-download.
+           */
+          Log.Error($"Unable to install the {engine} runtime pack; putting the previous copy back", ex);
+
+          if (!Directory.Exists(target) && Directory.Exists(retired))
+          {
+            Directory.Move(retired, target);
+          }
+
+          return false;
+        }
+
         TryWriteMarker(target, pack);
         progress?.Report(1f);
 
@@ -211,9 +270,22 @@ namespace EQLogParser.Audio
       }
       finally
       {
+        // Only this method's own waiter may leave the gate, and only after the staging directory and the half read
+        // archive are gone: the next install would otherwise find them in the way.
         DeleteTreeQuietly(staging);
         TryDeleteFile(tempArchive);
-        _installGate.Release();
+
+        if (gated)
+        {
+          try
+          {
+            _installGate.Release();
+          }
+          catch (ObjectDisposedException)
+          {
+            // the app is closing; nobody is waiting
+          }
+        }
       }
     }
 
@@ -239,6 +311,12 @@ namespace EQLogParser.Audio
         }
 
         Directory.Delete(target, true);
+
+        // Anything parked next to it is worth reclaiming in the same gesture: an interrupted install leaves a .staging
+        // or .retired directory behind and this is the one place somebody asks for the space back.
+        DeleteTreeQuietly(target + ".staging");
+        DeleteTreeQuietly(target + ".retired");
+
         Log.Info($"{engine} runtime pack removed from {target}");
         return true;
       }
@@ -249,22 +327,25 @@ namespace EQLogParser.Audio
       }
     }
 
-    private static async Task<bool> DownloadAsync(Pack pack, string tempArchive, IProgress<float> progress, CancellationToken cancellationToken)
+    private static async Task<bool> DownloadAsync(Pack pack, string tempArchive, IProgress<float> progress,
+      CancellationToken cancellationToken)
     {
       var url = $"https://github.com/{ReleaseRepo}/releases/download/{pack.Tag}/{pack.AssetName}";
       using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
         .ConfigureAwait(false);
       if (!response.IsSuccessStatusCode)
       {
-        Log.Error($"Unable to fetch the {pack.Engine} runtime pack: {(int)response.StatusCode} {response.ReasonPhrase}");
+        Log.Error($"Unable to fetch the {pack.Engine} runtime pack: " +
+          $"{(int)response.StatusCode} {response.ReasonPhrase}");
         return false;
       }
 
       var total = response.Content.Headers.ContentLength ?? 0L;
       await using var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-      await using var destination = new FileStream(tempArchive, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20);
+      await using var destination = new FileStream(tempArchive, FileMode.Create, FileAccess.Write, FileShare.None,
+        BulkBufferSize);
 
-      var buffer = new byte[1 << 20];
+      var buffer = new byte[BulkBufferSize];
       long read = 0;
       int got;
       while ((got = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
@@ -274,7 +355,7 @@ namespace EQLogParser.Audio
         if (total > 0)
         {
           // Leave headroom in the bar for verification so it never sits at 100% while still working.
-          progress?.Report(Math.Clamp((float)read / total * 0.9f, 0f, 0.9f));
+          progress?.Report(Math.Clamp((float)read / total * VerifyStart, 0f, VerifyStart));
         }
       }
 
@@ -285,16 +366,24 @@ namespace EQLogParser.Audio
      * Extracts into a private directory and checks every file the manifest lists. Zip entries are treated as
      * untrusted paths: an entry that tries to climb out of the target directory aborts the install outright.
      */
-    private static void ExtractAndVerify(string archive, string target, string engine)
+    private static void ExtractAndVerify(string archive, string target, string engine, IProgress<float> progress,
+      CancellationToken cancellationToken)
     {
       Directory.CreateDirectory(target);
       using var zip = ZipFile.OpenRead(archive);
 
       var manifest = ReadManifest(zip, engine);
       var rootFull = Path.GetFullPath(target) + Path.DirectorySeparatorChar;
+      var unpacking = new StageProgress(progress, DigestEnd, ExtractEnd);
+      unpacking.Begin(UncompressedBytes(zip));
+      var buffer = new byte[BulkBufferSize];
 
       foreach (var entry in zip.Entries)
       {
+        // Cancelling a download is only honest if it also stops the unpacking: an archive this size takes long enough
+        // that somebody changes their mind during it. The finally in InstallAsync clears the half written directory.
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (string.IsNullOrEmpty(entry.Name))
         {
           continue; // directory entry
@@ -312,8 +401,14 @@ namespace EQLogParser.Audio
           Directory.CreateDirectory(directory);
         }
 
-        entry.ExtractToFile(destination, true);
+        // Copied by hand instead of ExtractToFile: that reports no bytes and notices a cancellation only once the
+        // entry is complete, and one entry here is a 156MB model.
+        using var source = entry.Open();
+        using var sink = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, BulkBufferSize);
+        CopyStream(source, sink, buffer, unpacking.Advance, cancellationToken);
       }
+
+      unpacking.Finish();
 
       if (manifest is null)
       {
@@ -321,8 +416,13 @@ namespace EQLogParser.Audio
         return;
       }
 
+      var checking = new StageProgress(progress, ExtractEnd, 1f);
+      checking.Begin(TotalManifestBytes(manifest));
+
       foreach (var file in manifest)
       {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var path = Path.GetFullPath(Path.Combine(target, file.Path));
         if (!path.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
         {
@@ -330,11 +430,67 @@ namespace EQLogParser.Audio
         }
 
         if (!File.Exists(path) || new FileInfo(path).Length != file.Size ||
-            !string.Equals(ComputeSha256(path), file.Sha256, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(ComputeSha256(path, checking.Advance, cancellationToken), file.Sha256,
+              StringComparison.OrdinalIgnoreCase))
         {
           throw new InvalidDataException($"{engine} pack failed verification for {file.Path}");
         }
       }
+
+      checking.Finish();
+    }
+
+    private static long TotalManifestBytes(List<PackFile> manifest)
+    {
+      if (manifest is null)
+      {
+        return 0L;
+      }
+
+      long total = 0L;
+      foreach (var file in manifest)
+      {
+        total += Math.Max(0L, file.Size);
+      }
+
+      return total;
+    }
+
+    /*
+     * One stage of the tail of an install: bytes moved in, a slice of the progress bar out. Reports per chunk, which
+     * at this buffer size is a few dozen reports for a whole pack.
+     */
+    private sealed class StageProgress
+    {
+      private readonly IProgress<float> _progress;
+      private readonly float _from;
+      private readonly float _to;
+      private long _total = 1L;
+      private long _done;
+
+      internal StageProgress(IProgress<float> progress, float from, float to)
+      {
+        _progress = progress;
+        _from = from;
+        _to = to;
+      }
+
+      internal void Begin(long totalBytes)
+      {
+        _total = Math.Max(1L, totalBytes);
+        _done = 0L;
+      }
+
+      internal void Advance(long bytes)
+      {
+        _done += bytes;
+        Report((float)(_done / (double)_total));
+      }
+
+      internal void Finish() => Report(1f);
+
+      private void Report(float fraction) =>
+        _progress?.Report(_from + (_to - _from) * Math.Clamp(fraction, 0f, 1f));
     }
 
     private sealed record PackFile(string Path, long Size, string Sha256);
@@ -484,7 +640,7 @@ namespace EQLogParser.Audio
      */
     private static void RemoveLegacyKokoroModel()
     {
-      if (!IsInstalled(AudioManager.KokoroEngine))
+      if (InstalledDirectory(AudioManager.KokoroEngine) is null)
       {
         return;
       }
@@ -492,19 +648,106 @@ namespace EQLogParser.Audio
       DeleteTreeQuietly(Path.Combine(StorageRoot, "kokoro-tts"));
     }
 
-    private static void ReplaceDirectory(string dir)
+    /*
+     * Whether the volume holding local app data has room for another `bytes`. Anything unknown - a drive that cannot
+     * be queried, a path without a root, a size nobody could measure - is treated as room enough, because this exists
+     * to refuse a job that cannot finish and not to second guess a disk it cannot read. A disk that fills up anyway
+     * reports the real number by itself.
+     */
+    private static bool HasRoom(string engine, long bytes, string stage)
     {
-      if (Directory.Exists(dir))
+      if (bytes <= 0)
       {
-        Directory.Delete(dir, true);
+        return true;
+      }
+
+      try
+      {
+        var root = Path.GetPathRoot(StorageRoot);
+        if (string.IsNullOrEmpty(root))
+        {
+          return true;
+        }
+
+        var drive = new DriveInfo(root);
+        if (drive.IsReady && drive.AvailableFreeSpace < bytes)
+        {
+          Log.Error($"Not enough free space on {root} to {stage} the {engine} runtime pack: " +
+            $"{bytes / (1024 * 1024)} MB needed, {drive.AvailableFreeSpace / (1024 * 1024)} MB free.");
+          return false;
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Unable to check the free space for a runtime pack", ex);
+      }
+
+      return true;
+    }
+
+    /* What this archive will occupy once unpacked, straight from its central directory. 0 means unknown. */
+    private static long UncompressedBytes(string archive, string engine)
+    {
+      try
+      {
+        using var zip = ZipFile.OpenRead(archive);
+        return UncompressedBytes(zip);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug($"Unable to measure the {engine} pack archive", ex);
+        return 0L;
       }
     }
 
-    private static string ComputeSha256(string path)
+    private static long UncompressedBytes(ZipArchive zip)
+    {
+      long total = 0L;
+      foreach (var entry in zip.Entries)
+      {
+        if (!string.IsNullOrEmpty(entry.Name))
+        {
+          total += Math.Max(0L, entry.Length);
+        }
+      }
+
+      return total;
+    }
+
+    /*
+     * Hashes a file the way the pack manifests do: streamed, so a 156MB model costs memory nothing. The chunk loop is
+     * what makes cancellation and progress possible during it; hashing an archive and then every file in it runs to
+     * tens of seconds, and a Cancel button that had to wait for that would look broken.
+     */
+    internal static string ComputeSha256(string path, Action<long> onBytes = null,
+      CancellationToken cancellationToken = default)
     {
       using var sha = SHA256.Create();
-      using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20);
-      return Convert.ToHexString(sha.ComputeHash(stream));
+      using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, BulkBufferSize);
+
+      var buffer = new byte[BulkBufferSize];
+      int read;
+      while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+      {
+        sha.TransformBlock(buffer, 0, read, null, 0);
+        onBytes?.Invoke(read);
+        cancellationToken.ThrowIfCancellationRequested();
+      }
+
+      sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+      return Convert.ToHexString(sha.Hash ?? Array.Empty<byte>());
+    }
+
+    private static void CopyStream(Stream source, FileStream destination, byte[] buffer, Action<long> onBytes,
+      CancellationToken cancellationToken)
+    {
+      int got;
+      while ((got = source.Read(buffer, 0, buffer.Length)) > 0)
+      {
+        destination.Write(buffer, 0, got);
+        onBytes?.Invoke(got);
+        cancellationToken.ThrowIfCancellationRequested();
+      }
     }
 
     private static void TryWriteMarker(string dir, Pack pack)
@@ -534,14 +777,26 @@ namespace EQLogParser.Audio
       }
     }
 
+    /*
+     * Removes a directory that must not be there, letting anything go wrong surface. Used for the staging directory
+     * before unpacking into it: half a tree left behind from an interrupted install is a reason to stop, not something
+     * to extract on top of.
+     */
+    private static void CleanDirectory(string dir)
+    {
+      if (Directory.Exists(dir))
+      {
+        Directory.Delete(dir, true);
+      }
+    }
+
+    // The same, for directories whose disappearance is only worth having: parking the replaced pack, or a leftover the
+    // app no longer needs. Failing at those must not fail the job that was actually asked for.
     private static void DeleteTreeQuietly(string dir)
     {
       try
       {
-        if (Directory.Exists(dir))
-        {
-          Directory.Delete(dir, true);
-        }
+        CleanDirectory(dir);
       }
       catch (Exception ex)
       {

@@ -11,8 +11,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,19 +41,38 @@ namespace EQLogParser.Audio
      */
     private const int WarmUpAttempts = 6;
     private const int WarmUpRetryDelayMs = 400;
+
+    /*
+     * Ceiling on voices waiting to be warmed. A zone-in registers dozens of players at once and most of them will not
+     * be spoken with this fight; when the list is full the oldest request is dropped, because a voice someone changed
+     * two minutes ago matters less than the one just picked.
+     */
+    private const int MaxWarmUpQueue = 8;
     private readonly ConcurrentDictionary<string, PlayerAudio> _playerAudios = [];
     private readonly ConcurrentDictionary<string, bool> _isRenderDevice = new();
     /*
-     * Engines hold process wide native state (Piper's voice table, Kokoro's inference session), so only one
-     * synthesis runs at a time. Cached phrases never take the gate. See docs/DesignNotes.md -> Speech synthesis
-     * and TTS engines.
+     * Engines hold process wide native state (Piper's voice table, Kokoro's inference session), so only one synthesis
+     * runs at a time and no engine is created or released while another thread speaks through one. A phrase already in
+     * the cache takes neither this gate nor an engine at all, which is what keeps a burst of familiar callouts from
+     * queueing behind a neural synthesis of something new. See docs/DesignNotes.md -> Speech synthesis and TTS engines.
      */
     private readonly SemaphoreSlim _synthGate = new(1, 1);
+
+    /*
+     * Serializes the short engine calls - binding a voice, dropping one, asking what a player speaks - against an
+     * engine swap, so nothing can reach an engine whose native state has just been released. Deliberately not held
+     * across synthesis: that is _synthGate's job, and a callout must never be delayed by someone using a dropdown.
+     */
+    private readonly object _engineLock = new();
     private readonly AudioDeviceNotificationClient _notificationClient = new();
     private readonly object _deviceLock = new();
 
-    /* Swapped in place when the user picks another engine mid session; read it under _synthGate when it matters. */
-    private ITtsEngine _tts;
+    /*
+     * Swapped in place when the user picks another engine mid session. volatile so a thread that reads it without the
+     * lock sees whoever is actually speaking; anything about to call into it holds _engineLock first, except synthesis
+     * and warm-up, which run under _synthGate for exactly as long as a switch holds it.
+     */
+    private volatile ITtsEngine _tts;
 
     /*
      * What the host asked each player to speak with. The engine decides whether it can honor that name, and this is
@@ -62,10 +81,15 @@ namespace EQLogParser.Audio
     private readonly ConcurrentDictionary<string, string> _requestedVoices = [];
 
     /*
-     * Engine and voice most recently prepared by WarmUpVoice, so being asked for the same voice twice does nothing.
-     * Cleared when another engine takes over, because the new one has to be warmed on its own terms.
+     * Warm-up bookkeeping, all of it under _warmLock: the voices worth preparing, the set that keeps one voice in the
+     * list once, the last voice confirmed prepared, and whether the single worker is running. A voice is recorded as
+     * warm only when it actually got through, so a warm-up that gave up does not suppress the next attempt.
      */
+    private readonly object _warmLock = new();
+    private readonly Queue<(string Voice, string Key)> _warmQueue = [];
+    private readonly HashSet<string> _warmQueued = [];
     private string _warmedVoice;
+    private bool _warmWorkerRunning;
 
     private MMDeviceEnumerator _deviceEnumerator;
     private Guid _selectedDeviceGuid = Guid.Empty;
@@ -87,7 +111,10 @@ namespace EQLogParser.Audio
     {
       _cache = cache;
       _showError = showError;
-      _preferredEngine = preferredEngine;
+
+      // The setting can have been edited by hand, and every comparison from here on is against the names this build
+      // uses. Normalizing once at the boundary is what keeps "piper" meaning Piper.
+      _preferredEngine = TtsEngineFactory.Normalize(preferredEngine);
     }
 
     private AudioManager()
@@ -109,14 +136,16 @@ namespace EQLogParser.Audio
       }
     }
 
-    public bool IsEngineAvailable(string engine) => EngineIsAvailable(engine);
+    public bool IsEngineAvailable(string engine) => EngineIsAvailable(TtsEngineFactory.Normalize(engine));
 
-    public bool IsEngineDownloaded(string engine) => TtsPackManager.IsPackOnDisk(engine);
+    public bool IsEngineDownloaded(string engine) => TtsPackManager.IsPackOnDisk(TtsEngineFactory.Normalize(engine));
 
-    public long GetEngineDownloadBytes(string engine) => TtsPackManager.GetDownloadBytes(engine);
+    public long GetEngineDownloadBytes(string engine) =>
+      TtsPackManager.GetDownloadBytes(TtsEngineFactory.Normalize(engine));
 
-    public Task<bool> InstallEngineAsync(string engine, IProgress<float> progress, CancellationToken cancellationToken = default) =>
-      TtsPackManager.InstallAsync(engine, progress, cancellationToken);
+    public Task<bool> InstallEngineAsync(string engine, IProgress<float> progress,
+      CancellationToken cancellationToken = default) =>
+      TtsPackManager.InstallAsync(TtsEngineFactory.Normalize(engine), progress, cancellationToken);
 
     /*
      * Reclaims the space a pack uses. The engine currently speaking keeps its native libraries mapped for the life of
@@ -125,21 +154,19 @@ namespace EQLogParser.Audio
      */
     public bool RemoveEngineFiles(string engine)
     {
-      if (string.IsNullOrEmpty(engine) || engine == GetActiveEngine())
+      var target = TtsEngineFactory.Normalize(engine);
+
+      if (string.IsNullOrEmpty(target) || string.Equals(target, GetActiveEngine(), StringComparison.OrdinalIgnoreCase))
       {
         return false;
       }
 
-      return TtsPackManager.Remove(engine);
+      return TtsPackManager.Remove(target);
     }
 
     /// <summary>Every engine the app knows how to drive, whether or not its runtime pack is installed. The picker
     /// lists these so a download can be offered from the same place the engine is chosen.</summary>
     public static List<string> GetAllEngines() => [PiperEngine, KokoroEngine, WindowsEngine];
-
-    /// <summary>Engines that can currently be selected: Windows is always available; Piper/Kokoro only once their
-    /// runtime pack (or, for Piper, an older app installed copy) is on disk.</summary>
-    public static List<string> GetAvailableEngines() => GetAllEngines().Where(EngineIsAvailable).ToList();
 
     private static bool EngineIsAvailable(string engine) => engine switch
     {
@@ -156,76 +183,140 @@ namespace EQLogParser.Audio
     /// selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
     public async Task<bool> SwitchEngineAsync(string engine)
     {
-      if (_disposed || string.IsNullOrEmpty(engine))
+      if (_disposed) return false;
+
+      var wanted = TtsEngineFactory.Normalize(engine);
+
+      if (string.IsNullOrEmpty(wanted))
       {
         return false;
       }
 
-      var previous = _tts;
-
-      if (engine == previous.Name || !GetAvailableEngines().Contains(engine))
+      // Already speaking it, or nothing on disk to speak it with. Reported as "no switch" either way; the picker tells
+      // those two apart from what it can see on disk.
+      if (string.Equals(wanted, GetActiveEngine(), StringComparison.OrdinalIgnoreCase) || !EngineIsAvailable(wanted))
       {
-        return engine == previous.Name;
+        return string.Equals(wanted, GetActiveEngine(), StringComparison.OrdinalIgnoreCase);
       }
+
+      var (switched, voices) = await SwitchUnderGateAsync(wanted).ConfigureAwait(false);
+
+      if (!switched)
+      {
+        return false;
+      }
+
+      /*
+       * Warm the new engine now that the gate is back. This cannot happen inside the switch: warm-up enters that gate
+       * only when it is free, and the switch holds it for as long as it takes to build a model, so asking from in
+       * there means every warm-up quietly gives up and the first callout after a switch pays for everything.
+       *
+       * Distinct voices only: a machine with six characters configured speaks with up to six of them, and each of
+       * these is one short word.
+       */
+      foreach (var voice in voices)
+      {
+        WarmUpVoice(voice);
+      }
+
+      return true;
+    }
+
+    /*
+     * The part of a switch that needs the synthesis gate: build the new engine, hand it the players, swap it in, and
+     * let go of the one it replaced. Returns whether the switch happened and which voices are worth warming once the
+     * gate is back.
+     */
+    private async Task<(bool Switched, string[] Voices)> SwitchUnderGateAsync(string wanted)
+    {
+      var previous = _tts;
 
       // held for the whole switch: creation and disposal both touch process wide native state, and no synthesis may
       // run against an engine that is being created or torn down
       await _synthGate.WaitAsync().ConfigureAwait(false);
+
+      var next = (ITtsEngine) null;
+      var retired = (ITtsEngine) null;
+      var voices = Array.Empty<string>();
 
       try
       {
         // Creation is where the cost is: Kokoro builds an inference session over a 156 MB graph and Windows proves
         // every voice by synthesizing a word into a stream. Callouts that arrive meanwhile wait on this gate, which
         // is still kinder than speaking half of one engine and half of the other.
-        var next = await Task.Run(() => TtsEngineFactory.CreateNamed(engine)).ConfigureAwait(false);
+        next = await Task.Run(() => TtsEngineFactory.CreateNamed(wanted)).ConfigureAwait(false);
 
         if (next is null)
         {
-          Log.Debug($"Unable to switch the TTS engine to {engine}; staying on {previous.Name}.");
-          return false;
+          Log.Debug($"Unable to switch the TTS engine to {wanted}; staying on {previous.Name}.");
+          return (false, voices);
         }
 
-        await next.LoadVoicesAsync().ConfigureAwait(false);
-
-        // An engine that has no voice at all cannot speak, whatever its name is. Switching to one would report success
-        // and then deliver silence; the current engine keeps the microphone.
-        if (next.GetVoices().Count == 0)
+        try
         {
-          Log.Debug($"{engine} has no usable voices; staying on {previous.Name}.");
-          next.Dispose();
-          return false;
-        }
+          // Nothing else can reach this engine yet - _tts still answers for the session - so these need no lock.
+          await next.LoadVoicesAsync().ConfigureAwait(false);
 
-        foreach (var requested in _requestedVoices)
+          // An engine that has no voice at all cannot speak, whatever its name is. Switching to one would report
+          // success and then deliver silence; the current engine keeps the microphone.
+          if (next.GetVoices().Count == 0)
+          {
+            Log.Debug($"{wanted} has no usable voices; staying on {previous.Name}.");
+            return (false, voices);
+          }
+
+          foreach (var requested in _requestedVoices)
+          {
+            next.SetVoice(requested.Key, requested.Value);
+          }
+        }
+        catch (Exception ex)
         {
-          next.SetVoice(requested.Key, requested.Value);
+          // A half prepared engine is dropped where every unusable one is dropped, below.
+          Log.Error($"Unable to prepare the {wanted} TTS engine", ex);
+          return (false, voices);
         }
 
-        _tts = next;
-
-        // The new engine has nothing prepared yet whatever the old one had warmed. Distinct voices only: a machine
-        // with six characters configured speaks with up to six of them, and each of these is one short word.
-        _warmedVoice = null;
-
-        foreach (var voice in _requestedVoices.Values.Distinct(StringComparer.OrdinalIgnoreCase))
+        /*
+         * Swapping and retiring belong together under _engineLock: a voice being bound to a player either finishes
+         * against the old engine or starts against the new one, never across both. The new engine keeps whatever the
+         * players asked for that it recognizes; a name it does not have was already dropped by SetVoice.
+         */
+        lock (_engineLock)
         {
-          WarmUpVoice(voice);
+          retired = previous;
+          _tts = next;
+          ResetWarmUpState();
         }
 
-        // retired under the gate on purpose: every call into an engine happens under this gate, so an engine that
-        // nobody can reach any more is the only one safe to hand to the native release
-        previous.Dispose();
+        var active = next;
+        next = null; // owned by _tts from here on, so there is nothing left to clean up below
 
-        if (next.Name is KokoroEngine or PiperEngine)
+        voices = [.. _requestedVoices.Values.Distinct(StringComparer.OrdinalIgnoreCase)];
+
+        // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
+        if (active.Name is KokoroEngine or PiperEngine)
         {
-          Log.Info($"Using {next.Name.ToLowerInvariant()}-tts");
+          Log.Info($"Using {active.Name.ToLowerInvariant()}-tts");
         }
 
-        return true;
+        return (true, voices);
       }
       finally
       {
-        _synthGate.Release();
+        /*
+         * Both disposals run under _engineLock while this still holds the gate, so nothing can be speaking with either
+         * engine and a voice call that was already in flight against the retired one has finished. next is set only
+         * when an engine was built and never became active, retired only when one was replaced: releasing the wrong
+         * one here would take the native voices away from the engine still speaking.
+         */
+        lock (_engineLock)
+        {
+          next?.Dispose();
+          retired?.Dispose();
+        }
+
+        ReleaseSynthGate();
       }
     }
 
@@ -234,26 +325,71 @@ namespace EQLogParser.Audio
       _showError?.Invoke("Unable to Play sound. No audio device?");
     }
 
+    /* Releasing after the manager has been disposed is normal during shutdown; there is nobody left to wait. */
+    private void ReleaseSynthGate()
+    {
+      try
+      {
+        _synthGate.Release();
+      }
+      catch (ObjectDisposedException)
+      {
+        // ignore: the app is closing
+      }
+    }
+
     public int GetVolume() => (int)(_appVolume * 100.0f);
     public void SetVolume(int volume) => _appVolume = volume / 100.0f;
 
+    /*
+     * Proves the engine that started the session. Takes the synthesis gate because proving voices is engine lifecycle
+     * work, the same as the creation and release a switch performs; nothing may speak with an engine while it runs,
+     * and this must not run against an engine somebody else has already retired.
+     */
     public async Task LoadValidVoicesAsync()
     {
-      await _tts.LoadVoicesAsync().ConfigureAwait(false);
+      var engine = _tts;
+
+      await _synthGate.WaitAsync().ConfigureAwait(false);
+
+      try
+      {
+        await engine.LoadVoicesAsync().ConfigureAwait(false);
+      }
+      finally
+      {
+        ReleaseSynthGate();
+      }
 
       // By now the engine that started the session has been asked to prove its voices, which is the earliest point
       // where "there is no speech on this machine" is knowable. Worth a log line: from the user's side it is only
       // silence, and that makes for a bug report with nothing in it.
-      if (!EngineIsAvailable(_tts.Name))
+      if (!EngineIsAvailable(engine.Name))
       {
-        Log.Warn($"{_tts.Name} TTS has no usable voices on this machine. Callouts stay silent until an engine is " +
+        Log.Warn($"{engine.Name} TTS has no usable voices on this machine. Callouts stay silent until an engine is " +
           "enabled on the TTS Engine screen.");
       }
     }
 
-    public List<string> GetVoiceList() => _tts.GetVoices();
+    public List<string> GetVoiceList()
+    {
+      var engine = _tts;
 
-    public string GetDefaultVoice() => _tts.GetDefaultVoice();
+      lock (_engineLock)
+      {
+        return engine.GetVoices();
+      }
+    }
+
+    public string GetDefaultVoice()
+    {
+      var engine = _tts;
+
+      lock (_engineLock)
+      {
+        return engine.GetDefaultVoice();
+      }
+    }
 
     public void SelectDevice(string id)
     {
@@ -269,7 +405,7 @@ namespace EQLogParser.Audio
       if (!string.IsNullOrEmpty(voice) && _playerAudios.ContainsKey(id))
       {
         _requestedVoices[id] = voice;
-        _tts.SetVoice(id, voice);
+        BindVoice(id, voice);
         WarmUpVoice(voice);
       }
     }
@@ -277,9 +413,25 @@ namespace EQLogParser.Audio
     public void Add(string id, string voice)
     {
       _requestedVoices[id] = voice;
-      _tts.SetVoice(id, voice);
       _playerAudios.TryAdd(id, new PlayerAudio());
+      BindVoice(id, voice);
       WarmUpVoice(voice);
+    }
+
+    /*
+     * Binds a player to a voice on whatever engine speaks now. Under _engineLock because a voice is engine state: for
+     * Piper this builds an ONNX session in a native table that the next engine swap releases wholesale, so binding may
+     * not straddle a swap. It is not cheap (a few hundred milliseconds for a first voice) and callers are the UI, which
+     * is why it is never held across synthesis.
+     */
+    private void BindVoice(string id, string voice)
+    {
+      var engine = _tts;
+
+      lock (_engineLock)
+      {
+        engine.SetVoice(id, voice);
+      }
     }
 
     /*
@@ -291,39 +443,91 @@ namespace EQLogParser.Audio
      * This is a nicety, not a requirement: every path here still synthesizes correctly if warm-up never ran, only the
      * first utterance pays for it.
      */
-    public void WarmUpVoice(string voice)
+    private void WarmUpVoice(string voice)
     {
       if (_disposed)
       {
         return;
       }
 
-      var target = string.IsNullOrEmpty(voice) ? _tts.GetDefaultVoice() : voice;
-      var key = $"{_tts.Name}:{target}";
+      var engine = _tts;
+      var target = string.IsNullOrEmpty(voice) ? SpokenVoice(engine, null) : voice;
 
-      if (string.IsNullOrEmpty(target) || string.Equals(_warmedVoice, key, StringComparison.OrdinalIgnoreCase))
+      if (string.IsNullOrEmpty(target))
       {
         return;
       }
 
-      _warmedVoice = key;
+      // A name belongs to an engine: the same name on another one is a different voice and has to be prepared again.
+      var key = $"{engine.Name}:{target}";
 
-      /*
-       * Opportunistic by design. It slips into the synthesis gate only when that gate is free, which is what keeps it
-       * from building or releasing a native voice while another thread speaks through one and from holding up anything
-       * audible - choosing a voice speaks a preview straight away, and that preview would otherwise wait behind this.
-       * If speech is busy for a moment the warm-up retries, then gives up; the voice stays cold until the next change,
-       * which costs nothing but speed.
-       */
-      _ = Task.Run(async () =>
+      lock (_warmLock)
       {
-        for (var attempt = 0; attempt < WarmUpAttempts; attempt++)
+        // Already prepared, or already on the list to be. One short synthesis per voice per engine is the whole point.
+        if (string.Equals(_warmedVoice, key, StringComparison.OrdinalIgnoreCase) || !_warmQueued.Add(key))
         {
-          if (_disposed)
+          return;
+        }
+
+        while (_warmQueue.Count >= MaxWarmUpQueue && _warmQueue.TryDequeue(out var dropped))
+        {
+          _warmQueued.Remove(dropped.Key);
+        }
+
+        _warmQueue.Enqueue((target, key));
+
+        if (_warmWorkerRunning)
+        {
+          return;
+        }
+
+        _warmWorkerRunning = true;
+      }
+
+      _ = Task.Run(WarmUpWorkerAsync);
+    }
+
+    /*
+     * What this engine would answer for a player, or its default voice when there is no player. That is engine state,
+     * so it is read under _engineLock like every other call into an engine; it is also cheap enough for a UI thread.
+     */
+    private string SpokenVoice(ITtsEngine engine, string playerId)
+    {
+      lock (_engineLock)
+      {
+        return playerId is not null ? engine.GetVoice(playerId) : engine.GetDefaultVoice();
+      }
+    }
+
+    /*
+     * One worker for the whole list, because warming is CPU work nobody is waiting on: registering thirty characters at
+     * a zone-in must not start thirty warm-ups at once, and none of them may hold up anything audible. Each voice
+     * slips into the synthesis gate only when that gate is free, which is what keeps it from building or releasing a
+     * native voice while another thread speaks through one - choosing a voice speaks a preview straight away, and that
+     * preview would otherwise wait behind this. Speech that stays busy makes a warm-up retry, then give up; the voice
+     * stays cold until something asks again, which costs nothing but speed.
+     */
+    private async Task WarmUpWorkerAsync()
+    {
+      while (!_disposed)
+      {
+        (string Voice, string Key) item;
+
+        lock (_warmLock)
+        {
+          if (!_warmQueue.TryDequeue(out item))
           {
+            _warmWorkerRunning = false;
             return;
           }
 
+          _warmQueued.Remove(item.Key);
+        }
+
+        var prepared = false;
+
+        for (var attempt = 0; attempt < WarmUpAttempts && !_disposed; attempt++)
+        {
           bool taken;
 
           try
@@ -346,28 +550,46 @@ namespace EQLogParser.Audio
           {
             // The engine may have changed since this was queued. Warm what is speaking now rather than what was
             // selected then; an engine handed a voice it does not have falls back to its own default.
-            await _tts.WarmUpVoiceAsync(target).ConfigureAwait(false);
+            await _tts.WarmUpVoiceAsync(item.Voice).ConfigureAwait(false);
+            prepared = true;
           }
           catch (Exception ex)
           {
             // A voice that will not warm is not worth reporting: the trigger that follows synthesizes normally, just
             // without the head start.
-            Log.Debug($"Unable to warm up the {target} voice", ex);
+            Log.Debug($"Unable to warm up the {item.Voice} voice", ex);
           }
           finally
           {
-            _synthGate.Release();
+            ReleaseSynthGate();
           }
 
-          return;
+          break;
         }
 
-        // Something was talking the whole time. Forget that this ran so a later change gets another chance.
-        if (string.Equals(_warmedVoice, key, StringComparison.OrdinalIgnoreCase))
+        /*
+         * Only a voice that actually got through counts as prepared. Recording one that gave up would suppress the
+         * next attempt at it, and that is how a busy moment leaves a player cold for the rest of the evening.
+         */
+        if (prepared)
         {
-          _warmedVoice = null;
+          lock (_warmLock)
+          {
+            _warmedVoice = item.Key;
+          }
         }
-      });
+      }
+    }
+
+    /* Nothing the previous engine had prepared counts for the next one; it warms on its own terms. */
+    private void ResetWarmUpState()
+    {
+      lock (_warmLock)
+      {
+        _warmQueue.Clear();
+        _warmQueued.Clear();
+        _warmedVoice = null;
+      }
     }
 
     public void StartAudio(string id)
@@ -414,8 +636,14 @@ namespace EQLogParser.Audio
         {
           _requestedVoices.TryRemove(id, out _);
 
-          // whatever the engine held for this player is the engine's to release, outside this lock
-          _tts.RemoveVoice(id);
+          // whatever the engine held for this player is the engine's to release, outside this lock but not around a
+          // swap: see BindVoice for why engine state is only ever touched under _engineLock
+          var engine = _tts;
+
+          lock (_engineLock)
+          {
+            engine.RemoveVoice(id);
+          }
         }
 
         try
@@ -559,7 +787,11 @@ namespace EQLogParser.Audio
       }
     }
 
-    public async void SpeakFileAsync(string id, string filePath, long priority, int playerVolume, int adjustedVolume = 4)
+    public void SpeakFileAsync(string id, string filePath, long priority, int playerVolume, int adjustedVolume = 4) =>
+      _ = SpeakFileCoreAsync(id, filePath, priority, playerVolume, adjustedVolume);
+
+    private async Task SpeakFileCoreAsync(string id, string filePath, long priority, int playerVolume,
+      int adjustedVolume)
     {
       if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath) && _cache != null)
       {
@@ -641,29 +873,51 @@ namespace EQLogParser.Audio
      * text, so the PCM is cached: only fresh text pays for inference, which matters most for Kokoro. The text is
      * hashed so a long custom callout cannot produce an unbounded cache key.
      *
-     * Everything, cache lookup included, happens under the gate. The engine can be swapped while this waits, and
-     * resolving voice, key and synthesis against one local copy means cached PCM never crosses engines and an engine
-     * that is being disposed is never spoken with: SwitchEngineAsync takes it out under this same gate.
+     * A phrase that is already cached needs no gate and no engine at all: cached bytes belong to an engine, a voice
+     * and a piece of text rather than to whichever engine happens to be speaking, so the first lookup below settles
+     * itself against the cache alone. That is what keeps twenty familiar callouts from queueing behind one new
+     * sentence being synthesized. Everything that can miss runs under the gate, where the engine cannot be swapped out
+     * underneath it - SwitchEngineAsync takes an engine out under this same gate - so voice, key and result are all
+     * resolved against one engine.
      */
     private async Task<(byte[] pcm, int sampleRate)> SynthesizeCachedAsync(string playerId, string voice, string text,
       Func<ITtsEngine, string, Task<(byte[] pcm, int sampleRate)>> synthesize)
     {
+      var probedEngine = _tts;
+      var probedVoice = _cache is null ? null : RequestedVoice(probedEngine, playerId, voice);
+      var probe = _cache is null ? null : BuildCacheKey(probedEngine.Name, probedVoice, text);
+
+      if (probe is not null && TryGetCached(probe, out var cachedPcm, out var cachedRate))
+      {
+        return (cachedPcm, cachedRate);
+      }
+
       await _synthGate.WaitAsync().ConfigureAwait(false);
 
       try
       {
+        // Resolved again: this waited, and the engine may have changed while it did. When nothing it depends on moved,
+        // the key built above is the same one, and a second digest of the same phrase buys nothing.
         var engine = _tts;
-        var spokenVoice = playerId is not null ? engine.GetVoice(playerId) : voice;
-        var textHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
-        var key = _cache is null ? null : $"{AudioCacheKey}tts:{engine.Name}:{spokenVoice}:{textHash}";
+        var spokenVoice = RequestedVoice(engine, playerId, voice);
+        var key = probe is not null && ReferenceEquals(engine, probedEngine) && spokenVoice == probedVoice
+          ? probe
+          : _cache is null ? null : BuildCacheKey(engine.Name, spokenVoice, text);
 
-        if (key is not null && _cache.TryGetValue(key, out object entry) &&
-            entry is CachedAudio { Data.Length: > 0 } cached)
+        if (key is not null && TryGetCached(key, out cachedPcm, out cachedRate))
         {
-          return (cached.Data, cached.WaveFormat?.SampleRate ?? 0);
+          return (cachedPcm, cachedRate);
         }
 
         var (pcm, sampleRate) = await synthesize(engine, spokenVoice).ConfigureAwait(false);
+
+        if (pcm is { Length: > 0 } && sampleRate <= 0)
+        {
+          // Nothing downstream can play this and it must not be remembered as audio: a WaveFormat of zero hertz turns
+          // into an exception at the audio device, far from the engine that produced it.
+          Log.Debug($"{engine.Name} returned speech with no sample rate; dropped.");
+          return (null, 0);
+        }
 
         if (key is not null && pcm is { Length: > 0 })
         {
@@ -680,8 +934,45 @@ namespace EQLogParser.Audio
       }
       finally
       {
-        _synthGate.Release();
+        ReleaseSynthGate();
       }
+    }
+
+    /*
+     * The voice this request speaks with: whatever the player is bound to for a player, and the name that was asked
+     * for - which no player owns - for a preview or a WAV export.
+     */
+    private string RequestedVoice(ITtsEngine engine, string playerId, string voice) =>
+      playerId is not null ? SpokenVoice(engine, playerId) : voice;
+
+    /*
+     * PCM belongs to one engine speaking one voice, so nothing cached under one name is ever played by another.
+     *
+     * The digest runs over the string's own UTF-16 bytes rather than a UTF-8 copy: this key never leaves the process,
+     * so all it has to be is stable for as long as the cache lives, and skipping the encoding pass keeps an allocation
+     * per callout out of a zone-in with twenty players talking at once.
+     */
+    private static string BuildCacheKey(string engine, string voice, string text)
+    {
+      var phrase = Convert.ToHexString(SHA256.HashData(MemoryMarshal.AsBytes(text.AsSpan())));
+      return $"{AudioCacheKey}tts:{engine}:{voice}:{phrase}";
+    }
+
+    /* Only audio that could actually be played counts as a hit. */
+    private static bool TryGetCached(string key, out byte[] pcm, out int sampleRate)
+    {
+      pcm = null;
+      sampleRate = 0;
+
+      if (_cache.TryGetValue(key, out object entry) &&
+          entry is CachedAudio { Data.Length: > 0 } cached && cached.WaveFormat is { SampleRate: > 0 } format)
+      {
+        pcm = cached.Data;
+        sampleRate = format.SampleRate;
+        return true;
+      }
+
+      return false;
     }
 
     public static (List<string> idList, List<string> nameList) GetDeviceList()

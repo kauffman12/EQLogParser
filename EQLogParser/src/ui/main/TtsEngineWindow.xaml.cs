@@ -21,8 +21,12 @@ namespace EQLogParser
   {
     private const string SettingKey = "TtsEngine";
 
-    // TtsPackManager spends the first nine tenths of the bar on bytes off the network and the last tenth on hashing and
-    // unpacking, which is why the wording changes there rather than at 100%.
+    /*
+     * TtsPackManager spends the first nine tenths of the bar on bytes off the network and splits the last tenth between
+     * hashing the archive, unpacking it and checking every file, which is why the wording changes there rather than at
+     * 100%. The number lives in both places; changing one without the other only makes the status line wrong for a
+     * moment, which is why nothing here is derived from it.
+     */
     private const double VerifyPhaseFraction = 0.9;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private CancellationTokenSource _cts;
@@ -93,10 +97,10 @@ namespace EQLogParser
      * Grey out rows this machine cannot use by setting IsEnabled on the generated containers.
      *
      * The obvious way is an ItemContainerStyle with a binding, and it does not work here: assigning a container style
-     * replaces it rather than adding to it, so the themed ComboBoxItem is gone and what comes back is a WPF default item
-     * that reads as broken against the skin. BasedOn cannot bridge that in this codebase, which is why no other combo
-     * uses it. Setting the property on the container the theme actually produced keeps its own disabled look, greyed in
-     * whichever colors the current skin uses.
+     * replaces it rather than adding to it, so the themed ComboBoxItem is gone and what comes back is a WPF default
+     * item that reads as broken against the skin. BasedOn cannot bridge that in this codebase, which is why no other
+     * combo uses it. Setting the property on the container the theme actually produced keeps its own disabled look,
+     * greyed in whichever colors the current skin uses.
      */
     private void UpdateRowEnabledState()
     {
@@ -118,12 +122,12 @@ namespace EQLogParser
     private static string GetEngineDescription(string engine) => engine switch
     {
       AudioManager.PiperEngine =>
-        "Fast and lightweight. Speech starts almost instantly and uses very few system resources, but the voices sound " +
-        "more synthetic than Kokoro.",
+        "Fast and lightweight. Speech starts almost instantly and uses very few system resources, but the voices " +
+        "sound more synthetic than Kokoro.",
 
       AudioManager.KokoroEngine =>
-        "The most natural-sounding voices, but also the most demanding. Uses a few hundred MB of memory and more CPU, " +
-        "so speech may take a moment to start and slower systems may struggle to keep up.",
+        "The most natural-sounding voices, but also the most demanding. Uses a few hundred MB of memory and more " +
+        "CPU, so speech may take a moment to start and slower systems may struggle to keep up.",
 
       AudioManager.WindowsEngine =>
         "Built into Windows with nothing extra to download. Voice quality depends on the installed Windows voice. " +
@@ -172,14 +176,16 @@ namespace EQLogParser
       {
         // Proven unusable rather than merely unused: not real Windows -- Wine has no voices to give -- or the speech
         // runtime is missing. One of those has no fix at all, so say what the way out is.
-        SetHint($"The {selected} voices come from Windows itself and are absent under Wine. Enable Piper or Kokoro below.", WarnBrush);
+        SetHint($"The {selected} voices come from Windows itself and are absent under Wine. " +
+          "Enable Piper or Kokoro below.", WarnBrush);
       }
     }
 
     /*
-     * Body text and status lines resolve their colour through the theme dictionaries rather than picking one up in
-     * code, so switching themes mid-session repaints them. Passing no brush key hands the element back to the theme's
-     * own text colour: ClearValue restores inheritance, where assigning a colour would not.
+     * Both text lines under the picker resolve their colour through the theme dictionaries rather than carrying one of
+     * their own, so switching themes mid-session repaints them. Passing no brush key asks the skin for its ordinary
+     * body text colour by name - the same answer the XAML opens with - which keeps one obvious way to say "plain text"
+     * here instead of two that look different and do the same thing.
      */
     private void SetHint(string text, string brushKey = null) => SetText(engineHintText, text, brushKey);
 
@@ -192,16 +198,8 @@ namespace EQLogParser
     private static void SetText(TextBlock target, string text, string brushKey)
     {
       target.Text = text;
-      if (string.IsNullOrEmpty(brushKey))
-      {
-        // Body text as the skin defines it, which is what the XAML opens with. ClearValue would do something similar by
-        // inheriting from the window, but this keeps one obvious answer for "plain text in a dialog".
-        target.SetResourceReference(TextBlock.ForegroundProperty, "ContentForeground");
-      }
-      else
-      {
-        target.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
-      }
+      target.SetResourceReference(TextBlock.ForegroundProperty,
+        string.IsNullOrEmpty(brushKey) ? "ContentForeground" : brushKey);
     }
 
     /* The download and remove buttons belong to whichever engine is selected. */
@@ -218,8 +216,8 @@ namespace EQLogParser
       actionButton.IsEnabled = !busy && (!available || !active);
 
       // Reclaiming a pack is only possible while nothing is speaking with it: the engine in use keeps its native
-      // libraries mapped until EQLogParser closes, so deleting that directory would leave half of it behind. Packs
-      // downloaded by an older installer sit beside the program and are not offered here either.
+      // libraries mapped until EQLogParser closes, so deleting that directory would leave half of it behind. Only a
+      // real pack counts -- a directory an old installer left under the program folder is not one and gets no button.
       var downloaded = AudioManager.Instance.IsEngineDownloaded(engine);
       removeButton.Visibility = bytes > 0 && downloaded ? Visibility.Visible : Visibility.Collapsed;
       removeButton.IsEnabled = downloaded && !active && !busy;
@@ -267,8 +265,7 @@ namespace EQLogParser
     private void SelectRow(string engine)
     {
       _ready = false;
-      engineList.SelectedItem = engineList.Items.Cast<EngineOption>().FirstOrDefault(row => row.Name == engine)
-        ?? engineList.SelectedItem;
+      engineList.SelectedItem = _options.FirstOrDefault(row => row.Name == engine) ?? engineList.SelectedItem;
       UpdateEngineText();
       _ready = true;
     }
@@ -324,9 +321,17 @@ namespace EQLogParser
     private async Task DownloadEngineAsync(string engine)
     {
       _downloading = true;
-      _cts = new CancellationTokenSource();
       engineList.IsEnabled = false;
       UpdateButtons(engine);
+
+      /*
+       * Cancelling is a normal outcome of a download this size, so it gets a button. Closing the window cancels too -
+       * that is what OnClosed does - but nothing on screen says so, and nobody watching 348 MB crawl should have to
+       * guess how to stop it.
+       */
+      cancelButton.Visibility = Visibility.Visible;
+      cancelButton.IsEnabled = true;
+
       var totalBytes = AudioManager.Instance.GetEngineDownloadBytes(engine);
       progressBar.Visibility = Visibility.Visible;
       progressBar.Value = 0;
@@ -342,17 +347,45 @@ namespace EQLogParser
         progressBar.Value = Math.Clamp(value * 100, 0, 100);
         SetStatus(value < VerifyPhaseFraction
           ? $"{FormatSize((long)(totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)}"
-          : "validating files...");
+          : "checking every file, this takes a minute...");
       });
-      var success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
+      var success = false;
+      var cancelled = false;
 
-      _downloading = false;
-      progressBar.Visibility = Visibility.Collapsed;
-      engineList.IsEnabled = true;
+      try
+      {
+        _cts = new CancellationTokenSource();
+        success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
+      }
+      catch (OperationCanceledException)
+      {
+        cancelled = true;
+      }
+      catch (Exception ex)
+      {
+        // TtsPackManager reports its own failures. This is only the seam that keeps an unexpected one from leaving the
+        // dialog half updated, with a progress bar that never stops moving.
+        Log.Debug($"Unable to install the {engine} runtime pack", ex);
+      }
+      finally
+      {
+        /*
+         * Unconditional, because every path out of here has to leave the dialog usable: a failure that left
+         * _downloading set would grey the picker and disable both buttons for the rest of the session.
+         */
+        cancelled |= _cts?.IsCancellationRequested == true;
+        _cts?.Dispose();
+        _cts = null;
+        _downloading = false;
+        progressBar.Visibility = Visibility.Collapsed;
+        cancelButton.Visibility = Visibility.Collapsed;
+        engineList.IsEnabled = true;
+      }
 
       if (!success)
       {
-        SetStatus("Download failed. See the Error Log and try again.", StopBrush);
+        SetStatus(cancelled ? $"{engine} download cancelled." : "Download failed. See the Error Log and try again.",
+          cancelled ? null : StopBrush);
         UpdateButtons(engine);
         return;
       }
@@ -372,6 +405,21 @@ namespace EQLogParser
         return;
       }
 
+      /*
+       * Deleting a couple of hundred megabytes is one click from a button here, and the only way back is to download it
+       * all again, so it asks first like everything else in this app that destroys something.
+       */
+      var confirm = new MessageWindow($"Remove the {engine} runtime files from this machine? " +
+        $"{FormatSize(AudioManager.Instance.GetEngineDownloadBytes(engine))} will be deleted. " +
+        "The engine can be downloaded again at any time.",
+        "Remove TTS Engine Files", MessageWindow.IconType.Question, "Remove");
+      confirm.ShowDialog();
+
+      if (!confirm.IsYes1Clicked)
+      {
+        return;
+      }
+
       if (AudioManager.Instance.RemoveEngineFiles(engine))
       {
         // The saved setting decides the next start; leaving it pointing at a directory that no longer exists buys a
@@ -386,9 +434,29 @@ namespace EQLogParser
         return;
       }
 
-      // Either the active engine, which AudioManager refuses for, or a running copy has the native libraries mapped.
-      SetStatus($"Could not remove the {engine} files: another copy of EQLogParser is using them. Close it and try again.", StopBrush);
+      /*
+       * Two different problems look alike here. Either this is the engine that is speaking - AudioManager refuses that
+       * one because deleting it would leave half a directory behind - or its native libraries are still mapped into
+       * this process, which on Windows they are until EQLogParser closes even if the engine has not spoken for hours.
+       * Blaming "another copy of EQLogParser" for the second one sends people hunting for a process that is not
+       * running, so the two get different answers.
+       */
+      var inUse = string.Equals(AudioManager.Instance.GetActiveEngine(), engine, StringComparison.OrdinalIgnoreCase);
+
+      SetStatus(inUse
+        ? $"{engine} is the engine in use. Switch to another one before removing its files."
+        : $"Could not remove the {engine} files: they are still in use by this session. Restart EQLogParser, then " +
+          "remove them without speaking with that engine first. Check Error Log for Details.", StopBrush);
       UpdateButtons(engine);
+    }
+
+    private void CancelClicked(object sender, RoutedEventArgs e)
+    {
+      _cts?.Cancel();
+
+      // One press is enough; the install notices the token between files and unwinds to the previous pack by itself.
+      cancelButton.IsEnabled = false;
+      SetStatus("cancelling...");
     }
 
     /*
@@ -426,7 +494,13 @@ namespace EQLogParser
 
     protected override void OnClosed(EventArgs e)
     {
+      /*
+       * Closing the window stops a download in progress: nobody should be left holding a 348 MB transfer for a dialog
+       * that is gone. The install notices the token and leaves whatever was installed before in place.
+       */
       _cts?.Cancel();
+      _cts?.Dispose();
+      _cts = null;
       base.OnClosed(e);
     }
   }

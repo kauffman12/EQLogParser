@@ -8,11 +8,13 @@
 
     KokoroVoiceManager.LoadVoicesFromPath(path) lists whatever .npy files exist in the directory it is given, and at
     run time that directory is the downloaded Kokoro pack, so an unshipped voice is simply never offered and nothing
-    in the app needs to know about the set. What lands here in the build output is the staging source for
+    in the app needs to know about the set. What lands in the build output is the staging source for
     scripts/Build-TtsPack.ps1 -Sync: this is how the shipped voice set gets into the published pack rather than into
-    the installer. The work happens only in outputs that actually received KokoroSharp.dll (the app, the WPF tests,
-    BackupUtil); class libraries don't copy package assemblies locally, so they get neither the dll nor a voices
-    folder.
+    the installer.
+
+    Only the app's own output is that staging source, so only the app gets the folder. KokoroSharp reaches the WPF test
+    and BackupUtil outputs transitively as well, and copying embeddings there too bought nothing but ~11MB per output
+    that no code reads; a stray folder in one of those outputs is now deleted rather than refreshed.
 
     KokoroVoicePrefixes selects the shipped voices by filename prefix; add prefixes to widen the picker:
       bf bm  British English   ef em  Spanish     ff fm  French     hf hm  Hindi
@@ -26,7 +28,16 @@
   </PropertyGroup>
 
   <Target Name="CopyContent" AfterTargets="Build">
-    <ItemGroup Condition="Exists('$(OutputPath)KokoroSharp.dll')">
+    <PropertyGroup>
+      <!-- The one output Build-TtsPack.ps1 -Sync reads. -->
+      <_KokoroVoiceStaging Condition="'$(MSBuildProjectName)' == 'EQLogParser' And Exists('$(OutputPath)KokoroSharp.dll')">true</_KokoroVoiceStaging>
+    </PropertyGroup>
+
+    <!-- Everything else that has one: left behind by the builds that ran before this was scoped to the app. -->
+    <RemoveDir Directories="$(OutputPath)voices"
+               Condition="'$(_KokoroVoiceStaging)' != 'true' And Exists('$(OutputPath)voices')" />
+
+    <ItemGroup Condition="'$(_KokoroVoiceStaging)' == 'true'">
       <_KokoroPrefix Include="$(KokoroVoicePrefixes)" />
       <!-- ItemGroup batching, one glob per prefix: wildcards only expand in a literal Include, so the prefixes
            themselves must not contain '*'. -->
@@ -39,11 +50,12 @@
     </ItemGroup>
 
     <!-- Self-healing: keeps the folder in step with KokoroVoicePrefixes across builds. -->
-    <Delete Files="@(_KokoroStrayFile)" Condition="Exists('$(OutputPath)KokoroSharp.dll')" />
+    <Delete Files="@(_KokoroStrayFile)" Condition="'$(_KokoroVoiceStaging)' == 'true'" />
     <!-- voices-zh is the one subfolder the package ships; Delete leaves directories behind, so drop it explicitly. -->
-    <RemoveDir Directories="$(OutputPath)voices\voices-zh" Condition="Exists('$(OutputPath)voices\voices-zh')" />
+    <RemoveDir Directories="$(OutputPath)voices\voices-zh"
+               Condition="'$(_KokoroVoiceStaging)' == 'true' And Exists('$(OutputPath)voices\voices-zh')" />
     <Copy SourceFiles="@(_KokoroWantedFile);@(_KokoroAttributionFile)" DestinationFolder="$(OutputPath)voices"
-          SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)KokoroSharp.dll')" />
+          SkipUnchangedFiles="true" Condition="'$(_KokoroVoiceStaging)' == 'true'" />
   </Target>
 
 </Project>

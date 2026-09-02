@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The pack layer and the engine factory are internal; the tests need them to check the pinned pack digests
+         against the publish docs and to cover download plumbing without a network. -->
+    <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="KokoroSharp.CPU" Version="0.8.4" />
     <PackageReference Include="log4net" Version="3.3.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.19" />

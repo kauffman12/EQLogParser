@@ -173,7 +173,6 @@ function Test-PackSignatures([string]$Dir) {
     $unsigned = @()
     foreach ($f in Get-ChildItem -LiteralPath $Dir -Recurse -File |
             Where-Object { $_.Extension -eq '.dll' -and $MustBeSigned -contains $_.Name }) {
-        $status = (Get-AuthenticodeSignature -LiteralPath $f.FullName).Status
         $sig = Get-AuthenticodeSignature -LiteralPath $f.FullName
         if ($sig.Status -eq 'NotSigned') {
             $unsigned += $f.Name
@@ -233,7 +232,6 @@ $KokoroDir = Join-Path $DataRoot 'kokoro'
 if (-not $OutDir) { $OutDir = Join-Path $DataRoot 'out' }
 
 function Sync-FromBuild {
-    if ($AppRelease -and -not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
     if (-not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
     $AppRelease = (Resolve-Path -LiteralPath $AppRelease).Path
     $copied = 0
@@ -258,7 +256,7 @@ function Sync-FromBuild {
         $s = Join-Path $AppRelease "runtimes\win-x64\native\$n"
         if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $KokoroDir "native\$n"); $copied++ }
     }
-    # Kokoro voice embeddings are produced by the app build; KokoroVoiceMasks in Directory.Build.targets chooses them.
+    # Kokoro voice embeddings are produced by the app build; KokoroVoicePrefixes in Directory.Build.targets chooses them.
     $vs = Join-Path $AppRelease 'voices'
     if (Test-Path -LiteralPath $vs) {
         foreach ($f in Get-ChildItem -LiteralPath $vs -File | Where-Object { $_.Extension -eq '.npy' -or $_.Name -ieq 'LICENSE' }) {

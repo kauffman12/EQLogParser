@@ -1,4 +1,5 @@
 using EQLogParser.Audio;
+using log4net;
 using Syncfusion.Windows.PropertyGrid;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,6 +20,8 @@ namespace EQLogParser
 {
   public partial class TriggersView : IDocumentContent
   {
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private readonly Dictionary<string, Window> _previewWindows = [];
     private TriggerConfig _theConfig;
@@ -1082,7 +1086,21 @@ namespace EQLogParser
       _ready = false;
       voices.ItemsSource = available;
 
-      var index = !string.IsNullOrEmpty(_theConfig?.Voice) ? available.IndexOf(_theConfig.Voice) : -1;
+      var saved = _theConfig?.Voice;
+      var index = !string.IsNullOrEmpty(saved) ? available.IndexOf(saved) : -1;
+
+      /*
+       * A voice belongs to one engine, so a character configured for Piper has nothing to select the first time Kokoro
+       * speaks. The engine's default is shown and the config is left alone on purpose: the name comes back when the
+       * engine that owns it does, and overwriting it here would cost somebody a preference they never changed. Worth
+       * logging because a dropdown that moved by itself otherwise reads as a bug.
+       */
+      if (index < 0 && !string.IsNullOrEmpty(saved))
+      {
+        Log.Info($"Voice {saved} is not available on " +
+          $"{AudioManager.Instance.GetActiveEngine()}; showing that engine's default.");
+      }
+
       voices.SelectedIndex = index >= 0
         ? index
         : Math.Max(available.IndexOf(AudioManager.Instance.GetDefaultVoice()), 0);

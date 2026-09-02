@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace EQLogParser.Audio
@@ -42,12 +41,19 @@ namespace EQLogParser.Audio
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    // KokoroSharp holds the loaded embeddings in process wide state, so they can only be read once. Remembered here
-    // so that switching packs mid session is reported instead of quietly mixing two sets of voices.
-    private static string _voicesLoadedFrom;
-
-    // Last resolved voice directory. One engine exists at a time, so the newest engine owns this.
+    /*
+     * Voice directory state, all of it read and written under _voicesLock. KokoroSharp keeps the embeddings in process
+     * wide state, so they can only be read once: an engine pointing at a different directory cannot be honored without
+     * a restart, and that is reported rather than quietly answered with the first set of voices. A failed load is
+     * remembered per directory so reopening the dropdown does not retry - and re-log - a broken pack forever, while a
+     * pack that gets reinstalled into a different directory still gets its chance. The lock matters because the picker
+     * asks for the voice list from the UI thread while a switch builds an engine on another one.
+     */
     private static string _voicesPath;
+    private static string _voicesLoadedFrom;
+    private static string _voicesLoadAttemptedFrom;
+    private static bool _voicesLoadFailed;
+    private static readonly object _voicesLock = new();
 
     private readonly ConcurrentDictionary<string, string> _playerVoices = [];
     private readonly string _modelPath;
@@ -62,7 +68,10 @@ namespace EQLogParser.Audio
 
     public List<string> GetVoices()
     {
-      EnsureVoicesLoaded();
+      if (!EnsureVoicesLoaded())
+      {
+        return [];
+      }
       return KokoroVoiceManager.Voices
         .Select(voice => voice.Name)
         .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -71,7 +80,11 @@ namespace EQLogParser.Audio
 
     public string GetDefaultVoice()
     {
-      EnsureVoicesLoaded();
+      if (!EnsureVoicesLoaded())
+      {
+        return string.Empty;
+      }
+
       return KokoroVoiceManager.Voices.FirstOrDefault(voice =>
         string.Equals(voice.Name, PreferredDefaultVoice, StringComparison.OrdinalIgnoreCase))?.Name
         ?? KokoroVoiceManager.Voices.FirstOrDefault()?.Name;
@@ -79,7 +92,7 @@ namespace EQLogParser.Audio
 
     public string GetVoice(string playerId)
     {
-      if (playerId != null && _playerVoices.TryGetValue(playerId, out var voice) && !string.IsNullOrEmpty(voice))
+      if (playerId is not null && _playerVoices.TryGetValue(playerId, out var voice) && !string.IsNullOrEmpty(voice))
       {
         return voice;
       }
@@ -109,7 +122,7 @@ namespace EQLogParser.Audio
 
     public void RemoveVoice(string playerId)
     {
-      if (playerId != null)
+      if (playerId is not null)
       {
         _playerVoices.TryRemove(playerId, out _);
       }
@@ -184,14 +197,23 @@ namespace EQLogParser.Audio
 
         // Creating the session over a 156MB graph takes seconds; callers keep it off the UI thread.
         engine._synth = KokoroWavSynthesizer.LoadModel(engine._modelPath);
-        EnsureVoicesLoaded();
+
+        // A pack whose embeddings cannot be read is not an engine: every voice lookup would answer with nothing and
+        // every callout would stay silent while the picker still listed a working engine.
+        if (!EnsureVoicesLoaded())
+        {
+          engine.Dispose();
+          return null;
+        }
+
         return engine;
       }
       catch (Exception ex)
       {
         // The runtime that answered is part of the error: a model can be refused by an older onnxruntime than the one
         // this engine ships, and without this the log points at the download instead of at the loaded module.
-        Log.Error($"Error initializing kokoro-tts (onnxruntime in use: {TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
+        Log.Error($"Error initializing kokoro-tts (onnxruntime in use: " +
+          $"{TtsPackManager.DescribeLoadedOnnxRuntime()})", ex);
         engine.Dispose();
         return null;
       }
@@ -212,7 +234,7 @@ namespace EQLogParser.Audio
           return true;
         }
 
-        if (!string.Equals(ComputeSha256(_modelPath), ModelSha256, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(TtsPackManager.ComputeSha256(_modelPath), ModelSha256, StringComparison.OrdinalIgnoreCase))
         {
           Log.Error($"Kokoro model checksum mismatch at {_modelPath}. Reinstall Kokoro from the TTS Engine screen.");
           return false;
@@ -226,13 +248,6 @@ namespace EQLogParser.Audio
         Log.Error("Unable to verify the kokoro-tts model", ex);
         return false;
       }
-    }
-
-    private static string ComputeSha256(string path)
-    {
-      using var sha = SHA256.Create();
-      using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20);
-      return Convert.ToHexString(sha.ComputeHash(stream));
     }
 
     private void TryWriteMarker()
@@ -251,40 +266,66 @@ namespace EQLogParser.Audio
     {
       _modelPath = Path.Combine(root, "model", ModelFileName);
       _markerPath = _modelPath + ".sha256";
-      _voicesPath = Path.Combine(root, "voices");
+
+      lock (_voicesLock)
+      {
+        _voicesPath = Path.Combine(root, "voices");
+      }
     }
 
     /*
      * The .npy embeddings live in the pack and KokoroSharp keeps them in process wide state, so they are read once.
      * A second engine pointing at a different directory cannot be honored without a restart; that is logged rather
-     * than silently answering with the first set.
+     * than silently answered with the first set. False means there is no voice list to answer from, which is the
+     * difference between an engine that falls back to its default and one that has never heard of voices at all.
      */
-    private static void EnsureVoicesLoaded()
+    private static bool EnsureVoicesLoaded()
     {
-      if (string.IsNullOrEmpty(_voicesPath) || KokoroVoiceManager.Voices.Count > 0)
+      lock (_voicesLock)
       {
-        if (_voicesLoadedFrom is not null && !string.Equals(_voicesLoadedFrom, _voicesPath, StringComparison.OrdinalIgnoreCase))
+        if (KokoroVoiceManager.Voices.Count > 0)
         {
-          Log.Warn($"Kokoro voices are already loaded from {_voicesLoadedFrom}; restart EQLogParser to use {_voicesPath}");
+          if (_voicesLoadedFrom is not null && _voicesPath is not null &&
+              !string.Equals(_voicesLoadedFrom, _voicesPath, StringComparison.OrdinalIgnoreCase))
+          {
+            Log.Warn($"Kokoro voices are already loaded from {_voicesLoadedFrom}; " +
+              $"restart EQLogParser to use {_voicesPath}");
+          }
+
+          return true;
         }
 
-        return;
-      }
+        // Nothing to read from, or this exact directory has already been tried and failed. Retrying on every dropdown
+        // open would only fill the log; a different directory - a reinstalled pack - is tried once on its own merits.
+        if (_voicesPath is not { Length: > 0 } path ||
+            _voicesLoadFailed && string.Equals(_voicesLoadAttemptedFrom, path, StringComparison.OrdinalIgnoreCase))
+        {
+          return KokoroVoiceManager.Voices.Count > 0;
+        }
 
-      try
-      {
-        KokoroVoiceManager.LoadVoicesFromPath(_voicesPath);
-        _voicesLoadedFrom = _voicesPath;
-      }
-      catch (Exception ex)
-      {
-        Log.Error($"Error loading kokoro-tts voices from {_voicesPath}", ex);
+        try
+        {
+          _voicesLoadAttemptedFrom = path;
+          KokoroVoiceManager.LoadVoicesFromPath(path);
+          _voicesLoadedFrom = path;
+          _voicesLoadFailed = false;
+          return true;
+        }
+        catch (Exception ex)
+        {
+          _voicesLoadFailed = true;
+          Log.Error($"Error loading kokoro-tts voices from {path}", ex);
+          return false;
+        }
       }
     }
 
     private static KokoroVoice FindVoice(string name)
     {
-      EnsureVoicesLoaded();
+      if (!EnsureVoicesLoaded())
+      {
+        return null;
+      }
 
       if (!string.IsNullOrEmpty(name) &&
           KokoroVoiceManager.Voices.FirstOrDefault(voice =>

@@ -21,5 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EQLogParser\EQLogParser.csproj" />
+    <!-- Direct, not just through the app: the audio tests reach internals of this assembly. -->
+    <ProjectReference Include="..\EQLogParser.Audio\EQLogParser.Audio.csproj" />
   </ItemGroup>
 </Project>

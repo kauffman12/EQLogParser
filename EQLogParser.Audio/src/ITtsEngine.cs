@@ -11,9 +11,11 @@ namespace EQLogParser.Audio
    *
    * Threading: SynthesizeForPlayerAsync / SynthesizeVoiceAsync / WarmUpVoiceAsync are serialized by AudioManager.
    * Piper keeps a process-wide native voice table and Kokoro runs a single inference session; neither is documented
-   * as safe to
-   * call concurrently, so engines may assume one synthesis at a time. Everything else must tolerate being called
-   * from the UI thread. See docs/DesignNotes.md -> Speech synthesis and TTS engines.
+   * as safe to call concurrently, so engines may assume one synthesis at a time. The rest - SetVoice, RemoveVoice,
+   * GetVoices, GetVoice, GetDefaultVoice - are called under a lock AudioManager holds around every engine call of
+   * that kind, which is also what keeps them from reaching an engine a switch has just retired. They still have to
+   * tolerate the UI thread and they have to be quick: nothing audible waits behind them, so a slow one freezes a
+   * dropdown instead of a callout. See docs/DesignNotes.md -> Speech synthesis and TTS engines.
    */
   internal interface ITtsEngine : IDisposable
   {
@@ -67,9 +69,10 @@ namespace EQLogParser.Audio
      */
     internal static ITtsEngine Create(string preferredEngine)
     {
-      var order = preferredEngine switch
+      var order = Normalize(preferredEngine) switch
       {
-        AudioManager.KokoroEngine => new[] { AudioManager.KokoroEngine, AudioManager.PiperEngine, AudioManager.WindowsEngine },
+        AudioManager.KokoroEngine =>
+          new[] { AudioManager.KokoroEngine, AudioManager.PiperEngine, AudioManager.WindowsEngine },
         AudioManager.PiperEngine => new[] { AudioManager.PiperEngine, AudioManager.WindowsEngine },
         // Someone who asked for Windows voices on a machine that turns out not to have them (Wine, a stripped image)
         // is better off with an engine that can speak than with the preference honored and silence delivered.
@@ -93,7 +96,26 @@ namespace EQLogParser.Audio
       return new WindowsTtsEngine();
     }
 
-    /* Returns the engine with this exact name, or null when it is not usable on this machine. */
+    /*
+     * The canonical spelling of an engine name. Settings are plain text: hand edited, copied between machines, or
+     * written by an older build. Every comparison in the app - this factory, the pack table, the picker - is made
+     * against the three names this class knows, so anything arriving from outside is mapped onto one of them at the
+     * boundary rather than compared case by case in six places. An unknown name comes back unchanged, which means "no
+     * preference" to Create and "not available" everywhere else.
+     */
+    internal static string Normalize(string engineName) => engineName switch
+    {
+      null or { Length: 0 } => engineName,
+      _ when string.Equals(engineName, AudioManager.PiperEngine, StringComparison.OrdinalIgnoreCase) =>
+        AudioManager.PiperEngine,
+      _ when string.Equals(engineName, AudioManager.KokoroEngine, StringComparison.OrdinalIgnoreCase) =>
+        AudioManager.KokoroEngine,
+      _ when string.Equals(engineName, AudioManager.WindowsEngine, StringComparison.OrdinalIgnoreCase) =>
+        AudioManager.WindowsEngine,
+      _ => engineName
+    };
+
+    /* Returns the engine with this exact name - already normalized - or null when it is not usable on this machine. */
     internal static ITtsEngine CreateNamed(string name) => name switch
     {
       AudioManager.KokoroEngine => KokoroTtsEngine.TryCreate(),

@@ -63,6 +63,9 @@
         FontSize="{DynamicResource EQContentSize}" Click="RemoveClicked" Margin="2,0,4,0" Padding="16,0,16,0" Content="Remove Files" Visibility="Collapsed" />
       <Button x:Name="actionButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
         FontSize="{DynamicResource EQContentSize}" Click="ActionClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Download" />
+      <!-- Only shown while something is downloading: closing the window cancels too, but that is not written on it. -->
+      <Button x:Name="cancelButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
+        FontSize="{DynamicResource EQContentSize}" Click="CancelClicked" Margin="2,0,4,0" Padding="16,0,16,0" Content="Cancel" Visibility="Collapsed" />
       <Button x:Name="closeButton" Foreground="{DynamicResource PrimaryDarken}" Height="{DynamicResource EQButtonHeight}"
         FontSize="{DynamicResource EQContentSize}" Click="CloseClicked" Margin="2,0,4,0" Padding="20,0,20,0" Content="Close" />
     </StackPanel>

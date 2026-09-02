@@ -117,21 +117,25 @@ the single pack lands around 350–400 MB, which every user who enables Piper do
 tradeoff over per-voice packs. `-PiperVoices a,b` lets you ship a subset without deleting anything.
 
 **Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am`, American English;
-the same property stops KokoroSharp's build target from copying all 79 MB of voices into every build output), rebuild,
-`-Sync`, repack. Each `.npy` is ~0.5 MB. Anything beyond English prefixes will not work regardless: MisakiSharp's 66 MB
-is English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly one file.
+the same property stops KokoroSharp's build target from copying all 79 MB of voices into every build output — only the
+app's own output gets the folder, since that is the one `-Sync` reads, and a stray `voices\` in another output is
+deleted), rebuild, `-Sync`, repack. Each `.npy` is ~0.5 MB. Anything beyond English prefixes will not work regardless:
+MisakiSharp's 66 MB is English grapheme-to-phoneme data and is the reason the Kokoro pack is mostly one file.
 
 ## Installing at run time
 
 The TTS Engine dialog is the whole UI: it lists all three engines and puts one button on whatever comes next —
-**Download Piper (347 MB)** / **Download Kokoro (224 MB)** for an engine with nothing on disk, **Use Piper** to start an
+**Download Piper (348 MB)** / **Download Kokoro (224 MB)** for an engine with nothing on disk, **Use Piper** to start an
 installed one, **In use** when it is already speaking. Looking at a row applies nothing; switching is the button, and it
 takes effect without a restart. A finished download does switch on its own, since that is plainly why it was fetched.
+While something is downloading a **Cancel** button appears next to Close; closing the window cancels as well.
 
-**Remove Files** reclaims an installed pack, and only for one that is not the engine in use — that one holds its native
-libraries mapped until EQLogParser closes, so its directory cannot be deleted cleanly. This is why browsing does not
-switch: when selecting a row applied it, every row on screen was by definition the active one, and the button could never
-become available for anything.
+**Remove Files** asks first — it deletes a couple of hundred megabytes and the way back is to download them again. It
+applies to an engine that is not the one in use: that one holds its native libraries mapped until EQLogParser closes,
+so its directory cannot be deleted cleanly. This is why browsing does not switch: when selecting a row applied it, every
+row on screen was by definition the active one, and the button could never become available for anything. An engine used
+earlier in the same session has the same problem and says so: the libraries are still mapped, so removing it needs a
+restart rather than hunting for another running copy.
 
 `TtsPackManager.InstallAsync` does the rest, and each step is there because the alternative is worse:
 
@@ -140,12 +144,26 @@ become available for anything.
 2. hash the archive and compare it to the pin. A CDN, proxy or DNS that hands back other bytes is discarded here.
 3. extract into `<engine>.staging` and verify every `manifest.json` entry (path, size, SHA-256). Entries that resolve
    outside the target directory abort the install — archive paths are treated as hostile even from a digest-matched zip.
-4. move any existing install aside to `<engine>.retired`, promote staging, write `.pack-ready` (`<tag> <digest>`),
-   then delete the retired copy.
+4. move any existing install aside to `<engine>.retired`, promote staging, write `.pack-ready` (`<tag> <digest>`), then
+   delete the retired copy. If promoting fails the retired copy is moved back, so a pack that worked this morning still
+   starts tomorrow.
+
+**Cancel** covers all four steps and not just the transfer: the byte loop, the archive hash, each extracted entry and
+each verified file watch the same token, which matters because steps 2 and 3 are tens of seconds on their own after a
+fast download. A cancelled or failed install leaves whatever was installed exactly as it was — staging and the temp
+archive go on the way out.
+
+Two free-space checks rather than one: room for the archive before anybody's bandwidth is spent, and — once the zip is in
+hand and its central directory can say what it will really occupy — room for the extracted tree before anything lands.
+An unreadable drive or an unmeasurable archive counts as room enough; these exist to refuse a job that cannot finish, not
+to argue with a disk, and a disk that fills up regardless reports its own numbers in the error log.
 
 Startup does no hashing: an engine counts as installed when its directory holds what the engine needs (`voices\
 voices.json` + `piperApi.dll`, or `model\kokoro-fp16.onnx` + at least one `.npy`). Kokoro additionally re-checks its
 own model hash, cached in a sidecar marker.
 
 The app repo carries neither engine's data. What remains under `EQLogParser/piper-tts/` is five native SDK binaries
-(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. The app never reads a speech runtime from under the program folder, so an old build directory that still holds `espeak-ng-data\` and `voices\` cannot pass itself off as an installed pack — it is dead weight until that directory is cleaned, and the installer deletes what pre-pack installs left in `{app}`.
+(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. The app never reads a speech runtime
+from under the program folder, so an old build directory that still holds `espeak-ng-data\` and `voices\` cannot pass
+itself off as an installed pack — it is dead weight until that directory is cleaned, and the installer deletes what
+pre-pack installs left in `{app}`.
