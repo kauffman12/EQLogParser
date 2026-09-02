@@ -253,6 +253,10 @@ namespace EQLogParser
      * always references the log action that started the timer — it does not update
      * dynamically during the timer's lifetime.
      *
+     * Timers flagged StaticDisplayName skip the template and keep the name resolved when the
+     * timer started. The built-in codes still resolve from per-timer fields captured at that same
+     * moment, so those names do not move either.
+     *
      * This method is called only during full renders (~450ms interval). Short ticks
      * reuse the display name from the cached TimerBarModel. No additional rate-limiting
      * is needed — the render cycle provides natural throttling.
@@ -260,7 +264,8 @@ namespace EQLogParser
     internal static string GetDisplayName(TimerData timerData)
     {
       var result = timerData.DisplayName;
-      var hasTemplateVars = !string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
+      var hasTemplateVars = timerData.StaticDisplayName is false &&
+          !string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
           timerData.Variables is not null &&
           timerData.DisplayNameTemplate.Contains('{');
 

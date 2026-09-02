@@ -13,6 +13,7 @@ namespace EQLogParser.Wpf.Test
       {
         Private = true,
         AltTimerName = "alt timer",
+        TimerNameStatic = true,
         Comments = "test comment",
         DurationSeconds = 15.5,
         EnableTimer = true,
@@ -141,6 +142,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(source.EndUseRegex, dest.EndUseRegex);
       Assert.AreEqual(source.EndUseRegex2, dest.EndUseRegex2);
       Assert.AreEqual(source.EndUseRegex3, dest.EndUseRegex3);
+      Assert.AreEqual(source.TimerNameStatic, dest.TimerNameStatic);
     }
 
     [TestMethod]

@@ -12,12 +12,14 @@ namespace EQLogParser.Wpf.Test
       ConcurrentDictionary<string, string>? variables = null,
       int repeatedCount = -1,
       int counterCount = -1,
-      string? logTime = null)
+      string? logTime = null,
+      bool staticDisplayName = false)
     {
       return new TimerData
       {
         DisplayName = displayName,
         DisplayNameTemplate = displayNameTemplate,
+        StaticDisplayName = staticDisplayName,
         Variables = variables,
         RepeatedCount = repeatedCount,
         CounterCount = counterCount,
@@ -84,6 +86,62 @@ namespace EQLogParser.Wpf.Test
       // Change variable — next call sees it immediately (no rate-limiting)
       variables["hp"] = "25";
       Assert.AreEqual("Shield 25", TimerOverlayWindow.GetDisplayName(timerData));
+    }
+
+    #endregion
+
+    #region Static timer names
+
+    [TestMethod]
+    public void GetDisplayName_StaticDisplayName_IgnoresVariableChanges()
+    {
+      var variables = new ConcurrentDictionary<string, string> { ["hp"] = "100" };
+      var timerData = CreateTimerData(
+        displayName: "Shield 100",
+        displayNameTemplate: "Shield {hp}",
+        variables: variables,
+        staticDisplayName: true);
+
+      Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
+
+      // The trigger set TimerNameStatic, so the name stays as it was resolved at timer start
+      variables["hp"] = "25";
+      Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
+    }
+
+    [TestMethod]
+    public void GetDisplayName_StaticDisplayName_HidesUnsetVariables()
+    {
+      // A variable cleared or expired mid-timer never leaks its {token} into a static name
+      var variables = new ConcurrentDictionary<string, string>();
+      var timerData = CreateTimerData(
+        displayName: "Shield 100",
+        displayNameTemplate: "Shield {hp}",
+        variables: variables,
+        staticDisplayName: true);
+
+      Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
+    }
+
+    [TestMethod]
+    public void GetDisplayName_StaticDisplayName_ResolvesBuiltInCodes()
+    {
+      // DisplayName arrives with custom variables already resolved (as the processor writes it)
+      // while built-in codes are still tokens for this method to fill from per-timer fields
+      var variables = new ConcurrentDictionary<string, string> { ["stacks"] = "3" };
+      var timerData = CreateTimerData(
+        displayName: "Cast {counter} x3",
+        displayNameTemplate: "Cast {counter} x{stacks}",
+        variables: variables,
+        counterCount: 2,
+        staticDisplayName: true);
+
+      Assert.AreEqual("Cast 2 x3", TimerOverlayWindow.GetDisplayName(timerData));
+
+      // The counter field and the variable both move, only the variable is ignored
+      timerData.CounterCount = 5;
+      variables["stacks"] = "9";
+      Assert.AreEqual("Cast 5 x3", TimerOverlayWindow.GetDisplayName(timerData));
     }
 
     #endregion
