@@ -18,6 +18,10 @@ namespace EQLogParser
   public partial class TtsEngineWindow
   {
     private const string SettingKey = "TtsEngine";
+
+    // TtsPackManager spends the first nine tenths of the bar on bytes off the network and the last tenth on hashing and
+    // unpacking, which is why the wording changes there rather than at 100%.
+    private const double VerifyPhaseFraction = 0.9;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private CancellationTokenSource _cts;
     private bool _downloading;
@@ -52,18 +56,22 @@ namespace EQLogParser
         .ToList();
       engineList.ItemsSource = options;
 
+      /*
+       * Open on the engine that is actually speaking, not on the one that was asked for. The saved setting can name an
+       * engine that never came up -- its pack is missing, a model refused to load, Wine has no Windows voices -- and a
+       * picker resting on that name claims a choice that was never made while hiding the fallback underneath it. Where
+       * the two disagree the line under the picker says so.
+       */
       var active = AudioManager.Instance.GetActiveEngine();
-      var names = options.Select(option => option.Name).ToList();
       var saved = ConfigUtil.GetSetting(SettingKey);
-      var selected = !string.IsNullOrEmpty(saved) && names.Contains(saved) ? saved : active;
-      if (!names.Contains(selected))
-      {
-        selected = names.Contains(active) ? active : AudioManager.WindowsEngine;
-      }
+      var selected = options.FirstOrDefault(row => row.Name == active)
+        ?? options.FirstOrDefault(row => string.Equals(row.Name, saved, StringComparison.OrdinalIgnoreCase))
+        ?? options.FirstOrDefault(row => row.Name == AudioManager.WindowsEngine)
+        ?? options[0];
 
-      engineList.SelectedItem = options.First(option => option.Name == selected);
+      engineList.SelectedItem = selected;
       UpdateEngineText();
-      UpdateButtons(selected);
+      UpdateButtons(selected.Name);
       _ready = true;
     }
 
@@ -105,7 +113,10 @@ namespace EQLogParser
 
       if (selected == AudioManager.Instance.GetActiveEngine())
       {
-        engineHintText.Text = "This is the engine currently in use.";
+        var saved = ConfigUtil.GetSetting(SettingKey);
+        engineHintText.Text = string.IsNullOrEmpty(saved) || saved == selected
+          ? "This is the engine currently in use."
+          : $"{selected} is what EQLogParser speaks with. The saved choice, {saved}, would not start here.";
       }
       else if (available)
       {
@@ -169,6 +180,20 @@ namespace EQLogParser
     }
 
     /*
+     * Move the picker without that counting as a choice, so assigning a row does not re-enter the handler and start a
+     * second switch. The row is taken from the list rather than built fresh: a value the list does not contain leaves
+     * the drop down with nothing highlighted, and clicking that name again then raises no change at all.
+     */
+    private void SelectRow(string engine)
+    {
+      _ready = false;
+      engineList.SelectedItem = engineList.Items.Cast<EngineOption>().FirstOrDefault(row => row.Name == engine)
+        ?? engineList.SelectedItem;
+      UpdateEngineText();
+      _ready = true;
+    }
+
+    /*
      * Switching applies to the running session: Kokoro builds an inference session over its model, Piper reads its
      * voice pack and Windows proves its voices, so this takes a moment and is reported in statusText. A switch that
      * cannot be honored leaves the current engine speaking.
@@ -222,12 +247,23 @@ namespace EQLogParser
       _cts = new CancellationTokenSource();
       engineList.IsEnabled = false;
       UpdateButtons(engine);
+      var totalBytes = AudioManager.Instance.GetEngineDownloadBytes(engine);
       progressBar.Visibility = Visibility.Visible;
       progressBar.Value = 0;
-      statusText.Text = $"Downloading {engine}...";
+      statusText.Text = $"Downloading {engine}, about {FormatSize(totalBytes)} from GitHub...";
 
-      // Progress<T> posts back to the UI thread it was created on, which is what makes the bar move.
-      var progress = new Progress<float>(value => progressBar.Value = Math.Clamp(value * 100, 0, 100));
+      /*
+       * Progress<T> posts back to the UI thread it was created on, which is what makes the bar move. The byte count is
+       * spelled out as well because a bar on its own cannot say whether 348 MB is nearly there or barely started, and
+       * because the last tenth of the run is hashing and unpacking rather than the network.
+       */
+      var progress = new Progress<float>(value =>
+      {
+        progressBar.Value = Math.Clamp(value * 100, 0, 100);
+        statusText.Text = value < VerifyPhaseFraction
+          ? $"{engine}: about {FormatSize((long) (totalBytes * (value / VerifyPhaseFraction)))} of {FormatSize(totalBytes)} downloaded"
+          : $"{engine}: checking the files and installing them...";
+      });
       var success = await AudioManager.Instance.InstallEngineAsync(engine, progress, _cts.Token);
 
       _downloading = false;
@@ -243,12 +279,9 @@ namespace EQLogParser
 
       RefreshState();
 
-      // having chosen the engine, the user wants to speak with it now rather than after a restart; set the selection
-      // once and switch explicitly, because assigning it may or may not raise the handler
-      _ready = false;
+      // Having chosen the engine, the user wants to speak with it now rather than after a restart.
       ConfigUtil.SetSetting(SettingKey, engine);
-      engineList.SelectedItem = new EngineOption(engine, true);
-      _ready = true;
+      SelectRow(engine);
       await ApplyEngineAsync(engine);
     }
 
@@ -272,11 +305,16 @@ namespace EQLogParser
       UpdateButtons(engine);
     }
 
-    // a selection that could not be applied must not claim to be in use
+    /*
+     * A selection that could not be applied must not claim to be in use, and must not survive as a preference either:
+     * this setting decides the engine at the next start, so leaving it on something that just failed to initialize
+     * would open every later session on silence. Unwind it to what is speaking; RefreshState then puts the picker back
+     * on the same row, and the failure is carried by the status line below it.
+     */
     private void ShowStaysOnMessage()
     {
       var active = AudioManager.Instance.GetActiveEngine();
-      engineHintText.Text = $"EQLogParser is still using {active}.";
+      ConfigUtil.SetSetting(SettingKey, active);
       statusText.Text = $"Could not switch. {active} keeps speaking.";
     }
 
