@@ -189,8 +189,8 @@ namespace EQLogParser.Audio
         return IntPtr.Zero;
       }
 
-      // Whichever copy of the pack is in play has its own piperApi.dll; both candidates are tried because a pack can
-      // be installed while an engine built on the app-local copy is still alive.
+      // The pack is not on any search path the loader knows, so name its folder. Looping over the candidates keeps this
+      // working if the resolution ever has more than one answer again; today there is exactly one.
       foreach (var dir in CandidateDirectories())
       {
         if (NativeLibrary.TryLoad(Path.Combine(dir, libraryName), out var handle))
@@ -202,14 +202,13 @@ namespace EQLogParser.Audio
       return IntPtr.Zero;
     }
 
+    /* Piper lives in its pack and nowhere else: nothing beside the executable is read, installed or adopted. */
     private static IEnumerable<string> CandidateDirectories()
     {
       if (TtsPackManager.ResolveRoot(EngineName) is { } resolved)
       {
         yield return resolved;
       }
-
-      yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper-tts");
     }
 
     private static bool InitializeNative(string root)

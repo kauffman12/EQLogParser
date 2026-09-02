@@ -87,10 +87,17 @@ namespace EQLogParser.Audio
       Packs.TryGetValue(engine, out var pack) && Directory.Exists(Path.Combine(StorageRoot, pack.FolderName));
 
     /*
-     * Where an engine should read from: the downloaded pack, or for Piper the copy that older installers put beside
-     * the executable. Null means the engine has nothing to run on and must stay out of the picker.
+     * Where an engine reads from: its downloaded pack, and nowhere else. Null means the engine has nothing to run on,
+     * so it stays out of the picker until a pack is downloaded.
+     *
+     * There used to be a second answer for Piper -- a complete copy beside the executable, honored so that installs
+     * predating the packs kept speaking. It is gone on purpose. A directory the app silently adopts cannot be updated,
+     * removed from the dialog, or matched against a pinned digest, and it makes "is Piper installed?" depend on debris
+     * an old build left behind: the build output still carried espeak-ng data and voice models long after they left the
+     * repository, so development runs reported a working Piper that nobody had downloaded. One place for these files,
+     * owned by the pack manager, and everything else is inert.
      */
-    internal static string ResolveRoot(string engine) => InstalledDirectory(engine) ?? LegacyDirectoryIfComplete(engine);
+    internal static string ResolveRoot(string engine) => InstalledDirectory(engine);
 
     /*
      * Directories that may hold native libraries a pack provides, most specific first.
@@ -437,28 +444,13 @@ namespace EQLogParser.Audio
       return HasExpectedFiles(dir, engine) ? dir : null;
     }
 
-    /*
-     * Installs that predating the packs put Piper beside the executable. Those users keep speaking without a
-     * 347MB re-download; everyone else never sees this path. Kokoro never shipped that way, so it has no fallback.
-     */
-    private static string LegacyDirectoryIfComplete(string engine)
-    {
-      if (!string.Equals(engine, AudioManager.PiperEngine, StringComparison.OrdinalIgnoreCase))
-      {
-        return null;
-      }
-
-      var dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper-tts");
-      return HasExpectedFiles(dir, engine) ? dir : null;
-    }
-
     /* The few files that prove a directory is usable, without reading anything expensive. */
     private static bool HasExpectedFiles(string dir, string engine)
     {
       try
       {
-        // The marker records which release a directory came from; usability itself is decided by the files below, so
-        // that a pack downloaded here and the copy an older installer left beside the executable are treated alike.
+        // The marker records which release a directory came from; usability is decided by the files below, because a
+        // half deleted or hand-edited pack should stop being offered rather than pretend to be fine.
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
         {
           return false;
