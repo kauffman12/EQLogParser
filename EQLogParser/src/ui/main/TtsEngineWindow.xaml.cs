@@ -206,14 +206,13 @@ namespace EQLogParser
     private void UpdateButtons(string engine)
     {
       var bytes = AudioManager.Instance.GetEngineDownloadBytes(engine);
-      var available = AudioManager.Instance.IsEngineAvailable(engine);
       var active = engine == AudioManager.Instance.GetActiveEngine();
       var busy = _downloading || _switching;
+      var action = PlanAction(engine, bytes, AudioManager.Instance.IsEngineAvailable(engine), active, busy);
 
-      // One button for whatever comes next, because two would mean a second one that is disabled half the time.
-      actionButton.Visibility = bytes > 0 ? Visibility.Visible : Visibility.Collapsed;
-      actionButton.Content = DescribeAction(engine, bytes, available, active);
-      actionButton.IsEnabled = !busy && (!available || !active);
+      actionButton.Visibility = action.Visibility;
+      actionButton.Content = action.Content;
+      actionButton.IsEnabled = action.IsEnabled;
 
       // Reclaiming a pack is only possible while nothing is speaking with it: the engine in use keeps its native
       // libraries mapped until EQLogParser closes, so deleting that directory would leave half of it behind. Only a
@@ -470,15 +469,32 @@ namespace EQLogParser
       SetStatus($"Could not switch: {active} keeps speaking.", StopBrush);
     }
 
-    // What the next press would do, on the button that does it.
-    private static string DescribeAction(string engine, long bytes, bool available, bool active)
+    /*
+     * One button for whatever the next press would do, or no button at all where there is nothing to do: no pack to
+     * fetch and no engine to speak with, which is what the Windows engine looks like under Wine. Being ready to use
+     * has to be enough on its own, since the Windows voices need no pack - keying this on the download size alone
+     * took Use away from the one engine that never has one. The three answers are decided together, and apart from
+     * the controls, so they cannot drift out of step again.
+     */
+    internal static (Visibility Visibility, string Content, bool IsEnabled) PlanAction(
+      string engine, long bytes, bool available, bool active, bool busy)
     {
-      if (!available)
+      if (!available && bytes <= 0)
       {
-        return $"Download {engine} ({FormatSize(bytes)})";
+        return (Visibility.Collapsed, string.Empty, false);
       }
 
-      return active ? "In use" : $"Use {engine}";
+      if (!available)
+      {
+        return (Visibility.Visible, $"Download {engine} ({FormatSize(bytes)})", !busy);
+      }
+
+      if (active)
+      {
+        return (Visibility.Visible, "In use", false);
+      }
+
+      return (Visibility.Visible, $"Use {engine}", !busy);
     }
 
     private static string FormatSize(long bytes) => bytes switch
