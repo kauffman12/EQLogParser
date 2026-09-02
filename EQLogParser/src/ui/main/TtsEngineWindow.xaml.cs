@@ -409,9 +409,7 @@ namespace EQLogParser
        * Deleting a couple of hundred megabytes is one click from a button here, and the only way back is to download it
        * all again, so it asks first like everything else in this app that destroys something.
        */
-      var confirm = new MessageWindow($"Remove the {engine} runtime files from this machine? " +
-        $"{FormatSize(AudioManager.Instance.GetEngineDownloadBytes(engine))} will be deleted. " +
-        "The engine can be downloaded again at any time.",
+      var confirm = new MessageWindow($"Remove the {engine} runtime files from this machine?",
         "Remove TTS Engine Files", MessageWindow.IconType.Question, "Remove");
       confirm.ShowDialog();
 
