@@ -32,18 +32,12 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal">
       <TextBlock Text="TTS Engine:" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}"
         Foreground="{DynamicResource ContentForeground}" />
-      <ComboBox x:Name="engineList" Width="160" Margin="8,0,0,0" SelectionChanged="EngineSelectionChanged">
-        <!--
-          Rows the machine cannot use are greyed out where the choice is made, from EngineOption.CanPick. BasedOn keeps
-          the themed ComboBoxItem style: a bare Style here would win over the Syncfusion theme and hand back a WPF
-          default item, which is invisible in the dark theme.
-        -->
-        <ComboBox.ItemContainerStyle>
-          <Style TargetType="ComboBoxItem" BasedOn="{DynamicResource {x:Type ComboBoxItem}}">
-            <Setter Property="IsEnabled" Value="{Binding CanPick}" />
-          </Style>
-        </ComboBox.ItemContainerStyle>
-      </ComboBox>
+      <!--
+        Bare on purpose, like every other combo in the app: SfSkinManager paints it. Rows that cannot be used are
+        disabled from code, on the generated containers, because an ItemContainerStyle here replaces the container style
+        and the themed item does not come back through BasedOn.
+      -->
+      <ComboBox x:Name="engineList" Width="160" Margin="8,0,0,0" SelectionChanged="EngineSelectionChanged" />
     </StackPanel>
     <TextBlock Grid.Row="1" x:Name="engineHintText" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource EQContentSize}"
       Foreground="{DynamicResource ContentForeground}" />

@@ -1,6 +1,7 @@
 using EQLogParser.Audio;
 using log4net;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -33,6 +34,11 @@ namespace EQLogParser
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
+
+      // Containers exist only once the generator has run, which is after layout and again whenever the drop down is
+      // opened, so the enabled state is applied as they appear rather than once here.
+      engineList.ItemContainerGenerator.StatusChanged += (_, _) => UpdateRowEnabledState();
+      engineList.DropDownOpened += (_, _) => UpdateRowEnabledState();
       RefreshState();
     }
 
@@ -41,6 +47,8 @@ namespace EQLogParser
     {
       public override string ToString() => Name;
     }
+
+    private List<EngineOption> _options = [];
 
     private string SelectedEngine => (engineList.SelectedItem as EngineOption)?.Name;
 
@@ -51,10 +59,11 @@ namespace EQLogParser
       // Every engine is listed, installed or not: this is the only place a runtime pack gets downloaded from, so an
       // engine that needs one has to be reachable here. One row is greyed out only when there is neither a way to use
       // it nor a way to get it, which in practice means the Windows voices are missing from this machine.
-      var options = AudioManager.GetAllEngines()
+      _options = AudioManager.GetAllEngines()
         .Select(name => new EngineOption(name, CanPick(name)))
         .ToList();
-      engineList.ItemsSource = options;
+      engineList.ItemsSource = _options;
+      UpdateRowEnabledState();
 
       /*
        * Open on the engine that is actually speaking, not on the one that was asked for. The saved setting can name an
@@ -64,10 +73,10 @@ namespace EQLogParser
        */
       var active = AudioManager.Instance.GetActiveEngine();
       var saved = ConfigUtil.GetSetting(SettingKey);
-      var selected = options.FirstOrDefault(row => row.Name == active)
-        ?? options.FirstOrDefault(row => string.Equals(row.Name, saved, StringComparison.OrdinalIgnoreCase))
-        ?? options.FirstOrDefault(row => row.Name == AudioManager.WindowsEngine)
-        ?? options[0];
+      var selected = _options.FirstOrDefault(row => row.Name == active)
+        ?? _options.FirstOrDefault(row => string.Equals(row.Name, saved, StringComparison.OrdinalIgnoreCase))
+        ?? _options.FirstOrDefault(row => row.Name == AudioManager.WindowsEngine)
+        ?? _options[0];
 
       engineList.SelectedItem = selected;
       UpdateEngineText();
@@ -78,6 +87,27 @@ namespace EQLogParser
     /* An engine you can speak with now, or download and then speak with, is an engine worth selecting. */
     private static bool CanPick(string engine) =>
       AudioManager.Instance.IsEngineAvailable(engine) || AudioManager.Instance.GetEngineDownloadBytes(engine) > 0;
+
+    /*
+     * Grey out rows this machine cannot use by setting IsEnabled on the generated containers.
+     *
+     * The obvious way is an ItemContainerStyle with a binding, and it does not work here: assigning a container style
+     * replaces it rather than adding to it, so the themed ComboBoxItem is gone and what comes back is a WPF default item
+     * that reads as broken against the skin. BasedOn cannot bridge that in this codebase, which is why no other combo
+     * uses it. Setting the property on the container the theme actually produced keeps its own disabled look, greyed in
+     * whichever colors the current skin uses.
+     */
+    private void UpdateRowEnabledState()
+    {
+      var generator = engineList.ItemContainerGenerator;
+      foreach (var option in _options)
+      {
+        if (generator.ContainerFromItem(option) is ComboBoxItem item)
+        {
+          item.IsEnabled = option.CanPick;
+        }
+      }
+    }
 
     /*
      * What each engine is like to live with, because three names in a dropdown decide both the sound and whether the
