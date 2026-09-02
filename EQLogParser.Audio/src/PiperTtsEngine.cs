@@ -43,6 +43,17 @@ namespace EQLogParser.Audio
 
     private readonly ConcurrentDictionary<string, PlayerVoice> _players = new();
 
+    /*
+     * Everything below is one process wide table of loaded voices in piperApi.dll, and loading a voice into it can
+     * take a few hundred milliseconds. Binding a player removes its old voice first, so speaking through an id while a
+     * bind is in flight means speaking through a voice that has been removed and not yet rebuilt - which the native
+     * library answers with no audio rather than an error. Choosing a voice does exactly that: it rebinds the player
+     * and speaks a preview of it, so the preview went silent while the model behind it was being swapped. This lock is
+     * innermost: nothing under it reaches for AudioManager's engine lock or synthesis gate, so it cannot invert with
+     * them.
+     */
+    private readonly object _tableLock = new();
+
     // Voice currently loaded under AdHocVoiceId, null when that slot is empty or unusable.
     private string _preparedVoice;
     private readonly PiperVoiceData _voiceData;
@@ -98,26 +109,29 @@ namespace EQLogParser.Audio
         return;
       }
 
-      // The old voice goes out first. Replacing a table entry is not documented as releasing the session behind it, so
-      // rebinding without removing would leak a voice model per dropdown change - which is how an afternoon of trying
-      // voices ends with several hundred megabytes of voices nobody selected.
-      if (current is not null)
+      lock (_tableLock)
       {
-        TryRemoveNativeVoice(playerId);
-      }
+        // The old voice goes out first. Replacing a table entry is not documented as releasing the session behind it,
+        // so rebinding without removing would leak a voice model per dropdown change - which is how an afternoon of
+        // trying voices ends with several hundred megabytes of voices nobody selected.
+        if (current is not null)
+        {
+          TryRemoveNativeVoice(playerId);
+        }
 
-      if (LoadNativeVoice(playerId, voice) is { } voiceInfo)
-      {
-        _players[playerId] = new PlayerVoice { Name = voiceInfo.Name, SampleRate = voiceInfo.Sample };
-      }
-      else
-      {
-        /*
-         * The native voice above was removed, so nothing is loaded under this id any more and nothing may claim
-         * otherwise. Leaving the old binding behind gives a player that reports a voice it cannot speak: silent on
-         * every callout, and worth borrowing by the preview path for a voice that produces nothing.
-         */
-        _ = _players.TryRemove(playerId, out _);
+        if (LoadNativeVoice(playerId, voice) is { } voiceInfo)
+        {
+          _players[playerId] = new PlayerVoice { Name = voiceInfo.Name, SampleRate = voiceInfo.Sample };
+        }
+        else
+        {
+          /*
+           * The native voice above was removed, so nothing is loaded under this id any more and nothing may claim
+           * otherwise. Leaving the old binding behind gives a player that reports a voice it cannot speak: silent on
+           * every callout, and worth borrowing by the preview path for a voice that produces nothing.
+           */
+          _ = _players.TryRemove(playerId, out _);
+        }
       }
     }
 
@@ -128,8 +142,11 @@ namespace EQLogParser.Audio
         return;
       }
 
-      _players.TryRemove(playerId, out _);
-      TryRemoveNativeVoice(playerId);
+      lock (_tableLock)
+      {
+        _ = _players.TryRemove(playerId, out _);
+        TryRemoveNativeVoice(playerId);
+      }
     }
 
     private static void TryRemoveNativeVoice(string id)
@@ -144,39 +161,39 @@ namespace EQLogParser.Audio
       }
     }
 
-    public async Task<(byte[] pcm, int sampleRate)> SynthesizeForPlayerAsync(string playerId, string text)
-    {
-      var sample = playerId is not null && _players.TryGetValue(playerId, out var player) ? player.SampleRate : 0;
-      var pcm = await Task.Run(() => SynthesizeNative(playerId, text)).ConfigureAwait(false);
-      return (pcm, sample);
-    }
-
-    public async Task<(byte[] pcm, int sampleRate)> SynthesizeVoiceAsync(string voice, string text)
-    {
-      var (speaker, sampleRate) = ResolveAdHocSpeaker(voice);
-
-      if (string.IsNullOrEmpty(speaker))
+    public async Task<(byte[] pcm, int sampleRate)> SynthesizeForPlayerAsync(string playerId, string text) =>
+      await Task.Run(() =>
       {
-        return (null, 0);
-      }
+        lock (_tableLock)
+        {
+          var sample = playerId is not null && _players.TryGetValue(playerId, out var player) ? player.SampleRate : 0;
+          return (SynthesizeNative(playerId, text), sample);
+        }
+      }).ConfigureAwait(false);
 
-      var pcm = await Task.Run(() => SynthesizeNative(speaker, text)).ConfigureAwait(false);
-      return (pcm, sampleRate);
-    }
+    public async Task<(byte[] pcm, int sampleRate)> SynthesizeVoiceAsync(string voice, string text) =>
+      await Task.Run(() => SpeakAdHoc(voice, text)).ConfigureAwait(false);
 
     public async Task WarmUpVoiceAsync(string voice)
     {
-      var (speaker, _) = ResolveAdHocSpeaker(voice);
+      // Building the session is most of the cost and SpeakAdHoc does it. The throwaway synthesis is for the rest: ONNX
+      // Runtime allocates its arenas and settles on kernels the first time it runs something, so a trigger should not
+      // be the first thing through a brand new session.
+      _ = await Task.Run(() => SpeakAdHoc(voice, WarmUpText)).ConfigureAwait(false);
+    }
 
-      if (string.IsNullOrEmpty(speaker))
+    /*
+     * Resolve which id speaks for this voice and speak through it without letting go of the table in between: picking
+     * the next voice in the dropdown retargets that same slot, and doing that while an earlier synthesis is still
+     * running takes the voice out from under it.
+     */
+    private (byte[] pcm, int sampleRate) SpeakAdHoc(string voice, string text)
+    {
+      lock (_tableLock)
       {
-        return;
+        var (speaker, sampleRate) = ResolveAdHocSpeaker(voice);
+        return string.IsNullOrEmpty(speaker) ? (null, 0) : (SynthesizeNative(speaker, text), sampleRate);
       }
-
-      // Building the session is most of the cost and ResolveAdHocSpeaker has just done it. The throwaway synthesis is
-      // for the rest: ONNX Runtime allocates its arenas and settles on kernels the first time it runs something, so a
-      // trigger should not be the first thing through a brand new session.
-      _ = await Task.Run(() => SynthesizeNative(speaker, WarmUpText)).ConfigureAwait(false);
     }
 
     /*
@@ -188,6 +205,8 @@ namespace EQLogParser.Audio
      * Either way the session stays loaded afterwards. Previews come in bursts - pick a voice, hear it, edit the text,
      * hear it again - and the old behaviour of dropping the voice when each one finished meant paying for the model
      * again on every single one.
+     *
+     * Called with _tableLock held, by SpeakAdHoc only: it both reads and rewires the native table.
      */
     private (string speaker, int sampleRate) ResolveAdHocSpeaker(string voice)
     {
@@ -361,6 +380,9 @@ namespace EQLogParser.Audio
         var size = PiperInterop.synthesize(playerId, text, out var audioBuffer);
         if (size <= 0 || audioBuffer == IntPtr.Zero)
         {
+          // Silence with no exception is how a voice that is not loaded answers. Worth a line: it looks exactly like
+          // the audio device being broken from the user's side.
+          Log.Debug($"Piper produced no speech for voice '{playerId}' (size {size}); is that voice loaded?");
           return null;
         }
 
