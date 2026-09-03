@@ -117,7 +117,8 @@ namespace EQLogParser.Wpf.Test.src.audio
     {
       Assert.AreEqual("US", PiperTtsEngine.RegionOf("en_US"));
       Assert.AreEqual("US", PiperTtsEngine.RegionOf(" US "));
-      Assert.AreEqual("PT", PiperTtsEngine.RegionOf("pt_BR"));
+      // pt is the language, BR is the region - and the region is what gets printed
+      Assert.AreEqual("BR", PiperTtsEngine.RegionOf("pt_BR"));
 
       // Nothing to print for a token with no region in it.
       Assert.IsNull(PiperTtsEngine.RegionOf(null));
