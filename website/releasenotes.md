@@ -1,5 +1,10 @@
 **Note that Windows 7/8 support will end by September this year**
 
+# 2.3.62 | 09/03/26
+1. Added **Dynamic Timer Name** option to Trigger Timers. This option decides whether **Trigger Variables** will be queried every time the timer updates or if those variables are only read and displayed once when the **Timer** is started.
+2. EQLP now includes a **New Feature** for selecting an optional **TTS Engine**. Code provided by **willk@github**. Look under the **Tools** dropdown on **Trigger Manager** to try out/configure the **TTS Engine**. The additional choices are for **Kokoro** and **PiperTTS**. Brief descritpions are povided within the app.
+3. **Linux Users** you will have to install a TTS Engine. The old default will no longer work.
+
 # 2.3.61 | 08/31/26
 1. Updated melee ADPS list to include SPA 467.
 2. Fixed a number of NAG migration bugs.

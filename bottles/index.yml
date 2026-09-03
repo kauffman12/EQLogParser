@@ -5,7 +5,7 @@
 eqlogparser:
   Arch: win64
   Name: EQLogParser
-  Description: EQLogParser v2.3.61
+  Description: EQLogParser v2.3.62
   Grade: Gold
   Category: Games
   Icon: EQLogParser.ico
