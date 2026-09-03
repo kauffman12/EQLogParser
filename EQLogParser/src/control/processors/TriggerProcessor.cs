@@ -711,8 +711,8 @@ namespace EQLogParser
       // dynamic updates when variables change from other triggers (e.g. a counter
       // that decrements while a long-running timer is active). Built-in codes
       // ({counter}, {repeated}, {logtime}) are resolved in GetDisplayName before
-      // custom variables, giving them precedence. Triggers marked TimerNameStatic pass the flag
-      // through to TimerData so the overlay skips that re-resolution and keeps this name.
+      // custom variables, giving them precedence. The trigger's dynamic-name flag is passed through
+      // to TimerData; a timer without it skips that re-resolution and keeps this name.
       if (ProcessMatchesText(wrapper.ModifiedTimerName, matches) is { } altTimerName)
       {
         altTimerName = ProcessMatchesText(altTimerName, previousMatches);
@@ -899,7 +899,7 @@ namespace EQLogParser
         TimerType = trigger.TimerType,
         TimesToLoopCount = loopCount,
         DisplayNameTemplate = timerNameTemplate,
-        StaticDisplayName = trigger.TimerNameStatic,
+        DynamicDisplayName = trigger.TimerNameDynamic,
         Variables = _variables,
         TriggerId = wrapper.Id,
         TriggerAgainOption = trigger.TriggerAgainOption,

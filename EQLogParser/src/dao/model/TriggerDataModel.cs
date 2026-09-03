@@ -54,9 +54,9 @@ namespace EQLogParser
     public bool Warned { get; set; }
     public string DisplayName { get; set; }
     public string DisplayNameTemplate { get; set; }
-    // Frozen names ignore DisplayNameTemplate so the overlay keeps the DisplayName resolved at
-    // timer start instead of following variable changes from other triggers.
-    public bool StaticDisplayName { get; set; }
+    // When false (a frozen name) the overlay ignores DisplayNameTemplate and keeps the DisplayName
+    // resolved at timer start instead of following variable changes from other triggers.
+    public bool DynamicDisplayName { get; set; } = true;
     public ConcurrentDictionary<string, string> Variables { get; set; }
     public double DurationSeconds { get; set; }
     public long BeginTicks { get; set; }

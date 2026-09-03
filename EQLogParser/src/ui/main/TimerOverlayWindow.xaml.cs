@@ -253,7 +253,7 @@ namespace EQLogParser
      * always references the log action that started the timer — it does not update
      * dynamically during the timer's lifetime.
      *
-     * Timers flagged StaticDisplayName skip the template and keep the name resolved when the
+     * Timers without a dynamic display name skip the template and keep the name resolved when the
      * timer started. The built-in codes still resolve from per-timer fields captured at that same
      * moment, so those names do not move either.
      *
@@ -264,7 +264,7 @@ namespace EQLogParser
     internal static string GetDisplayName(TimerData timerData)
     {
       var result = timerData.DisplayName;
-      var hasTemplateVars = timerData.StaticDisplayName is false &&
+      var hasTemplateVars = timerData.DynamicDisplayName &&
           !string.IsNullOrEmpty(timerData.DisplayNameTemplate) &&
           timerData.Variables is not null &&
           timerData.DisplayNameTemplate.Contains('{');

@@ -13,13 +13,13 @@ namespace EQLogParser.Wpf.Test
       int repeatedCount = -1,
       int counterCount = -1,
       string? logTime = null,
-      bool staticDisplayName = false)
+      bool dynamicDisplayName = true)
     {
       return new TimerData
       {
         DisplayName = displayName,
         DisplayNameTemplate = displayNameTemplate,
-        StaticDisplayName = staticDisplayName,
+        DynamicDisplayName = dynamicDisplayName,
         Variables = variables,
         RepeatedCount = repeatedCount,
         CounterCount = counterCount,
@@ -93,24 +93,24 @@ namespace EQLogParser.Wpf.Test
     #region Static timer names
 
     [TestMethod]
-    public void GetDisplayName_StaticDisplayName_IgnoresVariableChanges()
+    public void GetDisplayName_StaticName_IgnoresVariableChanges()
     {
       var variables = new ConcurrentDictionary<string, string> { ["hp"] = "100" };
       var timerData = CreateTimerData(
         displayName: "Shield 100",
         displayNameTemplate: "Shield {hp}",
         variables: variables,
-        staticDisplayName: true);
+        dynamicDisplayName: false);
 
       Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
 
-      // The trigger set TimerNameStatic, so the name stays as it was resolved at timer start
+      // Dynamic naming is off for this trigger, so the name stays as it was resolved at timer start
       variables["hp"] = "25";
       Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
     }
 
     [TestMethod]
-    public void GetDisplayName_StaticDisplayName_HidesUnsetVariables()
+    public void GetDisplayName_StaticName_HidesUnsetVariables()
     {
       // A variable cleared or expired mid-timer never leaks its {token} into a static name
       var variables = new ConcurrentDictionary<string, string>();
@@ -118,13 +118,13 @@ namespace EQLogParser.Wpf.Test
         displayName: "Shield 100",
         displayNameTemplate: "Shield {hp}",
         variables: variables,
-        staticDisplayName: true);
+        dynamicDisplayName: false);
 
       Assert.AreEqual("Shield 100", TimerOverlayWindow.GetDisplayName(timerData));
     }
 
     [TestMethod]
-    public void GetDisplayName_StaticDisplayName_ResolvesBuiltInCodes()
+    public void GetDisplayName_StaticName_ResolvesBuiltInCodes()
     {
       // DisplayName arrives with custom variables already resolved (as the processor writes it)
       // while built-in codes are still tokens for this method to fill from per-timer fields
@@ -134,7 +134,7 @@ namespace EQLogParser.Wpf.Test
         displayNameTemplate: "Cast {counter} x{stacks}",
         variables: variables,
         counterCount: 2,
-        staticDisplayName: true);
+        dynamicDisplayName: false);
 
       Assert.AreEqual("Cast 2 x3", TimerOverlayWindow.GetDisplayName(timerData));
 

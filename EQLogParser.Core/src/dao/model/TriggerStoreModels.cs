@@ -91,9 +91,9 @@ namespace EQLogParser
     public bool Private { get; set; }
     public double LastTriggered { get; set; }
     public string AltTimerName { get; set; }
-    // When true the timer keeps the name captured when it started. Otherwise a name containing
-    // trigger variables is re-resolved on each overlay render so it follows variable changes.
-    public bool TimerNameStatic { get; set; }
+    // When true (the default) a name containing trigger variables is re-resolved on each overlay render
+    // so it follows variable changes. When false the timer keeps the name captured when it started.
+    public bool TimerNameDynamic { get; set; } = true;
     public string Comments { get; set; }
     public double RepeatedResetTime { get; set; } = 0.75;
     public double DurationSeconds { get; set; } = 0.2;
