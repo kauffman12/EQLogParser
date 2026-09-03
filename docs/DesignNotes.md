@@ -159,7 +159,7 @@ app runs.
 ### One engine behind ITtsEngine
 
 Each engine implements `ITtsEngine` (`EQLogParser.Audio/src`) and owns its own per player voice state. A factory walks
-the configured preference (settings key `TtsEngine`, set from the TTS Engine item of the **Settings** dropdown on the
+the configured preference (settings key `TtsEngine`, set from the TTS Engine item of the **Tools** dropdown on the
 Triggers toolbar, alongside Dictionary and Quick Shares) and
 falls back through the remaining engines in order - a Piper whose pack is missing or will not load reaches an installed
 Kokoro before the Windows voices, which are the last resort and need no files at all - so a missing model or voice pack
