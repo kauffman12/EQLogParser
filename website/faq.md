@@ -142,7 +142,25 @@
 
 # Linux Support
 
-EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Install the .NET 8.0 Desktop Runtime under Wine first if your system does not have it, then run the installer and launch EQLogParser like any other app.
+EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Two things have to be inside the Wine prefix before that installer is worth running: the **.NET 8 Desktop Runtime** and the **Microsoft Visual C++ 2015-2022 redistributable** (`vcredist2022` in Bottles, `vcrun2022` in winetricks). The redistributable is new with 2.3.62: the downloadable speech engines run on Microsoft's ONNX runtime and Wine cannot satisfy it on its own.
+
+Two ways to get there: [with Bottles](#installing-with-bottles) or [with plain Wine](#installing-with-plain-wine).
+
+## Installing with Bottles
+1. Create a **64-bit** bottle and install these dependencies into it from the bottle's Dependencies page:
+    - **vcredist2022** — required for text to speech, without it Piper and Kokoro download their files and then stay silent (item 3 under Known Issues below)
+    - **dotnetdesktop8** — the .NET 8 Desktop Runtime EQLogParser runs on
+    - **allfonts** — optional, completes the same set as the recipe EQLogParser publishes (`bottles/Games/eqlogparser.yml` in the GitHub project)
+2. Install with **Install → Run executable** and choose `EQLogParser-install-{version}.exe`, then launch `EQLogParser.exe` from `Program Files\EQLogParser`
+3. On first start nothing speaks until one engine is downloaded: Trigger Manager → **Tools** → **TTS Engine** → **Download** (Piper, about 682 MB, or Kokoro, about 228 MB). See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
+
+## Installing with plain Wine
+1. Create a 64-bit prefix and put both prerequisites in it:
+    - `WINEPREFIX=~/eqlogparser WINEARCH=win64 wineboot`
+    - `WINEPREFIX=~/eqlogparser winetricks vcrun2022 dotnetdesktop8`
+2. Run the installer in that prefix: `WINEPREFIX=~/eqlogparser wine EQLogParser-install-{version}.exe`
+3. Launch it and download a speech engine the same way as above
+4. Only one Visual C++ package belongs in a prefix: **vcrun2022** covers everything from 2015 through 2022, so there is no reason to add 2015, 2017 or 2019 alongside it
 
 ## Known Issues with Linux
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
@@ -152,6 +170,11 @@ EQLogParser has supported Linux since version 2.2.66 with only minor issues, and
     - Log file location: ~/.wine/drive_c/users/username/AppData/Roaming/EQLogParser/logs
 2. WINE x64 does not work with any windows text-to-speech engine
     - Use **Piper** or **Kokoro** instead — both work under Wine, and the TTS Engine window in the Trigger Manager downloads one for you. See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
+3. Speech stays silent after a download that reported success, and the error log says `Unable to load DLL 'onnxruntime' … Module not found`
+    - The prefix is missing the Visual C++ 2015-2022 redistributable: add **vcredist2022** in Bottles or run `winetricks vcrun2022`, restart EQLogParser and press **Use** again. No re-download is needed
+    - The pack itself is fine — every file is checksum-verified as it installs, which is why the download succeeds. Only the Microsoft runtime that reads those files was missing
+4. Each speech engine downloads several hundred MB into the prefix, at `~/.wine/drive_c/users/username/AppData/Local/EQLogParser` (under Bottles that is inside the bottle's own `drive_c`)
+    - **Remove Files** in the TTS Engine window gives the space back; you have to switch to another engine first
 
 # Feedback
 
