@@ -120,75 +120,29 @@
 2. In short: **Tools → Migrate NAG Database**, pick the folder that contains `trigger-database.json`, and everything lands in a new `NAG Ingest - {date time}` folder under Triggers
 3. Imported triggers start **disabled** so you can enable what you want — check the HTML report from the summary dialog for any NAG features that have no EQLogParser equivalent
 
+## What are the TTS Engine options and how do I change them?
+1. If your triggers speak text out loud, the speaking is done by one of three text-to-speech engines:
+    - **Windows** — uses the voices installed with Windows. Nothing to download, so it works out of the box on a Windows machine, but the quality depends on which voices are present. This engine is not available under Linux/Wine because WINE does not provide the Windows speech system
+    - **Piper** — fast and lightweight. Speech starts almost instantly and it uses very few system resources, so it suits older machines and busy raids where your triggers are speaking a lot. The tradeoff is that its voices have the lowest sound quality. The runtime downloads as a ~682 MB pack containing 12 voices
+    - **Kokoro** — the most natural-sounding voices of the three, but also the most demanding. It needs more memory and CPU than older systems can handle. The runtime downloads as a ~228 MB pack
+2. Change the engine from the Trigger Manager window: click the **Tools** dropdown button in the toolbar at the top and select **TTS Engine**
+    - Selecting an engine in the dropdown only updates the description below it — nothing changes until you press a button
+    - If that engine's runtime is not on this machine yet, the button reads **Download Piper (682 MB)** or similar. When the download finishes, EQLogParser switches to the new engine automatically
+    - If the runtime is already installed, the button says **Use** followed by the engine name. The switch is live: the next thing your triggers speak already uses the new engine, no restart needed
+3. Why you might pick one over the other:
+    - **Windows** when you want zero setup and are happy with the built-in Windows voices (not an option under Linux/Wine)
+    - **Piper** when speech has to start instantly and the system has limited resources — a good default if your triggers talk a lot during play
+    - **Kokoro** when voice quality matters more than CPU usage, on a machine that can keep up with it
+4. Voices belong to the engine that provides them:
+    - Pick one from the **voice** dropdown in the Trigger Manager toolbar; in advanced mode each character keeps its own voice
+    - Switching engines temporarily shows that engine's default voice until you pick one. A voice saved for one engine (e.g. Piper) comes back when you switch to it again
+5. The Piper and Kokoro runtimes are downloaded by the app into `%LOCALAPPDATA%\EQLogParser` — they are not part of the installer
+    - To reclaim the space, select the engine in the TTS Engine window and press **Remove Files** (you cannot remove the engine that is currently speaking; switch to another one first)
+6. If you followed older instructions: you no longer need to download Piper from Google Drive or unzip anything into the EQLogParser program folder. The TTS Engine window downloads, verifies and installs everything itself, and the installer cleans up old copies when you upgrade
+
 # Linux Support
 
-EQLogParser has been officially supporting Linux since version 2.2.66 with only minor issues. Note that the 64bit version of WINE is required.
-
-## Simplest Install: Flatpak + Bottles
-
-The easiest way to get EQLogParser running on Linux is using **Flatpak** and **Bottles**. Bottles is a Wine management app that handles all the setup for you, and Flatpak is the recommended way to install it.
-
-### Step 1 — Install Flatpak and Bottles
-
-Open a terminal and run the following commands:
-
-```bash
-# Install Flatpak
-sudo apt install flatpak
-
-# Add the Flathub repository (where Bottles is hosted)
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-# Install Bottles
-flatpak install flathub com.usebottles.bottles
-```
-
-### Step 2 — Launch Bottles
-
-Start Bottles using the following command. The `PERSONAL_INSTALLERS` variable tells it where to find the EQLogParser installer:
-
-```bash
-PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/refs/heads/master/bottles flatpak run com.usebottles.bottles
-```
-
-> **Tip:** You can save this as a shell script or desktop shortcut so you don't have to type it every time.
-
-### Step 3 — Create a New Bottle
-
-Once Bottles is open:
-
-1. Click **Create a New Bottle**
-2. When prompted for the bottle type, select **Custom**
-3. Make sure the architecture is set to **64-bit**
-4. Change the **Runner** to **Wine**
-5. Click **Create** and wait for Bottles to finish setting up the environment
-
-### Step 4 — Install EQLogParser
-
-After the bottle is created:
-
-1. Click the **Install App** button inside your new bottle
-2. Find and select **EQLogParser** from the list of available apps
-3. Follow any on-screen prompts to complete the installation
-
-### Step 5 — Run EQLogParser
-
-Once installation is finished, simply click the **Run App** button to launch EQLogParser. That's it — no manual Wine configuration required!
-
----
-
-## Manually installing without Flatpak/Bottles
-
-### Download **EQLogParser** and the **.Net 8.0 Desktop Runtime x64** found [here](index.html).
-Use the following steps to install under Linux (tested on Ubuntu/Debian-based systems):
-```
-sudo apt install wine  # (version 10)
-sudo apt install winetricks  # (version 20250102-1)
-winetricks allfonts
-winetricks renderer=gdi
-wine windowsdesktop-runtime-8.0.25-win-x64.exe  # (or latest)
-wine EQLogParser-install-2.3.49.exe  # (or latest)
-```
+EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Install the .NET 8.0 Desktop Runtime under Wine first if your system does not have it, then run the installer and launch EQLogParser like any other app.
 
 ## Known Issues with Linux
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
@@ -197,20 +151,7 @@ wine EQLogParser-install-2.3.49.exe  # (or latest)
     - The EQLogParser log file should show Software as the RenderMode
     - Log file location: ~/.wine/drive_c/users/username/AppData/Roaming/EQLogParser/logs
 2. WINE x64 does not work with any windows text-to-speech engine
-    - Piper TTS is provided as an alternative but requires manual Installation
-    - The bottles install comes with 1 voice pre-loaded
-    - Follow steps below for all voices
-    
-## Piper TTS
-Piper TTS is an Open Source **text-to-speech engine** and a custom build is provided for EQLogParser. It is hosted on google drive and may be subject to a limited number of downloads per day/month.
-
-1. Download the <a href="https://drive.google.com/file/d/1G2Ecg9sfOMxifRzrKwqySGwHoVV3tHUJ/view?usp=sharing" target="_blank">PiperTTS</a> zip file
-2. Unzip into ~/.wine/drive_c/Program Files/EQLogParser/piper-tts
-3. Verify it was unzipped properly
-    - The piper-tts folder contains dlls and a voices folder
-    - The piper-tts folder should be directly under the EQLogParser folder
-4. Restart EQLogParser. Note that the log file should tell you that it's using piper-tts
-5. Test changing voices in the Trigger Manager window
+    - Use **Piper** or **Kokoro** instead — both work under Wine, and the TTS Engine window in the Trigger Manager downloads one for you. See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
 
 # Feedback
 

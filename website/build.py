@@ -64,8 +64,8 @@ PAGE_META = {
                            'Regex basics plus the EQLogParser trigger reference: patterns, capture variables, timers, '
                            'text overlays, sounds, custom colours and .NET regex performance tips.'),
     'faq.html': ('FAQ and Support | EQLogParser',
-                 'Answers to common EQLogParser problems: spells missing from counts, triggers that never fire, '
-                 'overlay colours, OBS capture, EMU servers and Linux support.'),
+                 'Common EQLogParser questions: spells missing from counts, triggers that never fire, TTS engine '
+                 'options, overlay colours, OBS capture, EMU servers, Linux.'),
     'releasenotes.html': ('Release Notes | EQLogParser',
                           'What changed in every EQLogParser release: damage meter fixes, trigger features, timer '
                           'overlays, NAG migration and quality of life updates.'),

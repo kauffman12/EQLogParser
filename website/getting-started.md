@@ -12,7 +12,7 @@ EQLogParser is a real-time combat analyzer and damage parsing application built 
 - **Visual overlays** (damage meter, timers, text displays) that can show in OBS for streaming
 - **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG databases
 
-At its core EQLogParser is a **parser** — open a character's log file and the stats take care of themselves. On top of that sits an optional **trigger engine**: audio callouts and visual overlays that react to anything in the log, which you only need if you want alerts or streaming graphics.
+At its core EQLogParser is a **parser** — open a character's log file and the stats take care of themselves. On top of that sits an optional **trigger engine**: audio alerts (sounds or text spoken out loud) and visual overlays that react to anything in the log, which you only need if you want alerts or streaming graphics.
 
 ## 1. Download & Install
 
@@ -36,7 +36,7 @@ Tip: enable **Options → Auto Monitor Last Log** and EQLogParser will reopen th
 
 ## 3. Audio Triggers and Overlays
 
-Want sounds, TTS callouts, or on-screen overlays? Those come from the trigger engine:
+Want your triggers to play sounds, speak text out loud, or show on-screen overlays? Those come from the trigger engine:
 
 1. Open the **Trigger Manager** (View → Triggers → Trigger Manager).
 2. Right-click in the tree → **New Trigger**, set a **Name**, enter a **Pattern** to match (see [Triggers & Regex](documentation.html) for syntax), and configure its display/speak/timer options.
@@ -104,7 +104,8 @@ If a restore fails partway through, your existing configuration is rolled back a
 ## Next Steps
 
 - Read the full [Trigger Variables](documentation.html#trigger-variables) reference for pattern matching syntax
-- Check out the [Linux Support](faq.html#linux-support) guide if you're on Linux/Wine
+- If your triggers speak text out loud and you're wondering which TTS engine to use, see [the TTS Engine options in the FAQ](faq.html#what-are-the-tts-engine-options-and-how-do-i-change-them)
+- On Linux or Wine? The standard installer works as-is — see the [Linux notes in the FAQ](faq.html#linux-support)
 - Browse the [F.A.Q.](faq.html#f-a-q) for troubleshooting tips
 
 ---
