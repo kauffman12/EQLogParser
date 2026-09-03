@@ -720,6 +720,10 @@ namespace EQLogParser.Audio
             ShowAudioError();
           }
         }
+        else
+        {
+          LogSilentPreview(voice, tts);
+        }
       }
       catch (Exception ex)
       {
@@ -750,7 +754,7 @@ namespace EQLogParser.Audio
               ShowAudioError();
             }
           }
-          else
+          else if (fileName is not null)
           {
             WaveFileWriter writer = null;
             RawSourceWaveStream stream = null;
@@ -792,6 +796,10 @@ namespace EQLogParser.Audio
                 // ignore
               }
             }
+          }
+          else
+          {
+            LogSilentPreview(voice, tts);
           }
         }
       }
@@ -1122,6 +1130,17 @@ namespace EQLogParser.Audio
         }
       }
     }
+
+    /*
+     * Somebody asked to hear a voice and got nothing at all. From the outside that is indistinguishable from a dead
+     * audio device - which is what makes it worth a line without Debug turned on - so name the engine and the voice
+     * that came back empty; the engine itself logs whatever it knows about its side of the failure.
+     */
+    private void LogSilentPreview(string voice, string tts) =>
+      Log.Warn($"Nothing came back from the {_tts?.Name ?? "TTS"} voice '{voice}' ({Shorten(tts)}).");
+
+    /* Previews speak text people typed, and the log has no business carrying all of it. */
+    private static string Shorten(string text) => text.Length <= 40 ? text : text[..40] + "...";
 
     private static bool PlayAudioData(byte[] data, WaveFormat waveFormat, Guid device, float volume, int rate = 0)
     {

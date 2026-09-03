@@ -228,6 +228,9 @@ namespace EQLogParser.Audio
 
       if (owned.Value is not null)
       {
+        // Which slot spoke matters when a preview comes back empty: 'testSpeaker' means the prepared one, anything else
+        // is a trigger player's own session being borrowed for the preview.
+        Log.Debug($"Piper previews '{wanted.Name}' through the {owned.Key} player");
         return (owned.Key, owned.Value.SampleRate);
       }
 
@@ -492,7 +495,17 @@ namespace EQLogParser.Audio
 
       try
       {
-        return PiperInterop.loadVoice(playerId, modelPath, configPath) != -1 ? voiceInfo : null;
+        /*
+         * A -1 is all the native side says, and what follows it is silence with no exception anywhere - which from the
+         * user's side looks exactly like a broken sound card. This one has to reach the log without Debug turned on.
+         */
+        if (PiperInterop.loadVoice(playerId, modelPath, configPath) == -1)
+        {
+          Log.Warn($"Piper could not load the '{voiceInfo.Name}' voice for '{playerId}' from {modelPath}");
+          return null;
+        }
+
+        return voiceInfo;
       }
       catch (Exception ex)
       {
@@ -516,7 +529,7 @@ namespace EQLogParser.Audio
         {
           // Silence with no exception is how a voice that is not loaded answers. Worth a line: it looks exactly like
           // the audio device being broken from the user's side.
-          Log.Debug($"Piper produced no speech for voice '{playerId}' (size {size}); is that voice loaded?");
+          Log.Warn($"Piper produced no speech for voice '{playerId}' (size {size}); is that voice loaded?");
           return null;
         }
 
