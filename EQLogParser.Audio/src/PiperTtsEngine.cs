@@ -92,7 +92,12 @@ namespace EQLogParser.Audio
 
     public Task LoadVoicesAsync() => Task.CompletedTask;
 
-    public List<string> GetVoices() => _voiceData?.Voices?.Select(voice => voice.Name).ToList() ?? [];
+    // voices.json arrives in whatever order the pack was built, which is not an order anybody can scan a dropdown in.
+    // The picker gets the labels it prints, alphabetically; see TtsVoiceOrder.
+    public List<string> GetVoices() =>
+      _voiceData?.Voices is { } voices
+        ? TtsVoiceOrder.ByLabel(voices.Select(voice => voice.Name), GetVoiceDisplayName)
+        : [];
 
     public string GetDefaultVoice() => _voiceData?.Voices?.FirstOrDefault()?.Name;
 

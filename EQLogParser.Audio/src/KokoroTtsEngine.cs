@@ -95,10 +95,9 @@ namespace EQLogParser.Audio
       {
         return [];
       }
-      return KokoroVoiceManager.Voices
-        .Select(voice => voice.Name)
-        .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+      // Alphabetical by the label the picker prints rather than by the id: ordered by id, af_* precedes am_* so every
+      // American woman comes before Adam, and the Chinese and Japanese voices land between Hindi and Italian.
+      return TtsVoiceOrder.ByLabel(KokoroVoiceManager.Voices.Select(voice => voice.Name), DisplayNameFor);
     }
 
     public string GetDefaultVoice()

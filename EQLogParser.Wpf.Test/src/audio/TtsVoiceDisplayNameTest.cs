@@ -125,5 +125,40 @@ namespace EQLogParser.Wpf.Test.src.audio
       Assert.IsNull(PiperTtsEngine.RegionOf("english"));
       Assert.IsNull(PiperTtsEngine.RegionOf("en_"));
     }
+
+    /*
+     * Ordering is by the label the picker prints, not by the id behind it. Kokoro ids lead with accent and gender, so an
+     * id-ordered list puts every American woman in front of Adam and files the Chinese voice between Hindi and Italian -
+     * correct on paper and unusable in a dropdown.
+     */
+    [TestMethod]
+    public void VoicesAreOrderedByTheLabelTheyShow()
+    {
+      var ordered = TtsVoiceOrder.ByLabel(
+        new[] { "zm_yunxi", "am_adam", "hf_priya", "af_nicole", "bf_emma", "jm_kumo" },
+        KokoroTtsEngine.DisplayNameFor);
+
+      CollectionAssert.AreEqual(
+        new[] { "Adam (US)", "Emma (GB)", "Kumo (JP)", "Nicole (US)", "Priya (HI)", "Yunxi (CN)" }, ordered);
+    }
+
+    [TestMethod]
+    public void OrderingIgnoresCaseTheWayALabelReaderDoes()
+    {
+      var ordered = TtsVoiceOrder.ByLabel(
+        new[] { "HFC Male (US)", "alyssa (US)", "Alba (GB)" }, label => label);
+
+      CollectionAssert.AreEqual(new[] { "Alba (GB)", "alyssa (US)", "HFC Male (US)" }, ordered);
+    }
+
+    [TestMethod]
+    public void VoicesSharingALabelKeepTheirIdsInOrder()
+    {
+      // Two models answering to the same name must not trade places between one call and the next: whoever is listed
+      // first stays first, and the setting saved beside either one is still the id it always was.
+      var ordered = TtsVoiceOrder.ByLabel(new[] { "zz_dave-medium", "ab_dave-medium" }, _ => "Dave (US)");
+
+      CollectionAssert.AreEqual(new[] { "ab_dave-medium", "zz_dave-medium" }, ordered);
+    }
   }
 }
