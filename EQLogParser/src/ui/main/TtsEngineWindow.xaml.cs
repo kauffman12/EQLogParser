@@ -325,7 +325,7 @@ namespace EQLogParser
 
       /*
        * Cancelling is a normal outcome of a download this size, so it gets a button. Closing the window cancels too -
-       * that is what OnClosed does - but nothing on screen says so, and nobody watching 348 MB crawl should have to
+       * that is what OnClosed does - but nothing on screen says so, and nobody watching 682 MB crawl should have to
        * guess how to stop it.
        */
       cancelButton.Visibility = Visibility.Visible;
@@ -338,7 +338,7 @@ namespace EQLogParser
 
       /*
        * Progress<T> posts back to the UI thread it was created on, which is what makes the bar move. Bytes rather than
-       * a percentage because a bar alone cannot say whether 224 MB is nearly there or barely started. Nothing names the
+       * a percentage because a bar alone cannot say whether 682 MB is nearly there or barely started. Nothing names the
        * engine: they clicked its Download button, and this row has room for one short line.
        */
       var progress = new Progress<float>(value =>
@@ -509,7 +509,7 @@ namespace EQLogParser
     protected override void OnClosed(EventArgs e)
     {
       /*
-       * Closing the window stops a download in progress: nobody should be left holding a 348 MB transfer for a dialog
+       * Closing the window stops a download in progress: nobody should be left holding a 682 MB transfer for a dialog
        * that is gone. The install notices the token and leaves whatever was installed before in place.
        */
       _cts?.Cancel();

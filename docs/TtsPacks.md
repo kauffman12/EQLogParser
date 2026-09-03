@@ -1,9 +1,10 @@
 # Speech runtime packs (Piper / Kokoro)
 
-Both optional speech engines need far more than an installer should carry: the Piper runtime plus its voices is ~88 MB
-unpacked for a single voice, and the Kokoro runtime is another 93 MB before counting the 156 MB model. Neither is in the
-installer. They are published as GitHub release assets from `kauffman12/EQLogParser-TTS` and downloaded into per-user
-storage when an engine is enabled.
+Both optional speech engines need far more than an installer should carry. A Piper voice alone is ~63 MB, and today's
+twelve unpack to 791 MB behind a 682 MiB download. Kokoro is heavy in its own shape: 93 MB of runtime and a 156 MB
+model, after which 28 embeddings add only 15 MB (228 MiB packed). Neither engine is in the installer; both are
+published as GitHub release assets from `kauffman12/EQLogParser-TTS` and downloaded into per-user storage when an
+engine is enabled.
 
 ```
 on a user's machine
@@ -70,8 +71,8 @@ humans and for `-Verify`, not as the app's reference.
 
 | engine | tag / asset | archive SHA-256 |
 |---|---|---|
-| Piper | `piper-1.0` → `piper-1.0.zip` | `dc24d7f9673b28b9e18a0801f0492107ad8c2b6e6ba6645ca67488b703f76451` |
-| Kokoro | `kokoro-1.0` → `kokoro-1.0.zip` | `b1070b9e231dd0d08203fc89f6540c6de3d13de479bd506f63f6902194241788` |
+| Piper | `piper-1.0` → `piper-1.0.zip` | `4d51eb9e821252aecc14024b5cb5ffc2d21e9d2cd242f9870a7ea8c52868e311` |
+| Kokoro | `kokoro-1.0` → `kokoro-1.0.zip` | `6f4728392c15fe6da8cbb115ed3a227c334f426e12598bd4482e9863abc48783` |
 
 ## Publishing rules
 
@@ -111,10 +112,18 @@ CDN, per-asset digests and download counts.
 
 ## Adding voices
 
-**Piper** — drop `*.onnx` + `*.onnx.json` into `piper-tts\voices\<name>\`, pack with `-GenerateVoicesJson` (it reads
-each model's `audio.sample_rate` and `_meta.name`, so there is nothing to hand-edit), publish a new tag. With six voices
-the single pack lands around 350–400 MB, which every user who enables Piper downloads in one piece; that is a deliberate
-tradeoff over per-voice packs. `-PiperVoices a,b` lets you ship a subset without deleting anything.
+**Piper** — drop `*.onnx` + `*.onnx.json` into `piper-tts\voices\<name>\`, add the voice to `voices\voices.json`,
+pack, and publish. Names live in that file: `Name` is what the picker shows, and the optional `Locale` is what it
+prints beside it (`Alan (GB)`) - also read from each model's `language.code` when a pack does not say so itself.
+
+**Do not run `-GenerateVoicesJson` over a set whose names you wrote by hand.** It takes names from each model's
+`_meta.name`, the published piper releases do not carry one, and it falls back to the folder - `alan` where `Alan` was
+wanted. Sample rates are the one thing it reads reliably.
+
+Twelve voices unpack to 791 MB behind a 682 MiB download, and every user who enables Piper takes all of them at once;
+that is the deliberate tradeoff over per-voice packs. `-PiperVoices a,b` ships a subset without deleting anything from
+the data dir. Nothing at run time reads the `piper-tts\voices\` copy this repo still carries - an engine looks in local
+app data and nowhere else - so that folder is a leftover of the layout this replaced.
 
 **Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am;bf;bm`, the
 English voices both sides of the Atlantic; the same property stops KokoroSharp's build target from copying all 79 MB of
@@ -144,7 +153,7 @@ the sidecar against the archive, neither of which knows or cares that the direct
 ## Installing at run time
 
 The TTS Engine dialog is the whole UI: it lists all three engines and puts one button on whatever comes next —
-**Download Piper (348 MB)** / **Download Kokoro (228 MB)** for an engine with nothing on disk, **Use Piper** to start an
+**Download Piper (682 MB)** / **Download Kokoro (228 MB)** for an engine with nothing on disk, **Use Piper** to start an
 installed one, **In use** when it is already speaking. Looking at a row applies nothing; switching is the button, and it
 takes effect without a restart. A finished download does switch on its own, since that is plainly why it was fetched.
 While something is downloading a **Cancel** button appears next to Close; closing the window cancels as well.

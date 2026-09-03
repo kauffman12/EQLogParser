@@ -15,8 +15,8 @@ namespace EQLogParser.Wpf.Test
   [TestClass]
   public class TtsEngineActionButtonTest
   {
-    private const long KokoroBytes = 234_881_024;
-    private const long PiperBytes = 364_904_448;
+    private const long KokoroBytes = 228L * 1024 * 1024;
+    private const long PiperBytes = 682L * 1024 * 1024;
 
     [TestMethod]
     public void PlanAction_WindowsReadyWhileAnotherEngineSpeaks_OffersUse()
@@ -55,7 +55,7 @@ namespace EQLogParser.Wpf.Test
       var action = TtsEngineWindow.PlanAction(AudioManager.KokoroEngine, KokoroBytes, false, false, false);
 
       Assert.AreEqual(Visibility.Visible, action.Visibility);
-      Assert.AreEqual("Download Kokoro (224 MB)", action.Content);
+      Assert.AreEqual("Download Kokoro (228 MB)", action.Content);
       Assert.IsTrue(action.IsEnabled);
     }
 

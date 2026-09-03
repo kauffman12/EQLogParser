@@ -62,18 +62,20 @@ namespace EQLogParser.Audio
     private sealed record Pack(string Engine, string Tag, string AssetName, string Sha256, string FolderName,
       long DownloadBytes);
 
-    // Bumping a pack means publishing the new tag and changing Tag and Sha256 together; old releases are never
-    // overwritten once an app build that pins them exists, so an installed app keeps pointing at bytes that will still
-    // exist. The packs below were still free to be replaced under their own tag, which is how the first piper-1.0
-    // digest (059241c0...) differs from the one here: it was rebuilt with onnxruntime aligned to Kokoro's.
+    /*
+     * Bumping a pack means publishing the new tag and changing Tag and Sha256 together; old releases are never
+     * overwritten once an app build that pins them exists, so an installed app keeps pointing at bytes that will still
+     * exist. Both packs below have been replaced under their own tag anyway - onnxruntime aligned between them first,
+     * then more voices in each - which is defensible only because nothing shipped can pin what it never had: master
+     * carries no pack code at all, so the sole builds that ever fetched these assets are builds of this branch. Neither
+     * replacement touched a binary: a signature covers the bytes of one PE file rather than the archive around it, so
+     * adding voices and regenerating manifest.json leaves every DLL inside exactly as signed. What does change is the
+     * digest pinned here, which has to go up with the asset rather than ahead of it.
+     */
     private static readonly Dictionary<string, Pack> Packs = new(StringComparer.OrdinalIgnoreCase)
     {
       [AudioManager.PiperEngine] = new Pack(AudioManager.PiperEngine, "piper-1.0", "piper-1.0.zip",
-        "dc24d7f9673b28b9e18a0801f0492107ad8c2b6e6ba6645ca67488b703f76451", "piper-tts", 348L * 1024 * 1024),
-      // Voices added to a pack change its bytes, so the pin changes with them. Replacing this asset under its own tag
-      // was open because nothing shipped pins the old digest: the downloader first exists in this branch, and master -
-      // every build users have - has no pack code at all. The files already inside were left byte for byte alone, which
-      // is what keeps their signatures valid; only manifest.json and the archive digest are new.
+        "4d51eb9e821252aecc14024b5cb5ffc2d21e9d2cd242f9870a7ea8c52868e311", "piper-tts", 682L * 1024 * 1024),
       [AudioManager.KokoroEngine] = new Pack(AudioManager.KokoroEngine, "kokoro-1.0", "kokoro-1.0.zip",
         "6f4728392c15fe6da8cbb115ed3a227c334f426e12598bd4482e9863abc48783", "kokoro", 228L * 1024 * 1024)
     };
@@ -149,7 +151,7 @@ namespace EQLogParser.Audio
       AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolvePackNative;
     }
 
-    /* Approximate archive size, for "Download Piper (348 MB)" style button wording. */
+    /* Approximate archive size, for "Download Piper (682 MB)" style button wording. */
     internal static long GetDownloadBytes(string engine) =>
       Packs.TryGetValue(engine, out var pack) ? pack.DownloadBytes : 0;
 
