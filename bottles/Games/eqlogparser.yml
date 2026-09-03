@@ -3,7 +3,12 @@ Description: EQLogParser v2.3.62
 Grade: Gold
 Arch: win64
 
+# vcredist2022 is not optional. The speech engines download a Microsoft onnxruntime that imports msvcp140,
+# msvcp140_1, vcruntime140 and vcruntime140_1, none of which Wine supplies; without the redistributable an
+# installed Piper or Kokoro pack loads its files and then stays silent with
+# "Unable to load DLL 'onnxruntime' ... Module not found".
 Dependencies:
+- vcredist2022
 - dotnetdesktop8
 - allfonts
 
