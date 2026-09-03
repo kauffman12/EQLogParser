@@ -1,6 +1,8 @@
 using EQLogParser.Audio;
+using log4net;
 using System;
 using System.Globalization;
+using System.Reflection;
 using System.Windows.Data;
 
 namespace EQLogParser
@@ -12,6 +14,8 @@ namespace EQLogParser
   /// </summary>
   public class VoiceNameConverter : IValueConverter
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
       value is string { Length: > 0 } voice ? LabelOf(voice) : value;
 
@@ -27,7 +31,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        System.Diagnostics.Debug.WriteLine($"Unable to label voice '{voice}': {ex.Message}");
+        Log.Debug($"Unable to label voice '{voice}'", ex);
         return voice;
       }
     }

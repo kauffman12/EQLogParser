@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser.Audio
@@ -40,6 +41,14 @@ namespace EQLogParser.Audio
     // matter how many engine instances come and go.
     private static string _nativeInitializedRoot;
     private static readonly object _nativeLock = new();
+
+    /*
+     * One each for the two ways Piper answers with silence instead of an exception. Both are said per event - a voice
+     * fails once per player that binds it, an empty synthesis once per callout - so only the first of each is worth
+     * Warn; the rest is the same fact repeated and belongs at Debug. See WarnOnce.
+     */
+    private static int _loadFailureReported;
+    private static int _silentSynthesisReported;
 
     private readonly ConcurrentDictionary<string, PlayerVoice> _players = new();
 
@@ -164,6 +173,23 @@ namespace EQLogParser.Audio
       catch (Exception ex)
       {
         Log.Debug("Unable to remove piper voice", ex);
+      }
+    }
+
+    /*
+     * The first time, say it out loud; every time after, mutter. A callout path that fails logs once per utterance and
+     * a bind path fails once per player, which is the chatter that buries the entry somebody actually needs - the
+     * first one carries the whole message, so nothing is lost by putting the repeats at Debug.
+     */
+    private static void WarnOnce(ref int reported, string message)
+    {
+      if (Interlocked.Exchange(ref reported, 1) == 0)
+      {
+        Log.Warn(message);
+      }
+      else
+      {
+        Log.Debug(message);
       }
     }
 
@@ -526,7 +552,8 @@ namespace EQLogParser.Audio
          */
         if (PiperInterop.loadVoice(playerId, modelPath, configPath) == -1)
         {
-          Log.Warn($"Piper could not load the '{voiceInfo.Name}' voice for '{playerId}' from {modelPath}");
+          WarnOnce(ref _loadFailureReported,
+            $"Piper could not load the '{voiceInfo.Name}' voice for '{playerId}' from {modelPath}");
           return null;
         }
 
@@ -552,9 +579,11 @@ namespace EQLogParser.Audio
         var size = PiperInterop.synthesize(playerId, text, out var audioBuffer);
         if (size <= 0 || audioBuffer == IntPtr.Zero)
         {
-          // Silence with no exception is how a voice that is not loaded under that id answers. Worth a line: it looks
-          // exactly like the audio device being broken from the user's side.
-          Log.Warn($"Piper produced no speech from '{playerId}' (size {size}); is a voice loaded under that id?");
+          // Silence with no exception is how a voice that is not loaded under that id answers. Worth a line - it looks
+          // exactly like the audio device being broken from the user's side - but only the first one: this runs per
+          // callout, and a whole fight of them would fill the rolling log with one fact.
+          WarnOnce(ref _silentSynthesisReported,
+            $"Piper produced no speech from '{playerId}' (size {size}); is a voice loaded under that id?");
           return null;
         }
 

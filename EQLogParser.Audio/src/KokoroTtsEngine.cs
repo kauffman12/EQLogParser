@@ -72,6 +72,10 @@ namespace EQLogParser.Audio
     private static string _voicesLoadedFrom;
     private static string _voicesLoadAttemptedFrom;
     private static bool _voicesLoadFailed;
+
+    // Whether the "a different pack directory needs a restart" line has been said yet. The branch that raises it runs
+    // on every voice lookup once true, so the repeats go to Debug rather than filling the log with one sentence.
+    private static bool _crossDirectoryReported;
     private static readonly object _voicesLock = new();
 
     private readonly ConcurrentDictionary<string, string> _playerVoices = [];
@@ -347,8 +351,18 @@ namespace EQLogParser.Audio
           if (_voicesLoadedFrom is not null && _voicesPath is not null &&
               !string.Equals(_voicesLoadedFrom, _voicesPath, StringComparison.OrdinalIgnoreCase))
           {
-            Log.Warn($"Kokoro voices are already loaded from {_voicesLoadedFrom}; " +
-              $"restart EQLogParser to use {_voicesPath}");
+            var message = $"Kokoro voices are already loaded from {_voicesLoadedFrom}; " +
+              $"restart EQLogParser to use {_voicesPath}";
+
+            if (_crossDirectoryReported)
+            {
+              Log.Debug(message);
+            }
+            else
+            {
+              _crossDirectoryReported = true;
+              Log.Warn(message);
+            }
           }
 
           return true;
