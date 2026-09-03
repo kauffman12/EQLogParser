@@ -149,21 +149,14 @@ Type: files; Name: "{app}\data\releasenotes.pdf"
 Type: files; Name: "{app}\data\triggerVariables.pdf"
 Type: files; Name: "{app}\data\triggerVariables.rtf"
 
-; Speech runtimes are read from %LOCALAPPDATA%\EQLogParser only. Nothing under {app} is consulted any more, so what
-; installs before packs left behind -- a bundled piper-tts, the Kokoro voices, the support assemblies KokoroSharp pulled
-; in -- is inert data at this point. Deleting it reclaims roughly 150MB on upgrade and cannot silence anything: those
-; paths stopped being searched in the release the pack downloader shipped.
-Type: filesandordirs; Name: "{app}\piper-tts"
-Type: filesandordirs; Name: "{app}\voices"
-Type: files; Name: "{app}\MisakiSharp.dll"
-Type: files; Name: "{app}\NumSharp.dll"
-Type: files; Name: "{app}\OpenTK.Audio.OpenAL.dll"
-Type: files; Name: "{app}\OpenTK.Core.dll"
-Type: files; Name: "{app}\OpenTK.Mathematics.dll"
-Type: files; Name: "{app}\System.Numerics.Tensors.dll"
-
-; Not deleted: {app}\runtimes\win-x64 also holds natives other packages need (SQLite among them). This installer does not
-; create that folder and nothing here can say what an older install left inside it, so it is left to the uninstaller.
+; Deliberately NOT deleted: anything the speech engines used to live in. Releases through 2.3.61 installed Piper at
+; {app}\piper-tts and its voices under {app}\piper-tts\voices; 2.3.62 reads speech only from
+; %LOCALAPPDATA%\EQLogParser\<engine>-<version>, so those files are inert -- but users put their own Piper voices in that
+; folder, and deleting someone's models on upgrade is worse than leaving a few hundred MB of dead weight for them to move
+; by hand. The uninstaller still clears {app}.
+;
+; {app}\runtimes\win-x64 is left alone for the same reason: other packages put natives in it (SQLite among them), this
+; installer does not create the folder, and nothing here can say what an older install left inside it.
 
 [Code]
 // Delete old logs

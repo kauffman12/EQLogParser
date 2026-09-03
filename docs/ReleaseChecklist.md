@@ -59,10 +59,11 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
 
    A fresh install therefore ships Windows voices only; Piper and Kokoro appear in the TTS Engine dialog as a download.
    Nothing reads a speech runtime under `{app}` any more — `%LOCALAPPDATA%\EQLogParser\<engine>-<version>` is the only
-   place the engines look — so whatever `[InstallDelete]` names there is inert, and removing it cannot silence anything.
-   How much that reclaims depends entirely on what the machine ran: a `EQLogParser-install-pipertts-*` install carries a
-   whole `{app}\piper-tts` (binaries, `espeak-ng-data`, twelve voices) and frees several hundred MB, a pre-release build
-   of the pack work leaves Kokoro's support assemblies and `{app}\voices`, and an ordinary install has none of it and
-   loses only the small retired dlls listed above. An upgrader who had Piper app-local gets it back from the dialog.
+   place the engines look — but `[InstallDelete]` deliberately does **not** clean up what used to live there. Releases
+   through 2.3.61 put Piper at `{app}\piper-tts` with voices underneath, and users put their own voice models in that
+   folder; leaving a few hundred inert MB is better than deleting files somebody added. The uninstaller still clears
+   `{app}`. So `[InstallDelete]` stays what it always was — libraries this project dropped years ago (`ActiproSoftware.*`,
+   `LiveCharts*`, `Hardcodet.*`, `NumericUpDownLib`, `Syncfusion.SfRichTextBoxAdv`, `WPFTextBoxAutoComplete`) and
+   superseded docs under `{app}\data` — never a user's files, and never a name the current `[Files]` section installs.
 
    If this release bumps `Microsoft.ML.OnnxRuntime` or `KokoroSharp`, the published Kokoro pack has to be rebuilt against it and `TtsPackManager` re-pointed at the new tag: the installed managed ONNX wrapper and the pack's native `onnxruntime.dll` must be the same version, and KokoroSharp runs on top of everything in the pack.
