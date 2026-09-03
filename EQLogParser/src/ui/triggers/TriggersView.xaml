@@ -62,9 +62,14 @@
           <syncfusion:SfRangeSlider Name="volumeSlider" Height="300" Minimum="0" Maximum="100" LabelOrientation="Horizontal" TickFrequency="10" ValuePlacement="BottomRight" ShowValueLabels="True" Orientation="Vertical" PreviewMouseLeftButtonUp="VolumeSliderChanged"/>
         </Border>
       </Popup>
-      <Button x:Name="ttsEngineButton" Margin="0,0,4,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}" ToolTip="Choose the Text-to-Speech engine. Piper and Kokoro are local and free, and download their runtime when you enable them" Click="TtsEngineClick">TTS Engine</Button>
-      <Button x:Name="dictButton" Margin="0,0,4,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Phonetic Dictionary" Click="DictionaryClick">Dictionary</Button>
-      <Button x:Name="quickShareButton" Margin="0,0,8,1" Padding="8,0,8,0" IsEnabled="True" Height="{DynamicResource EQButtonHeight}"  ToolTip="Quick Share Settings and Received Log" Click="QuickShareClick">Quick Shares</Button>
+      <!-- What were the TTS Engine / Dictionary / Quick Shares buttons; the items keep those tooltips and reuse their Click handlers. -->
+      <syncfusion:DropDownButtonAdv Label="Settings" IconHeight="0" IconWidth="5" Height="{DynamicResource EQButtonHeight}" Padding="4,0,4,0" Margin="0,0,8,1">
+        <syncfusion:DropDownMenuGroup>
+          <syncfusion:DropDownMenuItem Header="Dictionary" ToolTip="Phonetic Dictionary" Click="DictionaryClick" />
+          <syncfusion:DropDownMenuItem Header="Quick Shares" ToolTip="Quick Share Settings and Received Log" Click="QuickShareClick" />
+          <syncfusion:DropDownMenuItem Header="TTS Engine" ToolTip="Choose the Text-to-Speech engine. Piper and Kokoro are local and free, and download their runtime when you enable them" Click="TtsEngineClick" />
+        </syncfusion:DropDownMenuGroup>
+      </syncfusion:DropDownButtonAdv>
     </StackPanel>
     <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>
