@@ -144,6 +144,12 @@ namespace EQLogParser.Wpf.Test
       var fresh = TtsEngineWindow.PlanHint(AudioManager.KokoroEngine, true, true, true, true, null);
       StringAssert.Contains(fresh.Text, "currently in use");
       Assert.IsNull(fresh.BrushKey);
+
+      // The setting is plain text and gets hand edited: a saved 'kokoro' names the engine that is speaking rather
+      // than one that failed to come up, and must not be reported as a fallback.
+      var typed = TtsEngineWindow.PlanHint(AudioManager.KokoroEngine, true, true, true, true, "kokoro");
+      StringAssert.Contains(typed.Text, "currently in use");
+      Assert.IsNull(typed.BrushKey);
     }
 
     [TestMethod]

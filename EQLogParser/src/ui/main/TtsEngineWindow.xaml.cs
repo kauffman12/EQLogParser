@@ -469,7 +469,9 @@ namespace EQLogParser
     {
       if (active)
       {
-        return string.IsNullOrEmpty(saved) || saved == engine
+        // The setting is plain text that gets hand edited or copied between machines, so a saved "piper" agrees with
+        // the Piper engine that is speaking; comparing the two by case would blame an engine that came up fine.
+        return string.IsNullOrEmpty(saved) || string.Equals(saved, engine, StringComparison.OrdinalIgnoreCase)
           ? ("This is the engine currently in use.", null)
           // Something is speaking that is not what was asked for, which is worth colouring: an engine failed to come
           // up and the fallback took over quietly.
