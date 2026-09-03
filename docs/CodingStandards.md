@@ -12,12 +12,23 @@
 ## Indentation and Formatting
 
 - **2-space indentation** throughout all files
-- Braces on same line for class/method declarations
-- Braces on new line for control structures (if/else/for/while)
+- Allman braces: the opening brace goes on its own line for classes, methods and control structures alike (`.editorconfig` `csharp_new_line_before_open_brace = all`)
 - **Never use single-line try/catch blocks** — always use multi-line brace style, even for simple bodies
 - Consistent spacing around operators and after commas
 - Logical grouping of related methods with blank lines
 - Line length limited to ~120 characters
+
+### Visual Studio Cleanup Code
+
+The root `.editorconfig` is the single source of truth for style. Run Visual Studio's **Cleanup Code** (or `dotnet format`) on every file you touch and commit the result rather than hand-formatting around it. The enforced choices that differ from what most editors default to:
+
+- **No space after a cast**: `(ITtsEngine)null`, not `(ITtsEngine) null` (`csharp_space_after_cast = false`).
+- **`var` wherever the type is apparent** — including built-in types and `out` arguments: `var total = 0L;`, `if (cache.TryGetValue(key, out var entry))`.
+- **Local functions get `static`** when they do not use instance state: `static int CountAll(List<ExportTriggerNode> list) => ...`.
+- **Parentheses for clarity** in mixed arithmetic: `_from + ((_to - _from) * Math.Clamp(fraction, 0f, 1f))`.
+- **Collection expressions and `new(...)`** where the type matches loosely: `Nodes = [.. children]`, `= new(180 + ...)`, `?? []` for an empty collection.
+- **Operators start the continuation line** when a statement wraps (`dotnet_style_operator_placement_when_wrapping = beginning_of_line`).
+- **Unused `using` directives are removed** (IDE0005); keep only the directives the file actually needs.
 
 ## Naming Conventions
 
@@ -31,7 +42,7 @@
 - Async suffix: `Async` for asynchronous methods
 
 ### Variables
-- prefer use of var over naming the type when possible
+- use `var` whenever the type is apparent from the right-hand side, including built-in types and `out` arguments — see **Visual Studio Cleanup Code**
 - camelCase (e.g., `_assassinateEnabled`, `_mainWindow`)
 - Short, meaningful names (e.g., `wrapper`, `lineData`, `matches`)
 - Descriptive names for complex data (e.g., `dynamicDuration`, `swTime`)
@@ -62,7 +73,7 @@
 
 - Use `/* ... */` comment blocks for method, class, enum, and field documentation
 - XML documentation comments (`/// <summary>`) are **only** for WPF component class headers (e.g., `TriggersView`, `ConditionEditor`) where tooling or designers may consume them
-- **Remove unused `using` statements** — run `dotnet format` or your IDE's cleanup to auto-remove them before committing
+- **Remove unused `using` statements** (IDE0005) — see **Visual Studio Cleanup Code**; the cleanup runs on every touched file before commit
 - Methods are ordered by visibility (public first, then internal, then private)
 - Related methods are grouped together
 - Lifecycle methods grouped together
