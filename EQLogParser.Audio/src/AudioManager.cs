@@ -52,9 +52,11 @@ namespace EQLogParser.Audio
     private readonly ConcurrentDictionary<string, bool> _isRenderDevice = new();
     /*
      * Engines hold process wide native state (Piper's voice table, Kokoro's inference session), so only one synthesis
-     * runs at a time and no engine is created or released while another thread speaks through one. A phrase already in
-     * the cache takes neither this gate nor an engine at all, which is what keeps a burst of familiar callouts from
-     * queueing behind a neural synthesis of something new. See docs/DesignNotes.md -> Speech synthesis and TTS engines.
+     * runs at a time and no engine is created or released while another thread speaks through one - except the
+     * startup build in the constructor, which runs before any player can be registered to speak with. A phrase
+     * already in the cache takes neither this gate nor an engine at all, which is what keeps a burst of familiar
+     * callouts from queueing behind a neural synthesis of something new.
+     * See docs/DesignNotes.md -> Speech synthesis and TTS engines.
      */
     private readonly SemaphoreSlim _synthGate = new(1, 1);
 
@@ -71,8 +73,17 @@ namespace EQLogParser.Audio
      * Swapped in place when the user picks another engine mid session. volatile so a thread that reads it without the
      * lock sees whoever is actually speaking; anything about to call into it holds _engineLock first, except synthesis
      * and warm-up, which run under _synthGate for exactly as long as a switch holds it.
+     *
+     * It is null only while _engineReady is out: startup awaits LoadValidVoicesAsync before the main window shows, and
+     * players register and voice dropdowns open only after it, so no engine call can land in that window.
      */
     private volatile ITtsEngine _tts;
+
+    /*
+     * The build of the engine the session starts with, running on the thread pool from the constructor. The one point
+     * that waits for it is LoadValidVoicesAsync; see the comment above _tts for why nothing else can get there first.
+     */
+    private readonly Task _engineReady;
 
     /*
      * What the host asked each player to speak with. The engine decides whether it can honor that name, and this is
@@ -127,13 +138,44 @@ namespace EQLogParser.Audio
       // before an engine built against it reaches for a type or a native library.
       TtsPackManager.EnsureResolversRegistered();
 
-      _tts = TtsEngineFactory.Create(_preferredEngine);
-
-      // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
-      if (_tts.Name is KokoroEngine or PiperEngine)
+      /*
+       * Built on the thread pool: a Kokoro session over the 156 MB graph takes seconds, and this constructor runs on
+       * whatever thread touches Instance first - the UI thread at startup. It does not take the synthesis gate: nothing
+       * can synthesize while it is out (players register only after LoadValidVoicesAsync returns, which startup awaits
+       * before showing the main window), and a fire-and-forget task must not be left holding the gate if the app
+       * closes before it finishes.
+       */
+      _engineReady = Task.Run(() =>
       {
-        Log.Info($"Using {_tts.Name.ToLowerInvariant()}-tts");
-      }
+        ITtsEngine engine;
+
+        try
+        {
+          engine = TtsEngineFactory.Create(_preferredEngine);
+        }
+        catch (Exception ex)
+        {
+          // The factory guards every engine itself and is not expected to throw, but a null here would reach every
+          // caller of Instance, so the last resort is the engine that needs nothing on disk.
+          Log.Error("Unable to create the TTS engine", ex);
+          engine = new WindowsTtsEngine();
+        }
+
+        if (_disposed)
+        {
+          // The app closed while the build was out; there is no session left for this engine to speak for.
+          engine.Dispose();
+          return;
+        }
+
+        _tts = engine;
+
+        // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
+        if (engine.Name is KokoroEngine or PiperEngine)
+        {
+          Log.Info($"Using {engine.Name.ToLowerInvariant()}-tts");
+        }
+      });
     }
 
     public bool IsEngineAvailable(string engine) => EngineIsAvailable(TtsEngineFactory.Normalize(engine));
@@ -183,7 +225,10 @@ namespace EQLogParser.Audio
     /// selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
     public async Task<bool> SwitchEngineAsync(string engine)
     {
-      if (_disposed) return false;
+      if (_disposed)
+      {
+        return false;
+      }
 
       var wanted = TtsEngineFactory.Normalize(engine);
 
@@ -344,10 +389,13 @@ namespace EQLogParser.Audio
     /*
      * Proves the engine that started the session. Takes the synthesis gate because proving voices is engine lifecycle
      * work, the same as the creation and release a switch performs; nothing may speak with an engine while it runs,
-     * and this must not run against an engine somebody else has already retired.
+     * and this must not run against an engine somebody else has already retired. Also the single point that waits for
+     * the constructor's thread pool build of that engine.
      */
     public async Task LoadValidVoicesAsync()
     {
+      await _engineReady.ConfigureAwait(false);
+
       var engine = _tts;
 
       await _synthGate.WaitAsync().ConfigureAwait(false);
@@ -1584,7 +1632,10 @@ namespace EQLogParser.Audio
 
     protected virtual void Dispose(bool disposing)
     {
-      if (_disposed) return;
+      if (_disposed)
+      {
+        return;
+      }
 
       if (disposing)
       {

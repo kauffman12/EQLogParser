@@ -172,8 +172,16 @@ namespace EQLogParser.Audio
       {
         lock (_tableLock)
         {
-          var sample = playerId is not null && _players.TryGetValue(playerId, out var player) ? player.SampleRate : 0;
-          return (SynthesizeNative(playerId, text), sample);
+          // The binding is the normal path. A player without one - a voice that could not be loaded - would otherwise
+          // speak through an id piper never received a model for: no exception, no audio, while GetVoice still reports
+          // this engine's default. That mismatch is worse than speaking, so the default goes out instead.
+          if (playerId is not null && _players.TryGetValue(playerId, out var player))
+          {
+            return (SynthesizeNative(playerId, text), player.SampleRate);
+          }
+
+          var (speaker, sampleRate) = ResolveAdHocSpeaker(GetDefaultVoice());
+          return string.IsNullOrEmpty(speaker) ? (null, 0) : (SynthesizeNative(speaker, text), sampleRate);
         }
       }).ConfigureAwait(false);
 
@@ -212,7 +220,8 @@ namespace EQLogParser.Audio
      * hear it again - and the old behaviour of dropping the voice when each one finished meant paying for the model
      * again on every single one.
      *
-     * Called with _tableLock held, by SpeakAdHoc only: it both reads and rewires the native table.
+     * Called with _tableLock held, by SpeakAdHoc and the unbound fallback in SynthesizeForPlayerAsync: it both reads
+     * and rewires the native table.
      */
     private (string speaker, int sampleRate) ResolveAdHocSpeaker(string voice)
     {
@@ -317,16 +326,16 @@ namespace EQLogParser.Audio
       }
     }
 
+    /* voices.json already names these; this is that lookup, and nothing when the name belongs to another engine. */
+    private PiperVoice FindNamed(string voice) => _voiceData?.Voices?.FirstOrDefault(candidate =>
+      string.Equals(candidate.Name, voice, StringComparison.OrdinalIgnoreCase));
+
     /*
      * Which locale to print beside a Piper voice's name. A pack may say so in voices.json; almost always the model's
      * own metadata does (language.code, "en_US"); and where neither can be read the file name still tells it, since
      * piper voices are named locale first (en_US-lessac-medium.onnx). Nothing spoken depends on any of this, so a
      * voice whose metadata cannot be read simply goes without the suffix.
      */
-    /* voices.json already names these; this is that lookup, and nothing when the name belongs to another engine. */
-    private PiperVoice FindNamed(string voice) => _voiceData?.Voices?.FirstOrDefault(candidate =>
-      string.Equals(candidate.Name, voice, StringComparison.OrdinalIgnoreCase));
-
     private static string ResolveLocale(string root, PiperVoice voice)
     {
       // A pack that declares the locale outright needs no file read at all.

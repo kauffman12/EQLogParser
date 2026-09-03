@@ -86,20 +86,7 @@ namespace EQLogParser.Audio
      */
     internal static ITtsEngine Create(string preferredEngine)
     {
-      var order = Normalize(preferredEngine) switch
-      {
-        AudioManager.KokoroEngine =>
-          new[] { AudioManager.KokoroEngine, AudioManager.PiperEngine, AudioManager.WindowsEngine },
-        AudioManager.PiperEngine => new[] { AudioManager.PiperEngine, AudioManager.WindowsEngine },
-        // Someone who asked for Windows voices on a machine that turns out not to have them (Wine, a stripped image)
-        // is better off with an engine that can speak than with the preference honored and silence delivered.
-        AudioManager.WindowsEngine => WindowsTtsEngine.IsAvailable()
-          ? new[] { AudioManager.WindowsEngine }
-          : new[] { AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine },
-        _ => new[] { AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine }
-      };
-
-      foreach (var name in order)
+      foreach (var name in FallbackOrder(preferredEngine))
       {
         if (CreateNamed(name) is { } engine)
         {
@@ -112,6 +99,22 @@ namespace EQLogParser.Audio
       // and says why, which is where this user goes next.
       return new WindowsTtsEngine();
     }
+
+    /*
+     * The engines Create tries for a preference, most wanted first: the preference leads where it is one of the two
+     * pack engines, otherwise the historic Piper, Kokoro, Windows order. A preference falls through to the next
+     * engine that can speak rather than failing - a Piper whose pack was removed or will not load keeps getting an
+     * installed Kokoro before the Windows voices, which are the last resort and need no files at all. Someone who
+     * asked for Windows voices on a machine that turns out not to have them (Wine, a stripped image) is better off
+     * with an engine that can speak than with the preference honored and silence delivered.
+     */
+    internal static string[] FallbackOrder(string preferredEngine) => Normalize(preferredEngine) switch
+    {
+      AudioManager.WindowsEngine when WindowsTtsEngine.IsAvailable() => [AudioManager.WindowsEngine],
+      AudioManager.KokoroEngine =>
+        [AudioManager.KokoroEngine, AudioManager.PiperEngine, AudioManager.WindowsEngine],
+      _ => [AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine]
+    };
 
     /*
      * The canonical spelling of an engine name. Settings are plain text: hand edited, copied between machines, or

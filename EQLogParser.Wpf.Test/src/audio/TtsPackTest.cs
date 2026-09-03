@@ -50,6 +50,43 @@ namespace EQLogParser.Wpf.Test
 
     #endregion
 
+    #region Fallback order
+
+    /*
+     * A preference that cannot be honored falls through rather than failing, and the fall-through goes to the next
+     * engine the machine actually has: a Piper whose pack was removed or will not load keeps getting an installed
+     * Kokoro before the Windows voices. Without the Kokoro in the middle this user would skip straight to the last
+     * resort even though they chose Piper knowing speech was expected.
+     */
+    [TestMethod]
+    public void FallbackOrder_PiperPreference_TriesKokoroBeforeTheWindowsVoices()
+    {
+      var order = TtsEngineFactory.FallbackOrder(AudioManager.PiperEngine);
+
+      Assert.AreEqual(AudioManager.PiperEngine, order[0]);
+      CollectionAssert.Contains(order, AudioManager.KokoroEngine);
+      Assert.IsTrue(Array.IndexOf(order, AudioManager.KokoroEngine) < Array.IndexOf(order, AudioManager.WindowsEngine),
+        "A Piper preference must reach an installed Kokoro before the Windows voices.");
+    }
+
+    [TestMethod]
+    public void FallbackOrder_NoOrUnrecognizedPreference_KeepsTheHistoricOrder()
+    {
+      var historic = new[] { AudioManager.PiperEngine, AudioManager.KokoroEngine, AudioManager.WindowsEngine };
+
+      CollectionAssert.AreEqual(historic, TtsEngineFactory.FallbackOrder(null));
+      CollectionAssert.AreEqual(historic, TtsEngineFactory.FallbackOrder(string.Empty));
+      CollectionAssert.AreEqual(historic, TtsEngineFactory.FallbackOrder("espeak"));
+    }
+
+    [TestMethod]
+    public void FallbackOrder_KokoroPreference_StartsWithKokoro()
+    {
+      Assert.AreEqual(AudioManager.KokoroEngine, TtsEngineFactory.FallbackOrder(AudioManager.KokoroEngine)[0]);
+    }
+
+    #endregion
+
     #region Digests
 
     [TestMethod]

@@ -554,18 +554,25 @@ namespace EQLogParser.Audio
      * So the winner has to be chosen deliberately rather than fall out of which engine the user spoke from first.
      *
      * The right winner is Kokoro's copy, because that one is published alongside the Microsoft.ML.OnnxRuntime wrapper
-     * installed with the app and repacked whenever the wrapper version moves. Piper vendors its own build (1.14 today,
-     * against a 1.22 wrapper) and it is the side that loses harmlessly: the ORT C API is versioned and old models keep
-     * running on a newer runtime, while the older one refuses Kokoro's graphs outright -- "Unsupported model IR
-     * version: 9" about a download that is perfectly fine. Loading a newer Piper build over a newer wrapper would be
-     * just as wrong the other way round, which is why this matches rather than compares versions.
+     * installed with the app and repacked whenever the wrapper version moves. Piper's pack carries the same version
+     * today (the two are kept in step, see piper-tts\README.md), so either would do; if they ever drift, the older one
+     * is the side that loses harmlessly: the ORT C API is versioned and old models keep running on a newer runtime,
+     * while the older one refuses Kokoro's graphs outright -- "Unsupported model IR version: 9" about a download that
+     * is perfectly fine. Loading a newer Piper build over a newer wrapper would be just as wrong the other way round,
+     * which is why this matches rather than compares versions.
      */
     internal static void PreferMatchingOnnxRuntime()
     {
-      if (ResolveRoot(AudioManager.KokoroEngine) is not string root) return;
+      if (ResolveRoot(AudioManager.KokoroEngine) is not string root)
+      {
+        return;
+      }
 
       var path = Path.Combine(root, "native", OnnxRuntimeFileName);
-      if (!File.Exists(path)) return;
+      if (!File.Exists(path))
+      {
+        return;
+      }
 
       // An absolute path loads that file and lets its own dependencies come from the same folder.
       if (NativeLibrary.TryLoad(path, typeof(TtsPackManager).Assembly,

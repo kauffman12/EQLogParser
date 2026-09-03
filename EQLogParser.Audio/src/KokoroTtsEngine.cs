@@ -211,7 +211,8 @@ namespace EQLogParser.Audio
           return null;
         }
 
-        // Creating the session over a 156MB graph takes seconds; callers keep it off the UI thread.
+        // Creating the session over a 156MB graph takes seconds. Callers keep it off the UI thread: the startup build
+        // runs on the thread pool in AudioManager's constructor, and a mid-session switch already does.
         engine._synth = KokoroWavSynthesizer.LoadModel(engine._modelPath);
 
         // A pack whose embeddings cannot be read is not an engine: every voice lookup would answer with nothing and

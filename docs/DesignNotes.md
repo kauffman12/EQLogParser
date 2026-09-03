@@ -160,9 +160,15 @@ app runs.
 
 Each engine implements `ITtsEngine` (`EQLogParser.Audio/src`) and owns its own per player voice state. A factory walks
 the configured preference (settings key `TtsEngine`, set from the **TTS Engine** button on the Triggers toolbar) and
-falls back to Piper and then the Windows voices, so a missing model or voice pack is a silent downgrade rather than an
-error dialog. Engine names are matched case insensitively at every boundary (`TtsEngineFactory.Normalize`) because the
-setting is plain text somebody can edit.
+falls back through the remaining engines in order - a Piper whose pack is missing or will not load reaches an installed
+Kokoro before the Windows voices, which are the last resort and need no files at all - so a missing model or voice pack
+is a silent downgrade rather than an error dialog. Engine names are matched case insensitively at every boundary
+(`TtsEngineFactory.Normalize`) because the setting is plain text somebody can edit.
+
+The session's first engine is built on the thread pool from the `AudioManager` constructor, not inline: a Kokoro
+session over the 156 MB model graph takes seconds, and that constructor runs on the UI thread the moment startup
+touches `Instance`. `LoadValidVoicesAsync` is the single point that waits for the build - startup awaits it before the
+main window shows, players register only after it - so the engine field can be null only in that window.
 
 Before this seam `AudioManager` carried `_usePiper` / `_useKokoro` booleans consulted at a dozen sites — voice listing,
 default voice, per player voice binding, synthesis, sample rates, shutdown — and kept a synth object per engine inside
