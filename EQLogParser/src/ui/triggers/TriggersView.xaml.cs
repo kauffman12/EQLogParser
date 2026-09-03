@@ -486,7 +486,10 @@ namespace EQLogParser
             {
               _theConfig.Voice = voiceName;
               await TriggerStateDB.Instance.UpdateConfig(_theConfig);
-              tts = voiceName;
+
+              // What is stored is the identifier and what is spoken is the name: reading 'af_heart' aloud spells the
+              // letters out instead of introducing the voice that was just picked.
+              tts = AudioManager.Instance.GetVoiceSpokenName(voiceName);
             }
           }
           else if (Equals(sender, rateOption))

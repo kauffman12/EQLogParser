@@ -181,7 +181,8 @@ namespace EQLogParser
         }
         else if (Equals(sender, voices))
         {
-          tts = voice;
+          // The name rather than the identifier: handed straight to a synthesizer, 'bm_george' is read as letters.
+          tts = AudioManager.Instance.GetVoiceSpokenName(voice);
         }
         else if (Equals(sender, volumeOption))
         {

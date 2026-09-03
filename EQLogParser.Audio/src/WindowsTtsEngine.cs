@@ -302,6 +302,9 @@ namespace EQLogParser.Audio
      */
     public string GetVoiceDisplayName(string voice) => voice;
 
+    // Windows names its voices the way a person would already, and a preview has always said that whole name.
+    public string GetVoiceSpokenName(string voice) => voice;
+
     public string GetVoice(string playerId)
     {
       lock (_lock)

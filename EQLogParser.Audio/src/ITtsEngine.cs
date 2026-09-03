@@ -40,6 +40,14 @@ namespace EQLogParser.Audio
      */
     string GetVoiceDisplayName(string voice);
 
+    /*
+     * What to say out loud when somebody asks to hear this voice. Not the display name: a preview that reads
+     * "af_heart (US)" aloud says letters and an abbreviation, so this hands back the name inside it - "Heart". The
+     * value a voice is stored under and everything spoken on air are untouched by this; it exists for the one place
+     * that speaks a voice's own name, which is the preview fired when a dropdown selection changes.
+     */
+    string GetVoiceSpokenName(string voice);
+
     /* The voice a player will actually speak with, empty resolved to the default. Used for cache keys and logs. */
     string GetVoice(string playerId);
 

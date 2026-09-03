@@ -88,10 +88,10 @@ namespace EQLogParser.Audio
     public string GetDefaultVoice() => _voiceData?.Voices?.FirstOrDefault()?.Name;
 
     public string GetVoiceDisplayName(string voice) =>
-      _voiceData?.Voices?.FirstOrDefault(candidate =>
-        string.Equals(candidate.Name, voice, StringComparison.OrdinalIgnoreCase)) is { } found
-        ? FormatDisplayName(found.Name, found.Locale)
-        : voice;
+      FindNamed(voice) is { } found ? FormatDisplayName(found.Name, found.Locale) : voice;
+
+    /* The name on its own, which is what a preview says: the locale tag is for reading, not for hearing. */
+    public string GetVoiceSpokenName(string voice) => FindNamed(voice)?.Name ?? voice;
 
     public string GetVoice(string playerId) =>
       playerId is not null && _players.TryGetValue(playerId, out var player) && !string.IsNullOrEmpty(player.Name)
@@ -323,6 +323,10 @@ namespace EQLogParser.Audio
      * piper voices are named locale first (en_US-lessac-medium.onnx). Nothing spoken depends on any of this, so a
      * voice whose metadata cannot be read simply goes without the suffix.
      */
+    /* voices.json already names these; this is that lookup, and nothing when the name belongs to another engine. */
+    private PiperVoice FindNamed(string voice) => _voiceData?.Voices?.FirstOrDefault(candidate =>
+      string.Equals(candidate.Name, voice, StringComparison.OrdinalIgnoreCase));
+
     private static string ResolveLocale(string root, PiperVoice voice)
     {
       // A pack that declares the locale outright needs no file read at all.

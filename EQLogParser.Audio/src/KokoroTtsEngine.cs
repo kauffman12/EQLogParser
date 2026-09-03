@@ -104,6 +104,8 @@ namespace EQLogParser.Audio
 
     public string GetVoiceDisplayName(string voice) => DisplayNameFor(voice);
 
+    public string GetVoiceSpokenName(string voice) => PlainNameFor(voice);
+
     public string GetVoice(string playerId)
     {
       if (playerId is not null && _playerVoices.TryGetValue(playerId, out var voice) && !string.IsNullOrEmpty(voice))
@@ -234,32 +236,45 @@ namespace EQLogParser.Audio
     }
 
     /*
-     * Confirms the model on disk is the graph we expect. Cheap once the marker matches, so it costs nothing on the
-     * normal startup path; a hand-placed model pays for it once. The pack download already checked both the archive
-     * and this file against its manifest, so a mismatch here means the bytes changed after installation.
-     */
-    /*
      * af_nicole reads "Nicole (US)" and bm_george "George (GB)", which is what somebody picking a voice wants to know:
      * the name they will hear, and whose English it is. Anything that is not shaped like one of this engine's ids - a
      * voice kept from another engine, or an embedding named by hand - comes back exactly as stored rather than being
      * dressed up into something no longer matches the config.
      */
-    internal static string DisplayNameFor(string voice)
+    internal static string DisplayNameFor(string voice) =>
+      ParseVoiceName(voice) is { } parsed ? $"{parsed.Name} ({parsed.Locale})" : voice;
+
+    /*
+     * The name a preview speaks: "Nicole", with neither the locale tag the picker adds nor the letters that lead a
+     * Kokoro id. Read aloud, "af_nicole" is a spelling lesson rather than a voice name, which is what a person hears
+     * when they pick a voice and the app reads its identifier back at them.
+     */
+    internal static string PlainNameFor(string voice) => ParseVoiceName(voice)?.Name ?? voice;
+
+    /*
+     * af_nicole is an American woman called Nicole: [locale][gender]_name. Nothing comes back for anything not shaped
+     * like that, so neither the label nor a preview makes up a name for an id this engine does not have.
+     */
+    private static (string Name, string Locale)? ParseVoiceName(string voice)
     {
       if (voice is not { Length: > 3 } || voice[1] is not ('f' or 'm') || voice[2] != '_')
       {
-        return voice;
+        return null;
       }
 
       if (!_voiceLocales.TryGetValue(char.ToLowerInvariant(voice[0]), out var locale))
       {
-        return voice;
+        return null;
       }
 
-      var name = char.ToUpperInvariant(voice[3]) + voice[4..].Replace('_', ' ');
-      return $"{name} ({locale})";
+      return (char.ToUpperInvariant(voice[3]) + voice[4..].Replace('_', ' '), locale);
     }
 
+    /*
+     * Confirms the model on disk is the graph we expect. Cheap once the marker matches, so it costs nothing on the
+     * normal startup path; a hand-placed model pays for it once. The pack download already checked both the archive
+     * and this file against its manifest, so a mismatch here means the bytes changed after installation.
+     */
     private bool VerifyModel()
     {
       try

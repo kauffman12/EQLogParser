@@ -184,6 +184,12 @@ that the pack carries British voices too. Piper labels a voice with the locale i
 a name that cannot be located goes without a suffix. Windows answers with the name it was handed: "Microsoft David
 Desktop" needs no improvement, and the `(Legacy) ` marking on a System.Speech voice is information rather than noise.
 
+A third form exists because one place says a voice's name out loud. Picking a row in a voice dropdown previews it by
+speaking that name, so `ITtsEngine.GetVoiceSpokenName` returns the name with neither the identifier's leading letters nor
+the locale tag — "Nicole" from `af_nicole`, "Cori" from a Piper pack whose display label reads "Cori (GB)". Handing the
+stored value to a synthesizer instead spells it: Kokoro reads `af_heart` as letters, so choosing Heart was answered by
+somebody reciting "ay eff heart".
+
 ### Synthesis threading and cache
 
 `SpeakTtsAsync`, `TestSpeakTtsAsync`, `SpeakOrSaveTtsAsync` and `TestSpeakFileAsync` are fire-and-forget for their

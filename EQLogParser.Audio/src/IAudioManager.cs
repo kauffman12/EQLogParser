@@ -27,6 +27,12 @@ namespace EQLogParser.Audio
 
     /// <summary>How a voice from GetVoiceList reads in a picker ("Nicole (US)"). Never the stored value.</summary>
     string GetVoiceDisplayName(string voice);
+
+    /// <summary>
+    /// What a preview says when asked for this voice: the name on its own ("Nicole"), never the identifier and never
+    /// the locale tag the picker adds beside it.
+    /// </summary>
+    string GetVoiceSpokenName(string voice);
     void SetVoice(string playerId, string voiceName);
 
     // --- Device selection ---

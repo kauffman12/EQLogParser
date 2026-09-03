@@ -4,9 +4,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser.Wpf.Test.src.audio
 {
   /// <summary>
-  /// Voice pickers show a name a person would use while the value stored and spoken stays the engine's id. The label
-  /// rules live in each engine, so that is what is pinned here: Kokoro reads its accent out of the voice id, Piper out
-  /// of the locale its models declare, Windows leaves well enough alone.
+  /// Voice pickers show a name a person would use while the value stored stays the engine's id, and a preview says the
+  /// name on its own. The rules for both live in each engine, so that is what is pinned here: Kokoro reads its accent
+  /// out of the voice id, Piper out of the locale its models declare, Windows leaves well enough alone.
   /// </summary>
   [TestClass]
   public class TtsVoiceDisplayNameTest
@@ -47,6 +47,33 @@ namespace EQLogParser.Wpf.Test.src.audio
       Assert.AreEqual("af_", KokoroTtsEngine.DisplayNameFor("af_"));
       Assert.AreEqual(string.Empty, KokoroTtsEngine.DisplayNameFor(string.Empty));
       Assert.IsNull(KokoroTtsEngine.DisplayNameFor(null));
+    }
+
+    /*
+     * Picking a voice plays a preview that says that voice's name, so it must carry none of what the picker only
+     * prints: read aloud, "af_heart (US)" is a spelling lesson and an abbreviation rather than a voice introducing
+     * itself.
+     */
+    [TestMethod]
+    public void KokoroSpokenNamesAreTheNameAlone()
+    {
+      Assert.AreEqual("Bella", KokoroTtsEngine.PlainNameFor("af_bella"));
+      Assert.AreEqual("George", KokoroTtsEngine.PlainNameFor("bm_george"));
+      Assert.AreEqual("Emma", KokoroTtsEngine.PlainNameFor("bf_emma"));
+      Assert.AreEqual("Nicole", KokoroTtsEngine.PlainNameFor("af_nicole"));
+
+      Assert.IsFalse(KokoroTtsEngine.PlainNameFor("bm_lewis").Contains('_'));
+      Assert.IsFalse(KokoroTtsEngine.PlainNameFor("bm_lewis").Contains('('));
+    }
+
+    [TestMethod]
+    public void KokoroSpokenNamesFallBackToWhatIsStored()
+    {
+      // A name this engine did not make is not a name it should rewrite, in a preview any more than in the picker.
+      Assert.AreEqual("Microsoft David Desktop", KokoroTtsEngine.PlainNameFor("Microsoft David Desktop"));
+      Assert.AreEqual("qf_xena", KokoroTtsEngine.PlainNameFor("qf_xena"));
+      Assert.AreEqual(string.Empty, KokoroTtsEngine.PlainNameFor(string.Empty));
+      Assert.IsNull(KokoroTtsEngine.PlainNameFor(null));
     }
 
     [TestMethod]
