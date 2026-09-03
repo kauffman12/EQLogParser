@@ -91,5 +91,78 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(Visibility.Visible, downloading.Visibility);
       Assert.IsFalse(downloading.IsEnabled);
     }
+
+    /*
+     * The line under the engine description carries the states a button cannot: whether this engine is speaking now,
+     * and - the one that read as a bug twice - whether the files on disk are a runtime or the leftovers of a removal
+     * that could not finish while an earlier engine still had them mapped.
+     */
+    [TestMethod]
+    public void PlanHint_PackOnDiskAndWorking_OffersTheSwitch()
+    {
+      var hint = TtsEngineWindow.PlanHint(AudioManager.KokoroEngine, true, true, true, false, null);
+
+      StringAssert.Contains(hint.Text, "Press Use");
+      Assert.IsNull(hint.BrushKey);
+    }
+
+    [TestMethod]
+    public void PlanHint_NothingOnDisk_SaysNotInstalled()
+    {
+      var hint = TtsEngineWindow.PlanHint(AudioManager.PiperEngine, false, false, true, false, null);
+
+      StringAssert.Contains(hint.Text, "not installed");
+      Assert.IsNull(hint.BrushKey);
+    }
+
+    [TestMethod]
+    public void PlanHint_HalfARemovedPack_SaysTheFilesDoNotWork()
+    {
+      /*
+       * A directory that exists but is not a usable pack: Download and Remove both have a job to do there, which is
+       * exactly what looks like the dialog contradicting itself unless somebody says what is on disk.
+       */
+      var hint = TtsEngineWindow.PlanHint(AudioManager.PiperEngine, false, true, true, false, null);
+
+      StringAssert.Contains(hint.Text, "incomplete or damaged");
+      StringAssert.Contains(hint.Text, "Download");
+      Assert.IsNotNull(hint.BrushKey);
+
+      // and the button agrees: replacing those files is what the download does
+      var action = TtsEngineWindow.PlanAction(AudioManager.PiperEngine, PiperBytes, false, false, false);
+      StringAssert.StartsWith(action.Content, "Download Piper");
+    }
+
+    [TestMethod]
+    public void PlanHint_InUseWithTheSavedChoice_SaysItPlainly()
+    {
+      var saved = TtsEngineWindow.PlanHint(AudioManager.KokoroEngine, true, true, true, true, "Kokoro");
+      StringAssert.Contains(saved.Text, "currently in use");
+      Assert.IsNull(saved.BrushKey);
+
+      // Nothing saved yet is not a disagreement; the first session has no preference to contradict.
+      var fresh = TtsEngineWindow.PlanHint(AudioManager.KokoroEngine, true, true, true, true, null);
+      StringAssert.Contains(fresh.Text, "currently in use");
+      Assert.IsNull(fresh.BrushKey);
+    }
+
+    [TestMethod]
+    public void PlanHint_InUseAgainstTheSavedChoice_NamesTheFallback()
+    {
+      var hint = TtsEngineWindow.PlanHint(AudioManager.WindowsEngine, true, false, false, true, "Kokoro");
+
+      StringAssert.Contains(hint.Text, "Kokoro");
+      Assert.IsNotNull(hint.BrushKey);
+    }
+
+    [TestMethod]
+    public void PlanHint_NothingAnywhereIsUsable_SaysWhereToGo()
+    {
+      // Windows under Wine: no pack to fetch, no voices to give, and no fix on this row
+      var hint = TtsEngineWindow.PlanHint(AudioManager.WindowsEngine, false, false, false, false, null);
+
+      StringAssert.Contains(hint.Text, "Wine");
+      Assert.IsNotNull(hint.BrushKey);
+    }
   }
 }

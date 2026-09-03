@@ -149,6 +149,10 @@ namespace EQLogParser.Audio
 
       AssemblyLoadContext.Default.Resolving += ResolvePackAssembly;
       AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolvePackNative;
+
+      // Before any runtime is mapped: this is the one moment in a session when files an earlier removal could not
+      // delete are certain to be releasable.
+      SweepParkedRemovals();
     }
 
     /* Approximate archive size, for "Download Piper (682 MB)" style button wording. */
@@ -316,10 +320,22 @@ namespace EQLogParser.Audio
           return false;
         }
 
-        Directory.Delete(target, true);
+        /*
+         * Deleting a pack file by file is not one gesture. Recursive delete walks the tree and throws at the first file
+         * this process still has mapped - a runtime that spoke earlier in this session keeps its libraries loaded until
+         * EQLogParser closes - so it takes some of a runtime with it and leaves the rest behind. That leftover is the
+         * worst state available: too broken to speak with, not gone either, and the dialog has nothing honest to say
+         * about a directory that is half a product.
+         *
+         * Moving the directory aside first is one operation on one object. If the move succeeds, whatever refuses to
+         * delete after it is unreachable and gets reclaimed the next time the app starts; if the move fails, nothing
+         * was touched and the pack is exactly as complete as it was.
+         */
+        var parked = ParkDirectory(target);
+        DeleteTreeQuietly(parked);
 
-        // Anything parked next to it is worth reclaiming in the same gesture: an interrupted install leaves a .staging
-        // or .retired directory behind and this is the one place somebody asks for the space back.
+        // Anything else parked next to it is worth reclaiming in the same gesture: an interrupted install leaves a
+        // .staging or .retired directory behind and this is the one place somebody asks for the space back.
         DeleteTreeQuietly(target + ".staging");
         DeleteTreeQuietly(target + ".retired");
 
@@ -798,6 +814,45 @@ namespace EQLogParser.Audio
 
     // The same, for directories whose disappearance is only worth having: parking the replaced pack, or a leftover the
     // app no longer needs. Failing at those must not fail the job that was actually asked for.
+    /*
+     * Somewhere to move a pack on its way out. Timestamped after the first attempt because a directory parked by an
+     * earlier removal may still be holding files nobody will release until the app closes, and two removals of one
+     * engine must not be stacked on top of each other.
+     */
+    private static string ParkDirectory(string target)
+    {
+      var parked = $"{target}.removing";
+
+      if (Directory.Exists(parked))
+      {
+        parked = $"{target}.removing-{DateTime.Now:yyyyMMdd-HHmmss}";
+      }
+
+      Directory.Move(target, parked);
+      return parked;
+    }
+
+    /* Space reclaimed late is still space reclaimed: what an earlier session could not delete goes first chance. */
+    private static void SweepParkedRemovals()
+    {
+      try
+      {
+        if (!Directory.Exists(StorageRoot))
+        {
+          return;
+        }
+
+        foreach (var dir in Directory.GetDirectories(StorageRoot, "*.removing*", SearchOption.TopDirectoryOnly))
+        {
+          DeleteTreeQuietly(dir);
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Unable to look for pack directories left behind by an earlier removal", ex);
+      }
+    }
+
     private static void DeleteTreeQuietly(string dir)
     {
       try

@@ -165,6 +165,13 @@ row on screen was by definition the active one, and the button could never becom
 earlier in the same session has the same problem and says so: the libraries are still mapped, so removing it needs a
 restart rather than hunting for another running copy.
 
+Deleting parks the directory before emptying it — `<folder>.removing`, timestamped when an earlier one is still waiting:
+`Directory.Delete(path, true)` walks file by file and throws at the first library this process has mapped, which takes
+half a runtime with it and leaves the rest behind. That leftover is too broken to speak with and not gone either, and the
+dialog cannot tell it apart from an install. A move is one operation on one object. If it succeeds, whatever refuses to
+delete afterwards is unreachable and gets swept at the next start when nothing holds it; if it fails, nothing moved and
+the pack is as complete as it was.
+
 `TtsPackManager.InstallAsync` does the rest, and each step is there because the alternative is worse:
 
 1. stream the zip to `%LOCALAPPDATA%\EQLogParser\_download\<asset>.tmp`, reporting progress — nothing is touched in the

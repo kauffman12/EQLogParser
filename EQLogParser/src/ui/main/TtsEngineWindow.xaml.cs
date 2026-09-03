@@ -146,39 +146,17 @@ namespace EQLogParser
 
       infoText.Text = GetEngineDescription(selected);
 
-      var available = AudioManager.Instance.IsEngineAvailable(selected);
-      var downloadable = AudioManager.Instance.GetEngineDownloadBytes(selected) > 0;
+      // Five states for one line: speaking now, ready to switch to, a directory that is not a runtime, nothing on
+      // disk, and an engine this machine cannot run at all. Decided away from the controls so the wording can be read
+      // with the buttons rather than argued with them.
+      var hint = PlanHint(selected,
+        AudioManager.Instance.IsEngineAvailable(selected),
+        AudioManager.Instance.IsEngineDownloaded(selected),
+        AudioManager.Instance.GetEngineDownloadBytes(selected) > 0,
+        selected == AudioManager.Instance.GetActiveEngine(),
+        ConfigUtil.GetSetting(SettingKey));
 
-      if (selected == AudioManager.Instance.GetActiveEngine())
-      {
-        var saved = ConfigUtil.GetSetting(SettingKey);
-        if (string.IsNullOrEmpty(saved) || saved == selected)
-        {
-          SetHint("This is the engine currently in use.");
-        }
-        else
-        {
-          // Something is speaking that is not what was asked for, which is worth colouring: it means an engine failed
-          // to come up and the fallback took over quietly.
-          SetHint($"{selected} is in use; the saved choice, {saved}, would not start.", WarnBrush);
-        }
-      }
-      else if (available)
-      {
-        SetHint("Press Use to switch, starting with the next callout.");
-      }
-      else if (downloadable)
-      {
-        // Size and action both live on the button, so this only has to say why the button is there.
-        SetHint($"{selected} is not installed. Use Download below.");
-      }
-      else
-      {
-        // Proven unusable rather than merely unused: not real Windows -- Wine has no voices to give -- or the speech
-        // runtime is missing. One of those has no fix at all, so say what the way out is.
-        SetHint($"The {selected} voices come from Windows itself and are absent under Wine. " +
-          "Enable Piper or Kokoro below.", WarnBrush);
-      }
+      SetHint(hint.Text, hint.BrushKey);
     }
 
     /*
@@ -214,11 +192,15 @@ namespace EQLogParser
       actionButton.Content = action.Content;
       actionButton.IsEnabled = action.IsEnabled;
 
-      // Reclaiming a pack is only possible while nothing is speaking with it: the engine in use keeps its native
-      // libraries mapped until EQLogParser closes, so deleting that directory would leave half of it behind. Only a
-      // real pack counts -- a directory an old installer left under the program folder is not one and gets no button.
+      /*
+       * Reclaiming a pack is only possible while nothing is speaking with it: the engine in use keeps its native
+       * libraries mapped until EQLogParser closes. What is on disk decides whether there is anything to reclaim, and
+       * that is a different question from whether what is on disk works - a directory holding half a runtime still
+       * holds files somebody wants back, and the line above says what it is. The pinned archive size answers neither,
+       * so it no longer gets a vote here.
+       */
       var downloaded = AudioManager.Instance.IsEngineDownloaded(engine);
-      removeButton.Visibility = bytes > 0 && downloaded ? Visibility.Visible : Visibility.Collapsed;
+      removeButton.Visibility = downloaded ? Visibility.Visible : Visibility.Collapsed;
       removeButton.IsEnabled = downloaded && !active && !busy;
     }
 
@@ -426,8 +408,14 @@ namespace EQLogParser
           ConfigUtil.SetSetting(SettingKey, AudioManager.Instance.GetActiveEngine());
         }
 
-        RefreshState();
-        SetStatus($"{engine} files removed.", GoodBrush);
+        /*
+         * Stay on the row whose files just went rather than refreshing back to whatever is speaking: this row's button
+         * is how they come back, and a picker that hops to another engine the moment you clear one reads as though the
+         * download had gone missing along with the files.
+         */
+        UpdateEngineText();
+        UpdateButtons(engine);
+        SetStatus($"{engine} files removed. Download brings them back.", GoodBrush);
         return;
       }
 
@@ -467,6 +455,48 @@ namespace EQLogParser
       var active = AudioManager.Instance.GetActiveEngine();
       ConfigUtil.SetSetting(SettingKey, active);
       SetStatus($"Could not switch: {active} keeps speaking.", StopBrush);
+    }
+
+    /*
+     * The line under the engine description. Every state it can be in has a different way out, and two of them are
+     * worth warning about: an engine speaking that is not the one saved means something failed to come up, and a
+     * directory holding files that are not a working runtime means a removal stopped halfway - which is what leaves a
+     * pack with no voices in it and a dialog offering both Download and Remove at once. Only that second one cannot be
+     * seen from the buttons alone, so it gets said here.
+     */
+    internal static (string Text, string BrushKey) PlanHint(string engine, bool available, bool downloaded,
+      bool downloadable, bool active, string saved)
+    {
+      if (active)
+      {
+        return string.IsNullOrEmpty(saved) || saved == engine
+          ? ("This is the engine currently in use.", null)
+          // Something is speaking that is not what was asked for, which is worth colouring: an engine failed to come
+          // up and the fallback took over quietly.
+          : ($"{engine} is in use; the saved choice, {saved}, would not start.", WarnBrush);
+      }
+
+      if (available)
+      {
+        return ("Press Use to switch, starting with the next callout.", null);
+      }
+
+      if (downloaded)
+      {
+        return ($"The {engine} files on this machine are incomplete or damaged, so nothing can speak with them. " +
+          "Download replaces them; Remove clears them away.", WarnBrush);
+      }
+
+      if (downloadable)
+      {
+        // Size and action both live on the button, so this only has to say why the button is there.
+        return ($"{engine} is not installed. Use Download below.", null);
+      }
+
+      // Proven unusable rather than merely unused: not real Windows -- Wine has no voices to give. There is no fix for
+      // that one here, so say where there is.
+      return ($"The {engine} voices come from Windows itself and are absent under Wine. " +
+        "Enable Piper or Kokoro below.", WarnBrush);
     }
 
     /*
