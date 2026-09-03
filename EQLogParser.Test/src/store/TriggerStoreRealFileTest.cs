@@ -89,7 +89,7 @@ namespace EQLogParser
       await db.ImportTriggers(root, data);
       var (_, nodes, _) = await db.GetTriggerTree("P1");
       // expected total: everything under the exported top-level wrapper(s)
-      int CountAll(List<ExportTriggerNode> list) => list.Sum(n => 1 + CountAll(n.Nodes ?? []));
+      static int CountAll(List<ExportTriggerNode> list) => list.Sum(n => 1 + CountAll(n.Nodes ?? []));
       Assert.AreEqual(CountAll(data[0].Nodes ?? []), nodes.Count);
 
       // re-import must be exactly idempotent on this scale

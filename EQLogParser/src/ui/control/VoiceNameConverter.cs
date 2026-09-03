@@ -1,7 +1,7 @@
+using EQLogParser.Audio;
 using System;
 using System.Globalization;
 using System.Windows.Data;
-using EQLogParser.Audio;
 
 namespace EQLogParser
 {

@@ -1,5 +1,4 @@
 using EQLogParser.Audio;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace EQLogParser.Wpf.Test.src.audio
 {

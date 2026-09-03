@@ -34,7 +34,7 @@ namespace EQLogParser
     /// <summary>Wraps nodes the way real .tgf exports do — the list contains the tree root as its
     /// first element and Import() unwraps exactly that one level.</summary>
     private static List<ExportTriggerNode> Wrap(params ExportTriggerNode[] children) =>
-      [new ExportTriggerNode { Name = TriggerStateDB.Triggers, Nodes = [..children] }];
+      [new ExportTriggerNode { Name = TriggerStateDB.Triggers, Nodes = [.. children] }];
 
     /// <summary>Fails if <paramref name="value"> or anything nested in it is a document with a
     /// LiteDB polymorphic "_type" marker (data must not depend on assembly identity).</summary>
@@ -355,11 +355,11 @@ namespace EQLogParser
       var (db, _) = FreshStore();
       await using var _ = db;
       var (root, _, _) = await db.GetTriggerTree("P1");
-      List<ExportTriggerNode> BuildExport() => Wrap(new ExportTriggerNode
-        {
-          Name = " Padded Folder ",
-          Nodes = [ExportLeaf(" Boss #1 ", "regex1", "same-id"), ExportLeaf(" Boss #2 ", "regex2", "same-id")]
-        });
+      static List<ExportTriggerNode> BuildExport() => Wrap(new ExportTriggerNode
+      {
+        Name = " Padded Folder ",
+        Nodes = [ExportLeaf(" Boss #1 ", "regex1", "same-id"), ExportLeaf(" Boss #2 ", "regex2", "same-id")]
+      });
 
       await db.ImportTriggers(root, BuildExport());
       var (_, nodes, _) = await db.GetTriggerTree("P1");
@@ -647,11 +647,15 @@ namespace EQLogParser
         // apart by id
         var export = Wrap(
           ExportLeaf("Dup", "first", originalId: "a"),
-          new ExportTriggerNode { Name = "Common", Nodes =
+          new ExportTriggerNode
+          {
+            Name = "Common",
+            Nodes =
             [
               ExportLeaf("Boss #1", "regex-1", originalId: "fam"),
               ExportLeaf("Boss #2 (Timer 2)", "timer-1", originalId: "fam"),
-            ] },
+            ]
+          },
           ExportLeaf("Dup", "second", originalId: "b"));
         await db.ImportTriggers(root, export);
 
@@ -1043,7 +1047,7 @@ namespace EQLogParser
       var root = (await db.GetOverlayTree()).Root;
       var baseCount = (await db.GetOverlayTree()).Nodes.Count(n => n.Parent == root.Id);
 
-      List<ExportTriggerNode> Leaves(string fontSize) =>
+      static List<ExportTriggerNode> Leaves(string fontSize) =>
       [
         new ExportTriggerNode { Id = "ov-1", Name = "One", OverlayData = new Overlay { IsTextOverlay = true, FontSize = fontSize } },
         new ExportTriggerNode { Id = "ov-2", Name = "Two", OverlayData = new Overlay { IsTimerOverlay = true } }

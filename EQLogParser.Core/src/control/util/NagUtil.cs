@@ -1,9 +1,5 @@
 using log4net;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -1550,7 +1546,7 @@ internal static class NagUtil
     {
       // ReadLong, not a raw cast: a finite double past long.MaxValue would unchecked-cast to
       // long.MinValue instead of keeping the default
-      timer.WarningSeconds = ReadLong(edur, (long)timer.WarningSeconds);
+      timer.WarningSeconds = ReadLong(edur, timer.WarningSeconds);
     }
     if (action.TryGetProperty("duration", out var tdur))
     {

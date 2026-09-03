@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="EQLogParser.TriggersView"
+<UserControl x:Class="EQLogParser.TriggersView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -64,11 +64,11 @@
       </Popup>
       <!-- What were the TTS Engine / Dictionary / Quick Shares buttons; the items keep those tooltips and reuse their Click handlers. -->
       <syncfusion:DropDownButtonAdv Label="Tools" IconHeight="0" IconWidth="5" Height="{DynamicResource EQButtonHeight}" Padding="4,0,4,0" Margin="0,0,8,1"
-                                    ToolTip="Open the phonetic dictionary, Quick Share settings, or choose the TTS engine">
+                                    ToolTip="Open the Phonetic Dictionary, Quick Share settings, or choose the TTS engine">
         <syncfusion:DropDownMenuGroup>
           <syncfusion:DropDownMenuItem Header="Dictionary" ToolTip="Phonetic Dictionary" Click="DictionaryClick" />
-          <syncfusion:DropDownMenuItem Header="Quick Shares" ToolTip="Quick Share Settings and Received Log" Click="QuickShareClick" />
-          <syncfusion:DropDownMenuItem Header="TTS Engine" ToolTip="Choose the Text-to-Speech engine. Piper and Kokoro are local and free, and download their runtime when you enable them" Click="TtsEngineClick" />
+          <syncfusion:DropDownMenuItem Header="Quick Shares" ToolTip="Quick Share Settings and Log of received Quick Shares" Click="QuickShareClick" />
+          <syncfusion:DropDownMenuItem Header="TTS Engine" ToolTip="Choose the Text-to-Speech engine" Click="TtsEngineClick" />
         </syncfusion:DropDownMenuGroup>
       </syncfusion:DropDownButtonAdv>
     </StackPanel>
@@ -462,7 +462,7 @@
                 <!-- Trigger Timer Options -->
                 <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="AltTimerName" DisplayName="Alternate Timer Name"  Visibility="Collapsed" Description="The Name of the Timer defaults to the name of the Trigger. Set this property if an Alternate Name is required. See the documentation on Using Trigger Variables for additional information."/>
                 <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="TimerNameStatic" DisplayName="Static Timer Name" Visibility="Collapsed"
-                  Description="A Timer name that uses a trigger variable updates while the Timer runs whenever that variable changes. Check this to keep the value from when the Timer started."/>
+                  Description="If the Timer name uses a trigger variable, the name updates whenever that variable changes while the Timer is running. Check this option to keep the value captured when the Timer started."/>
                 <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerDurationItem" PropertyName="DurationTimeSpan" DisplayName="Duration (hh:mm:ss)" Visibility="Collapsed" Description="Number of Minutes/Seconds after the Trigger has been executed before the Timer completes." />
                 <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" x:Name="timerShortDurationItem" PropertyName="DurationSeconds" DisplayName="Duration (0.2s -> 2.0s)" Visibility="Collapsed" Description="Number of Milliseconds after the Trigger has been executed before the Timer completes." />
                 <syncfusion:PropertyGridItem CategoryName="Basic Timer Options" PropertyName="EndSoundOrText" DisplayName="End Sound/Text to Speak"  Visibility="Collapsed" Description="The Phrase to be spoken or sound file to play at completion of the Timer. For additional wav files, copy them to Program Files\EQLogParser\data\sounds. Also, see the documentation on Using Trigger Variables for additional information."/>

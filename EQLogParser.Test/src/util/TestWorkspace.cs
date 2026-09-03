@@ -1,5 +1,3 @@
-using System.IO;
-
 namespace EQLogParser
 {
   /* Scratch storage shared by the store/util fixtures. Each fixture used to carry its own temp-dir

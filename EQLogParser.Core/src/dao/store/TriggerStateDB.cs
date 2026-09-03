@@ -1,13 +1,8 @@
 using LiteDB;
 using log4net;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace EQLogParser
 {
@@ -1460,7 +1455,7 @@ namespace EQLogParser
           // the existing overlay in place on re-import, so re-migrating a NAG database refreshes an
           // earlier import's overlays (name included) rather than adding a second copy.
           var matchedBySource = false;
-          TriggerNode foundOverlay = siblings.FirstOrDefault(n => n.Id == newNode.Id);
+          var foundOverlay = siblings.FirstOrDefault(n => n.Id == newNode.Id);
           if (foundOverlay is null && newNode.OverlayData?.Source is { Length: > 0 } source)
           {
             matchedBySource = true;
@@ -1831,7 +1826,7 @@ namespace EQLogParser
       // mirrors CreateViewNode: view IsChecked derives from Enabled with a false default and
       // stays null for overlays (excluded from both counts below)
       bool? ChildChecked(TriggerNode child) =>
-        child.OverlayData == null ? (bool?)state.Enabled.GetValueOrDefault(child.Id, false) : null;
+        child.OverlayData == null ? state.Enabled.GetValueOrDefault(child.Id, false) : null;
     }
 
     private static void SetVerticalAlignment(TriggerNode overlay)

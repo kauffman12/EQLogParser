@@ -114,7 +114,7 @@ namespace EQLogParser
     public async Task SearchLogs_MissingFile_CompletesWithoutPosting()
     {
       var missing = Path.Combine(_dir, "does-not-exist.txt");
-      int progressMax = 0;
+      var progressMax = 0;
 
       var searcher = new FileSearcher<string?>([missing]);
       var posted = false;
@@ -132,7 +132,7 @@ namespace EQLogParser
     {
       // 40 lines so every 5% boundary lands on a line end and progress reaches 100
       var file = WriteFile("d.txt", LogLines(40, "delta"));
-      int progressMax = 0;
+      var progressMax = 0;
 
       var searcher = new FileSearcher<string?>([file]);
       var posted = false;

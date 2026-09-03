@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace EQLogParser
 {
   /* File-driven tests against a real NAG database dump under local/nag/ (gitignored). They skip

@@ -124,7 +124,7 @@ namespace EQLogParserTest
     [TestMethod]
     public void DelayedAction_Generic_NullValue_IsHandled()
     {
-      string? received = "not set";
+      var received = "not set";
       using var action = new DelayedAction<string?>(TimeSpan.FromMilliseconds(50), v => received = v);
       action.Invoke(null);
       Thread.Sleep(100);

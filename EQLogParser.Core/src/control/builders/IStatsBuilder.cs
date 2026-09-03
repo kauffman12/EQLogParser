@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser
 {
   public interface IStatsBuilder

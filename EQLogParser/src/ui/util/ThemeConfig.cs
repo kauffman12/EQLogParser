@@ -232,7 +232,7 @@ namespace EQLogParser
 
     /* Extra width above 15pt keeps the manage characters toolbar buttons visible at large fonts.
        TriggersView must also apply this on theme changes: a ColumnDefinition's DynamicResource only resolves at load. */
-    internal static GridLength GetTriggerCharacterListWidth() => new(180 + (CurrentFontSize * 4) + Math.Max(0.0, CurrentFontSize - 15) * 17);
+    internal static GridLength GetTriggerCharacterListWidth() => new(180 + (CurrentFontSize * 4) + (Math.Max(0.0, CurrentFontSize - 15) * 17));
 
     private static void SetThemeFontSizes()
     {

@@ -122,15 +122,15 @@ namespace EQLogParser
     private static string GetEngineDescription(string engine) => engine switch
     {
       AudioManager.PiperEngine =>
-        "Fast and lightweight. Speech starts almost instantly and uses very few system resources, but the voices " +
-        "sound more synthetic than Kokoro.",
+        "Fast and lightweight. Speech starts almost instantly and uses very few system resources but the voices " +
+        "have the lowest sound quality.",
 
       AudioManager.KokoroEngine =>
-        "The most natural-sounding voices, but also the most demanding. Uses a few hundred MB of memory and more " +
-        "CPU, so speech may take a moment to start and slower systems may struggle to keep up.",
+        "The most natural-sounding voices but also the most demanding. May require more memory and CPU than " +
+        "older systems can handle.",
 
       AudioManager.WindowsEngine =>
-        "Built into Windows with nothing extra to download. Voice quality depends on the installed Windows voice. " +
+        "Built into Windows with nothing extra to download. Voice quality depends on the installed voice. " +
         "This engine is not available when running under Linux/Wine.",
 
       _ => "Speech is generated locally on this machine."

@@ -1,7 +1,5 @@
 using EQLogParser.Audio;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace EQLogParser.Wpf.Test
 {
@@ -143,7 +141,7 @@ namespace EQLogParser.Wpf.Test
       try
       {
         File.WriteAllBytes(path, new byte[10000]);
-        long reported = 0L;
+        var reported = 0L;
 
         var digest = TtsPackManager.ComputeSha256(path, count => Interlocked.Add(ref reported, count));
 

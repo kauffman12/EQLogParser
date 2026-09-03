@@ -46,7 +46,7 @@ namespace EQLogParserTest
       await using var _ = db;
       var (root, _, _) = await db.GetTriggerTree("P1");
 
-      int CountAll(List<ExportTriggerNode> list) => list.Sum(n => 1 + CountAll(n.Nodes ?? []));
+      static int CountAll(List<ExportTriggerNode> list) => list.Sum(n => 1 + CountAll(n.Nodes ?? []));
       var expected = CountAll(data[0].Nodes ?? []);
 
       await db.ImportTriggers(root, data);

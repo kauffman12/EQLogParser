@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace EQLogParser
 {
   internal class RaidRosterStore : ILifecycle, IDisposable

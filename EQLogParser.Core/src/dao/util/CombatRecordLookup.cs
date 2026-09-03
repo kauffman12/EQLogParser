@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser
 {
   // Host-provided lookups for data owned by WPF-side stores (EQDataStore's

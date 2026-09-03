@@ -228,7 +228,7 @@ namespace EQLogParser
       Assert.AreEqual(ConfigUtil.PlayerName, loot.Player);
       Assert.IsTrue(loot.IsCurrency);
       // 28p + 7g + 2s + 5c in copper
-      Assert.AreEqual(28 * 1000 + 7 * 100 + 2 * 10 + 5, (int)loot.Quantity);
+      Assert.AreEqual((28 * 1000) + (7 * 100) + (2 * 10) + 5, (int)loot.Quantity);
       Assert.AreEqual("28 Platinum, 7 Gold, 2 Silver, 5 Copper", loot.Item);
     }
 

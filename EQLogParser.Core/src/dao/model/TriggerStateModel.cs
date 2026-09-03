@@ -1,5 +1,4 @@
 using LiteDB;
-using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace EQLogParser

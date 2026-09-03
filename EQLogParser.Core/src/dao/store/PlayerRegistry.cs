@@ -1,11 +1,7 @@
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Threading;
 
 namespace EQLogParser
 {

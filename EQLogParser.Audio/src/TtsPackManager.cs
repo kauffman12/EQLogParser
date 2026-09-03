@@ -469,7 +469,7 @@ namespace EQLogParser.Audio
         return 0L;
       }
 
-      long total = 0L;
+      var total = 0L;
       foreach (var file in manifest)
       {
         total += Math.Max(0L, file.Size);
@@ -512,7 +512,7 @@ namespace EQLogParser.Audio
       internal void Finish() => Report(1f);
 
       private void Report(float fraction) =>
-        _progress?.Report(_from + (_to - _from) * Math.Clamp(fraction, 0f, 1f));
+        _progress?.Report(_from + ((_to - _from) * Math.Clamp(fraction, 0f, 1f)));
     }
 
     private sealed record PackFile(string Path, long Size, string Sha256);
@@ -731,7 +731,7 @@ namespace EQLogParser.Audio
 
     private static long UncompressedBytes(ZipArchive zip)
     {
-      long total = 0L;
+      var total = 0L;
       foreach (var entry in zip.Entries)
       {
         if (!string.IsNullOrEmpty(entry.Name))

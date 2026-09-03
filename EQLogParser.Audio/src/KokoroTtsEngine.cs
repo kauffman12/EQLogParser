@@ -44,7 +44,14 @@ namespace EQLogParser.Audio
      */
     private static readonly Dictionary<char, string> _voiceLocales = new()
     {
-      ['a'] = "US", ['b'] = "GB", ['e'] = "ES", ['f'] = "FR", ['h'] = "HI", ['i'] = "IT", ['j'] = "JP", ['p'] = "PT",
+      ['a'] = "US",
+      ['b'] = "GB",
+      ['e'] = "ES",
+      ['f'] = "FR",
+      ['h'] = "HI",
+      ['i'] = "IT",
+      ['j'] = "JP",
+      ['p'] = "PT",
       ['z'] = "CN"
     };
 
@@ -350,7 +357,7 @@ namespace EQLogParser.Audio
         // Nothing to read from, or this exact directory has already been tried and failed. Retrying on every dropdown
         // open would only fill the log; a different directory - a reinstalled pack - is tried once on its own merits.
         if (_voicesPath is not { Length: > 0 } path ||
-            _voicesLoadFailed && string.Equals(_voicesLoadAttemptedFrom, path, StringComparison.OrdinalIgnoreCase))
+            (_voicesLoadFailed && string.Equals(_voicesLoadAttemptedFrom, path, StringComparison.OrdinalIgnoreCase)))
         {
           return KokoroVoiceManager.Voices.Count > 0;
         }

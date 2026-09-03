@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser;
 
 public class HitRecord : IAction

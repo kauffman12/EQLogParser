@@ -280,8 +280,8 @@ namespace EQLogParser.Audio
       // run against an engine that is being created or torn down
       await _synthGate.WaitAsync().ConfigureAwait(false);
 
-      var next = (ITtsEngine) null;
-      var retired = (ITtsEngine) null;
+      var next = (ITtsEngine)null;
+      var retired = (ITtsEngine)null;
       var voices = Array.Empty<string>();
 
       try
@@ -1040,7 +1040,7 @@ namespace EQLogParser.Audio
       pcm = null;
       sampleRate = 0;
 
-      if (_cache.TryGetValue(key, out object entry) &&
+      if (_cache.TryGetValue(key, out var entry) &&
           entry is CachedAudio { Data.Length: > 0 } cached && cached.WaveFormat is { SampleRate: > 0 } format)
       {
         pcm = cached.Data;

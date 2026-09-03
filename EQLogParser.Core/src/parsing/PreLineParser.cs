@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser
 {
   internal class PreLineParser

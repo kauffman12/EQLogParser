@@ -1,5 +1,3 @@
-using System;
-
 namespace EQLogParser
 {
   // Platform-dependent behavior used by TriggerStateDB, injected by the WPF host at startup

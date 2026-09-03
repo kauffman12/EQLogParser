@@ -1,6 +1,3 @@
-using System;
-using System.Threading.Tasks;
-
 namespace EQLogParser
 {
   /* Host hooks for the GINA import flow — the two places it needs a window: failure messages and

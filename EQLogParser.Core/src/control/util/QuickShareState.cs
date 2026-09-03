@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace EQLogParser
 {
   /* Thread-safe quick-share history rules shared by every producer (GINA chat detection, legacy
