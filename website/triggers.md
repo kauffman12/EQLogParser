@@ -231,21 +231,21 @@ Variables are cleared **after** the End Text to Display and End Sound/Text to Sp
 
 When the 3-minute buff timer ends, the display shows the caster name and the variable is cleared.
 
-### Static Timer Name (Timer Tab)
+### Dynamic Timer Name (Timer Tab)
 
-By default a Timer name that references a custom variable stays live. When another trigger changes that variable, the Timer bar on screen updates to the new value (within about half a second). This is what you want for stacks, counts or casters that change while the Timer runs.
+**Dynamic Timer Name** (under *Basic Timer Options*) is checked by default. While it is checked, a Timer name that references a custom variable stays live: when another trigger changes that variable, the Timer bar on screen updates to the new value (within about half a second). This is what you want for stacks, counts or casters that change while the Timer runs.
 
-Check **Static Timer Name** (under *Basic Timer Options*) to pin the name instead. The Timer keeps the name it resolved when it started and ignores later changes to the variable.
+Uncheck **Dynamic Timer Name** to pin the name instead. The Timer keeps the name it resolved when it started and ignores later changes to the variable.
 
-- Restarting still works as expected. If the trigger fires again and **If Triggered Again** restarts the Timer, or a **Looping** Timer starts its next loop, that new run captures whatever the value is at that moment. Static means the name holds for one run.
+- Restarting still works as expected either way. If the trigger fires again and **If Triggered Again** restarts the Timer, or a **Looping** Timer starts its next loop, that new run captures whatever the value is at that moment. Pinned means the name holds for one run.
 - The built-in codes (`{COUNTER}`, `{REPEATED}`, `{LOGTIME}`) are captured when the Timer starts either way, so they do not move.
-- Pinning also avoids an awkward Timer bar. Clearing a variable, or letting its **Time To Live** expire mid-Timer, would otherwise leave the raw `{variable}` text on the bar because there is no value left to substitute.
+- Unchecking also avoids an awkward Timer bar. Clearing a variable, or letting its **Time To Live** expire mid-Timer, leaves the raw `{variable}` text on a live name because there is no value left to substitute.
 
 **Example — label a buff with its caster without chasing later casts:**
 
 1. Trigger matches `^(\w+) gains Spirit of Vesagran` with a **Set** action for `gEpicCaster = {s1}`.
 2. Alternate Timer Name: `Vesagran ({gEpicCaster})`, Duration 3:00.
-3. Check **Static Timer Name**. The variable action still fills the name when this Timer starts, but if another player refreshes the buff halfway through and rewrites `gEpicCaster`, the bar keeps the original caster until it expires.
+3. Uncheck **Dynamic Timer Name**. The variable action still fills the name when this Timer starts, but if another player refreshes the buff halfway through and rewrites `gEpicCaster`, the bar keeps the original caster until it expires.
 
 ---
 
