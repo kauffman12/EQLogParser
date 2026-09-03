@@ -240,7 +240,19 @@ namespace EQLogParser.Audio
         _preparedVoice = LoadNativeVoice(AdHocVoiceId, wanted.Name)?.Name;
       }
 
-      return _preparedVoice is not null ? (_preparedVoice, wanted.Sample) : (null, 0);
+      /*
+       * The id of the slot, never the name of the voice sitting in it. The native table is keyed by id alone, so
+       * handing back 'Cori' asks piper to speak through something it was never given and it answers with nothing - no
+       * exception, no audio, which from the user's side is a broken preview rather than a wrong argument. The voice
+       * name belongs in _preparedVoice as bookkeeping and in this line, not in the answer.
+       */
+      if (_preparedVoice is null)
+      {
+        return (null, 0);
+      }
+
+      Log.Debug($"Piper previews '{wanted.Name}' through the {AdHocVoiceId} slot");
+      return (AdHocVoiceId, wanted.Sample);
     }
 
     public void Dispose()
@@ -527,16 +539,16 @@ namespace EQLogParser.Audio
         var size = PiperInterop.synthesize(playerId, text, out var audioBuffer);
         if (size <= 0 || audioBuffer == IntPtr.Zero)
         {
-          // Silence with no exception is how a voice that is not loaded answers. Worth a line: it looks exactly like
-          // the audio device being broken from the user's side.
-          Log.Warn($"Piper produced no speech for voice '{playerId}' (size {size}); is that voice loaded?");
+          // Silence with no exception is how a voice that is not loaded under that id answers. Worth a line: it looks
+          // exactly like the audio device being broken from the user's side.
+          Log.Warn($"Piper produced no speech from '{playerId}' (size {size}); is a voice loaded under that id?");
           return null;
         }
 
         try
         {
-          var pcm = new byte[(int)size * sizeof(short)];
-          var samples = new short[(int)size];
+          var pcm = new byte[size * sizeof(short)];
+          var samples = new short[size];
           Marshal.Copy(audioBuffer, samples, 0, samples.Length);
           Buffer.BlockCopy(samples, 0, pcm, 0, pcm.Length);
           return pcm;
@@ -571,8 +583,13 @@ namespace EQLogParser.Audio
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int removeVoice([MarshalAs(UnmanagedType.LPStr)] string id);
 
+    /*
+     * An int, not a long: piperApi answers -1 when the id it was handed speaks nothing, and reading that through a
+     * 64-bit signature turns a failure into 4294967295, which is a positive number and eight gigabytes of allocation
+     * waiting to happen if the buffer were ever returned with it.
+     */
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern long synthesize([MarshalAs(UnmanagedType.LPStr)] string id,
+    internal static extern int synthesize([MarshalAs(UnmanagedType.LPStr)] string id,
       [MarshalAs(UnmanagedType.LPStr)] string text, out IntPtr audioBuffer);
 
     [DllImport(PiperTtsEngine.PiperApiLibrary, CallingConvention = CallingConvention.Cdecl)]
