@@ -19,10 +19,13 @@
 #                        voices\af_* am_* bf_* bm_*.npy LICENSE   <- built by the app repo (KokoroVoicePrefixes)
 #                        model\kokoro-fp16.onnx             <- optional, -SkipModel leaves it out
 #
-# Only the binaries come from a build. Everything else is data you keep here: espeak-ng-data, the Piper voices and
-# the Kokoro model are no longer in the app repo at all, so -Sync copies binaries (plus whatever data an older app
-# checkout still carries) and nothing else (sign them there first -- signing rewrites the tail of a PE file, so a
-# manifest built before signing will not match what users download).
+# Only some of the binaries come from a build. espeak-ng-data, the Piper voices and the Kokoro model are data you keep
+# here; they left the app repo long ago and -Sync cannot supply them. Neither can it supply Piper's own DLLs --
+# piperApi, piper_phonemize, espeak-ng and the ONNX Runtime beside them are not in the app repo either, since the app
+# installs no Piper binary: the pack carries them. Stage those here out of a published pack, or build them from the
+# Piper fork (upstream https://github.com/rhasspy/piper). What -Sync does copy is Kokoro's support assemblies, its
+# native ONNX Runtime and the .npy voice embeddings. Sign whatever you place here before packing -- signing rewrites
+# the tail of a PE file, so a manifest built beforehand will not match what users download.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Inventory
@@ -33,9 +36,9 @@
 #
 # Switches:
 #   -Inventory            report what is present, missing and unexpected; pack nothing
-#   -Sync                 fill the data dirs from -AppRelease: runtime binaries for both engines and the Kokoro .npy
-#                         embeddings, plus espeak-ng-data and Piper voices if that build still carries them;
-#                         hash-compared, so re-running is cheap
+#   -Sync                 fill the data dirs from -AppRelease: Kokoro's support assemblies, its native ONNX Runtime and
+#                         the Kokoro .npy embeddings. Piper's binaries are not in an app build any more (see above),
+#                         and neither engine's data is; hash-compared, so re-running is cheap
 #   -ModelSource <path>    kokoro-fp16.onnx to stage with -Sync. Default: an installed Kokoro pack in local app data,
 #                         then the older %LOCALAPPDATA%\EQLogParser\kokoro-tts copy
 #   -Pack kokoro|piper|both
@@ -235,19 +238,10 @@ function Sync-FromBuild {
     if (-not (Test-Path -LiteralPath $AppRelease)) { throw "no such build output: $AppRelease" }
     $AppRelease = (Resolve-Path -LiteralPath $AppRelease).Path
     $copied = 0
-    foreach ($n in $PiperBin) {
-        $s = Join-Path $AppRelease "piper-tts\$n"
-        if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $PiperDir $n); $copied++ }
-    }
-    # espeak-ng-data and the voice folders used to be in the app repo, which is where the old installer picked them
-    # up. They are this repo's data now, so a current build contributes nothing here; an older checkout still does.
-    $copied += Sync-Tree (Join-Path $AppRelease 'piper-tts\espeak-ng-data') (Join-Path $PiperDir 'espeak-ng-data')
-    $srcVoices = Join-Path $AppRelease 'piper-tts\voices'
-    if (Test-Path -LiteralPath $srcVoices) {
-        foreach ($d in Get-ChildItem -LiteralPath $srcVoices -Directory) {
-            $copied += Sync-Tree $d.FullName (Join-Path $PiperDir "voices\$($d.Name)")
-        }
-    }
+    # Nothing Piper-side comes out of an app build: EQLogParser\piper-tts is gone, and with it the last copy of those
+    # five DLLs this repo held. They belong to the pack, which has carried them since piper-1.0, so a Piper binary bump
+    # means staging them here from that pack or from a Piper build -- -Inventory names whatever is missing. $PiperDir is
+    # left exactly as found.
     foreach ($n in $KokoroBin) {
         $s = Join-Path $AppRelease $n
         if (Test-Path -LiteralPath $s) { Copy-IfChanged $s (Join-Path $KokoroDir "bin\$n"); $copied++ }
@@ -282,17 +276,6 @@ function Sync-FromBuild {
     Write-Host "sync: $copied file(s) new or changed"
 }
 
-function Sync-Tree([string]$SourceDir, [string]$TargetDir) {
-    if (-not (Test-Path -LiteralPath $SourceDir)) { return 0 }
-    $count = 0
-    foreach ($f in Get-ChildItem -LiteralPath $SourceDir -Recurse -File) {
-        $rel = Get-RelativePath $SourceDir $f.FullName
-        if (Copy-IfChanged $f.FullName (Join-Path $TargetDir ($rel -replace '/', '\')) -Quiet) { $count++ }
-    }
-    if ($count -gt 0) { Write-Host ("  {0}: {1} file(s) new or changed" -f (Split-Path -Leaf $SourceDir), $count) }
-    return $count
-}
-
 # Checked before anything is staged, so a half-populated data dir produces one readable list instead of an exception from
 # three functions deep -- after the other pack has already been built.
 function Get-KokoroMissing {
@@ -306,7 +289,11 @@ function Get-KokoroMissing {
 
 function Get-PiperMissing {
     $m = @()
-    foreach ($n in $PiperBin) { if (-not (Test-Path -LiteralPath (Join-Path $PiperDir $n))) { $m += "piper-tts/$n" } }
+    foreach ($n in $PiperBin) {
+        if (-not (Test-Path -LiteralPath (Join-Path $PiperDir $n))) {
+            $m += "piper-tts/$n  (not in the app repo: copy it out of a published pack, or build it from the Piper fork)"
+        }
+    }
     if (-not (Test-Path -LiteralPath (Join-Path $PiperDir 'espeak-ng-data'))) { $m += 'piper-tts/espeak-ng-data/  (355 files: phoneme tables and language data Piper needs to speak at all)' }
     $vd = Join-Path $PiperDir 'voices'
     if (@(Get-VoiceDirs $vd).Count -eq 0) { $m += 'piper-tts/voices/<name>/*.onnx  (at least one voice folder holding a model)' }
@@ -324,10 +311,10 @@ function Assert-PackInputs([string]$Engine, [object[]]$Missing) {
     throw ($lines -join [Environment]::NewLine)
 }
 
-function Copy-IfChanged([string]$Source, [string]$Target, [switch]$Quiet) {
+function Copy-IfChanged([string]$Source, [string]$Target) {
     if ((Test-Path -LiteralPath $Target) -and (Get-Sha256Hex $Target) -eq (Get-Sha256Hex $Source)) { return $false }
     Copy-FileTo $Source (Split-Path -Parent $Target) (Split-Path -Leaf $Target)
-    if (-not $Quiet) { Write-Host "  copied $(Split-Path -Leaf $Source)" }
+    Write-Host "  copied $(Split-Path -Leaf $Source)"
     return $true
 }
 

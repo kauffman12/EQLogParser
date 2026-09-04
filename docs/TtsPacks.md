@@ -138,8 +138,9 @@ wanted. Sample rates are the one thing it reads reliably.
 
 Twelve voices unpack to 791 MB behind a 682 MiB download, and every user who enables Piper takes all of them at once;
 that is the deliberate tradeoff over per-voice packs. `-PiperVoices a,b` ships a subset without deleting anything from
-the data dir. Nothing at run time reads the `piper-tts\voices\` copy this repo still carries - an engine looks in local
-app data and nowhere else - so that folder is a leftover of the layout this replaced.
+the data dir. What a pre-pack install left behind under `{app}\piper-tts\voices\` is a different case: nothing reads it —
+an engine looks in local app data and nowhere else — but an upgrade does not delete it either, because users put models
+of their own in there.
 
 **Kokoro** — edit `KokoroVoicePrefixes` in the app repo's `Directory.Build.targets` (default `af;am;bf;bm`, the
 English voices both sides of the Atlantic; the same property stops KokoroSharp's build target from copying all 79 MB of
@@ -213,8 +214,20 @@ Startup does no hashing: an engine counts as installed when its directory holds 
 voices.json` + `piperApi.dll`, or `model\kokoro-fp16.onnx` + at least one `.npy`). Kokoro additionally re-checks its
 own model hash, cached in a sidecar marker.
 
-The app repo carries neither engine's data. What remains under `EQLogParser/piper-tts/` is five native SDK binaries
-(10 MB) for `sign.cmd` and `-Sync` to read; see `EQLogParser/piper-tts/README.md`. The app never reads a speech runtime
-from under the program folder, so an old build directory that still holds `espeak-ng-data\` and `voices\` cannot pass
-itself off as an installed pack — it is dead weight until that directory is cleaned, and the installer deletes what
-pre-pack installs left in `{app}`.
+The app repo carries neither engine's data nor any Piper binary. It used to keep Piper's five native SDK DLLs under
+`EQLogParser/piper-tts/` — `piperApi.dll`, `piper_phonemize.dll`, `espeak-ng.dll` and the ONNX pair beside them — for one
+reason: so a Release build had something at `%RELEASE_DIR%\piper-tts\` for `sign.cmd` to sign and `-Sync` to pass to the
+pack. Those are gone. The app installs none of them, every pack since `piper-1.0` carries its own signed copies, the three
+unique ones exist only as build outputs of the Piper fork (upstream: <https://github.com/rhasspy/piper>), and 13 MB held
+in git to seed a workflow that runs when a binary bumps is the wrong side of that trade.
+
+So a Piper binary bump now starts in this repo's staging tree: put the new DLLs there — extracted from the published pack,
+or built from the fork — sign them in place, then `-Sync`-independent pack as usual. `-Inventory` lists anything missing
+and names that provenance, and an unsigned `piperApi.dll` in the staged tree earns a warning while packing — pass
+`-Strict` and it becomes a refusal. Kokoro is unchanged:
+its support assemblies and native ONNX Runtime still come out of the app build through `-Sync`, because those are the
+files the installed `Microsoft.ML.OnnxRuntime` wrapper and KokoroSharp compile against.
+
+Nothing at run time reads a speech runtime from under the program folder, so an old build directory or pre-pack install
+still holding `piper-tts\espeak-ng-data\` and `voices\` cannot pass itself off as an installed pack. It is inert; the
+installer leaves it alone deliberately (`docs/ReleaseChecklist.md`) and the uninstaller clears `{app}`.

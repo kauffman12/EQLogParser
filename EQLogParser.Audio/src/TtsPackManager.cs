@@ -577,7 +577,7 @@ namespace EQLogParser.Audio
      * a P/Invoke that names nothing but "onnxruntime.dll" -- is answered out of memory. The winner therefore has to be
      * picked rather than fall out of which engine the user spoke from first. Kokoro's copy leads because it is
      * published alongside the Microsoft.ML.OnnxRuntime wrapper installed with the app and repacked whenever that
-     * wrapper moves; Piper's pack carries the same build today (the two are kept in step, see piper-tts\README.md), so
+     * wrapper moves; Piper's pack carries the same build today (the two are kept in step, see docs/TtsPacks.md), so
      * either serves and Piper getting here first is fine -- which is exactly why the claim sits here instead of inside
      * an engine. If the two ever drift, this order still chooses the one matching the wrapper.
      *

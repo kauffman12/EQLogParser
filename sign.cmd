@@ -80,6 +80,10 @@ rem DLL carrying our certificate is treated far more calmly by antivirus heurist
 rem users a publisher to look at beyond a hash. Already-signed vendor files (Microsoft's onnxruntime and
 rem System.Numerics.Tensors) are skipped rather than overwritten, so their upstream attribution survives.
 rem
+rem Piper's own binaries are absent from this list on purpose: nothing under {app} is Piper, and EQLogParser no longer
+rem carries piperApi/piper_phonemize/espeak-ng at all (see docs/TtsPacks.md). They live in the TTS data repo's staging
+rem tree, so a Piper binary bump gets signed there before packing -- Build-TtsPack.ps1 -Verify reports any that are not.
+rem
 rem IMPORTANT: sign first, then build the SHA-256 manifest the app verifies against. Signing rewrites the tail of the
 rem file, so hashes taken before this step will not match what users download.
 rem ---------------------------------------------------------------------------
@@ -92,11 +96,6 @@ for %%F in (
     "%RELEASE_DIR%\OpenTK.Mathematics.dll"
     "%RELEASE_DIR%\runtimes\win-x64\native\onnxruntime.dll"
     "%RELEASE_DIR%\runtimes\win-x64\native\onnxruntime_providers_shared.dll"
-    "%RELEASE_DIR%\piper-tts\piperApi.dll"
-    "%RELEASE_DIR%\piper-tts\piper_phonemize.dll"
-    "%RELEASE_DIR%\piper-tts\espeak-ng.dll"
-    "%RELEASE_DIR%\piper-tts\onnxruntime.dll"
-    "%RELEASE_DIR%\piper-tts\onnxruntime_providers_shared.dll"
 ) do (
     call :SignPackFile "%%~F" || goto :fail
 )
