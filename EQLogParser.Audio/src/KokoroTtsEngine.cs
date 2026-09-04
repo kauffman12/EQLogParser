@@ -1,12 +1,15 @@
 using KokoroSharp;
 using KokoroSharp.Core;
 using log4net;
+using Microsoft.ML.OnnxRuntime;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser.Audio
@@ -76,6 +79,11 @@ namespace EQLogParser.Audio
     // Whether the "a different pack directory needs a restart" line has been said yet. The branch that raises it runs
     // on every voice lookup once true, so the repeats go to Debug rather than filling the log with one sentence.
     private static bool _crossDirectoryReported;
+
+    // The same courtesy for the ONNX Runtime version note: an engine rebuilt by hand while a mismatch exists would
+    // otherwise repeat it every time somebody touches the picker. Interlocked because engine creation is not under
+    // _voicesLock and two switches can be in flight.
+    private static int _runtimeDriftReported;
     private static readonly object _voicesLock = new();
 
     private readonly ConcurrentDictionary<string, string> _playerVoices = [];
@@ -212,6 +220,32 @@ namespace EQLogParser.Audio
       // installed with the app, so the loaders have to know about the pack before KokoroSharp touches any of them.
       TtsPackManager.EnsureResolversRegistered();
 
+      /*
+       * Two more seams before the ONNX wrapper's first P/Invoke: map EQLP's own onnxruntime.dll so this process owns
+       * that module name, and pin the wrapper's imports to the same folder. Without the first, a copy another program
+       * left in System32 answers the import -- it is on the operating system's search path and our resolvers are only
+       * asked after that search fails. See TtsPackManager.PreferMatchingOnnxRuntime.
+       */
+      TtsPackManager.PreferMatchingOnnxRuntime();
+      TtsPackManager.EnsureOnnxRuntimeImportResolver(typeof(InferenceSession).Assembly);
+
+      /*
+       * Somebody else's runtime is not a runtime. A 1.7 answers this graph with an error that reads exactly like a
+       * broken download, and the only honest answer is to say which module is mapped and leave Kokoro out of the
+       * session rather than make the user re-download 156MB they already have.
+       */
+      if (TtsPackManager.IsForeignOnnxRuntimeResident())
+      {
+        Log.Error(@"Kokoro needs EQLogParser's own onnxruntime.dll, but this process has " +
+          $"{TtsPackManager.DescribeLoadedOnnxRuntime()} mapped. Another program installed that ONNX Runtime and " +
+          "Windows keeps one module per name, so it answers for the whole session. Nothing in the Kokoro pack is at " +
+          "fault: find what installed the other copy and restart EQLogParser once it is gone, rather than deleting " +
+          "anything from Windows.");
+        return null;
+      }
+
+      WarnOnRuntimeDrift();
+
       var engine = new KokoroTtsEngine(root);
       try
       {
@@ -280,6 +314,56 @@ namespace EQLogParser.Audio
 
       return (char.ToUpperInvariant(voice[3]) + voice[4..].Replace('_', ' '), locale);
     }
+
+    /*
+     * The native module and the managed wrapper are published together and are meant to be the same version
+     * (docs/TtsPacks.md -> publishing rules), so a drift means one of the two moved alone: a Kokoro pack that predates
+     * this app build, or a runtime from elsewhere holding the name under an older install. Warn rather than refuse --
+     * major.minor is not the whole contract, and an engine that speaks beats a tidy log.
+     */
+    private static void WarnOnRuntimeDrift()
+    {
+      // Nothing mapped yet is normal: it means neither engine has loaded ONNX Runtime and the wrapper's own import
+      // resolver will bring ours in when the session is built. There is nothing to compare against until then.
+      if (TtsPackManager.LoadedOnnxRuntimePath() is not { Length: > 0 } path)
+      {
+        return;
+      }
+
+      try
+      {
+        var native = FileVersionInfo.GetVersionInfo(path).FileVersion;
+        var wrapper = typeof(InferenceSession).Assembly.GetName().Version?.ToString();
+
+        if (MajorMinor(native) is { } runtime && MajorMinor(wrapper) is { } managed &&
+            !string.Equals(runtime, managed, StringComparison.OrdinalIgnoreCase))
+        {
+          var message = $"ONNX Runtime version mismatch: onnxruntime.dll in use is {native}, while " +
+            $"Microsoft.ML.OnnxRuntime installed with EQLogParser is {wrapper}. Reinstall Kokoro from the TTS Engine " +
+            "screen so the pack's runtime matches this build.";
+
+          if (Interlocked.Exchange(ref _runtimeDriftReported, 1) == 1)
+          {
+            Log.Debug(message);
+          }
+          else
+          {
+            Log.Warn(message);
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        // A version nobody could read is not a reason to skip the session about to be built.
+        Log.Debug("Unable to compare the onnxruntime versions", ex);
+      }
+    }
+
+    /* The first two dotted components, "1.22" out of "1.22.0.0"; null when the string is not shaped like a version. */
+    private static string MajorMinor(string version) =>
+      version is { Length: > 0 } && version.Split('.') is [var major, var minor, ..]
+        ? $"{major}.{minor}"
+        : null;
 
     /*
      * Confirms the model on disk is the graph we expect. Cheap once the marker matches, so it costs nothing on the

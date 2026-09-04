@@ -147,6 +147,15 @@ namespace EQLogParser.Audio
        */
       _engineReady = Task.Run(() =>
       {
+        /*
+         * One decision about ONNX Runtime before either engine can make it by accident: EQLP's own onnxruntime.dll is
+         * mapped here so that it holds the module name for this process, whichever engine gets built first. Both packs
+         * carry the same build and only one of them -- or worse, a copy another program put in System32 -- can serve
+         * the process, so the choice has to be made once and early. On this thread and not in the constructor: mapping
+         * a 12MB runtime is not work for the UI thread at startup.
+         */
+        TtsPackManager.PreferMatchingOnnxRuntime();
+
         ITtsEngine engine;
 
         try

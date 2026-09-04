@@ -101,6 +101,21 @@ for %%F in (
     call :SignPackFile "%%~F" || goto :fail
 )
 
+rem ---------------------------------------------------------------------------
+rem The MSVC runtime installed app-local beside EQLogParser.exe (see EQLogParser\redist\README.md). These ship signed
+rem by Microsoft and go into the installer as they are, so this only catches the case where someone refreshed the
+rem folder from a source that was not signed. Same rule as the pack files: a vendor signature is left alone rather than
+rem replaced with ours.
+rem ---------------------------------------------------------------------------
+for %%F in (
+    "%RELEASE_DIR%\redist\msvcp140.dll"
+    "%RELEASE_DIR%\redist\msvcp140_1.dll"
+    "%RELEASE_DIR%\redist\vcruntime140.dll"
+    "%RELEASE_DIR%\redist\vcruntime140_1.dll"
+) do (
+    call :SignPackFile "%%~F" || goto :fail
+)
+
 for %%F in ("%MSI_DIR%\EQLogParser*.msi") do (
     if exist "%%~fF" (
         call :SignFile "%%~fF" || goto :fail

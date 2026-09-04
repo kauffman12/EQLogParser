@@ -349,6 +349,10 @@ engines remotely possible at all. Two hooks cover a pack once it exists:
 Both return "not mine" (null / `IntPtr.Zero`) for anything they do not have, so unrelated loads are untouched.
 The hooks are registered once, before any engine is constructed.
 
+Neither hook is a guarantee, and that distinction turned out to matter: they are asked **after** the default search has
+failed to find a name. `onnxruntime.dll` is a case where something else may answer first — see
+[Which onnxruntime.dll wins](#which-onnxruntimedll-wins) — which is why the runtime is claimed rather than resolved.
+
 There is no fallback to a copy beside the executable, and there deliberately is not one. Reading `{app}\piper-tts` when it
 was complete -- which earlier releases did, so that upgrading did not cost a re-download -- meant an engine could be
 running off files the dialog cannot update, cannot remove, and cannot match against a pinned digest, and worse: those
@@ -410,3 +414,72 @@ while an older Piper is alive cannot move files out from under it — and `initi
 espeak-ng data when the directory changes). Everything else returns `IntPtr.Zero` and resolves normally. Piper's own
 dependencies (`onnxruntime.dll`, `espeak-ng.dll`, `piper_phonemize.dll`) sit beside `piperApi.dll`, which the altered
 search path used by `NativeLibrary.Load` covers.
+
+### Which onnxruntime.dll wins
+
+Both speech engines load `onnxruntime.dll`, and Windows keeps **one native module per base name** for the life of a
+process: whoever maps it first holds that name, and every later request — an import from `piperApi.dll`, a P/Invoke from
+`Microsoft.ML.OnnxRuntime.dll`, even a load by absolute path to a different file — is answered out of the module list.
+So one ONNX Runtime serves the whole session, and the question is which file that is.
+
+The answer cannot be left to resolution order, because an old copy is easy to hit. `onnxruntime.dll` is not a Windows
+system DLL, but other programs install it there anyway: a machine with a 2021-vintage `C:\Windows\System32\
+onnxruntime.dll` (1.7.x) answers `DllImport("onnxruntime")` from System32 and refuses Kokoro's graph with something like
+"Unsupported model IR version" about a download that is perfectly fine. Two facts make that fatal rather than merely
+untidy:
+
+- The default search — the host's deps.json native assets, then `LoadLibraryEx` over the usual directories including
+  System32 — runs **before** .NET asks anyone's resolver. A search that *succeeds* with somebody else's file never asks
+  `ResolvingUnmanagedDll`, and a resolver registered for `Microsoft.ML.OnnxRuntime` never runs either.
+- `EQLogParser.deps.json` lists `runtimes/win-x64/native/onnxruntime.dll`, which the installer deliberately does not
+  ship (that is ~12 MB of a ~20 MB installer, and the packs carry it). A declared native asset that is not on disk is
+  simply not found, so a clean install falls through to the operating system while a development run — whose build
+  output does have the file — resolves it correctly. That asymmetry is why this bug showed up on a VM and not on the
+  machine that reproduced everything else.
+
+What works instead is being **resident first**, which is `TtsPackManager.PreferMatchingOnnxRuntime()`: it loads EQLP's
+own copy by absolute path, so from then on every request for the name is answered with ours. Candidate order is
+`<kokoro>\native`, then `<piper-tts>`: Kokoro's copy leads because it is published together with the managed wrapper
+installed beside the executable and repacked whenever that wrapper moves, while Piper's pack carries the same build today
+and either serves. It runs once, from the thread pool, before the session's first engine is built (`AudioManager`) — not
+from the constructor, because mapping a 12 MB runtime is not startup work for the UI thread — and again from both engines
+for a pack downloaded mid-session. Whichever engine gets there first is fine; that is the point of keeping the choice in
+one place rather than in an engine.
+
+Three supports around the claim, each covering a case the others cannot:
+
+- `EnsureOnnxRuntimeImportResolver` pins `Microsoft.ML.OnnxRuntime`'s own imports to the approved folder. It cannot beat
+  System32 — nothing registered from managed code can, once the default search finds a file — so its job is the mirror
+  failure: when EQLP's copy is **missing** it throws instead of returning `IntPtr.Zero`, because handing the name back
+  is exactly how a foreign runtime gets in. Fail loudly on a decision we own.
+- After claiming, `IsForeignOnnxRuntimeResident()` asks which file is actually mapped — an absolute-path load returns the
+  already-resident module, so success alone does not prove it is ours — and Kokoro refuses to start when the answer is a
+  path outside its packs and program folder. The alternative is 156 MB of "re-download your model" advice aimed at a
+  file that is fine.
+- `WarnOnRuntimeDrift` compares the mapped module's version with the wrapper installed beside the executable, since the
+  pack publishes the two together and a mismatch means one of them moved alone. Warn, not refuse: major.minor is not the
+  whole contract and an engine that speaks beats a tidy log.
+
+### The MSVC runtime the same way
+
+`onnxruntime.dll` imports `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll` and `vcruntime140_1.dll`. Those four
+install app-local beside `EQLogParser.exe` (`EQLogParser\redist`, Microsoft-signed and left that way) so a machine with no
+Visual C++ redistributable can still speak — historically that was exactly where Kokoro failed on Wine while Piper worked,
+and the difference was never the ONNX build.
+
+They are claimed by name in the same call, before ONNX Runtime is mapped, and that claim is the load-bearing part. A
+runtime loaded from `<kokoro>\native` is mapped with an altered search path — its own directory, then the system
+Directories — so the program folder is **not** in that list, and four DLLs beside `EQLogParser.exe` would do nothing for
+it unless those names were already resident. Claiming them first means ONNX's imports are answered from the module list,
+which is also why the claim runs before the runtime and not after.
+
+The consequence of installing them flat in `{app}` is worth stating plainly: the search order puts the program folder
+ahead of System32, so these four are what this process maps even on a machine that has a newer redistributable. That is
+Microsoft's *local deployment* of the CRT and it holds under one condition — **the checked-in copies stay current**
+(`EQLogParser\redist\README.md` says how to refresh them). The CRT serves older binaries forward, so an up-to-date
+app-local copy is a safe floor for everything in the process: Syncfusion's natives, NAudio's, ONNX Runtime's. Which file
+answered each name is visible twice over — in `scripts\MeasureLoadedAssemblies.ps1` output, and in the Debug lines
+`ClaimVisualCppRuntimes` writes.
+
+Whether that makes Bottles' `vcredist2022` dependency redundant is a separate question with a fresh-prefix test in front
+of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).

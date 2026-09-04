@@ -173,6 +173,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <!-- The MSVC runtime DLLs ONNX Runtime imports, copied out to the build output only so the installer has something
+         to pick up: the .iss [Files] section installs them flat into {app}, not into a redist folder. They are
+         Microsoft-signed and stay that way. See redist\README.md. -->
+    <None Include="redist\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="..\Dependencies\Hardcodet.Wpf.TaskbarNotification.dll" />
     <None Remove="icons\Active.gif" />
     <None Remove="icons\idle.gif" />

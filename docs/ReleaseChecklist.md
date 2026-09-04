@@ -59,7 +59,13 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
 
    A fresh install therefore ships Windows voices only; Piper and Kokoro appear in the TTS Engine dialog as a download.
    Nothing reads a speech runtime under `{app}` any more — `%LOCALAPPDATA%\EQLogParser\<engine>-<version>` is the only
-   place the engines look — but `[InstallDelete]` deliberately does **not** clean up what used to live there. Releases
+   place the engines look — but `[InstallDelete]` deliberately does **not** clean up what used to live there.
+
+   The exception in `[Files]` is the app-local MSVC runtime (`{app}\msvcp140*.dll`, `vcruntime140*.dll`, taken from
+   `EQLogParser\redist`). Expect those four in the report loaded **from `{app}`** even on a machine that has the
+   redistributable installed: the program folder is searched before System32, and that precedence is the feature. They
+   belong to the whole process, so an ONNX Runtime loaded from a pack resolving against them is the pairing this exists
+   to create — see `EQLogParser\redist\README.md` for why those copies have to stay current. Releases
    through 2.3.61 put Piper at `{app}\piper-tts` with voices underneath, and users put their own voice models in that
    folder; leaving a few hundred inert MB is better than deleting files somebody added. The uninstaller still clears
    `{app}`. So `[InstallDelete]` stays what it always was — libraries this project dropped years ago (`ActiproSoftware.*`,

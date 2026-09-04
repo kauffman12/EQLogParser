@@ -16,6 +16,9 @@ namespace EQLogParser.Wpf.Test
   {
     private const string UnknownEngine = "NoSuchEngine";
 
+    // The one native module name this app chooses for itself; see the ONNX Runtime selection region.
+    private const string OnnxRuntimeFile = "onnxruntime.dll";
+
     // "abc" and the empty input, the two digests anybody verifies a hash implementation against by hand.
     private const string AbcSha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
     private const string EmptySha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -181,6 +184,106 @@ namespace EQLogParser.Wpf.Test
     public async Task InstallAsync_EngineWithNoPack_FailsWithoutDownloading()
     {
       Assert.IsFalse(await TtsPackManager.InstallAsync(UnknownEngine, null, CancellationToken.None));
+    }
+
+    #endregion
+
+    #region ONNX Runtime selection
+
+    /*
+     * One onnxruntime.dll can be resident per process, so the candidate order decides which one a session gets and it
+     * decides silently: Kokoro's copy leads because it is published together with the managed wrapper installed beside
+     * the executable, and anything without a runtime in it has to be stepped over rather than trusted. A directory that
+     * holds KokoroSharp but no runtime is a real entry in that list (`<kokoro>\bin`), which is what the first assertion
+     * is for. See docs/DesignNotes.md -> Which onnxruntime.dll wins.
+     */
+    [TestMethod]
+    public void FirstDirectoryWithOnnxRuntime_PicksTheFirstCandidateCarryingARuntime()
+    {
+      var root = Path.Combine(Path.GetTempPath(), $"eqlp-onnx-{Guid.NewGuid():N}");
+
+      try
+      {
+        var kokoroBin = Directory.CreateDirectory(Path.Combine(root, "kokoro", "bin")).FullName;
+        var kokoroNative = Directory.CreateDirectory(Path.Combine(root, "kokoro", "native")).FullName;
+        var piper = Directory.CreateDirectory(Path.Combine(root, "piper-tts")).FullName;
+        var candidates = new[] { kokoroBin, kokoroNative, piper };
+
+        File.WriteAllText(Path.Combine(kokoroBin, "MisakiSharp.dll"), string.Empty);
+        File.WriteAllText(Path.Combine(piper, OnnxRuntimeFile), string.Empty);
+
+        Assert.AreEqual(piper, TtsPackManager.FirstDirectoryWithOnnxRuntime(candidates));
+
+        // Both packs in step is the normal state, and then Kokoro's copy has to be the one that wins.
+        File.WriteAllText(Path.Combine(kokoroNative, OnnxRuntimeFile), string.Empty);
+        Assert.AreEqual(kokoroNative, TtsPackManager.FirstDirectoryWithOnnxRuntime(candidates),
+          "Kokoro's copy must claim the name: it is published with the ONNX wrapper installed beside the executable.");
+
+        Assert.IsNull(TtsPackManager.FirstDirectoryWithOnnxRuntime([kokoroBin]));
+        Assert.IsNull(TtsPackManager.FirstDirectoryWithOnnxRuntime(Array.Empty<string>()));
+      }
+      finally
+      {
+        Directory.Delete(root, true);
+      }
+    }
+
+    /*
+     * Whether the runtime in use came from EQLP is the difference between "reinstall Kokoro" and "another program's
+     * 2021 onnxruntime.dll is answering your imports", so the check has to name a foreign path as foreign -- a copy in
+     * System32 above all, since that is the one found in the field. Directory prefixes compare with a trailing
+     * separator, which is what stops an "EQLogParser-old" sibling from counting as ours.
+     */
+    [TestMethod]
+    public void IsOwnedNativePath_PacksAndProgramFolderAreOursEverythingElseIsNot()
+    {
+      var root = Path.Combine(Path.GetTempPath(), $"eqlp-owned-{Guid.NewGuid():N}");
+      var packs = Path.Combine(root, "EQLogParser");
+      var program = Path.Combine(root, "Program Files", "EQLogParser");
+      var owned = new[] { packs, program };
+
+      try
+      {
+        Assert.IsTrue(TtsPackManager.IsOwnedNativePath(
+          Path.Combine(packs, "kokoro", "native", OnnxRuntimeFile), owned));
+        Assert.IsTrue(TtsPackManager.IsOwnedNativePath(
+          Path.Combine(program, "runtimes", "win-x64", "native", OnnxRuntimeFile), owned),
+          "A development run resolves the NuGet runtime through EQLogParser.deps.json and is still EQLP's own.");
+
+        Assert.IsFalse(TtsPackManager.IsOwnedNativePath(
+          Path.Combine(Path.GetPathRoot(Path.GetFullPath(root)) ?? Path.DirectorySeparatorChar.ToString(),
+            "Windows", "System32", OnnxRuntimeFile), owned));
+        Assert.IsFalse(TtsPackManager.IsOwnedNativePath(
+          Path.Combine(root, "EQLogParser-old", OnnxRuntimeFile), owned));
+        Assert.IsFalse(TtsPackManager.IsOwnedNativePath(null, owned));
+        Assert.IsFalse(TtsPackManager.IsOwnedNativePath(string.Empty, owned));
+      }
+      finally
+      {
+        // Nothing was created here; this only removes the root should that ever change.
+        if (Directory.Exists(root))
+        {
+          Directory.Delete(root, true);
+        }
+      }
+    }
+
+    /*
+     * The resolver pins one module name and nothing else: `onnxruntime_providers_shared.dll` is loaded by ONNX Runtime
+     * itself from beside its own module, and piperApi.dll has a resolver of its own in PiperTtsEngine. Taking either of
+     * those over would mean answering for imports whose location this code does not decide.
+     */
+    [TestMethod]
+    public void IsOnnxRuntimeLibrary_OnlyTheRuntimeItselfIsOursToChoose()
+    {
+      Assert.IsTrue(TtsPackManager.IsOnnxRuntimeLibrary("onnxruntime"));
+      Assert.IsTrue(TtsPackManager.IsOnnxRuntimeLibrary(OnnxRuntimeFile));
+      Assert.IsTrue(TtsPackManager.IsOnnxRuntimeLibrary("ONNXRUNTIME.DLL"));
+
+      Assert.IsFalse(TtsPackManager.IsOnnxRuntimeLibrary("onnxruntime_providers_shared.dll"));
+      Assert.IsFalse(TtsPackManager.IsOnnxRuntimeLibrary(PiperTtsEngine.PiperApiLibrary));
+      Assert.IsFalse(TtsPackManager.IsOnnxRuntimeLibrary(null));
+      Assert.IsFalse(TtsPackManager.IsOnnxRuntimeLibrary(string.Empty));
     }
 
     #endregion

@@ -52,7 +52,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; assemblies, onnxruntime, embeddings and model are published as runtime packs and downloaded into
 ; %LOCALAPPDATA%\EQLogParser\piper-tts and ...\kokoro when the user enables one on the TTS Engine screen
 ; (docs/TtsPacks.md). Only the two assemblies EQLogParser.Audio.dll is compiled against are carried below:
-; KokoroSharp.dll and Microsoft.ML.OnnxRuntime.dll. Keeping the rest out is what holds this installer near 19MB.
+; KokoroSharp.dll and Microsoft.ML.OnnxRuntime.dll. Keeping the rest out is what holds this installer near 20MB.
+; The one speech-related exception is the MSVC runtime those engines' ONNX Runtime imports, installed app-local further
+; down: it is a prerequisite of the whole app rather than of one engine's data, and 750KB beats telling people to
+; install a redistributable for one feature.
 
 Source: "{#MyReleaseDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\DotLiquid.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -124,6 +127,16 @@ Source: "{#MyReleaseDir}\System.Drawing.Common.dll"; DestDir: "{app}"; Flags: ig
 Source: "{#MyReleaseDir}\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WpfAnimatedGif.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\runtimes\win\lib\net8.0\System.Speech.dll"; DestDir: "{app}\runtimes\win\lib\net8.0"; Flags: ignoreversion
+
+; The MSVC runtime that onnxruntime.dll imports, installed app-local (flat in {app}, not in a redist folder) so a
+; machine without the Visual C++ 2022 redistributable can still speak. Being beside the executable is what puts them
+; ahead of System32 for this process, and TtsPackManager maps these four names before it maps any ONNX Runtime, which is
+; what makes them apply to a runtime that lives in a pack directory and does not search here at all. Microsoft-signed;
+; sign.cmd leaves the vendor signature alone. See EQLogParser\redist\README.md.
+Source: "{#MyReleaseDir}\redist\msvcp140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\redist\msvcp140_1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\redist\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\redist\vcruntime140_1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#BackupUtilDir}\BackupUtil.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BackupUtilDir}\BackupUtil.dll"; DestDir: "{app}"; Flags: ignoreversion

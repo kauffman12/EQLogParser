@@ -43,7 +43,17 @@ namespace EQLogParser.Audio
     private const string ReleaseRepo = "kauffman12/EQLogParser-TTS";
     private const string MarkerName = ".pack-ready";
     private const string ManifestName = "manifest.json";
+    private const string RedistFolderName = "redist";
     private const string OnnxRuntimeFileName = "onnxruntime.dll";
+
+    /*
+     * The MSVC runtime DLLs onnxruntime.dll imports. They install beside the executable (EQLogParser\redist in the
+     * repository, see its README) so a Windows machine that never installed the Visual C++ redistributable can still
+     * speak, and they are claimed by name before onnxruntime is mapped because a runtime living in a pack folder
+     * resolves its imports from that folder and then the system -- never from the program folder.
+     */
+    private static readonly string[] VisualCppRuntimeDlls =
+      ["msvcp140.dll", "msvcp140_1.dll", "vcruntime140.dll", "vcruntime140_1.dll"];
 
     // One buffer for every bulk read and write in an install: hashing, unpacking and the download all move whole
     // megabytes, and 4MB is what makes per-chunk cancellation and progress cheap enough to bother with.
@@ -96,6 +106,17 @@ namespace EQLogParser.Audio
     private static readonly JsonSerializerOptions ManifestOptions = new() { PropertyNameCaseInsensitive = true };
 
     private static int _resolversRegistered;
+
+    /*
+     * ONNX Runtime selection, all of it under _onnxLock. Windows keys native modules by base name, so the first
+     * onnxruntime.dll to be mapped serves every later request in this process and nothing can take the name back; a
+     * claim therefore settles once it has either put our copy in place or found somebody else's already there.
+     * _claimWarned keeps a machine that cannot map its runtime from logging the same sentence on every engine switch.
+     */
+    private static readonly object _onnxLock = new();
+    private static bool _onnxClaimSettled;
+    private static bool _claimWarned;
+    private static int _onnxImportResolverRegistered;
 
     /*
      * True when this engine's own directory is here, complete or not. Only used to word the result of a remove:
@@ -547,44 +568,134 @@ namespace EQLogParser.Audio
     }
 
     /*
-     * Map the onnxruntime.dll that belongs with the managed wrapper before Piper gets the chance to load its own.
+     * Claim onnxruntime.dll -- and the MSVC runtime it imports -- for EQLP's own files before either speech engine can
+     * end up speaking through a copy nobody chose. Call this before anything touches ONNX Runtime; repeating it is
+     * cheap and the first success settles it for the process.
      *
-     * Both engines ship that file and only one can be resident, because Windows keys modules by base name: whichever
-     * loads first holds the name for the life of the process, and every later request for it is answered from memory.
-     * So the winner has to be chosen deliberately rather than fall out of which engine the user spoke from first.
+     * Both engines ship onnxruntime.dll and only one of them can be resident, because Windows keys native modules by
+     * base name: whoever loads first holds the name for the life of the process, and every later request -- including
+     * a P/Invoke that names nothing but "onnxruntime.dll" -- is answered out of memory. The winner therefore has to be
+     * picked rather than fall out of which engine the user spoke from first. Kokoro's copy leads because it is
+     * published alongside the Microsoft.ML.OnnxRuntime wrapper installed with the app and repacked whenever that
+     * wrapper moves; Piper's pack carries the same build today (the two are kept in step, see piper-tts\README.md), so
+     * either serves and Piper getting here first is fine -- which is exactly why the claim sits here instead of inside
+     * an engine. If the two ever drift, this order still chooses the one matching the wrapper.
      *
-     * The right winner is Kokoro's copy, because that one is published alongside the Microsoft.ML.OnnxRuntime wrapper
-     * installed with the app and repacked whenever the wrapper version moves. Piper's pack carries the same version
-     * today (the two are kept in step, see piper-tts\README.md), so either would do; if they ever drift, the older one
-     * is the side that loses harmlessly: the ORT C API is versioned and old models keep running on a newer runtime,
-     * while the older one refuses Kokoro's graphs outright -- "Unsupported model IR version: 9" about a download that
-     * is perfectly fine. Loading a newer Piper build over a newer wrapper would be just as wrong the other way round,
-     * which is why this matches rather than compares versions.
+     * Claiming is not cosmetic. A bare DllImport("onnxruntime") is answered by the operating system's search order,
+     * System32 included, and a 1.7 copy some other program left there wins that race -- it refuses Kokoro's graph with
+     * "Unsupported model IR version" about a download that is perfectly fine. The resolvers below cannot prevent that,
+     * because they are consulted only after the default search has failed; being resident first is what makes the
+     * outcome deterministic.
      */
     internal static void PreferMatchingOnnxRuntime()
     {
-      if (ResolveRoot(AudioManager.KokoroEngine) is not string root)
+      lock (_onnxLock)
       {
-        return;
-      }
+        if (_onnxClaimSettled)
+        {
+          return;
+        }
 
-      var path = Path.Combine(root, "native", OnnxRuntimeFileName);
-      if (!File.Exists(path))
-      {
-        return;
-      }
+        // Before onnxruntime, whose imports these are: its own folder is searched first and the program folder not at
+        // all, so an app-local MSVC runtime applies only if this process takes those names first.
+        ClaimVisualCppRuntimes();
 
-      // An absolute path loads that file and lets its own dependencies come from the same folder.
-      if (NativeLibrary.TryLoad(path, typeof(TtsPackManager).Assembly,
-            DllImportSearchPath.UseDllDirectoryForDependencies, out _))
-      {
+        if (ApprovedNativeDirectory() is not { } directory)
+        {
+          // Nothing to claim: a machine with no downloaded pack has no runtime. Not worth logging, because an engine
+          // cannot be built without one and both engines come through this method on their way to being built.
+          return;
+        }
+
+        var path = Path.Combine(directory, OnnxRuntimeFileName);
+
+        // An absolute path loads that file and lets its own dependencies come from the same folder.
+        if (!NativeLibrary.TryLoad(path, typeof(TtsPackManager).Assembly,
+              DllImportSearchPath.UseDllDirectoryForDependencies, out _))
+        {
+          WarnOnce(ref _claimWarned,
+            $"Unable to load EQLP's onnxruntime from {path}; another copy may answer instead " +
+            $"({DescribeLoadedOnnxRuntime()})");
+
+          // Leave the claim open: a runtime that would not map once -- a pack half written, a DLL briefly locked --
+          // may map fine on the next engine, and giving up here would make that permanent.
+          return;
+        }
+
+        /*
+         * An absolute path does not win the name by itself: if some other copy is already mapped, LoadLibrary hands
+         * back that module and the file asked for never leaves the disk. So confirm who actually holds it instead of
+         * assuming success means ours.
+         */
+        if (IsForeignOnnxRuntimeResident())
+        {
+          // Settled in the bad sense. Nothing this process can do takes the name back, so saying it again on every
+          // engine switch would only be noise.
+          _onnxClaimSettled = true;
+
+          Log.Error($@"EQLP's onnxruntime at {path} is not the module this process is using: " +
+            $"{DescribeLoadedOnnxRuntime()} is mapped instead. Windows keeps one module per name, so that copy serves " +
+            "EQLogParser until it is unmapped -- which only happens when the process ends. Do not delete anything from " +
+            "Windows: find what installed it, close it, and restart EQLogParser.");
+          return;
+        }
+
+        _onnxClaimSettled = true;
         Log.Debug($"onnxruntime claimed for this process by {path}");
       }
-      else
-      {
-        Log.Warn($"Unable to load the pack's onnxruntime from {path}; Piper may claim the name first");
-      }
     }
+
+    /*
+     * The directory whose onnxruntime.dll this process must use: the first candidate that has one, Kokoro's ahead of
+     * Piper's for the reason in PreferMatchingOnnxRuntime. Null when no installed pack carries a runtime.
+     */
+    internal static string ApprovedNativeDirectory() => FirstDirectoryWithOnnxRuntime(NativeSearchDirectories());
+
+    /* Visible for tests: the first of these directories that holds an onnxruntime.dll. */
+    internal static string FirstDirectoryWithOnnxRuntime(IEnumerable<string> directories)
+    {
+      foreach (var directory in directories)
+      {
+        if (directory is { Length: > 0 } && File.Exists(Path.Combine(directory, OnnxRuntimeFileName)))
+        {
+          return directory;
+        }
+      }
+
+      return null;
+    }
+
+    /*
+     * Pin the managed ONNX wrapper's own imports to EQLP's copy, so "onnxruntime.dll" cannot be answered from
+     * somewhere else even on a path that forgot to claim it -- a pack downloaded while the app runs, an engine built
+     * by code added later. The wrapper is the assembly whose P/Invoke stubs ask for the module, so the resolver is
+     * registered for it and not for this one, and it has to be in place before anything creates a session.
+     *
+     * Second line, and worth saying plainly: an import resolver runs only after the default search has failed to find
+     * the name, so against a copy sitting in System32 or already mapped it never fires at all. The claim above is what
+     * closes that; what this one buys is that a pack missing its runtime becomes an error instead of a hand-back to
+     * the operating system.
+     */
+    internal static void EnsureOnnxRuntimeImportResolver(Assembly onnxWrapper)
+    {
+      if (onnxWrapper is null || Interlocked.Exchange(ref _onnxImportResolverRegistered, 1) == 1)
+      {
+        return;
+      }
+
+      NativeLibrary.SetDllImportResolver(onnxWrapper, ResolveOnnxRuntimeImport);
+    }
+
+    /*
+     * True when the onnxruntime.dll this process has mapped is not one EQLP put there: a runtime another program left
+     * in System32, or one found earlier on the search path. An engine asks this before blaming its own download,
+     * because a graph refused by somebody else's four-year-old runtime looks exactly like a corrupt model.
+     */
+    internal static bool IsForeignOnnxRuntimeResident() =>
+      LoadedOnnxRuntimePath() is { } path && !IsOwnedNativePath(path, OwnedNativeRoots());
+
+    /* Where the mapped onnxruntime.dll came from, or null when this process has not mapped one. */
+    internal static string LoadedOnnxRuntimePath() => LoadedModulePath(OnnxRuntimeFileName);
 
     /*
      * Which onnxruntime.dll the process actually has mapped, with its version. Exists because a model rejected by an
@@ -592,23 +703,199 @@ namespace EQLogParser.Audio
      */
     internal static string DescribeLoadedOnnxRuntime()
     {
+      if (LoadedOnnxRuntimePath() is not { Length: > 0 } path)
+      {
+        return "none loaded";
+      }
+
       try
       {
-        using var current = Process.GetCurrentProcess();
-        foreach (ProcessModule module in current.Modules)
+        return $"{path} version {FileVersionInfo.GetVersionInfo(path).FileVersion ?? "unknown"}";
+      }
+      catch (Exception ex)
+      {
+        Log.Debug($"Unable to read the version of {path}", ex);
+        return path;
+      }
+    }
+
+    /* Whether the wrapper imports this name as the runtime module: "onnxruntime" and "onnxruntime.dll". */
+    internal static bool IsOnnxRuntimeLibrary(string libraryName) =>
+      libraryName is { Length: > 0 } &&
+      string.Equals(Path.GetFileNameWithoutExtension(libraryName), "onnxruntime", StringComparison.OrdinalIgnoreCase);
+
+    /*
+     * Visible for tests: whether a mapped module lives under one of these roots. The comparison is on full paths with
+     * a trailing separator, so a root ending in "...\kokoro" cannot claim "...\kokoro-other\onnxruntime.dll".
+     */
+    internal static bool IsOwnedNativePath(string path, IEnumerable<string> ownedRoots)
+    {
+      if (path is not { Length: > 0 })
+      {
+        return false;
+      }
+
+      try
+      {
+        var full = Path.GetFullPath(path);
+
+        foreach (var root in ownedRoots)
         {
-          if (string.Equals(module.ModuleName, OnnxRuntimeFileName, StringComparison.OrdinalIgnoreCase))
+          if (root is not { Length: > 0 })
           {
-            return $"{module.FileName} version {module.FileVersionInfo?.FileVersion}";
+            continue;
+          }
+
+          var prefix = Path.GetFullPath(root);
+          if (!prefix.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+          {
+            prefix += Path.DirectorySeparatorChar;
+          }
+
+          if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+          {
+            return true;
           }
         }
       }
       catch (Exception ex)
       {
-        Log.Debug("Unable to inspect the loaded onnxruntime module", ex);
+        Log.Debug($"Unable to compare {path} with the directories EQLP owns", ex);
       }
 
-      return "none loaded";
+      return false;
+    }
+
+    /*
+     * Make sure the four MSVC runtime names onnxruntime.dll imports are answered before it is mapped, and record where
+     * each one came from -- these are the module names whose wrong answer looks like a broken download.
+     *
+     * Installed, the four sit beside EQLogParser.exe and this loop asks a question the search order has already
+     * answered: the program folder comes before System32, so an app-local CRT is what this process gets (Microsoft's
+     * "local deployment" pattern, and the reason the checked-in copies have to be a current toolset build -- see
+     * redist\README.md). That is the point of putting them there: a runtime loaded from a pack directory, and a machine
+     * with no redistributable at all, both need it.
+     *
+     * The fallback below covers the layouts where they are NOT beside the executable -- a build output keeps them under
+     * redist\, which nothing searches -- by mapping that copy explicitly.
+     */
+    private static void ClaimVisualCppRuntimes()
+    {
+      foreach (var name in VisualCppRuntimeDlls)
+      {
+        // Plain LoadLibrary semantics, which is the question being asked: "what does this machine give me for this
+        // name?" The overload taking an assembly would also consult our own pack resolver, and that would let a stray
+        // DLL in a pack answer for the whole process.
+        if (NativeLibrary.TryLoad(name, out _))
+        {
+          Log.Debug($"{name} resolved from {LoadedModulePath(name) ?? "somewhere unnamed"}");
+          continue;
+        }
+
+        if (AppLocalVisualCppRuntime(name) is { } path && NativeLibrary.TryLoad(path, out _))
+        {
+          Log.Debug($"no {name} on the search path; using EQLP's copy at {path}");
+        }
+        else
+        {
+          Log.Debug($"no copy of {name} on this machine; onnxruntime may not be loadable");
+        }
+      }
+    }
+
+    /*
+     * The program folder first -- that is where the installer puts these -- then the redist folder, which is where a
+     * build output keeps them and therefore what a development run sees.
+     */
+    private static string AppLocalVisualCppRuntime(string name)
+    {
+      foreach (var directory in AppLocalNativeDirectories())
+      {
+        var candidate = Path.Combine(directory, name);
+        if (File.Exists(candidate))
+        {
+          return candidate;
+        }
+      }
+
+      return null;
+    }
+
+    private static IEnumerable<string> AppLocalNativeDirectories()
+    {
+      yield return AppContext.BaseDirectory;
+      yield return Path.Combine(AppContext.BaseDirectory, RedistFolderName);
+    }
+
+    private static IntPtr ResolveOnnxRuntimeImport(string libraryName, Assembly assembly,
+      DllImportSearchPath? searchPath)
+    {
+      if (!IsOnnxRuntimeLibrary(libraryName))
+      {
+        // Every other import the wrapper makes is not EQLP's to choose.
+        return IntPtr.Zero;
+      }
+
+      /*
+       * Deliberately not IntPtr.Zero when our copy is missing. Handing the name back sends the wrapper into the
+       * operating system's search -- which is precisely how an old onnxruntime.dll in System32 gets to run Kokoro's
+       * graph -- and a machine with no runtime pack is an error somebody can act on.
+       */
+      if (ApprovedNativeDirectory() is not { } directory)
+      {
+        throw new DllNotFoundException(
+          $"EQLogParser's {OnnxRuntimeFileName} was not found in any installed speech runtime pack.");
+      }
+
+      // Absolute, so the provider stub beside it comes from the same folder rather than from anywhere on the path.
+      return NativeLibrary.Load(Path.Combine(directory, OnnxRuntimeFileName));
+    }
+
+    /*
+     * The directories whose onnxruntime.dll counts as ours: the packs this app downloaded into local app data, and its
+     * own program folder -- which covers both a runtime installed beside the executable and the NuGet copy under
+     * runtimes\win-x64\native in a build output, where development runs resolve it through EQLogParser.deps.json.
+     */
+    private static IEnumerable<string> OwnedNativeRoots()
+    {
+      yield return StorageRoot;
+      yield return AppContext.BaseDirectory;
+    }
+
+    /* Where a native module of this name was loaded from, or null when the process has not mapped it. */
+    private static string LoadedModulePath(string moduleName)
+    {
+      try
+      {
+        using var current = Process.GetCurrentProcess();
+        foreach (ProcessModule module in current.Modules)
+        {
+          if (string.Equals(module.ModuleName, moduleName, StringComparison.OrdinalIgnoreCase))
+          {
+            return module.FileName;
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Debug($"Unable to inspect the loaded {moduleName} module", ex);
+      }
+
+      return null;
+    }
+
+    /* One Warn per event: these branches run again on every engine switch, and repeats are Debug material. */
+    private static void WarnOnce(ref bool alreadyReported, string message)
+    {
+      if (alreadyReported)
+      {
+        Log.Debug(message);
+      }
+      else
+      {
+        alreadyReported = true;
+        Log.Warn(message);
+      }
     }
 
     private static HttpClient CreateClient()

@@ -505,8 +505,12 @@ namespace EQLogParser.Audio
       {
         try
         {
-          // Claim the onnxruntime name for the build matching our managed wrapper before piperApi.dll pulls in the one
-          // sitting next to it: both engines need that module and only the first loaded can serve them.
+          /*
+           * Claim the onnxruntime name for the build matching our managed wrapper before piperApi.dll pulls in the one
+           * sitting next to it: both engines need that module and only the first loaded can serve them. Usually a
+           * no-op -- AudioManager claims it before the session's first engine is built -- but this is the path that
+           * covers a Piper enabled later in the session, and the claim is idempotent either way.
+           */
           TtsPackManager.PreferMatchingOnnxRuntime();
 
           // One initialize() per pack directory: downloading a pack while an app-local Piper is live means the new

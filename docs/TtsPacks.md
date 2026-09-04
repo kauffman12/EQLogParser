@@ -90,7 +90,23 @@ humans and for `-Verify`, not as the app's reference.
 - **Bumping `Microsoft.ML.OnnxRuntime` in the app means republishing the Kokoro pack.** The managed wrapper installs
   with the app and the native `onnxruntime.dll` comes from the pack; ONNX Runtime requires the two to be the same
   version. Same reasoning for KokoroSharp itself: it installs with the app and runs against everything in the pack.
-  A mismatch shows up as Kokoro refusing to start, in the log, not as a crash.
+  A mismatch shows up as Kokoro refusing to start, in the log, not as a crash — and `KokoroTtsEngine` now says so in
+  words when the mapped runtime and the installed wrapper disagree on major.minor.
+
+## One onnxruntime.dll per process
+
+Both packs carry `onnxruntime.dll`, and only one of them can ever be in use: Windows keys native modules by base name,
+so the first copy mapped serves every later request in that process — including a load by absolute path to a different
+file. Which engine spoke first is therefore not an acceptable way to decide it, and neither is resolution order:
+`DllImport("onnxruntime")` goes through the operating system's search, System32 included, and other programs put their
+own `onnxruntime.dll` there. EQLP claims its copy instead of resolving one. The rules — candidate order, why the claim
+happens before either engine is built, why import resolvers cannot beat System32, and why the MSVC runtime copies in
+`EQLogParser\redist\` ship beside `EQLogParser.exe` and are claimed by name before ONNX Runtime is mapped — are in
+[DesignNotes.md](DesignNotes.md) → *Which onnxruntime.dll wins*.
+
+The practical part for anyone publishing: keep the two packs' ONNX Runtime in step (they are the same Microsoft build,
+signed by Microsoft and left unsigned by us), and treat a log line naming a runtime outside
+`%LOCALAPPDATA%\EQLogParser\` as a machine problem rather than a pack problem.
 
 ## What goes in git versus releases
 
