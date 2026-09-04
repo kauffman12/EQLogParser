@@ -170,6 +170,9 @@ Type: files; Name: "{app}\data\triggerVariables.rtf"
 ;
 ; {app}\runtimes\win-x64 is left alone for the same reason: other packages put natives in it (SQLite among them), this
 ; installer does not create the folder, and nothing here can say what an older install left inside it.
+;
+; The downloaded packs are a different case and are removed on uninstall -- see CurUninstallStepChanged: nothing under
+; %LOCALAPPDATA%\EQLogParser is user-authored, it all comes back from GitHub on the next enable.
 
 [Code]
 // Delete old logs
@@ -360,6 +363,39 @@ begin
   begin
     DeleteLogFiles;
   end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  PacksRoot: string;
+begin
+  // The speech runtime packs are downloaded rather than installed, so Inno knows nothing about them and would leave
+  // roughly a gigabyte behind: piper-tts (~682MB unpacked) and kokoro (~228MB), plus whatever a half-finished fetch left
+  // in _download and the .staging / .retired / *.removing trees an update parked. All of it is derived data that returns
+  // from GitHub the next time somebody enables an engine, so the folder goes whole rather than chasing a list of two
+  // names that rots whenever an engine is added. Roaming stays: logs and settings are small, and they are theirs.
+  if CurUninstallStep <> usPostUninstall then
+  begin
+    Exit;
+  end;
+
+  PacksRoot := ExpandConstant('{localappdata}\EQLogParser');
+
+  // Guarded rather than trusted: this is an unattended recursive delete inside someone's profile, so it refuses to go
+  // anywhere unless the path expanded to exactly the folder it was aiming at.
+  if not DirExists(PacksRoot) or (ExtractFileName(PacksRoot) <> 'EQLogParser') then
+  begin
+    Log('speech packs: nothing to remove at ' + PacksRoot);
+    Exit;
+  end;
+
+  if DelTree(PacksRoot, True, True, False) then
+    Log('removed downloaded speech engines from ' + PacksRoot)
+  else
+    // Usually a voice still playing: EQLogParser keeps onnxruntime.dll mapped out of the pack. Inno's default
+    // CloseApplications asks about the running program first, so this is rare, and what survives is inert -- a partial
+    // pack fails the "is this installed" check like any other and downloads again.
+    Log('could not fully remove ' + PacksRoot + '; something still has files open');
 end;
 
 function InitializeSetup: Boolean;
