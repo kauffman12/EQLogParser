@@ -190,20 +190,24 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   for text popups) and Direct2D via Vortice/SharpDX (we would hand-roll DirectWrite layout; the scale does
   not justify it).
 
-### A/B results so far (10x raid-scale simulation, 4K @120 Hz)
+### A/B verdict (measured, ×10 raid-scale simulation)
 
-- **Vector ceiling:** with NAG's 5-point outline + aliased rasterization and zero render layers, ~100
-  active hits top out around 70 fps — the display-list/DWM path plateaus, not the CPU.
-- **SkiaSharp:** pending first user run; the blit is one `DrawImage` regardless of hit count, so the
-  per-hit cost is C++ draw ops only (~5 per hit vs ~9 vector draws). Crit glow is a real blur in both
-  directions for the first time (vector approximates it with 4 extra diagonal passes or omits it).
+- **Vector (`FctSimCanvas`): under 30 fps** and visibly falling behind — even after eliminating render
+  layers, matching NAG's shadow stack and switching to aliased rasterization, the per-hit display-list
+  path plateaus. Confirms the ceiling is WPF's vector pipeline, not the machine.
+- **SkiaSharp (`FctSkiaCanvas`): ~100 fps** and visually much better — true Gaussian crit glow, no
+  perceptible lag at ×10. The single-image blit holds steady because per-frame cost scales with C++
+  draw ops (~5/hit), not WPF display-list elements.
+- **Decision:** the SkiaSharp backend is the production renderer. `FctSimCanvas` stays in the tree only
+  as the A/B reference behind the second Tools entry; retire it once FCT ships.
 
 ### Phasing
 
-1. **Performance simulation** (done in this tree): `Tools → FCT Simulation (Vector, Test)` and
+1. **Performance simulation** (done, verdict above): `Tools → FCT Simulation (Vector, Test)` and
    `Tools → FCT Simulation (Skia, Test)` each run a fixed-seed 60-second, raid-scale (~7,500 records at
    ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
    draw ops per second in the header. Same record stream, same lane/stack/count-up logic, two renderers.
+   **Winner: SkiaSharp.**
 2. Record plumbing: `EventsHealProcessed`, monitor-start timestamp gate, `FctManager` (records → group-
    matched hit batches).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config
