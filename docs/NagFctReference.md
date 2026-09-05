@@ -182,11 +182,14 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   blur (`SKMaskFilter.CreateBlur`) baked once per unique crit value into a ref-counted halo sprite.
   Both backends implement `IFctSimCanvas`, so production code targets one interface and the winner
   of the A/B test is the only thing that ships.
-- **Package pinning:** `SkiaSharp` + `SkiaSharp.Views.WPF` are pinned to **3.119.2** — the last line
-  whose views package still targets net8 (`net8.0-windows10.0.19041` core lib; the views lib falls
-  back to its net4x build, same `NU1701` pattern as the existing OpenTK references). 3.119.4 dropped
-  net8 and 4.x changed the text API (explicit `SKFont`, `SKPaint` without `Alpha`) and its views assets
-  only target net9/net10/net4x.
+- **Package pinning:** core `SkiaSharp` only, pinned to **3.119.2** — the last line whose core still
+  targets plain net8 (3.119.4 dropped it; 4.x changed the text API and its assets target net9/net10).
+  `SkiaSharp.Views.WPF` was initially referenced for one `ToWriteableBitmap()` extension and has been
+  dropped: every one of its dependency groups pulls OpenTK — below a Win10-19041 project platform it
+  resolves through the net4x build (NU1701), and at ≥19041 its net8 asset demands the OpenTK 4.3 family,
+  which conflicts with KokoroSharp's OpenTK 5.0.0-pre.13 (NU1608, cascading into XAML markup-compile
+  failures). The CPU-surface → WPF blit is now inlined as `FctSkiaCanvas.ToWriteableBitmap` (pinned
+  `ReadPixels` of Bgra8888/premultiplied into WPF's native `Bgra32`, no conversion).
 - **Rejected outright:** WebView2 (could port NAG's CSS keyframes unchanged, but adds a browser runtime
   for text popups) and Direct2D via Vortice/SharpDX (we would hand-roll DirectWrite layout; the scale does
   not justify it).

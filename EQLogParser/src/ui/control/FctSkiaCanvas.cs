@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using SkiaSharp;
-using SkiaSharp.Views.WPF;
 
 namespace EQLogParser
 {
@@ -264,8 +265,33 @@ namespace EQLogParser
       }
 
       using var image = _surface.Snapshot();
-      dc.DrawImage(image.ToWriteableBitmap(), new Rect(0, 0, ActualWidth, ActualHeight));
+      dc.DrawImage(ToWriteableBitmap(image), new Rect(0, 0, ActualWidth, ActualHeight));
       _dirty = false;
+    }
+
+    /*
+     * CPU surface to WPF blit. The surface is created with the default SKImageInfo (Bgra8888, premultiplied),
+     * which is byte-identical to WPF's native Bgra32 format, so reading back with image.Info performs no
+     * conversion. Replaces the SkiaSharp.Views.WPF ToWriteableBitmap() extension; that package drags an
+     * OpenTK stack that conflicts with the Kokoro TTS one, and nothing else in it is used.
+     */
+    private static WriteableBitmap ToWriteableBitmap(SKImage image)
+    {
+      var stride = image.Width * 4;
+      var pixels = new byte[stride * image.Height];
+      var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+      try
+      {
+        image.ReadPixels(image.Info, handle.AddrOfPinnedObject(), stride);
+      }
+      finally
+      {
+        handle.Free();
+      }
+
+      var bitmap = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgra32, null);
+      bitmap.WritePixels(new Int32Rect(0, 0, image.Width, image.Height), pixels, stride, 0);
+      return bitmap;
     }
 
     private void OnRendering(object sender, EventArgs e)
