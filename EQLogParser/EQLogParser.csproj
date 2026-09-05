@@ -193,6 +193,8 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.19" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.11" />
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.2" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport.Core" Version="2.3.2" />
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="33.1.49" />

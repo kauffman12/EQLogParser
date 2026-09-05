@@ -371,6 +371,12 @@ namespace EQLogParser
     private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
+
+    /* Throwaway perf tests for the FCT render backends — auto-close after 60 s. */
+    private void OpenFctSimulationClick(object sender, RoutedEventArgs e) => new FctSimulationWindow().Show();
+
+    private void OpenFctSkiaSimulationClick(object sender, RoutedEventArgs e) => new FctSimulationWindow(useSkia: true).Show();
+
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
     private async void MigrateNagDbClick(object sender, RoutedEventArgs e)

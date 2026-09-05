@@ -445,6 +445,17 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator />
+          <MenuItem Header="FCT Simul_ation (Vector, Test)" Click="OpenFctSimulationClick" ToolTip="Runs a 60-second floating combat text rendering performance simulation on the WPF vector backend">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="_FCT Simulation (Skia, Test)" Click="OpenFctSkiaSimulationClick" ToolTip="Runs the 60-second floating combat text simulation on the SkiaSharp backend">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
           <MenuItem Header="View _Error Log" Click="ViewErrorLogClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FileCode" />
