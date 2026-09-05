@@ -56,7 +56,8 @@ namespace EQLogParser
       Raise([new FctHitCommand
       {
         Lane = crit ? FctLane.Crit : self ? FctLane.DamageDealt : FctLane.DamageTaken,
-        Value = record.Total + record.OverTotal,
+        // Total is the amount actually dealt (damage records never carry OverTotal today)
+        Value = record.Total,
         Source = $"({record.SubType})",
       }]);
     }
@@ -77,11 +78,18 @@ namespace EQLogParser
         return; // party-wide healing lands with the group config
       }
 
+      // EQ heal lines read "for 9409 (11000)": Total is the effective amount, OverTotal the gross
+      // (it already includes Total when present) — show effective and drop zero-effective overheals
+      if (e.Record.Total == 0)
+      {
+        return;
+      }
+
       Raise([new FctHitCommand
       {
         // a self-heal reads as healing on me
         Lane = healedMe ? FctLane.HealingReceived : FctLane.HealingDealt,
-        Value = e.Record.Total + e.Record.OverTotal,
+        Value = e.Record.Total,
         Source = $"({e.Record.SubType})",
       }]);
     }

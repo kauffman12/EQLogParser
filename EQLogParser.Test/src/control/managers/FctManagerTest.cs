@@ -54,6 +54,28 @@ namespace EQLogParser
       Assert.AreEqual(2, _batches.Count);
       Assert.AreEqual(FctLane.HealingDealt, _batches[0][0].Lane);
       Assert.AreEqual(FctLane.HealingReceived, _batches[1][0].Lane);
+      Assert.AreEqual(50.0, _batches[0][0].Value);
+      Assert.AreEqual(50.0, _batches[1][0].Value);
+    }
+
+    [TestMethod]
+    public void SelfHealEmitsOnlyAsReceived()
+    {
+      FireHeal("TestPlayer", 800, healed: "TestPlayer");
+
+      Assert.AreEqual(1, _batches.Count);
+      Assert.AreEqual(FctLane.HealingReceived, _batches[0][0].Lane);
+    }
+
+    [TestMethod]
+    public void OverhealShowsEffectiveAmountAndDropsZeroEffective()
+    {
+      // "for 9409 (11000)": Total is effective, OverTotal the gross — no double count
+      FireHeal("OtherGuy", 500, healed: "TestPlayer", total: 94, overTotal: 1100);
+      FireHeal("OtherGuy", 600, healed: "TestPlayer", total: 0, overTotal: 500); // fully overhealed tick
+
+      Assert.AreEqual(1, _batches.Count);
+      Assert.AreEqual(94.0, _batches[0][0].Value);
     }
 
     private static void FireDamage(string attacker, double beginTime, bool crit = false, bool isMonitor = true) =>
@@ -71,14 +93,15 @@ namespace EQLogParser
         IsMonitor = isMonitor,
       });
 
-    private static void FireHeal(string healer, double beginTime, string healed = "SomeNpc", bool isMonitor = true) =>
+    private static void FireHeal(string healer, double beginTime, string healed = "SomeNpc", bool isMonitor = true, uint total = 50, uint overTotal = 0) =>
       FctManager.Instance.HandleHeal(new HealProcessedEvent
       {
         Record = new HealRecord
         {
           Healer = healer,
           Healed = healed,
-          Total = 50,
+          Total = total,
+          OverTotal = overTotal,
           SubType = "Blessing",
         },
         BeginTime = beginTime,
