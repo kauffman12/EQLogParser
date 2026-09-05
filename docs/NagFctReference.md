@@ -214,12 +214,13 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    healing received green) arc within the left half of center, outgoing lanes (damage dealt yellow,
    crits orange, heals dealt green) within the right half. Crits keep the blowout + glow but stay on
    the half of their source lane. Deliberate NAG deviations: no fixed flex columns (free float + arc
-   instead), no random crit cell grid (half-clamped band instead — the occupancy grid stays a later
-   smart feature), and rise distance/lifetime is EQ-style (long float) rather than NAG's 1 s fountain.
+   instead), and **no crit cell grid** (decided): crit emphasis is larger size + orange + glow/blowout,
+   drawn last so crits cover non-crits (two-pass draw order in both canvases) — that was judged enough.
+   Rise distance/lifetime is EQ-style (long float) rather than NAG's 1 s fountain.
    Party-wide healing (other chars' heals) is not fed yet; it lands with group config.
 2. Record plumbing (done): `EventsHealProcessed`, per-line `IsMonitor` gate, `FctManager` (records →
    lane-matched hit batches; smart group matching comes with the config phase).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config
    dir, import/export.
-4. Smart features: median tracking, accumulate/ignore thresholds, random/crit cell grid with
-   merge-into-last fallback, per-character enable.
+4. Smart features: median tracking, accumulate/ignore thresholds, per-character enable.
+   (Crit cell grid evaluated and rejected — see layout v1 above.)

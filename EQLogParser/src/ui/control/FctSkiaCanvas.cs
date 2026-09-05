@@ -214,23 +214,32 @@ namespace EQLogParser
       canvas.ResetMatrix();
       canvas.Scale((float)scale, (float)scale); // draw in logical coordinates
 
-      foreach (var hit in _hits)
+      // two passes: regular hits first, crits last — crits draw on top of everything
+      for (var pass = 0; pass < 2; pass++)
       {
-        var age = now - hit.SpawnMs;
-        var opacity = FadeOpacity(age, hit.LifetimeMs, hit.FadeMs);
-        if (opacity <= 0)
+        foreach (var hit in _hits)
         {
-          continue;
-        }
+          if (hit.Blowout != (pass == 1))
+          {
+            continue;
+          }
 
-        var key = FctText.FormatHitValue(GetDisplayValue(hit, age));
-        if (key != hit.LastValueKey)
-        {
-          hit.LastValueKey = key;
-          hit.ValueWidth = TextWidth(key, hit.ValueFontSize, bold: true);
-        }
+          var age = now - hit.SpawnMs;
+          var opacity = FadeOpacity(age, hit.LifetimeMs, hit.FadeMs);
+          if (opacity <= 0)
+          {
+            continue;
+          }
 
-        DrawHit(canvas, hit, age, opacity);
+          var key = FctText.FormatHitValue(GetDisplayValue(hit, age));
+          if (key != hit.LastValueKey)
+          {
+            hit.LastValueKey = key;
+            hit.ValueWidth = TextWidth(key, hit.ValueFontSize, bold: true);
+          }
+
+          DrawHit(canvas, hit, age, opacity);
+        }
       }
 
       using var image = _surface.Snapshot();

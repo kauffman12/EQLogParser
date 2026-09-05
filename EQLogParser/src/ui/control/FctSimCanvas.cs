@@ -192,17 +192,26 @@ namespace EQLogParser
     {
       var now = _clock is null ? 0 : _clock.Elapsed.TotalMilliseconds;
 
-      foreach (var hit in _hits)
+      // two passes: regular hits first, crits last — crits draw on top of everything (no Z-index in a raw OnRender)
+      for (var pass = 0; pass < 2; pass++)
       {
-        var age = now - hit.SpawnMs;
-        var opacity = FadeOpacity(age, hit.LifetimeMs, hit.FadeMs);
-        if (opacity <= 0)
+        foreach (var hit in _hits)
         {
-          continue;
-        }
+          if (hit.Blowout != (pass == 1))
+          {
+            continue;
+          }
 
-        RefreshValueText(hit, age);
-        DrawHit(dc, hit, age, opacity);
+          var age = now - hit.SpawnMs;
+          var opacity = FadeOpacity(age, hit.LifetimeMs, hit.FadeMs);
+          if (opacity <= 0)
+          {
+            continue;
+          }
+
+          RefreshValueText(hit, age);
+          DrawHit(dc, hit, age, opacity);
+        }
       }
 
       _dirty = false;
