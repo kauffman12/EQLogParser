@@ -67,6 +67,7 @@ namespace EQLogParser
      * is actually fading — never per draw (that was the cause of the initial lag). */
     private readonly Random _rand = new(1234);
     private readonly List<FctSimHitState> _hits = [];
+    private readonly FctLifeController _life = new();
     private readonly Brush _outlineBrush = MakeFrozenBrush(0, 0, 0, 235);
     private readonly Brush _glowBrush = MakeFrozenBrush(0, 0, 0, 64);
     private double _pixelsPerDip;
@@ -155,6 +156,26 @@ namespace EQLogParser
       state.SideMin = leftSide ? 8 : w / 2 + 4;
       state.SideMax = leftSide ? w / 2 - 4 : w - 8;
 
+      // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
+      if (lane == FctSimLane.Crit)
+      {
+        state.LifetimeMs = 2800;
+      }
+      else
+      {
+        var live = 0;
+        foreach (var existing in _hits)
+        {
+          if (existing.Lane == lane)
+          {
+            live++;
+          }
+        }
+
+        state.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
+      }
+
+      state.FadeMs = Math.Clamp(state.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
       _hits.Add(state);
       _dirty = true;
     }
@@ -276,31 +297,24 @@ namespace EQLogParser
 
       switch (lane)
       {
+        // lifetime/fade are assigned by AddHit (adaptive - see FctLifeController)
         case FctSimLane.Crit:
           state.Blowout = true;
-          state.LifetimeMs = 2800;
-          state.FadeMs = 700;
           state.ValueFontSize = CritFontSize;
           state.ValueBrush = MakeFrozenBrush(0xFF, 0xA3, 0x2E); // orange
           break;
 
         case FctSimLane.HealingDealt or FctSimLane.HealingReceived:
-          state.LifetimeMs = 2400;
-          state.FadeMs = 500;
           state.ValueFontSize = HealingFontSize;
           state.ValueBrush = MakeFrozenBrush(0x7F, 0xE0, 0x61); // green
           break;
 
         case FctSimLane.DamageDealt:
-          state.LifetimeMs = minor ? 1500 : 3400;
-          state.FadeMs = 500;
           state.ValueFontSize = minor ? MinorFontSize : DamageDealtFontSize;
           state.ValueBrush = MakeFrozenBrush(0xFF, 0xD7, 0x5E); // yellow
           break;
 
         default: // DamageTaken
-          state.LifetimeMs = 3400;
-          state.FadeMs = 500;
           state.ValueFontSize = DamageTakenFontSize;
           state.ValueBrush = MakeFrozenBrush(0xFF, 0x6B, 0x5E); // red
           break;

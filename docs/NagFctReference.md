@@ -213,7 +213,9 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    float upward with a sideways arc that grows as they rise; incoming lanes (damage taken red,
    healing received green) arc within the left half of center, outgoing lanes (damage dealt yellow,
    crits orange, heals dealt green) within the right half. Crits keep the blowout + glow but stay on
-   the half of their source lane. Deliberate NAG deviations: no fixed flex columns (free float + arc
+   the half of their source lane. Display time starts at NAG's 7 s default and is compressed per lane
+   by predicted congestion (`FctLifeController`: lifetime = slack/live-rate, 1 s floor; crits fixed).
+   Deliberate NAG deviations: no fixed flex columns (free float + arc
    instead), and **no crit cell grid** (decided): crit emphasis is larger size + orange + glow/blowout,
    drawn last so crits cover non-crits (two-pass draw order in both canvases) — that was judged enough.
    Rise distance/lifetime is EQ-style (long float) rather than NAG's 1 s fountain.

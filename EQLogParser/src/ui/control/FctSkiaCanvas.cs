@@ -57,6 +57,7 @@ namespace EQLogParser
 
     private readonly Random _rand = new(1234);
     private readonly List<FctSkiaHit> _hits = [];
+    private readonly FctLifeController _life = new();
     private readonly Dictionary<string, HaloEntry> _halos = new();
     private readonly Dictionary<(byte style, int size), SKFont> _fonts = new();
     private SKTypeface _boldTypeface, _regularTypeface;
@@ -161,6 +162,26 @@ namespace EQLogParser
       hit.SideMin = leftSide ? 8 : w / 2 + 4;
       hit.SideMax = leftSide ? w / 2 - 4 : w - 8;
 
+      // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
+      if (lane == FctSimLane.Crit)
+      {
+        hit.LifetimeMs = 2800;
+      }
+      else
+      {
+        var live = 0;
+        foreach (var existing in _hits)
+        {
+          if (existing.Lane == lane)
+          {
+            live++;
+          }
+        }
+
+        hit.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
+      }
+
+      hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
       _hits.Add(hit);
       _dirty = true;
     }
@@ -306,31 +327,24 @@ namespace EQLogParser
 
       switch (lane)
       {
+        // lifetime/fade are assigned by AddHit (adaptive - see FctLifeController)
         case FctSimLane.Crit:
           hit.Blowout = true;
-          hit.LifetimeMs = 2800;
-          hit.FadeMs = 700;
           hit.ValueFontSize = CritFontSize;
           hit.ValueColor = new SKColor(0xFF, 0xA3, 0x2E); // orange
           break;
 
         case FctSimLane.HealingDealt or FctSimLane.HealingReceived:
-          hit.LifetimeMs = 2400;
-          hit.FadeMs = 500;
           hit.ValueFontSize = HealingFontSize;
           hit.ValueColor = new SKColor(0x7F, 0xE0, 0x61); // green
           break;
 
         case FctSimLane.DamageDealt:
-          hit.LifetimeMs = minor ? 1500 : 3400;
-          hit.FadeMs = 500;
           hit.ValueFontSize = minor ? MinorFontSize : DamageDealtFontSize;
           hit.ValueColor = new SKColor(0xFF, 0xD7, 0x5E); // yellow
           break;
 
         default: // DamageTaken
-          hit.LifetimeMs = 3400;
-          hit.FadeMs = 500;
           hit.ValueFontSize = DamageTakenFontSize;
           hit.ValueColor = new SKColor(0xFF, 0x6B, 0x5E); // red
           break;
