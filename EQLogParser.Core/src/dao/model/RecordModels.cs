@@ -49,6 +49,12 @@ namespace EQLogParser
     public double BeginTime { get; set; }
   }
 
+  internal class HealProcessedEvent
+  {
+    public HealRecord Record { get; set; }
+    public double BeginTime { get; set; }
+  }
+
 
   internal class DataPointEvent
   {
