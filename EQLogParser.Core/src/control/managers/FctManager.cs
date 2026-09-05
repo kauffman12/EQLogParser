@@ -1,11 +1,13 @@
 namespace EQLogParser
 {
-  /* Lanes the FCT renderer understands. Crit gets its own random band, like NAG. */
+  /* Lanes the FCT renderer understands. Incoming sits left of center, outgoing right of center;
+   * crits stay on the half of the lane that produced them. */
   internal enum FctLane
   {
     DamageDealt,
     DamageTaken,
-    Healing,
+    HealingDealt,
+    HealingReceived,
     Crit
   }
 
@@ -66,16 +68,19 @@ namespace EQLogParser
         return;
       }
 
-      // heals I deal for now; healed-by-me lands with the group config once lanes are user-defined
-      if (e.Record.Healer != ConfigUtil.PlayerName &&
-          PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healer) != ConfigUtil.PlayerName)
+      var healedMe = e.Record.Healed == ConfigUtil.PlayerName ||
+                     PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healed) == ConfigUtil.PlayerName;
+      var dealtByMe = e.Record.Healer == ConfigUtil.PlayerName ||
+                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healer) == ConfigUtil.PlayerName;
+      if (!healedMe && !dealtByMe)
       {
-        return;
+        return; // party-wide healing lands with the group config
       }
 
       Raise([new FctHitCommand
       {
-        Lane = FctLane.Healing,
+        // a self-heal reads as healing on me
+        Lane = healedMe ? FctLane.HealingReceived : FctLane.HealingDealt,
         Value = e.Record.Total + e.Record.OverTotal,
         Source = $"({e.Record.SubType})",
       }]);

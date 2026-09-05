@@ -209,6 +209,14 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
    draw ops per second in the header. Same record stream, same lane/stack/count-up logic, two renderers.
    **Winner: SkiaSharp.**
+1b. **Layout v1** (user-specified, implemented in both canvases): hits spawn in the bottom third and
+   float upward with a sideways arc that grows as they rise; incoming lanes (damage taken red,
+   healing received green) arc within the left half of center, outgoing lanes (damage dealt yellow,
+   crits orange, heals dealt green) within the right half. Crits keep the blowout + glow but stay on
+   the half of their source lane. Deliberate NAG deviations: no fixed flex columns (free float + arc
+   instead), no random crit cell grid (half-clamped band instead — the occupancy grid stays a later
+   smart feature), and rise distance/lifetime is EQ-style (long float) rather than NAG's 1 s fountain.
+   Party-wide healing (other chars' heals) is not fed yet; it lands with group config.
 2. Record plumbing (done): `EventsHealProcessed`, per-line `IsMonitor` gate, `FctManager` (records →
    lane-matched hit batches; smart group matching comes with the config phase).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config

@@ -45,13 +45,15 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void HealsByMeMapToHealingAndOtherHealersAreDropped()
+    public void HealsMapByDirectionAndOtherHealsAreDropped()
     {
-      FireHeal("TestPlayer", 500);
-      FireHeal("OtherGuy", 600);
+      FireHeal("TestPlayer", 500);                       // I heal someone -> HealingDealt
+      FireHeal("OtherGuy", 600, healed: "TestPlayer");   // someone heals me -> HealingReceived
+      FireHeal("OtherGuy", 700, healed: "SomeOther");    // neither side is me -> dropped
 
-      Assert.AreEqual(1, _batches.Count);
-      Assert.AreEqual(FctLane.Healing, _batches[0][0].Lane);
+      Assert.AreEqual(2, _batches.Count);
+      Assert.AreEqual(FctLane.HealingDealt, _batches[0][0].Lane);
+      Assert.AreEqual(FctLane.HealingReceived, _batches[1][0].Lane);
     }
 
     private static void FireDamage(string attacker, double beginTime, bool crit = false, bool isMonitor = true) =>
@@ -69,12 +71,13 @@ namespace EQLogParser
         IsMonitor = isMonitor,
       });
 
-    private static void FireHeal(string healer, double beginTime, bool isMonitor = true) =>
+    private static void FireHeal(string healer, double beginTime, string healed = "SomeNpc", bool isMonitor = true) =>
       FctManager.Instance.HandleHeal(new HealProcessedEvent
       {
         Record = new HealRecord
         {
           Healer = healer,
+          Healed = healed,
           Total = 50,
           SubType = "Blessing",
         },

@@ -13,11 +13,14 @@ namespace EQLogParser
   internal sealed class FctSkiaHit
   {
     public FctSimLane Lane;
-    public double X, Y;                        // base position (logical px)
+    public double X0, Y0;                      // spawn position (logical px)
+    public double Rise, Arc;                   // total upward travel / sideways arc amplitude
+    public double SideMin, SideMax;            // half-canvas clamp for value left edge + width
+    public double ValueWidth;                  // measured, refreshed only when the value changes
     public double ValueFontSize, SourceFontSize;
     public SKColor ValueColor;
-    public double FloatDistance, DriftX, LifetimeMs, FadeMs;
-    public bool Blowout;                       // crit scale curve instead of float curve
+    public double LifetimeMs, FadeMs;
+    public bool Blowout;                       // crit scale pop on top of the float curve
     public double SpawnMs, AgeAtCountStartMs;  // canvas clock time in ms
     public double TargetValue, CountBaseValue;
     public double CountUpMs;                   // 0 => no count-up
@@ -31,15 +34,15 @@ namespace EQLogParser
    * SkiaSharp FCT renderer: one CPU-raster SKSurface redrawn every frame and blitted into the WPF
    * tree as a single image. Outline is FillAndStroke (2 passes instead of NAG's 5), glow is a true
    * Gaussian blur baked once per unique crit value into a ref-counted halo sprite. Mirrors the lane,
-   * stacking, count-up and stats logic of FctSimCanvas so both backends are directly comparable —
-   * see docs/NagFctReference.md for the design.
+   * motion (bottom-third spawn, rise + half-clamped arc), count-up and stats logic of FctSimCanvas so
+   * both backends are directly comparable — see docs/NagFctReference.md for the design.
    */
   internal class FctSkiaCanvas : FrameworkElement, IFctSimCanvas
   {
-    private const double MyDamageFontSize = 30;
+    private const double DamageDealtFontSize = 30;
     private const double DamageTakenFontSize = 28;
     private const double HealingFontSize = 24;
-    private const double CritFontSize = 44;
+    private const double CritFontSize = 42;
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
     private const float GlowSigma = 5f;
@@ -115,8 +118,7 @@ namespace EQLogParser
       _hits.Clear();
     }
 
-    /* Mirrors FctSimCanvas.AddHit: crits divert to the random crit band; other lanes stack upward
-     * from their bottom anchor and recycle the oldest hit on overflow. */
+    /* Mirrors FctSimCanvas.AddHit: bottom-third spawn in the lane's half, rise + arc. */
     public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false)
     {
       if (_clock is null)
@@ -131,38 +133,35 @@ namespace EQLogParser
         return;
       }
 
-      var now = _clock.Elapsed.TotalMilliseconds;
-      double x, y;
-
+      // captured before crits are pooled into their own lane, so a taken-crit stays on the incoming side
+      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived;
       if (crit)
       {
         lane = FctSimLane.Crit;
-        x = w * 0.30 + _rand.NextDouble() * (w * 0.40);
-        y = h * 0.10 + _rand.NextDouble() * (h * 0.28);
       }
-      else
+
+      // home band: center of the lane's half, jittered; crits spread wider across their half
+      var cx = lane switch
       {
-        switch (lane)
-        {
-          case FctSimLane.MyDamage:
-            x = w * 0.24;
-            y = NextStackY(lane, h - 110, 52, 170);
-            break;
+        FctSimLane.DamageTaken => w * 0.30,
+        FctSimLane.HealingReceived => w * 0.42,
+        FctSimLane.Crit => leftSide ? w * 0.36 : w * 0.70,
+        FctSimLane.HealingDealt => w * 0.78,
+        _ => w * 0.60, // DamageDealt
+      };
 
-          case FctSimLane.DamageTaken:
-            x = w * 0.63;
-            y = NextStackY(lane, h - 110, 50, 170);
-            break;
+      var hit = NewHitState(lane, value, action, minor,
+        x: cx + ((_rand.NextDouble() * 2 - 1) * (lane == FctSimLane.Crit ? w * 0.17 : w * 0.09)),
+        y: h * (0.68 + _rand.NextDouble() * 0.17), // bottom third
+        now: _clock.Elapsed.TotalMilliseconds);
 
-          default: // Healing
-            lane = FctSimLane.Healing;
-            x = w / 2 + (_rand.NextDouble() * 60 - 30);
-            y = NextStackY(lane, h - 44, 36, h * 0.55);
-            break;
-        }
-      }
+      hit.Rise = h * (0.34 + _rand.NextDouble() * 0.12) * (lane is FctSimLane.HealingDealt or FctSimLane.HealingReceived ? 0.8 : 1.0);
+      hit.Arc = (_rand.NextDouble() * 2 - 1) * w * (lane == FctSimLane.Crit ? 0.15 : 0.12);
 
-      _hits.Add(NewHitState(lane, value, action, crit, minor, x, y, now));
+      hit.SideMin = leftSide ? 8 : w / 2 + 4;
+      hit.SideMax = leftSide ? w / 2 - 4 : w - 8;
+
+      _hits.Add(hit);
       _dirty = true;
     }
 
@@ -224,7 +223,13 @@ namespace EQLogParser
           continue;
         }
 
-        hit.LastValueKey = FctText.FormatHitValue(GetDisplayValue(hit, age));
+        var key = FctText.FormatHitValue(GetDisplayValue(hit, age));
+        if (key != hit.LastValueKey)
+        {
+          hit.LastValueKey = key;
+          hit.ValueWidth = TextWidth(key, hit.ValueFontSize, bold: true);
+        }
+
         DrawHit(canvas, hit, age, opacity);
       }
 
@@ -276,25 +281,18 @@ namespace EQLogParser
       _statFrameMsSum += LastFrameMs;
     }
 
-    private FctSkiaHit NewHitState(FctSimLane lane, double value, string action, bool crit, bool minor, double x, double y, double now)
+    private FctSkiaHit NewHitState(FctSimLane lane, double value, string action, bool minor, double x, double y, double now)
     {
       var hit = new FctSkiaHit
       {
         Lane = lane,
-        X = x,
-        Y = y,
+        X0 = x,
+        Y0 = y,
         SpawnMs = now,
         TargetValue = value,
         CountBaseValue = value,
         Action = action,
         LastValueKey = FctText.FormatHitValue(value),
-        ValueColor = lane == FctSimLane.Crit
-          ? new SKColor(0xFF, 0xD2, 0x3F)
-          : lane == FctSimLane.Healing
-            ? new SKColor(0x77, 0xE0, 0x61)
-            : lane == FctSimLane.MyDamage
-              ? new SKColor(0xFF, 0xF4, 0xC1)
-              : new SKColor(0xFF, 0x7A, 0x5C),
       };
 
       switch (lane)
@@ -304,30 +302,33 @@ namespace EQLogParser
           hit.LifetimeMs = 2800;
           hit.FadeMs = 700;
           hit.ValueFontSize = CritFontSize;
+          hit.ValueColor = new SKColor(0xFF, 0xA3, 0x2E); // orange
           break;
 
-        case FctSimLane.Healing:
+        case FctSimLane.HealingDealt or FctSimLane.HealingReceived:
           hit.LifetimeMs = 2400;
           hit.FadeMs = 500;
           hit.ValueFontSize = HealingFontSize;
-          hit.FloatDistance = minor ? 40 + _rand.NextDouble() * 20 : 55 + _rand.NextDouble() * 30;
-          hit.DriftX = _rand.NextDouble() * 24 - 12;
+          hit.ValueColor = new SKColor(0x7F, 0xE0, 0x61); // green
           break;
 
-        default: // MyDamage / DamageTaken
-          hit.LifetimeMs = minor ? 1500 : 3600;
+        case FctSimLane.DamageDealt:
+          hit.LifetimeMs = minor ? 1500 : 3400;
           hit.FadeMs = 500;
-          hit.ValueFontSize = minor ? MinorFontSize : (lane == FctSimLane.MyDamage ? MyDamageFontSize : DamageTakenFontSize);
-          if (!minor)
-          {
-            hit.FloatDistance = 80 + _rand.NextDouble() * 50;
-            hit.DriftX = (_rand.NextDouble() * 2 - 1) * (30 + _rand.NextDouble() * 40);
-          }
+          hit.ValueFontSize = minor ? MinorFontSize : DamageDealtFontSize;
+          hit.ValueColor = new SKColor(0xFF, 0xD7, 0x5E); // yellow
+          break;
 
+        default: // DamageTaken
+          hit.LifetimeMs = 3400;
+          hit.FadeMs = 500;
+          hit.ValueFontSize = DamageTakenFontSize;
+          hit.ValueColor = new SKColor(0xFF, 0x6B, 0x5E); // red
           break;
       }
 
       hit.SourceFontSize = Math.Max(SourceFontMin, hit.ValueFontSize * 0.42);
+      hit.ValueWidth = TextWidth(hit.LastValueKey, hit.ValueFontSize, bold: true);
 
       // true NAG-style radial glow, crits only (default groups carry no halo)
       if (hit.Blowout)
@@ -336,40 +337,6 @@ namespace EQLogParser
       }
 
       return hit;
-    }
-
-    /* Bottom-anchored stacking: the newest hit sits rowHeight above the topmost live hit in its lane. */
-    private double NextStackY(FctSimLane lane, double baseY, double rowHeight, double minY)
-    {
-      double? top = null;
-
-      foreach (var hit in _hits)
-      {
-        if (hit.Lane == lane && (top is null || hit.Y < top))
-        {
-          top = hit.Y;
-        }
-      }
-
-      var y = top is null ? baseY : top.Value - rowHeight;
-
-      // keep the lane inside the canvas by recycling its oldest hit
-      if (y < minY)
-      {
-        for (var i = 0; i < _hits.Count; i++)
-        {
-          if (_hits[i].Lane == lane)
-          {
-            ReleaseHalo(_hits[i]);
-            _hits.RemoveAt(i);
-            break;
-          }
-        }
-
-        y = top is null ? baseY : top.Value - rowHeight;
-      }
-
-      return y;
     }
 
     private double GetDisplayValue(FctSkiaHit hit, double ageMs)
@@ -452,32 +419,21 @@ namespace EQLogParser
     {
       EnsureSkiaResources();
       var alpha = (byte)Math.Round(opacity * 255.0);
-      double x, y;
+
+      // rise over the whole lifetime; arc grows as the hit gets high, clamped to its half
+      var p = Math.Clamp(ageMs / hit.LifetimeMs, 0.0, 1.0);
+      var x = ArcedX(hit, p);
+      var y = RaisedY(hit, p);
 
       if (hit.Blowout)
       {
         var s = (float)BlowoutScale(ageMs, hit.LifetimeMs);
-        var valueWidth = TextWidth(hit.LastValueKey, hit.ValueFontSize, bold: true);
-        var cx = hit.X + (valueWidth / 2.0);
-        var cy = hit.Y + (hit.ValueFontSize * 0.45);
+        var cx = x + (hit.ValueWidth / 2.0);
+        var cy = y + (hit.ValueFontSize * 0.45);
         canvas.Save();
         canvas.Translate((float)cx, (float)cy);
         canvas.Scale(s, s);
         canvas.Translate(-(float)cx, -(float)cy);
-      }
-
-      if (hit.Blowout)
-      {
-        x = hit.X;
-        y = hit.Y;
-      }
-      else
-      {
-        var floatMs = Math.Min(1500, hit.LifetimeMs * 0.55);
-        var p = Math.Clamp(ageMs / floatMs, 0.0, 1.0);
-        y = hit.Y - (hit.FloatDistance * EaseOutCubic(p));
-        var dp = ageMs / hit.LifetimeMs;
-        x = hit.X + (hit.DriftX * (dp * dp));
       }
 
       var valueBase = y + (hit.ValueFontSize * 0.82);
@@ -545,6 +501,14 @@ namespace EQLogParser
       using var measure = new SKPaint();
       return GetFont(bold, size).MeasureText(text, measure);
     }
+
+    /* Rise: fast at first (ease-out), over the whole lifetime. */
+    private static double RaisedY(FctSkiaHit hit, double p) => hit.Y0 - (hit.Rise * EaseOutCubic(p));
+
+    /* Arc: quadratic growth, so horizontal travel mostly happens as the hit gets high; clamped to
+     * the hit's half of the canvas including its text width. */
+    private static double ArcedX(FctSkiaHit hit, double p) =>
+      Math.Clamp(hit.X0 + (hit.Arc * p * p), hit.SideMin, hit.SideMax - hit.ValueWidth);
 
     /* NAG blowout: quick ramp to ~1.45x, hold, then shrink to ~0 while fading. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)

@@ -113,7 +113,7 @@ namespace EQLogParser
 
       // fold small non-crit damage into the newest live hit, like NAG's accumulate mode (count-up);
       // 450 ≈ 0.75x of the 600-median melee distribution
-      if (!ev.Crit && !ev.Minor && ev.Lane == FctSimLane.MyDamage && ev.Value < 450 && _canvas.TryAccumulate(FctSimLane.MyDamage, ev.Value))
+      if (!ev.Crit && !ev.Minor && ev.Lane == FctSimLane.DamageDealt && ev.Value < 450 && _canvas.TryAccumulate(FctSimLane.DamageDealt, ev.Value))
       {
         return;
       }
@@ -132,12 +132,17 @@ namespace EQLogParser
     private void BuildEvents()
     {
       var rand = new Random(RandomSeed);
-      AddPoissonStream(rand, 2.0, 0.18, FctSimLane.MyDamage, MeleeActions, () => 600 * Math.Exp(NextGaussian(rand) * 0.55), 250, 2600);
-      AddPoissonStream(rand, 0.85, 0.15, FctSimLane.MyDamage, SpellActions, () => 1400 * Math.Exp(NextGaussian(rand) * 0.6), 700, 5600);
-      AddPoissonStream(rand, 1.5, 0.05, FctSimLane.MyDamage, DotActions, () => 180 * Math.Exp(NextGaussian(rand) * 0.5), 90, 750, minor: true);
+
+      // outgoing (right half): yellow damage, orange crits, green heals I cast
+      AddPoissonStream(rand, 2.0, 0.18, FctSimLane.DamageDealt, MeleeActions, () => 600 * Math.Exp(NextGaussian(rand) * 0.55), 250, 2600);
+      AddPoissonStream(rand, 0.85, 0.15, FctSimLane.DamageDealt, SpellActions, () => 1400 * Math.Exp(NextGaussian(rand) * 0.6), 700, 5600);
+      AddPoissonStream(rand, 1.5, 0.05, FctSimLane.DamageDealt, DotActions, () => 180 * Math.Exp(NextGaussian(rand) * 0.5), 90, 750, minor: true);
+      AddPoissonStream(rand, 2.3, 0.12, FctSimLane.HealingDealt, HealActions, () => 1500 * Math.Exp(NextGaussian(rand) * 0.55), 600, 7000);
+      AddPoissonStream(rand, 0.9, 0.0, FctSimLane.HealingDealt, HotActions, () => 250 * Math.Exp(NextGaussian(rand) * 0.4), 120, 900, minor: true);
+
+      // incoming (left half): red damage taken, green heals I receive
       AddPoissonStream(rand, 1.7, 0.10, FctSimLane.DamageTaken, TakenActions, () => 450 * Math.Exp(NextGaussian(rand) * 0.6), 150, 3200);
-      AddPoissonStream(rand, 2.3, 0.12, FctSimLane.Healing, HealActions, () => 1500 * Math.Exp(NextGaussian(rand) * 0.55), 600, 7000);
-      AddPoissonStream(rand, 0.9, 0.0, FctSimLane.Healing, HotActions, () => 250 * Math.Exp(NextGaussian(rand) * 0.4), 120, 900, minor: true);
+      AddPoissonStream(rand, 1.6, 0.0, FctSimLane.HealingReceived, HealActions, () => 900 * Math.Exp(NextGaussian(rand) * 0.5), 400, 5200);
 
       _events.Sort((a, b) => a.AtMs.CompareTo(b.AtMs));
     }
