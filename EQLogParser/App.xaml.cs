@@ -57,6 +57,8 @@ namespace EQLogParser
         ExceptionUtil.GlobalLogError = Log.Error;
         ExceptionUtil.GlobalLogDebug = msg => Log.Debug(msg);
 
+        // Runtime OS gate: below Win10 we warn and keep running in degraded mode; the TFM target is
+        // compile-time only and does not bound the installed OS - do not remove or harden into an exit.
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           Log.Warn("Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
