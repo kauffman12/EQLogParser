@@ -55,6 +55,7 @@ namespace EQLogParser
     private readonly Random _rand = new(1234);
     private readonly List<FctSkiaHit> _hits = [];
     private readonly Dictionary<string, HaloEntry> _halos = new();
+    private readonly Dictionary<(byte style, int size), SKFont> _fonts = new();
     private SKTypeface _boldTypeface, _regularTypeface;
     private SKMaskFilter _glowBlur;
     private SKSurface _surface;
@@ -101,6 +102,12 @@ namespace EQLogParser
       _surface = null;
       _glowBlur?.Dispose();
       _glowBlur = null;
+      foreach (var font in _fonts.Values)
+      {
+        font.Dispose();
+      }
+
+      _fonts.Clear();
       _boldTypeface?.Dispose();
       _boldTypeface = null;
       _regularTypeface?.Dispose();
@@ -390,22 +397,18 @@ namespace EQLogParser
 
       var pad = (int)(GlowSigma * 3.0) + 2;
       EnsureSkiaResources();
-      using (var measure = new SKPaint { Typeface = _boldTypeface, TextSize = (float)hit.ValueFontSize, IsAntialias = true })
+      using (var font = new SKFont(_boldTypeface, (float)hit.ValueFontSize, 1f, 0f))
       {
-        var textWidth = (int)Math.Ceiling(measure.MeasureText(hit.LastValueKey));
+        // 3.119.2 MeasureText overloads require a paint argument but only read it for encoding
+        using var measure = new SKPaint();
+        var textWidth = (int)Math.Ceiling(font.MeasureText(hit.LastValueKey, measure));
         var textHeight = (int)Math.Ceiling(hit.ValueFontSize * 1.25);
 
         using var surf = SKSurface.Create(new SKImageInfo(textWidth + pad * 2, textHeight + pad * 2));
-        var paint = new SKPaint
-        {
-          Typeface = _boldTypeface,
-          TextSize = (float)hit.ValueFontSize,
-          Color = SKColors.Black,
-          IsAntialias = true,
-          MaskFilter = _glowBlur,
-        };
+        var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true, MaskFilter = _glowBlur };
+        surf.Canvas.DrawText(hit.LastValueKey, pad, (float)(pad + hit.ValueFontSize * 0.82), SKTextAlign.Left, font, paint);
+        paint.Dispose();
 
-        surf.Canvas.DrawText(hit.LastValueKey, pad, (float)(pad + hit.ValueFontSize * 0.82), paint);
         var image = surf.Snapshot();
         _halos[key] = new HaloEntry { Image = image, Refs = 1, Pad = pad };
         hit.HaloKey = key;
@@ -504,32 +507,43 @@ namespace EQLogParser
     /* NAG's multi-shadow outline in two passes: black StrokeAndFill under a colored Fill. */
     private void DrawOutlinedText(SKCanvas canvas, string text, float x, float baselineY, double size, bool bold, SKColor color, byte alpha)
     {
-      var typeface = bold ? _boldTypeface : _regularTypeface;
+      var font = GetFont(bold, size);
 
       var outline = MakePaint(SKColors.Black, alpha, SKPaintStyle.StrokeAndFill, bold ? 2f : 1.5f);
-      outline.Typeface = typeface;
-      outline.TextSize = (float)size;
-      canvas.DrawText(text, x, baselineY, outline);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Left, font, outline);
       outline.Dispose();
 
       var fill = MakePaint(color, alpha, SKPaintStyle.Fill, 0);
-      fill.Typeface = typeface;
-      fill.TextSize = (float)size;
-      canvas.DrawText(text, x, baselineY, fill);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Left, font, fill);
       fill.Dispose();
 
       CountDraw(2);
+    }
+
+    /* Fonts are shared per (style, size) — lane sizes are stable, so the cache holds a handful of entries. */
+    private SKFont GetFont(bool bold, double size)
+    {
+      var key = ((byte)(bold ? 1 : 0), (int)Math.Round(size));
+
+      if (!_fonts.TryGetValue(key, out var font))
+      {
+        EnsureSkiaResources();
+        font = new SKFont(bold ? _boldTypeface : _regularTypeface, (float)size, 1f, 0f);
+        _fonts[key] = font;
+      }
+
+      return font;
     }
 
     /* 3.x SKPaint has no Alpha property — alpha rides on the color. */
     private static SKPaint MakePaint(SKColor color, byte alpha, SKPaintStyle style, float strokeWidth) =>
       new() { Color = color.WithAlpha(alpha), Style = style, StrokeWidth = strokeWidth, IsAntialias = true };
 
+    /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding. */
     private float TextWidth(string text, double size, bool bold)
     {
-      EnsureSkiaResources();
-      using var paint = new SKPaint { Typeface = bold ? _boldTypeface : _regularTypeface, TextSize = (float)size, IsAntialias = true };
-      return paint.MeasureText(text);
+      using var measure = new SKPaint();
+      return GetFont(bold, size).MeasureText(text, measure);
     }
 
     /* NAG blowout: quick ramp to ~1.45x, hold, then shrink to ~0 while fading. */
