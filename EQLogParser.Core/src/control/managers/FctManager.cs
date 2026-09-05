@@ -18,52 +18,30 @@ namespace EQLogParser
   }
 
   /*
-   * Feeds floating combat text from parsed records. Damage and heal events arrive on the log reader
-   * thread and also fire during historical replay (opening a log file), so everything before the
-   * first monitor line — stamped by LogProcessor via MarkLiveLine — is dropped. Subscribers are
-   * responsible for batching onto their own UI thread; see FctSkiaCanvas and
-   * docs/NagFctReference.md for the rendering side.
+   * Feeds floating combat text from parsed records. Both parser events fire during historical
+   * replay (opening a log file) and live monitoring alike, but every event carries IsMonitor
+   * (threaded from LogReader's line flag via LineData), so replay records are simply dropped.
+   * Events arrive on the log reader thread; subscribers are responsible for batching onto their
+   * own UI thread. See FctSkiaCanvas and docs/NagFctReference.md for the rendering side.
    */
-  internal class FctManager : ILifecycle
+  internal class FctManager
   {
-    /* tolerate a record timestamped a hair before the first monitor line (same-millisecond edges) */
-    private const double ReplayGraceMs = 50;
-
     // singleton with set for unit test, like FightManager
     internal static FctManager Instance { get; set; } = new();
 
     /* Reader thread — subscribers must marshal to their UI thread. */
     internal event Action<IReadOnlyList<FctHitCommand>> EventsHitsProcessed;
 
-    /* cross-thread: read via Volatile.Read, like FightManager.LastFightProcessTime */
-    private double _liveStart = double.NegativeInfinity;
-
     private FctManager()
     {
       DamageLineParser.EventsDamageProcessed += HandleDamage;
       HealingLineParser.EventsHealProcessed += HandleHeal;
-      LifecycleManager.Register(this);
-    }
-
-    public void Clear(bool serverChanged) => Volatile.Write(ref _liveStart, double.NegativeInfinity);
-
-    public void Shutdown()
-    {
-    }
-
-    /* First monitor line of the current session; replay records carry earlier timestamps. */
-    internal void MarkLiveLine(double beginTime)
-    {
-      if (!double.IsNaN(beginTime) && Volatile.Read(ref _liveStart) == double.NegativeInfinity)
-      {
-        Volatile.Write(ref _liveStart, beginTime);
-      }
     }
 
     /* Internal so unit tests can drive the feed without parsing log lines. */
     internal void HandleDamage(DamageProcessedEvent e)
     {
-      if (e.Record is null || IsReplay(e.BeginTime))
+      if (e.Record is null || !e.IsMonitor)
       {
         return;
       }
@@ -83,7 +61,7 @@ namespace EQLogParser
 
     internal void HandleHeal(HealProcessedEvent e)
     {
-      if (e.Record is null || IsReplay(e.BeginTime))
+      if (e.Record is null || !e.IsMonitor)
       {
         return;
       }
@@ -101,17 +79,6 @@ namespace EQLogParser
         Value = e.Record.Total + e.Record.OverTotal,
         Source = $"({e.Record.SubType})",
       }]);
-    }
-
-    private bool IsReplay(double beginTime)
-    {
-      if (double.IsNaN(beginTime))
-      {
-        return true;
-      }
-
-      var liveStart = Volatile.Read(ref _liveStart);
-      return liveStart == double.NegativeInfinity || beginTime + ReplayGraceMs < liveStart;
     }
 
     private void Raise(IReadOnlyList<FctHitCommand> batch) => EventsHitsProcessed?.Invoke(batch);

@@ -158,9 +158,10 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   `RecordsStore.Instance.Add(record, ...)` call. (Polling `GetHealsDuring` was considered and rejected:
   timer granularity for zero benefit when the record is already in hand at write time.)
 - **Live-only gating** — both parser paths also fire during historical replay when a log is opened.
-  `LogProcessor.DoPreProcess` knows whether each line is a monitor (live) line; on the first monitor line
-  it stamps one timestamp, and the FCT manager drops any record with an earlier `BeginTime`. One line of
-  plumbing, no record-model changes, works for damage and heals alike.
+  `LogReader` already tags each line: the initial load loop emits non-monitor lines, the live tail loop
+  emits monitor lines. That flag is threaded `LogReaderItem.IsMonitor → LineData.IsMonitor →` the
+  processed events (`DamageProcessedEvent.IsMonitor`, `HealProcessedEvent.IsMonitor`), and `FctManager`
+  simply drops non-monitor records. No session state, no timestamp heuristics.
 - Group matching, median/accumulate and ignore thresholds port from NAG (see above).
 
 ### Rendering — no Storyboards, no new dependency (initially)
@@ -208,8 +209,8 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
    draw ops per second in the header. Same record stream, same lane/stack/count-up logic, two renderers.
    **Winner: SkiaSharp.**
-2. Record plumbing: `EventsHealProcessed`, monitor-start timestamp gate, `FctManager` (records → group-
-   matched hit batches).
+2. Record plumbing (done): `EventsHealProcessed`, per-line `IsMonitor` gate, `FctManager` (records →
+   lane-matched hit batches; smart group matching comes with the config phase).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config
    dir, import/export.
 4. Smart features: median tracking, accumulate/ignore thresholds, random/crit cell grid with

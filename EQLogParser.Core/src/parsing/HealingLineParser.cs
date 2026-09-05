@@ -27,7 +27,7 @@ namespace EQLogParser
           HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
           RecordsStore.Instance.Add(record, lineData.BeginTime);
-          EventsHealProcessed?.Invoke(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime });
+          EventsHealProcessed?.Invoke(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
           return true;
         }
       }

@@ -974,7 +974,7 @@ namespace EQLogParser
           {
             CheckSlainQueue(lineData.BeginTime);
 
-            var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
+            var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor };
             EventsDamageProcessed?.Invoke(damageEvent);
 
             if (record.Type == Labels.Dd)

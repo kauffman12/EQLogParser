@@ -47,13 +47,8 @@ namespace EQLogParser
 
     private void DoPreProcess(string line, double dateTime, bool monitor)
     {
-      var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = _lineCount };
-
-      // first monitor line of the session: FCT drops replay records stamped before it
-      if (monitor)
-      {
-        FctManager.Instance.MarkLiveLine(dateTime);
-      }
+      // IsMonitor rides with the line so downstream consumers (FCT) can drop replay records
+      var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = _lineCount, IsMonitor = monitor };
 
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
