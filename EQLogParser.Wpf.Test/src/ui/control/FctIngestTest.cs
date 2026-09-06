@@ -199,20 +199,50 @@ namespace EQLogParser
       Assert.AreEqual(0.0, outgoing.BandMaxY, "halves mode adds no vertical clamp");
     }
 
-    /* A fountain's fall points down, which would drag an incoming hit through its band and park it at the bottom of
-     * the overlay; the direction cue outranks the flourish, so the fall is simply not applied there. */
+    /*
+     * Fountain motion on the incoming band is mirrored, not dropped: the fall pulls back up toward the gap instead of
+     * down into the bottom of the overlay, where a literal gravity tail would park the number for half its life.
+     * Three things have to hold at once — it still gets the choreography (a real fall distance), it never leaves its
+     * band, and it never approaches the protected strip above it.
+     */
     [TestMethod]
-    public void FountainMotionDoesNotDragIncomingHitsThroughTheirBand()
+    public void FountainOnTheIncomingBandMirrorsUpwardAndStaysInsideIt()
     {
       var ingest = NewIngest();
+      var gapBottom = Height * FctLayout.GapBottomFrac;
 
       var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: true);
 
-      Assert.AreEqual(0.0, incoming.FallDist, "an incoming hit in bands mode gets no downward fall");
+      Assert.IsTrue(incoming.FallDist < 0, $"incoming fall must run back up toward the gap, was {incoming.FallDist:0.#}");
+      Assert.AreEqual(FctMotion.MotionWindowMs, incoming.LifetimeMs, "fountain life is the choreography, not an adaptive hold");
+
+      var lowest = incoming.Y0 - incoming.Rise;   // Rise is negative: this is below the spawn point
+      for (var t = 0.0; t <= 1.0; t += 0.05)
+      {
+        var y = FctMotion.RaisedY(incoming, t);
+        Assert.IsTrue(y >= gapBottom - 0.001, $"incoming hit climbed into the protected strip at t={t:0.00} (y {y:0.#}, gap {gapBottom:0.#})");
+        Assert.IsTrue(y <= lowest + 0.001, $"incoming hit sank past its own deepest point at t={t:0.00}");
+      }
+    }
+
+    /* The outgoing band keeps the literal fall: up, over, and down toward the strip (the clamp, not luck, is what
+     * keeps it out of the gap). Both sides of the mirror are pinned so a "cleanup" cannot silently delete one. */
+    [TestMethod]
+    public void FountainOnTheOutgoingBandFallsDownward()
+    {
+      var ingest = NewIngest();
+      var gapTop = Height * FctLayout.GapTopFrac;
+
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: true);
+
+      Assert.AreEqual(Height * 0.28, outgoing.FallDist, 0.001, "the outgoing band keeps its literal gravity tail");
+      Assert.IsTrue(FctMotion.RaisedY(outgoing, 1.0) > (outgoing.Y0 - outgoing.Rise), "outgoing fountain text comes back down");
 
       for (var t = 0.0; t <= 1.0; t += 0.05)
       {
-        Assert.IsTrue(FctMotion.RaisedY(incoming, t) >= (Height * FctLayout.GapBottomFrac) - 0.001, $"incoming hit left its band at t={t:0.00}");
+        var y = FctMotion.RaisedY(outgoing, t);
+        Assert.IsTrue(y + FctLayout.TextReserve(outgoing) <= gapTop + 0.001,
+          $"outgoing hit fell into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextReserve(outgoing):0.#}, gap top {gapTop:0.#})");
       }
     }
 

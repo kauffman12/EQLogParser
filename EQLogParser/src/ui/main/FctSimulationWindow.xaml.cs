@@ -115,7 +115,7 @@ namespace EQLogParser
       {
         _lastHeaderUpdateMs = nowMs;
         statsText.Text = $"t {nowMs / 1000.0:0} s / {DurationMs / 1000.0:0} s   |   records {_generatedCount}/{_events.Count}   |   active {_canvas.ActiveCount}" +
-                         $"   |   fps {_diagnostics.Fps:0}   |   frame {_diagnostics.LastFrameMs:0.##} ms (avg {_diagnostics.AvgFrameMs:0.##})" +
+                         $"   |   fps {_diagnostics.Fps:0} on {_diagnostics.DisplayHz:0} Hz   |   frame {_diagnostics.LastFrameMs:0.##} ms (avg {_diagnostics.AvgFrameMs:0.##} / max {_diagnostics.MaxFrameMs:0.##})" +
                          $"   |   draw ops {_diagnostics.DrawsPerSec:0}/s   |   dropped {_diagnostics.DroppedCount}";
       }
 

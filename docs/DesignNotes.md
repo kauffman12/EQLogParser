@@ -540,12 +540,31 @@ Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the nume
 the label with "0" — which reads as a legal absorb rather than an obvious mistake. A hit with `FixedText` set now
 can only ever draw that text.
 
-### Raster at most 60 times a second, into the same buffer
+### Raster at most 60 times a second, and never on a beat pattern
 
 `CompositionTarget.Rendering` fires at display refresh, so on a 144 Hz monitor an animated canvas would raster a
-full surface 144 times a second for text nobody can read faster. `TargetFrameMs` caps painting near 60 Hz; the
-tick still fires `EventsFrame` (the simulation paces its record schedule off it) but the surface memset + draw +
-blit does not run. On a 980×640 overlay at 150% scaling, each skipped raster is ~3.5 MB of pixel work avoided.
+full surface 144 times a second for text nobody can read faster. The cap lives in `FctFramePacer` (shared by both
+backends, since both are driven by the same callback); the tick still fires `EventsFrame` (the simulation paces its
+record schedule off it) but the surface memset + draw + blit does not run. On a 980×640 overlay at 150% scaling, each
+skipped raster is ~3.5 MB of pixel work avoided.
+
+**The cap counts whole ticks, and that detail is the difference between smooth and juddery.** The first version asked
+"has `TargetFrameMs` (16.67 ms) elapsed since the last paint?" — a threshold tuned to 60 Hz sitting on top of a 60 Hz
+stream. Real frames arrive at 16.4, 16.9, 16.6…; whenever one lands a hair early it is skipped, the next frame is two
+refreshes later, and the cadence settles into an alternating one-frame/two-frames pattern. Positions are exact and the
+average fps looks perfect while the text visibly stutters, most on the display where the cap is not skipping at all in
+principle. `FctFramePacer` measures the refresh interval from the tick spacing itself (light EWMA, samples outside
+0.5–200 ms discarded so a tab-out or a GC pause cannot retune it) and then paints on a whole number of ticks nearest
+the target ratio: every tick at 60 Hz, every second at 120 Hz, every second at 144 Hz (72 fps, not the 48 that a time
+threshold produced), every fourth at 240 Hz. Never faster than the display, never a beat pattern, and it re-derives
+itself when the window moves to another monitor mid-fight.
+
+Because smoothness lives in the tail and not the mean, `IFctDiagnostics` reports `MaxFrameMs` (worst frame in the stats
+window) alongside the average, plus `DisplayHz` so painted fps can be read against the real refresh rate: 72 fps under a
+144 Hz display is pacing, 60 fps under a 60 Hz display with a 40 ms max frame is overload. The simulation window prints
+both; the gameplay overlay deliberately does not, because a stats line that moves every second is a distraction in a pull.
+`FctFramePacerTest` feeds synthetic tick streams — including a jittered 60 Hz one, where it asserts the old time-threshold
+rule really did skip frames — so the cadence is pinned without a monitor.
 
 The destination bitmap and its copy buffer are allocated once per size and reused. Allocating a `WriteableBitmap`
 plus a fresh `byte[w*h*4]` every frame put ~5 MB/frame on the large-object heap and forced a new GPU texture
@@ -586,9 +605,14 @@ including the left/right rule and no vertical clamp — `FctMotion` treats an un
 second code path. The overlay's hint line states which scheme is active and what it means, because that line is the
 only documentation anyone reads while fighting.
 
-A fountain's rise-fall-shrink choreography points *down* on its way out, which in bands mode would drag an incoming
-hit through its band and park it on the bottom edge for the rest of its life. `FctIngest.AssignLifetime` therefore
-skips the fall for incoming hits while banding: direction outranks the flourish.
+A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
+incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own
+band edge for half its life, which reads as stuck rather than as physics, so `FctIngest.AssignLifetime` **mirrors** it:
+`FallDist` is signed screen-relative (positive falls toward the bottom, negative back up toward the gap) and an incoming
+hit in bands mode gets half its sink distance back on the way out. Both sides then have the same overshoot-and-settle
+shape in opposite signs, which is what "one animation, two directions" was supposed to mean, and the return cannot reach
+the protected strip because it is a fraction of travel already spent below it. Halves mode has no such band and falls
+everywhere, as it always did.
 
 Both schemes keep their promises at any window size. In halves mode the x clamp degrades to the middle of its band
 instead of throwing when a label is wider than its half — an inverted band used to crash every frame on a small
@@ -650,9 +674,16 @@ pins it in both region schemes, with a source line present and at crit scale.
   jitter even though the position maths is continuous. Without subpixel positioning Skia snaps each run to a whole
   pixel, quantising exactly the motion `FctMotion` interpolated. Both settings are right for moving text and wrong for
   a static document, so they are commented rather than obvious: do not tidy them back to defaults.
-- Raster stays capped near 60 Hz (`TargetFrameMs`) while `EventsFrame` still fires at display refresh. On a 120/144 Hz
-  screen that cap is the next dial to turn if motion still reads as stepped, and it costs a full surface raster per
-  extra frame (~3.5 MB of pixel work at 980×640 @150%).
+- Pacing counts whole ticks instead of comparing elapsed time, for the reason given in "Raster at most 60 times a
+  second": at exactly 60 Hz the old threshold skipped frames on ordinary jitter and produced an alternating cadence.
+- **Both ends of the fade are eased.** A linear ramp changes slope abruptly at `fadeStart` — steady, then suddenly
+  dimming, then gone — and a linear start is a pop. The trade is a slightly steeper mid-fade, which reads as the text
+  holding up and then dissolving rather than draining away.
+- **A counting-up total never moves anything else.** A folded DoT stack re-measures its glyphs each frame; letting the
+  widening number also widen `ValueWidth` would widen the clamp band `ArcedX` reads, so the total drifted sideways as it
+  climbed and looked unstable. `FctMotion.IsCountingUp` pins the backend to the widest measurement seen while counting.
+- **The crit halo is shaped like the text it glows behind.** Its sprite is rendered with the same `Hinting = None` as
+  the crisp pass; a hinted sprite under unhinted glyphs puts the bloom a fraction off the number.
 
 ### The one grammatical rule on the source line
 

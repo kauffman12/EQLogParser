@@ -193,7 +193,8 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   failures). The CPU-surface → WPF blit is now inlined in `FctSkiaCanvas` (`EnsureSurface` + `Blit`: pinned
   `ReadPixels` of Bgra8888/premultiplied into WPF's native `Bgra32`, no conversion). The destination
   `WriteableBitmap` and its pinned copy buffer are allocated per resize rather than per frame, and painting is
-  capped near 60 Hz (`TargetFrameMs`) because `CompositionTarget.Rendering` fires at display refresh — see
+  capped near 60 Hz by `FctFramePacer` (whole ticks, not an elapsed-time threshold) because
+  `CompositionTarget.Rendering` fires at display refresh — see
   docs/DesignNotes.md → Floating Combat Text.
 - **Rejected outright:** WebView2 (could port NAG's CSS keyframes unchanged, but adds a browser runtime
   for text popups) and Direct2D via Vortice/SharpDX (we would hand-roll DirectWrite layout; the scale does

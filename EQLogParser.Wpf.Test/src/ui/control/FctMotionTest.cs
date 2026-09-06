@@ -109,6 +109,70 @@ namespace EQLogParser
       Assert.IsTrue(lastQuarter > firstHalf, "fall should accelerate (ease-in)");
     }
 
+    /*
+     * The incoming band mirrors the fountain rather than losing it: sink, stop, then accelerate back up toward the gap
+     * by a fraction of the travel already spent below it. Mirrored because gravity points at the bottom of the screen
+     * and that is where their band lives — a literal fall parks the number against its own bottom edge, which reads as
+     * stuck rather than as physics.
+     */
+    [TestMethod]
+    public void NegativeFallDistMirrorsTheFountainUpward()
+    {
+      var hit = NewHit();
+      hit.Rise = -300;              // incoming hits travel downwards in bands mode: Rise is negative
+      hit.FallDist = -150;          // and half of it comes back up, screen-relative
+
+      var low = hit.Y0 - hit.Rise;  // deepest point, reached when the travel phase ends
+      Assert.AreEqual(low, FctMotion.RaisedY(hit, 1.0 - FctMotion.FallPhaseFrac), 0.5);
+      Assert.AreEqual(low + hit.FallDist, FctMotion.RaisedY(hit, 1.0), 0.001);
+
+      var justAfter = FctMotion.RaisedY(hit, 0.70) - low;
+      var muchLater = FctMotion.RaisedY(hit, 0.95) - low;
+      Assert.IsTrue(muchLater < justAfter, "the mirrored fall accelerates upward; it does not drift");
+      Assert.IsTrue(FctMotion.ScaleOf(hit, hit.MotionMs) < 1.0, "a hit in its fall phase shrinks, either direction");
+    }
+
+    /* The seam most parabolas show: travel hands over to fall. Neither side may arrive or leave with speed, or the
+     * number visibly jerks at the exact moment it changes its mind about gravity. */
+    [TestMethod]
+    public void TravelHandsOverToFallWithoutAJerk()
+    {
+      var hit = NewHit();
+      hit.FallDist = 180;
+
+      var seam = 1.0 - FctMotion.FallPhaseFrac;
+
+      double SpeedAt(double t) => (FctMotion.RaisedY(hit, t + 0.001) - FctMotion.RaisedY(hit, t - 0.001)) / 0.002;
+
+      // px per unit of life: mid-travel is over 1300 here, so these two say the ends really do brake and start gently
+      Assert.IsTrue(Math.Abs(SpeedAt(seam - 0.01)) < 60, $"still braking into the seam: {SpeedAt(seam - 0.01):0.#}");
+      Assert.IsTrue(Math.Abs(SpeedAt(seam + 0.01)) < 60, $"already launched out of the seam: {SpeedAt(seam + 0.01):0.#}");
+    }
+
+    /* Opacity must not change slope visibly at fadeStart and must reach zero by the end of life: a linear ramp is
+     * "steady, then suddenly dimmer, then gone", which is the pop the eased ends remove. */
+    [TestMethod]
+    public void FadeBeginsAndEndsGentlyAndNeverReverses()
+    {
+      var hit = NewHit();
+      var fadeStart = hit.LifetimeMs - hit.FadeMs;
+
+      Assert.IsTrue(FctMotion.FadeOpacity(hit, fadeStart * 0.5) > 0.99, "mid-life is fully lit");
+      Assert.IsTrue(FctMotion.FadeOpacity(hit, fadeStart + (hit.FadeMs * 0.5)) is > 0.4 and < 0.6, "halfway through the fade is halfway dim");
+
+      var before = FctMotion.FadeOpacity(hit, fadeStart - 1);
+      var justAfter = FctMotion.FadeOpacity(hit, fadeStart + 1);
+      Assert.IsTrue(before > 0.99 && justAfter > 0.99, $"fading must begin gently, was {before:0.00} -> {justAfter:0.00}");
+
+      var prev = 1.0;
+      for (var age = fadeStart - hit.FadeMs; age <= hit.LifetimeMs; age += 25)
+      {
+        var o = FctMotion.FadeOpacity(hit, age);
+        Assert.IsTrue(o <= prev + 0.0001, $"opacity went back up at {age:0} ms");
+        prev = o;
+      }
+    }
+
     [TestMethod]
     public void ScalePopsForCritsOnly()
     {

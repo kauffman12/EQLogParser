@@ -17,8 +17,16 @@ namespace EQLogParser
     public double X0, Y0;
 
     /* Total travel (px, signed): positive rises, negative sinks — incoming hits in bands mode travel downwards so
-     * that direction of motion says who acted. Sideways arc amplitude and fountain fall distance follow. */
-    public double Rise, Arc, FallDist;
+     * that direction of motion says who acted. Arc is sideways amplitude (sign = which way first). */
+    public double Rise, Arc;
+
+    /*
+     * Fountain fall distance, and note the sign runs opposite to Rise because it is screen-relative: positive
+     * accelerates toward the bottom of the screen (the usual gravity tail), negative back up toward the gap, which is
+     * how the incoming band mirrors the outgoing fountain instead of parking against its own bottom edge. Zero means
+     * hold style: no fall phase at all. Mixing the two conventions up is what makes this worth a comment.
+     */
+    public double FallDist;
 
     // rise+arc finish by this age, then hold position until the fade (see FctMotion.RaisedY)
     public double MotionMs;

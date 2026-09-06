@@ -189,17 +189,25 @@ namespace EQLogParser
     private void AssignLifetime(FctHitState hit, List<FctHitState> hits, double h, double now, bool fountain)
     {
       /*
-       * A fountain's fall travels downwards, which in bands mode would drive an incoming hit through the bottom of
-       * its band and park it there for the rest of its life. The direction cue matters more than the flourish, so
-       * incoming hits rise-and-hold even with fountain motion on; halves mode keeps the choreography everywhere.
+       * The fountain choreography: travel, then accelerate along the fall for the rest of life, no hold phase, and the
+       * fade spans exactly the fall. Bands mode mirrors the fall for incoming hits rather than dropping it — gravity
+       * points at the bottom of the screen, and their band is the last thing before that edge, so a literal downward
+       * fall parks the number against its own bottom edge for half its life (which reads as stuck, not as physics).
+       * Falling back up toward the gap keeps the overshoot-and-settle shape both sides, keeps the two directions
+       * reading as one animation in opposite signs, and cannot reach the protected strip: the return is a fraction of
+       * travel already spent below the gap. Halves mode has no such band, so it falls everywhere.
        */
-      if (fountain && !(hit.Incoming && Mode is FctLayoutMode.Bands))
+      if (fountain)
       {
         // the choreography is the life: rise then fall, no hold phase, and the fade spans exactly the fall
         hit.LifetimeMs = FctMotion.MotionWindowMs;
         hit.MotionMs = FctMotion.MotionWindowMs;
         hit.FadeMs = FctMotion.MotionWindowMs * FctMotion.FallPhaseFrac;
-        hit.FallDist = h * 0.28;
+
+        // Rise is already assigned: layout runs before lifetime assignment
+        hit.FallDist = hit.Incoming && Mode is FctLayoutMode.Bands
+          ? -Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
+          : h * 0.28;
         return;
       }
 

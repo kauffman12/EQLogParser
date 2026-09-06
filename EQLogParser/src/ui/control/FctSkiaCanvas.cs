@@ -21,13 +21,6 @@ namespace EQLogParser
    */
   internal class FctSkiaCanvas : FrameworkElement, IFctCanvas, IFctDiagnostics
   {
-    /*
-     * CompositionTarget.Rendering fires at display refresh; a hit's position depends on the clock, so a
-     * live canvas repaints every allowed frame. Rastering the whole surface faster than ~60 Hz buys
-     * nothing and costs proportional to surface area, which on a 1440p overlay at 144 Hz is gigabytes a
-     * second of memset and blit.
-     */
-    private const double TargetFrameMs = 1000.0 / 60;
 
     // re-read DPI about once a second: per-monitor scaling changes neither the size nor any event we get
     private const double DpiCheckMs = 1000;
@@ -65,9 +58,13 @@ namespace EQLogParser
     private GCHandle _pixelHandle;
     private int _surfaceWidth, _surfaceHeight;
     private double _pixelsPerDip = 1.0;
-    private double _lastPaintMs, _lastDpiCheckMs;
+    private double _lastDpiCheckMs;
+    private double _statFrameMsMax;
     private Stopwatch _clock;
     private bool _dirty;
+
+    /* Which render ticks get rastered, measured from tick spacing; shared with the vector backend. */
+    private readonly FctFramePacer _pacer = new();
 
     private double _statsWindowStartMs;
     private long _statFrames, _statDrawsTotal, _statDrawsWindow;
@@ -83,6 +80,12 @@ namespace EQLogParser
 
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
+
+    /* Worst frame in the current stats window: average frame time hides the spike that reads as a hitch. */
+    public double MaxFrameMs { get; private set; }
+
+    /* What the monitor is actually running at, so a low fps can be told apart from a deliberate pacing cap. */
+    public double DisplayHz => _pacer.DisplayHz;
     public double LastFrameMs { get; private set; }
     public double DrawsPerSec { get; private set; }
     public int DroppedCount => _ingest.DroppedCount;
@@ -92,7 +95,7 @@ namespace EQLogParser
     {
       _clock = Stopwatch.StartNew();
       _statsWindowStartMs = 0;
-      _lastPaintMs = 0;
+      _pacer.Reset();
       _dirty = true;
       RefreshDpi();
       CompositionTarget.Rendering += OnRendering;
@@ -180,6 +183,10 @@ namespace EQLogParser
 
       var now = _clock.Elapsed.TotalMilliseconds;
 
+      /* First, and on every tick even the ones this method drops: the pacer measures refresh interval from tick
+       * spacing, so measuring only the frames it likes would make it blind to exactly the displays it exists for. */
+      var shouldPaint = _pacer.Tick(now);
+
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
@@ -189,13 +196,13 @@ namespace EQLogParser
         return;
       }
 
-      if (now - _lastPaintMs < TargetFrameMs)
+      if (!shouldPaint)
       {
         return;
       }
 
       var sw = Stopwatch.StartNew();
-      _lastPaintMs = now;
+      _pacer.Painted();
 
       if (now - _lastDpiCheckMs >= DpiCheckMs)
       {
@@ -352,7 +359,14 @@ namespace EQLogParser
     private void RebuildGlyphs(FctHitState hit)
     {
       EnsureSkiaResources();
-      hit.ValueWidth = TextWidth(hit.DisplayText, hit.ValueFontSize, bold: true);
+      var measured = TextWidth(hit.DisplayText, hit.ValueFontSize, bold: true);
+
+      /*
+       * A folded hit counts up, and if its width grew with the digits then so did the clamp band ArcedX reads: a DoT
+       * total sliding to a wider number would drift sideways as it climbed, which looks like the number is unstable.
+       * Hold the widest measurement while counting; every other hit takes its own.
+       */
+      hit.ValueWidth = FctMotion.IsCountingUp(hit) ? Math.Max(hit.ValueWidth, measured) : measured;
       hit.TextDirty = false;
 
       if (hit.Blowout)
@@ -378,6 +392,10 @@ namespace EQLogParser
         var pad = (int)(GlowSigma * 3.0) + 2;
         using (var font = new SKFont(_boldTypeface, (float)hit.ValueFontSize, 1f, 0f))
         {
+          /* Same shaping as the crisp pass in GetFont: the halo is a blurred twin of these exact glyph outlines, so
+           * a hinted sprite behind unhinted text puts the glow a fraction off the number it is supposed to bloom. */
+          font.Hinting = SKFontHinting.None;
+
           // 3.119.2 MeasureText overloads require a paint argument but only read it for encoding
           using var measure = new SKPaint();
           var textWidth = (int)Math.Ceiling(font.MeasureText(hit.DisplayText, measure));
@@ -527,15 +545,18 @@ namespace EQLogParser
         var seconds = (now - _statsWindowStartMs) / 1000.0;
         Fps = _statFrames / seconds;
         AvgFrameMs = _statFrames > 0 ? _statFrameMsSum / _statFrames : 0;
+        MaxFrameMs = _statFrameMsMax;
         DrawsPerSec = (_statDrawsTotal - _statDrawsWindow) / seconds;
         _statsWindowStartMs = now;
         _statFrames = 0;
         _statFrameMsSum = 0;
+        _statFrameMsMax = 0;
         _statDrawsWindow = _statDrawsTotal;
       }
 
       _statFrames++;
       _statFrameMsSum += LastFrameMs;
+      _statFrameMsMax = Math.Max(_statFrameMsMax, LastFrameMs);
     }
 
     private void ReleaseSurface()

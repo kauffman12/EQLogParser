@@ -16,7 +16,6 @@ namespace EQLogParser
    */
   internal class FctSimCanvas : FrameworkElement, IFctCanvas, IFctDiagnostics
   {
-    private const double TargetFrameMs = 1000.0 / 60;
     private const double DpiCheckMs = 1000;
 
     private const int BlackArgb = unchecked((int)0xF7000000); // the outline stack is a touch translucent, like NAG's
@@ -42,8 +41,12 @@ namespace EQLogParser
     private readonly Brush _glowBrush = FrozenBrush(unchecked((int)0x40000000));
 
     private double _pixelsPerDip = 1.0;
-    private double _lastPaintMs, _lastDpiCheckMs;
+    private double _lastDpiCheckMs;
+    private double _statFrameMsMax;
     private Stopwatch _clock;
+
+    /* Which render ticks get rastered, measured from tick spacing; shared with the Skia backend. */
+    private readonly FctFramePacer _pacer = new();
 
     private double _statsWindowStartMs;
     private long _statFrames, _statDrawsTotal, _statDrawsWindow;
@@ -60,6 +63,12 @@ namespace EQLogParser
 
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
+
+    /* Worst frame in the current stats window: average frame time hides the spike that reads as a hitch. */
+    public double MaxFrameMs { get; private set; }
+
+    /* What the monitor is actually running at, so a low fps can be told apart from a deliberate pacing cap. */
+    public double DisplayHz => _pacer.DisplayHz;
     public double LastFrameMs { get; private set; }
     public double DrawsPerSec { get; private set; }
     public int DroppedCount => _ingest.DroppedCount;
@@ -68,7 +77,7 @@ namespace EQLogParser
     {
       _clock = Stopwatch.StartNew();
       _statsWindowStartMs = 0;
-      _lastPaintMs = 0;
+      _pacer.Reset();
       RefreshDpi();
 
       if (AliasedTextRendering)
@@ -139,6 +148,10 @@ namespace EQLogParser
 
       var now = _clock.Elapsed.TotalMilliseconds;
 
+      /* First, and on every tick even the ones this method drops: the pacer measures refresh interval from tick
+       * spacing, so measuring only the frames it likes would make it blind to exactly the displays it exists for. */
+      var shouldPaint = _pacer.Tick(now);
+
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
@@ -147,13 +160,13 @@ namespace EQLogParser
         return;
       }
 
-      if (now - _lastPaintMs < TargetFrameMs)
+      if (!shouldPaint)
       {
         return;
       }
 
       var sw = Stopwatch.StartNew();
-      _lastPaintMs = now;
+      _pacer.Painted();
 
       if (now - _lastDpiCheckMs >= DpiCheckMs)
       {
@@ -327,15 +340,18 @@ namespace EQLogParser
         var seconds = (now - _statsWindowStartMs) / 1000.0;
         Fps = _statFrames / seconds;
         AvgFrameMs = _statFrames > 0 ? _statFrameMsSum / _statFrames : 0;
+        MaxFrameMs = _statFrameMsMax;
         DrawsPerSec = (_statDrawsTotal - _statDrawsWindow) / seconds;
         _statsWindowStartMs = now;
         _statFrames = 0;
         _statFrameMsSum = 0;
+        _statFrameMsMax = 0;
         _statDrawsWindow = _statDrawsTotal;
       }
 
       _statFrames++;
       _statFrameMsSum += LastFrameMs;
+      _statFrameMsMax = Math.Max(_statFrameMsMax, LastFrameMs);
     }
   }
 }

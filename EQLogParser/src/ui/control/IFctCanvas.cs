@@ -34,6 +34,15 @@ namespace EQLogParser
   {
     double Fps { get; }
     double AvgFrameMs { get; }
+
+    /* Worst frame in the current stats window. Smoothness lives in this number and not in the average: one 40 ms frame
+     * inside a second of 6 ms frames is a visible hitch that no average will ever show. */
+    double MaxFrameMs { get; }
+
+    /* Measured display refresh, so painted fps can be read against it: 72 fps under a 144 Hz refresh is pacing, and a
+     * 60 fps reading under a 60 Hz refresh with a high MaxFrameMs is overload. */
+    double DisplayHz { get; }
+
     double LastFrameMs { get; }
     double DrawsPerSec { get; }
 

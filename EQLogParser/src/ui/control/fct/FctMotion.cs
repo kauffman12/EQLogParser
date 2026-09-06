@@ -17,6 +17,13 @@ namespace EQLogParser
     public const double FallPhaseFrac = 0.45;
     public const double FallScaleEnd = 0.55;
 
+    /*
+     * How much of an incoming hit's sink distance it gets back on the way out, in bands mode where a literal downward
+     * fall is not available (see FctIngest.AssignLifetime). Half of it reads as the same overshoot-and-settle your own
+     * numbers have, mirrored, without crawling back up into the protected strip.
+     */
+    public const double IncomingFallsBackFrac = 0.5;
+
     /* Crit blowout: quick ramp to CritPeakScale, hold, then collapse over the last CritScaleOutMs. */
     public const double CritPeakScale = 1.30;
     public const double CritScaleInMs = 90;
@@ -32,17 +39,22 @@ namespace EQLogParser
 
     /*
      * Hold style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
-     * Rise is negative) and then hold. Fountain style: same travel, then fall with gravity over the last
-     * FallPhaseFrac of life (paired with shrink + fade by the caller).
+     * Rise is negative) and then hold. Fountain style: same travel, then fall over the last FallPhaseFrac of life
+     * (paired with shrink + fade by the caller). FallDist is signed the way Rise is: positive accelerates toward the
+     * bottom of the screen, negative back up toward the gap, which is how the incoming band gets a mirrored fountain
+     * instead of parking against its own bottom edge.
      *
-     * The band clamp is what stops traffic entering the protected middle strip when the two disagree — a fountain
-     * fall asked of an incoming hit, a resize that moves the gap under a number already in flight.
+     * Both halves are continuous in velocity: smootherstep arrives at zero speed and the ease-in tail leaves from
+     * zero, so the handoff at riseFrac has no kink to look at — the seam most parabolas show.
+     *
+     * The band clamp is what stops traffic entering the protected middle strip when the two disagree — a resize that
+     * moves the gap under a number already in flight, or a fall asked for more room than the band has.
      */
     public static double RaisedY(FctHitState hit, double t) => ClampedToBand(hit, TravelledY(hit, t));
 
     private static double TravelledY(FctHitState hit, double t)
     {
-      if (hit.FallDist <= 0.0)
+      if (hit.FallDist == 0.0)
       {
         return hit.Y0 - (hit.Rise * Ease(t));
       }
@@ -54,7 +66,7 @@ namespace EQLogParser
       }
 
       var u = (t - riseFrac) / FallPhaseFrac;
-      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate downward
+      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate along the fall's own sign
     }
 
     /* A layout with no vertical limit leaves the band at 0..0; clamping against that would pin every hit to the
@@ -90,7 +102,7 @@ namespace EQLogParser
         return BlowoutScale(ageMs, hit.LifetimeMs);
       }
 
-      if (hit.FallDist > 0.0)
+      if (hit.FallDist != 0.0)
       {
         const double riseFrac = 1.0 - FallPhaseFrac;
         var t = Progress(hit, ageMs);
@@ -104,23 +116,32 @@ namespace EQLogParser
       return 1.0;
     }
 
+    /*
+     * Both ends are eased rather than linear. A linear ramp changes slope abruptly at fadeStart — steady, then suddenly
+     * dimming, then gone — and a linear start appears as a hard pop; easing each end removes both discontinuities. The
+     * mid-fade is slightly steeper as the trade, which reads as the text holding up and then dissolving rather than
+     * draining away.
+     */
     public static double FadeOpacity(FctHitState hit, double ageMs)
     {
-      var o = ageMs < FadeInMs ? ageMs / FadeInMs : 1.0;
+      var o = ageMs < FadeInMs ? Ease(ageMs / FadeInMs) : 1.0;
       var fadeStart = hit.LifetimeMs - hit.FadeMs;
 
       if (ageMs > fadeStart)
       {
-        o *= Math.Max(0, 1 - ((ageMs - fadeStart) / hit.FadeMs));
+        o *= 1.0 - Ease(Math.Clamp((ageMs - fadeStart) / hit.FadeMs, 0.0, 1.0));
       }
 
       return Math.Clamp(o, 0.0, 1.0);
     }
 
+    /* Whether the drawn number is mid-count-up. Backends use it so a growing total moves nothing else around it. */
+    public static bool IsCountingUp(FctHitState hit) => hit.CountUpMs > 0 && hit.TargetValue != hit.CountBaseValue;
+
     /* The interpolated number while a folded-in hit counts up; the target otherwise. */
     public static double DisplayValue(FctHitState hit, double ageMs)
     {
-      if (hit.CountUpMs <= 0 || hit.TargetValue == hit.CountBaseValue)
+      if (!IsCountingUp(hit))
       {
         return hit.TargetValue;
       }
