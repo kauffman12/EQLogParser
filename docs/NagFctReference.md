@@ -228,9 +228,10 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
 1c. **Layout v2 — direction went vertical** (current default): my hits rise out of the top band and hits on me sink
    out of the bottom, both travelling *away* from a protected strip across the middle; x now means *what* (damage
    toward the middle of a band, healing out wide, crits and labels centered) instead of *who*, and colour carries no
-   direction at all (nothing is blue, labels are hueless, amber only for `Invulnerable`/`Absorb`). The left/right
-   split remains reachable as `FctLayoutMode.Halves` (`FctOverlayLayout`, or the "halves" checkbox on the overlay
-   header). Rationale: `docs/DesignNotes.md` → "Two region schemes, and why direction went vertical".
+   direction at all (nothing is blue, labels are hueless, amber only for `Invulnerable`/`Absorb`). The left/right split
+   that shipped first has since been **removed**: two region schemes meant every style added afterwards had to be told
+   about the other one, and the cell grid could not lay out non-overlapping columns inside a half. Rationale:
+   `docs/DesignNotes.md` → "One region scheme, and why direction went vertical".
    Deliberate NAG deviations: no fixed flex columns (free float + arc
    instead), and **no crit cell grid** (decided): crit emphasis is larger size + orange + glow/blowout,
    drawn last so crits cover non-crits (two-pass draw order in both canvases) — that was judged enough.

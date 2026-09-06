@@ -526,7 +526,7 @@ The two canvases used to carry near-copies of the same layout and motion code, a
 
 - `FctIngest` — fold into a live number of the same ability, spawn, take a full lane's slot from a less significant
   number, or count a drop.
-- `FctLayout` — which region of the canvas a lane lives in (bands or halves), spawn position, travel, the protected middle.
+- `FctLayout` — which band of the canvas a lane lives in, spawn position, travel, the protected middle.
 - `FctMotion` — position, scale, opacity and **the text itself** as pure functions of `(hit, age)`.
 - `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
 - `FctLifeController` / `FctMedianTracker` — adaptive lifetime and the rolling median.
@@ -587,7 +587,7 @@ The remaining copy (surface → snapshot → pinned array → back buffer) is th
 shared Skia surface would remove it. It is not taken here because it needs a real GPU to validate against, and
 three memcpys are not what limits this renderer today.
 
-### Two region schemes, and why direction went vertical
+### One region scheme, and why direction went vertical
 
 The overlay cannot know where the player's target ring, cast bar or spell gems sit in the game window, so it can only
 promise that a band across its middle stays clear. The first scheme spent that promise horizontally: incoming lanes
@@ -596,7 +596,7 @@ on the left half, outgoing on the right, `FctLayout.CenterClearance` reserving t
 middle. It worked for numbers and failed for everything else — left/right is a convention that has to be learned and
 remembered, and it has no analogue anywhere in EQ's own UI.
 
-`FctLayoutMode.Bands` (the default) makes direction vertical, which is how nearly every game with floating text does
+The default makes direction vertical, which is how nearly every game with floating text does
 it: text about my target rises out of the top of the overlay, text about my body sinks out of the bottom, and both
 travel *away* from the protected strip between them (`GapTopFrac`/`GapBottomFrac`). Three things came out of that for
 free:
@@ -609,26 +609,29 @@ free:
   healing out wide, crits and labels centered. Each band carries two categories, so lane slots are still needed —
   they were never the problem; overloading one axis with two meanings was.
 
-`FctLayoutMode.Halves` stays as a fallback behind the overlay header's "halves" checkbox (`FctOverlayLayout` in
-settings.ini) for a player whose camera or HUD makes the vertical axis worse. It is the old geometry unchanged,
-including the left/right rule and no vertical clamp — `FctMotion` treats an unset y band (`BandMaxY <= BandMinY`) as
-"no vertical clamp" rather than pinning every hit to y=0, which is why halves stayed a 20-line branch instead of a
-second code path. The overlay's hint line states which scheme is active and what it means, because that line is the
-only documentation anyone reads while fighting.
+There is one region scheme, deliberately. The original left/right split (`FctLayoutMode.Halves`, a checkbox on the header,
+`FctOverlayLayout` in settings.ini) stayed as a fallback long after bands became the default, and every style added
+afterwards had to be told about it. The cell grid measures its columns against the canvas width, so in halves the outer
+columns fell under the protected centre column and the clamp collapsed several "distinct" cells onto one place — measured:
+4 overlapping numbers in 8. Taking the grid away there was worse: a pulse hit has no travel to separate it from its
+neighbours, so plain placement gave 11-22 overlapping pairs on the same burst. Halves also offered no vertical band for the
+choreographed styles to fall inside, which is why their fall had a mode-specific special case. Two geometry systems that
+each satisfy half the styles cost more than one that satisfies all of them, and the fallback was not earning its keep, so it
+was removed rather than fixed; a stale `FctOverlayLayout` entry in an existing settings.ini is simply unread now. The
+overlay's hint line still states what the layout means, because that line is the only documentation anyone reads while
+fighting.
 
 A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
 incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own
 band edge for half its life, which reads as stuck rather than as physics, so `FctIngest.AssignLifetime` **mirrors** it:
 `FallDist` is signed screen-relative (positive falls toward the bottom, negative back up toward the gap) and an incoming
-hit in bands mode gets half its sink distance back on the way out. Both sides then have the same overshoot-and-settle
+hit gets half its sink distance back on the way out. Both sides then have the same overshoot-and-settle
 shape in opposite signs, which is what "one animation, two directions" was supposed to mean, and the return cannot reach
-the protected strip because it is a fraction of travel already spent below it. Halves mode has no such band and falls
-everywhere, as it always did.
+the protected strip because it is a fraction of travel already spent below it.
 
-Both schemes keep their promises at any window size. In halves mode the x clamp degrades to the middle of its band
-instead of throwing when a label is wider than its half — an inverted band used to crash every frame on a small
-overlay — and bands mode falls back to "inside the edges" when a window is short enough to invert its y band.
-`FctLayoutTest` pins all of it at 100–240 px, across the whole motion and at crit scale.
+The layout keeps its promises at any window size: a band that a short window would invert falls back to "inside the edges"
+instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
+100–240 px, across the whole motion and at crit scale.
 
 ### Four motion styles, and the one thing none of them may change
 
@@ -636,8 +639,8 @@ The fountain began as a checkbox, which was honest while there were two choices 
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
 be read, fade — the default), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse** (no
 travel at all — it swells where it appeared) and **spray** (a random cone out of the lane slot, then a short fall).
-Placement (`FctLayoutMode`), motion style and stacking are three orthogonal decisions, and cramming two of them into
-one boolean was how "fountain" came to mean several things at once.
+Where a hit goes, how it moves and how numbers stack are three orthogonal decisions, and cramming two of them into one
+boolean was how "fountain" came to mean several things at once.
 
 Three rules keep four styles from becoming four behaviours:
 
@@ -705,8 +708,6 @@ one place, GW2 groups into fixed areas. Deterministic positions are the point: t
   layout pays: rows sized for the loudest possible number would halve how many numbers fit.
 - **An overlay too small for a grid keeps its numbers.** `HasRoom` is checked first; when no row plus margins fits, the hit
   keeps the plain static placement `FctLayout` gave it instead of being dropped. Losing layout is fine, losing damage is not.
-
-Halves mode has no grid: its protected axis is horizontal, and its single spawn row sits nowhere near the centre column.
 
 Pulse is also the nearest thing here to the reduced-motion option the design document asks for: nothing translates, so
 the information arrives without movement. It is not labelled that way yet — an explicit reduced-motion setting should
@@ -833,10 +834,10 @@ the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits
 (`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
 and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
 every hover over the overlay and buys nothing observable. Lock state and geometry persist through `ConfigUtil`
-(`FctOverlayLeft/Top/Width/Height/Locked/Enabled`) and the overlay reopens at startup if it was open on exit. The two
-presentation switches — region scheme (`FctOverlayLayout`) and motion style (`FctOverlayMotion`) — persist through
-`FctOverlaySettings`, read by the overlay and by both simulation windows so a bands run and a halves run, or a hold run
-and a spray run, differ in nothing but the thing being compared. `FctOverlayMotion` also reads the old
+(`FctOverlayLeft/Top/Width/Height/Locked/Enabled`) and the overlay reopens at startup if it was open on exit. The one
+presentation switch — motion style (`FctOverlayMotion`) — persists through
+`FctOverlaySettings`, read by the overlay and by both simulation windows so a hold run and a spray run differ in nothing
+but the thing being compared. `FctOverlayMotion` also reads the old
 `FctOverlayFountain` boolean when its own key is absent: an upgrade should keep the choreography somebody had already
 chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.

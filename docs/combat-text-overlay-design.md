@@ -1,12 +1,13 @@
 # Combat Text Overlay: Design and Implementation Plan
 
 > **Status note (superseded on one point).** This document is the original design brief and stays as written; the
-> *Classic* left/right preset it recommends is what shipped first and is still available as `FctLayoutMode.Halves`.
+> *Classic* left/right preset it recommends is what shipped first, and has since been removed: keeping two region
+> schemes meant every motion style added afterwards had to be told about the other one.
 > The default presentation now uses a **vertical** split instead — my hits rise out of the top band, hits on me sink
 > out of the bottom, both travelling away from the protected middle this document asks for — because left/right has to
 > be memorised while "up = at my target, down = at me" does not, and because diverging travel keeps the middle clear
 > by construction rather than by clamping. Colour likewise no longer encodes direction anywhere. See
-> `docs/DesignNotes.md` → "Two region schemes, and why direction went vertical" and "Colour answers what, never who".
+> `docs/DesignNotes.md` → "One region scheme, and why direction went vertical" and "Colour answers what, never who".
 > Everything below about keeping the center clear, capping footprint and routing events into fixed areas still holds.
 
 ## Recommendation
