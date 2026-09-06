@@ -10,7 +10,7 @@ namespace EQLogParser
     {
       var life = new FctLifeController();
 
-      Assert.AreEqual(7000.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 1000));
+      Assert.AreEqual(3500.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 1000));
     }
 
     [TestMethod]
@@ -21,7 +21,7 @@ namespace EQLogParser
       life.NextLifetime(FctSimLane.DamageDealt, 0, 1100);
 
       // 20 s of silence: the rate estimate is forgotten
-      Assert.AreEqual(7000.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 21100));
+      Assert.AreEqual(3500.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 21100));
     }
 
     [TestMethod]

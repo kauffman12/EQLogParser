@@ -42,14 +42,14 @@ namespace EQLogParser
    */
   internal class FctSkiaCanvas : FrameworkElement, IFctSimCanvas
   {
-    private const double DamageDealtFontSize = 30;
-    private const double DamageTakenFontSize = 28;
-    private const double HealingFontSize = 24;
+    private const double DamageDealtFontSize = 31;
+    private const double DamageTakenFontSize = 29;
+    private const double HealingFontSize = 25;
     /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
      * from normal damage, not a spectacle. */
-    private const double CritFontSize = 34;
-    private const double DefensiveFontSize = 20; // evade words are informational, not damage
-    private const double MinorFontSize = 19;
+    private const double CritFontSize = 35;
+    private const double DefensiveFontSize = 21; // evade words are informational, not damage
+    private const double MinorFontSize = 20;
     private const double SourceFontMin = 12;
     private const float GlowSigma = 5f;
 
@@ -217,7 +217,7 @@ namespace EQLogParser
       else
       {
         hit.MotionMs = Math.Min(MotionWindowMs, hit.LifetimeMs);
-        hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
+        hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
       }
       _hits.Add(hit);
       _dirty = true;

@@ -74,7 +74,7 @@ namespace EQLogParser
         {
           Lane = iAmDefender ? FctLane.Defensive : FctLane.Missed,
           ValueText = record.Type,
-          Source = string.IsNullOrEmpty(record.SubType) ? null : $"({record.SubType})",
+          Source = string.IsNullOrEmpty(record.SubType) ? null : $"({SingularizeVerb(record.SubType)})",
         }]);
         return;
       }
@@ -92,13 +92,29 @@ namespace EQLogParser
         Crit = crit,
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
-        Source = string.IsNullOrEmpty(record.SubType) ? null : $"({record.SubType})",
+        Source = string.IsNullOrEmpty(record.SubType) ? null : $"({SingularizeVerb(record.SubType)})",
       }]);
     }
 
     /* The labels DamageLineParser assigns to zero-damage evade lines. */
     private static bool IsDefensiveLabel(string type) =>
       type is Labels.Miss or Labels.Dodge or Labels.Block or Labels.Parry or Labels.Riposte or Labels.Absorb or Labels.Invulnerable;
+
+    /* Display-only polish: some lines capture the third-person verb form ("bites", "crushes");
+     * FCT reads better with the base form. */
+    private static string SingularizeVerb(string verb)
+    {
+      if (string.IsNullOrEmpty(verb) || !verb.EndsWith('s') || verb.EndsWith("ss", StringComparison.Ordinal))
+      {
+        return verb;
+      }
+
+      var lower = verb.ToLowerInvariant();
+      var dropsEs = lower.EndsWith("ses", StringComparison.Ordinal) || lower.EndsWith("xes", StringComparison.Ordinal) ||
+                    lower.EndsWith("zes", StringComparison.Ordinal) || lower.EndsWith("ches", StringComparison.Ordinal) ||
+                    lower.EndsWith("shes", StringComparison.Ordinal);
+      return dropsEs ? verb[..^2] : verb[..^1];
+    }
 
     internal void HandleHeal(HealProcessedEvent e)
     {

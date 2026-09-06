@@ -4,7 +4,8 @@ namespace EQLogParser
 {
   /*
    * Adaptive display time per lane. Presentation policy, so it lives with the canvases (Core never
-   * sees congestion). Baseline is NAG's 7 s fadeOut default; at each spawn the lifetime is chosen so
+   * sees congestion). Baseline sits well under NAG's 7 s fadeOut default - in a fixed-size overlay a
+   * long full-opacity hold reads as frozen text; at each spawn the lifetime is chosen so
    * the lane's predicted fill (live count + rate x lifetime) stays at or under its capacity:
    * L = clamp((capacity - liveCount) / rate, floor, baseline). A doubled incoming rate roughly
    * halves how long entries stay on screen; a lane already at capacity gets the floor. Crits do not
@@ -12,7 +13,7 @@ namespace EQLogParser
    */
   internal sealed class FctLifeController
   {
-    private const double BaselineMs = 7000; // NAG fadeOut default
+    private const double BaselineMs = 3500; // 7 s (NAG) held too long to read as anything but stuck
     private const double FloorMs = 1000;    // below this, numbers stop being readable
     private const double RateAlpha = 0.25;  // EMA weight of the newest inter-arrival interval
 
