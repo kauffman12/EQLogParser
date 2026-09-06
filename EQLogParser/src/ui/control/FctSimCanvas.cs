@@ -55,6 +55,9 @@ namespace EQLogParser
     public int ActiveCount => _hits.Count;
     public bool FountainMotion { get; set; }
 
+    /* The layout scheme is ingest's decision, so the canvas just forwards it; see FctLayout for the two modes. */
+    public FctLayoutMode Layout { get => _ingest.Mode; set => _ingest.Mode = value; }
+
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
     public double LastFrameMs { get; private set; }

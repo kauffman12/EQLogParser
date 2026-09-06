@@ -1,13 +1,19 @@
 namespace EQLogParser
 {
   /*
-   * Lane → presentation style. Colors are plain 0xAARRGGBB ints so the table is shared by the Skia and
-   * WPF renderers (and assertable from the unit tests) instead of being copied per substrate.
+   * Lane → presentation style. Colors are plain 0xAARRGGBB ints so the table is shared by the Skia and WPF
+   * renderers (and assertable from the unit tests) instead of being copied per substrate.
    *
-   * Crits are common in EQ (roughly every third number), so their emphasis stays a size step up from
-   * normal damage plus color/glow, not a spectacle. Periodic ticks (DoT/HoT) are deliberately the
-   * smallest numeric tier: they are the noisiest stream in the game and the first thing grouping and
-   * filtering will target — see docs/combat-text-overlay-design.md §4.
+   * Colour answers "what kind of event is this", never "who did it": that question is answered by the band a hit
+   * lives in and the direction it travels (FctLayout), and putting a hue on it as well would give two contradictory
+   * answers. In particular nothing here is blue — blue reads as mana, arcane damage or a friendly nameplate to
+   * anyone coming from another MMO, so it was the wrong sign for "a defence that worked".
+   *
+   * Crits are common in EQ (roughly every third number), so their emphasis stays a size step up from normal damage
+   * plus the pop, not a spectacle; their hue is pushed deeper than dealt damage rather than brighter, because at
+   * 1.3x scale a light orange and the yellow it must stand apart from converge. Periodic ticks (DoT/HoT) are
+   * deliberately the smallest numeric tier: they are the noisiest stream in the game and the first thing grouping
+   * and filtering will target — see docs/combat-text-overlay-design.md §4, docs/DesignNotes.md.
    */
   internal static class FctStyle
   {
@@ -15,19 +21,31 @@ namespace EQLogParser
     public const double DamageTakenFontSize = 29;
     public const double HealingFontSize = 25;
     public const double CritFontSize = 35;
-    public const double DefensiveFontSize = 21; // evade words are informational, not damage
+
+    /* Evade words are informational, but they are the only text on screen that carries a sentence's worth of
+     * meaning, so they get a tier of their own rather than being treated as tiny damage. */
+    public const double DefensiveFontSize = 21;
 
     // periodic ticks and the player's own misses: readable, but never competing with a direct hit
     public const double MinorFontSize = 20;
     public const double SourceFontMin = 12;
 
-    /* The ability/verb line, always a little dimmer than the value. */
-    public const int SourceArgb = unchecked(0xF2 << 24 | 0x6E << 16 | 0x93 << 8 | 0xC8);
+    /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
+    public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);
+
+    /* Zero-damage labels are hueless: high value against any zone, low value against each other. The player's own
+     * whiff sits a step behind a defence that worked, which is the only ranking here worth encoding. */
+    public const int WordArgb = unchecked(0xFF << 24 | 0xCF << 16 | 0xE0 << 8 | 0xEA);
+    public const int OwnWordArgb = unchecked(0xFF << 24 | 0xAF << 16 | 0xBB << 8 | 0xC6);
+
+    /* Invulnerable and Absorb mean "every cast from here is wasted", so they are the one label allowed to shout. */
+    public const int LoudWordArgb = unchecked(0xFF << 24 | 0xF2 << 16 | 0xC9 << 8 | 0x4C);
 
     public static void ApplyTo(FctHitState hit, FctLane lane, bool minor)
     {
-      hit.ValueFontSize = ValueSize(lane, minor);
-      hit.ValueArgb = ValueArgb(lane);
+      var loud = IsLoudLabel(hit.FixedText);
+      hit.ValueFontSize = ValueSize(lane, minor, loud);
+      hit.ValueArgb = ValueArgb(lane, loud);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = SourceArgb;
       hit.Blowout = lane == FctLane.Crit;
@@ -36,8 +54,16 @@ namespace EQLogParser
     /* The source line rides at 42% of the value size, floored so it stays legible on small hits. */
     public static double SourceSize(double valueFontSize) => valueFontSize * 0.42 > SourceFontMin ? valueFontSize * 0.42 : SourceFontMin;
 
-    private static double ValueSize(FctLane lane, bool minor)
+    /* The labels that mean "stop casting at this", as written by DamageLineParser into FctHitCommand.ValueText. */
+    public static bool IsLoudLabel(string fixedText) => fixedText is Labels.Invulnerable or Labels.Absorb;
+
+    private static double ValueSize(FctLane lane, bool minor, bool loud)
     {
+      if (loud)
+      {
+        return DefensiveFontSize; // a wasted-cast warning is not a footnote, whatever made it
+      }
+
       if (minor && lane is not (FctLane.Crit or FctLane.Defensive))
       {
         return MinorFontSize; // periodic tick or own-miss: the smallest numeric tier
@@ -54,14 +80,15 @@ namespace EQLogParser
       };
     }
 
-    private static int ValueArgb(FctLane lane) =>
+    private static int ValueArgb(FctLane lane, bool loud) =>
       lane switch
       {
-        FctLane.Crit => Argb(0xFF, 0xA3, 0x2E),       // orange
+        FctLane.Crit => Argb(0xFF, 0x8A, 0x1E),       // deep orange - away from dealt yellow, not toward taken red
         FctLane.HealingDealt or FctLane.HealingReceived => Argb(0x7F, 0xE0, 0x61), // green
         FctLane.DamageDealt => Argb(0xFF, 0xD7, 0x5E), // yellow
-        FctLane.Defensive => Argb(0x4F, 0xA8, 0xE8),   // blue - a defense that worked for me
-        FctLane.Missed => Argb(0x9A, 0xA3, 0xAD),      // dim gray - my own whiff, informational only
+        // hueless labels; amber only where the message is "stop casting", dimmer step for my own whiff
+        FctLane.Defensive => loud ? LoudWordArgb : WordArgb,
+        FctLane.Missed => loud ? LoudWordArgb : OwnWordArgb,
         _ => Argb(0xFF, 0x6B, 0x5E),                   // red - damage taken
       };
 

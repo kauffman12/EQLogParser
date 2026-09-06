@@ -31,10 +31,16 @@ namespace EQLogParser
     public static double Progress(FctHitState hit, double ageMs) => Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
 
     /*
-     * Hold style: ease out to the top band and stay. Fountain style: same rise, then fall with gravity
-     * over the last FallPhaseFrac of life (paired with shrink + fade by the caller).
+     * Hold style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
+     * Rise is negative) and then hold. Fountain style: same travel, then fall with gravity over the last
+     * FallPhaseFrac of life (paired with shrink + fade by the caller).
+     *
+     * The band clamp is what stops traffic entering the protected middle strip when the two disagree — a fountain
+     * fall asked of an incoming hit, a resize that moves the gap under a number already in flight.
      */
-    public static double RaisedY(FctHitState hit, double t)
+    public static double RaisedY(FctHitState hit, double t) => ClampedToBand(hit, TravelledY(hit, t));
+
+    private static double TravelledY(FctHitState hit, double t)
     {
       if (hit.FallDist <= 0.0)
       {
@@ -51,10 +57,16 @@ namespace EQLogParser
       return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate downward
     }
 
+    /* A layout with no vertical limit leaves the band at 0..0; clamping against that would pin every hit to the
+     * top of the canvas, so an unset band means "no vertical clamp". */
+    private static double ClampedToBand(FctHitState hit, double y) =>
+      hit.BandMaxY > hit.BandMinY ? Math.Clamp(y, hit.BandMinY, hit.BandMaxY) : y;
+
     /*
-     * Arc settles with the rise, clamped to the hit's half of the canvas. The clamp reserves half the
-     * drawn width — scaled, so a crit at full blowout still cannot cross into the protected center —
-     * and degrades to the band's middle instead of throwing when a label is wider than its half.
+     * Arc settles with the rise, clamped to the hit's clamp band (the half it was given in halves mode, the window
+     * edges in bands mode). The clamp reserves half the drawn width — scaled, so a crit at full blowout still cannot
+     * cross into the protected middle — and degrades to the band's middle instead of throwing when a label is wider
+     * than the space it has.
      */
     public static double ArcedX(FctHitState hit, double t)
     {

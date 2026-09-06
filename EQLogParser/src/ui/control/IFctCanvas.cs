@@ -18,6 +18,10 @@ namespace EQLogParser
     /* Fountain style (rise-fall-shrink) vs the default hold style; applies to new hits only. */
     bool FountainMotion { get; set; }
 
+    /* Region scheme for new hits: bands (my hits rise above the protected middle strip, hits on me sink below it)
+     * or the original left/right halves. Hosts set it from settings.ini so it can be flipped mid-fight. */
+    FctLayoutMode Layout { get; set; }
+
     void Start();
     void Stop();
 

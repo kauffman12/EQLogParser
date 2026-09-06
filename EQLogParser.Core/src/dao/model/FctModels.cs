@@ -1,8 +1,12 @@
 namespace EQLogParser
 {
-  /* Lanes the floating combat text pipeline understands. Incoming sits left of center, outgoing
-   * right of center; crits stay on the half of the lane that produced them. The renderers pool a
-   * crit into Crit, so FctManager never emits it — see docs/DesignNotes.md → Floating Combat Text. */
+  /*
+   * Lanes the floating combat text pipeline understands. Incoming lanes (the ones about something happening to me)
+   * get the overlay's incoming region and outgoing lanes get the other; which region that is — bottom band, or the
+   * left half — is the renderer's layout mode (FctLayoutMode), not this enum's concern. Crits stay on the region of
+   * the lane that produced them. The renderers pool a crit into Crit, so FctManager never emits it — see
+   * docs/DesignNotes.md → Floating Combat Text.
+   */
   internal enum FctLane
   {
     DamageDealt,
@@ -10,7 +14,7 @@ namespace EQLogParser
     HealingDealt,
     HealingReceived,
     Crit,
-    // zero-damage evades: Defensive = they failed on me (blue), Missed = I whiffed (dim gray)
+    // zero-damage evades: Defensive = they failed against me, Missed = my own attack failed
     Defensive,
     Missed
   }
@@ -22,7 +26,7 @@ namespace EQLogParser
   {
     public FctLane Lane;
 
-    // the source lane survives even for crits: the renderer pools a crit onto its producing side's half
+    // the source lane survives even for crits: the renderer pools a crit onto its producing lane's region
     public bool Crit;
 
     // DoT/HoT tick: smaller type, and the first candidate for grouping (docs/combat-text-overlay-design.md §4)

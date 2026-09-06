@@ -31,6 +31,7 @@
           <TextBlock Text="FCT" FontSize="13" FontWeight="Bold" Foreground="#D6E1EC" VerticalAlignment="Center" />
           <CheckBox x:Name="fountainCheck" Content=" fountain (rise-fall-shrink)" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="FountainChanged" Unchecked="FountainChanged" />
           <CheckBox x:Name="lockCheck" Content=" lock (click-through)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="LockChanged" Unchecked="LockChanged" />
+          <CheckBox x:Name="layoutCheck" Content=" halves (left/right)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" ToolTip="Bands: your hits rise above the empty middle strip, hits on you sink below it. Halves: the original left/right split." Checked="LayoutChanged" Unchecked="LayoutChanged" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <TextBlock x:Name="statsText" Margin="0,0,10,0" FontSize="12" Foreground="#7FD1FF" />

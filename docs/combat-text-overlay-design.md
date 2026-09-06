@@ -1,5 +1,14 @@
 # Combat Text Overlay: Design and Implementation Plan
 
+> **Status note (superseded on one point).** This document is the original design brief and stays as written; the
+> *Classic* left/right preset it recommends is what shipped first and is still available as `FctLayoutMode.Halves`.
+> The default presentation now uses a **vertical** split instead — my hits rise out of the top band, hits on me sink
+> out of the bottom, both travelling away from the protected middle this document asks for — because left/right has to
+> be memorised while "up = at my target, down = at me" does not, and because diverging travel keeps the middle clear
+> by construction rather than by clamping. Colour likewise no longer encodes direction anywhere. See
+> `docs/DesignNotes.md` → "Two region schemes, and why direction went vertical" and "Colour answers what, never who".
+> Everything below about keeping the center clear, capping footprint and routing events into fixed areas still holds.
+
 ## Recommendation
 
 Build one preset first: **Classic**. Place incoming damage and received healing on the left, outgoing damage and healing on the right, and scroll both streams upward. Keep an empty area between them for the player and target. Use red for incoming damage, green for healing, and warm white/yellow for outgoing damage.

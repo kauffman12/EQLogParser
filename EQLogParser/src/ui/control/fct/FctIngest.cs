@@ -34,6 +34,12 @@ namespace EQLogParser
 
     public FctIngest(Random rand = null) => _rand = rand ?? new Random();
 
+    /*
+     * Region scheme handed to FctLayout for new hits (bands by default). The canvas sets it once from settings.ini;
+     * changing it only affects hits spawned afterwards, which is what makes flipping it mid-fight worth doing.
+     */
+    public FctLayoutMode Mode = FctLayoutMode.Bands;
+
     /* Hits that had nowhere to go, surfaced in the overlay header so overload stays visible. */
     public int DroppedCount { get; private set; }
 
@@ -63,7 +69,7 @@ namespace EQLogParser
         return null; // nothing sane can be laid out yet (window not measured)
       }
 
-      var leftSide = FctLayout.IsLeftSide(lane);          // before pooling: a taken crit stays incoming
+      var incoming = FctLayout.IsIncoming(lane);          // before pooling: a taken crit stays on the incoming side
       var pooled = crit ? FctLane.Crit : lane;
 
       if (fixedText is null)
@@ -89,7 +95,7 @@ namespace EQLogParser
       var hit = new FctHitState
       {
         Lane = pooled,
-        LeftSide = leftSide,
+        Incoming = incoming,
         SpawnMs = now,
         Source = source,
         FixedText = fixedText,
@@ -98,7 +104,7 @@ namespace EQLogParser
       };
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic);
-      FctLayout.Spawn(hit, w, h, _rand);
+      FctLayout.Spawn(hit, w, h, _rand, Mode);
       AssignLifetime(hit, hits, h, now, fountain);
 
       /*
@@ -182,7 +188,12 @@ namespace EQLogParser
 
     private void AssignLifetime(FctHitState hit, List<FctHitState> hits, double h, double now, bool fountain)
     {
-      if (fountain)
+      /*
+       * A fountain's fall travels downwards, which in bands mode would drive an incoming hit through the bottom of
+       * its band and park it there for the rest of its life. The direction cue matters more than the flourish, so
+       * incoming hits rise-and-hold even with fountain motion on; halves mode keeps the choreography everywhere.
+       */
+      if (fountain && !(hit.Incoming && Mode is FctLayoutMode.Bands))
       {
         // the choreography is the life: rise then fall, no hold phase, and the fade spans exactly the fall
         hit.LifetimeMs = FctMotion.MotionWindowMs;

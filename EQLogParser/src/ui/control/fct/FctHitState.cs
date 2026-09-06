@@ -9,13 +9,15 @@ namespace EQLogParser
   {
     public FctLane Lane;
 
-    // half of the canvas this hit belongs to; captured before crit pooling, so a taken crit stays incoming
-    public bool LeftSide;
+    /* Whether this hit is about something happening to me: the bottom band (bands mode) or the left half (halves
+     * mode). Captured from the producing lane before crit pooling, so a taken crit stays on the incoming side. */
+    public bool Incoming;
 
     // spawn anchor: x is the value text's center, y its top
     public double X0, Y0;
 
-    // total upward travel / sideways arc amplitude / fountain fall distance (px)
+    /* Total travel (px, signed): positive rises, negative sinks — incoming hits in bands mode travel downwards so
+     * that direction of motion says who acted. Sideways arc amplitude and fountain fall distance follow. */
     public double Rise, Arc, FallDist;
 
     // rise+arc finish by this age, then hold position until the fade (see FctMotion.RaisedY)
@@ -23,6 +25,10 @@ namespace EQLogParser
 
     // clamp band for the value's center x, already inset for text width and scale
     public double SideMin, SideMax;
+
+    /* Clamp band for the value's top y, inset so the drawn text stays clear of the protected middle strip. Left
+     * unset (0..0) by layouts that put no vertical limit on a hit; FctMotion then skips the vertical clamp. */
+    public double BandMinY, BandMaxY;
 
     public double LifetimeMs, FadeMs;
     public double ValueFontSize, SourceFontSize;

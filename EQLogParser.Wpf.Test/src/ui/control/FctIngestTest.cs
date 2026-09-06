@@ -19,7 +19,7 @@ namespace EQLogParser
     private static FctIngest NewIngest() => new(new Random(20_260_714));
 
     [TestMethod]
-    public void FirstHitSpawnsOnItsOwnHalf()
+    public void FirstHitSpawnsOnItsSide()
     {
       var ingest = NewIngest();
 
@@ -28,7 +28,7 @@ namespace EQLogParser
       Assert.IsNotNull(hit);
       Assert.AreEqual(1, _hits.Count);
       Assert.AreEqual(FctLane.DamageDealt, hit.Lane);
-      Assert.IsFalse(hit.LeftSide);
+      Assert.IsFalse(hit.Incoming);
       Assert.AreEqual("Flurry", hit.Source);
       Assert.AreEqual("500", hit.DisplayText);
       Assert.IsTrue(hit.ValueWidth > 0, "spawn must seed a width estimate for the center clamp");
@@ -42,11 +42,11 @@ namespace EQLogParser
       var taken = ingest.Accept(_hits, FctLane.DamageTaken, 900, "Bites", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
       var dealt = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
 
-      // a crit I take must still appear on the incoming side, or the halves stop meaning anything
+      // a crit I take must still appear on the incoming side, or the region scheme stops meaning anything
       Assert.AreEqual(FctLane.Crit, taken.Lane);
-      Assert.IsTrue(taken.LeftSide);
+      Assert.IsTrue(taken.Incoming);
       Assert.AreEqual(FctLane.Crit, dealt.Lane);
-      Assert.IsFalse(dealt.LeftSide);
+      Assert.IsFalse(dealt.Incoming);
       Assert.IsTrue(taken.Blowout && dealt.Blowout);
     }
 
@@ -161,6 +161,59 @@ namespace EQLogParser
 
       Assert.AreEqual(12, _hits.Count, "the crit lane is capped and nothing merged into a crit");
       Assert.AreEqual(8, ingest.DroppedCount, "lost crits have to show up in the header, not silently disappear");
+    }
+
+    /*
+     * Bands is the default and carries the overlay's whole direction story on its own: incoming lives below the
+     * protected strip and travels down, outgoing above it and up. Pinned here because the canvases only forward
+     * the mode, so a regression would silently turn into "which side is which again?" while invisible to a unit
+     * test of the renderers.
+     */
+    [TestMethod]
+    public void BandsModePutsIncomingBelowAndOutgoingAboveTheStrip()
+    {
+      var ingest = NewIngest();
+
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
+
+      Assert.IsTrue(outgoing.Rise > 0, $"outgoing text must rise (Rise {outgoing.Rise})");
+      Assert.IsTrue(outgoing.BandMaxY <= (Height * FctLayout.GapTopFrac) + 0.001, "outgoing band must stop at the protected strip");
+      Assert.IsTrue(incoming.Rise < 0, $"incoming text must sink (Rise {incoming.Rise})");
+      Assert.IsTrue(incoming.BandMinY >= (Height * FctLayout.GapBottomFrac) - 0.001, "incoming band must start below the protected strip");
+    }
+
+    /* The mode has to reach geometry rather than just be remembered: halves restores the left/right clamp and adds
+     * no vertical limit at all. */
+    [TestMethod]
+    public void LayoutModeReachesTheGeometry()
+    {
+      var ingest = NewIngest();
+      ingest.Mode = FctLayoutMode.Halves;
+
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
+
+      Assert.IsTrue(outgoing.SideMin >= (Width / 2) - 1, $"halves mode put my hits on the incoming side ({outgoing.SideMin})");
+      Assert.IsTrue(incoming.SideMax <= (Width / 2) + 1, $"halves mode put hits on me on the outgoing side ({incoming.SideMax})");
+      Assert.AreEqual(0.0, outgoing.BandMaxY, "halves mode adds no vertical clamp");
+    }
+
+    /* A fountain's fall points down, which would drag an incoming hit through its band and park it at the bottom of
+     * the overlay; the direction cue outranks the flourish, so the fall is simply not applied there. */
+    [TestMethod]
+    public void FountainMotionDoesNotDragIncomingHitsThroughTheirBand()
+    {
+      var ingest = NewIngest();
+
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: true);
+
+      Assert.AreEqual(0.0, incoming.FallDist, "an incoming hit in bands mode gets no downward fall");
+
+      for (var t = 0.0; t <= 1.0; t += 0.05)
+      {
+        Assert.IsTrue(FctMotion.RaisedY(incoming, t) >= (Height * FctLayout.GapBottomFrac) - 0.001, $"incoming hit left its band at t={t:0.00}");
+      }
     }
 
     [TestMethod]

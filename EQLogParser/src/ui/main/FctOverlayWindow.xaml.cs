@@ -15,6 +15,11 @@ namespace EQLogParser
    * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
    * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
    * Unlock from the Tools menu, or press Esc while it has focus to close.
+   *
+   * Two region schemes are available and switchable from the header: bands (default — my hits rise above an empty
+   * middle strip, hits on me sink below it) and the original left/right halves. The overlay cannot know where the
+   * player's target is on screen, so what makes direction readable is the empty strip plus the direction of travel;
+   * the hint line states which is which because it is the only documentation a player sees while fighting.
    */
   public partial class FctOverlayWindow : Window
   {
@@ -102,7 +107,7 @@ namespace EQLogParser
       _locked = locked;
 
       lockCheck.IsChecked = locked;
-      hintText.Text = locked ? "locked · unlock from the Tools menu" : "drag header to move · Esc closes";
+      UpdateHint(locked);
 
       // belt-and-braces for frames between the request and the style actually landing
       rootBorder.IsHitTestVisible = !locked;
@@ -152,6 +157,29 @@ namespace EQLogParser
       var fountain = ConfigUtil.IfSet("FctOverlayFountain");
       fountainCheck.IsChecked = fountain;
       _canvas.FountainMotion = fountain;
+
+      _canvas.Layout = FctOverlaySettings.LoadLayout();
+      layoutCheck.IsChecked = _canvas.Layout == FctLayoutMode.Halves;
+      UpdateHint(_locked);
+    }
+
+    /*
+     * The hint is the only documentation on screen, so it says what the current layout means instead of a generic
+     * "drag to move": in bands mode the strip to line up with your cast bar is the useful instruction, and in
+     * halves mode it is which side is which.
+     */
+    private void UpdateHint(bool locked)
+    {
+      if (locked)
+      {
+        hintText.Text = "locked · unlock from the Tools menu";
+        return;
+      }
+
+      var meaning = _canvas.Layout == FctLayoutMode.Halves
+        ? "left = hits on you, right = your hits"
+        : "keep the gap above your cast bar · up = your hits, down = hits on you";
+      hintText.Text = $"drag header to move · {meaning} · Esc closes";
     }
 
     private void SaveSettings()
@@ -196,6 +224,14 @@ namespace EQLogParser
     }
 
     private void LockChanged(object sender, RoutedEventArgs e) => ApplyLock(lockCheck.IsChecked == true);
+
+    /* Applies to hits spawned from now on; a number already in flight keeps the geometry it was given. */
+    private void LayoutChanged(object sender, RoutedEventArgs e)
+    {
+      _canvas.Layout = layoutCheck.IsChecked == true ? FctLayoutMode.Halves : FctLayoutMode.Bands;
+      FctOverlaySettings.SaveLayout(_canvas.Layout);
+      UpdateHint(_locked);
+    }
 
     /* DragMove throws if no button is actually held (synthetic events, double-fire on some setups). */
     private void HeaderDrag(object sender, MouseButtonEventArgs e)

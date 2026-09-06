@@ -525,7 +525,7 @@ The two canvases used to carry near-copies of the same layout and motion code, a
 `FctHitState` is plain data and the decisions live in one place:
 
 - `FctIngest` — fold into a live number, spawn, or drop at the lane cap.
-- `FctLayout` — which half of the canvas a lane lives in, spawn band, rise/arc, the protected center.
+- `FctLayout` — which region of the canvas a lane lives in (bands or halves), spawn position, travel, the protected middle.
 - `FctMotion` — position, scale, opacity and **the text itself** as pure functions of `(hit, age)`.
 - `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
 - `FctLifeController` / `FctMedianTracker` — adaptive lifetime and the rolling median.
@@ -557,13 +557,54 @@ The remaining copy (surface → snapshot → pinned array → back buffer) is th
 shared Skia surface would remove it. It is not taken here because it needs a real GPU to validate against, and
 three memcpys are not what limits this renderer today.
 
-### Where text may go
+### Two region schemes, and why direction went vertical
 
-The overlay does not know where the player's target ring, cast bar or spell gems sit in the game window, so
-`FctLayout.CenterClearance` reserves a band of clear space on both sides of the midline and `FctMotion.ArcedX`
-clamps against it using half the *scaled* text width — a crit at full blowout still cannot slide over the middle.
-The clamp degrades to the middle of its band instead of throwing when a label is wider than its half, which is
-what used to crash every frame on a small overlay (`FctLayoutTest` pins both properties).
+The overlay cannot know where the player's target ring, cast bar or spell gems sit in the game window, so it can only
+promise that a band across its middle stays clear. The first scheme spent that promise horizontally: incoming lanes
+on the left half, outgoing on the right, `FctLayout.CenterClearance` reserving the column between them and
+`FctMotion.ArcedX` clamping with half the *scaled* text width so even a crit at full blowout cannot slide over the
+middle. It worked for numbers and failed for everything else — left/right is a convention that has to be learned and
+remembered, and it has no analogue anywhere in EQ's own UI.
+
+`FctLayoutMode.Bands` (the default) makes direction vertical, which is how nearly every game with floating text does
+it: text about my target rises out of the top of the overlay, text about my body sinks out of the bottom, and both
+travel *away* from the protected strip between them (`GapTopFrac`/`GapBottomFrac`). Three things came out of that for
+free:
+
+- The empty middle is empty **by construction** rather than by clamping traffic out of it. Diverging travel cannot
+  cross the gap it started outside, where the old scheme needed a per-frame clamp to keep two opposing fountains apart.
+- Direction has two independent carriers (band and direction of motion) instead of one, so it survives a glance,
+  peripheral vision and a colorblind player.
+- The x axis stopped meaning *who* and went back to meaning *what*: damage sits toward the middle of its band,
+  healing out wide, crits and labels centered. Each band carries two categories, so lane slots are still needed —
+  they were never the problem; overloading one axis with two meanings was.
+
+`FctLayoutMode.Halves` stays as a fallback behind the overlay header's "halves" checkbox (`FctOverlayLayout` in
+settings.ini) for a player whose camera or HUD makes the vertical axis worse. It is the old geometry unchanged,
+including the left/right rule and no vertical clamp — `FctMotion` treats an unset y band (`BandMaxY <= BandMinY`) as
+"no vertical clamp" rather than pinning every hit to y=0, which is why halves stayed a 20-line branch instead of a
+second code path. The overlay's hint line states which scheme is active and what it means, because that line is the
+only documentation anyone reads while fighting.
+
+A fountain's rise-fall-shrink choreography points *down* on its way out, which in bands mode would drag an incoming
+hit through its band and park it on the bottom edge for the rest of its life. `FctIngest.AssignLifetime` therefore
+skips the fall for incoming hits while banding: direction outranks the flourish.
+
+Both schemes keep their promises at any window size. In halves mode the x clamp degrades to the middle of its band
+instead of throwing when a label is wider than its half — an inverted band used to crash every frame on a small
+overlay — and bands mode falls back to "inside the edges" when a window is short enough to invert its y band.
+`FctLayoutTest` pins all of it at 100–240 px, across the whole motion and at crit scale.
+
+### Colour answers "what", never "who"
+
+`FctStyle` used to paint the successful-defence lane blue, which put direction on colour — and blue in particular
+reads as mana, arcane damage or a friendly nameplate to anyone arriving from another MMO, so it was a wrong sign on
+top of a redundant one. Nothing is blue now: yellow dealt / deep-orange crit / red taken / green heals, with crit's
+hue pushed *deeper* than dealt damage rather than brighter (at 1.3× scale plus the pop, a light orange and the yellow
+it must stand apart from converge). The zero-damage labels are hueless — pale slate for a defence that worked, one
+step dimmer for my own whiff — with amber reserved for `Invulnerable`/`Absorb`, the two labels that mean "every cast
+from here is wasted" and so deserve to beat the routine one next to them. The source line went neutral grey for the
+same reason: it must not compete with a value colour for meaning.
 
 Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive lifetime
 aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop merges into a live
@@ -591,7 +632,8 @@ the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits
 and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
 every hover over the overlay and buys nothing observable. Lock state, fountain style and geometry persist through
 `ConfigUtil` (`FctOverlayLeft/Top/Width/Height/Locked/Fountain/Enabled`) and the overlay reopens at startup if it
-was open on exit.
+was open on exit. The region scheme persists as `FctOverlayLayout` through `FctOverlaySettings`, read by the overlay
+and by both simulation windows so a bands run and a halves run differ in nothing but layout.
 
 Because a locked window cannot be clicked, its own checkbox is unreachable by design; the way out is the Tools
 menu's lock item, since locked also means `WS_EX_NOACTIVATE` and therefore no keyboard input either — which is what
@@ -609,5 +651,8 @@ constant deliberately rather than assume it is there.
 - Party-wide and other-players' heals: fed only when group configuration exists to scope them.
 - Resist/immune as distinct event classes: the parser reports partial resists as reduced totals (which display
   correctly) and full immunity as `Labels.Invulnerable`; there is no "resisted 75%" record to show, so nothing is invented.
-- Per-character or per-lane configuration, palettes for color-vision accessibility, and a reduced-motion mode.
+- Per-character or per-lane configuration, palette customization, and a reduced-motion mode. Colour is deliberately
+  not load-bearing for reading the overlay — direction comes from region plus travel, and the two lanes that could
+  be confused (my whiff vs a defence that worked) are also separated by size and band — so a palette switch is a
+  comfort feature rather than an accessibility blocker.
 - Real GPU presentation via `D3DImage` (see above).

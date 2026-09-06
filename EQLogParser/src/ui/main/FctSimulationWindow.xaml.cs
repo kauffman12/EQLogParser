@@ -11,7 +11,8 @@ namespace EQLogParser
    * heals, crits, periodic ticks and misses — and feeds them at the recorded pace to either backend (SkiaSharp
    * or WPF vector) while its header reports fps, active hits, frame time, draw ops/sec and drops. The seed is
    * fixed so runs are comparable; click or Esc stops early. Folding/count-up is no longer simulated here: the
-   * canvas does it for real through FctIngest, which is the point of the comparison.
+   * canvas does it for real through FctIngest, which is the point of the comparison. The region scheme comes from
+   * the same setting the live overlay uses, so a bands run and a halves run differ in nothing but layout.
    */
   public partial class FctSimulationWindow : Window
   {
@@ -54,6 +55,7 @@ namespace EQLogParser
 
       _canvas = useSkia ? fctSkiaCanvas : fctCanvas;
       _diagnostics = (IFctDiagnostics)_canvas;
+      _canvas.Layout = FctOverlaySettings.LoadLayout();
       fctCanvas.Visibility = useSkia ? Visibility.Collapsed : Visibility.Visible;
       fctSkiaCanvas.Visibility = useSkia ? Visibility.Visible : Visibility.Collapsed;
       titleText.Text = $"FCT Render Simulation ({(useSkia ? "SkiaSharp" : "WPF vector")}) — 60 seconds, {_events.Count:N0} simulated records (rate ×{RateMultiplier:0.#})";
@@ -141,14 +143,14 @@ namespace EQLogParser
     {
       var rand = new Random(RandomSeed);
 
-      // outgoing (right half): yellow damage, orange crits, green heals I cast
+      // outgoing (top band, or the right half in halves mode): yellow damage, orange crits, green heals I cast
       AddStream(rand, 2.0, 0.18, FctLane.DamageDealt, MeleeActions, () => 600 * Math.Exp(NextGaussian(rand) * 0.55), 250, 2600);
       AddStream(rand, 0.85, 0.15, FctLane.DamageDealt, SpellActions, () => 1400 * Math.Exp(NextGaussian(rand) * 0.6), 700, 5600);
       AddStream(rand, 1.5, 0.05, FctLane.DamageDealt, DotActions, () => 180 * Math.Exp(NextGaussian(rand) * 0.5), 90, 750, minor: true, periodic: true);
       AddStream(rand, 2.3, 0.12, FctLane.HealingDealt, HealActions, () => 1500 * Math.Exp(NextGaussian(rand) * 0.55), 600, 7000);
       AddStream(rand, 0.9, 0.0, FctLane.HealingDealt, HotActions, () => 250 * Math.Exp(NextGaussian(rand) * 0.4), 120, 900, minor: true, periodic: true);
 
-      // incoming (left half): red damage taken, green heals I receive
+      // incoming (bottom band, or the left half): red damage taken, green heals I receive
       AddStream(rand, 1.7, 0.10, FctLane.DamageTaken, TakenActions, () => 450 * Math.Exp(NextGaussian(rand) * 0.6), 150, 3200);
       AddStream(rand, 1.6, 0.0, FctLane.HealingReceived, HealActions, () => 900 * Math.Exp(NextGaussian(rand) * 0.5), 400, 5200);
 
