@@ -165,7 +165,8 @@ namespace EQLogParser
         y: h * (0.68 + _rand.NextDouble() * 0.17), // bottom third
         now: _clock.Elapsed.TotalMilliseconds);
 
-      hit.Rise = h * (0.34 + _rand.NextDouble() * 0.12) * (lane is FctSimLane.HealingDealt or FctSimLane.HealingReceived ? 0.8 : 1.0);
+      // rise all the way to a top band (finishing ~87-95% up from the bottom), then fade out there
+      hit.Rise = hit.Y0 - h * (0.05 + _rand.NextDouble() * 0.08);
       hit.Arc = (_rand.NextDouble() * 2 - 1) * w * (lane == FctSimLane.Crit ? 0.15 : 0.12);
 
       hit.SideMin = leftSide ? 8 : w / 2 + 4;
