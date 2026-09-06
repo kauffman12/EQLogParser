@@ -321,5 +321,22 @@ namespace EQLogParser
       var middle = (wide.SideMin + wide.SideMax) / 2.0;
       Assert.AreEqual(middle, FctMotion.ArcedX(wide, 0.5), 0.001);
     }
+
+    /*
+     * A hit with no motion left to travel is *finished*, not undefined. This matters because MotionMs is a style's slide
+     * length in pulse mode (FctCellGrid.SlideMs), so "appear straight in place" — 0 — is the obvious thing for someone to
+     * want, and dividing by it produced NaN on the first frame. NaN then survived Math.Clamp and both band clamps, because
+     * NaN compares false against every limit, and the number simply failed to be drawn.
+     */
+    [TestMethod]
+    public void AHitWithNoMotionIsFinishedAndNotNaN()
+    {
+      var hit = NewHit();
+      hit.MotionMs = 0;
+
+      Assert.AreEqual(1.0, FctMotion.Progress(hit, 0), 0.001, "a zero-length motion is complete from its first frame");
+      Assert.IsFalse(double.IsNaN(FctMotion.ArcedX(hit, FctMotion.Progress(hit, 0))));
+      Assert.IsFalse(double.IsNaN(FctMotion.RaisedY(hit, FctMotion.Progress(hit, 0))));
+    }
   }
 }

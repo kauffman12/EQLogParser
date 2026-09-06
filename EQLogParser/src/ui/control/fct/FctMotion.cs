@@ -66,7 +66,14 @@ namespace EQLogParser
     /* How long a folded-in hit takes to count up to its new total. */
     public const double CountUpMs = 300;
 
-    public static double Progress(FctHitState hit, double ageMs) => Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
+    /*
+     * Where a hit is along its travel, 0..1. The zero guard is not decoration: pulse mode's MotionMs comes from
+     * FctCellGrid.SlideMs, so setting that to 0 — "appear straight in place", a plausible knob to expose — divides 0 by 0
+     * on the hit's very first frame, and NaN survives both Math.Clamp and the band clamps (NaN compares false against
+     * every limit), so ArcedX and RaisedY hand back NaN and the number simply fails to be drawn for that frame.
+     */
+    public static double Progress(FctHitState hit, double ageMs) =>
+      hit.MotionMs > 0 ? Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0) : 1.0;
 
     /*
      * Hold style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose

@@ -145,13 +145,22 @@ namespace EQLogParser
       var scale = _pixelsPerDip > 0 ? _pixelsPerDip : 1.0;
       var w = (int)Math.Ceiling(ActualWidth * scale);
       var h = (int)Math.Ceiling(ActualHeight * scale);
+
+      /*
+       * Both early-outs clear _dirty, because nothing was drawn and leaving the flag set turns them into a repaint loop:
+       * OnRendering invalidates whenever _dirty is set, so an overlay dragged under 50 px — or one whose surface cannot be
+       * allocated — would ask WPF to render at display rate forever, arriving here, drawing nothing, and asking again.
+       * Clearing costs nothing: WPF renders again when the size comes back, and live hits keep invalidating anyway.
+       */
       if (w < 50 || h < 50)
       {
+        _dirty = false;
         return;
       }
 
       if (!EnsureSurface(w, h))
       {
+        _dirty = false;
         return;
       }
 
@@ -423,7 +432,12 @@ namespace EQLogParser
 
       entry.Refs++;
       _haloKey[hit] = key;
-      CountDraw(1);
+
+      /*
+       * Deliberately not counted in DrawsPerSec: this is a sprite being baked, and DrawHit counts the blit that uses it.
+       * Counting both billed an op that drew nothing, once per distinct crit string, inflating the one number anyone reads
+       * to decide whether the glow is affordable.
+       */
     }
 
     private void ReleaseHalo(FctHitState hit)
