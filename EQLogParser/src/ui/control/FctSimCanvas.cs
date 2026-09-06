@@ -56,11 +56,8 @@ namespace EQLogParser
     public event Action<double> EventsFrame; // canvas clock ms since Start()
 
     public int ActiveCount => _hits.Count;
-    /* Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest like Layout below. */
+    /* Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. */
     public FctMotionStyle MotionStyle { get => _ingest.Style; set => _ingest.Style = value; }
-
-    /* The layout scheme is ingest's decision, so the canvas just forwards it; see FctLayout for the two modes. */
-    public FctLayoutMode Layout { get => _ingest.Mode; set => _ingest.Mode = value; }
 
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }

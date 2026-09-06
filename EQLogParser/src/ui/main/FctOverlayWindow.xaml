@@ -46,7 +46,6 @@
             <ComboBoxItem Content="spray" Tag="spray" />
           </ComboBox>
           <CheckBox x:Name="lockCheck" Content=" lock (click-through)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="LockChanged" Unchecked="LockChanged" />
-          <CheckBox x:Name="layoutCheck" Content=" halves (left/right)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" ToolTip="Bands: your hits rise above the empty middle strip, hits on you sink below it. Halves: the original left/right split." Checked="LayoutChanged" Unchecked="LayoutChanged" />
         </StackPanel>
         <!-- the hint is the only documentation a player reads mid-fight, so it gets the flexible column and trims
              rather than pushing over the controls; drag events still reach the Grid through it -->

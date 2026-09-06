@@ -119,7 +119,7 @@ namespace EQLogParser
     public void NegativeFallDistMirrorsTheFountainUpward()
     {
       var hit = NewHit();
-      hit.Rise = -300;              // incoming hits travel downwards in bands mode: Rise is negative
+      hit.Rise = -300;              // incoming hits travel downwards: Rise is negative
       hit.FallDist = -150;          // and half of it comes back up, screen-relative
 
       var low = hit.Y0 - hit.Rise;  // deepest point, reached when the travel phase ends

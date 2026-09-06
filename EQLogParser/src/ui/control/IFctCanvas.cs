@@ -19,10 +19,6 @@ namespace EQLogParser
      * hits spawned from now on, which is what makes switching it during a fight a practical way to choose. */
     FctMotionStyle MotionStyle { get; set; }
 
-    /* Region scheme for new hits: bands (my hits rise above the protected middle strip, hits on me sink below it)
-     * or the original left/right halves. Hosts set it from settings.ini so it can be flipped mid-fight. */
-    FctLayoutMode Layout { get; set; }
-
     void Start();
     void Stop();
 

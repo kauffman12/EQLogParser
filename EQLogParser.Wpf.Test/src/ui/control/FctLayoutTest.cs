@@ -91,78 +91,24 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * Halves mode keeps its own promise: the centre column stays clear, at crit scale and at every frame. The styles are
-     * looped because each one has a different widest frame — a pulse grows to PulsePeakScale with no travel to warn you,
-     * and an x clamp built on 1.0 would let exactly that style bleed over the protected centre.
-     */
-    [TestMethod]
-    public void HalvesModeKeepsTextOutOfTheProtectedCenter()
-    {
-      var rand = new Random(7);
-      var center = Width / 2;
-
-      for (var i = 0; i < 400; i++)
-      {
-        foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
-        {
-          foreach (var incoming in new[] { true, false })
-          {
-            var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, mode: FctLayoutMode.Halves, style: style);
-            hit.ValueWidth = 180; // a wide label: the clamp has to reserve half of it, scaled
-
-            for (var t = 0.0; t <= 1.0; t += 0.05)
-            {
-              var x = FctMotion.ArcedX(hit, t);
-              var peak = hit.Blowout ? FctMotion.CritPeakScale : style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
-              var half = (hit.ValueWidth * peak) / 2.0;
-
-              if (incoming)
-              {
-                Assert.IsTrue(x + half <= center - FctLayout.CenterClearance + 0.001, $"{style} incoming text crossed the center at t={t:0.00} (right edge {x + half:0.#})");
-              }
-              else
-              {
-                Assert.IsTrue(x - half >= center + FctLayout.CenterClearance - 0.001, $"{style} outgoing text crossed the center at t={t:0.00} (left edge {x - half:0.#})");
-              }
-            }
-          }
-        }
-      }
-    }
-
-    /* Halves mode puts no vertical limit on a hit; FctMotion reads an unset band as "no clamp" rather than pinning
-     * everything to y=0. */
-    [TestMethod]
-    public void HalvesModeLeavesTheVerticalBandUnset()
-    {
-      var halves = Spawn(FctLane.DamageDealt, incoming: false, new Random(5), mode: FctLayoutMode.Halves);
-      Assert.AreEqual(0, halves.BandMinY);
-      Assert.AreEqual(0, halves.BandMaxY);
-      Assert.AreEqual(halves.Y0 - (halves.Rise * 1.0), FctMotion.RaisedY(halves, 1.0), 0.0001, "an unset band must not clamp");
-    }
-
     /* A tiny overlay must degrade instead of throwing: an inverted clamp band used to crash every frame. */
     [TestMethod]
     public void TinyCanvasesStillProduceADrawablePosition()
     {
       var rand = new Random(3);
 
-      foreach (var mode in new[] { FctLayoutMode.Bands, FctLayoutMode.Halves })
+      foreach (var size in new[] { 100, 160, 240 })
       {
-        foreach (var size in new[] { 100, 160, 240 })
+        foreach (var incoming in new[] { true, false })
         {
-          foreach (var incoming in new[] { true, false })
-          {
-            var hit = Spawn(FctLane.DamageDealt, incoming, rand, size, size, mode: mode);
-            Assert.IsTrue(hit.SideMin <= hit.SideMax, $"x clamp band inverted at {size}px ({hit.SideMin}..{hit.SideMax})");
-            Assert.IsTrue(hit.BandMaxY > hit.BandMinY || hit.BandMaxY == 0, $"y band inverted at {size}px ({hit.BandMinY}..{hit.BandMaxY})");
+          var hit = Spawn(FctLane.DamageDealt, incoming, rand, size, size);
+          Assert.IsTrue(hit.SideMin <= hit.SideMax, $"x clamp band inverted at {size}px ({hit.SideMin}..{hit.SideMax})");
+          Assert.IsTrue(hit.BandMaxY > hit.BandMinY, $"y band inverted at {size}px ({hit.BandMinY}..{hit.BandMaxY})");
 
-            var x = FctMotion.ArcedX(hit, 0.5); // must not throw
-            var y = FctMotion.RaisedY(hit, 0.5);
-            Assert.IsTrue(x >= 0 && x <= size, $"x={x} outside a {size}px canvas");
-            Assert.IsTrue(y >= 0 && y <= size, $"y={y} outside a {size}px canvas");
-          }
+          var x = FctMotion.ArcedX(hit, 0.5); // must not throw
+          var y = FctMotion.RaisedY(hit, 0.5);
+          Assert.IsTrue(x >= 0 && x <= size, $"x={x} outside a {size}px canvas");
+          Assert.IsTrue(y >= 0 && y <= size, $"y={y} outside a {size}px canvas");
         }
       }
     }
@@ -194,20 +140,17 @@ namespace EQLogParser
     {
       var rand = new Random(4);
 
-      foreach (var mode in new[] { FctLayoutMode.Bands, FctLayoutMode.Halves })
+      for (var i = 0; i < 300; i++)
       {
-        for (var i = 0; i < 300; i++)
+        foreach (var incoming in new[] { true, false })
         {
-          foreach (var incoming in new[] { true, false })
-          {
-            var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, mode: mode, source: "Crushing Blow");
+          var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, source: "Crushing Blow");
 
-            for (var t = 0.0; t <= 1.0; t += 0.05)
-            {
-              var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextReserve(hit);
-              Assert.IsTrue(bottom <= Height - FctLayout.EdgePad + 0.001,
-                $"text clipped at the bottom edge in {mode} mode at t={t:0.00} (bottom {bottom:0.#}, canvas {Height})");
-            }
+          for (var t = 0.0; t <= 1.0; t += 0.05)
+          {
+            var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextReserve(hit);
+            Assert.IsTrue(bottom <= Height - FctLayout.EdgePad + 0.001,
+              $"text clipped at the bottom edge at t={t:0.00} (bottom {bottom:0.#}, canvas {Height})");
           }
         }
       }
@@ -225,7 +168,7 @@ namespace EQLogParser
 
       for (var i = 0; i < 200; i++)
       {
-        var hit = Spawn(FctLane.DamageDealt, incoming: false, rand, mode: FctLayoutMode.Bands, source: "Crushing Blow", style: FctMotionStyle.Pulse);
+        var hit = Spawn(FctLane.DamageDealt, incoming: false, rand, source: "Crushing Blow", style: FctMotionStyle.Pulse);
 
         Assert.AreEqual(0.0, hit.Rise, "a pulse travels nowhere, so only its scale can leave the band");
         Assert.IsTrue(FctLayout.TextReserve(hit) > (hit.ValueFontSize * FctLayout.TextHeightFactor),
@@ -294,7 +237,7 @@ namespace EQLogParser
             for (var i = 0; i < 50; i++)
             {
               var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, TinyW, TinyH,
-                mode: FctLayoutMode.Bands, source: "Crushing Blow", style: style, proc: proc);
+                source: "Crushing Blow", style: style, proc: proc);
 
               Assert.IsTrue(hit.Y0 >= FctLayout.EdgePad - 0.001, $"text ran off the top ({hit.Y0:0.#})");
               Assert.IsTrue(hit.Y0 + FctLayout.TextReserve(hit) <= TinyH - FctLayout.EdgePad + 0.001,
@@ -305,7 +248,7 @@ namespace EQLogParser
       }
     }
 
-    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null, FctMotionStyle style = FctMotionStyle.Hold, bool proc = false)
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, string? source = null, FctMotionStyle style = FctMotionStyle.Hold, bool proc = false)
     {
       // Source, style and proc must be set before layout runs: the vertical reserve, the travel and the band row are all
       // derived from them, exactly as FctIngest does it
@@ -321,7 +264,7 @@ namespace EQLogParser
       };
 
       FctStyle.ApplyTo(hit, hit.Lane, minor: false);
-      FctLayout.Spawn(hit, w, h, rand, mode);
+      FctLayout.Spawn(hit, w, h, rand);
       return hit;
     }
   }

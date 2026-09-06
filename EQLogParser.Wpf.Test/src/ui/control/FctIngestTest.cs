@@ -327,38 +327,9 @@ namespace EQLogParser
     }
 
     /*
-     * Pulse in halves mode is an open defect, not a behaviour to celebrate: the cell grid is measured against the whole
-     * canvas width, so in halves its outer columns fall under the protected centre column and their clamp lands several
-     * "distinct" cells on one place — 4 overlapping pairs among 8 numbers at 980x640, against 11-22 for the same burst with
-     * no grid at all (a pulse hit has no travel to separate it), which is why taking the grid away is not the fix. See
-     * local/fct-implementation.md §12 D4: the grid has to become per-side. What this pins meanwhile is that the combination
-     * is still functional — cells are allocated, nothing is dropped, and pulse keeps not travelling.
-     */
-    [TestMethod]
-    public void PulseInHalvesModeStillAllocatesCells()
-    {
-      var ingest = NewIngest();
-      ingest.Style = FctMotionStyle.Pulse;
-      ingest.Mode = FctLayoutMode.Halves;
-
-      for (var i = 0; i < 6; i++)
-      {
-        var hit = ingest.Accept(_hits, FctLane.DamageDealt, 5000 - (i * 40), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
-
-        Assert.IsNotNull(hit, "halves mode must not lose pulse numbers");
-        Assert.IsTrue(hit.Cell >= 0, "the cell pool is still what allocates them");
-        Assert.AreEqual(FctCellGrid.SlideMs, hit.MotionMs, 0.001, "and it slides into that cell rather than travelling");
-      }
-
-      Assert.AreEqual(0, ingest.DroppedCount);
-      Assert.AreEqual(6, _hits.Select(h => h.Cell).Distinct().Count(), "one cell per number, even where the grid does not fit");
-    }
-
-    /*
-     * Bands is the default and carries the overlay's whole direction story on its own: incoming lives below the
-     * protected strip and travels down, outgoing above it and up. Pinned here because the canvases only forward
-     * the mode, so a regression would silently turn into "which side is which again?" while invisible to a unit
-     * test of the renderers.
+     * Direction is the whole point of the layout, so it is pinned here rather than left to the renderer: incoming lives
+     * below the protected strip and travels down, outgoing above it and up. A regression turns into "which way was mine?"
+     * in game while staying invisible to any test of the renderers themselves.
      */
     [TestMethod]
     public void BandsModePutsIncomingBelowAndOutgoingAboveTheStrip()
@@ -374,21 +345,6 @@ namespace EQLogParser
       Assert.IsTrue(incoming.BandMinY >= (Height * FctLayout.GapBottomFrac) - 0.001, "incoming band must start below the protected strip");
     }
 
-    /* The mode has to reach geometry rather than just be remembered: halves restores the left/right clamp and adds
-     * no vertical limit at all. */
-    [TestMethod]
-    public void LayoutModeReachesTheGeometry()
-    {
-      var ingest = NewIngest();
-      ingest.Mode = FctLayoutMode.Halves;
-
-      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
-      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10);
-
-      Assert.IsTrue(outgoing.SideMin >= (Width / 2) - 1, $"halves mode put my hits on the incoming side ({outgoing.SideMin})");
-      Assert.IsTrue(incoming.SideMax <= (Width / 2) + 1, $"halves mode put hits on me on the outgoing side ({incoming.SideMax})");
-      Assert.AreEqual(0.0, outgoing.BandMaxY, "halves mode adds no vertical clamp");
-    }
 
     /*
      * Fountain motion on the incoming band is mirrored, not dropped: the fall pulls back up toward the gap instead of

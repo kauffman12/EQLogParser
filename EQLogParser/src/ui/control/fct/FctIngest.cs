@@ -44,15 +44,9 @@ namespace EQLogParser
     public FctIngest(Random rand = null) => _rand = rand ?? new Random();
 
     /*
-     * Region scheme handed to FctLayout for new hits (bands by default). The canvas sets it once from settings.ini;
-     * changing it only affects hits spawned afterwards, which is what makes flipping it mid-fight worth doing.
-     */
-    public FctLayoutMode Mode = FctLayoutMode.Bands;
-
-    /*
-     * Motion style for new hits (see FctMotionStyle). Kept beside Mode because they are the two orthogonal presentation
-     * switches — where text goes, and how it moves — and both are canvas settings rather than per-record ones: a feed
-     * that mixed styles from log line to log line would look like a bug, not a feature.
+     * Motion style for new hits (see FctMotionStyle): how text moves, as opposed to where it goes, which FctLayout decides
+     * and does not ask about. A canvas setting rather than a per-record one: a feed that mixed styles from log line to log
+     * line would look like a bug, not a feature.
      */
     public FctMotionStyle Style = FctMotionStyle.Hold;
 
@@ -95,15 +89,9 @@ namespace EQLogParser
       /*
        * Pulse mode allocates cells, and cells are its capacity: folding a number into a running total that lives in some
        * other cell would hide the fold, and the lane cap would drop hits that a free cell has room for. So the absorb and
-       * overflow paths below belong to the travelling styles only.
-       *
-       * Known defect, deliberately left as-is: the grid is measured against the whole canvas width and knows nothing about
-       * halves (FctCellGrid.Position), so in halves mode its outer columns fall under the protected centre column and the
-       * clamp pushes several "distinct" cells onto one place — measured at 980x640, 4 overlapping pairs among 8 pulse
-       * numbers. Dropping the grid there is *worse*, not better: a pulse hit has no travel to separate it from its
-       * neighbours, so without cells the same measurement gives 11-22 overlapping pairs. The grid has to become per-side —
-       * columns inside the half, and cell pools keyed by side as well as band and proc — which touches geometry, pooling
-       * and the eviction that reads it, not just a guard here.
+       * overflow paths below belong to the travelling styles only. The grid spans the canvas because there is one region
+       * scheme to lay cells out in; making halves mode available meant that promise was false in it, which is why halves is
+       * gone rather than patched (see the FctLayout header).
        */
       var celled = Style is FctMotionStyle.Pulse;
 
@@ -165,7 +153,7 @@ namespace EQLogParser
       };
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic, proc);
-      FctLayout.Spawn(hit, w, h, _rand, Mode);
+      FctLayout.Spawn(hit, w, h, _rand);
       AssignLifetime(hit, hits, h, now);
 
       /*
@@ -333,14 +321,13 @@ namespace EQLogParser
        * thing before that edge, so a literal downward fall parks the number against its own bottom edge for half its
        * life, which reads as stuck rather than as physics. Falling back up toward the gap keeps the overshoot-and-settle
        * shape on both sides, keeps the two directions reading as one animation in opposite signs, and cannot reach the
-       * protected strip because the return is a fraction of travel already spent below it. Halves mode has no such band
-       * and falls everywhere.
+       * protected strip because the return is a fraction of travel already spent below it.
        *
        * Pulse and Hold fall through to the adaptive lifetime: neither has a fall, so neither needs its life dictated
        * by a choreography.
        */
-      // mirrored on the incoming band in bands mode, where a downward fall has nowhere legal to go
-      var mirrored = hit.Incoming && Mode is FctLayoutMode.Bands;
+      // mirrored on the incoming band, where a downward fall has nowhere legal to go
+      var mirrored = hit.Incoming;
 
       if (Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
@@ -391,8 +378,9 @@ namespace EQLogParser
      * How far gravity carries a choreographed hit past its apex, always positive — the caller applies the sign. Spray
      * measures against the height this particular number reached: falling less than it rose is what stops any angle of
      * the cone from returning a number to the band edge it left, which keeps the protected strip clear for every random
-     * draw rather than for the lucky ones. A mirrored fountain uses a share of how far it sank; an unmirrored one takes
-     * the canvas-relative throw it has always had, held honest by the band clamp.
+     * draw rather than for the lucky ones. A mirrored fountain — any incoming one, whose downward fall would park it on its
+     * own band edge — uses a share of how far it sank; an outgoing one takes the canvas-relative throw it has always had,
+     * held honest by the band clamp.
      */
     private double FallDepth(FctHitState hit, double h, bool mirrored) =>
       Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * FctLayout.SprayFallFrac

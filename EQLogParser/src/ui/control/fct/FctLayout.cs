@@ -3,31 +3,20 @@ using System;
 namespace EQLogParser
 {
   /*
-   * Which region scheme a canvas lays hits out in. Bands is the default: direction becomes vertical, so text
-   * about my targets rises out of the top of the overlay and text about my own body sinks out of the bottom.
-   * Halves is the original left/right split, kept as a fallback for a player whose camera and HUD make the
-   * vertical axis awkward (toggled on the overlay header, persisted in settings.ini). Both modes keep the
-   * middle of the overlay empty; neither needs the player to memorise a colour to know who acted.
-   * Rationale: docs/DesignNotes.md → Floating Combat Text.
-   */
-  internal enum FctLayoutMode
-  {
-    Bands,
-    Halves
-  }
-
-  /*
    * Where a hit spawns and how far it may travel — one table for every backend, so a tuning change is one edit
-   * instead of a copy-paste pair. The overlay cannot know where the player or their target are on screen, so in
-   * both modes a band across the middle stays clear: that is where EQ's own windows sit and where the spell
-   * effects being looked at happen (docs/combat-text-overlay-design.md §1).
+   * instead of a copy-paste pair. Direction is vertical: text about my targets rises out of the top of the overlay and
+   * text about my own body sinks out of the bottom, with a band across the middle kept clear because that is where EQ's
+   * own windows sit and where the spell effects being looked at happen (docs/combat-text-overlay-design.md §1).
+   *
+   * There is deliberately one region scheme. The original left/right halves split survived here for a while as a
+   * switchable fallback, and every style added afterwards had to be told about it: the cell grid's columns are measured
+   * against the canvas width, so halves collapsed several "distinct" cells onto one place (4 overlapping numbers in 8),
+   * while taking the grid away there was worse (11-22), and halves offered no vertical band for the choreographed styles
+   * to fall inside. Two geometry systems that each satisfy half the styles is worse than one that satisfies all of them,
+   * so the split is gone rather than fixed. Rationale: docs/DesignNotes.md → Floating Combat Text.
    */
   internal static class FctLayout
   {
-    /* Half-width of text-free space each half gives up along the midline (halves mode). Keeps the player's cast
-     * bar, target ring and spell gems readable underneath the overlay. */
-    public const double CenterClearance = 64;
-
     // breathing room at the outer canvas edges
     public const double EdgePad = 8;
 
@@ -106,22 +95,11 @@ namespace EQLogParser
     }
 
     /*
-     * Whether a lane is about something happening to me — the bottom band in bands mode, the left half in halves
-     * mode. Crit is deliberately not handled here: ingest reads this from the producing lane before pooling, and
-     * stores it on hit.Incoming, which is what keeps a taken crit on the incoming side.
+     * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest
+     * reads this from the producing lane before pooling, and stores it on hit.Incoming, which is what keeps a taken crit
+     * on the incoming side.
      */
     public static bool IsIncoming(FctLane lane) => lane is FctLane.DamageTaken or FctLane.HealingReceived or FctLane.Defensive;
-
-    public static void Spawn(FctHitState hit, double w, double h, Random rand, FctLayoutMode mode = FctLayoutMode.Bands)
-    {
-      if (mode == FctLayoutMode.Halves)
-      {
-        SpawnHalves(hit, w, h, rand);
-        return;
-      }
-
-      SpawnBands(hit, w, h, rand);
-    }
 
     /*
      * Ballpark width used until the backend measures the real glyph run. Needed at spawn because the clamp band
@@ -131,11 +109,11 @@ namespace EQLogParser
       string.IsNullOrEmpty(text) ? 0 : text.Length * (fontSize * 0.58);
 
     /*
-     * Direction is vertical here, so x is only a lane slot: damage toward the middle of the overlay, healing out
-     * wide, crits and labels centred over their band. Both bands carry two categories each, which is why the x
-     * slots survive the move away from left/right — they stopped meaning who and now mean what.
+     * Direction is vertical, so x is only a lane slot: damage toward the middle of the overlay, healing out wide, crits
+     * and labels centred over their band. Both bands carry two categories each, which is why the x slots survived the move
+     * away from left/right — they stopped meaning who and now mean what.
      */
-    private static void SpawnBands(FctHitState hit, double w, double h, Random rand)
+    public static void Spawn(FctHitState hit, double w, double h, Random rand)
     {
       var cx = hit.Lane switch
       {
@@ -222,51 +200,6 @@ namespace EQLogParser
 
       hit.Rise = up * usable;
       hit.Arc = (rand.NextDouble() * 2 - 1) * w * (hit.Blowout ? 0.15 : 0.12);
-    }
-
-    /* The original split: each half owns its lanes and neither enters the protected centre column. */
-    private static void SpawnHalves(FctHitState hit, double w, double h, Random rand)
-    {
-      var left = hit.Incoming;
-
-      // each side's lanes centered as a pair within their own half (text is drawn center-aligned on x); the busy
-      // damage lane takes the inner, center-near slot on both sides, healing the outer one, crits sit at the
-      // middle of their half and spread wider
-      var cx = hit.Lane switch
-      {
-        FctLane.DamageTaken => w * 0.35,
-        FctLane.HealingReceived => w * 0.14,
-        FctLane.Crit => left ? w * 0.25 : w * 0.75,
-        // evades ride with their side's damage lane - a miss lands where the whiffed swing would
-        FctLane.Defensive => w * 0.35,
-        FctLane.Missed => w * 0.65,
-        FctLane.HealingDealt => w * 0.86,
-        _ => w * 0.65, // DamageDealt
-      };
-
-      var spread = hit.Blowout ? 0.17 : 0.09;
-      hit.X0 = cx + ((rand.NextDouble() * 2 - 1) * (w * spread));
-
-      // bottom third, but never so low that the drawn block hangs off the window; then rise to a top band
-      var lowestStart = Math.Max(EdgePad, h - EdgePad - TextReserve(hit));
-      hit.Y0 = Math.Min(h * (0.68 + (rand.NextDouble() * 0.17)), lowestStart);
-      AssignTravel(hit, w, rand, up: 1, Math.Max(0, hit.Y0 - (h * (0.05 + (rand.NextDouble() * 0.08)))));
-
-      /* Math.Max/Min keep the band valid on a small overlay: an inverted band used to throw inside Math.Clamp on
-       * every frame, and the clamp is what protects the center. */
-      var innerLeft = Math.Max(EdgePad + 1, (w / 2) - CenterClearance);
-      var innerRight = Math.Min(w - EdgePad - 1, (w / 2) + CenterClearance);
-
-      if (left)
-      {
-        hit.SideMin = EdgePad;
-        hit.SideMax = innerLeft;
-      }
-      else
-      {
-        hit.SideMin = innerRight;
-        hit.SideMax = w - EdgePad;
-      }
     }
 
     /* Keeps the band drawable: a window short enough to invert it degrades to "inside the edges" rather than to a

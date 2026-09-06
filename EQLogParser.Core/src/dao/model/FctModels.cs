@@ -1,10 +1,9 @@
 namespace EQLogParser
 {
   /*
-   * Lanes the floating combat text pipeline understands. Incoming lanes (the ones about something happening to me)
-   * get the overlay's incoming region and outgoing lanes get the other; which region that is — bottom band, or the
-   * left half — is the renderer's layout mode (FctLayoutMode), not this enum's concern. Crits stay on the region of
-   * the lane that produced them. The renderers pool a crit into Crit, so FctManager never emits it — see
+   * Lanes the floating combat text pipeline understands. Direction is vertical: incoming lanes (the ones about something
+   * happening to me) get the overlay's bottom band and outgoing lanes get the top one. Crits stay on the region of the lane
+   * that produced them. The renderers pool a crit into Crit, so FctManager never emits it — see
    * docs/DesignNotes.md → Floating Combat Text.
    */
   internal enum FctLane

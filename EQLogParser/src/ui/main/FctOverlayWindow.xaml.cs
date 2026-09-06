@@ -11,20 +11,21 @@ namespace EQLogParser
    * Production FCT host: topmost, non-activating overlay fed by FctManager's queue (live monitor lines
    * only — historical replay never reaches it). The queue is drained once per painted frame from the
    * canvas's EventsFrame, so a log burst becomes one cross-thread hop instead of one dispatcher item per
-   * record. Position, motion style, region scheme and the click-through lock persist like every other overlay window.
+   * record. Position, motion style and the click-through lock persist like every other overlay window.
    *
    * Motion is a combo rather than the old fountain checkbox because there are four styles now (hold, fountain, pulse,
    * spray) and they are presentation, not information: whichever is chosen, band and direction of travel still say who
-   * acted. Both it and the region scheme apply to hits spawned afterwards, so trying one during a pull is safe.
+   * acted. It applies to hits spawned afterwards, so trying a style during a pull is safe.
    *
    * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
    * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
    * Unlock from the Tools menu, or press Esc while it has focus to close.
    *
-   * Two region schemes are available and switchable from the header: bands (default — my hits rise above an empty
-   * middle strip, hits on me sink below it) and the original left/right halves. The overlay cannot know where the
-   * player's target is on screen, so what makes direction readable is the empty strip plus the direction of travel;
-   * the hint line states which is which because it is the only documentation a player sees while fighting.
+   * Direction is vertical and the only scheme there is: my hits rise above an empty middle strip, hits on me sink below
+   * it. The overlay cannot know where the player's target is on screen, so what makes direction readable is that strip plus
+   * the direction of travel; the hint line states which is which because it is the only documentation a player sees while
+   * fighting. The old left/right halves switch is gone — see the FctLayout header for why it could not be made to work with
+   * the styles built after it.
    */
   public partial class FctOverlayWindow : Window
   {
@@ -165,16 +166,13 @@ namespace EQLogParser
       _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
       SelectMotionOption(_canvas.MotionStyle);
 
-      _canvas.Layout = FctOverlaySettings.LoadLayout();
-      layoutCheck.IsChecked = _canvas.Layout == FctLayoutMode.Halves;
       UpdateHint(_locked);
       _settingsReady = true;
     }
 
     /*
-     * The hint is the only documentation on screen, so it says what the current layout means instead of a generic
-     * "drag to move": in bands mode the strip to line up with your cast bar is the useful instruction, and in
-     * halves mode it is which side is which.
+     * The hint is the only documentation on screen, so it says what the layout means instead of a generic "drag to move":
+     * the strip to line up with your cast bar is the one instruction that makes direction click.
      */
     private void UpdateHint(bool locked)
     {
@@ -184,12 +182,9 @@ namespace EQLogParser
         return;
       }
 
-      // terse on purpose: the hint shares one row with the motion combo and the two checkboxes, and a legend that gets
+      // terse on purpose: the hint shares one row with the motion combo and the lock checkbox, and a legend that gets
       // ellipsised is a legend nobody can read while fighting
-      var meaning = _canvas.Layout == FctLayoutMode.Halves
-        ? "left = hits on you, right = yours"
-        : "gap above your cast bar · up = yours, down = hits on you";
-      hintText.Text = $"drag to move · {meaning} · Esc closes";
+      hintText.Text = "drag to move · gap above your cast bar · up = yours, down = hits on you · Esc closes";
     }
 
     private void SaveSettings()
@@ -259,14 +254,6 @@ namespace EQLogParser
     }
 
     private void LockChanged(object sender, RoutedEventArgs e) => ApplyLock(lockCheck.IsChecked == true);
-
-    /* Applies to hits spawned from now on; a number already in flight keeps the geometry it was given. */
-    private void LayoutChanged(object sender, RoutedEventArgs e)
-    {
-      _canvas.Layout = layoutCheck.IsChecked == true ? FctLayoutMode.Halves : FctLayoutMode.Bands;
-      FctOverlaySettings.SaveLayout(_canvas.Layout);
-      UpdateHint(_locked);
-    }
 
     /* DragMove throws if no button is actually held (synthetic events, double-fire on some setups). */
     private void HeaderDrag(object sender, MouseButtonEventArgs e)
