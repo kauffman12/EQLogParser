@@ -54,6 +54,15 @@ namespace EQLogParser
     public const double PulseInsetFrac = 0.20;
 
     /*
+     * The same idea for procs, which stack up in the middle of a fight and read as one blurred column when they share a
+     * row with the hits they accompany. A proc starts further *out* from the protected strip instead: my procs higher up,
+     * procs landing on me lower down, so the two streams occupy different rows of the same band and the eye can ignore
+     * one while reading the other. Additive with the pulse inset above, because a procced pulse should separate from
+     * plain pulses too, and clamped by the same band ends.
+     */
+    public const double ProcInsetFrac = 0.15;
+
+    /*
      * Spray geometry: half-angle of the cone (radians, ~38°) and how much wider a crit's cone opens; SprayMaxLateralFrac
      * caps sideways travel as a share of canvas width because the cone is aimed from wherever the lane slot put the hit
      * — at the overlay's edge a full spread would leave the window.
@@ -170,12 +179,14 @@ namespace EQLogParser
         up = 1;
       }
 
-      /* Static text gets the depth of its band rather than its edge. Clamped by the band ends, which already carry the
-       * vertical reserve on the gap-facing side and the edge pad on the other, so this cannot push anything out of the
-       * window or into the strip — it only ever moves hits away from the strip. */
-      if (hit.Style is FctMotionStyle.Pulse)
+      /* Text that either never travels (pulse) or must not share a row with the hit it arrived beside (a proc) starts
+       * deeper in its band than its gap-facing edge. Clamped by the band ends, which already carry the vertical reserve
+       * on one side and the edge pad on the other, so this cannot push anything into the strip or out of the window — it
+       * only ever moves hits away from the strip, further up in my band and further down in theirs. */
+      var insetFrac = (hit.Style is FctMotionStyle.Pulse ? PulseInsetFrac : 0.0) + (hit.Proc ? ProcInsetFrac : 0.0);
+      if (insetFrac > 0)
       {
-        var inset = BandSpan(hit) * PulseInsetFrac;
+        var inset = BandSpan(hit) * insetFrac;
         hit.Y0 = hit.Incoming
           ? Math.Min(hit.BandMaxY, hit.Y0 + inset)
           : Math.Max(hit.BandMinY, hit.Y0 - inset);

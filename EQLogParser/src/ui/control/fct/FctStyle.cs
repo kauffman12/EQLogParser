@@ -39,10 +39,11 @@ namespace EQLogParser
      * A proc fires on its own schedule, on top of the swing or cast the player was actually watching for, and several
      * items fire several times a pull. It is real damage and stays legible, but it should not outshout the hit that
      * provoked it, so it rides a fraction below its lane's size instead of being pushed down to the periodic tier —
-     * 34 becomes about 29, which sits between dealt damage and a DoT tick. A crit proc keeps the full size: the pop is
-     * the answer to "did something big happen", and shrinking the loudest number in the log would be a lie.
+     * 34 becomes about 27 — between a direct hit and the periodic tier, subordinate without being a footnote. A crit proc
+     * keeps the full size: the pop is the answer to "did something big happen", and shrinking the loudest number in the
+     * log would be a lie.
      */
-    public const double ProcSizeFrac = 0.86;
+    public const double ProcSizeFrac = 0.78;
 
     /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
     public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);

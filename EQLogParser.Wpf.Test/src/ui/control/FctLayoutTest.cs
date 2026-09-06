@@ -280,15 +280,85 @@ namespace EQLogParser
         $"static text should start further from the strip than travelling text ({pulseClosest:0.#} vs {travelFurthest:0.#})");
     }
 
-    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null, FctMotionStyle style = FctMotionStyle.Hold)
+    /*
+     * Procs belong to the fight but not to the number the player is reading, so they start in a different row of the
+     * band than the hits they arrived beside - mine further up, hits on me further down. Asserted two ways because the
+     * per-hit position also carries lane jitter: every proc clears the inset from the strip, and as a stream procs read
+     * further out than plain hits by roughly the inset itself.
+     */
+    [TestMethod]
+    public void ProcHitsStartInTheirOwnRowOfTheBand()
     {
-      // Source and style must be set before layout runs: the vertical reserve and the travel are both derived from them,
-      // exactly as FctIngest does it
+      var rand = new Random(17);
+      double plainClearance = 0;
+      double procClearance = 0;
+      const int Rounds = 400;
+
+      for (var i = 0; i < Rounds; i++)
+      {
+        foreach (var incoming in new[] { false, true })
+        {
+          var lane = incoming ? FctLane.DamageTaken : FctLane.DamageDealt;
+
+          var plain = Spawn(lane, incoming, rand);
+          var proc = Spawn(lane, incoming, rand, proc: true);
+          var span = plain.BandMaxY - plain.BandMinY;
+
+          // distance from the band edge nearest the strip, which already carries the text reserve
+          var plainNear = incoming ? plain.Y0 - plain.BandMinY : plain.BandMaxY - plain.Y0;
+          var procNear = incoming ? proc.Y0 - proc.BandMinY : proc.BandMaxY - proc.Y0;
+
+          Assert.IsTrue(procNear >= span * FctLayout.ProcInsetFrac - 0.001,
+            $"proc started {procNear:0.#} px from the strip, want at least {span * FctLayout.ProcInsetFrac:0.#}");
+
+          plainClearance += plainNear;
+          procClearance += procNear;
+        }
+      }
+
+      var gap = (procClearance - plainClearance) / (Rounds * 2);
+      Assert.IsTrue(gap > 15, $"procs should read a clear row outside the direct hits, averaged {gap:0.#} px apart");
+    }
+
+    /* The insets are shares of band depth, so a small overlay is where they have to give way rather than push text off
+     * the screen - and pulse plus proc stacks both of them at once. */
+    [TestMethod]
+    public void InsetsWithStackUpStillFitOnATinyOverlay()
+    {
+      var rand = new Random(3);
+      const double TinyW = 420;
+      const double TinyH = 300;
+
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
+      {
+        foreach (var proc in new[] { false, true })
+        {
+          foreach (var incoming in new[] { false, true })
+          {
+            for (var i = 0; i < 50; i++)
+            {
+              var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, TinyW, TinyH,
+                mode: FctLayoutMode.Bands, source: "Crushing Blow", style: style, proc: proc);
+
+              Assert.IsTrue(hit.Y0 >= FctLayout.EdgePad - 0.001, $"text ran off the top ({hit.Y0:0.#})");
+              Assert.IsTrue(hit.Y0 + FctLayout.TextReserve(hit) <= TinyH - FctLayout.EdgePad + 0.001,
+                $"text ran off the bottom ({hit.Y0 + FctLayout.TextReserve(hit):0.#} of {TinyH})");
+            }
+          }
+        }
+      }
+    }
+
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null, FctMotionStyle style = FctMotionStyle.Hold, bool proc = false)
+    {
+      // Source, style and proc must be set before layout runs: the vertical reserve, the travel and the band row are all
+      // derived from them, exactly as FctIngest does it
       var hit = new FctHitState
       {
         Lane = crit ? FctLane.Crit : lane,
         Incoming = incoming,
         Style = style,
+        Proc = proc,
         Source = source,
         TargetValue = 1234,
         CountBaseValue = 1234,

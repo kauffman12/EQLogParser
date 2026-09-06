@@ -711,9 +711,16 @@ pins it in both region schemes, with a source line present and at crit scale.
 
 A proc is not the number anybody aimed at. Item and spell procs fire on their own schedule, several times a pull, and they
 arrive on top of the swing or cast whose timing the player is reading - so at full lane size they compete with the hit
-they accompany without being the reason for it. `FctStyle.ProcSizeFrac` (0.86) rides a proc's value below its lane, which
-turns 34 into about 29: between dealt damage and a DoT tick, subordinate but not a footnote, with the source line shrinking
+they accompany without being the reason for it. `FctStyle.ProcSizeFrac` (0.78) rides a proc's value below its lane, which
+turns 34 into about 27: between dealt damage and a DoT tick, subordinate but not a footnote, with the source line shrinking
 alongside it because a full-size ability name under a smaller number would undo the effect on its own.
+
+Size alone does not separate two streams that land in the same place though, so procs also start in a different row of
+their band: `FctLayout.ProcInsetFrac` (0.15) moves them further *out* from the protected strip — my procs higher up, procs
+landing on me lower down — which is the same mechanism that gives a pulse its depth, and additive with it, because a
+procced pulse wants to separate from plain pulses too. Being shares of band depth, both insets are clamped by the band
+ends, so a small overlay loses separation before it loses text; a test stacks every combination on a 420×300 canvas to
+keep that true.
 `FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
 together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
 A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
