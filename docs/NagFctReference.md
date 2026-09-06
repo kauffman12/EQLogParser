@@ -216,7 +216,7 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
 1. **Performance simulation** (done, verdict above): `Tools → FCT Simulation (Vector, Test)` and
    `Tools → FCT Simulation (Skia, Test)` each run a fixed-seed 60-second, raid-scale (~7,500 records at
    ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
-   draw ops per second in the header. Same record stream, same lane/stack/count-up logic, two renderers.
+   draw ops per second in the header. Same record stream, same lane/stack/fold logic, two renderers.
    **Winner: SkiaSharp.**
 1b. **Layout v1** (user-specified, implemented in both canvases): hits spawn in the bottom third and
    float upward with a sideways arc that grows as they rise; incoming lanes (damage taken red,
@@ -247,11 +247,12 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    lane-matched hit batches; smart group matching comes with the config phase).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config
    dir, import/export. Not built: the overlay runs on fixed per-lane styles from `FctStyle`.
-4. Smart features: **median tracking and the accumulate threshold are implemented** (`FctMedianTracker`,
-   `FctIngest`) — a direct hit under half its lane's rolling median counts up on a live number, periodic DoT/HoT
-   ticks always fold, healing never folds, and the lane cap merges before it drops (and counts what it loses).
-   Deviation from NAG: nothing is *ignored*. NAG can drop hits below its threshold; here they fold, so no damage
-   disappears from an overlay whose job is to lose nothing measurable. Per-character enable waits on group config.
+4. Smart features: **folding is implemented, and it counts instead of summing** (`FctIngest`) — a hit folds into the live
+   number already showing that exact amount for that exact ability, which draws as `2,040 ×2`; periodic DoT/HoT ticks are the
+   stream it exists for, healing never folds, and the lane cap folds and evicts before it drops (and counts what it loses).
+   NAG's median-based accumulate threshold is **not** implemented and was deliberately removed once folding stopped adding
+   amounts up: it decided when it was acceptable to inflate somebody else's number. Deviation from NAG stands: nothing is
+   *ignored* — NAG can drop hits below its threshold, here they either appear or are counted. Per-character enable waits on group config.
    (Crit cell grid evaluated and rejected — see layout v1 above.)
 
 ### Product pass (v1): what changed once it fed real records

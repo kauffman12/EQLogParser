@@ -524,12 +524,13 @@ drains, which is invisible until the next session shows yesterday's fight.
 The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. Now
 `FctHitState` is plain data and the decisions live in one place:
 
-- `FctIngest` — fold into a live number of the same ability, spawn, take a full lane's slot from a less significant
-  number, or count a drop.
+- `FctIngest` — fold a repeat into the number already showing that exact hit, spawn, take a full lane's slot from a less
+  significant number, or count a drop.
 - `FctLayout` — which band of the canvas a lane lives in, spawn position, travel, the protected middle.
-- `FctMotion` — position, scale, opacity and **the text itself** as pure functions of `(hit, age)`.
+- `FctMotion` — position, scale and opacity as pure functions of `(hit, age)`, plus the rule for the main line (one hit's
+  face value, plus how many identical hits it stands for).
 - `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
-- `FctLifeController` / `FctMedianTracker` — adaptive lifetime and the rolling median.
+- `FctLifeController` — adaptive lifetime.
 
 A backend keeps only what genuinely differs: substrate resources (Skia `SKFont`/`SKPaint`/halo sprites, WPF
 `FormattedText`/brushes) and its draw loop. That split is also what makes the animation unit-testable
@@ -541,15 +542,22 @@ Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the nume
 the label with "0" — which reads as a legal absorb rather than an obvious mistake. A hit with `FixedText` set now
 can only ever draw that text.
 
-**Folding is keyed on identity, and a full lane is a comparison.** Folding must only ever combine numbers about the same
-thing, so the key is lane + side + proc-or-direct + periodic-or-direct + ability name — matching on lane alone let an
-Immolation tick grow a number labelled "Spinning Attack", which is a wrong total wearing a true label. The lane cap decides
-who owns a slot rather than whether the information survives: at capacity a same-ability hit folds (size stops mattering — a
-running total beats a fourteenth overlapping number), otherwise the newcomer takes the slot from the least significant
-number already on screen, but only if it clearly outranks it. Significance discounts a proc, so an old proc is the cheapest
-slot and a big cast costs almost nothing to place. Healing direct casts are excluded from folding at every occupancy —
-players read heals one cast at a time — which is why they need eviction: without it, "no folding" would mean "the thirteenth
-heal in a raid-wide panic is silently invisible", and the point of showing healing at all is that a missed one matters.
+**A fold counts, it never adds.** Folding is for EQ's habit of repeating exact values — every DoT tick, every fixed-damage
+proc — and what it produces is one number that says how many: `2,040 ×2`, `412 ×5`. The key is lane + side + proc-or-direct +
+periodic-or-direct + ability name + **the value as it is drawn**, so a fold can only ever combine hits the player cannot tell
+apart. Same-ability-but-different is not close enough: matching on lane alone once let an Immolation tick grow a number
+labelled "Spinning Attack", which is a wrong total wearing a true label, and summing identical hits was the same mistake at a
+smaller scale — 4,080 is an amount no hit landed for, it makes the player divide to find out what happened, and eight routine
+ticks wearing the face value of a big one is precisely the confusion the fold exists to remove.
+
+The lane cap decides who owns a slot rather than whether the information survives. The fold is tried before the cap and does
+not care about occupancy, so a stream of identical hits never consumes slots at all — 20 seconds of the same 900 at eleven a
+second measured two live numbers and zero drops. What cannot fold goes next to eviction: take the least significant number on
+screen, but only if the newcomer clearly outranks it, where significance is what a number *stands for* — face value times its
+count, with a proc discounted because one is subordinate by design. Only then is a drop counted. Healing direct casts are
+excluded from folding at every occupancy — players read heals one cast at a time, and two identical heals are still two
+casts of two different targets — which is why they need eviction: without it, "no folding" would mean "the thirteenth heal in
+a raid-wide panic is silently invisible", and the point of showing healing at all is that a missed one matters.
 
 ### Raster at most 60 times a second, and never on a beat pattern
 
@@ -729,20 +737,23 @@ from here is wasted" and so deserve to beat the routine one next to them. The so
 same reason: it must not compete with a value colour for meaning.
 
 Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive lifetime
-aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop merges into a live
-number before it drops anything, so overload compresses the display instead of eating damage. Merging has two modes:
-below the cap only a *young* hit may absorb — pouring damage into a number that is already fading hides the amount —
-while at the cap the newest hit takes it regardless of age, because "the label grows" is a much smaller lie than
-"that hit never appeared". Crits refuse to absorb in both modes: a crit number that quietly inflates is misleading,
-so crit overload is the case where `DroppedCount` actually moves. `FctIngestTest` pins both halves — 40 hits at one
-lane still show 36,000 damage on screen with zero drops, and 20 crits into a capped crit lane report 8 counted drops.
+aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop folds a repeat into a live
+number before it drops anything, so overload compresses the display instead of eating damage. The age rules are about
+readability now rather than correctness: a fold needs a target that is under 2.5 s old *and* has 40% of its life left, so a
+count never lands on something already fading out — which matters more than it sounds, because a number that gains a "×3" as
+its opacity drops reads as a glitch. Crits refuse to fold outright: each one is the event, and a crit number standing for
+several hits is misleading, so crit overload is the case where `DroppedCount` actually moves. `FctIngestTest` pins both
+halves — 40 identical hits into one lane leave every one of them counted on screen with zero drops, and none of the numbers
+any bigger than a single hit — and 20 crits into a capped crit lane report 8 counted drops.
 
-Folding follows NAG's median idea with different numbers: `FctMedianTracker` keeps a rolling window per lane and
-a direct hit below half the lane's median counts up on a live number instead of spawning its own (`periodic`
-DoT/HoT ticks always fold — five overlapping 200s tell you nothing one running total does not). Healing never
-folds: players read heals individually, and merging them hides who got patched. Half the median rather than
-NAG's "ignore under 2× median of *max hits*" because ignoring is not an option here — losing a number in an
-overlay whose whole job is to lose nothing measurable is worse than showing a small one.
+Folding used to follow NAG's median idea instead: `FctMedianTracker` kept a rolling window per lane and a direct hit under half
+the lane's median was treated as routine noise and poured into whatever live number shared its lane. That is gone, and it went
+with summation rather than alongside it — the median answered "when is it acceptable to add this amount to somebody else's
+number", and once a fold can only collapse identical values there is nothing left to permit. It also refused the case players
+actually ask about: two 2,040s sit *at* the median of a lane that deals 2,040s, so the repeat was shown as a second number
+while five identical DoT ticks merged happily. (`periodic` DoT/HoT ticks still always fold; healing never does.) Reintroducing
+a threshold means bringing the tracker back — see the counted-ignore-tier idea in `local/fct-implementation.md` §12 F4, which
+is where a median-relative cut belongs, because it discards on purpose and has to say so.
 
 ### Text sizes, and the reserve they imply
 
