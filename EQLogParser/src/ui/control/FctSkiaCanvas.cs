@@ -264,8 +264,16 @@ namespace EQLogParser
         }
       }
 
+      /*
+       * Blit in device space, not logical: the surface holds ceil(logical * scale) pixels, so drawing over
+       * ActualWidth DIUs gives WPF a destination of logical * scale device pixels - non-integer and off by up
+       * to one pixel. WPF then resamples the bitmap every frame, and that resampling phase shifts with each
+       * sub-pixel step of the motion, which reads as fine graininess on slow text. Sizing the rect from the
+       * surface's real pixel count makes the mapping exactly 1:1; the sub-pixel overshoot from the ceil is
+       * clipped at the canvas edge.
+       */
       using var image = _surface.Snapshot();
-      dc.DrawImage(ToWriteableBitmap(image), new Rect(0, 0, ActualWidth, ActualHeight));
+      dc.DrawImage(ToWriteableBitmap(image), new Rect(0, 0, (double)_surfaceWidth / scale, (double)_surfaceHeight / scale));
       _dirty = false;
     }
 
