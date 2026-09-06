@@ -72,6 +72,9 @@ namespace EQLogParser
       statsText.Text = $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} active";
     }
 
+    /* Toggles between the hold style (rise and stay) and the fountain style (rise, fall, shrink). */
+    private void FountainChanged(object sender, RoutedEventArgs e) => _canvas.FountainMotion = fountainCheck.IsChecked == true;
+
     private void HeaderDrag(object sender, MouseButtonEventArgs e) => DragMove();
 
     private void WindowKeyDown(object sender, KeyEventArgs e)

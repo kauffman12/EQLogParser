@@ -27,6 +27,7 @@ namespace EQLogParser
   {
     public FctSimLane Lane;
     public double X0, Y0;                     // spawn position of the value text
+    public double FallDist;                   // fountain: downward travel from the apex (px); 0 = hold style
     public double Rise, Arc;                  // total upward travel / sideways arc amplitude (px)
     public double MotionMs;                   // rise+arc complete by this age, then hold (see RaisedY)
     public double SideMin, SideMax;           // half-canvas clamp for the value's center x
@@ -66,6 +67,11 @@ namespace EQLogParser
      * span the whole (adaptive) display time. */
     private const double MotionWindowMs = 2000;
 
+    /* Fountain motion (FountainMotion): rise to the apex, then fall while shrinking and fading out.
+     * The fall spans the last FallPhaseFrac of life; the fade covers exactly that span. */
+    private const double FallPhaseFrac = 0.45;
+    private const double FallScaleEnd = 0.55;
+
     private static readonly FontFamily _fontFamily = new("Arial");
     private static readonly Typeface _valueTypeface = new(_fontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
     private static readonly Typeface _sourceTypeface = new(_fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
@@ -83,6 +89,9 @@ namespace EQLogParser
     /* Per-second stats, published by the render loop for the simulation header. */
     public event Action<double> EventsFrame; // canvas clock ms since Start()
     public int ActiveCount => _hits.Count;
+
+    /* Fountain style (rise-fall-shrink) vs the default hold style; applies to new hits only. */
+    public bool FountainMotion { get; set; }
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
     public double LastFrameMs { get; private set; }
@@ -184,8 +193,20 @@ namespace EQLogParser
         state.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
       }
 
-      state.MotionMs = Math.Min(MotionWindowMs, state.LifetimeMs);
-      state.FadeMs = Math.Clamp(state.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
+      if (FountainMotion)
+      {
+        // fountain choreography: rise+fall IS the life - fixed length, no hold phase, so the
+        // adaptive controller is bypassed; the fade spans exactly the fall
+        state.LifetimeMs = MotionWindowMs;
+        state.MotionMs = MotionWindowMs;
+        state.FadeMs = MotionWindowMs * FallPhaseFrac;
+        state.FallDist = h * 0.28;
+      }
+      else
+      {
+        state.MotionMs = Math.Min(MotionWindowMs, state.LifetimeMs);
+        state.FadeMs = Math.Clamp(state.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
+      }
       _hits.Add(state);
       _dirty = true;
     }
@@ -398,7 +419,24 @@ namespace EQLogParser
 
     /* See FctSkiaCanvas.RaisedY: rise and arc complete within the motion window, then hold position
      * and fade. Kept identical for a fair A/B. */
-    private static double RaisedY(FctSimHitState hit, double t) => hit.Y0 - (hit.Rise * EaseOutQuad(t));
+    /* Hold style: ease out to the top band and stay. Fountain style: same rise, then fall with
+     * gravity over the last FallPhaseFrac of life (the draw loop pairs it with shrink + fade). */
+    private static double RaisedY(FctSimHitState hit, double t)
+    {
+      if (hit.FallDist <= 0.0)
+      {
+        return hit.Y0 - (hit.Rise * EaseOutQuad(t));
+      }
+
+      var riseFrac = 1.0 - FallPhaseFrac;
+      if (t < riseFrac)
+      {
+        return hit.Y0 - (hit.Rise * EaseOutQuad(t / riseFrac));
+      }
+
+      var u = (t - riseFrac) / FallPhaseFrac;
+      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate downward
+    }
 
     /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
     private static double ArcedX(FctSimHitState hit, double t) =>
@@ -433,8 +471,38 @@ namespace EQLogParser
       else
       {
         var t = Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
-        DrawValue(dc, hit.ValueOutline, hit.ValueGlow, hit.ValueText, ArcedX(hit, t), RaisedY(hit, t));
-        DrawSource(dc, hit.SourceOutline, hit.SourceText, ArcedX(hit, t), RaisedY(hit, t) + hit.ValueText.Height * 0.95);
+        var fx = ArcedX(hit, t);
+        var fy = RaisedY(hit, t);
+
+        // fountain shrink over the fall phase (crits use the blowout path above)
+        var s = 1f;
+        if (hit.FallDist > 0.0)
+        {
+          var riseFrac = 1.0 - FallPhaseFrac;
+          if (t >= riseFrac)
+          {
+            var u = (t - riseFrac) / FallPhaseFrac;
+            s = (float)(1.0 + ((FallScaleEnd - 1.0) * u));
+          }
+        }
+
+        if (s != 1f)
+        {
+          var cy = fy + hit.ValueText.Height / 2;
+          dc.PushTransform(new TranslateTransform(fx, cy));
+          dc.PushTransform(new ScaleTransform(s, s));
+          dc.PushTransform(new TranslateTransform(-fx, -cy));
+        }
+
+        DrawValue(dc, hit.ValueOutline, hit.ValueGlow, hit.ValueText, fx, fy);
+        DrawSource(dc, hit.SourceOutline, hit.SourceText, fx, fy + hit.ValueText.Height * 0.95);
+
+        if (s != 1f)
+        {
+          dc.Pop();
+          dc.Pop();
+          dc.Pop();
+        }
       }
 
       if (fading)

@@ -15,6 +15,7 @@ namespace EQLogParser
   {
     public FctSimLane Lane;
     public double X0, Y0;                      // spawn position (logical px)
+    public double FallDist;                    // fountain: downward travel from the apex (px); 0 = hold style
     public double Rise, Arc;                   // total upward travel / sideways arc amplitude
     public double MotionMs;                    // rise+arc complete by this age, then hold (see RaisedY)
     public double SideMin, SideMax;            // half-canvas clamp for the value's center x
@@ -55,6 +56,11 @@ namespace EQLogParser
      * whole (adaptive) display time. */
     private const double MotionWindowMs = 2000;
 
+    /* Fountain motion (FountainMotion): rise to the apex, then fall while shrinking and fading out.
+     * The fall spans the last FallPhaseFrac of life; the fade covers exactly that span. */
+    private const double FallPhaseFrac = 0.45;
+    private const double FallScaleEnd = 0.55;
+
     /* Ref-counted blur-glow sprite: rendered once per unique (value, size), disposed when the last
      * hit using it expires. NAG's glow is a black wide radial text-shadow, so color is irrelevant. */
     private sealed class HaloEntry
@@ -77,6 +83,9 @@ namespace EQLogParser
 
     public event Action<double> EventsFrame; // canvas clock ms since Start()
     public int ActiveCount => _hits.Count;
+
+    /* Fountain style (rise-fall-shrink) vs the default hold style; applies to new hits only. */
+    public bool FountainMotion { get; set; }
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
     public double LastFrameMs { get; private set; }
@@ -191,8 +200,20 @@ namespace EQLogParser
         hit.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
       }
 
-      hit.MotionMs = Math.Min(MotionWindowMs, hit.LifetimeMs);
-      hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
+      if (FountainMotion)
+      {
+        // fountain choreography: rise+fall IS the life - fixed length, no hold phase, so the
+        // adaptive controller is bypassed; the fade spans exactly the fall
+        hit.LifetimeMs = MotionWindowMs;
+        hit.MotionMs = MotionWindowMs;
+        hit.FadeMs = MotionWindowMs * FallPhaseFrac;
+        hit.FallDist = h * 0.28;
+      }
+      else
+      {
+        hit.MotionMs = Math.Min(MotionWindowMs, hit.LifetimeMs);
+        hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
+      }
       _hits.Add(hit);
       _dirty = true;
     }
@@ -497,10 +518,25 @@ namespace EQLogParser
       var x = ArcedX(hit, t);
       var y = RaisedY(hit, t);
 
+      // scale around the value's center: crit blowout pop, or fountain shrink over the fall phase
+      var s = 1f;
       if (hit.Blowout)
       {
-        var s = (float)BlowoutScale(ageMs, hit.LifetimeMs);
-        // x is the text's center now, so it doubles as the blowout pivot
+        s = (float)BlowoutScale(ageMs, hit.LifetimeMs);
+      }
+      else if (hit.FallDist > 0.0)
+      {
+        var riseFrac = 1.0 - FallPhaseFrac;
+        if (t >= riseFrac)
+        {
+          var u = (t - riseFrac) / FallPhaseFrac;
+          s = (float)(1.0 + ((FallScaleEnd - 1.0) * u));
+        }
+      }
+
+      if (s != 1f)
+      {
+        // x is the text's center, so it doubles as the scale pivot
         var cy = y + (hit.ValueFontSize * 0.45);
         canvas.Save();
         canvas.Translate((float)x, (float)cy);
@@ -526,7 +562,7 @@ namespace EQLogParser
       var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
       DrawOutlinedText(canvas, $"({hit.Action})", (float)x, (float)sourceBase, hit.SourceFontSize, false, new SKColor(0x6E, 0x93, 0xC8), (byte)(alpha * 0.95));
 
-      if (hit.Blowout)
+      if (s != 1f)
       {
         canvas.Restore();
       }
@@ -585,7 +621,24 @@ namespace EQLogParser
      * ~1s fountain, then opacity 1 for the full 7s fadeOut. Short adaptive lifetimes (congestion)
      * are shorter than the window, so under load there is no hold at all.
      */
-    private static double RaisedY(FctSkiaHit hit, double t) => hit.Y0 - (hit.Rise * EaseOutQuad(t));
+    /* Hold style: ease out to the top band and stay. Fountain style: same rise, then fall with
+     * gravity over the last FallPhaseFrac of life (the draw loop pairs it with shrink + fade). */
+    private static double RaisedY(FctSkiaHit hit, double t)
+    {
+      if (hit.FallDist <= 0.0)
+      {
+        return hit.Y0 - (hit.Rise * EaseOutQuad(t));
+      }
+
+      var riseFrac = 1.0 - FallPhaseFrac;
+      if (t < riseFrac)
+      {
+        return hit.Y0 - (hit.Rise * EaseOutQuad(t / riseFrac));
+      }
+
+      var u = (t - riseFrac) / FallPhaseFrac;
+      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate downward
+    }
 
     /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
     private static double ArcedX(FctSkiaHit hit, double t) =>
