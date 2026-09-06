@@ -16,6 +16,7 @@ namespace EQLogParser
     public FctSimLane Lane;
     public double X0, Y0;                      // spawn position (logical px)
     public double Rise, Arc;                   // total upward travel / sideways arc amplitude
+    public double MotionMs;                    // rise+arc complete by this age, then hold (see RaisedY)
     public double SideMin, SideMax;            // half-canvas clamp for value left edge + width
     public double ValueWidth;                  // measured, refreshed only when the value changes
     public double ValueFontSize, SourceFontSize;
@@ -47,6 +48,10 @@ namespace EQLogParser
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
     private const float GlowSigma = 5f;
+
+    /* How early in its life a hit finishes moving; see RaisedY for why motion must not span the
+     * whole (adaptive) display time. */
+    private const double MotionWindowMs = 2000;
 
     /* Ref-counted blur-glow sprite: rendered once per unique (value, size), disposed when the last
      * hit using it expires. NAG's glow is a black wide radial text-shadow, so color is irrelevant. */
@@ -182,6 +187,7 @@ namespace EQLogParser
         hit.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
       }
 
+      hit.MotionMs = Math.Min(MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
       _hits.Add(hit);
       _dirty = true;
@@ -482,10 +488,10 @@ namespace EQLogParser
       EnsureSkiaResources();
       var alpha = (byte)Math.Round(opacity * 255.0);
 
-      // rise over the whole lifetime; arc grows as the hit gets high, clamped to its half
-      var p = Math.Clamp(ageMs / hit.LifetimeMs, 0.0, 1.0);
-      var x = ArcedX(hit, p);
-      var y = RaisedY(hit, p);
+      // motion runs on its own short clock: rise/arc finish and hold before the fade (see RaisedY)
+      var t = Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
+      var x = ArcedX(hit, t);
+      var y = RaisedY(hit, t);
 
       if (hit.Blowout)
       {
@@ -564,13 +570,22 @@ namespace EQLogParser
       return GetFont(bold, size).MeasureText(text, measure);
     }
 
-    /* Rise: fast at first (ease-out), over the whole lifetime. */
-    private static double RaisedY(FctSkiaHit hit, double p) => hit.Y0 - (hit.Rise * EaseOutCubic(p));
+    /*
+     * Rise and arc both complete within the hit's motion window (early in its life), after which the
+     * text holds position until it fades. A raster display cannot show motion slower than ~1 device
+     * pixel per frame without visible stepping or anti-alias-phase shimmer, and a whole-lifetime
+     * ease-out spends most of a 7s display down in that zone - that was the "grainy slow vertical"
+     * artifact (horizontal looked fine because the old arc accelerated while the rise stalled). A
+     * bounded window keeps the motion fast enough to stay smooth, ends at zero velocity (no hitch
+     * into the hold), and leaves the long float as a crisp still hold + fade - NAG's own pattern:
+     * ~1s fountain, then opacity 1 for the full 7s fadeOut. Short adaptive lifetimes (congestion)
+     * are shorter than the window, so under load there is no hold at all.
+     */
+    private static double RaisedY(FctSkiaHit hit, double t) => hit.Y0 - (hit.Rise * EaseOutQuad(t));
 
-    /* Arc: quadratic growth, so horizontal travel mostly happens as the hit gets high; clamped to
-     * the hit's half of the canvas including its text width. */
-    private static double ArcedX(FctSkiaHit hit, double p) =>
-      Math.Clamp(hit.X0 + (hit.Arc * p * p), hit.SideMin, hit.SideMax - hit.ValueWidth);
+    /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
+    private static double ArcedX(FctSkiaHit hit, double t) =>
+      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin, hit.SideMax - hit.ValueWidth);
 
     /* NAG blowout: quick ramp to ~1.45x, hold, then shrink to ~0 while fading. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)
@@ -605,7 +620,7 @@ namespace EQLogParser
       return Math.Clamp(o, 0.0, 1.0);
     }
 
-    private static double EaseOutCubic(double p) => 1 - Math.Pow(1 - p, 3);
+    private static double EaseOutQuad(double p) => 1 - ((1 - p) * (1 - p));
 
     private void CountDraw(int n) => _statDrawsTotal += n;
   }

@@ -28,6 +28,7 @@ namespace EQLogParser
     public FctSimLane Lane;
     public double X0, Y0;                     // spawn position of the value text
     public double Rise, Arc;                  // total upward travel / sideways arc amplitude (px)
+    public double MotionMs;                   // rise+arc complete by this age, then hold (see RaisedY)
     public double SideMin, SideMax;           // half-canvas clamp for the value's left edge + width
     public double ValueFontSize, SourceFontSize;
     public Brush ValueBrush, SourceBrush;
@@ -58,6 +59,10 @@ namespace EQLogParser
 
     /* A/B: EQ's FCT font is a pixel font, so un-antialiased rasterization is both cheaper and more faithful. */
     private const bool AliasedTextRendering = true;
+
+    /* How early in its life a hit finishes moving; see FctSkiaCanvas.RaisedY for why motion must not
+     * span the whole (adaptive) display time. */
+    private const double MotionWindowMs = 2000;
 
     private static readonly FontFamily _fontFamily = new("Arial");
     private static readonly Typeface _valueTypeface = new(_fontFamily, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
@@ -175,6 +180,7 @@ namespace EQLogParser
         state.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
       }
 
+      state.MotionMs = Math.Min(MotionWindowMs, state.LifetimeMs);
       state.FadeMs = Math.Clamp(state.LifetimeMs * 0.18, 250, 700); // fade is a share of the life, capped
       _hits.Add(state);
       _dirty = true;
@@ -382,13 +388,13 @@ namespace EQLogParser
       return brush;
     }
 
-    /* Rise: fast at first (ease-out), over the whole lifetime. */
-    private static double RaisedY(FctSimHitState hit, double p) => hit.Y0 - (hit.Rise * EaseOutCubic(p));
+    /* See FctSkiaCanvas.RaisedY: rise and arc complete within the motion window, then hold position
+     * and fade. Kept identical for a fair A/B. */
+    private static double RaisedY(FctSimHitState hit, double t) => hit.Y0 - (hit.Rise * EaseOutQuad(t));
 
-    /* Arc: quadratic growth, so horizontal travel mostly happens as the hit gets high; clamped to
-     * the hit's half of the canvas including its text width. */
-    private static double ArcedX(FctSimHitState hit, double p) =>
-      Math.Clamp(hit.X0 + (hit.Arc * p * p), hit.SideMin, hit.SideMax - hit.ValueText.Width);
+    /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
+    private static double ArcedX(FctSimHitState hit, double t) =>
+      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin, hit.SideMax - hit.ValueText.Width);
 
     /* One PushOpacity per hit, and only while it is fading in/out (the common full-opacity case pushes nothing). */
     private void DrawHit(DrawingContext dc, FctSimHitState hit, double ageMs, double opacity)
@@ -401,9 +407,9 @@ namespace EQLogParser
 
       if (hit.Blowout)
       {
-        var p = Math.Clamp(ageMs / hit.LifetimeMs, 0.0, 1.0);
-        var bx = ArcedX(hit, p);
-        var by = RaisedY(hit, p);
+        var t = Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
+        var bx = ArcedX(hit, t);
+        var by = RaisedY(hit, t);
         var s = BlowoutScale(ageMs, hit.LifetimeMs);
         var cx = bx + hit.ValueText.Width / 2;
         var cy = by + hit.ValueText.Height / 2;
@@ -418,9 +424,9 @@ namespace EQLogParser
       }
       else
       {
-        var p = Math.Clamp(ageMs / hit.LifetimeMs, 0.0, 1.0);
-        DrawValue(dc, hit.ValueOutline, hit.ValueGlow, hit.ValueText, ArcedX(hit, p), RaisedY(hit, p));
-        DrawSource(dc, hit.SourceOutline, hit.SourceText, ArcedX(hit, p), RaisedY(hit, p) + hit.ValueText.Height * 0.95);
+        var t = Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
+        DrawValue(dc, hit.ValueOutline, hit.ValueGlow, hit.ValueText, ArcedX(hit, t), RaisedY(hit, t));
+        DrawSource(dc, hit.SourceOutline, hit.SourceText, ArcedX(hit, t), RaisedY(hit, t) + hit.ValueText.Height * 0.95);
       }
 
       if (fading)
@@ -502,6 +508,6 @@ namespace EQLogParser
       _statDrawsTotal++;
     }
 
-    private static double EaseOutCubic(double p) => 1 - Math.Pow(1 - p, 3);
+    private static double EaseOutQuad(double p) => 1 - ((1 - p) * (1 - p));
   }
 }
