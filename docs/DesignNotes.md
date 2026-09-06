@@ -580,21 +580,25 @@ overlay whose whole job is to lose nothing measurable is worse than showing a sm
 ### Locked by default: click-through and persistence
 
 In game the overlay must not eat clicks or take focus, so `FctOverlayWindow` runs layered plus
-`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` while locked — the same recipe as the timer and text overlays, reasserted
-in `WM_NCHITTEST` because WPF rewrites window styles whenever it feels like it. Lock state, fountain style and
-geometry persist through `ConfigUtil` (`FctOverlayLeft/Top/Width/Height/Locked/Fountain/Enabled`) and the overlay
-reopens at startup if it was open on exit.
+`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` while locked — the same recipe as the timer, text and toolbar overlays: read
+the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits, write them back with
+`NativeMethods.SetWindowLong` through `GetWindowLongFields.GwlExstyle`. Transparency itself is declared once in XAML
+(`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
+and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
+every hover over the overlay and buys nothing observable. Lock state, fountain style and geometry persist through
+`ConfigUtil` (`FctOverlayLeft/Top/Width/Height/Locked/Fountain/Enabled`) and the overlay reopens at startup if it
+was open on exit.
 
 Because a locked window cannot be clicked, its own checkbox is unreachable by design; the way out is the Tools
 menu's lock item, since locked also means `WS_EX_NOACTIVATE` and therefore no keyboard input either — which is what
 the overlay's hint line tells the user. (Esc still prefers unlock over close in the case where the window does hold
 focus: losing a positioned overlay to a stray Esc is the worse failure.) `MainWindow` mirrors the state so menu and
-checkbox never disagree, and an unlocked overlay gets `Activate()` on show so its Esc can reach it at all.
+checkbox never disagree, and unlocking from the menu calls `Activate()` so Esc and dragging are live afterwards.
 
-`NativeMethods.GwlStyle` is `-20`, i.e. Win32's `GWL_EXSTYLE`, and `NativeMethods.GwlExStyle` is a wrong value that
-nothing correct uses. Every existing overlay drives extended styles through `GwlStyle` and works, so the FCT window
-follows suit rather than "fixing" the constant, which would break five windows at once. Renaming the pair to match
-Win32 — with `GWL_STYLE` becoming `-16` — is a separate change with its own test pass.
+`NativeMethods` exposes exactly two style vocabulary sets — `ExtendedWindowStyles` and `GetWindowLongFields` — and
+neither has a `WS_EX_APPWINDOW` member nor a plain `GWL_STYLE` accessor. Overlay windows stay toolwindows in both
+lock states, which is also what keeps them out of Alt+Tab; anything wanting app-window behavior has to add the
+constant deliberately rather than assume it is there.
 
 ### What is deliberately not here yet
 

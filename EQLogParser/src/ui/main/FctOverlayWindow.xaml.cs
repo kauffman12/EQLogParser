@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -13,9 +12,9 @@ namespace EQLogParser
    * canvas's EventsFrame, so a log burst becomes one cross-thread hop instead of one dispatcher item per
    * record. Position, fountain style and the click-through lock persist like every other overlay window.
    *
-   * Locked (the in-game default) means WS_EX_TRANSPARENT: clicks fall through to EverQuest and the overlay
-   * stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use. Unlock from
-   * the Tools menu, or press Esc once while it has focus to unlock and again to close.
+   * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
+   * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
+   * Unlock from the Tools menu, or press Esc while it has focus to close.
    */
   public partial class FctOverlayWindow : Window
   {
@@ -54,39 +53,44 @@ namespace EQLogParser
       Closed += OnClosed;
     }
 
-    /* Mirrors the lock state from the Tools menu (the checkbox is unreachable while clicks pass through). */
-    public void SetLocked(bool locked) => ApplyLock(locked);
+    /*
+     * Lock state driven from the Tools menu (the in-window checkbox is unreachable while clicks pass through).
+     * Unlocking activates the window: a user who just asked to move it should get Esc and typing-free dragging.
+     */
+    public void SetLocked(bool locked)
+    {
+      ApplyLock(locked);
+
+      if (!locked)
+      {
+        Activate();
+      }
+    }
 
     private void OnSourceInitialized(object sender, EventArgs e)
     {
       _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
-      _hwndSource?.AddHook(WndProc);
       ApplyLock(_locked);
     }
 
     /*
-     * Extended window styles for the current lock state.
-     *
-     * Locked: transparent (clicks pass through) plus no-activate, so showing or moving the overlay never
-     * takes focus away from the game. Unlocked: app-window, so an overlay that is being positioned is
-     * reachable in Alt-Tab. Toolwindow in both states keeps it out of the taskbar (ShowInTaskbar only covers
-     * the initial state).
-     *
-     * Note NativeMethods.GwlStyle is -20, i.e. Win32's GWL_EXSTYLE: every overlay here drives extended styles
-     * through that constant and works; "fixing" the name without changing the value would break them all.
+     * Extended styles for the current lock state, driven through the same NativeMethods constants as the timer,
+     * text and toolbar overlays. Layered is what lets a transparent WPF window be hit-tested at all; toolwindow
+     * keeps it out of the taskbar and Alt+Tab in both states (the header is draggable and Esc closes it, so an
+     * overlay being positioned does not need an Alt+Tab entry to be reachable). Locked adds transparent — clicks
+     * fall through to EverQuest — and no-activate, so showing or moving it never takes focus mid-fight.
      */
     private int CurrentStyles()
     {
-      var styles = GetWindowLong(_hwndSource.Handle, NativeMethods.GwlStyle) | (int)NativeMethods.ExtendedWindowStyles.WsExLayered;
+      var styles = (int)NativeMethods.GetWindowLongPtr(_hwndSource.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+      styles |= (int)(NativeMethods.ExtendedWindowStyles.WsExLayered | NativeMethods.ExtendedWindowStyles.WsExToolwindow);
 
       if (_locked)
       {
-        styles |= (int)(NativeMethods.ExtendedWindowStyles.WsExTransparent | NativeMethods.ExtendedWindowStyles.WsExToolwindow | NativeMethods.ExtendedWindowStyles.WsExNoActive);
-        styles &= ~(int)NativeMethods.ExtendedWindowStyles.WsExAppWindow;
+        styles |= (int)(NativeMethods.ExtendedWindowStyles.WsExTransparent | NativeMethods.ExtendedWindowStyles.WsExNoActive);
       }
       else
       {
-        styles |= (int)(NativeMethods.ExtendedWindowStyles.WsExToolwindow | NativeMethods.ExtendedWindowStyles.WsExAppWindow);
         styles &= ~(int)(NativeMethods.ExtendedWindowStyles.WsExTransparent | NativeMethods.ExtendedWindowStyles.WsExNoActive);
       }
 
@@ -108,19 +112,8 @@ namespace EQLogParser
 
       if (_hwndSource is not null)
       {
-        SetWindowLong(_hwndSource.Handle, NativeMethods.GwlStyle, CurrentStyles());
+        NativeMethods.SetWindowLong(_hwndSource.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, new IntPtr(CurrentStyles()));
       }
-    }
-
-    /* Re-asserted on every mouse message: WPF rewrites window styles as it likes, so this must too. */
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-      if (msg == NativeMethods.WmNcHitTest && _hwndSource is not null)
-      {
-        SetWindowLong(hwnd, NativeMethods.GwlStyle, CurrentStyles());
-      }
-
-      return IntPtr.Zero;
     }
 
     /* Canvas stopped and feed gated off while hidden: an overlay nobody sees must not parse or raster. */
@@ -242,7 +235,6 @@ namespace EQLogParser
 
     private void OnClosed(object sender, EventArgs e)
     {
-      _hwndSource?.RemoveHook(WndProc);
       _hwndSource = null;
 
       _canvas.EventsFrame -= OnCanvasFrame;
@@ -254,11 +246,5 @@ namespace EQLogParser
 
       EventsClosed?.Invoke();
     }
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
   }
 }
