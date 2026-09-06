@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 
@@ -10,7 +11,11 @@ namespace EQLogParser
    * Production FCT host: topmost, non-activating overlay fed by FctManager's queue (live monitor lines
    * only — historical replay never reaches it). The queue is drained once per painted frame from the
    * canvas's EventsFrame, so a log burst becomes one cross-thread hop instead of one dispatcher item per
-   * record. Position, fountain style and the click-through lock persist like every other overlay window.
+   * record. Position, motion style, region scheme and the click-through lock persist like every other overlay window.
+   *
+   * Motion is a combo rather than the old fountain checkbox because there are four styles now (hold, fountain, pulse,
+   * spray) and they are presentation, not information: whichever is chosen, band and direction of travel still say who
+   * acted. Both it and the region scheme apply to hits spawned afterwards, so trying one during a pull is safe.
    *
    * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
    * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
@@ -30,6 +35,9 @@ namespace EQLogParser
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
     private bool _locked;
+
+    /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
+    private bool _settingsReady;
 
     // lets the Tools menu item uncheck itself when the window is closed with Esc
     public event Action EventsClosed;
@@ -154,13 +162,13 @@ namespace EQLogParser
 
       _locked = ConfigUtil.IfSet("FctOverlayLocked");
 
-      var fountain = ConfigUtil.IfSet("FctOverlayFountain");
-      fountainCheck.IsChecked = fountain;
-      _canvas.FountainMotion = fountain;
+      _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
+      SelectMotionOption(_canvas.MotionStyle);
 
       _canvas.Layout = FctOverlaySettings.LoadLayout();
       layoutCheck.IsChecked = _canvas.Layout == FctLayoutMode.Halves;
       UpdateHint(_locked);
+      _settingsReady = true;
     }
 
     /*
@@ -176,10 +184,12 @@ namespace EQLogParser
         return;
       }
 
+      // terse on purpose: the hint shares one row with the motion combo and the two checkboxes, and a legend that gets
+      // ellipsised is a legend nobody can read while fighting
       var meaning = _canvas.Layout == FctLayoutMode.Halves
-        ? "left = hits on you, right = your hits"
-        : "keep the gap above your cast bar · up = your hits, down = hits on you";
-      hintText.Text = $"drag header to move · {meaning} · Esc closes";
+        ? "left = hits on you, right = yours"
+        : "gap above your cast bar · up = yours, down = hits on you";
+      hintText.Text = $"drag to move · {meaning} · Esc closes";
     }
 
     private void SaveSettings()
@@ -217,10 +227,35 @@ namespace EQLogParser
         : $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} active";
     }
 
-    private void FountainChanged(object sender, RoutedEventArgs e)
+    /*
+     * A presentation switch, not a per-record one: it takes effect on hits from now on, which is what makes "try each
+     * for a minute in a real pull" the way to choose instead of a screenshot.
+     */
+    private void MotionChanged(object sender, SelectionChangedEventArgs e)
     {
-      _canvas.FountainMotion = fountainCheck.IsChecked == true;
-      ConfigUtil.SetSetting("FctOverlayFountain", fountainCheck.IsChecked == true);
+      if (!_settingsReady || motionCombo.SelectedItem is not ComboBoxItem item)
+      {
+        return;
+      }
+
+      _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
+      FctOverlaySettings.SaveMotion(_canvas.MotionStyle);
+    }
+
+    private void SelectMotionOption(FctMotionStyle style)
+    {
+      var name = FctOverlaySettings.Name(style);
+
+      for (var i = 0; i < motionCombo.Items.Count; i++)
+      {
+        if (motionCombo.Items[i] is ComboBoxItem item && item.Tag as string == name)
+        {
+          motionCombo.SelectedIndex = i;
+          return;
+        }
+      }
+
+      motionCombo.SelectedIndex = 0; // an unknown stored name: show the default rather than an empty box
     }
 
     private void LockChanged(object sender, RoutedEventArgs e) => ApplyLock(lockCheck.IsChecked == true);

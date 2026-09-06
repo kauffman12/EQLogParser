@@ -235,6 +235,12 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    instead), and **no crit cell grid** (decided): crit emphasis is larger size + orange + glow/blowout,
    drawn last so crits cover non-crits (two-pass draw order in both canvases) — that was judged enough.
    Rise distance/lifetime is EQ-style (long float) rather than NAG's 1 s fountain.
+   NAG offers animation as a bag of independent checkboxes (`combatAnimations`: blowout, fountain, scroll, fadeIn,
+   fadeOut, grow, shrink — with `fountainSubDrift`, `blowoutSubZoomOut`, and direction variants per style); ours is
+   **one** `FctMotionStyle` per hit — hold / fountain / pulse / spray — with fade always on and crit blowout always
+   layered on top. Mutually exclusive choreographies were already mutually exclusive in NAG, and the combinable ones
+   (grow plus shrink, drift plus scroll) produced numbers whose motion told contradictory stories. Rationale:
+   `docs/DesignNotes.md` → "Four motion styles, and the one thing none of them may change".
    Party-wide healing (other chars' heals) is not fed yet; it lands with group config.
 2. Record plumbing (done): `EventsHealProcessed`, per-line `IsMonitor` gate, `FctManager` (records →
    lane-matched hit batches; smart group matching comes with the config phase).
@@ -262,7 +268,8 @@ Floating Combat Text.
 - **Shared policy:** layout, motion, lifetime and folding extracted out of the two canvases into `FctIngest`,
   `FctLayout`, `FctMotion`, `FctStyle`; a backend keeps only substrate resources and its draw loop.
 - **Usable in game:** click-through lock (`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE`) unlocked from the Tools menu, geometry
-  plus lock/fountain/enabled persisted through `ConfigUtil`, hidden overlay stops its canvas and gates the feed,
+  and lock/enabled persisted through `ConfigUtil` plus region scheme and motion style through `FctOverlaySettings`
+  (`FctOverlayLayout`, `FctOverlayMotion`), hidden overlay stops its canvas and gates the feed,
   and a protected center band keeps numbers off the target/cast area.
 - **Still NAG-shaped:** lane colors and sizes, two-pass outline, crit blowout + Gaussian halo, count-up folding,
   adaptive lifetime.

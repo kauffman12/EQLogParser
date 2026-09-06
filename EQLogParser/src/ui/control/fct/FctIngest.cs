@@ -40,6 +40,13 @@ namespace EQLogParser
      */
     public FctLayoutMode Mode = FctLayoutMode.Bands;
 
+    /*
+     * Motion style for new hits (see FctMotionStyle). Kept beside Mode because they are the two orthogonal presentation
+     * switches — where text goes, and how it moves — and both are canvas settings rather than per-record ones: a feed
+     * that mixed styles from log line to log line would look like a bug, not a feature.
+     */
+    public FctMotionStyle Style = FctMotionStyle.Hold;
+
     /* Hits that had nowhere to go, surfaced in the overlay header so overload stays visible. */
     public int DroppedCount { get; private set; }
 
@@ -62,7 +69,7 @@ namespace EQLogParser
      * build its glyphs — or null when the hit was folded into an existing one or dropped at the cap.
      */
     public FctHitState Accept(List<FctHitState> hits, FctLane lane, double value, string source, bool crit, bool minor, bool periodic,
-      string fixedText, double w, double h, double now, bool fountain)
+      string fixedText, double w, double h, double now)
     {
       if (w < 100 || h < 100)
       {
@@ -96,6 +103,7 @@ namespace EQLogParser
       {
         Lane = pooled,
         Incoming = incoming,
+        Style = Style,
         SpawnMs = now,
         Source = source,
         FixedText = fixedText,
@@ -105,7 +113,7 @@ namespace EQLogParser
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic);
       FctLayout.Spawn(hit, w, h, _rand, Mode);
-      AssignLifetime(hit, hits, h, now, fountain);
+      AssignLifetime(hit, hits, h, now);
 
       /*
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
@@ -186,28 +194,34 @@ namespace EQLogParser
       return false;
     }
 
-    private void AssignLifetime(FctHitState hit, List<FctHitState> hits, double h, double now, bool fountain)
+    private void AssignLifetime(FctHitState hit, List<FctHitState> hits, double h, double now)
     {
       /*
-       * The fountain choreography: travel, then accelerate along the fall for the rest of life, no hold phase, and the
-       * fade spans exactly the fall. Bands mode mirrors the fall for incoming hits rather than dropping it — gravity
-       * points at the bottom of the screen, and their band is the last thing before that edge, so a literal downward
-       * fall parks the number against its own bottom edge for half its life (which reads as stuck, not as physics).
-       * Falling back up toward the gap keeps the overshoot-and-settle shape both sides, keeps the two directions
-       * reading as one animation in opposite signs, and cannot reach the protected strip: the return is a fraction of
-       * travel already spent below the gap. Halves mode has no such band, so it falls everywhere.
+       * The choreographed styles (fountain, spray) share one shape: travel, then accelerate along a fall for the rest
+       * of life — no hold phase, and the fade spans exactly the fall. Both mirror that fall on the incoming band in
+       * bands mode rather than dropping it: gravity points at the bottom of the screen, and their band is the last
+       * thing before that edge, so a literal downward fall parks the number against its own bottom edge for half its
+       * life, which reads as stuck rather than as physics. Falling back up toward the gap keeps the overshoot-and-settle
+       * shape on both sides, keeps the two directions reading as one animation in opposite signs, and cannot reach the
+       * protected strip because the return is a fraction of travel already spent below it. Halves mode has no such band
+       * and falls everywhere.
+       *
+       * Pulse and Hold fall through to the adaptive lifetime: neither has a fall, so neither needs its life dictated
+       * by a choreography.
        */
-      if (fountain)
+      // mirrored on the incoming band in bands mode, where a downward fall has nowhere legal to go
+      var mirrored = hit.Incoming && Mode is FctLayoutMode.Bands;
+
+      if (Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
-        // the choreography is the life: rise then fall, no hold phase, and the fade spans exactly the fall
+        // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall
         hit.LifetimeMs = FctMotion.MotionWindowMs;
         hit.MotionMs = FctMotion.MotionWindowMs;
         hit.FadeMs = FctMotion.MotionWindowMs * FctMotion.FallPhaseFrac;
 
         // Rise is already assigned: layout runs before lifetime assignment
-        hit.FallDist = hit.Incoming && Mode is FctLayoutMode.Bands
-          ? -Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
-          : h * 0.28;
+        var depth = FallDepth(hit, h, mirrored);
+        hit.FallDist = mirrored ? -depth : depth;
         return;
       }
 
@@ -216,5 +230,17 @@ namespace EQLogParser
       hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
     }
+
+    /*
+     * How far gravity carries a choreographed hit past its apex, always positive — the caller applies the sign. Spray
+     * measures against the height this particular number reached: falling less than it rose is what stops any angle of
+     * the cone from returning a number to the band edge it left, which keeps the protected strip clear for every random
+     * draw rather than for the lucky ones. A mirrored fountain uses a share of how far it sank; an unmirrored one takes
+     * the canvas-relative throw it has always had, held honest by the band clamp.
+     */
+    private double FallDepth(FctHitState hit, double h, bool mirrored) =>
+      Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * FctLayout.SprayFallFrac
+        : mirrored ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
+        : h * 0.28;
   }
 }

@@ -56,7 +56,8 @@ namespace EQLogParser
     public event Action<double> EventsFrame; // canvas clock ms since Start()
 
     public int ActiveCount => _hits.Count;
-    public bool FountainMotion { get; set; }
+    /* Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest like Layout below. */
+    public FctMotionStyle MotionStyle { get => _ingest.Style; set => _ingest.Style = value; }
 
     /* The layout scheme is ingest's decision, so the canvas just forwards it; see FctLayout for the two modes. */
     public FctLayoutMode Layout { get => _ingest.Mode; set => _ingest.Mode = value; }
@@ -103,7 +104,7 @@ namespace EQLogParser
         return;
       }
 
-      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds, FountainMotion);
+      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds);
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint

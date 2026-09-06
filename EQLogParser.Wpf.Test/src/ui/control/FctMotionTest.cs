@@ -193,6 +193,28 @@ namespace EQLogParser
       Assert.IsTrue(late < 0.3, $"crit should have mostly shrunk away, was {late:0.00}");
     }
 
+    /*
+     * The pulse has no travel, so its swell is the entire announcement: in small, past full size, settle onto it — and
+     * never back below 1.0 afterwards, because a shrinking number reads as leaving before the fade has said so.
+     */
+    [TestMethod]
+    public void PulseSwellsThenRestsAtFullSize()
+    {
+      var hit = NewHit();
+      hit.Style = FctMotionStyle.Pulse;
+
+      Assert.AreEqual(FctMotion.PulseStartScale, FctMotion.ScaleOf(hit, 0), 0.001);
+      Assert.IsTrue(FctMotion.ScaleOf(hit, 60) > FctMotion.PulseStartScale, "it grows from the first frame");
+      Assert.AreEqual(FctMotion.PulsePeakScale, FctMotion.ScaleOf(hit, FctMotion.PulseInMs), 0.001);
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, FctMotion.PulseSettleMs), 0.001);
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, hit.LifetimeMs - 100), 0.001, "and it rests at full size until the fade");
+
+      // a crit outranks the style: it must still get its blowout pop, not the modest swell
+      hit.Blowout = true;
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, 0), 0.001);
+      Assert.AreEqual(FctMotion.CritPeakScale, FctMotion.ScaleOf(hit, FctMotion.CritScaleInMs), 0.001);
+    }
+
     [TestMethod]
     public void OpacityFadesInHoldsThenOut()
     {

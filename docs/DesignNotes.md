@@ -619,6 +619,43 @@ instead of throwing when a label is wider than its half — an inverted band use
 overlay — and bands mode falls back to "inside the edges" when a window is short enough to invert its y band.
 `FctLayoutTest` pins all of it at 100–240 px, across the whole motion and at crit scale.
 
+### Four motion styles, and the one thing none of them may change
+
+The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
+wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
+be read, fade — the default), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse** (no
+travel at all — it swells where it appeared) and **spray** (a random cone out of the lane slot, then a short fall).
+Placement (`FctLayoutMode`), motion style and stacking are three orthogonal decisions, and cramming two of them into
+one boolean was how "fountain" came to mean several things at once.
+
+Three rules keep four styles from becoming four behaviours:
+
+- **Motion is presentation, never information.** Band and direction of travel still say who acted whichever style is
+  running, which is what makes "try each during the next pull" a safe thing to offer. The combo therefore applies to
+  hits spawned *after* the change rather than restyling what is already on screen.
+- **A hit keeps the style it was born with** (`FctHitState.Style`, snapshotted by `FctIngest.Accept`). If the renderer
+  read one live setting, switching fountain → hold mid-flight would hand every parabola in progress a different
+  velocity for its remaining frames. Snapshotting an enum per hit is what makes switching free.
+- **The protected strip stays clear by construction, for all four.** Pulse cannot reach it (zero travel); spray falls
+  back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; hold
+  never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
+  the strip is behind it and the bottom edge is clamped. A test sweeps each style across its whole curve asserting none
+  enters the strip or leaves the window, so a future fifth style has to pass the same bar.
+
+Spray needed one constant that measurement forced: `SprayReachFactor`, roughly twice the depth of a band, with height
+capped at what the band offers. Given only the band's own travel budget (`usable * sin(theta)`), spray's horizontal
+coverage came out **identical to hold's** — hold already adds 12% of width in arc plus a lane-slot jitter, so a shallow
+cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
+actually move sideways while the steep ones simply top out against the clamp.
+
+Pulse is also the nearest thing here to the reduced-motion option the design document asks for: nothing translates, so
+the information arrives without movement. It is not labelled that way yet — an explicit reduced-motion setting should
+pick pulse and shorten lifetimes rather than invent a fifth style.
+
+What was deliberately **not** built is anchored-follow (a number tracking its own mob across the screen). EQ's log
+never contains actor positions, only names, so there is nothing to anchor to; that absence is the whole reason the
+design leans on bands and an empty strip instead of "numbers above your target".
+
 ### Colour answers "what", never "who"
 
 `FctStyle` used to paint the successful-defence lane blue, which put direction on colour — and blue in particular
@@ -701,10 +738,14 @@ the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits
 `NativeMethods.SetWindowLong` through `GetWindowLongFields.GwlExstyle`. Transparency itself is declared once in XAML
 (`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
 and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
-every hover over the overlay and buys nothing observable. Lock state, fountain style and geometry persist through
-`ConfigUtil` (`FctOverlayLeft/Top/Width/Height/Locked/Fountain/Enabled`) and the overlay reopens at startup if it
-was open on exit. The region scheme persists as `FctOverlayLayout` through `FctOverlaySettings`, read by the overlay
-and by both simulation windows so a bands run and a halves run differ in nothing but layout.
+every hover over the overlay and buys nothing observable. Lock state and geometry persist through `ConfigUtil`
+(`FctOverlayLeft/Top/Width/Height/Locked/Enabled`) and the overlay reopens at startup if it was open on exit. The two
+presentation switches — region scheme (`FctOverlayLayout`) and motion style (`FctOverlayMotion`) — persist through
+`FctOverlaySettings`, read by the overlay and by both simulation windows so a bands run and a halves run, or a hold run
+and a spray run, differ in nothing but the thing being compared. `FctOverlayMotion` also reads the old
+`FctOverlayFountain` boolean when its own key is absent: an upgrade should keep the choreography somebody had already
+chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
+out on its own rather than needing a migration.
 
 Because a locked window cannot be clicked, its own checkbox is unreachable by design; the way out is the Tools
 menu's lock item, since locked also means `WS_EX_NOACTIVATE` and therefore no keyboard input either — which is what

@@ -15,8 +15,9 @@ namespace EQLogParser
 
     int ActiveCount { get; }
 
-    /* Fountain style (rise-fall-shrink) vs the default hold style; applies to new hits only. */
-    bool FountainMotion { get; set; }
+    /* How new hits move (hold / fountain / pulse / spray); see FctMotionStyle for what each one is for. Applies to
+     * hits spawned from now on, which is what makes switching it during a fight a practical way to choose. */
+    FctMotionStyle MotionStyle { get; set; }
 
     /* Region scheme for new hits: bands (my hits rise above the protected middle strip, hits on me sink below it)
      * or the original left/right halves. Hosts set it from settings.ini so it can be flipped mid-fight. */

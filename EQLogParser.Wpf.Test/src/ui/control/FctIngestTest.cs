@@ -23,7 +23,7 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      var hit = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
+      var hit = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
       Assert.IsNotNull(hit);
       Assert.AreEqual(1, _hits.Count);
@@ -39,8 +39,8 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      var taken = ingest.Accept(_hits, FctLane.DamageTaken, 900, "Bites", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
-      var dealt = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
+      var taken = ingest.Accept(_hits, FctLane.DamageTaken, 900, "Bites", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var dealt = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 10);
 
       // a crit I take must still appear on the incoming side, or the region scheme stops meaning anything
       Assert.AreEqual(FctLane.Crit, taken.Lane);
@@ -55,14 +55,14 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      var hit = ingest.Accept(_hits, FctLane.Missed, 0, "Backstab", crit: false, minor: true, periodic: false, fixedText: Labels.Dodge, Width, Height, 0, fountain: false);
+      var hit = ingest.Accept(_hits, FctLane.Missed, 0, "Backstab", crit: false, minor: true, periodic: false, fixedText: Labels.Dodge, Width, Height, 0);
 
       Assert.IsNotNull(hit);
       Assert.AreEqual(Labels.Dodge, hit.DisplayText);
       Assert.AreEqual(FctLane.Missed, hit.Lane);
 
       // a label must never be folded into (or absorb into) a numeric hit
-      Assert.IsFalse(ingest.Accept(_hits, FctLane.Missed, 0, "Backstab", crit: false, minor: true, periodic: false, fixedText: Labels.Dodge, Width, Height, 50, fountain: false) is null);
+      Assert.IsFalse(ingest.Accept(_hits, FctLane.Missed, 0, "Backstab", crit: false, minor: true, periodic: false, fixedText: Labels.Dodge, Width, Height, 50) is null);
     }
 
     [TestMethod]
@@ -70,11 +70,11 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      ingest.Accept(_hits, FctLane.DamageDealt, 200, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 0, fountain: false);
+      ingest.Accept(_hits, FctLane.DamageDealt, 200, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 0);
 
       for (var now = 200.0; now < 1200; now += 200)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 200, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 200, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, now);
       }
 
       // one spawn plus five folded ticks
@@ -93,7 +93,7 @@ namespace EQLogParser
 
       for (var now = 0.0; now < 3000; now += 500)
       {
-        ingest.Accept(_hits, FctLane.HealingDealt, 1500, "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.HealingDealt, 1500, "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
       // players read heals individually; folding them hides who got patched and for how much
@@ -108,11 +108,11 @@ namespace EQLogParser
       // seed the lane's median with ordinary hits first: 60 is small against that history
       for (var now = 0.0; now < 900; now += 100)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 600, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 600, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
       var before = _hits.Count;
-      Assert.IsNull(ingest.Accept(_hits, FctLane.DamageDealt, 60, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 1000, fountain: false));
+      Assert.IsNull(ingest.Accept(_hits, FctLane.DamageDealt, 60, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 1000));
       Assert.AreEqual(before, _hits.Count);
 
       // the newest hit carries the count-up: it started at 600 and ends 60 higher
@@ -138,7 +138,7 @@ namespace EQLogParser
       // past the normal absorb window: a merge policy that only accepts young targets would start dropping here
       for (var i = 0; i < 40; i++, now += 60)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
       Assert.IsTrue(_hits.Count <= 12, $"lane cap was not enforced ({_hits.Count} live)");
@@ -156,7 +156,7 @@ namespace EQLogParser
 
       for (var i = 0; i < 20; i++, now += 60)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
       Assert.AreEqual(12, _hits.Count, "the crit lane is capped and nothing merged into a crit");
@@ -174,8 +174,8 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
-      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10);
 
       Assert.IsTrue(outgoing.Rise > 0, $"outgoing text must rise (Rise {outgoing.Rise})");
       Assert.IsTrue(outgoing.BandMaxY <= (Height * FctLayout.GapTopFrac) + 0.001, "outgoing band must stop at the protected strip");
@@ -191,8 +191,8 @@ namespace EQLogParser
       var ingest = NewIngest();
       ingest.Mode = FctLayoutMode.Halves;
 
-      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: false);
-      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10, fountain: false);
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 10);
 
       Assert.IsTrue(outgoing.SideMin >= (Width / 2) - 1, $"halves mode put my hits on the incoming side ({outgoing.SideMin})");
       Assert.IsTrue(incoming.SideMax <= (Width / 2) + 1, $"halves mode put hits on me on the outgoing side ({incoming.SideMax})");
@@ -209,9 +209,10 @@ namespace EQLogParser
     public void FountainOnTheIncomingBandMirrorsUpwardAndStaysInsideIt()
     {
       var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Fountain;
       var gapBottom = Height * FctLayout.GapBottomFrac;
 
-      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: true);
+      var incoming = ingest.Accept(_hits, FctLane.DamageTaken, 500, "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
       Assert.IsTrue(incoming.FallDist < 0, $"incoming fall must run back up toward the gap, was {incoming.FallDist:0.#}");
       Assert.AreEqual(FctMotion.MotionWindowMs, incoming.LifetimeMs, "fountain life is the choreography, not an adaptive hold");
@@ -231,9 +232,10 @@ namespace EQLogParser
     public void FountainOnTheOutgoingBandFallsDownward()
     {
       var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Fountain;
       var gapTop = Height * FctLayout.GapTopFrac;
 
-      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, fountain: true);
+      var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
       Assert.AreEqual(Height * 0.28, outgoing.FallDist, 0.001, "the outgoing band keeps its literal gravity tail");
       Assert.IsTrue(FctMotion.RaisedY(outgoing, 1.0) > (outgoing.Y0 - outgoing.Rise), "outgoing fountain text comes back down");
@@ -246,6 +248,126 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Pulse is the "stay out of the way" style: no travel whatsoever, which also means it can never reach the protected
+     * strip however long it lives or how small the window is. Its only animation is scale (pinned in FctMotionTest), so
+     * what is pinned here is the absence of motion — a regression that quietly gave pulses a drift would look like a
+     * layout bug somewhere else entirely.
+     */
+    [TestMethod]
+    public void PulseStyleSpawnsInPlaceAndStaysThere()
+    {
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Pulse;
+
+      for (var i = 0; i < 6; i++)
+      {
+        var hit = ingest.Accept(_hits, FctLane.DamageDealt, 5000 - (i * 40), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
+
+        Assert.IsNotNull(hit, "distinct values must not fold into each other");
+        Assert.AreEqual(0.0, hit.Rise, $"pulse travel must be zero (was {hit.Rise:0.#})");
+        Assert.AreEqual(0.0, hit.Arc, "a pulse must not drift sideways either");
+        Assert.AreEqual(0.0, hit.FallDist, "there is nothing to fall from");
+
+        var y = FctMotion.RaisedY(hit, 0);
+        var x = FctMotion.ArcedX(hit, 0);
+        for (var t = 0.0; t <= 1.0; t += 0.05)
+        {
+          Assert.AreEqual(y, FctMotion.RaisedY(hit, t), 0.001, "a pulse stays exactly where it appeared");
+          Assert.AreEqual(x, FctMotion.ArcedX(hit, t), 0.001);
+        }
+      }
+    }
+
+    /*
+     * Spray exists to fan repeated hits out instead of stacking them into one unreadable column, so the assertion is
+     * relative to hold rather than an absolute pixel figure — that would just be a second constant to maintain.
+     */
+    [TestMethod]
+    public void SprayFansWiderThanHold()
+    {
+      var held = Sweep(FctMotionStyle.Hold);
+      var sprayed = Sweep(FctMotionStyle.Spray);
+
+      // a modest margin on purpose: spray should be visibly wider, not a different universe of chaos
+      Assert.IsTrue(sprayed.Width > held.Width * 1.35,
+        $"spray is supposed to fan out: hold covered {held.Width:0} px of x, spray {sprayed.Width:0} px");
+    }
+
+    /* Every style owes the same two promises; sweep asserts them for hold, fountain, pulse and spray alike. */
+    [TestMethod]
+    public void EveryMotionStyleKeepsTheStripClearAndTheWindowInside()
+    {
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray })
+      {
+        var coverage = Sweep(style);
+
+        Assert.IsTrue(coverage.MinX >= FctLayout.EdgePad - 0.001, $"{style} drew past the left edge ({coverage.MinX:0.#})");
+        Assert.IsTrue(coverage.MaxX <= Width - FctLayout.EdgePad + 0.001, $"{style} drew past the right edge ({coverage.MaxX:0.#})");
+      }
+    }
+
+    /* Spray on the lower band mirrors like fountain does: it fans downward and its gravity pulls back up. */
+    [TestMethod]
+    public void SprayOnTheIncomingBandFansDownwardAndFallsBackUp()
+    {
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Spray;
+      var gapBottom = Height * FctLayout.GapBottomFrac;
+
+      for (var i = 0; i < 8; i++)
+      {
+        var hit = ingest.Accept(_hits, FctLane.DamageTaken, 5000 - (i * 40), "Bites", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
+
+        Assert.IsNotNull(hit);
+        Assert.IsTrue(hit.Rise < 0, $"incoming spray must travel away from the gap, downward (Rise {hit.Rise:0.#})");
+        Assert.IsTrue(hit.FallDist < 0, "and its fall must mirror back up toward the gap, not down to the window edge");
+
+        // the invariant that makes the mirror safe: it can never fall further than it sank
+        Assert.IsTrue(Math.Abs(hit.FallDist) < Math.Abs(hit.Rise), $"fell {hit.FallDist:0.#} after sinking {hit.Rise:0.#}");
+
+        var lowest = hit.Y0 - hit.Rise;
+        for (var t = 0.0; t <= 1.0; t += 0.05)
+        {
+          var y = FctMotion.RaisedY(hit, t);
+          Assert.IsTrue(y >= gapBottom - 0.001, $"incoming spray climbed into the protected strip at t={t:0.00}");
+          Assert.IsTrue(y <= lowest + 0.001, $"incoming spray sank past its own deepest point at t={t:0.00}");
+        }
+      }
+    }
+
+    /*
+     * The two choreographed styles share one timing shape — life equals the motion window, fade spans exactly the fall —
+     * while the two that stop and hold keep the adaptive lifetime. Getting this wrong is invisible in maths and obvious
+     * on screen: a sprayed number whose life outlasts its travel sits still for a second in mid-air.
+     */
+    [TestMethod]
+    public void ChoreographySetsTheLifeAndHoldStylesDoNot()
+    {
+      foreach (var style in new[] { FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      {
+        var ingest = NewIngest();
+        ingest.Style = style;
+
+        var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+
+        Assert.AreEqual(FctMotion.MotionWindowMs, hit.LifetimeMs, $"{style} life must be its choreography");
+        Assert.AreEqual(FctMotion.MotionWindowMs, hit.MotionMs, $"{style} must not hold mid-flight");
+        Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
+      }
+
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
+      {
+        var ingest = NewIngest();
+        ingest.Style = style;
+
+        var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+
+        Assert.IsTrue(hit.LifetimeMs > FctMotion.MotionWindowMs, $"{style} keeps the adaptive life (was {hit.LifetimeMs:0})");
+        Assert.AreEqual(FctMotion.MotionWindowMs, hit.MotionMs, 0.001, $"{style} travels inside the motion window, then holds");
+      }
+    }
+
     [TestMethod]
     public void ExpiredHitsArePrunedWithTheirBackendAttachments()
     {
@@ -253,7 +375,7 @@ namespace EQLogParser
 
       for (var i = 0; i < 5; i++)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 100, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 100);
       }
 
       var removed = new List<FctHitState>();
@@ -271,9 +393,52 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
-      Assert.IsNull(ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, 0, 0, 0, fountain: false));
+      Assert.IsNull(ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, 0, 0, 0));
       Assert.AreEqual(0, _hits.Count);
       Assert.AreEqual(0, ingest.DroppedCount, "an unmeasured window is not an overload");
+    }
+
+    /*
+     * One style's worth of an outgoing burst, asserting as it goes that nothing enters the protected strip or leaves the
+     * window horizontally, and reporting how much x the drawn text covered. Spacing is wide (900 ms) so hits overlap the
+     * way a slow fight does rather than tripping the lane cap, which would test dropping instead of geometry.
+     */
+    private (double Width, double MinX, double MaxX) Sweep(FctMotionStyle style)
+    {
+      var hits = new List<FctHitState>();
+      var ingest = NewIngest();
+      ingest.Style = style;
+
+      var gapTop = Height * FctLayout.GapTopFrac;
+      var minX = double.MaxValue;
+      var maxX = double.MinValue;
+
+      for (var i = 0; i < 40; i++)
+      {
+        // exactly what a canvas does every tick: without this the list fills to the lane cap and the burst stops
+        // spawning, which measures twelve samples of the random angle instead of the style
+        ingest.PruneExpired(hits, i * 900);
+
+        var hit = ingest.Accept(hits, FctLane.DamageDealt, 5000 - (i * 31), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 900);
+        if (hit is null)
+        {
+          continue; // folded into a live number: real behaviour, just not this test's subject
+        }
+
+        for (var t = 0.0; t <= 1.0; t += 0.05)
+        {
+          var x = FctMotion.ArcedX(hit, t);
+          var y = FctMotion.RaisedY(hit, t);
+
+          minX = Math.Min(minX, x - (hit.ValueWidth / 2.0));
+          maxX = Math.Max(maxX, x + (hit.ValueWidth / 2.0));
+
+          Assert.IsTrue(y + FctLayout.TextReserve(hit) <= gapTop + 0.001,
+            $"{style} put text into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextReserve(hit):0.#}, gap top {gapTop:0.#})");
+        }
+      }
+
+      return (maxX - minX, minX, maxX);
     }
 
     private static double TotalOf(List<FctHitState> hits)

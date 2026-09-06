@@ -91,7 +91,11 @@ namespace EQLogParser
       }
     }
 
-    /* Halves mode keeps its own promise: the centre column stays clear, at crit scale and at every frame. */
+    /*
+     * Halves mode keeps its own promise: the centre column stays clear, at crit scale and at every frame. The styles are
+     * looped because each one has a different widest frame — a pulse grows to PulsePeakScale with no travel to warn you,
+     * and an x clamp built on 1.0 would let exactly that style bleed over the protected centre.
+     */
     [TestMethod]
     public void HalvesModeKeepsTextOutOfTheProtectedCenter()
     {
@@ -100,23 +104,27 @@ namespace EQLogParser
 
       for (var i = 0; i < 400; i++)
       {
-        foreach (var incoming in new[] { true, false })
+        foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
         {
-          var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, mode: FctLayoutMode.Halves);
-          hit.ValueWidth = 180; // a wide label: the clamp has to reserve half of it, scaled
-
-          for (var t = 0.0; t <= 1.0; t += 0.05)
+          foreach (var incoming in new[] { true, false })
           {
-            var x = FctMotion.ArcedX(hit, t);
-            var half = (hit.ValueWidth * (hit.Blowout ? FctMotion.CritPeakScale : 1.0)) / 2.0;
+            var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, mode: FctLayoutMode.Halves, style: style);
+            hit.ValueWidth = 180; // a wide label: the clamp has to reserve half of it, scaled
 
-            if (incoming)
+            for (var t = 0.0; t <= 1.0; t += 0.05)
             {
-              Assert.IsTrue(x + half <= center - FctLayout.CenterClearance + 0.001, $"incoming text crossed the center at t={t:0.00} (right edge {x + half})");
-            }
-            else
-            {
-              Assert.IsTrue(x - half >= center + FctLayout.CenterClearance - 0.001, $"outgoing text crossed the center at t={t:0.00} (left edge {x - half})");
+              var x = FctMotion.ArcedX(hit, t);
+              var peak = hit.Blowout ? FctMotion.CritPeakScale : style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
+              var half = (hit.ValueWidth * peak) / 2.0;
+
+              if (incoming)
+              {
+                Assert.IsTrue(x + half <= center - FctLayout.CenterClearance + 0.001, $"{style} incoming text crossed the center at t={t:0.00} (right edge {x + half:0.#})");
+              }
+              else
+              {
+                Assert.IsTrue(x - half >= center + FctLayout.CenterClearance - 0.001, $"{style} outgoing text crossed the center at t={t:0.00} (left edge {x - half:0.#})");
+              }
             }
           }
         }
@@ -205,13 +213,37 @@ namespace EQLogParser
       }
     }
 
-    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null)
+    /*
+     * A pulse grows where it stands, so its spawn point has to leave room for the swell instead of for unscaled text.
+     * Nothing travels here, which makes this the one style whose clipping would be pure arithmetic: reserve smaller than
+     * the peak and every pulse is cut off at its widest frame.
+     */
+    [TestMethod]
+    public void PulseSpawnsLeaveRoomForTheirOwnSwell()
     {
-      // Source must be set before layout runs: the vertical reserve is derived from it, exactly as FctIngest does it
+      var rand = new Random(11);
+
+      for (var i = 0; i < 200; i++)
+      {
+        var hit = Spawn(FctLane.DamageDealt, incoming: false, rand, mode: FctLayoutMode.Bands, source: "Crushing Blow", style: FctMotionStyle.Pulse);
+
+        Assert.AreEqual(0.0, hit.Rise, "a pulse travels nowhere, so only its scale can leave the band");
+        Assert.IsTrue(FctLayout.TextReserve(hit) > (hit.ValueFontSize * FctLayout.TextHeightFactor),
+          $"the reserve must carry the swell (got {FctLayout.TextReserve(hit):0.#} for a {hit.ValueFontSize:0} px value)");
+        Assert.IsTrue(hit.Y0 + FctLayout.TextReserve(hit) <= (Height * FctLayout.GapTopFrac) + 0.001,
+          $"its widest frame crosses into the protected strip ({hit.Y0 + FctLayout.TextReserve(hit):0.#} > {Height * FctLayout.GapTopFrac:0.#})");
+      }
+    }
+
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null, FctMotionStyle style = FctMotionStyle.Hold)
+    {
+      // Source and style must be set before layout runs: the vertical reserve and the travel are both derived from them,
+      // exactly as FctIngest does it
       var hit = new FctHitState
       {
         Lane = crit ? FctLane.Crit : lane,
         Incoming = incoming,
+        Style = style,
         Source = source,
         TargetValue = 1234,
         CountBaseValue = 1234,

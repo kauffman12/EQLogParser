@@ -9,6 +9,12 @@ namespace EQLogParser
   {
     public FctLane Lane;
 
+    /* How this hit moves over its life: travel, fountain, pulse in place, or spray. Copied from the canvas's current
+     * setting by ingest, then read by FctLayout for geometry and by FctMotion for scale. A hit keeps the style it was
+     * spawned with, so flipping the overlay's choice mid-fight changes what comes next rather than teleporting what is
+     * already on screen. */
+    public FctMotionStyle Style;
+
     /* Whether this hit is about something happening to me: the bottom band (bands mode) or the left half (halves
      * mode). Captured from the producing lane before crit pooling, so a taken crit stays on the incoming side. */
     public bool Incoming;

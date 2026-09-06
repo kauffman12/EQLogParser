@@ -30,6 +30,16 @@ namespace EQLogParser
     public const double CritScaleOutMs = 700;
     public const double CritScaleEnd = 0.06;
 
+    /*
+     * Pulse style: appear a little small, swell just past full size, settle onto it. This style has no travel at all, so
+     * the swell is the whole announcement — and its overshoot is deliberately modest (12%) because a lane full of pulses
+     * shimmering in and out at 30% would be worse than the motion it replaces.
+     */
+    public const double PulseStartScale = 0.86;
+    public const double PulsePeakScale = 1.12;
+    public const double PulseInMs = 130;
+    public const double PulseSettleMs = 420;
+
     public const double FadeInMs = 160;
 
     /* How long a folded-in hit takes to count up to its new total. */
@@ -94,12 +104,17 @@ namespace EQLogParser
       return Math.Clamp(hit.X0 + (hit.Arc * Ease(t)), lo, hi);
     }
 
-    /* Crit pop, or the fountain shrink over the fall phase. 1 when neither applies. */
+    /* Crit pop, the pulse swell, or the fall-phase shrink. 1 when none applies. */
     public static double ScaleOf(FctHitState hit, double ageMs)
     {
       if (hit.Blowout)
       {
         return BlowoutScale(ageMs, hit.LifetimeMs);
+      }
+
+      if (hit.Style is FctMotionStyle.Pulse)
+      {
+        return PulseScale(ageMs);
       }
 
       if (hit.FallDist != 0.0)
@@ -166,8 +181,30 @@ namespace EQLogParser
       hit.TextDirty = true;
     }
 
-    /* Widest the drawn text ever gets, so a one-time clamp still protects the center over its life. */
-    private static double ScaleAllowance(FctHitState hit) => hit.Blowout ? CritPeakScale : 1.0;
+    /* Widest the drawn text ever gets, so a one-time clamp still protects the center over its life — and it agrees with
+     * FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. */
+    private static double ScaleAllowance(FctHitState hit) =>
+      hit.Blowout ? CritPeakScale : hit.Style is FctMotionStyle.Pulse ? PulsePeakScale : 1.0;
+
+    /*
+     * The pulse swell: in over PulseInMs, back down to full size by PulseSettleMs, then nothing — the eased ends keep it
+     * from looking like a screen glitch, and it never returns below 1.0 because a number shrinking away reads as
+     * leaving, which is the fade's job.
+     */
+    private static double PulseScale(double ageMs)
+    {
+      if (ageMs < PulseInMs)
+      {
+        return PulseStartScale + ((PulsePeakScale - PulseStartScale) * Ease(ageMs / PulseInMs));
+      }
+
+      if (ageMs < PulseSettleMs)
+      {
+        return PulsePeakScale - ((PulsePeakScale - 1.0) * Ease((ageMs - PulseInMs) / (PulseSettleMs - PulseInMs)));
+      }
+
+      return 1.0;
+    }
 
     private static double BlowoutScale(double ageMs, double lifetimeMs)
     {
