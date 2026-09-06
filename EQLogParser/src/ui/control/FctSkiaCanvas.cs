@@ -17,7 +17,7 @@ namespace EQLogParser
     public double X0, Y0;                      // spawn position (logical px)
     public double Rise, Arc;                   // total upward travel / sideways arc amplitude
     public double MotionMs;                    // rise+arc complete by this age, then hold (see RaisedY)
-    public double SideMin, SideMax;            // half-canvas clamp for value left edge + width
+    public double SideMin, SideMax;            // half-canvas clamp for the value's center x
     public double ValueWidth;                  // measured, refreshed only when the value changes
     public double ValueFontSize, SourceFontSize;
     public SKColor ValueColor;
@@ -44,7 +44,9 @@ namespace EQLogParser
     private const double DamageDealtFontSize = 30;
     private const double DamageTakenFontSize = 28;
     private const double HealingFontSize = 24;
-    private const double CritFontSize = 42;
+    /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
+     * from normal damage, not a spectacle. */
+    private const double CritFontSize = 34;
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
     private const float GlowSigma = 5f;
@@ -147,14 +149,15 @@ namespace EQLogParser
         lane = FctSimLane.Crit;
       }
 
-      // home band: center of the lane's half, jittered; crits spread wider across their half
+      // home band: each side's lanes centered as a pair within their own half (text is drawn
+      // center-aligned on x); crits sit at the middle of their half and spread wider
       var cx = lane switch
       {
-        FctSimLane.DamageTaken => w * 0.30,
-        FctSimLane.HealingReceived => w * 0.42,
-        FctSimLane.Crit => leftSide ? w * 0.36 : w * 0.70,
-        FctSimLane.HealingDealt => w * 0.78,
-        _ => w * 0.60, // DamageDealt
+        FctSimLane.DamageTaken => w * 0.14,
+        FctSimLane.HealingReceived => w * 0.35,
+        FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
+        FctSimLane.HealingDealt => w * 0.86,
+        _ => w * 0.65, // DamageDealt
       };
 
       var hit = NewHitState(lane, value, action, minor,
@@ -496,12 +499,12 @@ namespace EQLogParser
       if (hit.Blowout)
       {
         var s = (float)BlowoutScale(ageMs, hit.LifetimeMs);
-        var cx = x + (hit.ValueWidth / 2.0);
+        // x is the text's center now, so it doubles as the blowout pivot
         var cy = y + (hit.ValueFontSize * 0.45);
         canvas.Save();
-        canvas.Translate((float)cx, (float)cy);
+        canvas.Translate((float)x, (float)cy);
         canvas.Scale(s, s);
-        canvas.Translate(-(float)cx, -(float)cy);
+        canvas.Translate(-(float)x, -(float)cy);
       }
 
       var valueBase = y + (hit.ValueFontSize * 0.82);
@@ -510,7 +513,7 @@ namespace EQLogParser
       if (hit.HaloKey is not null && _halos.TryGetValue(hit.HaloKey, out var halo))
       {
         var blit = MakePaint(SKColors.White, alpha, SKPaintStyle.Fill, 0);
-        canvas.DrawImage(halo.Image, (float)(x - hit.HaloPad), (float)(y - hit.HaloPad), blit);
+        canvas.DrawImage(halo.Image, (float)(x - hit.ValueWidth / 2.0 - hit.HaloPad), (float)(y - hit.HaloPad), blit);
         blit.Dispose();
         CountDraw(1);
       }
@@ -534,11 +537,11 @@ namespace EQLogParser
       var font = GetFont(bold, size);
 
       var outline = MakePaint(SKColors.Black, alpha, SKPaintStyle.StrokeAndFill, bold ? 2f : 1.5f);
-      canvas.DrawText(text, x, baselineY, SKTextAlign.Left, font, outline);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, outline);
       outline.Dispose();
 
       var fill = MakePaint(color, alpha, SKPaintStyle.Fill, 0);
-      canvas.DrawText(text, x, baselineY, SKTextAlign.Left, font, fill);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, fill);
       fill.Dispose();
 
       CountDraw(2);
@@ -585,25 +588,25 @@ namespace EQLogParser
 
     /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
     private static double ArcedX(FctSkiaHit hit, double t) =>
-      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin, hit.SideMax - hit.ValueWidth);
+      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin + hit.ValueWidth / 2.0, hit.SideMax - hit.ValueWidth / 2.0);
 
-    /* NAG blowout: quick ramp to ~1.45x, hold, then shrink to ~0 while fading. */
+    /* NAG blowout, toned down: quick ramp to ~1.3x, hold, then shrink to ~0 while fading. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)
     {
       const double inMs = 90;
       const double outMs = 700;
       if (ageMs < inMs)
       {
-        return 1 + (0.45 * (ageMs / inMs));
+        return 1 + (0.30 * (ageMs / inMs));
       }
 
       if (ageMs < lifetimeMs - outMs)
       {
-        return 1.45;
+        return 1.30;
       }
 
       var p = Math.Clamp((ageMs - (lifetimeMs - outMs)) / outMs, 0.0, 1.0);
-      return 1.45 - ((1.45 - 0.06) * p * p);
+      return 1.30 - ((1.30 - 0.06) * p * p);
     }
 
     private static double FadeOpacity(double ageMs, double lifetimeMs, double fadeMs)

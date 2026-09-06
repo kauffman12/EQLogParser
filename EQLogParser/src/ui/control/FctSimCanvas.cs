@@ -29,7 +29,7 @@ namespace EQLogParser
     public double X0, Y0;                     // spawn position of the value text
     public double Rise, Arc;                  // total upward travel / sideways arc amplitude (px)
     public double MotionMs;                   // rise+arc complete by this age, then hold (see RaisedY)
-    public double SideMin, SideMax;           // half-canvas clamp for the value's left edge + width
+    public double SideMin, SideMax;           // half-canvas clamp for the value's center x
     public double ValueFontSize, SourceFontSize;
     public Brush ValueBrush, SourceBrush;
     public double LifetimeMs, FadeMs;
@@ -53,7 +53,9 @@ namespace EQLogParser
     private const double DamageDealtFontSize = 30;
     private const double DamageTakenFontSize = 28;
     private const double HealingFontSize = 24;
-    private const double CritFontSize = 42;
+    /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
+     * from normal damage, not a spectacle. */
+    private const double CritFontSize = 34;
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
 
@@ -140,14 +142,15 @@ namespace EQLogParser
         lane = FctSimLane.Crit;
       }
 
-      // home band: center of the lane's half, jittered; crits spread wider across their half
+      // home band: each side's lanes centered as a pair within their own half (text is drawn
+      // center-aligned on x); crits sit at the middle of their half and spread wider
       var cx = lane switch
       {
-        FctSimLane.DamageTaken => w * 0.30,
-        FctSimLane.HealingReceived => w * 0.42,
-        FctSimLane.Crit => leftSide ? w * 0.36 : w * 0.70,
-        FctSimLane.HealingDealt => w * 0.78,
-        _ => w * 0.60, // DamageDealt
+        FctSimLane.DamageTaken => w * 0.14,
+        FctSimLane.HealingReceived => w * 0.35,
+        FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
+        FctSimLane.HealingDealt => w * 0.86,
+        _ => w * 0.65, // DamageDealt
       };
 
       var state = NewHitState(lane, value, action, minor,
@@ -375,8 +378,12 @@ namespace EQLogParser
       hit.SourceOutline = MakeText(source, hit.SourceFontSize, _sourceTypeface, _outlineBrush);
     }
 
-    private FormattedText MakeText(string text, double size, Typeface typeface, Brush brush) =>
-      new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, size, brush, _pixelsPerDip);
+    private FormattedText MakeText(string text, double size, Typeface typeface, Brush brush)
+    {
+      var ft = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, size, brush, _pixelsPerDip);
+      ft.TextAlignment = TextAlignment.Center; // x is the value's center in every draw pass
+      return ft;
+    }
 
     private bool IsConnectedToPresentationSource() => PresentationSource.FromVisual(this) is not null;
 
@@ -394,7 +401,7 @@ namespace EQLogParser
 
     /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
     private static double ArcedX(FctSimHitState hit, double t) =>
-      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin, hit.SideMax - hit.ValueText.Width);
+      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin + hit.ValueText.Width / 2.0, hit.SideMax - hit.ValueText.Width / 2.0);
 
     /* One PushOpacity per hit, and only while it is fading in/out (the common full-opacity case pushes nothing). */
     private void DrawHit(DrawingContext dc, FctSimHitState hit, double ageMs, double opacity)
@@ -411,11 +418,11 @@ namespace EQLogParser
         var bx = ArcedX(hit, t);
         var by = RaisedY(hit, t);
         var s = BlowoutScale(ageMs, hit.LifetimeMs);
-        var cx = bx + hit.ValueText.Width / 2;
+        // bx is the text's center now, so it doubles as the blowout pivot
         var cy = by + hit.ValueText.Height / 2;
-        dc.PushTransform(new TranslateTransform(cx, cy));
+        dc.PushTransform(new TranslateTransform(bx, cy));
         dc.PushTransform(new ScaleTransform(s, s));
-        dc.PushTransform(new TranslateTransform(-cx, -cy));
+        dc.PushTransform(new TranslateTransform(-bx, -cy));
         DrawValue(dc, hit.ValueOutline, hit.ValueGlow, hit.ValueText, bx, by);
         DrawSource(dc, hit.SourceOutline, hit.SourceText, bx, by + hit.ValueText.Height * 0.95);
         dc.Pop();
@@ -435,23 +442,23 @@ namespace EQLogParser
       }
     }
 
-    /* NAG blowout: quick ramp to ~1.45x, hold, then shrink to ~0 while fading. */
+    /* NAG blowout, toned down: quick ramp to ~1.3x, hold, then shrink to ~0 while fading. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)
     {
       const double inMs = 90;
       const double outMs = 700;
       if (ageMs < inMs)
       {
-        return 1 + (0.45 * (ageMs / inMs));
+        return 1 + (0.30 * (ageMs / inMs));
       }
 
       if (ageMs < lifetimeMs - outMs)
       {
-        return 1.45;
+        return 1.30;
       }
 
       var p = Math.Clamp((ageMs - (lifetimeMs - outMs)) / outMs, 0.0, 1.0);
-      return 1.45 - ((1.45 - 0.06) * p * p);
+      return 1.30 - ((1.30 - 0.06) * p * p);
     }
 
     private static double FadeOpacity(double ageMs, double lifetimeMs, double fadeMs)
