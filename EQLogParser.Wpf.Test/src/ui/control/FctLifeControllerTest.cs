@@ -38,14 +38,16 @@ namespace EQLogParser
       var life = new FctLifeController();
       double t = 1000;
 
-      // 10/s for a couple of seconds: the EMA converges and slack (7 - live) at low fill is small
+      // 10/s for two seconds on a half-full lane: the EMA converges, and a lane that keeps its predictions right
+      // has no business holding numbers for the full baseline
       for (var i = 0; i < 20; i++)
       {
         t += 100;
+        life.NextLifetime(FctLane.DamageDealt, liveCount: 2, nowMs: t);
       }
 
-      var value = life.NextLifetime(FctLane.DamageDealt, liveCount: 0, nowMs: t);
-      Assert.IsTrue(value >= 1000 && value <= 3000, $"expected compressed lifetime, got {value}");
+      var value = life.NextLifetime(FctLane.DamageDealt, liveCount: 2, nowMs: t + 100);
+      Assert.IsTrue(value is >= 1000 and < 3500, $"expected compression below the 3.5 s baseline, got {value}");
     }
 
     [TestMethod]

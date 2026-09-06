@@ -565,10 +565,14 @@ clamps against it using half the *scaled* text width — a crit at full blowout 
 The clamp degrades to the middle of its band instead of throwing when a label is wider than its half, which is
 what used to crash every frame on a small overlay (`FctLayoutTest` pins both properties).
 
-Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive
-lifetime aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop merges
-into a live number before it drops anything, so overload compresses the display without losing totals —
-`FctIngestTest` asserts exactly that: 40 hits at one lane still show 36,000 damage on screen.
+Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive lifetime
+aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop merges into a live
+number before it drops anything, so overload compresses the display instead of eating damage. Merging has two modes:
+below the cap only a *young* hit may absorb — pouring damage into a number that is already fading hides the amount —
+while at the cap the newest hit takes it regardless of age, because "the label grows" is a much smaller lie than
+"that hit never appeared". Crits refuse to absorb in both modes: a crit number that quietly inflates is misleading,
+so crit overload is the case where `DroppedCount` actually moves. `FctIngestTest` pins both halves — 40 hits at one
+lane still show 36,000 damage on screen with zero drops, and 20 crits into a capped crit lane report 8 counted drops.
 
 Folding follows NAG's median idea with different numbers: `FctMedianTracker` keeps a rolling window per lane and
 a direct hit below half the lane's median counts up on a live number instead of spawning its own (`periodic`

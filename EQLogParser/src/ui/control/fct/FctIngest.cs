@@ -77,7 +77,7 @@ namespace EQLogParser
 
       if (LiveCount(hits, pooled) >= LaneCap)
       {
-        if (fixedText is null && TryAbsorb(hits, pooled, value, now))
+        if (fixedText is null && TryAbsorb(hits, pooled, value, now, relaxed: true))
         {
           return null;
         }
@@ -147,8 +147,14 @@ namespace EQLogParser
       return median > 0 && value < median * AbsorbFractionOfMedian;
     }
 
-    /* Folds amount into the newest eligible live hit of the lane (NAG's accumulateHits count-up). */
-    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, double amount, double now)
+    /*
+     * Folds amount into a live hit of the lane (NAG's accumulateHits count-up). Normally the target has to be
+     * young, because absorbing into a number that is already fading hides the amount. At the lane cap there is no
+     * good alternative left: the newest hit has more life ahead of it than anything else on screen, and a counted
+     * drop is damage nobody ever saw. Crits never absorb either way — a crit number that quietly grows is
+     * misleading, and that overload is what the drop counter exists to make visible.
+     */
+    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, double amount, double now, bool relaxed = false)
     {
       for (var i = hits.Count - 1; i > -1; i--)
       {
@@ -159,7 +165,7 @@ namespace EQLogParser
         }
 
         var age = now - hit.SpawnMs;
-        if (age > Math.Min(AbsorbWindowMs, hit.LifetimeMs * AbsorbMaxLifeFrac))
+        if (!relaxed && age > Math.Min(AbsorbWindowMs, hit.LifetimeMs * AbsorbMaxLifeFrac))
         {
           continue;
         }

@@ -80,7 +80,9 @@ namespace EQLogParser
       // one spawn plus five folded ticks
       Assert.AreEqual(1, _hits.Count);
       Assert.AreEqual(1200, _hits[0].TargetValue, 0.001);
-      FctMotion.RefreshText(_hits[0], 1200);
+
+      // the last fold happened at 1000 ms and counts up over CountUpMs: read the text after it settles
+      FctMotion.RefreshText(_hits[0], 1000 + FctMotion.CountUpMs + 1);
       Assert.AreEqual("1,200", _hits[0].DisplayText);
     }
 
@@ -121,32 +123,44 @@ namespace EQLogParser
       Assert.AreEqual("660", target.DisplayText);
     }
 
+    /*
+     * The overload contract has two halves, and the tests for them are separate on purpose: normal numbers must
+     * never be lost while a hit of their lane is still alive to take them, and the case where nothing can take
+     * them (crits, which refuse to absorb) has to be counted instead of silently vanishing.
+     */
     [TestMethod]
-    public void OverloadMergesBeforeItDropsAndCountsWhatItLoses()
+    public void SustainedOverloadMergesInsteadOfLosingDamage()
     {
       var ingest = NewIngest();
       var now = 0.0;
 
+      // 60 ms apart is faster than any lane can display, and it goes on long enough that every early hit ages
+      // past the normal absorb window: a merge policy that only accepts young targets would start dropping here
       for (var i = 0; i < 40; i++, now += 60)
       {
         ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
       }
 
       Assert.IsTrue(_hits.Count <= 12, $"lane cap was not enforced ({_hits.Count} live)");
-      Assert.AreEqual(0, ingest.DroppedCount, "while numbers can still merge, nothing is lost — totals survive overload");
+      Assert.AreEqual(0, ingest.DroppedCount, "while a hit of the lane is alive, nothing may be lost");
 
       // every hit after the 12th merged into a live number: the full 40 x 900 is still on screen
       Assert.AreEqual(40 * 900.0, TotalOf(_hits), 0.001);
+    }
 
-      // now every live hit is too old to absorb into: at that point drops are counted, never silent
-      now += 5000;
-      for (var i = 0; i < 10; i++, now += 60)
+    [TestMethod]
+    public void CritOverloadIsCountedBecauseCritsNeverAbsorb()
+    {
+      var ingest = NewIngest();
+      var now = 0.0;
+
+      for (var i = 0; i < 20; i++, now += 60)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
+        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, now, fountain: false);
       }
 
-      Assert.AreEqual(10, ingest.DroppedCount);
-      Assert.IsTrue(_hits.Count <= 12);
+      Assert.AreEqual(12, _hits.Count, "the crit lane is capped and nothing merged into a crit");
+      Assert.AreEqual(8, ingest.DroppedCount, "lost crits have to show up in the header, not silently disappear");
     }
 
     [TestMethod]

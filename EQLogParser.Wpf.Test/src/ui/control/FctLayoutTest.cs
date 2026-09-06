@@ -13,14 +13,16 @@ namespace EQLogParser
     private const double Width = 980;
     private const double Height = 640;
 
-    [DataTestMethod]
-    [DataRow(FctLane.DamageTaken, true)]
-    [DataRow(FctLane.HealingReceived, true)]
-    [DataRow(FctLane.Defensive, true)]
-    [DataRow(FctLane.DamageDealt, false)]
-    [DataRow(FctLane.HealingDealt, false)]
-    [DataRow(FctLane.Missed, false)]
-    public void LanesBelongToTheSideTheyHappenOn(FctLane lane, bool left) => Assert.AreEqual(left, FctLayout.IsLeftSide(lane));
+    /* FctLane is internal to the app and a public test method cannot take it as a parameter, so the rows carry
+     * names — nameof keeps them tied to the enum through a rename. */
+    [TestMethod]
+    [DataRow(nameof(FctLane.DamageTaken), true)]
+    [DataRow(nameof(FctLane.HealingReceived), true)]
+    [DataRow(nameof(FctLane.Defensive), true)]
+    [DataRow(nameof(FctLane.DamageDealt), false)]
+    [DataRow(nameof(FctLane.HealingDealt), false)]
+    [DataRow(nameof(FctLane.Missed), false)]
+    public void LanesBelongToTheSideTheyHappenOn(string lane, bool left) => Assert.AreEqual(left, FctLayout.IsLeftSide(Enum.Parse<FctLane>(lane)));
 
     [TestMethod]
     public void SpawnKeepsTextInsideTheCanvas()

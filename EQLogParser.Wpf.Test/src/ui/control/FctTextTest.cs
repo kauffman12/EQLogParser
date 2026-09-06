@@ -11,7 +11,7 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctTextTest
   {
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(0d, "0")]
     [DataRow(7d, "7")]
     [DataRow(999d, "999")]
