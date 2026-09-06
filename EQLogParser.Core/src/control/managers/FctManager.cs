@@ -8,7 +8,10 @@ namespace EQLogParser
     DamageTaken,
     HealingDealt,
     HealingReceived,
-    Crit
+    Crit,
+    // zero-damage evades: Defensive = they failed on me (blue), Missed = I whiffed (dim gray)
+    Defensive,
+    Missed
   }
 
   /* One floating text for a canvas to draw. Kept UI-agnostic so Core can own the feed. */
@@ -20,6 +23,7 @@ namespace EQLogParser
     public bool Crit;
     public double Value;
     public string Source; // "(melee)" / "(Fireball)" / ...
+    public string ValueText; // non-numeric main-line text (defensive labels); null = formatted Value
   }
 
   /*
@@ -52,19 +56,49 @@ namespace EQLogParser
       }
 
       var record = e.Record;
-      var self = record.Attacker == ConfigUtil.PlayerName ||
-                 PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == ConfigUtil.PlayerName;
+      var iAmAttacker = record.Attacker == ConfigUtil.PlayerName ||
+                         PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == ConfigUtil.PlayerName;
+      var iAmDefender = record.Defender == ConfigUtil.PlayerName ||
+                        PlayerRegistry.Instance.GetPlayerFromPet(record.Defender) == ConfigUtil.PlayerName;
+
+      // FCT covers my character's fight only; anything else is noise
+      if (!iAmAttacker && !iAmDefender)
+      {
+        return;
+      }
+
+      // evades arrive as zero-damage records carrying a label in Type (see DamageLineParser)
+      if (record.Total == 0 && IsDefensiveLabel(record.Type))
+      {
+        Raise([new FctHitCommand
+        {
+          Lane = iAmDefender ? FctLane.Defensive : FctLane.Missed,
+          ValueText = record.Type,
+          Source = string.IsNullOrEmpty(record.SubType) ? null : $"({record.SubType})",
+        }]);
+        return;
+      }
+
+      if (record.Total == 0)
+      {
+        return; // nothing numeric to show
+      }
+
       var crit = LineModifiersParser.IsCrit(record.ModifiersMask);
 
       Raise([new FctHitCommand
       {
-        Lane = self ? FctLane.DamageDealt : FctLane.DamageTaken,
+        Lane = iAmAttacker ? FctLane.DamageDealt : FctLane.DamageTaken,
         Crit = crit,
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
-        Source = $"({record.SubType})",
+        Source = string.IsNullOrEmpty(record.SubType) ? null : $"({record.SubType})",
       }]);
     }
+
+    /* The labels DamageLineParser assigns to zero-damage evade lines. */
+    private static bool IsDefensiveLabel(string type) =>
+      type is Labels.Miss or Labels.Dodge or Labels.Block or Labels.Parry or Labels.Riposte or Labels.Absorb or Labels.Invulnerable;
 
     internal void HandleHeal(HealProcessedEvent e)
     {

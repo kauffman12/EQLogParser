@@ -24,6 +24,7 @@ namespace EQLogParser
     {
       FctSimLane.DamageDealt or FctSimLane.DamageTaken => 7,
       FctSimLane.HealingDealt or FctSimLane.HealingReceived => 5,
+      FctSimLane.Defensive or FctSimLane.Missed => 5,
       _ => 0, // Crit: caller keeps its fixed lifetime
     };
 

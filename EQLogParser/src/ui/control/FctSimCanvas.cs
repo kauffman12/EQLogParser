@@ -15,7 +15,10 @@ namespace EQLogParser
     DamageTaken,
     HealingDealt,
     HealingReceived,
-    Crit
+    Crit,
+    // zero-damage evades: Defensive = they failed on me (blue), Missed = I whiffed (dim gray)
+    Defensive,
+    Missed
   }
 
   /* Per-hit render state for the FCT simulation canvas. There is deliberately no UIElement per hit:
@@ -57,6 +60,7 @@ namespace EQLogParser
     /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
      * from normal damage, not a spectacle. */
     private const double CritFontSize = 34;
+    private const double DefensiveFontSize = 20; // evade words are informational, not damage
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
 
@@ -130,7 +134,7 @@ namespace EQLogParser
      * Adds a hit. Crits divert to the crit lane regardless of source lane. Every hit spawns in the
      * bottom third of its half (incoming left / outgoing right) and rises with a sideways arc.
      */
-    public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false)
+    public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false, string valueText = null)
     {
       if (_clock is null)
       {
@@ -145,7 +149,7 @@ namespace EQLogParser
       }
 
       // captured before crits are pooled into their own lane, so a taken-crit stays on the incoming side
-      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived;
+      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived or FctSimLane.Defensive;
       if (crit)
       {
         lane = FctSimLane.Crit;
@@ -159,11 +163,14 @@ namespace EQLogParser
         FctSimLane.DamageTaken => w * 0.35,
         FctSimLane.HealingReceived => w * 0.14,
         FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
+        // evades ride with their side's damage lane - a miss lands where the whiffed swing would
+        FctSimLane.Defensive => w * 0.35,
+        FctSimLane.Missed => w * 0.65,
         FctSimLane.HealingDealt => w * 0.86,
         _ => w * 0.65, // DamageDealt
       };
 
-      var state = NewHitState(lane, value, action, minor,
+      var state = NewHitState(lane, value, action, minor, valueText,
         x: cx + ((_rand.NextDouble() * 2 - 1) * (lane == FctSimLane.Crit ? w * 0.17 : w * 0.09)),
         y: h * (0.68 + _rand.NextDouble() * 0.17), // bottom third
         now: _clock.Elapsed.TotalMilliseconds);
@@ -314,7 +321,7 @@ namespace EQLogParser
       _statFrameMsSum += LastFrameMs;
     }
 
-    private FctSimHitState NewHitState(FctSimLane lane, double value, string action, bool minor, double x, double y, double now)
+    private FctSimHitState NewHitState(FctSimLane lane, double value, string action, bool minor, string valueText, double x, double y, double now)
     {
       var state = new FctSimHitState
       {
@@ -348,6 +355,16 @@ namespace EQLogParser
           state.ValueBrush = MakeFrozenBrush(0xFF, 0xD7, 0x5E); // yellow
           break;
 
+        case FctSimLane.Defensive:
+          state.ValueFontSize = DefensiveFontSize;
+          state.ValueBrush = MakeFrozenBrush(0x4F, 0xA8, 0xE8); // blue - a defense that worked for me
+          break;
+
+        case FctSimLane.Missed:
+          state.ValueFontSize = MinorFontSize;
+          state.ValueBrush = MakeFrozenBrush(0x9A, 0xA3, 0xAD); // dim gray - my own whiff, informational only
+          break;
+
         default: // DamageTaken
           state.ValueFontSize = DamageTakenFontSize;
           state.ValueBrush = MakeFrozenBrush(0xFF, 0x6B, 0x5E); // red
@@ -355,7 +372,7 @@ namespace EQLogParser
       }
 
       state.SourceFontSize = Math.Max(SourceFontMin, state.ValueFontSize * 0.42);
-      state.LastValueKey = FctText.FormatHitValue(value);
+      state.LastValueKey = valueText is not null ? valueText : FctText.FormatHitValue(value);
       BuildTexts(state);
       return state;
     }
@@ -396,7 +413,7 @@ namespace EQLogParser
       hit.ValueOutline = MakeText(value, hit.ValueFontSize, _valueTypeface, _outlineBrush);
       // glow is crit-only (NAG's default non-crit groups carry no halo) — one less cached text per normal hit
       hit.ValueGlow = hit.Blowout ? MakeText(value, hit.ValueFontSize, _valueTypeface, _glowBrush) : null;
-      var source = $"({hit.Action})";
+      var source = hit.Action is not null ? $"({hit.Action})" : ""; // evades may carry no ability name
       hit.SourceText = MakeText(source, hit.SourceFontSize, _sourceTypeface, hit.SourceBrush);
       hit.SourceOutline = MakeText(source, hit.SourceFontSize, _sourceTypeface, _outlineBrush);
     }

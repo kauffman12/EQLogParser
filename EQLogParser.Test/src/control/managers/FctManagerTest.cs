@@ -37,7 +37,7 @@ namespace EQLogParser
     {
       FireDamage("TestPlayer", 500);
       FireDamage("TestPlayer", 600, crit: true);
-      FireDamage("OtherGuy", 700);
+      FireDamage("OtherGuy", 700, defender: "TestPlayer"); // they hit me -> DamageTaken
 
       Assert.AreEqual(3, _batches.Count);
       Assert.AreEqual(FctLane.DamageDealt, _batches[0][0].Lane);
@@ -46,6 +46,36 @@ namespace EQLogParser
       Assert.AreEqual(FctLane.DamageDealt, _batches[1][0].Lane);
       Assert.IsTrue(_batches[1][0].Crit);
       Assert.AreEqual(FctLane.DamageTaken, _batches[2][0].Lane);
+    }
+
+    [TestMethod]
+    public void IgnoresLinesThatDoNotInvolveMe()
+    {
+      FireDamage("OtherGuy", 100); // someone else's fight entirely
+
+      Assert.AreEqual(0, _batches.Count);
+    }
+
+    [TestMethod]
+    public void EvadesEmitWordsOnTheRightSide()
+    {
+      FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0, type: Labels.Miss); // they whiff on me -> blue, left
+      FireDamage("TestPlayer", 200, total: 0, type: Labels.Dodge);                     // target dodges me -> gray, right
+
+      Assert.AreEqual(2, _batches.Count);
+      Assert.AreEqual(FctLane.Defensive, _batches[0][0].Lane);
+      Assert.AreEqual(Labels.Miss, _batches[0][0].ValueText);
+      Assert.IsFalse(_batches[0][0].Crit);
+      Assert.AreEqual(FctLane.Missed, _batches[1][0].Lane);
+      Assert.AreEqual(Labels.Dodge, _batches[1][0].ValueText);
+    }
+
+    [TestMethod]
+    public void ZeroDamageWithoutALabelIsDropped()
+    {
+      FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0, type: Labels.Dd);
+
+      Assert.AreEqual(0, _batches.Count);
     }
 
     [TestMethod]
@@ -82,14 +112,16 @@ namespace EQLogParser
       Assert.AreEqual(94.0, _batches[0][0].Value);
     }
 
-    private static void FireDamage(string attacker, double beginTime, bool crit = false, bool isMonitor = true) =>
+    private static void FireDamage(string attacker, double beginTime, bool crit = false, bool isMonitor = true,
+      string defender = "SomeNpc", uint total = 100, string type = Labels.Dd) =>
       FctManager.Instance.HandleDamage(new DamageProcessedEvent
       {
         Record = new DamageRecord
         {
           Attacker = attacker,
-          Defender = "SomeNpc",
-          Total = 100,
+          Defender = defender,
+          Total = total,
+          Type = type,
           SubType = "melee",
           ModifiersMask = crit ? LineModifiersParser.Crit : LineModifiersParser.None,
         },

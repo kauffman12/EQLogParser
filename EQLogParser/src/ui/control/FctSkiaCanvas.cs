@@ -48,6 +48,7 @@ namespace EQLogParser
     /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
      * from normal damage, not a spectacle. */
     private const double CritFontSize = 34;
+    private const double DefensiveFontSize = 20; // evade words are informational, not damage
     private const double MinorFontSize = 19;
     private const double SourceFontMin = 12;
     private const float GlowSigma = 5f;
@@ -137,7 +138,7 @@ namespace EQLogParser
     }
 
     /* Mirrors FctSimCanvas.AddHit: bottom-third spawn in the lane's half, rise + arc. */
-    public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false)
+    public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false, string valueText = null)
     {
       if (_clock is null)
       {
@@ -152,7 +153,7 @@ namespace EQLogParser
       }
 
       // captured before crits are pooled into their own lane, so a taken-crit stays on the incoming side
-      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived;
+      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived or FctSimLane.Defensive;
       if (crit)
       {
         lane = FctSimLane.Crit;
@@ -166,11 +167,14 @@ namespace EQLogParser
         FctSimLane.DamageTaken => w * 0.35,
         FctSimLane.HealingReceived => w * 0.14,
         FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
+        // evades ride with their side's damage lane - a miss lands where the whiffed swing would
+        FctSimLane.Defensive => w * 0.35,
+        FctSimLane.Missed => w * 0.65,
         FctSimLane.HealingDealt => w * 0.86,
         _ => w * 0.65, // DamageDealt
       };
 
-      var hit = NewHitState(lane, value, action, minor,
+      var hit = NewHitState(lane, value, action, minor, valueText,
         x: cx + ((_rand.NextDouble() * 2 - 1) * (lane == FctSimLane.Crit ? w * 0.17 : w * 0.09)),
         y: h * (0.68 + _rand.NextDouble() * 0.17), // bottom third
         now: _clock.Elapsed.TotalMilliseconds);
@@ -382,7 +386,7 @@ namespace EQLogParser
       _statFrameMsSum += LastFrameMs;
     }
 
-    private FctSkiaHit NewHitState(FctSimLane lane, double value, string action, bool minor, double x, double y, double now)
+    private FctSkiaHit NewHitState(FctSimLane lane, double value, string action, bool minor, string valueText, double x, double y, double now)
     {
       var hit = new FctSkiaHit
       {
@@ -393,7 +397,7 @@ namespace EQLogParser
         TargetValue = value,
         CountBaseValue = value,
         Action = action,
-        LastValueKey = FctText.FormatHitValue(value),
+        LastValueKey = valueText is not null ? valueText : FctText.FormatHitValue(value),
       };
 
       switch (lane)
@@ -413,6 +417,16 @@ namespace EQLogParser
         case FctSimLane.DamageDealt:
           hit.ValueFontSize = minor ? MinorFontSize : DamageDealtFontSize;
           hit.ValueColor = new SKColor(0xFF, 0xD7, 0x5E); // yellow
+          break;
+
+        case FctSimLane.Defensive:
+          hit.ValueFontSize = DefensiveFontSize;
+          hit.ValueColor = new SKColor(0x4F, 0xA8, 0xE8); // blue - a defense that worked for me
+          break;
+
+        case FctSimLane.Missed:
+          hit.ValueFontSize = MinorFontSize;
+          hit.ValueColor = new SKColor(0x9A, 0xA3, 0xAD); // dim gray - my own whiff, informational only
           break;
 
         default: // DamageTaken
@@ -560,8 +574,11 @@ namespace EQLogParser
       DrawOutlinedText(canvas, hit.LastValueKey, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueColor, alpha);
 
       // source line under the value
-      var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
-      DrawOutlinedText(canvas, $"({hit.Action})", (float)x, (float)sourceBase, hit.SourceFontSize, false, new SKColor(0x6E, 0x93, 0xC8), (byte)(alpha * 0.95));
+      if (hit.Action is not null)
+      {
+        var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
+        DrawOutlinedText(canvas, $"({hit.Action})", (float)x, (float)sourceBase, hit.SourceFontSize, false, new SKColor(0x6E, 0x93, 0xC8), (byte)(alpha * 0.95));
+      }
 
       if (s != 1f)
       {

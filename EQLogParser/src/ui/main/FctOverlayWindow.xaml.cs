@@ -44,7 +44,7 @@ namespace EQLogParser
       {
         foreach (var cmd in batch)
         {
-          _canvas.AddHit(Map(cmd.Lane), cmd.Value, cmd.Source, crit: cmd.Crit, minor: false);
+          _canvas.AddHit(Map(cmd.Lane), cmd.Value, cmd.Source, crit: cmd.Crit, minor: false, valueText: cmd.ValueText);
         }
       });
     }
@@ -57,6 +57,8 @@ namespace EQLogParser
       FctLane.DamageTaken => FctSimLane.DamageTaken,
       FctLane.HealingDealt => FctSimLane.HealingDealt,
       FctLane.HealingReceived => FctSimLane.HealingReceived,
+      FctLane.Defensive => FctSimLane.Defensive,
+      FctLane.Missed => FctSimLane.Missed,
       _ => FctSimLane.Crit,
     };
 

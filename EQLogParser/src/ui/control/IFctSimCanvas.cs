@@ -21,7 +21,7 @@ namespace EQLogParser
     void Start();
     void Stop();
 
-    void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false);
+    void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false, string valueText = null);
     bool TryAccumulate(FctSimLane lane, double amount);
   }
 }
