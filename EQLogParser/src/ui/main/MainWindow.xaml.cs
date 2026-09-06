@@ -29,6 +29,7 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
+    private FctOverlayWindow _fctOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
     private PetMapping _currentEditMapping;
@@ -376,6 +377,33 @@ namespace EQLogParser
     private void OpenFctSimulationClick(object sender, RoutedEventArgs e) => new FctSimulationWindow().Show();
 
     private void OpenFctSkiaSimulationClick(object sender, RoutedEventArgs e) => new FctSimulationWindow(useSkia: true).Show();
+
+    /* Live-record FCT overlay (real logs, monitor lines only) - see FctOverlayWindow. */
+    private void ToggleFctOverlayClick(object sender, RoutedEventArgs e)
+    {
+      if (_fctOverlay is null)
+      {
+        _fctOverlay = new FctOverlayWindow();
+        // Esc closes the window: drop the reference so the next toggle builds a fresh one
+        _fctOverlay.EventsClosed += () =>
+        {
+          fctOverlay.IsChecked = false;
+          _fctOverlay = null;
+        };
+      }
+
+      var show = !_fctOverlay.IsVisible;
+      if (show)
+      {
+        _fctOverlay.Show();
+      }
+      else
+      {
+        _fctOverlay.Hide();
+      }
+
+      fctOverlay.IsChecked = show;
+    }
 
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);

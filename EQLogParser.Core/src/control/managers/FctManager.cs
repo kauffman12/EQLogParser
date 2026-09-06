@@ -14,7 +14,10 @@ namespace EQLogParser
   /* One floating text for a canvas to draw. Kept UI-agnostic so Core can own the feed. */
   internal sealed class FctHitCommand
   {
+    // the source lane, even for crits: the renderer pools a crit onto its producing side's half,
+    // which it can only know if the lane survives here unpooled
     public FctLane Lane;
+    public bool Crit;
     public double Value;
     public string Source; // "(melee)" / "(Fireball)" / ...
   }
@@ -55,7 +58,8 @@ namespace EQLogParser
 
       Raise([new FctHitCommand
       {
-        Lane = crit ? FctLane.Crit : self ? FctLane.DamageDealt : FctLane.DamageTaken,
+        Lane = self ? FctLane.DamageDealt : FctLane.DamageTaken,
+        Crit = crit,
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
         Source = $"({record.SubType})",
@@ -73,6 +77,7 @@ namespace EQLogParser
                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healed) == ConfigUtil.PlayerName;
       var dealtByMe = e.Record.Healer == ConfigUtil.PlayerName ||
                       PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healer) == ConfigUtil.PlayerName;
+      var crit = LineModifiersParser.IsCrit(e.Record.ModifiersMask);
       if (!healedMe && !dealtByMe)
       {
         return; // party-wide healing lands with the group config
@@ -89,6 +94,7 @@ namespace EQLogParser
       {
         // a self-heal reads as healing on me
         Lane = healedMe ? FctLane.HealingReceived : FctLane.HealingDealt,
+        Crit = crit,
         Value = e.Record.Total,
         Source = $"({e.Record.SubType})",
       }]);

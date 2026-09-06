@@ -41,7 +41,10 @@ namespace EQLogParser
 
       Assert.AreEqual(3, _batches.Count);
       Assert.AreEqual(FctLane.DamageDealt, _batches[0][0].Lane);
-      Assert.AreEqual(FctLane.Crit, _batches[1][0].Lane);
+      Assert.IsFalse(_batches[0][0].Crit);
+      // a crit keeps its source lane; the renderer is what pools it onto that side's half
+      Assert.AreEqual(FctLane.DamageDealt, _batches[1][0].Lane);
+      Assert.IsTrue(_batches[1][0].Crit);
       Assert.AreEqual(FctLane.DamageTaken, _batches[2][0].Lane);
     }
 
