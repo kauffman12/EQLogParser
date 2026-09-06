@@ -622,6 +622,46 @@ folds: players read heals individually, and merging them hides who got patched. 
 NAG's "ignore under 2× median of *max hits*" because ignoring is not an option here — losing a number in an
 overlay whose whole job is to lose nothing measurable is worse than showing a small one.
 
+### Text sizes, and the reserve they imply
+
+The first pass used web-scale type, and every tier went up by at least two points once it was looked at how it is
+actually read: across a game window, in peripheral vision, while moving (`FctStyle`: dealt 34 / taken 32 / healing 28 /
+crit 40 / labels 24 / smallest numeric tier 23). The *ratios* were sound from the start, so treat an absolute size as a
+presentation decision and a ratio as a design one.
+
+Bigger type also made an existing bug impossible to miss: `FctHitState.Y0` is the **top** of the value text, and layouts
+that reserved one em ran descenders and the entire source line off the bottom of the overlay — permanently, because
+incoming hits travel downwards and spend their last seconds against the bottom edge. Every vertical bound now reserves
+`FctLayout.TextReserve(hit)`: value height (`TextHeightFactor`), plus the source line's height when the hit carries one,
+times `CritPeakScale` for a crit (the draw scales about a pivot partway down the value, so scaling the whole block
+over-reserves slightly and never clips). It is a factor rather than measured glyph metrics for the same reason
+`EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`
+pins it in both region schemes, with a source line present and at crit scale.
+
+### Smoothing, where animated text actually costs
+
+- **Easing is smootherstep** (`6t⁵ − 15t⁴ + 10t³`) rather than ease-out-quad. Ease-out-quad leaves at full speed, which
+  is what made a number look thrown onto the screen; smootherstep has zero velocity *and* zero acceleration at both
+  ends, which is what "floated" means. The horizontal arc uses the same curve so the path cannot bend oddly mid-flight.
+- **Skia's antialias flag defaults to off in SkiaSharp 3**, and every paint in `FctSkiaCanvas` draws glyphs or the
+  blurred crit halo, so it is set explicitly: without it a 34 px number has staircase edges.
+- **`SKFont.Hinting = None`, `SKFont.Subpixel = true`.** Hinting reshapes a glyph according to which pixel rows it lands
+  on, so text that drifts a pixel per frame silently redraws its own outline every frame — the crawl people describe as
+  jitter even though the position maths is continuous. Without subpixel positioning Skia snaps each run to a whole
+  pixel, quantising exactly the motion `FctMotion` interpolated. Both settings are right for moving text and wrong for
+  a static document, so they are commented rather than obvious: do not tidy them back to defaults.
+- Raster stays capped near 60 Hz (`TargetFrameMs`) while `EventsFrame` still fires at display refresh. On a 120/144 Hz
+  screen that cap is the next dial to turn if motion still reads as stepped, and it costs a full surface raster per
+  extra frame (~3.5 MB of pixel work at 980×640 @150%).
+
+### The one grammatical rule on the source line
+
+`FctManager.DisplaySource` singularises the attack verb ("Crushes" → "Crush") for melee records **and** for the
+zero-damage evade lines, because `DamageLineParser` fills `SubType` from `"X tries to crush Y, but Y dodges!"` even
+though `Type` carries the label there. Miss that and the same swing reads "Crushes" beside DODGE and "Crush" under its
+number — invisible in a log file, obvious in peripheral vision. Nothing else is ever conjugated: every other `SubType`
+is a spell name, and proper nouns keep their letters (`Crown of Stars` is not `Crown of Star`).
+
 ### Locked by default: click-through and persistence
 
 In game the overlay must not eat clicks or take focus, so `FctOverlayWindow` runs layered plus

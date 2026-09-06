@@ -175,11 +175,17 @@ namespace EQLogParser
     private static bool IsDefensiveLabel(string type) =>
       type is Labels.Miss or Labels.Dodge or Labels.Block or Labels.Parry or Labels.Riposte or Labels.Absorb or Labels.Invulnerable;
 
-    /* Melee records carry the verb in SubType ("Crushes"); every other type carries a spell name,
-     * which is a proper noun and must never be conjugated. */
+    /*
+     * Melee records carry the attack verb in SubType ("Crushes"), and so do the zero-damage evade lines: their verb
+     * comes from "X tries to crush Y, but ..." even though Type holds the label instead of Labels.Melee. Everything
+     * else carries a spell name, which is a proper noun and must never be conjugated — Crown of Stars is not Crown of
+     * Star. Without the evade clause the same swing reads "Crush" under a damage number and "Crushes" under MISS or
+     * DODGE, and that inconsistency costs more here than anywhere else in the app because overlay text is read at a
+     * glance, by someone who is not looking for grammar.
+     */
     private static string DisplaySource(DamageRecord record) =>
       string.IsNullOrEmpty(record.SubType) ? null
-        : record.Type == Labels.Melee ? SingularizeVerb(record.SubType)
+        : record.Type == Labels.Melee || IsDefensiveLabel(record.Type) ? SingularizeVerb(record.SubType)
         : record.SubType;
 
     /* Display-only polish: melee lines capture the third-person verb ("bites", "crushes") and FCT

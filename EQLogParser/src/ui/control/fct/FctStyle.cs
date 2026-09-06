@@ -17,18 +17,23 @@ namespace EQLogParser
    */
   internal static class FctStyle
   {
-    public const double DamageDealtFontSize = 31;
-    public const double DamageTakenFontSize = 29;
-    public const double HealingFontSize = 25;
-    public const double CritFontSize = 35;
+    /* Sizes are what the overlay is read at: across a game window, in peripheral vision, while moving. The first
+     * pass borrowed web-scale sizes and every tier went up by at least two points once it was looked at in game —
+     * the ratios below (crit well above dealt, labels above the smallest numeric tier) survived, the absolute
+     * numbers did not. Raising them also forces the vertical reserve in FctLayout.TextReserve to keep up.
+     */
+    public const double DamageDealtFontSize = 34;
+    public const double DamageTakenFontSize = 32;
+    public const double HealingFontSize = 28;
+    public const double CritFontSize = 40;
 
     /* Evade words are informational, but they are the only text on screen that carries a sentence's worth of
      * meaning, so they get a tier of their own rather than being treated as tiny damage. */
-    public const double DefensiveFontSize = 21;
+    public const double DefensiveFontSize = 24;
 
     // periodic ticks and the player's own misses: readable, but never competing with a direct hit
-    public const double MinorFontSize = 20;
-    public const double SourceFontMin = 12;
+    public const double MinorFontSize = 23;
+    public const double SourceFontMin = 14;
 
     /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
     public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);

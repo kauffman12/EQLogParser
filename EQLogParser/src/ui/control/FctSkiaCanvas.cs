@@ -475,6 +475,16 @@ namespace EQLogParser
 
       EnsureSkiaResources();
       font = new SKFont(bold ? _boldTypeface : _regularTypeface, (float)size, 1f, 0f);
+
+      /*
+       * Animated text wants the opposite defaults from static text. Hinting reshapes a glyph according to which pixel
+       * rows it lands on, so a number drifting a pixel per frame silently changes its own outline every frame — the
+       * crawl that reads as jitter even though the position maths is smooth. And without subpixel positioning Skia
+       * snaps each run to a whole pixel, which quantises the very motion FctMotion just interpolated. Together these
+       * two are why the float stops stepping.
+       */
+      font.Hinting = SKFontHinting.None;
+      font.Subpixel = true;
       _fonts[key] = font;
       return font;
     }
@@ -485,6 +495,10 @@ namespace EQLogParser
       paint.Color = color;
       paint.Style = style;
       paint.StrokeWidth = strokeWidth;
+
+      /* Antialias is off by default in SkiaSharp 3, and every paint here draws glyphs (or the blurred crit halo):
+       * without it a 34 px number has staircase edges and the halo blits with nearest-neighbour steps. */
+      paint.IsAntialias = true;
     }
 
     private static SKColor ColorOf(int argb, double opacity) => new SKColor((uint)argb).WithAlpha(AlphaOf(opacity, (argb >>> 24) & 0xFF));

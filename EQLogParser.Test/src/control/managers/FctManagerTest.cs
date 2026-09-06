@@ -50,12 +50,12 @@ namespace EQLogParser
     {
       FireDamage("TestPlayer", 500);
       FireDamage("TestPlayer", 600, crit: true);
-      FireDamage("OtherGuy", 700, defender: "TestPlayer"); // they hit me -> DamageTaken
+      FireDamage("OtherGuy", 700, defender: "TestPlayer"); // they hit me -> incoming lane
 
       Assert.AreEqual(3, Drain());
       Assert.AreEqual(FctLane.DamageDealt, _drained[0].Lane);
       Assert.IsFalse(_drained[0].Crit);
-      // a crit keeps its source lane; the renderer is what pools it onto that side's half
+      // a crit keeps its source lane; the renderer is what pools it into the crit lane on that side's region
       Assert.AreEqual(FctLane.DamageDealt, _drained[1].Lane);
       Assert.IsTrue(_drained[1].Crit);
       Assert.AreEqual(FctLane.DamageTaken, _drained[2].Lane);
@@ -72,8 +72,8 @@ namespace EQLogParser
     [TestMethod]
     public void EvadesEmitWordsOnTheRightSide()
     {
-      FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0, type: Labels.Miss); // they whiff on me -> blue, left
-      FireDamage("TestPlayer", 200, total: 0, type: Labels.Dodge);                     // target dodges me -> gray, right
+      FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0, type: Labels.Miss); // they whiff on me -> Defensive
+      FireDamage("TestPlayer", 200, total: 0, type: Labels.Dodge);                     // my swing gets dodged -> Missed
 
       Assert.AreEqual(2, Drain());
       Assert.AreEqual(FctLane.Defensive, _drained[0].Lane);
@@ -147,6 +147,25 @@ namespace EQLogParser
       Assert.IsFalse(_drained[0].Source.Contains('(', StringComparison.Ordinal));
     }
 
+    /*
+     * An evade label's source is the same attack verb a damage number shows: DamageLineParser fills SubType from
+     * "X tries to crush Y, but Y dodges!" as well, even though Type carries the label there. Miss that and the same
+     * swing reads "Crush" under a number and "Crushes" beside DODGE — the kind of wobble nobody notices in a log and
+     * everybody notices in peripheral vision. Spell names stay untouched however they end: they are proper nouns.
+     */
+    [TestMethod]
+    public void EvadeLabelsSingulariseTheirVerbLikeDamageDoes()
+    {
+      FireDamage("TestPlayer", 100, total: 0, type: Labels.Dodge, subType: "Crushes");
+      FireDamage("OtherGuy", 200, defender: "TestPlayer", total: 0, type: Labels.Miss, subType: "Bites");
+      FireDamage("OtherGuy", 300, defender: "TestPlayer", subType: "Crown of Stars");
+
+      Assert.AreEqual(3, Drain());
+      Assert.AreEqual("Crush", _drained[0].Source);
+      Assert.AreEqual("Bite", _drained[1].Source);
+      Assert.AreEqual("Crown of Stars", _drained[2].Source);
+    }
+
     [TestMethod]
     public void StaleCommandsAreDroppedRatherThanReplayed()
     {
@@ -183,7 +202,7 @@ namespace EQLogParser
     }
 
     private static void FireDamage(string attacker, double beginTime, bool crit = false, bool isMonitor = true,
-      string defender = "SomeNpc", uint total = 100, string type = Labels.Dd) =>
+      string defender = "SomeNpc", uint total = 100, string type = Labels.Dd, string subType = "melee") =>
       FctManager.Instance.HandleDamage(new DamageProcessedEvent
       {
         Record = new DamageRecord
@@ -192,7 +211,7 @@ namespace EQLogParser
           Defender = defender,
           Total = total,
           Type = type,
-          SubType = "melee",
+          SubType = subType,
           ModifiersMask = crit ? LineModifiersParser.Crit : LineModifiersParser.None,
         },
         BeginTime = beginTime,

@@ -45,6 +45,29 @@ namespace EQLogParser
     private const double TravelSlackFrac = 0.10;
 
     /*
+     * How much vertical space a drawn hit needs below its anchor, as multiples of the font sizes involved: y is the
+     * top of the value text, and what actually gets drawn is the value (baseline around 0.82 em, plus descenders),
+     * optionally the parenthesised source line under it. Factor rather than measured glyph metrics because the band
+     * has to exist at spawn time, before a backend has built any text — see EstimateTextWidth for the same trade.
+     */
+    public const double TextHeightFactor = 1.35;
+    public const double SourceLineFactor = 1.25;
+
+    /*
+     * Vertical space a hit occupies below its y anchor, including the crit pop: DrawHit scales about a pivot partway
+     * down the value, so CritPeakScale is applied to the whole block, which over-reserves slightly and never clips.
+     * Reserving one em instead is what let incoming hits — which travel downwards and finish their life at the bottom
+     * of the band — run their descenders and source line off the edge of the overlay.
+     */
+    public static double TextReserve(FctHitState hit)
+    {
+      var block = (hit.ValueFontSize * TextHeightFactor) +
+                  (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
+
+      return hit.Blowout ? block * FctMotion.CritPeakScale : block;
+    }
+
+    /*
      * Whether a lane is about something happening to me — the bottom band in bands mode, the left half in halves
      * mode. Crit is deliberately not handled here: ingest reads this from the producing lane before pooling, and
      * stores it on hit.Incoming, which is what keeps a taken crit on the incoming side.
@@ -93,14 +116,15 @@ namespace EQLogParser
       hit.SideMin = EdgePad;
       hit.SideMax = Math.Max(EdgePad + 1, w - EdgePad);
 
-      /* Y0 is the top of the value text, so the band facing the gap gives up one em: an outgoing hit may not
-       * drop into the protected strip and an incoming one may not start inside it. Both endpoints of the travel
-       * are placed inside the band, so nothing crosses during its life; FctMotion clamps anyway because the
-       * fountain fall is the same maths asked to do more. */
-      var em = Math.Max(8, hit.ValueFontSize);
+      /* The band facing the gap gives up the hit's whole drawn height — value, source line and crit pop — so an
+       * outgoing hit cannot drop into the protected strip and an incoming one cannot start inside it, and the band
+       * edge away from the gap keeps the same reserve against the window border. Both endpoints of the travel are
+       * placed inside the band, so nothing crosses during its life; FctMotion clamps anyway because the fountain fall
+       * is the same maths asked to do more. */
+      var reserve = TextReserve(hit);
       if (hit.Incoming)
       {
-        ApplyBand(hit, h * GapBottomFrac, h - EdgePad - em, h);
+        ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
         hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
 
         // negative Rise: FctMotion computes Y0 - (Rise * ease), so incoming sinks away from the gap
@@ -108,7 +132,7 @@ namespace EQLogParser
       }
       else
       {
-        ApplyBand(hit, EdgePad, (h * GapTopFrac) - em, h);
+        ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
         hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
         hit.Rise = hit.Y0 - (hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble()));
       }
@@ -136,8 +160,11 @@ namespace EQLogParser
 
       var spread = hit.Blowout ? 0.17 : 0.09;
       hit.X0 = cx + ((rand.NextDouble() * 2 - 1) * (w * spread));
-      hit.Y0 = h * (0.68 + (rand.NextDouble() * 0.17));                    // bottom third
-      hit.Rise = hit.Y0 - (h * (0.05 + (rand.NextDouble() * 0.08)));       // finish in a top band, fade out there
+
+      // bottom third, but never so low that the drawn block hangs off the window; then rise to a top band
+      var lowestStart = Math.Max(EdgePad, h - EdgePad - TextReserve(hit));
+      hit.Y0 = Math.Min(h * (0.68 + (rand.NextDouble() * 0.17)), lowestStart);
+      hit.Rise = Math.Max(0, hit.Y0 - (h * (0.05 + (rand.NextDouble() * 0.08))));
       hit.Arc = (rand.NextDouble() * 2 - 1) * w * (hit.Blowout ? 0.15 : 0.12);
 
       /* Math.Max/Min keep the band valid on a small overlay: an inverted band used to throw inside Math.Clamp on

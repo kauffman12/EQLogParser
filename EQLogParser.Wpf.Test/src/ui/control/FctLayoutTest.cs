@@ -56,7 +56,7 @@ namespace EQLogParser
           for (var t = 0.0; t <= 1.0; t += 0.05)
           {
             var y = FctMotion.RaisedY(hit, t);
-            var bottom = y + hit.ValueFontSize; // y is the top of the value text
+            var bottom = y + FctLayout.TextReserve(hit); // y is the top of the value text
 
             if (incoming)
             {
@@ -175,12 +175,44 @@ namespace EQLogParser
       Assert.IsTrue(critMax > normalMax, "crits should occupy a wider band than ordinary damage");
     }
 
-    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands)
+    /*
+     * The clip a player actually notices: the whole drawn block — value, descenders, the source line under it, all of
+     * it scaled up during a crit's pop — has to stay inside the window for the hit's entire life, not merely its anchor
+     * point. Incoming hits are the case that used to fail, because they travel downwards and spend their last seconds
+     * against the bottom edge with only one em of reserve.
+     */
+    [TestMethod]
+    public void DrawnBlockStaysInsideTheWindow()
     {
+      var rand = new Random(4);
+
+      foreach (var mode in new[] { FctLayoutMode.Bands, FctLayoutMode.Halves })
+      {
+        for (var i = 0; i < 300; i++)
+        {
+          foreach (var incoming in new[] { true, false })
+          {
+            var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, mode: mode, source: "Crushing Blow");
+
+            for (var t = 0.0; t <= 1.0; t += 0.05)
+            {
+              var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextReserve(hit);
+              Assert.IsTrue(bottom <= Height - FctLayout.EdgePad + 0.001,
+                $"text clipped at the bottom edge in {mode} mode at t={t:0.00} (bottom {bottom:0.#}, canvas {Height})");
+            }
+          }
+        }
+      }
+    }
+
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, FctLayoutMode mode = FctLayoutMode.Bands, string? source = null)
+    {
+      // Source must be set before layout runs: the vertical reserve is derived from it, exactly as FctIngest does it
       var hit = new FctHitState
       {
         Lane = crit ? FctLane.Crit : lane,
         Incoming = incoming,
+        Source = source,
         TargetValue = 1234,
         CountBaseValue = 1234,
       };

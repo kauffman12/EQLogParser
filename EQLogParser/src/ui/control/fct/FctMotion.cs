@@ -44,13 +44,13 @@ namespace EQLogParser
     {
       if (hit.FallDist <= 0.0)
       {
-        return hit.Y0 - (hit.Rise * EaseOutQuad(t));
+        return hit.Y0 - (hit.Rise * Ease(t));
       }
 
       const double riseFrac = 1.0 - FallPhaseFrac;
       if (t < riseFrac)
       {
-        return hit.Y0 - (hit.Rise * EaseOutQuad(t / riseFrac));
+        return hit.Y0 - (hit.Rise * Ease(t / riseFrac));
       }
 
       var u = (t - riseFrac) / FallPhaseFrac;
@@ -79,7 +79,7 @@ namespace EQLogParser
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
 
-      return Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), lo, hi);
+      return Math.Clamp(hit.X0 + (hit.Arc * Ease(t)), lo, hi);
     }
 
     /* Crit pop, or the fountain shrink over the fall phase. 1 when neither applies. */
@@ -164,6 +164,12 @@ namespace EQLogParser
       return CritPeakScale - ((CritPeakScale - CritScaleEnd) * p * p);
     }
 
-    private static double EaseOutQuad(double p) => 1 - ((1 - p) * (1 - p));
+    /*
+     * Smootherstep (6t⁵ − 15t⁴ + 10t³): velocity *and* acceleration are zero at both ends, so a number leaves
+     * without a jerk and arrives without a hard stop. EaseOutQuad — the previous curve — begins at full speed, which
+     * is what made a hit look thrown onto the screen rather than floated off it; arc uses the same curve so the two
+     * components stay in step and the path does not bend oddly on the way out.
+     */
+    private static double Ease(double p) => p * p * p * (p * ((p * 6) - 15) + 10);
   }
 }
