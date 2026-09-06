@@ -249,33 +249,32 @@ namespace EQLogParser
     }
 
     /*
-     * Pulse is the "stay out of the way" style: no travel whatsoever, which also means it can never reach the protected
-     * strip however long it lives or how small the window is. Its only animation is scale (pinned in FctMotionTest), so
-     * what is pinned here is the absence of motion — a regression that quietly gave pulses a drift would look like a
-     * layout bug somewhere else entirely.
+     * Pulse is the static style, and static text lives or dies by not overlapping, so every number gets a cell of its own:
+     * distinct slots, no two numbers resting in the same place, nothing left moving once it has arrived. Asserted through
+     * the ingest because allocation is what makes the style safe; the raw geometry has its own file (FctCellGridTest) and
+     * the swell is pinned in FctMotionTest.
      */
     [TestMethod]
-    public void PulseStyleSpawnsInPlaceAndStaysThere()
+    public void PulseStyleGivesEveryNumberItsOwnCellAndThenStops()
     {
       var ingest = NewIngest();
       ingest.Style = FctMotionStyle.Pulse;
+      var resting = new List<(double X, double Y)>();
 
       for (var i = 0; i < 6; i++)
       {
         var hit = ingest.Accept(_hits, FctLane.DamageDealt, 5000 - (i * 40), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
 
         Assert.IsNotNull(hit, "distinct values must not fold into each other");
-        Assert.AreEqual(0.0, hit.Rise, $"pulse travel must be zero (was {hit.Rise:0.#})");
-        Assert.AreEqual(0.0, hit.Arc, "a pulse must not drift sideways either");
+        Assert.IsTrue(hit.Cell >= 0, "pulse mode allocates a cell per number");
         Assert.AreEqual(0.0, hit.FallDist, "there is nothing to fall from");
+        Assert.AreEqual(FctMotion.PulseSlideMs, hit.MotionMs, 0.001, "the slide into the cell is the whole animation");
 
-        var y = FctMotion.RaisedY(hit, 0);
-        var x = FctMotion.ArcedX(hit, 0);
-        for (var t = 0.0; t <= 1.0; t += 0.05)
-        {
-          Assert.AreEqual(y, FctMotion.RaisedY(hit, t), 0.001, "a pulse stays exactly where it appeared");
-          Assert.AreEqual(x, FctMotion.ArcedX(hit, t), 0.001);
-        }
+        var rest = (X: FctMotion.ArcedX(hit, 1), Y: FctMotion.RaisedY(hit, 1));
+        Assert.IsFalse(resting.Contains(rest), $"number {i} rests on top of an earlier one");
+        resting.Add(rest);
+
+        Assert.AreEqual(rest.Y, FctMotion.RaisedY(hit, FctMotion.Progress(hit, hit.LifetimeMs)), 0.001, "a number being read must not creep");
       }
     }
 
@@ -364,8 +363,13 @@ namespace EQLogParser
         var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
         Assert.IsTrue(hit.LifetimeMs > FctMotion.MotionWindowMs, $"{style} keeps the adaptive life (was {hit.LifetimeMs:0})");
-        Assert.AreEqual(FctMotion.MotionWindowMs, hit.MotionMs, 0.001, $"{style} travels inside the motion window, then holds");
       }
+
+      // hold spends the window travelling and then holds; pulse spends a fraction of it sliding into its cell
+      var hold = NewIngest();
+      hold.Style = FctMotionStyle.Hold;
+      var heldHit = hold.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 0);
+      Assert.AreEqual(FctMotion.MotionWindowMs, heldHit.MotionMs, 0.001, "hold travels inside the motion window, then holds");
     }
 
     /*

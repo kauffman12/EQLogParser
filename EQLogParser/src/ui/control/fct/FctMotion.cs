@@ -31,14 +31,21 @@ namespace EQLogParser
     public const double CritScaleEnd = 0.06;
 
     /*
-     * Pulse style: appear a little small, swell just past full size, settle onto it. This style has no travel at all, so
-     * the swell is the whole announcement — and its overshoot is deliberately modest (12%) because a lane full of pulses
+     * Pulse style: appear a little small, swell just past full size, settle onto it. Its only movement is the short slide
+     * into an assigned cell (FctCellGrid), so the swell carries the announcement — and its overshoot is deliberately modest (12%) because a lane full of pulses
      * shimmering in and out at 30% would be worse than the motion it replaces.
      */
     public const double PulseStartScale = 0.86;
     public const double PulsePeakScale = 1.12;
     public const double PulseInMs = 130;
     public const double PulseSettleMs = 420;
+
+    /*
+     * How long a celled (pulse) number takes to slide from its band's single spawn point into the cell it was assigned.
+     * Short enough that it is readable in place almost at once, long enough that a burst still reads as one event spreading
+     * out. Zero drops numbers straight into their cells, which is what anyone who finds the slide busy should run.
+     */
+    public const double PulseSlideMs = 220;
 
     public const double FadeInMs = 160;
 

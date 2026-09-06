@@ -67,9 +67,13 @@ namespace EQLogParser
     /*
      * The single entry point both backends call. Returns the newly spawned hit — the caller still has to
      * build its glyphs — or null when the hit was folded into an existing one or dropped at the cap.
+     *
+     * `evicting` is called for any hit whose screen space this one took over, which today means pulse mode stealing a full
+     * cell. The caller owns releasing what it kept for that hit (glyph runs, halo references), and the hit is already gone
+     * from the list by then.
      */
     public FctHitState Accept(List<FctHitState> hits, FctLane lane, double value, string source, bool crit, bool minor, bool periodic,
-      string fixedText, double w, double h, double now, bool proc = false)
+      string fixedText, double w, double h, double now, bool proc = false, Action<FctHitState> evicting = null)
     {
       if (w < 100 || h < 100)
       {
@@ -79,16 +83,23 @@ namespace EQLogParser
       var incoming = FctLayout.IsIncoming(lane);          // before pooling: a taken crit stays on the incoming side
       var pooled = crit ? FctLane.Crit : lane;
 
+      /*
+       * Pulse mode allocates cells, and cells are its capacity: folding a number into a running total that lives in some
+       * other cell would hide the fold, and the lane cap would drop hits that a free cell has room for. So the absorb and
+       * overflow paths below belong to the travelling styles only.
+       */
+      var celled = Style is FctMotionStyle.Pulse;
+
       if (fixedText is null)
       {
         _median.Add(lane, value);
-        if (!crit && ShouldAbsorb(pooled, value, periodic) && TryAbsorb(hits, pooled, value, now))
+        if (!celled && !crit && ShouldAbsorb(pooled, value, periodic) && TryAbsorb(hits, pooled, value, now))
         {
           return null;
         }
       }
 
-      if (LiveCount(hits, pooled) >= LaneCap)
+      if (!celled && LiveCount(hits, pooled) >= LaneCap)
       {
         if (fixedText is null && TryAbsorb(hits, pooled, value, now, relaxed: true))
         {
@@ -121,6 +132,26 @@ namespace EQLogParser
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
       hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHitValue(value), hit.ValueFontSize);
+
+      /*
+       * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
+       * static placement FctLayout gave it. Losing the layout is fine, losing the number is not.
+       */
+      if (celled && FctCellGrid.HasRoom(hit, h))
+      {
+        if (!FctCellGrid.Assign(hit, hits, w, h, now, out var bumped))
+        {
+          /* Every cell in the block is held by a crit and this is not one: drop it rather than erase a bigger number. */
+          DroppedCount++;
+          return null;
+        }
+
+        if (bumped is not null)
+        {
+          evicting?.Invoke(bumped);
+        }
+      }
+
       FctMotion.RefreshText(hit, 0);
       hits.Add(hit);
       return hit;

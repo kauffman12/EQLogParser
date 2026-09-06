@@ -104,7 +104,9 @@ namespace EQLogParser
         return;
       }
 
-      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds, proc);
+      /* The eviction sink for pulse mode: a hit whose cell was taken must have its cached glyph run dropped with it. */
+      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight,
+        _clock.Elapsed.TotalMilliseconds, proc, h => _glyphs.Remove(h));
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint

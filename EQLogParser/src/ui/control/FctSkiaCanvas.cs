@@ -119,7 +119,10 @@ namespace EQLogParser
         return;
       }
 
-      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds, proc);
+      /* ReleaseHalo is the eviction sink: pulse mode can take a full cell off a hit still on screen, and the surface that
+       * blurred its glow has to hear about it or the reference count never comes back down. */
+      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight,
+        _clock.Elapsed.TotalMilliseconds, proc, ReleaseHalo);
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint

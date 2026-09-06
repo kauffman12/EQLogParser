@@ -636,7 +636,8 @@ Three rules keep four styles from becoming four behaviours:
 - **A hit keeps the style it was born with** (`FctHitState.Style`, snapshotted by `FctIngest.Accept`). If the renderer
   read one live setting, switching fountain → hold mid-flight would hand every parabola in progress a different
   velocity for its remaining frames. Snapshotting an enum per hit is what makes switching free.
-- **The protected strip stays clear by construction, for all four.** Pulse cannot reach it (zero travel); spray falls
+- **The protected strip stays clear by construction, for all four.** Pulse's cells are laid out inside a margin off the
+  strip's edge and every one is measured against it (`FctCellGrid`); spray falls
   back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; hold
   never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
   the strip is behind it and the bottom edge is clamped. A test sweeps each style across its whole curve asserting none
@@ -648,13 +649,36 @@ coverage came out **identical to hold's** — hold already adds 12% of width in 
 cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
 actually move sideways while the steep ones simply top out against the clamp.
 
-Static text also needed its own spawn depth, and only a run in game showed that. Everything which travels starts hard
-against the protected strip on purpose - it leaves immediately, and its direction of travel is half the message. A pulse
-never leaves, so that starting point is where the number lives for its whole life, and it read as parked on top of the
-cast bar: nearer the middle than the same value ever got while floating away. `FctLayout.PulseInsetFrac` (a fifth of band
-depth) pushes a style with no travel deeper into its band, clamped by the band ends which already carry the text reserve
-and the edge pad - so it can only ever move a hit away from the strip, never into it or out of the window. Halves mode is
-untouched: its protected axis is horizontal and its spawn row sits nowhere near the centre column.
+Pulse then failed for a different reason, which in-game use showed and no amount of reasoning about single numbers would
+have: **static text overlaps**. Free-floating placement is fine for numbers that move, because each is only in a spot for a
+moment; a number that stays is read for its whole life, and two of them sharing a place is mush. That is what pulse was,
+because it inherited the lane-slot jitter designed for travelling text.
+
+Every combat log UI lands on the same fix — slot allocation — so `FctCellGrid` does: one cell per hit, held for the hit's
+life, oldest taken when the block fills. WoW's anti-stagger number mode spreads simultaneous values across fixed positions
+with a row limit (and the scrolling-text addons went further into explicit grids), FFXIV stacks a capped number of rows in
+one place, GW2 groups into fixed areas. Deterministic positions are the point: the player stops hunting for numbers.
+
+- **Cells belong to a band, not a lane.** The scarce thing is space inside a band; separate pools per lane would put the
+  damage block on top of the healing block, which is the bug. Colour says what a number is, position only has to say "not
+  on top of another number".
+- **The outer row belongs to procs**, smaller cells kept out of the block being read so item spam can never push into it.
+  Outward means away from the protected strip on both sides, which also keeps the strip's neighbour free of the most
+  frequent text on screen.
+- **Rows fill nearest the strip first, centre-out within a row**, and every number starts from one point in the band and
+  slides into its cell (`FctMotion.PulseSlideMs`, 220 ms; zero puts numbers straight into their cells for anyone who finds
+  the slide busy). A burst therefore reads as one event expanding rather than several unrelated appearances.
+- **A full block takes its oldest cell, but a crit is not up for grabs.** If everything left is a crit and the newcomer is
+  smaller, the newcomer is dropped and counted. Losing a routine number beats erasing the biggest one on screen.
+- **Geometry depends only on band and canvas size, never on the hit being placed.** This one is load-bearing, and the first
+  version got it wrong: sizing each row from that hit's own text reserve made two numbers in the same row disagree about
+  where the row was, and they landed on each other — the exact bug the grid exists to kill. Row slots are shared; only the
+  centring inside a slot is per-hit. The cost is that a crit's pop can crowd a neighbour by a few pixels, which every grid
+  layout pays: rows sized for the loudest possible number would halve how many numbers fit.
+- **An overlay too small for a grid keeps its numbers.** `HasRoom` is checked first; when no row plus margins fits, the hit
+  keeps the plain static placement `FctLayout` gave it instead of being dropped. Losing layout is fine, losing damage is not.
+
+Halves mode has no grid: its protected axis is horizontal, and its single spawn row sits nowhere near the centre column.
 
 Pulse is also the nearest thing here to the reduced-motion option the design document asks for: nothing translates, so
 the information arrives without movement. It is not labelled that way yet — an explicit reduced-motion setting should
@@ -717,10 +741,10 @@ alongside it because a full-size ability name under a smaller number would undo 
 
 Size alone does not separate two streams that land in the same place though, so procs also start in a different row of
 their band: `FctLayout.ProcInsetFrac` (0.15) moves them further *out* from the protected strip — my procs higher up, procs
-landing on me lower down — which is the same mechanism that gives a pulse its depth, and additive with it, because a
-procced pulse wants to separate from plain pulses too. Being shares of band depth, both insets are clamped by the band
-ends, so a small overlay loses separation before it loses text; a test stacks every combination on a 420×300 canvas to
-keep that true.
+landing on me lower down — so the two occupy different rows of the same band and the eye can ignore one while reading the
+other. Being a share of band depth it is clamped by the band ends, so a small overlay loses separation before it loses text;
+a test stacks every combination on a 420×300 canvas to keep that true. Pulse mode does not need the inset: allocation gives
+procs their own block of cells outright (`FctCellGrid`), which is a stronger version of the same rule.
 `FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
 together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
 A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola

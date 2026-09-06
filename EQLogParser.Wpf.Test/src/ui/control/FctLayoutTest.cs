@@ -235,50 +235,6 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * A style with no travel is read where it spawns, so spawning against the strip - correct for something leaving it -
-     * put a pulse nearer the cast bar than the same number ever got while floating away. Asserted as a distance rather
-     * than as a coordinate, and asserted against hold as well: whatever settles into this rule, the static text has to
-     * start further from the protected middle than the moving text does.
-     */
-    [TestMethod]
-    public void PulseStartsAwayFromTheProtectedStrip()
-    {
-      var rand = new Random(9);
-      var pulseClosest = double.MaxValue;
-      var travelFurthest = 0.0;
-
-      for (var i = 0; i < 200; i++)
-      {
-        foreach (var incoming in new[] { false, true })
-        {
-          foreach (var style in new[] { FctMotionStyle.Pulse, FctMotionStyle.Hold })
-          {
-            var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, style: style);
-            var span = hit.BandMaxY - hit.BandMinY;
-
-            // clearance from the band edge nearest the strip, which already carries the text reserve
-            var clearance = incoming ? hit.Y0 - hit.BandMinY : hit.BandMaxY - hit.Y0;
-
-            Assert.IsTrue(clearance >= 0, $"{style} spawned outside its own band ({clearance:0.#})");
-
-            if (style is FctMotionStyle.Pulse)
-            {
-              Assert.IsTrue(clearance >= span * FctLayout.PulseInsetFrac - 0.001,
-                $"pulse started {clearance:0.#} px inside the band, want at least {span * FctLayout.PulseInsetFrac:0.#}");
-              pulseClosest = Math.Min(pulseClosest, clearance);
-            }
-            else
-            {
-              travelFurthest = Math.Max(travelFurthest, clearance);
-            }
-          }
-        }
-      }
-
-      Assert.IsTrue(pulseClosest > travelFurthest,
-        $"static text should start further from the strip than travelling text ({pulseClosest:0.#} vs {travelFurthest:0.#})");
-    }
 
     /*
      * Procs belong to the fight but not to the number the player is reading, so they start in a different row of the
@@ -320,16 +276,16 @@ namespace EQLogParser
       Assert.IsTrue(gap > 15, $"procs should read a clear row outside the direct hits, averaged {gap:0.#} px apart");
     }
 
-    /* The insets are shares of band depth, so a small overlay is where they have to give way rather than push text off
-     * the screen - and pulse plus proc stacks both of them at once. */
+    /* The inset is a share of band depth, so a small overlay is where it has to give way rather than push text off the
+     * screen - which is also where a shallow band has to cope with a spray aimed at a full cone. */
     [TestMethod]
-    public void InsetsWithStackUpStillFitOnATinyOverlay()
+    public void InsetsGiveWayOnATinyOverlay()
     {
       var rand = new Random(3);
       const double TinyW = 420;
       const double TinyH = 300;
 
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Spray })
       {
         foreach (var proc in new[] { false, true })
         {

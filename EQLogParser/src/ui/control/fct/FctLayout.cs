@@ -45,20 +45,12 @@ namespace EQLogParser
     private const double TravelSlackFrac = 0.10;
 
     /*
-     * How far a style with no travel starts from the protected strip, as a share of band depth. Everything that moves is
-     * spawned hard against the gap on purpose — it leaves immediately and its direction of travel is half the message.
-     * A pulse never moves, so its spawn point is where it is read for three seconds, and reading it right on the edge of
-     * the empty middle felt cramped in game: the text sat closer to the cast bar than the same number floating away
-     * would ever have. Pushed deeper into its own band instead.
-     */
-    public const double PulseInsetFrac = 0.20;
-
-    /*
-     * The same idea for procs, which stack up in the middle of a fight and read as one blurred column when they share a
-     * row with the hits they accompany. A proc starts further *out* from the protected strip instead: my procs higher up,
-     * procs landing on me lower down, so the two streams occupy different rows of the same band and the eye can ignore
-     * one while reading the other. Additive with the pulse inset above, because a procced pulse should separate from
-     * plain pulses too, and clamped by the same band ends.
+     * Procs stack up in the middle of a fight and read as one blurred column when they share a row with the hits they
+     * accompany, so a proc starts further *out* from the protected strip: my procs higher up, procs landing on me lower
+     * down. The two streams then sit in different rows of the same band and the eye can ignore one while reading the other.
+     * Clamped by the band ends, which already carry the text reserve on the gap-facing side and the edge pad on the other,
+     * so a cramped overlay loses separation before it loses text. Pulse mode does not need this at all — FctCellGrid gives
+     * procs their own block of cells outright.
      */
     public const double ProcInsetFrac = 0.15;
 
@@ -179,14 +171,12 @@ namespace EQLogParser
         up = 1;
       }
 
-      /* Text that either never travels (pulse) or must not share a row with the hit it arrived beside (a proc) starts
-       * deeper in its band than its gap-facing edge. Clamped by the band ends, which already carry the vertical reserve
-       * on one side and the edge pad on the other, so this cannot push anything into the strip or out of the window — it
-       * only ever moves hits away from the strip, further up in my band and further down in theirs. */
-      var insetFrac = (hit.Style is FctMotionStyle.Pulse ? PulseInsetFrac : 0.0) + (hit.Proc ? ProcInsetFrac : 0.0);
-      if (insetFrac > 0)
+      /* A proc starts deeper in its band than the row of hits it arrived beside. Clamped by the band ends, which already
+       * carry the vertical reserve on one side and the edge pad on the other, so this cannot push anything into the strip or
+       * out of the window — it only ever moves hits away from the strip, further up in my band and further down in theirs. */
+      if (hit.Proc)
       {
-        var inset = BandSpan(hit) * insetFrac;
+        var inset = BandSpan(hit) * ProcInsetFrac;
         hit.Y0 = hit.Incoming
           ? Math.Min(hit.BandMaxY, hit.Y0 + inset)
           : Math.Max(hit.BandMinY, hit.Y0 - inset);
