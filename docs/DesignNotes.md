@@ -649,6 +649,23 @@ coverage came out **identical to hold's** — hold already adds 12% of width in 
 cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
 actually move sideways while the steep ones simply top out against the clamp.
 
+Widening the cone then exposed the real reason spray and fountain looked alike: **both axes ran on one ease curve**. When x
+and y advance by the same fraction of their totals, every trajectory is a straight line from origin to apex — the fan
+existed only in where numbers ended up, never in how they got there, so mid-flight a wide spray was a slanted fountain.
+`FctMotion.LateralProgress` puts spray's sideways travel on an ease-out while its vertical keeps the smootherstep climb:
+shrapnel keeps moving sideways while gravity handles the vertical, so the path bends over into an arc by itself. It eases
+to zero slope at the apex instead of running linearly because a number that stops dead sideways at the moment it begins to
+fall has a kink you can see. Hold and fountain deliberately keep one curve between them — a straight climb is what a thing
+with no gravity does. A test pins the difference rather than trusting the eye: hold's drawn point never leaves the line
+between its origin and its apex, spray's must leave it by more than 20 px and be nearly spread out by the time it peaks.
+
+Two smaller changes went the same way. The cone opened from ±38° to ±49°, with `SprayMaxLateralFrac` moving from 0.30 to
+0.34 of width — that cap has to travel with the angle or every wide draw stops at the same wall and the fan comes out flat
+topped — and spray's choreography got its own tempo, `SprayMotionWindowMs` (1700 ms against fountain's 2000), because
+shared flight time was the other half of the resemblance: two 2 second arcs read as one effect whatever path they draw, and
+shrapnel is supposed to look quick. Measured at 980×640 with these numbers, spray covers 519 px of x mid-flight where hold
+covers 246 and fountain 242.
+
 Pulse then failed for a different reason, which in-game use showed and no amount of reasoning about single numbers would
 have: **static text overlaps**. Free-floating placement is fine for numbers that move, because each is only in a spot for a
 moment; a number that stays is read for its whole life, and two of them sharing a place is mush. That is what pulse was,

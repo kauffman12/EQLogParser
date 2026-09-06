@@ -343,16 +343,16 @@ namespace EQLogParser
     [TestMethod]
     public void ChoreographySetsTheLifeAndHoldStylesDoNot()
     {
-      foreach (var style in new[] { FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      foreach (var (style, window) in new[] { (FctMotionStyle.Fountain, FctMotion.MotionWindowMs), (FctMotionStyle.Spray, FctMotion.SprayMotionWindowMs) })
       {
         var ingest = NewIngest();
         ingest.Style = style;
 
         var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
-        Assert.AreEqual(FctMotion.MotionWindowMs, hit.LifetimeMs, $"{style} life must be its choreography");
-        Assert.AreEqual(FctMotion.MotionWindowMs, hit.MotionMs, $"{style} must not hold mid-flight");
-        Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
+        Assert.AreEqual(window, hit.LifetimeMs, $"{style} life must be its choreography");
+        Assert.AreEqual(window, hit.MotionMs, $"{style} must not hold mid-flight");
+        Assert.AreEqual(window * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
       }
 
       foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })

@@ -55,19 +55,21 @@ namespace EQLogParser
     public const double ProcInsetFrac = 0.15;
 
     /*
-     * Spray geometry: half-angle of the cone (radians, ~38°) and how much wider a crit's cone opens; SprayMaxLateralFrac
+     * Spray geometry: half-angle of the cone (radians, ~49°) and how much wider a crit's cone opens; SprayMaxLateralFrac
      * caps sideways travel as a share of canvas width because the cone is aimed from wherever the lane slot put the hit
-     * — at the overlay's edge a full spread would leave the window.
+     * — at the overlay's edge a full spread would leave the window. The cap has to move with the angle or the widest draws all
+     * stop at the same wall and the fan comes out flat; 0.34 was set against that, by measuring how much of the cone survived
+     * the clamp.
      *
      * Reach is deliberately longer than a band is deep. Given only the band's own travel budget, even a wide angle moved
      * no further sideways than a lane-slot jitter — measured identical to hold's existing arc, which already swings 12%
      * of width, so spray would have been invisible. With the longer reach, steep draws top out against the band clamp
      * and wide draws get the lateral distance this style exists for.
      */
-    public const double SpraySpreadRadians = 0.66;
-    public const double SprayCritSpreadFactor = 1.3;
+    public const double SpraySpreadRadians = 0.85;
+    public const double SprayCritSpreadFactor = 1.25;
     public const double SprayReachFactor = 1.9;
-    public const double SprayMaxLateralFrac = 0.30;
+    public const double SprayMaxLateralFrac = 0.34;
 
     /*
      * How far gravity brings a sprayed number back after its apex, as a share of the height it actually reached — not

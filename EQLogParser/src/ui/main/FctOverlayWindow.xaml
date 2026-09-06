@@ -39,7 +39,7 @@
           <TextBlock Text="FCT" FontSize="13" FontWeight="Bold" Foreground="#D6E1EC" VerticalAlignment="Center" />
           <TextBlock Text="motion" Margin="12,0,4,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" />
           <ComboBox x:Name="motionCombo" Width="86" FontSize="12" VerticalAlignment="Center" SelectionChanged="MotionChanged"
-                    ToolTip="hold: travel, stop, fade in place&#10;fountain: overshoot, then fall (mirrored on the lower band)&#10;pulse: fixed cells, one number each, swells as it lands&#10;spray: random cone, then fall&#10;&#10;applies to new hits, so you can switch mid-fight to see which reads best">
+                    ToolTip="hold: travel, stop, fade in place&#10;fountain: overshoot, then fall (mirrored on the lower band)&#10;pulse: fixed cells, one number each, swells as it lands&#10;spray: wide random arcs, out then down&#10;&#10;applies to new hits, so you can switch mid-fight to see which reads best">
             <ComboBoxItem Content="hold" Tag="hold" />
             <ComboBoxItem Content="fountain" Tag="fountain" />
             <ComboBoxItem Content="pulse" Tag="pulse" />

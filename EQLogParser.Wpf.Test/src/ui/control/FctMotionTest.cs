@@ -194,7 +194,7 @@ namespace EQLogParser
     }
 
     /*
-     * The pulse has no travel, so its swell is the entire announcement: in small, past full size, settle onto it — and
+     * A celled number barely moves, so its swell is the entire announcement: in small, past full size, settle onto it — and
      * never back below 1.0 afterwards, because a shrinking number reads as leaving before the fade has said so.
      */
     [TestMethod]
@@ -213,6 +213,76 @@ namespace EQLogParser
       hit.Blowout = true;
       Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, 0), 0.001);
       Assert.AreEqual(FctMotion.CritPeakScale, FctMotion.ScaleOf(hit, FctMotion.CritScaleInMs), 0.001);
+    }
+
+    /*
+     * Spray and fountain have to differ in flight, not just in where numbers end up, so the shape of the path is pinned.
+     * Both axes used to run on one ease curve, which made every spray angle a straight line from origin to apex: the cone
+     * existed only in the endpoints and mid-flight a wide spray was a slanted fountain. Hold still draws a straight line -
+     * that is what a thing with no gravity looks like - and spray must visibly leave that line.
+     */
+    [TestMethod]
+    public void SprayDrawsAnArcWhileHoldGoesStraight()
+    {
+      var hold = ArcHit(FctMotionStyle.Hold);
+      var spray = ArcHit(FctMotionStyle.Spray);
+
+      for (var t = 0.05; t < 0.96; t += 0.05)
+      {
+        Assert.AreEqual(0.0, Deviation(hold, t), 0.01, $"hold drifted off its own line at t {t:0.##}");
+      }
+
+      var strayed = 0.0;
+      for (var t = 0.05; t < 0.96; t += 0.05)
+      {
+        strayed = Math.Max(strayed, Deviation(spray, t));
+      }
+
+      Assert.IsTrue(strayed > 20, $"spray should draw an arc, not a line (never left the straight path by more than {strayed:0.#} px)");
+
+      /*
+       * And it must bend the useful way: most of the sideways travel spent before the climb ends, so the path flattens into
+       * a fan at the top instead of arriving as a corner and dropping straight down.
+       */
+      var apex = 1.0 - FctMotion.FallPhaseFrac;
+      var lateralAtApex = (At(spray, apex).X - spray.X0) / spray.Arc;
+      Assert.IsTrue(lateralAtApex > 0.75, $"spray should be nearly spread out by the time it peaks ({lateralAtApex:0.##})");
+    }
+
+    /* Perpendicular distance from the straight origin-to-apex path, in px: zero means the hit is flying in a line. */
+    private static double Deviation(FctHitState hit, double t)
+    {
+      var vx = At(hit, 1).X - hit.X0;
+      var vy = At(hit, 1).Y - hit.Y0;
+      var len = Math.Sqrt((vx * vx) + (vy * vy));
+      if (len <= 0.001)
+      {
+        return 0;
+      }
+
+      var wx = At(hit, t).X - hit.X0;
+      var wy = At(hit, t).Y - hit.Y0;
+      return Math.Abs((wx * vy) - (wy * vx)) / len;
+    }
+
+    private static (double X, double Y) At(FctHitState hit, double t) => (FctMotion.ArcedX(hit, t), FctMotion.RaisedY(hit, t));
+
+    /* A wide cone draw: well to one side as it climbs. Hold gets no fall so its line stays a line. */
+    private static FctHitState ArcHit(FctMotionStyle style)
+    {
+      var hit = NewHit();
+      hit.Style = style;
+      hit.BandMinY = 40;
+      hit.BandMaxY = 520;
+      hit.SideMin = 0;
+      hit.SideMax = 1400;
+      hit.X0 = 700;
+      hit.Y0 = 480;
+      hit.Rise = 220;
+      hit.Arc = 300;
+      hit.FallDist = style is FctMotionStyle.Spray ? 88 : 0;
+      hit.MotionMs = style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
+      return hit;
     }
 
     [TestMethod]

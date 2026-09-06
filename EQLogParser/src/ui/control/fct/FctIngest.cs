@@ -246,10 +246,13 @@ namespace EQLogParser
 
       if (Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
-        // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall
-        hit.LifetimeMs = FctMotion.MotionWindowMs;
-        hit.MotionMs = FctMotion.MotionWindowMs;
-        hit.FadeMs = FctMotion.MotionWindowMs * FctMotion.FallPhaseFrac;
+        // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall. Each style
+        // owns its tempo — spray runs shorter, because sharing fountain's flight time was half of why the two looked alike
+        var window = Style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
+
+        hit.LifetimeMs = window;
+        hit.MotionMs = window;
+        hit.FadeMs = window * FctMotion.FallPhaseFrac;
 
         // Rise is already assigned: layout runs before lifetime assignment
         var depth = FallDepth(hit, h, mirrored);

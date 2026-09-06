@@ -13,6 +13,13 @@ namespace EQLogParser
     /* Rise+arc finish this early in life, after which the hit holds position and only fades. */
     public const double MotionWindowMs = 2000;
 
+    /*
+     * Spray's choreography is deliberately shorter than fountain's. Shape separates the two styles (see LateralProgress),
+     * but timing was the other half of why they read as one thing: two 2 second flights look alike whatever path they draw.
+     * Shrapnel is quick — out, over and down in about 1.7 s — which also lets a burst clear before the next one lands.
+     */
+    public const double SprayMotionWindowMs = 1700;
+
     /* Fountain style: the fall spans the last fraction of life, shrinking as it goes. */
     public const double FallPhaseFrac = 0.45;
     public const double FallScaleEnd = 0.55;
@@ -115,8 +122,25 @@ namespace EQLogParser
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
 
-      return Math.Clamp(hit.X0 + (hit.Arc * Ease(t)), lo, hi);
+      return Math.Clamp(hit.X0 + (hit.Arc * LateralProgress(hit, t)), lo, hi);
     }
+
+    /*
+     * How far along its sideways travel a hit is. Hold and fountain share the vertical ease so x and y stay in proportion:
+     * a number climbs the straight line it appears to be on, which is what a thrown thing with no gravity looks like.
+     *
+     * Spray must not, and this was why spray and fountain were hard to tell apart. With both axes driven by one curve, every
+     * angle of the cone draws a straight line from origin to apex — the fan existed only in where numbers ended up, never in
+     * how they got there, so mid-flight a wide spray was a slanted fountain. Real shrapnel keeps its sideways speed while
+     * gravity takes the vertical away, so spray runs laterally on an ease-out: out first, then up, and the path bends over
+     * into an arc on its own. Easing to zero slope at the apex instead of running linearly matters too — something that
+     * stops dead sideways at the moment it begins to fall has a kink in it you can see.
+     */
+    private static double LateralProgress(FctHitState hit, double t) =>
+      hit.Style is FctMotionStyle.Spray ? EaseOutQuad(t) : Ease(t);
+
+    /* Quadratic ease-out: fastest at the start, arriving at rest. */
+    private static double EaseOutQuad(double p) => p * (2 - p);
 
     /* Crit pop, the pulse swell, or the fall-phase shrink. 1 when none applies. */
     public static double ScaleOf(FctHitState hit, double ageMs)
