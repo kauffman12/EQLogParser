@@ -6,7 +6,8 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctManagerTest
   {
-    private Action<IReadOnlyList<FctHitCommand>> _onHits;
+    // no-op until TestInitialize wires up the real collector; keeps the field non-null for Teardown's -=
+    private Action<IReadOnlyList<FctHitCommand>> _onHits = static _ => { };
     private List<IReadOnlyList<FctHitCommand>> _batches = [];
 
     [TestInitialize]
