@@ -45,6 +45,15 @@ namespace EQLogParser
     private const double TravelSlackFrac = 0.10;
 
     /*
+     * How far a style with no travel starts from the protected strip, as a share of band depth. Everything that moves is
+     * spawned hard against the gap on purpose — it leaves immediately and its direction of travel is half the message.
+     * A pulse never moves, so its spawn point is where it is read for three seconds, and reading it right on the edge of
+     * the empty middle felt cramped in game: the text sat closer to the cast bar than the same number floating away
+     * would ever have. Pushed deeper into its own band instead.
+     */
+    public const double PulseInsetFrac = 0.20;
+
+    /*
      * Spray geometry: half-angle of the cone (radians, ~38°) and how much wider a crit's cone opens; SprayMaxLateralFrac
      * caps sideways travel as a share of canvas width because the cone is aimed from wherever the lane slot put the hit
      * — at the overlay's edge a full spread would leave the window.
@@ -159,6 +168,17 @@ namespace EQLogParser
         ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
         hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
         up = 1;
+      }
+
+      /* Static text gets the depth of its band rather than its edge. Clamped by the band ends, which already carry the
+       * vertical reserve on the gap-facing side and the edge pad on the other, so this cannot push anything out of the
+       * window or into the strip — it only ever moves hits away from the strip. */
+      if (hit.Style is FctMotionStyle.Pulse)
+      {
+        var inset = BandSpan(hit) * PulseInsetFrac;
+        hit.Y0 = hit.Incoming
+          ? Math.Min(hit.BandMaxY, hit.Y0 + inset)
+          : Math.Max(hit.BandMinY, hit.Y0 - inset);
       }
 
       // the far end of the band, minus a random share of slack: exactly how much room this hit has to travel in

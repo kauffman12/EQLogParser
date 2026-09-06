@@ -136,6 +136,25 @@ namespace EQLogParser
       Assert.IsTrue(_drained[1].Periodic);
     }
 
+    /*
+     * A proc is its own record type — DamageLineParser decides it by looking the spell up in procs.txt, not from how a
+     * line reads — and the overlay uses that flag to draw it slightly smaller and clear it sooner. It has to travel on
+     * the command because by the time a canvas sees a number, that is all it is: nothing downstream can tell a proc from
+     * the cast that provoked it.
+     */
+    [TestMethod]
+    public void ProcsAreFlaggedSoTheOverlayCanKeepThemQuiet()
+    {
+      FireDamage("TestPlayer", 100, type: Labels.Proc, subType: "Soul Strike");
+      FireDamage("OtherGuy", 200, defender: "TestPlayer", type: Labels.Proc);
+      FireDamage("TestPlayer", 300, type: Labels.Dd);
+
+      Assert.AreEqual(3, Drain());
+      Assert.IsTrue(_drained[0].Proc, "my proc");
+      Assert.IsTrue(_drained[1].Proc, "getting procced is subordinate too");
+      Assert.IsFalse(_drained[2].Proc, "an ordinary spell or melee hit is not a proc");
+    }
+
     [TestMethod]
     public void SourceIsABareNameForTheRendererToWrap()
     {

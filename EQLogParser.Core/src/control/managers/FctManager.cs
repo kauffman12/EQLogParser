@@ -130,6 +130,8 @@ namespace EQLogParser
         Lane = iAmAttacker ? FctLane.DamageDealt : FctLane.DamageTaken,
         Crit = LineModifiersParser.IsCrit(record.ModifiersMask),
         Periodic = record.Type == Labels.Dot,
+        // the parser labels a proc by looking the spell up in procs.txt, so this is not a guess at wording
+        Proc = record.Type == Labels.Proc,
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
         Source = DisplaySource(record),

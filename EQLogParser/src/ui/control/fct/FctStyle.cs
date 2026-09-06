@@ -35,6 +35,15 @@ namespace EQLogParser
     public const double MinorFontSize = 23;
     public const double SourceFontMin = 14;
 
+    /*
+     * A proc fires on its own schedule, on top of the swing or cast the player was actually watching for, and several
+     * items fire several times a pull. It is real damage and stays legible, but it should not outshout the hit that
+     * provoked it, so it rides a fraction below its lane's size instead of being pushed down to the periodic tier —
+     * 34 becomes about 29, which sits between dealt damage and a DoT tick. A crit proc keeps the full size: the pop is
+     * the answer to "did something big happen", and shrinking the loudest number in the log would be a lie.
+     */
+    public const double ProcSizeFrac = 0.86;
+
     /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
     public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);
 
@@ -46,10 +55,18 @@ namespace EQLogParser
     /* Invulnerable and Absorb mean "every cast from here is wasted", so they are the one label allowed to shout. */
     public const int LoudWordArgb = unchecked(0xFF << 24 | 0xF2 << 16 | 0xC9 << 8 | 0x4C);
 
-    public static void ApplyTo(FctHitState hit, FctLane lane, bool minor)
+    public static void ApplyTo(FctHitState hit, FctLane lane, bool minor, bool proc = false)
     {
       var loud = IsLoudLabel(hit.FixedText);
-      hit.ValueFontSize = ValueSize(lane, minor, loud);
+      var size = ValueSize(lane, minor, loud);
+
+      // scaled here rather than at draw time so the vertical reserve and the width estimate see the real size
+      if (proc && lane is not FctLane.Crit)
+      {
+        size *= ProcSizeFrac;
+      }
+
+      hit.ValueFontSize = size;
       hit.ValueArgb = ValueArgb(lane, loud);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = SourceArgb;

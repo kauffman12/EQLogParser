@@ -648,6 +648,14 @@ coverage came out **identical to hold's** — hold already adds 12% of width in 
 cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
 actually move sideways while the steep ones simply top out against the clamp.
 
+Static text also needed its own spawn depth, and only a run in game showed that. Everything which travels starts hard
+against the protected strip on purpose - it leaves immediately, and its direction of travel is half the message. A pulse
+never leaves, so that starting point is where the number lives for its whole life, and it read as parked on top of the
+cast bar: nearer the middle than the same value ever got while floating away. `FctLayout.PulseInsetFrac` (a fifth of band
+depth) pushes a style with no travel deeper into its band, clamped by the band ends which already carry the text reserve
+and the edge pad - so it can only ever move a hit away from the strip, never into it or out of the window. Halves mode is
+untouched: its protected axis is horizontal and its spawn row sits nowhere near the centre column.
+
 Pulse is also the nearest thing here to the reduced-motion option the design document asks for: nothing translates, so
 the information arrives without movement. It is not labelled that way yet — an explicit reduced-motion setting should
 pick pulse and shorten lifetimes rather than invent a fifth style.
@@ -698,6 +706,33 @@ times `CritPeakScale` for a crit (the draw scales about a pivot partway down the
 over-reserves slightly and never clips). It is a factor rather than measured glyph metrics for the same reason
 `EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`
 pins it in both region schemes, with a source line present and at crit scale.
+
+### Procs are subordinate: a little smaller, and quicker
+
+A proc is not the number anybody aimed at. Item and spell procs fire on their own schedule, several times a pull, and they
+arrive on top of the swing or cast whose timing the player is reading - so at full lane size they compete with the hit
+they accompany without being the reason for it. `FctStyle.ProcSizeFrac` (0.86) rides a proc's value below its lane, which
+turns 34 into about 29: between dealt damage and a DoT tick, subordinate but not a footnote, with the source line shrinking
+alongside it because a full-size ability name under a smaller number would undo the effect on its own.
+`FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
+together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
+A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
+in slow motion.
+
+Neither reduction touches a crit proc, which is the one place where two independent "make it smaller" rules would have
+stacked into a bug. A proc crit is the biggest single number in the log, and reducing both its size and its life would
+have made the loudest event the quietest thing on screen - the opposite of what a pop is for. `FctStyle.ApplyTo` and
+`FctIngest.ApplyProcTempo` each test `Blowout` for this, and a test asserts that a proc crit matches a plain crit in size,
+life and motion, so the exemption cannot be lost by refactoring one of the two.
+
+What makes this legitimate rather than a guess is that a proc is a **fact** about the record rather than an interpretation
+of it: `DamageLineParser` assigns `Labels.Proc` by looking the spell up in `data/procs.txt` (EQ's own proc list, loaded in
+`EQDataStore`), not from how a line happens to read. The flag travels on `FctHitCommand.Proc` because it cannot be
+recovered downstream - by the time a canvas sees a hit it has a number, a lane and an ability name, none of which say why
+the number exists. Same reason `Periodic` is carried as a flag instead of being guessed from a spell's name.
+
+The simulation streams include a proc stream which reuses the ordinary spell names on purpose: the same word appearing at
+two sizes side by side is what makes the treatment visible, rather than comparing a proc against some other ability.
 
 ### Smoothing, where animated text actually costs
 

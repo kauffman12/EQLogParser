@@ -42,6 +42,13 @@ namespace EQLogParser
 
     public const double FadeInMs = 160;
 
+    /*
+     * Procs run the whole fight at 70% tempo: travel, hold and fade all shorten together so the number is gone shortly
+     * after the swing that provoked it instead of lingering as long as that swing's own text. Scaling only the tail would
+     * leave a proc sitting on screen at full size while the hit behind it had already faded. See FctIngest.ApplyProcTempo.
+     */
+    public const double ProcTimeFrac = 0.7;
+
     /* How long a folded-in hit takes to count up to its new total. */
     public const double CountUpMs = 300;
 

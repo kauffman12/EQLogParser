@@ -32,6 +32,11 @@ namespace EQLogParser
     // DoT/HoT tick: smaller type, and the first candidate for grouping (docs/combat-text-overlay-design.md §4)
     public bool Periodic;
 
+    /* A proc (Labels.Proc): an item or spell effect that fires on its own rather than the swing or cast the player
+     * aimed. Subordinate by presentation — slightly smaller and shorter-lived — because it arrives on top of the
+     * number the player was actually watching for. See docs/DesignNotes.md → "Procs are subordinate". */
+    public bool Proc;
+
     public double Value;
 
     // "(Fireball)" is the renderer's job — it already owns fonts and layout

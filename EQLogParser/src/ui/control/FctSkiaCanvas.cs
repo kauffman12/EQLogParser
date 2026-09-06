@@ -112,14 +112,14 @@ namespace EQLogParser
      * Adds one hit. Everything about what happens to it — pooled crit lane, half of the canvas, style,
      * geometry, adaptive lifetime, folding into a live number at the cap — is decided in FctIngest.
      */
-    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null)
+    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false)
     {
       if (_clock is null)
       {
         return;
       }
 
-      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds);
+      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds, proc);
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint

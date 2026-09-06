@@ -18,7 +18,8 @@ namespace EQLogParser
 
     /* No travel at all: appear slightly small, swell just past full size, settle, fade in place. For a player who
      * wants the overlay to stay out of the way, for a second small overlay over the target's health bar, or for
-     * healing where motion adds nothing. Cheapest style to draw — the position never changes after spawn. */
+     * healing where motion adds nothing. Cheapest style to draw — the position never changes after spawn, and it is
+     * chosen deeper inside the band than travelling text is, because there its spawn point is where it gets read. */
     Pulse,
 
     /* A random cone per hit — height traded for lateral distance — then gravity (mirrored on the incoming band).

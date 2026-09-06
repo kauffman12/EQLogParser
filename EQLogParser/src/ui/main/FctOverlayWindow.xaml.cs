@@ -210,7 +210,7 @@ namespace EQLogParser
       FctManager.Instance.DrainTo(_pending);
       foreach (var cmd in _pending)
       {
-        _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText);
+        _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText, proc: cmd.Proc);
       }
 
       _pending.Clear();

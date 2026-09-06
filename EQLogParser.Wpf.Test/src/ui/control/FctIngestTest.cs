@@ -368,6 +368,60 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * A proc lands on top of the swing the player aimed, and items fire them constantly, so it rides a size below its
+     * lane and runs a shorter life. Both halves are pinned because either alone looks like tuning drift rather than a
+     * rule, and the source line is included: a full-size ability name under a shrunken value would undo the whole thing.
+     */
+    [TestMethod]
+    public void ProcsAreSmallerAndQuickerThanTheHitThatProvokedThem()
+    {
+      var plain = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 1000, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var proc = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 1000, "Soul Strike", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, proc: true);
+
+      Assert.AreEqual(FctStyle.DamageDealtFontSize * FctStyle.ProcSizeFrac, proc.ValueFontSize, 0.001);
+      Assert.IsTrue(proc.ValueFontSize < plain.ValueFontSize, "a proc must not compete with the hit behind it");
+      Assert.IsTrue(proc.SourceFontSize < plain.SourceFontSize, "the ability line shrinks with its value");
+      Assert.IsTrue(proc.LifetimeMs < plain.LifetimeMs, $"a proc clears sooner (was {proc.LifetimeMs:0} vs {plain.LifetimeMs:0})");
+      Assert.IsTrue(proc.MotionMs < plain.MotionMs, "the whole tempo shortens, not just the tail");
+      Assert.IsTrue(proc.FadeMs < plain.FadeMs, "and it fades proportionally, or it lingers while shrinking");
+
+      // still legible: subordinate is not footnote
+      Assert.IsTrue(proc.ValueFontSize > FctStyle.MinorFontSize, $"proc size {proc.ValueFontSize:0.#}");
+    }
+
+    /*
+     * A crit proc keeps everything a crit gets. Two separate rules quietly reducing emphasis would otherwise make the
+     * biggest single number in the log - a proc crit - the quietest thing on screen, which is the opposite of what the
+     * pop is for.
+     */
+    [TestMethod]
+    public void ProcCritsKeepTheirSizeAndTheirLife()
+    {
+      var crit = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 3000, "Flurry", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var procCrit = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 3000, "Soul Strike", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0, proc: true);
+
+      Assert.AreEqual(FctLane.Crit, procCrit.Lane);
+      Assert.AreEqual(crit.ValueFontSize, procCrit.ValueFontSize, 0.001, "crit size is not reduced for anybody");
+      Assert.AreEqual(crit.LifetimeMs, procCrit.LifetimeMs, 0.001, "and neither is its life");
+      Assert.AreEqual(crit.MotionMs, procCrit.MotionMs, 0.001);
+    }
+
+    /* A choreographed style scales as a unit: travel and fall share one lifetime, so shortening the life without the
+     * motion would leave a proc holding its parabola in slow motion. */
+    [TestMethod]
+    public void ProcTempoShortensTheWholeChoreography()
+    {
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Fountain;
+
+      var proc = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 1000, "Soul Strike", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, proc: true);
+
+      Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.ProcTimeFrac, proc.LifetimeMs, 0.001);
+      Assert.AreEqual(proc.LifetimeMs, proc.MotionMs, 0.001, "still one continuous motion, just quicker");
+      Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.ProcTimeFrac * FctMotion.FallPhaseFrac, proc.FadeMs, 0.001);
+    }
+
     [TestMethod]
     public void ExpiredHitsArePrunedWithTheirBackendAttachments()
     {

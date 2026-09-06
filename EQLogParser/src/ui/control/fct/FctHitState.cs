@@ -9,6 +9,10 @@ namespace EQLogParser
   {
     public FctLane Lane;
 
+    /* An item or spell proc rather than the attack or cast somebody aimed: reads a little smaller (FctStyle) and
+     * leaves sooner (FctIngest.ApplyProcTempo). A crit proc is exempt from both — the pop already says it matters. */
+    public bool Proc;
+
     /* How this hit moves over its life: travel, fountain, pulse in place, or spray. Copied from the canvas's current
      * setting by ingest, then read by FctLayout for geometry and by FctMotion for scale. A hit keeps the style it was
      * spawned with, so flipping the overlay's choice mid-fight changes what comes next rather than teleporting what is

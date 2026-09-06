@@ -69,7 +69,7 @@ namespace EQLogParser
      * build its glyphs — or null when the hit was folded into an existing one or dropped at the cap.
      */
     public FctHitState Accept(List<FctHitState> hits, FctLane lane, double value, string source, bool crit, bool minor, bool periodic,
-      string fixedText, double w, double h, double now)
+      string fixedText, double w, double h, double now, bool proc = false)
     {
       if (w < 100 || h < 100)
       {
@@ -102,6 +102,7 @@ namespace EQLogParser
       var hit = new FctHitState
       {
         Lane = pooled,
+        Proc = proc,
         Incoming = incoming,
         Style = Style,
         SpawnMs = now,
@@ -111,7 +112,7 @@ namespace EQLogParser
         CountBaseValue = value,
       };
 
-      FctStyle.ApplyTo(hit, pooled, minor || periodic);
+      FctStyle.ApplyTo(hit, pooled, minor || periodic, proc);
       FctLayout.Spawn(hit, w, h, _rand, Mode);
       AssignLifetime(hit, hits, h, now);
 
@@ -222,6 +223,7 @@ namespace EQLogParser
         // Rise is already assigned: layout runs before lifetime assignment
         var depth = FallDepth(hit, h, mirrored);
         hit.FallDist = mirrored ? -depth : depth;
+        ApplyProcTempo(hit);
         return;
       }
 
@@ -229,6 +231,28 @@ namespace EQLogParser
       hit.LifetimeMs = hit.Lane == FctLane.Crit ? CritLifetimeMs : _life.NextLifetime(hit.Lane, LiveCount(hits, hit.Lane), now);
       hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
+      ApplyProcTempo(hit);
+    }
+
+    /*
+     * A proc is not the number the player was watching for: items and spell procs fire on their own schedule, often
+     * several times a pull, and they land on top of the hit that provoked them. So the whole tempo shortens — travel,
+     * hold and fade together, not just the tail — which pairs with the smaller type from FctStyle to keep a proc beside
+     * a direct hit instead of competing with it.
+     *
+     * A crit proc is exempt: by definition that one deserves a look, and two rules quietly reducing the loudest number
+     * in the log would be worse than either rule alone. Same exemption FctStyle applies to its size.
+     */
+    private static void ApplyProcTempo(FctHitState hit)
+    {
+      if (!hit.Proc || hit.Blowout)
+      {
+        return;
+      }
+
+      hit.LifetimeMs *= FctMotion.ProcTimeFrac;
+      hit.MotionMs = Math.Min(hit.MotionMs * FctMotion.ProcTimeFrac, hit.LifetimeMs);
+      hit.FadeMs *= FctMotion.ProcTimeFrac;
     }
 
     /*

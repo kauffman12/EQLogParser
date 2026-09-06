@@ -26,8 +26,9 @@ namespace EQLogParser
     void Start();
     void Stop();
 
-    /* valueText is the literal main line for zero-damage labels ("Dodge"); null means show Value. */
-    void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null);
+    /* valueText is the literal main line for zero-damage labels ("Dodge"); null means show Value. proc marks an item or
+     * spell proc, which is drawn a little smaller and cleared sooner than the hit that provoked it. */
+    void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false);
   }
 
   /* Per-second counters for tuning and dogfooding. Overload has to be visible to be fixed. */

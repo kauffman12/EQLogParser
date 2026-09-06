@@ -27,7 +27,7 @@ namespace EQLogParser
     private const double RateMultiplier = 10.0;
 
     /* One simulated record, as it would arrive off the DamageRecord/HealRecord live events. */
-    private readonly record struct FctSimEvent(double AtMs, FctLane Lane, double Value, string Action, bool Crit, bool Minor, bool Periodic, string ValueText);
+    private readonly record struct FctSimEvent(double AtMs, FctLane Lane, double Value, string Action, bool Crit, bool Minor, bool Periodic, string ValueText, bool Proc = false);
 
     private static readonly string[] MeleeActions = ["Sweep", "Flurry", "Cleaver", "Double Slice", "Spinning Attack", "Backstab"];
     private static readonly string[] SpellActions = ["Fireball", "Frost Nova", "Lightning Bolt", "Pyroclasm", "Arcane Missile"];
@@ -130,7 +130,7 @@ namespace EQLogParser
     private void Feed(FctSimEvent ev)
     {
       _generatedCount++;
-      _canvas.AddHit(ev.Lane, ev.Value, ev.Action, ev.Crit, ev.Minor, ev.Periodic, ev.ValueText);
+      _canvas.AddHit(ev.Lane, ev.Value, ev.Action, ev.Crit, ev.Minor, ev.Periodic, ev.ValueText, ev.Proc);
     }
 
     private void CenterOnScreen()
@@ -149,6 +149,10 @@ namespace EQLogParser
       AddStream(rand, 2.0, 0.18, FctLane.DamageDealt, MeleeActions, () => 600 * Math.Exp(NextGaussian(rand) * 0.55), 250, 2600);
       AddStream(rand, 0.85, 0.15, FctLane.DamageDealt, SpellActions, () => 1400 * Math.Exp(NextGaussian(rand) * 0.6), 700, 5600);
       AddStream(rand, 1.5, 0.05, FctLane.DamageDealt, DotActions, () => 180 * Math.Exp(NextGaussian(rand) * 0.5), 90, 750, minor: true, periodic: true);
+
+      /* Procs reuse the spell names on purpose: the same word appearing at two sizes side by side is what shows the
+       * treatment (a little smaller, gone sooner) instead of hiding it in a stream nobody can compare. */
+      AddStream(rand, 0.4, 0.05, FctLane.DamageDealt, SpellActions, () => 900 * Math.Exp(NextGaussian(rand) * 0.55), 300, 4200, proc: true);
       AddStream(rand, 2.3, 0.12, FctLane.HealingDealt, HealActions, () => 1500 * Math.Exp(NextGaussian(rand) * 0.55), 600, 7000);
       AddStream(rand, 0.9, 0.0, FctLane.HealingDealt, HotActions, () => 250 * Math.Exp(NextGaussian(rand) * 0.4), 120, 900, minor: true, periodic: true);
 
@@ -163,7 +167,7 @@ namespace EQLogParser
       _events.Sort((a, b) => a.AtMs.CompareTo(b.AtMs));
     }
 
-    private void AddStream(Random rand, double rate, double critChance, FctLane lane, string[] actions, Func<double> rawValue, double min, double max, bool minor = false, bool periodic = false)
+    private void AddStream(Random rand, double rate, double critChance, FctLane lane, string[] actions, Func<double> rawValue, double min, double max, bool minor = false, bool periodic = false, bool proc = false)
     {
       rate *= RateMultiplier;
       var t = NextPoissonGap(rand, rate);
@@ -177,7 +181,7 @@ namespace EQLogParser
           value = Math.Min(max * 2.2, value * 2.2);
         }
 
-        _events.Add(new(t, lane, value, actions[rand.Next(actions.Length)], crit, minor, periodic, null));
+        _events.Add(new(t, lane, value, actions[rand.Next(actions.Length)], crit, minor, periodic, null, proc));
         t += NextPoissonGap(rand, rate * (InBurst(t) ? 2.2 : 1.0));
       }
     }
