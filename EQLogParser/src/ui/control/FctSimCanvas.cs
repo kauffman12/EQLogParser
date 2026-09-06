@@ -258,7 +258,9 @@ namespace EQLogParser
       LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
       // invalidate whenever the hit set changed since the last render (including the frame that clears it)
-      if (_dirty)
+      /* Animated content repaints every frame while live (see FctSkiaCanvas); _dirty only adds the frame
+       * that clears the canvas when the last hit expires. */
+      if (_dirty || _hits.Count > 0)
       {
         InvalidateVisual();
       }

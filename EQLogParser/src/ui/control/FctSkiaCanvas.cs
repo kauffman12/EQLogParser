@@ -314,8 +314,13 @@ namespace EQLogParser
 
       LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
-      // invalidate whenever the hit set changed since the last render (including the frame that clears it)
-      if (_dirty)
+      /*
+       * The content is animated: a hit's position depends on the clock, so any frame with live hits must
+       * repaint or the text stands still until the next spawn/expiry (visible as shaking at low intensity).
+       * _dirty alone only drives the one frame that clears the canvas when the last hit expires; with no
+       * hits at all the CPU raster is skipped entirely.
+       */
+      if (_dirty || _hits.Count > 0)
       {
         InvalidateVisual();
       }
