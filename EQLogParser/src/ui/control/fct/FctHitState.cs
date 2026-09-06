@@ -13,6 +13,12 @@ namespace EQLogParser
      * leaves sooner (FctIngest.ApplyProcTempo). A crit proc is exempt from both — the pop already says it matters. */
     public bool Proc;
 
+    /* A damage-over-time tick rather than one hit somebody aimed. Stored because folding needs it: a tick may only join a
+     * running total of ticks of the same ability, and once a number is on screen its kind cannot be re-derived from the
+     * value — 900 could be a swing or a tick, and letting those share a total is how a melee number ends up claiming to
+     * be a DoT. */
+    public bool Periodic;
+
     /*
      * Index of this hit's cell in its band's fixed grid, or -1 while it floats. Only pulse mode allocates cells; the pool
      * is picked by band and by whether the hit is a proc, so this one number names the slot. FctCellGrid owns it.

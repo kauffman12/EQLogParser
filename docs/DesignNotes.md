@@ -524,7 +524,8 @@ drains, which is invisible until the next session shows yesterday's fight.
 The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. Now
 `FctHitState` is plain data and the decisions live in one place:
 
-- `FctIngest` — fold into a live number, spawn, or drop at the lane cap.
+- `FctIngest` — fold into a live number of the same ability, spawn, take a full lane's slot from a less significant
+  number, or count a drop.
 - `FctLayout` — which region of the canvas a lane lives in (bands or halves), spawn position, travel, the protected middle.
 - `FctMotion` — position, scale, opacity and **the text itself** as pure functions of `(hit, age)`.
 - `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
@@ -539,6 +540,16 @@ before moving maths back into a canvas.
 Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the numeric string each frame overwrote
 the label with "0" — which reads as a legal absorb rather than an obvious mistake. A hit with `FixedText` set now
 can only ever draw that text.
+
+**Folding is keyed on identity, and a full lane is a comparison.** Folding must only ever combine numbers about the same
+thing, so the key is lane + side + proc-or-direct + periodic-or-direct + ability name — matching on lane alone let an
+Immolation tick grow a number labelled "Spinning Attack", which is a wrong total wearing a true label. The lane cap decides
+who owns a slot rather than whether the information survives: at capacity a same-ability hit folds (size stops mattering — a
+running total beats a fourteenth overlapping number), otherwise the newcomer takes the slot from the least significant
+number already on screen, but only if it clearly outranks it. Significance discounts a proc, so an old proc is the cheapest
+slot and a big cast costs almost nothing to place. Healing direct casts are excluded from folding at every occupancy —
+players read heals one cast at a time — which is why they need eviction: without it, "no folding" would mean "the thirteenth
+heal in a raid-wide panic is silently invisible", and the point of showing healing at all is that a missed one matters.
 
 ### Raster at most 60 times a second, and never on a beat pattern
 

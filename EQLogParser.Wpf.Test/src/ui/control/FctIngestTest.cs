@@ -164,6 +164,197 @@ namespace EQLogParser
     }
 
     /*
+     * The fold key. Lane alone was what this matched on, which let one number accumulate totals that were not its own and
+     * then say something untrue about where they came from — an Immolation tick growing a number labelled "Spinning
+     * Attack", or two DoTs taken collapsing into whichever landed first with the other one vanishing from the log entirely.
+     * NAG folds only into a component with identical flags for exactly this reason, and Mik's Scrolling Battle Text merges
+     * only on matching event type *and* skill name. Pinned per-kind because each pair is a real mistake a reader could be
+     * left with, not a theoretical one.
+     */
+    [TestMethod]
+    public void TicksOfTwoDifferentDoTsNeverShareANumber()
+    {
+      var ingest = NewIngest();
+
+      ingest.Accept(_hits, FctLane.DamageTaken, 400, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 0);
+      ingest.Accept(_hits, FctLane.DamageTaken, 350, "Burn", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
+      ingest.Accept(_hits, FctLane.DamageTaken, 400, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 200);
+
+      Assert.AreEqual(2, _hits.Count, "each ability keeps its own running total");
+      Assert.AreEqual(800, OnlyWith("Immolation").TargetValue, 0.001, "and a total is only its own ticks");
+      Assert.AreEqual(350, OnlyWith("Burn").TargetValue, 0.001, "which is what keeps the second one on screen at all");
+    }
+
+    [TestMethod]
+    public void AProcNeverInflatesTheSwingItLandedOn()
+    {
+      var ingest = NewIngest();
+
+      // ordinary swings first, so 40 is "routine" for the lane — the size test alone would happily fold it
+      for (var now = 0.0; now < 900; now += 100)
+      {
+        ingest.Accept(_hits, FctLane.DamageDealt, 1500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
+      }
+
+      var swing = _hits[^1];
+      var proc = ingest.Accept(_hits, FctLane.DamageDealt, 40, "Zealot's Fury", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 950, proc: true);
+
+      Assert.IsNotNull(proc, "a proc is a different ability: it gets its own number even when it is small");
+      Assert.AreEqual(40, proc.TargetValue, 0.001);
+      Assert.AreEqual(1500, swing.TargetValue, 0.001, "and the swing beside it stays what it was");
+    }
+
+    /* A tick must not fold into a direct hit either, or the melee number becomes the sum of a swing and a DoT. */
+    [TestMethod]
+    public void ADoTTickDoesNotGrowAMeleeNumber()
+    {
+      var ingest = NewIngest();
+
+      var swing = ingest.Accept(_hits, FctLane.DamageDealt, 1500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var tick = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
+
+      Assert.IsNotNull(tick);
+      Assert.AreEqual(1500, swing.TargetValue, 0.001, $"the swing still reads {swing.TargetValue:0}");
+      Assert.AreEqual("Immolation", tick.Source);
+    }
+
+    /*
+     * The cap fight, which is the reason this policy exists: at LaneCap the old code folded whatever arrived into whatever
+     * was newest, so a 45,000 cast disappeared into a 300 swing that then read as the biggest number on screen. Slotting is
+     * now a comparison, so the important number is the one that stays visible.
+     */
+    [TestMethod]
+    public void ABigCastIsNotHiddenBehindTwelveRoutineSwings()
+    {
+      var ingest = NewIngest();
+
+      for (var i = 0; i < 12; i++)
+      {
+        ingest.Accept(_hits, FctLane.DamageDealt, 300 + i, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
+      }
+
+      var big = ingest.Accept(_hits, FctLane.DamageDealt, 45_000, "Meteor Storm", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 600);
+
+      Assert.IsNotNull(big, "the biggest number of the fight has to be on screen");
+      Assert.AreEqual(45_000, big.TargetValue, 0.001, "as its own number, not inside somebody else's");
+      Assert.AreEqual("Meteor Storm", big.Source);
+      Assert.AreEqual(0, ingest.DroppedCount, "it took a slot rather than being dropped");
+      Assert.AreEqual(12, _hits.Count, "and the lane is still capped");
+
+      foreach (var hit in _hits)
+      {
+        if (hit != big)
+        {
+          Assert.IsTrue(hit.TargetValue < 1000, $"a routine swing came back reading {hit.TargetValue:0}");
+        }
+      }
+    }
+
+    [TestMethod]
+    public void AnEvictedHitReleasesWhatTheBackendKeptForIt()
+    {
+      var ingest = NewIngest();
+
+      for (var i = 0; i < 12; i++)
+      {
+        ingest.Accept(_hits, FctLane.HealingDealt, 900 + (i * 10), "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 40);
+      }
+
+      var smallest = _hits[0];
+      var released = new List<FctHitState>();
+      var big = ingest.Accept(_hits, FctLane.HealingDealt, 8000, "Prayer of Fealty", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 600, proc: false, evicting: released.Add);
+
+      Assert.IsNotNull(big, "a heal nobody would choose to miss is worth a slot");
+      Assert.AreEqual(1, released.Count, "the hit that gave it up has to be reported so glyphs and sprites go with it");
+      Assert.AreSame(smallest, released[0], "and the cheapest slot is the least significant number on screen");
+    }
+
+    /*
+     * Healing is the exception that proves the key: heals never fold, at any occupancy, because a player reads them one
+     * cast at a time — who got patched, for how much. Which means a thirteenth heal either takes a slot or is counted as
+     * dropped; what it must never do is grow a heal that already on screen.
+     */
+    [TestMethod]
+    public void AThirteenthHealNeverGrowsSomebodyElsesNumber()
+    {
+      var ingest = NewIngest();
+
+      for (var i = 0; i < 12; i++)
+      {
+        ingest.Accept(_hits, FctLane.HealingDealt, 900 + (i * 10), "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 40);
+      }
+
+      var before = TotalOf(_hits);
+      ingest.Accept(_hits, FctLane.HealingDealt, 8000, "Prayer of Fealty", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 600);
+
+      Assert.AreEqual(11, CountWith("Healing Word"), "one small heal made room");
+      Assert.AreEqual(before - 900 + 8000, TotalOf(_hits), 0.001, "and the visible total moved by exactly what landed and what left");
+    }
+
+    /* A routine number at a full lane folds into its own kind, so sustained spam still costs nothing but a slot. */
+    [TestMethod]
+    public void AFullLaneAddsToItsOwnKindInsteadOfDropping()
+    {
+      var ingest = NewIngest();
+
+      for (var i = 0; i < 13; i++)
+      {
+        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
+      }
+
+      Assert.AreEqual(12, _hits.Count);
+      Assert.AreEqual(0, ingest.DroppedCount, "thirteen hits of the same ability lose nothing to a twelve-slot lane");
+      Assert.AreEqual(13 * 900.0, TotalOf(_hits), 0.001);
+    }
+
+    /* ...and taking a slot is not a licence to shuffle: an occupant nearly as good as the newcomer keeps it. */
+    [TestMethod]
+    public void AFullLaneDoesNotShuffleForAMarginalNumber()
+    {
+      var ingest = NewIngest();
+
+      for (var i = 0; i < 12; i++)
+      {
+        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
+      }
+
+      // a different ability, so folding is out; 1.3× the weakest occupant is not the clear win eviction asks for
+      var marginal = ingest.Accept(_hits, FctLane.DamageDealt, 1200, "Backstab", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 600);
+
+      Assert.IsNull(marginal, "this is the case the drop counter exists for");
+      Assert.AreEqual(1, ingest.DroppedCount);
+      Assert.AreEqual(12, CountWith("Flurry"), "nothing already on screen moved to make room");
+    }
+
+    /*
+     * Pulse in halves mode is an open defect, not a behaviour to celebrate: the cell grid is measured against the whole
+     * canvas width, so in halves its outer columns fall under the protected centre column and their clamp lands several
+     * "distinct" cells on one place — 4 overlapping pairs among 8 numbers at 980x640, against 11-22 for the same burst with
+     * no grid at all (a pulse hit has no travel to separate it), which is why taking the grid away is not the fix. See
+     * local/fct-implementation.md §12 D4: the grid has to become per-side. What this pins meanwhile is that the combination
+     * is still functional — cells are allocated, nothing is dropped, and pulse keeps not travelling.
+     */
+    [TestMethod]
+    public void PulseInHalvesModeStillAllocatesCells()
+    {
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Pulse;
+      ingest.Mode = FctLayoutMode.Halves;
+
+      for (var i = 0; i < 6; i++)
+      {
+        var hit = ingest.Accept(_hits, FctLane.DamageDealt, 5000 - (i * 40), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
+
+        Assert.IsNotNull(hit, "halves mode must not lose pulse numbers");
+        Assert.IsTrue(hit.Cell >= 0, "the cell pool is still what allocates them");
+        Assert.AreEqual(FctCellGrid.SlideMs, hit.MotionMs, 0.001, "and it slides into that cell rather than travelling");
+      }
+
+      Assert.AreEqual(0, ingest.DroppedCount);
+      Assert.AreEqual(6, _hits.Select(h => h.Cell).Distinct().Count(), "one cell per number, even where the grid does not fit");
+    }
+
+    /*
      * Bands is the default and carries the overlay's whole direction story on its own: incoming lives below the
      * protected strip and travels down, outgoing above it and up. Pinned here because the canvases only forward
      * the mode, so a regression would silently turn into "which side is which again?" while invisible to a unit
@@ -497,6 +688,34 @@ namespace EQLogParser
       }
 
       return (maxX - minX, minX, maxX);
+    }
+
+    private FctHitState OnlyWith(string source)
+    {
+      foreach (var hit in _hits)
+      {
+        if (hit.Source == source)
+        {
+          return hit;
+        }
+      }
+
+      Assert.Fail($"no live number labelled {source}");
+      return null; // unreachable; Assert.Fail throws
+    }
+
+    private int CountWith(string source)
+    {
+      var found = 0;
+      foreach (var hit in _hits)
+      {
+        if (hit.Source == source)
+        {
+          found++;
+        }
+      }
+
+      return found;
     }
 
     private static double TotalOf(List<FctHitState> hits)
