@@ -17,12 +17,13 @@ namespace EQLogParser
      */
     private const int LaneCap = 12;
 
-    /* A hit under half its lane's rolling median is routine noise; fold it instead of spawning. */
-    private const double AbsorbFractionOfMedian = 0.5;
-
-    /* Only fold into a hit young enough that the count-up still reads as part of the same exchange, and
-     * one that has most of its life left — absorbing into a fading number would hide the amount. */
-    private const double AbsorbWindowMs = 1500;
+    /*
+     * Folding is now only ever collapsing identical hits (same ability, same face value), so how wide the window is has
+     * nothing to do with correctness and everything to do with what reads as one exchange. It is generous for that reason:
+     * DoT ticks land seconds apart and a trinket proc repeats on its own schedule, and "×4" over 2.5 s is four real hits.
+     * There is no sum to get wrong any more, so the only cost of a long window is that a number gains a count late.
+     */
+    private const double AbsorbWindowMs = 2500;
     private const double AbsorbMaxLifeFrac = 0.6;
 
     /* Crits do not adapt (they must stay prominent) and do not absorb; this is their whole display time. */
@@ -38,7 +39,6 @@ namespace EQLogParser
     private const double ProcSignificanceFrac = 0.5;
 
     private readonly FctLifeController _life = new();
-    private readonly FctMedianTracker _median = new();
     private readonly Random _rand;
 
     public FctIngest(Random rand = null) => _rand = rand ?? new Random();
@@ -97,8 +97,7 @@ namespace EQLogParser
 
       if (fixedText is null)
       {
-        _median.Add(lane, value);
-        if (!celled && !crit && ShouldAbsorb(pooled, value, periodic) &&
+        if (!celled && !crit && ShouldAbsorb(pooled, periodic) &&
             TryAbsorb(hits, pooled, incoming, proc, periodic, source, value, now))
         {
           return null;
@@ -108,26 +107,18 @@ namespace EQLogParser
       if (!celled && LiveCount(hits, pooled) >= LaneCap)
       {
         /*
-         * The lane is full. Three options, in the order that loses least.
+         * The lane is full. A duplicate of something already on screen was folded away above — that attempt does not care
+         * about occupancy, so a stream of identical hits never costs a slot.
          *
-         * Fold into a number that is about this same ability: at the cap the size test goes away, because a running
-         * total of ten procs beats either a counted drop or a fourteenth overlapping number, and the label stays honest
-         * now that the fold key includes the ability.
+         * What is left is a number the lane has nowhere to put: take the slot from the least significant number already on
+         * screen, but only if this newcomer clearly outranks it, so the thing that disappears is smaller and less worth
+         * reading than the thing that arrives. This is what stops the cap from hiding a big cast behind twelve routine
+         * swings.
          *
-         * Otherwise take the slot from the least significant number already on screen — but only if this newcomer
-         * clearly outranks it, so the thing that disappears is smaller and less worth reading than the thing that
-         * arrives. This is what stops the cap from hiding a big cast behind twelve routine swings.
-         *
-         * Only then count a drop. Everything above either put the amount on screen or added it to a total that says
-         * what it is.
+         * Only then count a drop. Everything above either put the number on screen or added it to a count that says how
+         * many it stands for.
          */
-        if (fixedText is null && !crit && ShouldAbsorb(pooled, value, periodic, relaxed: true) &&
-            TryAbsorb(hits, pooled, incoming, proc, periodic, source, value, now, relaxed: true))
-        {
-          return null;
-        }
-
-        var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, proc));
+        var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
           DroppedCount++;
@@ -148,8 +139,7 @@ namespace EQLogParser
         SpawnMs = now,
         Source = source,
         FixedText = fixedText,
-        TargetValue = value,
-        CountBaseValue = value,
+        Value = value,
       };
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic, proc);
@@ -160,7 +150,7 @@ namespace EQLogParser
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
-      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHitValue(value), hit.ValueFontSize);
+      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1), hit.ValueFontSize);
 
       /*
        * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
@@ -181,7 +171,7 @@ namespace EQLogParser
         }
       }
 
-      FctMotion.RefreshText(hit, 0);
+      FctMotion.RefreshText(hit);
       hits.Add(hit);
       return hit;
     }
@@ -206,81 +196,78 @@ namespace EQLogParser
     }
 
     /*
-     * Whether an incoming amount may be folded into a live number at all — the fold key itself is TryAbsorb's.
+     * Whether an incoming hit may be folded into a live number at all — the fold key itself is TryAbsorb's, and it now
+     * includes the face value, so this is only about which kinds of event are allowed to be collapsed.
      *
-     * Periodic ticks always may: one running number per ability beats five overlapping ticks. Healing direct casts never
-     * may, because players read heals one by one and merging two casts hides who got patched and for how much — and that
-     * rule is asked *before* both the normal fold and the relaxed at-cap one, which is what makes it true at the cap too.
-     * A heal with nowhere to go gets a slot taken for it (PickEvictionTarget) or is counted as dropped; it does not get
-     * added to somebody else's number.
+     * Periodic ticks always may: one number reading "412 ×5" beats five overlapping 412s. Direct damage may too, but in
+     * practice only when something identical is on screen — EQ repeats exact values constantly, so the collapse happens for
+     * real without bending any rule.
      *
-     * Direct damage folds when it is routine for its lane, meaning under half the running median. Relaxed (lane at cap)
-     * every direct hit qualifies: same-ability totals are honest, and losing damage silently is not.
+     * Healing direct casts never may, because players read heals one by one and collapsing two casts hides who got patched
+     * and for how much. A heal with nowhere to go gets a slot taken for it (PickEvictionTarget) or is counted as dropped;
+     * it does not join another heal's number.
      */
-    private bool ShouldAbsorb(FctLane lane, double value, bool periodic, bool relaxed = false)
-    {
-      if (periodic)
-      {
-        return true;
-      }
-
-      if (lane is not (FctLane.DamageDealt or FctLane.DamageTaken))
-      {
-        return false;
-      }
-
-      if (relaxed)
-      {
-        return true;
-      }
-
-      var median = _median.Median(lane);
-      return median > 0 && value < median * AbsorbFractionOfMedian;
-    }
+    private static bool ShouldAbsorb(FctLane lane, bool periodic) =>
+      periodic || lane is FctLane.DamageDealt or FctLane.DamageTaken;
 
     /*
-     * Folds amount into a live number about the *same thing* — NAG's accumulateHits count-up, with the key NAG uses.
-     * Same pooled lane, same side, same proc/direct and periodic/direct kind, same ability name; then the same age rules
-     * (young enough that the count-up reads as one exchange, unless the lane is at its cap and this is the best option
-     * left). Crits never absorb either way: a crit number that quietly grows is misleading, and that overload is what the
-     * drop counter exists to make visible.
+     * Folds a hit into the live number already showing exactly this — NAG's accumulateHits, with NAG's key plus the face
+     * value: same pooled lane, same side, same proc/direct and periodic/direct kind, same ability name, same amount. Then the
+     * age rules: the target has to be young enough that one number standing for several still reads as one exchange, and have
+     * most of its life left, so a count never lands on something about to fade out. Crits never absorb — each one is the event
+     * — and their overload is what the drop counter exists to make visible.
      *
-     * The key is load-bearing. Matching on lane alone — which is what this did — let an Immolation tick grow a melee
-     * number that then read "(Spinning Attack)", and let two different DoTs taken collapse into whichever landed first.
-     * That is not grouping, it is a wrong total wearing the right label; NAG folds only into a component with identical
-     * flags, and Mik's Scrolling Battle Text merges only on matching event type *and* skill name.
+     * Matching on the value is what makes "×N" a fact rather than an estimate: 2,040 ×2 really was two hits of 2,040.
+     * Summing instead, which this used to do, put a number on screen that no hit ever landed for and made the player divide
+     * to find out what happened.
+     *
+     * The rest of the key is load-bearing too. Matching on lane alone — the original — let an Immolation tick grow a melee
+     * number that then read "(Spinning Attack)", and let two different DoTs taken collapse into whichever landed first; NAG
+     * folds only into a component with identical flags, and Mik's Scrolling Battle Text merges only on matching event type
+     * *and* skill name.
      */
     private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool proc, bool periodic, string source,
-      double amount, double now, bool relaxed = false)
+      double value, double now)
     {
       for (var i = hits.Count - 1; i > -1; i--)
       {
         var hit = hits[i];
         if (hit.Lane != lane || hit.Blowout || hit.FixedText is not null
             || hit.Incoming != incoming || hit.Proc != proc || hit.Periodic != periodic
-            || !string.Equals(hit.Source, source, StringComparison.Ordinal))
+            || !string.Equals(hit.Source, source, StringComparison.Ordinal)
+
+            /*
+             * "Identical" means identical at the precision the player can read: two hits that draw the same main line are the
+             * same number as far as anyone can tell, so 12,480 and 12,520 both being "12.5k" may share a count while 2,040 and
+             * 2,041 may not. Compared last, because it is the only part of the key that allocates.
+             */
+            || !string.Equals(FctText.FormatHitValue(hit.Value), FctText.FormatHitValue(value), StringComparison.Ordinal))
         {
           continue;
         }
 
         var age = now - hit.SpawnMs;
-        if (!relaxed && age > Math.Min(AbsorbWindowMs, hit.LifetimeMs * AbsorbMaxLifeFrac))
+        if (age > Math.Min(AbsorbWindowMs, hit.LifetimeMs * AbsorbMaxLifeFrac))
         {
           continue;
         }
 
-        hit.CountBaseValue = FctMotion.DisplayValue(hit, age);
-        hit.AgeAtCountStartMs = age;
-        hit.CountUpMs = FctMotion.CountUpMs;
-        hit.TargetValue += amount;
+        /* The one thing a fold does: say so. The drawn amount stays the face value of a single hit. */
+        hit.MergeCount++;
+        FctMotion.RefreshText(hit);
         return true;
       }
 
       return false;
     }
 
-    /* What a number is worth keeping on screen: its amount, with a proc discounted because one is subordinate by design. */
-    private static double Significance(double value, bool proc) => value * (proc ? ProcSignificanceFrac : 1.0);
+    /*
+     * What a number is worth keeping on screen: everything it stands for, with a proc discounted because one is subordinate
+     * by design. The count matters because eviction is a choice about what to lose — dropping a number that represents six
+     * identical hits loses six hits, not one, whatever its face value says.
+     */
+    private static double Significance(double value, int mergeCount, bool proc) =>
+      value * Math.Max(1, mergeCount) * (proc ? ProcSignificanceFrac : 1.0);
 
     /*
      * The cheapest occupied slot in this lane and side: the least significant number there, excluding crits (a crit keeps
@@ -301,7 +288,7 @@ namespace EQLogParser
           continue;
         }
 
-        var score = Significance(hit.TargetValue, hit.Proc);
+        var score = Significance(hit.Value, hit.MergeCount, hit.Proc);
         if (score < weakestScore)
         {
           weakest = hit;

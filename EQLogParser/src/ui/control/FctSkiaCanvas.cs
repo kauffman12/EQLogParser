@@ -249,7 +249,7 @@ namespace EQLogParser
         return;
       }
 
-      FctMotion.RefreshText(hit, ageMs);
+      // text is ingest's business (FctMotion.RefreshText), which flags TextDirty when a duplicate folds in
       if (hit.TextDirty)
       {
         RebuildGlyphs(hit);
@@ -365,18 +365,18 @@ namespace EQLogParser
       return true;
     }
 
-    /* Measures the label and (re)acquires the crit halo: both depend on text that can change on count-up. */
+    /* Measures the label and (re)acquires the crit halo: both depend on the text, which changes when a duplicate folds in. */
     private void RebuildGlyphs(FctHitState hit)
     {
       EnsureSkiaResources();
       var measured = TextWidth(hit.DisplayText, hit.ValueFontSize, bold: true);
 
       /*
-       * A folded hit counts up, and if its width grew with the digits then so did the clamp band ArcedX reads: a DoT
-       * total sliding to a wider number would drift sideways as it climbed, which looks like the number is unstable.
-       * Hold the widest measurement while counting; every other hit takes its own.
+       * The measurement is what ArcedX clamps against, so a number that gains a "×3" gets a slightly narrower travel band —
+       * correct rather than sticky: the wider text really does need the room. It only ever grows (a count never shrinks), so
+       * there is no flicker to guard against now that folded hits stop changing their face value.
        */
-      hit.ValueWidth = FctMotion.IsCountingUp(hit) ? Math.Max(hit.ValueWidth, measured) : measured;
+      hit.ValueWidth = measured;
       hit.TextDirty = false;
 
       if (hit.Blowout)

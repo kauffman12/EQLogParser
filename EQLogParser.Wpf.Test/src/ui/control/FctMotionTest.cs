@@ -21,8 +21,7 @@ namespace EQLogParser
       Arc = 40,
       ValueWidth = 120,
       ValueFontSize = 31,
-      TargetValue = 1000,
-      CountBaseValue = 1000,
+      Value = 1000,
     };
 
     /*
@@ -35,13 +34,13 @@ namespace EQLogParser
       var hit = NewHit();
       hit.FixedText = Labels.Dodge;
 
-      FctMotion.RefreshText(hit, 0);
+      FctMotion.RefreshText(hit);
       Assert.AreEqual(Labels.Dodge, hit.DisplayText);
       Assert.IsTrue(hit.TextDirty);
 
-      // a later refresh (every frame does one) must not resurrect the number
+      // a later refresh (every fold does one) must not resurrect the number
       hit.TextDirty = false;
-      FctMotion.RefreshText(hit, 1200);
+      FctMotion.RefreshText(hit);
       Assert.AreEqual(Labels.Dodge, hit.DisplayText);
       Assert.IsFalse(hit.TextDirty);
     }
@@ -50,25 +49,31 @@ namespace EQLogParser
     public void NumericHitsShowTheFormattedValue()
     {
       var hit = NewHit();
-      FctMotion.RefreshText(hit, 10);
+      FctMotion.RefreshText(hit);
       Assert.AreEqual("1,000", hit.DisplayText);
     }
 
+    /*
+     * A number standing for several identical hits says how many and never shows a total: the drawn amount has to stay a
+     * value some single hit actually landed for, or the player divides to find out what happened.
+     */
     [TestMethod]
-    public void CountUpInterpolatesThenSettles()
+    public void ARepeatedHitShowsItsCountInsteadOfATotal()
     {
       var hit = NewHit();
-      hit.CountBaseValue = 1000;
-      hit.TargetValue = 1500;
-      hit.CountUpMs = FctMotion.CountUpMs;
-      hit.AgeAtCountStartMs = 0;
 
-      Assert.AreEqual(1000, FctMotion.DisplayValue(hit, 0), 0.001);
-      Assert.AreEqual(1250, FctMotion.DisplayValue(hit, FctMotion.CountUpMs / 2), 0.001);
-      Assert.AreEqual(1500, FctMotion.DisplayValue(hit, FctMotion.CountUpMs * 2), 0.001);
+      FctMotion.RefreshText(hit);
+      Assert.AreEqual("1,000", hit.DisplayText, "one hit is just its own number");
 
-      FctMotion.RefreshText(hit, FctMotion.CountUpMs * 2);
-      Assert.AreEqual("1,500", hit.DisplayText);
+      hit.MergeCount = 2;
+      FctMotion.RefreshText(hit);
+      Assert.AreEqual("1,000 ×2", hit.DisplayText, "two identical hits are still a thousand each");
+
+      hit.TextDirty = false;
+      hit.MergeCount = 12;
+      FctMotion.RefreshText(hit);
+      Assert.AreEqual("1,000 ×12", hit.DisplayText);
+      Assert.IsTrue(hit.TextDirty, "a changed count has to dirty the text so the backend rebuilds the glyphs");
     }
 
     [TestMethod]

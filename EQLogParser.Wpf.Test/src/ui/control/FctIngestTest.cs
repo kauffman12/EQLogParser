@@ -5,8 +5,9 @@ namespace EQLogParser
 {
   /*
    * Ingest decides what happens to an incoming hit: fold it, spawn it, or lose it to the lane cap. That is
-   * the policy that keeps a raid pull readable, so it is pinned here — totals must survive overload, periodic
-   * ticks must collapse into one running number, and drops must be counted rather than silent.
+   * the policy that keeps a raid pull readable, so it is pinned here — repeated hits collapse into one number
+   * that says how many it stands for, no number ever shows an amount some single hit did not land for, and drops
+   * are counted rather than silent.
    */
   [TestClass]
   public sealed class FctIngestTest
@@ -65,8 +66,9 @@ namespace EQLogParser
       Assert.IsFalse(ingest.Accept(_hits, FctLane.Missed, 0, "Backstab", crit: false, minor: true, periodic: false, fixedText: Labels.Dodge, Width, Height, 50) is null);
     }
 
+    /* Identical ticks are the case folding exists for: one number, still reading as one tick's worth, saying how many. */
     [TestMethod]
-    public void PeriodicTicksFoldIntoOneRunningNumber()
+    public void IdenticalTicksBecomeOneNumberWithACount()
     {
       var ingest = NewIngest();
 
@@ -79,11 +81,9 @@ namespace EQLogParser
 
       // one spawn plus five folded ticks
       Assert.AreEqual(1, _hits.Count);
-      Assert.AreEqual(1200, _hits[0].TargetValue, 0.001);
-
-      // the last fold happened at 1000 ms and counts up over CountUpMs: read the text after it settles
-      FctMotion.RefreshText(_hits[0], 1000 + FctMotion.CountUpMs + 1);
-      Assert.AreEqual("1,200", _hits[0].DisplayText);
+      Assert.AreEqual(6, _hits[0].MergeCount, "six ticks, one number");
+      Assert.AreEqual(200, _hits[0].Value, 0.001, "and it still reads as one tick, not as 1,200 of something");
+      Assert.AreEqual("200 ×6", _hits[0].DisplayText);
     }
 
     [TestMethod]
@@ -96,31 +96,37 @@ namespace EQLogParser
         ingest.Accept(_hits, FctLane.HealingDealt, 1500, "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
-      // players read heals individually; folding them hides who got patched and for how much
+      // players read heals individually; folding them hides who got patched and for how much. These six are the same size
+      // on purpose: identical is not close enough, a heal never joins another heal's number
       Assert.AreEqual(6, _hits.Count);
+      foreach (var hit in _hits)
+      {
+        Assert.AreEqual(1, hit.MergeCount, "six casts of 1,500 stay six numbers");
+      }
     }
 
+    /*
+     * What folding is not for. A small hit used to be poured into any live number of its lane because it looked like routine
+     * noise against the lane's running median, which put 60 inside a 600 and left a 660 on screen that no hit ever landed.
+     * Only an identical number may absorb one now, so different amounts stay visible as themselves.
+     */
     [TestMethod]
-    public void SmallDirectHitsCountUpOnALiveNumber()
+    public void ASmallHitIsNotPouredIntoABiggerOneOfTheSameAbility()
     {
       var ingest = NewIngest();
 
-      // seed the lane's median with ordinary hits first: 60 is small against that history
       for (var now = 0.0; now < 900; now += 100)
       {
         ingest.Accept(_hits, FctLane.DamageDealt, 600, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, now);
       }
 
       var before = _hits.Count;
-      Assert.IsNull(ingest.Accept(_hits, FctLane.DamageDealt, 60, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 1000));
-      Assert.AreEqual(before, _hits.Count);
+      var small = ingest.Accept(_hits, FctLane.DamageDealt, 60, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 1000);
 
-      // the newest hit carries the count-up: it started at 600 and ends 60 higher
-      var target = _hits[^1];
-      Assert.IsTrue(target.CountUpMs > 0);
-      Assert.AreEqual(660, target.TargetValue, 0.001);
-      FctMotion.RefreshText(target, (1000 - target.SpawnMs) + target.CountUpMs);
-      Assert.AreEqual("660", target.DisplayText);
+      Assert.IsNotNull(small, "there is no median gate any more, and nothing lands inside another number");
+      Assert.AreEqual(before + 1, _hits.Count);
+      Assert.AreEqual(60, small.Value, 0.001);
+      Assert.AreEqual(1, small.MergeCount, "and it is one hit, which is what it is");
     }
 
     /*
@@ -144,8 +150,12 @@ namespace EQLogParser
       Assert.IsTrue(_hits.Count <= 12, $"lane cap was not enforced ({_hits.Count} live)");
       Assert.AreEqual(0, ingest.DroppedCount, "while a hit of the lane is alive, nothing may be lost");
 
-      // every hit after the 12th merged into a live number: the full 40 x 900 is still on screen
-      Assert.AreEqual(40 * 900.0, TotalOf(_hits), 0.001);
+      // every hit after the first is a count on a number that is still on screen: all 40 are accounted for
+      Assert.AreEqual(40, Represented(_hits), "the counts have to add up to what actually landed");
+      foreach (var hit in _hits)
+      {
+        Assert.AreEqual(900, hit.Value, 0.001, "and none of them got any bigger than the hit it stands for");
+      }
     }
 
     [TestMethod]
@@ -180,9 +190,10 @@ namespace EQLogParser
       ingest.Accept(_hits, FctLane.DamageTaken, 350, "Burn", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
       ingest.Accept(_hits, FctLane.DamageTaken, 400, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 200);
 
-      Assert.AreEqual(2, _hits.Count, "each ability keeps its own running total");
-      Assert.AreEqual(800, OnlyWith("Immolation").TargetValue, 0.001, "and a total is only its own ticks");
-      Assert.AreEqual(350, OnlyWith("Burn").TargetValue, 0.001, "which is what keeps the second one on screen at all");
+      Assert.AreEqual(2, _hits.Count, "each ability keeps its own number");
+      Assert.AreEqual(400, OnlyWith("Immolation").Value, 0.001, "counting its own ticks over itself...");
+      Assert.AreEqual(2, OnlyWith("Immolation").MergeCount, "...which is two of them, not a total of 800");
+      Assert.AreEqual(350, OnlyWith("Burn").Value, 0.001, "and the other DoT stays on screen at all");
     }
 
     [TestMethod]
@@ -200,8 +211,8 @@ namespace EQLogParser
       var proc = ingest.Accept(_hits, FctLane.DamageDealt, 40, "Zealot's Fury", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 950, proc: true);
 
       Assert.IsNotNull(proc, "a proc is a different ability: it gets its own number even when it is small");
-      Assert.AreEqual(40, proc.TargetValue, 0.001);
-      Assert.AreEqual(1500, swing.TargetValue, 0.001, "and the swing beside it stays what it was");
+      Assert.AreEqual(40, proc.Value, 0.001);
+      Assert.AreEqual(1500, swing.Value, 0.001, "and the swing beside it stays what it was");
     }
 
     /* A tick must not fold into a direct hit either, or the melee number becomes the sum of a swing and a DoT. */
@@ -214,7 +225,8 @@ namespace EQLogParser
       var tick = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
 
       Assert.IsNotNull(tick);
-      Assert.AreEqual(1500, swing.TargetValue, 0.001, $"the swing still reads {swing.TargetValue:0}");
+      Assert.AreEqual(1500, swing.Value, 0.001, $"the swing still reads {swing.Value:0}");
+      Assert.AreEqual(1, swing.MergeCount);
       Assert.AreEqual("Immolation", tick.Source);
     }
 
@@ -236,7 +248,7 @@ namespace EQLogParser
       var big = ingest.Accept(_hits, FctLane.DamageDealt, 45_000, "Meteor Storm", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 600);
 
       Assert.IsNotNull(big, "the biggest number of the fight has to be on screen");
-      Assert.AreEqual(45_000, big.TargetValue, 0.001, "as its own number, not inside somebody else's");
+      Assert.AreEqual(45_000, big.Value, 0.001, "as its own number, not inside somebody else's");
       Assert.AreEqual("Meteor Storm", big.Source);
       Assert.AreEqual(0, ingest.DroppedCount, "it took a slot rather than being dropped");
       Assert.AreEqual(12, _hits.Count, "and the lane is still capped");
@@ -245,7 +257,7 @@ namespace EQLogParser
       {
         if (hit != big)
         {
-          Assert.IsTrue(hit.TargetValue < 1000, $"a routine swing came back reading {hit.TargetValue:0}");
+          Assert.IsTrue(hit.Value < 1000, $"a routine swing came back reading {hit.Value:0}");
         }
       }
     }
@@ -291,9 +303,13 @@ namespace EQLogParser
       Assert.AreEqual(before - 900 + 8000, TotalOf(_hits), 0.001, "and the visible total moved by exactly what landed and what left");
     }
 
-    /* A routine number at a full lane folds into its own kind, so sustained spam still costs nothing but a slot. */
+    /*
+     * A stream of identical hits cannot fill a lane at all: the fold is tried before the cap and does not care about
+     * occupancy, so thirteen swings of the same amount are one number counting up in place, and the twelve slots stay free
+     * for the different numbers that actually need somewhere to go.
+     */
     [TestMethod]
-    public void AFullLaneAddsToItsOwnKindInsteadOfDropping()
+    public void AStreamOfIdenticalHitsNeverReachesTheLaneCap()
     {
       var ingest = NewIngest();
 
@@ -302,9 +318,10 @@ namespace EQLogParser
         ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
       }
 
-      Assert.AreEqual(12, _hits.Count);
-      Assert.AreEqual(0, ingest.DroppedCount, "thirteen hits of the same ability lose nothing to a twelve-slot lane");
-      Assert.AreEqual(13 * 900.0, TotalOf(_hits), 0.001);
+      Assert.AreEqual(1, _hits.Count, "one number for thirteen identical swings");
+      Assert.AreEqual(13, _hits[0].MergeCount);
+      Assert.AreEqual(0, ingest.DroppedCount, "and nothing lost on the way");
+      Assert.AreEqual("900 ×13", _hits[0].DisplayText);
     }
 
     /* ...and taking a slot is not a licence to shuffle: an occupant nearly as good as the newcomer keeps it. */
@@ -313,9 +330,10 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
+      // twelve different amounts, because a lane of identical ones is one number and would not be full at all
       for (var i = 0; i < 12; i++)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
+        ingest.Accept(_hits, FctLane.DamageDealt, 900 + i, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 30);
       }
 
       // a different ability, so folding is out; 1.3× the weakest occupant is not the clear win eviction asks for
@@ -578,9 +596,11 @@ namespace EQLogParser
     {
       var ingest = NewIngest();
 
+      // distinct amounts on purpose: identical ones would fold into a single counted number and this test is about
+      // five live numbers leaving, not about folding
       for (var i = 0; i < 5; i++)
       {
-        ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 100);
+        ingest.Accept(_hits, FctLane.DamageDealt, 500 + (i * 10), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 100);
       }
 
       var removed = new List<FctHitState>();
@@ -674,15 +694,28 @@ namespace EQLogParser
       return found;
     }
 
+    /* What the numbers on screen add up to: every face value once per hit it stands for. */
     private static double TotalOf(List<FctHitState> hits)
     {
       var total = 0.0;
       foreach (var hit in hits)
       {
-        total += hit.TargetValue;
+        total += hit.Value * hit.MergeCount;
       }
 
       return total;
+    }
+
+    /* How many separate hits the visible numbers stand for. */
+    private static int Represented(List<FctHitState> hits)
+    {
+      var count = 0;
+      foreach (var hit in hits)
+      {
+        count += hit.MergeCount;
+      }
+
+      return count;
     }
   }
 }

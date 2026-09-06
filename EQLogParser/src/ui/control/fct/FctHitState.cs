@@ -13,10 +13,9 @@ namespace EQLogParser
      * leaves sooner (FctIngest.ApplyProcTempo). A crit proc is exempt from both — the pop already says it matters. */
     public bool Proc;
 
-    /* A damage-over-time tick rather than one hit somebody aimed. Stored because folding needs it: a tick may only join a
-     * running total of ticks of the same ability, and once a number is on screen its kind cannot be re-derived from the
-     * value — 900 could be a swing or a tick, and letting those share a total is how a melee number ends up claiming to
-     * be a DoT. */
+    /* A damage-over-time tick rather than one hit somebody aimed. Stored because folding needs it: a tick may only join
+     * another number of the same kind, and once a number is on screen its kind cannot be re-derived from the value — 900
+     * could be a swing or a tick, and letting those share a number is how one ends up claiming to be something it is not. */
     public bool Periodic;
 
     /*
@@ -69,9 +68,17 @@ namespace EQLogParser
     // crit scale pop on top of the float curve
     public bool Blowout;
 
-    // count-up: TargetValue is reached CountUpMs after AgeAtCountStartMs
-    public double SpawnMs, AgeAtCountStartMs, CountUpMs;
-    public double TargetValue, CountBaseValue;
+    public double SpawnMs;
+
+    /*
+     * The face amount of one hit, drawn as it is and never added to. When several identical hits land on the same number
+     * (FctIngest's fold) this stays the value of one of them and MergeCount says how many — a total would make the player
+     * divide to find out what landed, and let eight small hits wear the face value of a big one.
+     */
+    public double Value;
+
+    /* How many hits this one number stands for; 1 means it is simply its own hit. Drawn as "2,040 ×2" (FctText). */
+    public int MergeCount = 1;
 
     // ability/verb drawn under the value; null = no source line. Parentheses are added when drawn.
     public string Source;

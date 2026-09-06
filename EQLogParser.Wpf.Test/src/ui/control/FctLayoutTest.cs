@@ -259,8 +259,7 @@ namespace EQLogParser
         Style = style,
         Proc = proc,
         Source = source,
-        TargetValue = 1234,
-        CountBaseValue = 1234,
+        Value = 1234,
       };
 
       FctStyle.ApplyTo(hit, hit.Lane, minor: false);

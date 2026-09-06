@@ -35,6 +35,17 @@ namespace EQLogParser
       return Shorten(Math.Round(v / 1_000_000.0, 1), "m");
     }
 
+    /*
+     * The main line of a value: the hit's own face amount, plus how many identical hits this one number stands for.
+     *
+     * Not a sum, deliberately. A merged 4,080 makes the player divide to find out what actually landed, and it lets eight
+     * routine ticks wear the face value of a big one — which is the mistake the fold policy exists to avoid. "2,040 ×2"
+     * answers both questions a glance can ask: how big was a hit like this, and did several happen.
+     */
+    internal static string FormatHit(double value, int mergeCount) => mergeCount > 1
+      ? $"{FormatHitValue(value)} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
+      : FormatHitValue(value);
+
     /* "0.#" keeps 12k looking like 12k and 12.5k looking like 12.5k. */
     private static string Shorten(double value, string suffix) => value.ToString("0.#", CultureInfo.InvariantCulture) + suffix;
   }

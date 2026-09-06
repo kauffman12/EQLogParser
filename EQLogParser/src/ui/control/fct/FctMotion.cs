@@ -63,9 +63,6 @@ namespace EQLogParser
      */
     public const double ProcTimeFrac = 0.7;
 
-    /* How long a folded-in hit takes to count up to its new total. */
-    public const double CountUpMs = 300;
-
     /*
      * Where a hit is along its travel, 0..1. The zero guard is not decoration: pulse mode's MotionMs comes from
      * FctCellGrid.SlideMs, so setting that to 0 — "appear straight in place", a plausible knob to expose — divides 0 by 0
@@ -195,28 +192,17 @@ namespace EQLogParser
       return Math.Clamp(o, 0.0, 1.0);
     }
 
-    /* Whether the drawn number is mid-count-up. Backends use it so a growing total moves nothing else around it. */
-    public static bool IsCountingUp(FctHitState hit) => hit.CountUpMs > 0 && hit.TargetValue != hit.CountBaseValue;
-
-    /* The interpolated number while a folded-in hit counts up; the target otherwise. */
-    public static double DisplayValue(FctHitState hit, double ageMs)
-    {
-      if (!IsCountingUp(hit))
-      {
-        return hit.TargetValue;
-      }
-
-      var p = Math.Clamp((ageMs - hit.AgeAtCountStartMs) / hit.CountUpMs, 0.0, 1.0);
-      return hit.CountBaseValue + ((hit.TargetValue - hit.CountBaseValue) * p);
-    }
-
     /*
      * The main line. A label hit (FixedText) is literal and must never be replaced by the formatted
      * value: zero-damage records carry Value 0, and formatting that clobbered "Dodge" with "0".
+     *
+     * Nothing here depends on age any more. While a folded hit counted up its total, the drawn number changed over time and
+     * this had to be called every frame; showing one face value plus a hit count means the text only changes when a duplicate
+     * folds in, which FctIngest asks for directly.
      */
-    public static void RefreshText(FctHitState hit, double ageMs)
+    public static void RefreshText(FctHitState hit)
     {
-      var text = hit.FixedText ?? FctText.FormatHitValue(DisplayValue(hit, ageMs));
+      var text = hit.FixedText ?? FctText.FormatHit(hit.Value, hit.MergeCount);
       if (text == hit.DisplayText)
       {
         return;

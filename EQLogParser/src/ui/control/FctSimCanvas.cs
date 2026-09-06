@@ -198,7 +198,7 @@ namespace EQLogParser
         return;
       }
 
-      FctMotion.RefreshText(hit, ageMs);
+      // the text itself is ingest's business (FctMotion.RefreshText), which flags TextDirty when a duplicate folds in
       if (!_glyphs.TryGetValue(hit, out var glyphs) || hit.TextDirty)
       {
         BuildGlyphs(hit);
