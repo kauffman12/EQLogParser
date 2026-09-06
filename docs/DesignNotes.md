@@ -483,3 +483,123 @@ answered each name is visible twice over — in `scripts\MeasureLoadedAssemblies
 
 Whether that makes Bottles' `vcredist2022` dependency redundant is a separate question with a fresh-prefix test in front
 of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
+
+## Floating Combat Text
+
+`Tools → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is
+settled and recorded in `docs/NagFctReference.md` (SkiaSharp beat the WPF vector path ~100 fps vs ~30 fps at
+×10 raid scale); this section covers why the *plumbing* is shaped the way it is, because that is the part a
+later change is most likely to undo by accident.
+
+### One queue, drained on the render tick
+
+`FctManager` does not raise an event per record. It pushes `FctHitCommand`s onto a `ConcurrentQueue` and the
+overlay drains it from the canvas's `EventsFrame` callback — once per painted frame, at most 60 times a second.
+
+The earlier shape posted one dispatcher item per record, which is the worst of both worlds: a raid AoE window
+of ~200 hits/s became 200 cross-thread posts and 200 layout invalidations, and a UI stall replayed the whole
+burst seconds after it stopped mattering. Draining on the frame clock batches for free (the frame is the batch)
+and makes staleness cheap to reason about: anything older than `FctManager.MaxQueueAgeMs` is dropped and counted
+rather than drawn. A combat number that arrives half a second late describes a swing the player has already
+reacted to; showing it is worse than losing it, because it lies about what is on global right now.
+
+Two counters make overload visible instead of mysterious: `FctManager.DroppedCount` (queue lost the UI could not
+draw) and `IFctDiagnostics.DroppedCount` on the canvas (hits the lane caps refused). The header shows their sum
+as "N dropped" only when it is non-zero, so a healthy overlay stays quiet.
+
+### Parsing costs nothing when nobody is looking
+
+`FctManager.Enabled` is a volatile flag gated at the top of both handlers, and it is set from the overlay's
+`IsVisibleChanged`. Hiding the overlay therefore stops the feed at the parser: no player-name comparisons, no
+pet-owner registry lookups, no command allocation. `DamageLineParser`/`HealingLineParser` additionally hoist
+their static event delegate before raising, so with no subscriber even the `*ProcessedEvent` wrapper is not
+allocated — FCT is the only reason those events exist, and it should not tax a user who never opens it.
+
+A window owns exactly one manager: `FctManager.Create()` on construction, `Dispose()` (which unsubscribes from
+both parsers) on close. Without that pairing a closed overlay keeps a live handler chain feeding a queue nobody
+drains, which is invisible until the next session shows yesterday's fight.
+
+### Shared policy, per-backend drawing
+
+The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. Now
+`FctHitState` is plain data and the decisions live in one place:
+
+- `FctIngest` — fold into a live number, spawn, or drop at the lane cap.
+- `FctLayout` — which half of the canvas a lane lives in, spawn band, rise/arc, the protected center.
+- `FctMotion` — position, scale, opacity and **the text itself** as pure functions of `(hit, age)`.
+- `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
+- `FctLifeController` / `FctMedianTracker` — adaptive lifetime and the rolling median.
+
+A backend keeps only what genuinely differs: substrate resources (Skia `SKFont`/`SKPaint`/halo sprites, WPF
+`FormattedText`/brushes) and its draw loop. That split is also what makes the animation unit-testable
+(`EQLogParser.Wpf.Test/src/ui/control/Fct*Test.cs`) without a window, dispatcher or GPU — worth keeping in mind
+before moving maths back into a canvas.
+
+`FctMotion.RefreshText` having the text rule is deliberate and fixes a real bug: zero-damage records (Dodge,
+Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the numeric string each frame overwrote
+the label with "0" — which reads as a legal absorb rather than an obvious mistake. A hit with `FixedText` set now
+can only ever draw that text.
+
+### Raster at most 60 times a second, into the same buffer
+
+`CompositionTarget.Rendering` fires at display refresh, so on a 144 Hz monitor an animated canvas would raster a
+full surface 144 times a second for text nobody can read faster. `TargetFrameMs` caps painting near 60 Hz; the
+tick still fires `EventsFrame` (the simulation paces its record schedule off it) but the surface memset + draw +
+blit does not run. On a 980×640 overlay at 150% scaling, each skipped raster is ~3.5 MB of pixel work avoided.
+
+The destination bitmap and its copy buffer are allocated once per size and reused. Allocating a `WriteableBitmap`
+plus a fresh `byte[w*h*4]` every frame put ~5 MB/frame on the large-object heap and forced a new GPU texture
+upload each time instead of updating the existing one; both are now per-resize, not per-frame. The surface is
+explicitly `Bgra8888`/`Premul`, byte-identical to WPF's `Bgra32`, so `ReadPixels` is a memcpy with no conversion —
+and it fails closed (skip the frame) rather than blitting wrong bytes if Skia ever hands back another format.
+
+The remaining copy (surface → snapshot → pinned array → back buffer) is the known next step: `D3DImage` with a
+shared Skia surface would remove it. It is not taken here because it needs a real GPU to validate against, and
+three memcpys are not what limits this renderer today.
+
+### Where text may go
+
+The overlay does not know where the player's target ring, cast bar or spell gems sit in the game window, so
+`FctLayout.CenterClearance` reserves a band of clear space on both sides of the midline and `FctMotion.ArcedX`
+clamps against it using half the *scaled* text width — a crit at full blowout still cannot slide over the middle.
+The clamp degrades to the middle of its band instead of throwing when a label is wider than its half, which is
+what used to crash every frame on a small overlay (`FctLayoutTest` pins both properties).
+
+Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive
+lifetime aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop merges
+into a live number before it drops anything, so overload compresses the display without losing totals —
+`FctIngestTest` asserts exactly that: 40 hits at one lane still show 36,000 damage on screen.
+
+Folding follows NAG's median idea with different numbers: `FctMedianTracker` keeps a rolling window per lane and
+a direct hit below half the lane's median counts up on a live number instead of spawning its own (`periodic`
+DoT/HoT ticks always fold — five overlapping 200s tell you nothing one running total does not). Healing never
+folds: players read heals individually, and merging them hides who got patched. Half the median rather than
+NAG's "ignore under 2× median of *max hits*" because ignoring is not an option here — losing a number in an
+overlay whose whole job is to lose nothing measurable is worse than showing a small one.
+
+### Locked by default: click-through and persistence
+
+In game the overlay must not eat clicks or take focus, so `FctOverlayWindow` runs layered plus
+`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` while locked — the same recipe as the timer and text overlays, reasserted
+in `WM_NCHITTEST` because WPF rewrites window styles whenever it feels like it. Lock state, fountain style and
+geometry persist through `ConfigUtil` (`FctOverlayLeft/Top/Width/Height/Locked/Fountain/Enabled`) and the overlay
+reopens at startup if it was open on exit.
+
+Because a locked window cannot be clicked, its own checkbox is unreachable by design; the way out is the Tools
+menu's lock item, since locked also means `WS_EX_NOACTIVATE` and therefore no keyboard input either — which is what
+the overlay's hint line tells the user. (Esc still prefers unlock over close in the case where the window does hold
+focus: losing a positioned overlay to a stray Esc is the worse failure.) `MainWindow` mirrors the state so menu and
+checkbox never disagree, and an unlocked overlay gets `Activate()` on show so its Esc can reach it at all.
+
+`NativeMethods.GwlStyle` is `-20`, i.e. Win32's `GWL_EXSTYLE`, and `NativeMethods.GwlExStyle` is a wrong value that
+nothing correct uses. Every existing overlay drives extended styles through `GwlStyle` and works, so the FCT window
+follows suit rather than "fixing" the constant, which would break five windows at once. Renaming the pair to match
+Win32 — with `GWL_STYLE` becoming `-16` — is a separate change with its own test pass.
+
+### What is deliberately not here yet
+
+- Party-wide and other-players' heals: fed only when group configuration exists to scope them.
+- Resist/immune as distinct event classes: the parser reports partial resists as reduced totals (which display
+  correctly) and full immunity as `Labels.Invulnerable`; there is no "resisted 75%" record to show, so nothing is invented.
+- Per-character or per-lane configuration, palettes for color-vision accessibility, and a reduced-motion mode.
+- Real GPU presentation via `D3DImage` (see above).

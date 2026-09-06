@@ -75,6 +75,11 @@ Source: "{#MyReleaseDir}\Microsoft.WindowsAPICodePack.Shell.dll"; DestDir: "{app
 Source: "{#MyReleaseDir}\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Riok.Mapperly.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
 
+; Floating combat text (FctSkiaCanvas) renders through SkiaSharp. Both halves are required: the managed
+; assembly resolves normally, its native library is imported by name at first use and loads through the
+; deps.json probing below.
+Source: "{#MyReleaseDir}\SkiaSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
+
 ; .NET Memory Caching and Dependency Injection
 Source: "{#MyReleaseDir}\Microsoft.Extensions.Caching.Abstractions.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.Extensions.Caching.Memory.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -127,6 +132,7 @@ Source: "{#MyReleaseDir}\System.Drawing.Common.dll"; DestDir: "{app}"; Flags: ig
 Source: "{#MyReleaseDir}\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WpfAnimatedGif.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\runtimes\win\lib\net8.0\System.Speech.dll"; DestDir: "{app}\runtimes\win\lib\net8.0"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\runtimes\win-x64\native\libSkiaSharp.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
 
 ; The MSVC runtime that onnxruntime.dll imports, installed app-local (flat in {app}, not in a redist folder) so a
 ; machine without the Visual C++ 2022 redistributable can still speak. Being beside the executable is what puts them
@@ -168,8 +174,9 @@ Type: files; Name: "{app}\data\triggerVariables.rtf"
 ; folder, and deleting someone's models on upgrade is worse than leaving a few hundred MB of dead weight for them to move
 ; by hand. The uninstaller still clears {app}.
 ;
-; {app}\runtimes\win-x64 is left alone for the same reason: other packages put natives in it (SQLite among them), this
-; installer does not create the folder, and nothing here can say what an older install left inside it.
+; {app}\runtimes\win-x64 is left alone for the same reason: other packages put natives in it (SQLite among them) and
+; nothing here can say what an older install left inside it. SkiaSharp's native library installs under it, so the
+; folder itself now exists on a fresh install -- but only the one file this script copied is ever removed.
 ;
 ; The downloaded packs are a different case and are removed on uninstall -- see CurUninstallStepChanged: nothing under
 ; %LOCALAPPDATA%\EQLogParser is user-authored, it all comes back from GitHub on the next enable.

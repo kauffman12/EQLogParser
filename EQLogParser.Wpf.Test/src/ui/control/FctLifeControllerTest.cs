@@ -1,6 +1,6 @@
 namespace EQLogParser
 {
-  /* FctLifeController is the presentation-side governor: 7 s baseline, compressed by predicted lane
+  /* FctLifeController is the presentation-side governor: 3.5 s baseline, compressed by predicted lane
    * fill. Pure logic (no WPF types), so it is fully unit-testable here. */
   [TestClass]
   public sealed class FctLifeControllerTest
@@ -10,18 +10,18 @@ namespace EQLogParser
     {
       var life = new FctLifeController();
 
-      Assert.AreEqual(3500.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 1000));
+      Assert.AreEqual(3500.0, life.NextLifetime(FctLane.DamageDealt, liveCount: 0, nowMs: 1000));
     }
 
     [TestMethod]
     public void LongGapResetsToTheBaseline()
     {
       var life = new FctLifeController();
-      life.NextLifetime(FctSimLane.DamageDealt, 0, 1000);
-      life.NextLifetime(FctSimLane.DamageDealt, 0, 1100);
+      life.NextLifetime(FctLane.DamageDealt, 0, 1000);
+      life.NextLifetime(FctLane.DamageDealt, 0, 1100);
 
       // 20 s of silence: the rate estimate is forgotten
-      Assert.AreEqual(3500.0, life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: 21100));
+      Assert.AreEqual(3500.0, life.NextLifetime(FctLane.DamageDealt, liveCount: 0, nowMs: 21100));
     }
 
     [TestMethod]
@@ -29,7 +29,7 @@ namespace EQLogParser
     {
       var life = new FctLifeController();
 
-      Assert.AreEqual(0, life.NextLifetime(FctSimLane.Crit, liveCount: 50, nowMs: 1000));
+      Assert.AreEqual(0, life.NextLifetime(FctLane.Crit, liveCount: 50, nowMs: 1000));
     }
 
     [TestMethod]
@@ -44,7 +44,7 @@ namespace EQLogParser
         t += 100;
       }
 
-      var value = life.NextLifetime(FctSimLane.DamageDealt, liveCount: 0, nowMs: t);
+      var value = life.NextLifetime(FctLane.DamageDealt, liveCount: 0, nowMs: t);
       Assert.IsTrue(value >= 1000 && value <= 3000, $"expected compressed lifetime, got {value}");
     }
 
@@ -58,10 +58,10 @@ namespace EQLogParser
       for (var i = 0; i < 5; i++)
       {
         t += 200;
-        life.NextLifetime(FctSimLane.DamageDealt, liveCount: 3, nowMs: t);
+        life.NextLifetime(FctLane.DamageDealt, liveCount: 3, nowMs: t);
       }
 
-      var value = life.NextLifetime(FctSimLane.DamageDealt, liveCount: (int)FctLifeController.Capacity(FctSimLane.DamageDealt), nowMs: t + 200);
+      var value = life.NextLifetime(FctLane.DamageDealt, liveCount: (int)FctLifeController.Capacity(FctLane.DamageDealt), nowMs: t + 200);
       Assert.AreEqual(1000.0, value);
     }
 
@@ -69,21 +69,21 @@ namespace EQLogParser
     public void LifetimeIsSlackDividedByRate()
     {
       var life = new FctLifeController();
-      life.NextLifetime(FctSimLane.HealingDealt, 0, 1000);
+      life.NextLifetime(FctLane.HealingDealt, 0, 1000);
 
       // one interval of 200 ms -> instant rate 5/s, EMA (alpha .25) -> 1.25/s; slack 5 - 3 = 2 -> 1600 ms
-      var value = life.NextLifetime(FctSimLane.HealingDealt, liveCount: 3, nowMs: 1200);
+      var value = life.NextLifetime(FctLane.HealingDealt, liveCount: 3, nowMs: 1200);
       Assert.AreEqual(1600, value, 1);
     }
 
     [TestMethod]
     public void CapacityDiffersByLane()
     {
-      Assert.AreEqual(7, FctLifeController.Capacity(FctSimLane.DamageDealt));
-      Assert.AreEqual(7, FctLifeController.Capacity(FctSimLane.DamageTaken));
-      Assert.AreEqual(5, FctLifeController.Capacity(FctSimLane.HealingDealt));
-      Assert.AreEqual(5, FctLifeController.Capacity(FctSimLane.HealingReceived));
-      Assert.AreEqual(0, FctLifeController.Capacity(FctSimLane.Crit));
+      Assert.AreEqual(7, FctLifeController.Capacity(FctLane.DamageDealt));
+      Assert.AreEqual(7, FctLifeController.Capacity(FctLane.DamageTaken));
+      Assert.AreEqual(5, FctLifeController.Capacity(FctLane.HealingDealt));
+      Assert.AreEqual(5, FctLifeController.Capacity(FctLane.HealingReceived));
+      Assert.AreEqual(0, FctLifeController.Capacity(FctLane.Crit));
     }
   }
 }

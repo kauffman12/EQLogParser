@@ -974,8 +974,12 @@ namespace EQLogParser
           {
             CheckSlainQueue(lineData.BeginTime);
 
-            var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor };
-            EventsDamageProcessed?.Invoke(damageEvent);
+            // hoisted so the event object is not built per record when nothing is listening (FCT off)
+            var damageHandler = EventsDamageProcessed;
+            if (damageHandler is not null)
+            {
+              damageHandler(new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+            }
 
             if (record.Type == Labels.Dd)
             {

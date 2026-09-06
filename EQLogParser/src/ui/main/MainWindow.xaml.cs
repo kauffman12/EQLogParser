@@ -236,6 +236,13 @@ namespace EQLogParser
         // listen for tab changes
         dockSite.ActiveWindowChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
         dockSite.DockStateChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
+
+        // the FCT overlay comes back showing if it was showing when the app closed (after the dock is up, so it
+        // never opens on top of a half-built main window)
+        if (ConfigUtil.IfSet("FctOverlayEnabled"))
+        {
+          SetFctOverlayVisible(true);
+        }
       }
       catch (Exception e)
       {
@@ -379,30 +386,70 @@ namespace EQLogParser
     private void OpenFctSkiaSimulationClick(object sender, RoutedEventArgs e) => new FctSimulationWindow(useSkia: true).Show();
 
     /* Live-record FCT overlay (real logs, monitor lines only) - see FctOverlayWindow. */
-    private void ToggleFctOverlayClick(object sender, RoutedEventArgs e)
+    private void ToggleFctOverlayClick(object sender, RoutedEventArgs e) => SetFctOverlayVisible(fctOverlay.IsChecked);
+
+    /*
+     * Show/hide the FCT overlay. Hiding instead of closing keeps the window (and its position) around, while
+     * the window stops its canvas and gates FctManager whenever it is invisible - an overlay nobody is looking
+     * at does no raster work and no parser-side event traffic.
+     */
+    private void SetFctOverlayVisible(bool show)
     {
+      if (!show && _fctOverlay is null)
+      {
+        fctOverlay.IsChecked = false;
+        return;
+      }
+
       if (_fctOverlay is null)
       {
         _fctOverlay = new FctOverlayWindow();
+
         // Esc closes the window: drop the reference so the next toggle builds a fresh one
         _fctOverlay.EventsClosed += () =>
         {
           fctOverlay.IsChecked = false;
+          fctOverlayLock.IsChecked = false;
           _fctOverlay = null;
         };
+
+        // the in-window checkbox or Esc changes the lock while the menu cannot see it
+        _fctOverlay.EventsLockChanged += locked => fctOverlayLock.IsChecked = locked;
       }
 
-      var show = !_fctOverlay.IsVisible;
+      fctOverlay.IsChecked = show;
+      ConfigUtil.SetSetting("FctOverlayEnabled", show);
+
       if (show)
       {
+        fctOverlayLock.IsChecked = _fctOverlay.Locked;
         _fctOverlay.Show();
+
+        // an unlocked overlay needs focus for Esc to reach it; a locked one must never take it from the game
+        if (!_fctOverlay.Locked)
+        {
+          _fctOverlay.Activate();
+        }
       }
       else
       {
         _fctOverlay.Hide();
       }
+    }
 
-      fctOverlay.IsChecked = show;
+    private void ToggleFctOverlayLockClick(object sender, RoutedEventArgs e) => SetFctOverlayLock(fctOverlayLock.IsChecked);
+
+    /*
+     * Lock means click-through (WS_EX_TRANSPARENT): the overlay stops eating clicks meant for EverQuest, which
+     * is the only sane state in game. Persisted even while the overlay is closed so the next session comes back
+     * click-through. Unlocking from here is the escape hatch - while locked the window cannot be clicked, so
+     * its own checkbox is unreachable.
+     */
+    private void SetFctOverlayLock(bool locked)
+    {
+      ConfigUtil.SetSetting("FctOverlayLocked", locked);
+      fctOverlayLock.IsChecked = locked;
+      _fctOverlay?.SetLocked(locked);
     }
 
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");

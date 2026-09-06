@@ -9,249 +9,130 @@ using SkiaSharp;
 
 namespace EQLogParser
 {
-  /* Per-hit render state for the SkiaSharp FCT backend. Plain data — no WPF text objects, so the
-   * per-frame cost is C++-side shaping/drawing on one SKCanvas instead of a WPF display list. */
-  internal sealed class FctSkiaHit
-  {
-    public FctSimLane Lane;
-    public double X0, Y0;                      // spawn position (logical px)
-    public double FallDist;                    // fountain: downward travel from the apex (px); 0 = hold style
-    public double Rise, Arc;                   // total upward travel / sideways arc amplitude
-    public double MotionMs;                    // rise+arc complete by this age, then hold (see RaisedY)
-    public double SideMin, SideMax;            // half-canvas clamp for the value's center x
-    public double ValueWidth;                  // measured, refreshed only when the value changes
-    public double ValueFontSize, SourceFontSize;
-    public SKColor ValueColor;
-    public double LifetimeMs, FadeMs;
-    public bool Blowout;                       // crit scale pop on top of the float curve
-    public double SpawnMs, AgeAtCountStartMs;  // canvas clock time in ms
-    public double TargetValue, CountBaseValue;
-    public double CountUpMs;                   // 0 => no count-up
-    public string Action;
-    public string LastValueKey = "";
-    public string HaloKey;                     // cached blur-glow sprite (crits only)
-    public int HaloPad;
-  }
-
   /*
-   * SkiaSharp FCT renderer: one CPU-raster SKSurface redrawn every frame and blitted into the WPF
-   * tree as a single image. Outline is FillAndStroke (2 passes instead of NAG's 5), glow is a true
-   * Gaussian blur baked once per unique crit value into a ref-counted halo sprite. Mirrors the lane,
-   * motion (bottom-third spawn, rise + half-clamped arc), count-up and stats logic of FctSimCanvas so
-   * both backends are directly comparable — see docs/NagFctReference.md for the design.
+   * SkiaSharp FCT renderer — the production backend. All hits rasterize into one CPU SKSurface per frame
+   * and blit into the WPF tree as a single image, so per-frame cost tracks C++ draw ops (~5 per hit)
+   * rather than WPF display-list elements. Hit policy is shared with the vector backend through
+   * FctIngest/FctLayout/FctMotion; this file owns only Skia resources and the draw/blit.
+   *
+   * Outline is FillAndStroke (2 passes instead of NAG's 5), glow is a true Gaussian blur baked once per
+   * unique crit label into a ref-counted halo sprite. See docs/NagFctReference.md and
+   * docs/DesignNotes.md → Floating Combat Text.
    */
-  internal class FctSkiaCanvas : FrameworkElement, IFctSimCanvas
+  internal class FctSkiaCanvas : FrameworkElement, IFctCanvas, IFctDiagnostics
   {
-    private const double DamageDealtFontSize = 31;
-    private const double DamageTakenFontSize = 29;
-    private const double HealingFontSize = 25;
-    /* Crits are common in EQ (roughly every third number), so the emphasis stays a size step up
-     * from normal damage, not a spectacle. */
-    private const double CritFontSize = 35;
-    private const double DefensiveFontSize = 21; // evade words are informational, not damage
-    private const double MinorFontSize = 20;
-    private const double SourceFontMin = 12;
+    /*
+     * CompositionTarget.Rendering fires at display refresh; a hit's position depends on the clock, so a
+     * live canvas repaints every allowed frame. Rastering the whole surface faster than ~60 Hz buys
+     * nothing and costs proportional to surface area, which on a 1440p overlay at 144 Hz is gigabytes a
+     * second of memset and blit.
+     */
+    private const double TargetFrameMs = 1000.0 / 60;
+
+    // re-read DPI about once a second: per-monitor scaling changes neither the size nor any event we get
+    private const double DpiCheckMs = 1000;
+
     private const float GlowSigma = 5f;
 
-    /* How early in its life a hit finishes moving; see RaisedY for why motion must not span the
-     * whole (adaptive) display time. */
-    private const double MotionWindowMs = 2000;
+    /* Blur sprites are baked per unique crit label; bounded so a long session cannot grow without end. */
+    private const int HaloCacheMax = 64;
 
-    /* Fountain motion (FountainMotion): rise to the apex, then fall while shrinking and fading out.
-     * The fall spans the last FallPhaseFrac of life; the fade covers exactly that span. */
-    private const double FallPhaseFrac = 0.45;
-    private const double FallScaleEnd = 0.55;
+    // the outline under every label; the literal needs the cast because 0xFF000000 does not fit in an int
+    private const int BlackArgb = unchecked((int)0xFF000000);
 
-    /* Ref-counted blur-glow sprite: rendered once per unique (value, size), disposed when the last
-     * hit using it expires. NAG's glow is a black wide radial text-shadow, so color is irrelevant. */
+    /* Ref-counted blur-glow sprite. NAG's glow is a black wide radial text-shadow, so color is irrelevant. */
     private sealed class HaloEntry
     {
       public SKImage Image;
       public int Refs, Pad;
     }
 
-    private readonly Random _rand = new(1234);
-    private readonly List<FctSkiaHit> _hits = [];
-    private readonly FctLifeController _life = new();
+    private readonly List<FctHitState> _hits = [];
+    private readonly FctIngest _ingest = new();
     private readonly Dictionary<string, HaloEntry> _halos = new();
     private readonly Dictionary<(byte style, int size), SKFont> _fonts = new();
+    private readonly Dictionary<FctHitState, string> _haloKey = [];
+
     private SKTypeface _boldTypeface, _regularTypeface;
     private SKMaskFilter _glowBlur;
+
+    /* Paints are reused and reconfigured per draw: allocating 4-6 of them per hit per frame was the hot path. */
+    private SKPaint _outlinePaint, _fillPaint, _blitPaint;
+
     private SKSurface _surface;
+    private WriteableBitmap _bitmap;
+    private byte[] _pixelCopy;
+    private GCHandle _pixelHandle;
     private int _surfaceWidth, _surfaceHeight;
-    private double _pixelsPerDip;
+    private double _pixelsPerDip = 1.0;
+    private double _lastPaintMs, _lastDpiCheckMs;
     private Stopwatch _clock;
-
-    public event Action<double> EventsFrame; // canvas clock ms since Start()
-    public int ActiveCount => _hits.Count;
-
-    /* Fountain style (rise-fall-shrink) vs the default hold style; applies to new hits only. */
-    public bool FountainMotion { get; set; }
-    public double Fps { get; private set; }
-    public double AvgFrameMs { get; private set; }
-    public double LastFrameMs { get; private set; }
-    public double DrawsPerSec { get; private set; }
+    private bool _dirty;
 
     private double _statsWindowStartMs;
     private long _statFrames, _statDrawsTotal, _statDrawsWindow;
     private double _statFrameMsSum;
-    private bool _dirty;
 
+    public event Action<double> EventsFrame; // canvas clock ms since Start()
+
+    public int ActiveCount => _hits.Count;
+    public bool FountainMotion { get; set; }
+
+    public double Fps { get; private set; }
+    public double AvgFrameMs { get; private set; }
+    public double LastFrameMs { get; private set; }
+    public double DrawsPerSec { get; private set; }
+    public int DroppedCount => _ingest.DroppedCount;
+
+    /* The host drains its feed from EventsFrame, which fires before the paint decision below. */
     public void Start()
     {
       _clock = Stopwatch.StartNew();
       _statsWindowStartMs = 0;
-      if (PresentationSource.FromVisual(this) is not null)
-      {
-        _pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-      }
-
-      CompositionTarget.Rendering += OnRendering;
+      _lastPaintMs = 0;
       _dirty = true;
+      RefreshDpi();
+      CompositionTarget.Rendering += OnRendering;
     }
 
     public void Stop()
     {
       CompositionTarget.Rendering -= OnRendering;
-
-      foreach (var entry in _halos.Values)
-      {
-        entry.Image.Dispose();
-      }
-
-      _halos.Clear();
-      _surface?.Dispose();
-      _surface = null;
-      _glowBlur?.Dispose();
-      _glowBlur = null;
-      foreach (var font in _fonts.Values)
-      {
-        font.Dispose();
-      }
-
-      _fonts.Clear();
-      _boldTypeface?.Dispose();
-      _boldTypeface = null;
-      _regularTypeface?.Dispose();
-      _regularTypeface = null;
-      _hits.Clear();
+      ReleaseAllResources();
     }
 
-    /* Mirrors FctSimCanvas.AddHit: bottom-third spawn in the lane's half, rise + arc. */
-    public void AddHit(FctSimLane lane, double value, string action, bool crit, bool minor = false, string valueText = null)
+    /*
+     * Adds one hit. Everything about what happens to it — pooled crit lane, half of the canvas, style,
+     * geometry, adaptive lifetime, folding into a live number at the cap — is decided in FctIngest.
+     */
+    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null)
     {
       if (_clock is null)
       {
         return;
       }
 
-      var w = ActualWidth;
-      var h = ActualHeight;
-      if (w < 100 || h < 100)
+      var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight, _clock.Elapsed.TotalMilliseconds, FountainMotion);
+      if (hit is null)
       {
+        _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint
         return;
       }
 
-      // captured before crits are pooled into their own lane, so a taken-crit stays on the incoming side
-      var leftSide = lane is FctSimLane.DamageTaken or FctSimLane.HealingReceived or FctSimLane.Defensive;
-      if (crit)
-      {
-        lane = FctSimLane.Crit;
-      }
-
-      // home band: each side's lanes centered as a pair within their own half (text is drawn
-      // center-aligned on x); the busy damage lane takes the inner, center-near slot on both sides,
-      // healing the outer one; crits sit at the middle of their half and spread wider
-      var cx = lane switch
-      {
-        FctSimLane.DamageTaken => w * 0.35,
-        FctSimLane.HealingReceived => w * 0.14,
-        FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
-        // evades ride with their side's damage lane - a miss lands where the whiffed swing would
-        FctSimLane.Defensive => w * 0.35,
-        FctSimLane.Missed => w * 0.65,
-        FctSimLane.HealingDealt => w * 0.86,
-        _ => w * 0.65, // DamageDealt
-      };
-
-      var hit = NewHitState(lane, value, action, minor, valueText,
-        x: cx + ((_rand.NextDouble() * 2 - 1) * (lane == FctSimLane.Crit ? w * 0.17 : w * 0.09)),
-        y: h * (0.68 + _rand.NextDouble() * 0.17), // bottom third
-        now: _clock.Elapsed.TotalMilliseconds);
-
-      // rise all the way to a top band (finishing ~87-95% up from the bottom), then fade out there
-      hit.Rise = hit.Y0 - h * (0.05 + _rand.NextDouble() * 0.08);
-      hit.Arc = (_rand.NextDouble() * 2 - 1) * w * (lane == FctSimLane.Crit ? 0.15 : 0.12);
-
-      hit.SideMin = leftSide ? 8 : w / 2 + 4;
-      hit.SideMax = leftSide ? w / 2 - 4 : w - 8;
-
-      // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
-      if (lane == FctSimLane.Crit)
-      {
-        hit.LifetimeMs = 2800;
-      }
-      else
-      {
-        var live = 0;
-        foreach (var existing in _hits)
-        {
-          if (existing.Lane == lane)
-          {
-            live++;
-          }
-        }
-
-        hit.LifetimeMs = _life.NextLifetime(lane, live, _clock.Elapsed.TotalMilliseconds);
-      }
-
-      if (FountainMotion)
-      {
-        // fountain choreography: rise+fall IS the life - fixed length, no hold phase, so the
-        // adaptive controller is bypassed; the fade spans exactly the fall
-        hit.LifetimeMs = MotionWindowMs;
-        hit.MotionMs = MotionWindowMs;
-        hit.FadeMs = MotionWindowMs * FallPhaseFrac;
-        hit.FallDist = h * 0.28;
-      }
-      else
-      {
-        hit.MotionMs = Math.Min(MotionWindowMs, hit.LifetimeMs);
-        hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
-      }
-      _hits.Add(hit);
+      RebuildGlyphs(hit);
       _dirty = true;
     }
 
-    /* Mirrors FctSimCanvas.TryAccumulate: folds a small hit into the newest live non-crit hit of the lane. */
-    public bool TryAccumulate(FctSimLane lane, double amount)
+    protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
-      var now = _clock.Elapsed.TotalMilliseconds;
-
-      for (var i = _hits.Count - 1; i > -1; i--)
-      {
-        var hit = _hits[i];
-        if (hit.Lane != lane || hit.Blowout || now - hit.SpawnMs > 1500)
-        {
-          continue;
-        }
-
-        var age = now - hit.SpawnMs;
-        hit.CountBaseValue = GetDisplayValue(hit, age);
-        hit.AgeAtCountStartMs = age;
-        hit.CountUpMs = 300;
-        hit.TargetValue += amount;
-        _dirty = true;
-        return true;
-      }
-
-      return false;
+      base.OnRenderSizeChanged(sizeInfo);
+      RefreshDpi();
     }
 
     protected override void OnRender(DrawingContext dc)
     {
-      var now = _clock is null ? 0 : _clock.Elapsed.TotalMilliseconds;
-      var scale = _pixelsPerDip is 0 ? 1.0 : _pixelsPerDip;
+      var now = _clock?.Elapsed.TotalMilliseconds ?? 0;
+      var scale = _pixelsPerDip > 0 ? _pixelsPerDip : 1.0;
       var w = (int)Math.Ceiling(ActualWidth * scale);
       var h = (int)Math.Ceiling(ActualHeight * scale);
       if (w < 50 || h < 50)
@@ -259,12 +140,9 @@ namespace EQLogParser
         return;
       }
 
-      if (_surface is null || _surfaceWidth != w || _surfaceHeight != h)
+      if (!EnsureSurface(w, h))
       {
-        _surface?.Dispose();
-        _surface = SKSurface.Create(new SKImageInfo(w, h));
-        _surfaceWidth = w;
-        _surfaceHeight = h;
+        return;
       }
 
       var canvas = _surface.Canvas;
@@ -282,94 +160,351 @@ namespace EQLogParser
             continue;
           }
 
-          var age = now - hit.SpawnMs;
-          var opacity = FadeOpacity(age, hit.LifetimeMs, hit.FadeMs);
-          if (opacity <= 0)
-          {
-            continue;
-          }
-
-          var key = FctText.FormatHitValue(GetDisplayValue(hit, age));
-          if (key != hit.LastValueKey)
-          {
-            hit.LastValueKey = key;
-            hit.ValueWidth = TextWidth(key, hit.ValueFontSize, bold: true);
-          }
-
-          DrawHit(canvas, hit, age, opacity);
+          DrawHit(canvas, hit, now - hit.SpawnMs);
         }
       }
 
-      /*
-       * Blit in device space, not logical: the surface holds ceil(logical * scale) pixels, so drawing over
-       * ActualWidth DIUs gives WPF a destination of logical * scale device pixels - non-integer and off by up
-       * to one pixel. WPF then resamples the bitmap every frame, and that resampling phase shifts with each
-       * sub-pixel step of the motion, which reads as fine graininess on slow text. Sizing the rect from the
-       * surface's real pixel count makes the mapping exactly 1:1; the sub-pixel overshoot from the ceil is
-       * clipped at the canvas edge.
-       */
-      using var image = _surface.Snapshot();
-      dc.DrawImage(ToWriteableBitmap(image), new Rect(0, 0, (double)_surfaceWidth / scale, (double)_surfaceHeight / scale));
+      Blit(dc, scale);
       _dirty = false;
-    }
-
-    /*
-     * CPU surface to WPF blit. The surface is created with the default SKImageInfo (Bgra8888, premultiplied),
-     * which is byte-identical to WPF's native Bgra32 format, so reading back with image.Info performs no
-     * conversion. Replaces the SkiaSharp.Views.WPF ToWriteableBitmap() extension; that package drags an
-     * OpenTK stack that conflicts with the Kokoro TTS one, and nothing else in it is used.
-     */
-    private static WriteableBitmap ToWriteableBitmap(SKImage image)
-    {
-      var stride = image.Width * 4;
-      var pixels = new byte[stride * image.Height];
-      var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
-      try
-      {
-        image.ReadPixels(image.Info, handle.AddrOfPinnedObject(), stride);
-      }
-      finally
-      {
-        handle.Free();
-      }
-
-      var bitmap = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgra32, null);
-      bitmap.WritePixels(new Int32Rect(0, 0, image.Width, image.Height), pixels, stride, 0);
-      return bitmap;
     }
 
     private void OnRendering(object sender, EventArgs e)
     {
-      var sw = Stopwatch.StartNew();
-      var now = _clock.Elapsed.TotalMilliseconds;
-
-      // remove expired hits (releasing their halo sprite when the last user goes)
-      for (var i = _hits.Count - 1; i > -1; i--)
+      if (_clock is null)
       {
-        if (now - _hits[i].SpawnMs > _hits[i].LifetimeMs)
-        {
-          ReleaseHalo(_hits[i]);
-          _hits.RemoveAt(i);
-          _dirty = true;
-        }
+        return;
       }
 
+      var now = _clock.Elapsed.TotalMilliseconds;
+
+      // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
+
+      // idle and nothing to clear: skip the raster entirely
+      if (_hits.Count == 0 && !_dirty)
+      {
+        return;
+      }
+
+      if (now - _lastPaintMs < TargetFrameMs)
+      {
+        return;
+      }
+
+      var sw = Stopwatch.StartNew();
+      _lastPaintMs = now;
+
+      if (now - _lastDpiCheckMs >= DpiCheckMs)
+      {
+        _lastDpiCheckMs = now;
+        RefreshDpi();
+      }
+
+      if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+      {
+        _dirty = true;
+      }
 
       LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
       /*
-       * The content is animated: a hit's position depends on the clock, so any frame with live hits must
-       * repaint or the text stands still until the next spawn/expiry (visible as shaking at low intensity).
-       * _dirty alone only drives the one frame that clears the canvas when the last hit expires; with no
-       * hits at all the CPU raster is skipped entirely.
+       * Animated content: a hit's position is a function of the clock, so any frame with live hits must
+       * repaint or the text stands still until the next spawn/expiry. _dirty alone adds the one frame that
+       * clears the canvas when the last hit expires.
        */
       if (_dirty || _hits.Count > 0)
       {
         InvalidateVisual();
       }
 
-      // publish per-second stats when the one second window rolls over
+      PublishStats(now);
+    }
+
+    /* One hit = halo blit (crits) + value outline/fill + source outline/fill: ~5-6 Skia draw ops. */
+    private void DrawHit(SKCanvas canvas, FctHitState hit, double ageMs)
+    {
+      var opacity = FctMotion.FadeOpacity(hit, ageMs);
+      if (opacity <= 0)
+      {
+        return;
+      }
+
+      FctMotion.RefreshText(hit, ageMs);
+      if (hit.TextDirty)
+      {
+        RebuildGlyphs(hit);
+      }
+
+      var t = FctMotion.Progress(hit, ageMs);
+      var x = FctMotion.ArcedX(hit, t);
+      var y = FctMotion.RaisedY(hit, t);
+      var s = FctMotion.ScaleOf(hit, ageMs);
+
+      if (s != 1.0)
+      {
+        // x is the text's center, so it doubles as the scale pivot
+        var cy = y + (hit.ValueFontSize * 0.45);
+        canvas.Save();
+        canvas.Translate((float)x, (float)cy);
+        canvas.Scale((float)s, (float)s);
+        canvas.Translate(-(float)x, -(float)cy);
+      }
+
+      // glow underlay (pre-blurred sprite, crits only); white modulation keeps the black halo, alpha fades it
+      if (_haloKey.TryGetValue(hit, out var key) && _halos.TryGetValue(key, out var halo))
+      {
+        Configure(_blitPaint, SKColors.White.WithAlpha(AlphaOf(opacity)), SKPaintStyle.Fill, 0);
+        canvas.DrawImage(halo.Image, (float)(x - hit.ValueWidth / 2.0 - halo.Pad), (float)(y - halo.Pad), _blitPaint);
+        CountDraw(1);
+      }
+
+      // value: black outline pass, then colored fill pass; source line under it
+      DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)(y + (hit.ValueFontSize * 0.82)), hit.ValueFontSize, true, hit.ValueArgb, opacity);
+
+      if (!string.IsNullOrEmpty(hit.Source))
+      {
+        var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
+        DrawOutlinedText(canvas, $"({hit.Source})", (float)x, (float)sourceBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
+      }
+
+      if (s != 1.0)
+      {
+        canvas.Restore();
+      }
+    }
+
+    /* NAG's multi-shadow outline in two passes: black StrokeAndFill under a colored Fill. */
+    private void DrawOutlinedText(SKCanvas canvas, string text, float x, float baselineY, double size, bool bold, int argb, double opacity)
+    {
+      var font = GetFont(bold, size);
+
+      Configure(_outlinePaint, ColorOf(BlackArgb, opacity), SKPaintStyle.StrokeAndFill, bold ? 2f : 1.5f);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, _outlinePaint);
+
+      Configure(_fillPaint, ColorOf(argb, opacity), SKPaintStyle.Fill, 0);
+      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, _fillPaint);
+
+      CountDraw(2);
+    }
+
+    /*
+     * CPU surface to WPF blit, in device space and into a reused bitmap.
+     *
+     * Device space, not logical: the surface holds ceil(logical * scale) pixels, so drawing over ActualWidth
+     * DIUs hands WPF a destination of logical * scale device pixels - non-integer and off by up to one pixel.
+     * WPF then resamples every frame, and that resampling phase shifts with each sub-pixel step of the motion,
+     * which reads as fine graininess on slow text. Sizing the rect from the surface's real pixel count makes
+     * the mapping exactly 1:1; the sub-pixel overshoot from the ceil is clipped at the canvas edge.
+     *
+     * The bitmap and the copy buffer are allocated once per size and reused: a fresh WriteableBitmap plus a
+     * fresh byte[w*h*4] every frame was ~5 MB a frame of large-object-heap garbage, and a new texture upload
+     * each time instead of an update of the existing one. The surface is Bgra8888/premultiplied, which is
+     * byte-identical to WPF's native Bgra32, so ReadPixels performs no conversion. (Eliminating the last copy
+     * means D3DImage; see docs/DesignNotes.md.)
+     */
+    private void Blit(DrawingContext dc, double scale)
+    {
+      using var image = _surface.Snapshot();
+      if (image is null)
+      {
+        return;
+      }
+
+      var stride = _surfaceWidth * 4;
+      image.ReadPixels(image.Info, _pixelHandle.AddrOfPinnedObject(), stride);
+
+      _bitmap.WritePixels(new Int32Rect(0, 0, _surfaceWidth, _surfaceHeight), _pixelCopy, stride, 0);
+      dc.DrawImage(_bitmap, new Rect(0, 0, (double)_surfaceWidth / scale, (double)_surfaceHeight / scale));
+    }
+
+    /* Surface, destination bitmap and the pinned copy buffer all key off the same pixel size. */
+    private bool EnsureSurface(int w, int h)
+    {
+      if (_surface is not null && _surfaceWidth == w && _surfaceHeight == h)
+      {
+        return true;
+      }
+
+      ReleaseSurface();
+
+      /*
+       * Explicit Bgra8888/premultiplied because the blit assumes it (byte-identical to WPF's native Bgra32);
+       * Create returns null rather than converting, so a null here means the frame cannot be drawn at all.
+       */
+      _surface = SKSurface.Create(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+      if (_surface is null)
+      {
+        return false;
+      }
+
+      _surfaceWidth = w;
+      _surfaceHeight = h;
+      _bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
+      _pixelCopy = new byte[w * h * 4];
+      _pixelHandle = GCHandle.Alloc(_pixelCopy, GCHandleType.Pinned);
+      return true;
+    }
+
+    /* Measures the label and (re)acquires the crit halo: both depend on text that can change on count-up. */
+    private void RebuildGlyphs(FctHitState hit)
+    {
+      EnsureSkiaResources();
+      hit.ValueWidth = TextWidth(hit.DisplayText, hit.ValueFontSize, bold: true);
+      hit.TextDirty = false;
+
+      if (hit.Blowout)
+      {
+        AcquireHalo(hit);
+      }
+    }
+
+    private void AcquireHalo(FctHitState hit)
+    {
+      var key = $"{hit.DisplayText}|{hit.ValueFontSize:F0}";
+      if (_haloKey.TryGetValue(hit, out var current) && current == key)
+      {
+        return; // already holding the sprite for this label
+      }
+
+      ReleaseHalo(hit);
+
+      if (!_halos.TryGetValue(key, out var entry))
+      {
+        EvictUnreferencedHalos();
+
+        var pad = (int)(GlowSigma * 3.0) + 2;
+        using (var font = new SKFont(_boldTypeface, (float)hit.ValueFontSize, 1f, 0f))
+        {
+          // 3.119.2 MeasureText overloads require a paint argument but only read it for encoding
+          using var measure = new SKPaint();
+          var textWidth = (int)Math.Ceiling(font.MeasureText(hit.DisplayText, measure));
+          var textHeight = (int)Math.Ceiling(hit.ValueFontSize * 1.25);
+
+          using var surf = SKSurface.Create(new SKImageInfo(textWidth + (pad * 2), textHeight + (pad * 2)));
+          if (surf is null)
+          {
+            return;
+          }
+
+          using (var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true, MaskFilter = _glowBlur })
+          {
+            surf.Canvas.DrawText(hit.DisplayText, pad, (float)(pad + (hit.ValueFontSize * 0.82)), SKTextAlign.Left, font, paint);
+          }
+
+          entry = new HaloEntry { Image = surf.Snapshot(), Refs = 0, Pad = pad };
+          _halos[key] = entry;
+        }
+      }
+
+      entry.Refs++;
+      _haloKey[hit] = key;
+      CountDraw(1);
+    }
+
+    private void ReleaseHalo(FctHitState hit)
+    {
+      if (!_haloKey.Remove(hit, out var key) || !_halos.TryGetValue(key, out var entry))
+      {
+        return;
+      }
+
+      entry.Refs--;
+      if (entry.Refs <= 0)
+      {
+        entry.Image.Dispose();
+        _halos.Remove(key);
+      }
+    }
+
+    /* Crit labels churn (every crit is a different number), so the sprite cache has to shed its own weight. */
+    private void EvictUnreferencedHalos()
+    {
+      if (_halos.Count < HaloCacheMax)
+      {
+        return;
+      }
+
+      List<string> idle = null;
+      foreach (var pair in _halos)
+      {
+        if (pair.Value.Refs <= 0)
+        {
+          idle ??= [];
+          idle.Add(pair.Key);
+        }
+      }
+
+      if (idle is null)
+      {
+        return; // everything on screen still uses it; a temporary overflow is cheaper than dropping glow
+      }
+
+      foreach (var key in idle)
+      {
+        _halos[key].Image.Dispose();
+        _halos.Remove(key);
+      }
+    }
+
+    private void EnsureSkiaResources()
+    {
+      if (_boldTypeface is not null)
+      {
+        return;
+      }
+
+      _boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold);
+      _regularTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal);
+      _glowBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, GlowSigma);
+      _outlinePaint = new SKPaint { IsAntialias = true };
+      _fillPaint = new SKPaint { IsAntialias = true };
+      _blitPaint = new SKPaint { IsAntialias = true };
+    }
+
+    /* Fonts are shared per (style, size) — lane sizes are stable, so the cache holds a handful of entries. */
+    private SKFont GetFont(bool bold, double size)
+    {
+      var key = ((byte)(bold ? 1 : 0), (int)Math.Round(size));
+      if (_fonts.TryGetValue(key, out var font))
+      {
+        return font;
+      }
+
+      EnsureSkiaResources();
+      font = new SKFont(bold ? _boldTypeface : _regularTypeface, (float)size, 1f, 0f);
+      _fonts[key] = font;
+      return font;
+    }
+
+    private static void Configure(SKPaint paint, SKColor color, SKPaintStyle style, float strokeWidth)
+    {
+      // 3.x SKPaint has no Alpha property — alpha rides on the color
+      paint.Color = color;
+      paint.Style = style;
+      paint.StrokeWidth = strokeWidth;
+    }
+
+    private static SKColor ColorOf(int argb, double opacity) => new SKColor((uint)argb).WithAlpha(AlphaOf(opacity, (argb >>> 24) & 0xFF));
+
+    private static byte AlphaOf(double opacity, int max = 255) => (byte)Math.Round(Math.Clamp(opacity, 0.0, 1.0) * max);
+
+    /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding. */
+    private float TextWidth(string text, double size, bool bold)
+    {
+      using var measure = new SKPaint();
+      return GetFont(bold, size).MeasureText(text, measure);
+    }
+
+    private void RefreshDpi()
+    {
+      if (PresentationSource.FromVisual(this) is not null)
+      {
+        _pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+      }
+    }
+
+    private void PublishStats(double now)
+    {
       if (now - _statsWindowStartMs >= 1000)
       {
         var seconds = (now - _statsWindowStartMs) / 1000.0;
@@ -386,316 +521,49 @@ namespace EQLogParser
       _statFrameMsSum += LastFrameMs;
     }
 
-    private FctSkiaHit NewHitState(FctSimLane lane, double value, string action, bool minor, string valueText, double x, double y, double now)
+    private void ReleaseSurface()
     {
-      var hit = new FctSkiaHit
+      _surface?.Dispose();
+      _surface = null;
+
+      if (_pixelHandle.IsAllocated)
       {
-        Lane = lane,
-        X0 = x,
-        Y0 = y,
-        SpawnMs = now,
-        TargetValue = value,
-        CountBaseValue = value,
-        Action = action,
-        LastValueKey = valueText is not null ? valueText : FctText.FormatHitValue(value),
-      };
-
-      switch (lane)
-      {
-        // lifetime/fade are assigned by AddHit (adaptive - see FctLifeController)
-        case FctSimLane.Crit:
-          hit.Blowout = true;
-          hit.ValueFontSize = CritFontSize;
-          hit.ValueColor = new SKColor(0xFF, 0xA3, 0x2E); // orange
-          break;
-
-        case FctSimLane.HealingDealt or FctSimLane.HealingReceived:
-          hit.ValueFontSize = HealingFontSize;
-          hit.ValueColor = new SKColor(0x7F, 0xE0, 0x61); // green
-          break;
-
-        case FctSimLane.DamageDealt:
-          hit.ValueFontSize = minor ? MinorFontSize : DamageDealtFontSize;
-          hit.ValueColor = new SKColor(0xFF, 0xD7, 0x5E); // yellow
-          break;
-
-        case FctSimLane.Defensive:
-          hit.ValueFontSize = DefensiveFontSize;
-          hit.ValueColor = new SKColor(0x4F, 0xA8, 0xE8); // blue - a defense that worked for me
-          break;
-
-        case FctSimLane.Missed:
-          hit.ValueFontSize = MinorFontSize;
-          hit.ValueColor = new SKColor(0x9A, 0xA3, 0xAD); // dim gray - my own whiff, informational only
-          break;
-
-        default: // DamageTaken
-          hit.ValueFontSize = DamageTakenFontSize;
-          hit.ValueColor = new SKColor(0xFF, 0x6B, 0x5E); // red
-          break;
+        _pixelHandle.Free();
       }
 
-      hit.SourceFontSize = Math.Max(SourceFontMin, hit.ValueFontSize * 0.42);
-      hit.ValueWidth = TextWidth(hit.LastValueKey, hit.ValueFontSize, bold: true);
-
-      // true NAG-style radial glow, crits only (default groups carry no halo)
-      if (hit.Blowout)
-      {
-        AcquireHalo(hit);
-      }
-
-      return hit;
+      _pixelCopy = null;
+      _bitmap = null;
     }
 
-    private double GetDisplayValue(FctSkiaHit hit, double ageMs)
+    private void ReleaseAllResources()
     {
-      if (hit.CountUpMs <= 0 || hit.TargetValue == hit.CountBaseValue)
-      {
-        return hit.TargetValue;
-      }
-
-      var p = Math.Clamp((ageMs - hit.AgeAtCountStartMs) / hit.CountUpMs, 0.0, 1.0);
-      return hit.CountBaseValue + ((hit.TargetValue - hit.CountBaseValue) * p);
-    }
-
-    private void AcquireHalo(FctSkiaHit hit)
-    {
-      var key = $"{hit.LastValueKey}|{hit.ValueFontSize:F0}";
-
-      if (_halos.TryGetValue(key, out var entry))
-      {
-        entry.Refs++;
-        hit.HaloKey = key;
-        hit.HaloPad = entry.Pad;
-        return;
-      }
-
-      var pad = (int)(GlowSigma * 3.0) + 2;
-      EnsureSkiaResources();
-      using (var font = new SKFont(_boldTypeface, (float)hit.ValueFontSize, 1f, 0f))
-      {
-        // 3.119.2 MeasureText overloads require a paint argument but only read it for encoding
-        using var measure = new SKPaint();
-        var textWidth = (int)Math.Ceiling(font.MeasureText(hit.LastValueKey, measure));
-        var textHeight = (int)Math.Ceiling(hit.ValueFontSize * 1.25);
-
-        using var surf = SKSurface.Create(new SKImageInfo(textWidth + pad * 2, textHeight + pad * 2));
-        var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true, MaskFilter = _glowBlur };
-        surf.Canvas.DrawText(hit.LastValueKey, pad, (float)(pad + hit.ValueFontSize * 0.82), SKTextAlign.Left, font, paint);
-        paint.Dispose();
-
-        var image = surf.Snapshot();
-        _halos[key] = new HaloEntry { Image = image, Refs = 1, Pad = pad };
-        hit.HaloKey = key;
-        hit.HaloPad = pad;
-      }
-
-      CountDraw(1);
-    }
-
-    private void ReleaseHalo(FctSkiaHit hit)
-    {
-      if (hit.HaloKey is null || !_halos.TryGetValue(hit.HaloKey, out var entry))
-      {
-        return;
-      }
-
-      entry.Refs--;
-      if (entry.Refs <= 0)
+      foreach (var entry in _halos.Values)
       {
         entry.Image.Dispose();
-        _halos.Remove(hit.HaloKey);
       }
 
-      hit.HaloKey = null;
+      _halos.Clear();
+      _haloKey.Clear();
+      _hits.Clear();
+      ReleaseSurface();
+
+      _glowBlur?.Dispose();
+      _glowBlur = null;
+      _outlinePaint?.Dispose();
+      _fillPaint?.Dispose();
+      _blitPaint?.Dispose();
+      _outlinePaint = _fillPaint = _blitPaint = null;
+
+      foreach (var font in _fonts.Values)
+      {
+        font.Dispose();
+      }
+
+      _fonts.Clear();
+      _boldTypeface?.Dispose();
+      _regularTypeface?.Dispose();
+      _boldTypeface = _regularTypeface = null;
     }
-
-    private void EnsureSkiaResources()
-    {
-      if (_boldTypeface is not null)
-      {
-        return;
-      }
-
-      _boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold);
-      _regularTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal);
-      _glowBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, GlowSigma);
-    }
-
-    /* One hit = halo blit (crits) + value outline/fill + source outline/fill: ~5-6 Skia draw ops. */
-    private void DrawHit(SKCanvas canvas, FctSkiaHit hit, double ageMs, double opacity)
-    {
-      EnsureSkiaResources();
-      var alpha = (byte)Math.Round(opacity * 255.0);
-
-      // motion runs on its own short clock: rise/arc finish and hold before the fade (see RaisedY)
-      var t = Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0);
-      var x = ArcedX(hit, t);
-      var y = RaisedY(hit, t);
-
-      // scale around the value's center: crit blowout pop, or fountain shrink over the fall phase
-      var s = 1f;
-      if (hit.Blowout)
-      {
-        s = (float)BlowoutScale(ageMs, hit.LifetimeMs);
-      }
-      else if (hit.FallDist > 0.0)
-      {
-        var riseFrac = 1.0 - FallPhaseFrac;
-        if (t >= riseFrac)
-        {
-          var u = (t - riseFrac) / FallPhaseFrac;
-          s = (float)(1.0 + ((FallScaleEnd - 1.0) * u));
-        }
-      }
-
-      if (s != 1f)
-      {
-        // x is the text's center, so it doubles as the scale pivot
-        var cy = y + (hit.ValueFontSize * 0.45);
-        canvas.Save();
-        canvas.Translate((float)x, (float)cy);
-        canvas.Scale(s, s);
-        canvas.Translate(-(float)x, -(float)cy);
-      }
-
-      var valueBase = y + (hit.ValueFontSize * 0.82);
-
-      // glow underlay (pre-blurred sprite, crits only); white modulation keeps the black halo, alpha fades it
-      if (hit.HaloKey is not null && _halos.TryGetValue(hit.HaloKey, out var halo))
-      {
-        var blit = MakePaint(SKColors.White, alpha, SKPaintStyle.Fill, 0);
-        canvas.DrawImage(halo.Image, (float)(x - hit.ValueWidth / 2.0 - hit.HaloPad), (float)(y - hit.HaloPad), blit);
-        blit.Dispose();
-        CountDraw(1);
-      }
-
-      // value: black outline pass, then colored fill pass
-      DrawOutlinedText(canvas, hit.LastValueKey, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueColor, alpha);
-
-      // source line under the value
-      if (hit.Action is not null)
-      {
-        var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
-        DrawOutlinedText(canvas, $"({hit.Action})", (float)x, (float)sourceBase, hit.SourceFontSize, false, new SKColor(0x6E, 0x93, 0xC8), (byte)(alpha * 0.95));
-      }
-
-      if (s != 1f)
-      {
-        canvas.Restore();
-      }
-    }
-
-    /* NAG's multi-shadow outline in two passes: black StrokeAndFill under a colored Fill. */
-    private void DrawOutlinedText(SKCanvas canvas, string text, float x, float baselineY, double size, bool bold, SKColor color, byte alpha)
-    {
-      var font = GetFont(bold, size);
-
-      var outline = MakePaint(SKColors.Black, alpha, SKPaintStyle.StrokeAndFill, bold ? 2f : 1.5f);
-      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, outline);
-      outline.Dispose();
-
-      var fill = MakePaint(color, alpha, SKPaintStyle.Fill, 0);
-      canvas.DrawText(text, x, baselineY, SKTextAlign.Center, font, fill);
-      fill.Dispose();
-
-      CountDraw(2);
-    }
-
-    /* Fonts are shared per (style, size) — lane sizes are stable, so the cache holds a handful of entries. */
-    private SKFont GetFont(bool bold, double size)
-    {
-      var key = ((byte)(bold ? 1 : 0), (int)Math.Round(size));
-
-      if (!_fonts.TryGetValue(key, out var font))
-      {
-        EnsureSkiaResources();
-        font = new SKFont(bold ? _boldTypeface : _regularTypeface, (float)size, 1f, 0f);
-        _fonts[key] = font;
-      }
-
-      return font;
-    }
-
-    /* 3.x SKPaint has no Alpha property — alpha rides on the color. */
-    private static SKPaint MakePaint(SKColor color, byte alpha, SKPaintStyle style, float strokeWidth) =>
-      new() { Color = color.WithAlpha(alpha), Style = style, StrokeWidth = strokeWidth, IsAntialias = true };
-
-    /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding. */
-    private float TextWidth(string text, double size, bool bold)
-    {
-      using var measure = new SKPaint();
-      return GetFont(bold, size).MeasureText(text, measure);
-    }
-
-    /*
-     * Rise and arc both complete within the hit's motion window (early in its life), after which the
-     * text holds position until it fades. A raster display cannot show motion slower than ~1 device
-     * pixel per frame without visible stepping or anti-alias-phase shimmer, and a whole-lifetime
-     * ease-out spends most of a 7s display down in that zone - that was the "grainy slow vertical"
-     * artifact (horizontal looked fine because the old arc accelerated while the rise stalled). A
-     * bounded window keeps the motion fast enough to stay smooth, ends at zero velocity (no hitch
-     * into the hold), and leaves the long float as a crisp still hold + fade - NAG's own pattern:
-     * ~1s fountain, then opacity 1 for the full 7s fadeOut. Short adaptive lifetimes (congestion)
-     * are shorter than the window, so under load there is no hold at all.
-     */
-    /* Hold style: ease out to the top band and stay. Fountain style: same rise, then fall with
-     * gravity over the last FallPhaseFrac of life (the draw loop pairs it with shrink + fade). */
-    private static double RaisedY(FctSkiaHit hit, double t)
-    {
-      if (hit.FallDist <= 0.0)
-      {
-        return hit.Y0 - (hit.Rise * EaseOutQuad(t));
-      }
-
-      var riseFrac = 1.0 - FallPhaseFrac;
-      if (t < riseFrac)
-      {
-        return hit.Y0 - (hit.Rise * EaseOutQuad(t / riseFrac));
-      }
-
-      var u = (t - riseFrac) / FallPhaseFrac;
-      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate downward
-    }
-
-    /* Arc settles with the rise; clamped to the hit's half of the canvas including its text width. */
-    private static double ArcedX(FctSkiaHit hit, double t) =>
-      Math.Clamp(hit.X0 + (hit.Arc * EaseOutQuad(t)), hit.SideMin + hit.ValueWidth / 2.0, hit.SideMax - hit.ValueWidth / 2.0);
-
-    /* NAG blowout, toned down: quick ramp to ~1.3x, hold, then shrink to ~0 while fading. */
-    private static double BlowoutScale(double ageMs, double lifetimeMs)
-    {
-      const double inMs = 90;
-      const double outMs = 700;
-      if (ageMs < inMs)
-      {
-        return 1 + (0.30 * (ageMs / inMs));
-      }
-
-      if (ageMs < lifetimeMs - outMs)
-      {
-        return 1.30;
-      }
-
-      var p = Math.Clamp((ageMs - (lifetimeMs - outMs)) / outMs, 0.0, 1.0);
-      return 1.30 - ((1.30 - 0.06) * p * p);
-    }
-
-    private static double FadeOpacity(double ageMs, double lifetimeMs, double fadeMs)
-    {
-      const double fadeInMs = 160;
-      var o = ageMs < fadeInMs ? ageMs / fadeInMs : 1.0;
-      var fadeStart = lifetimeMs - fadeMs;
-
-      if (ageMs > fadeStart)
-      {
-        o *= Math.Max(0, 1 - ((ageMs - fadeStart) / fadeMs));
-      }
-
-      return Math.Clamp(o, 0.0, 1.0);
-    }
-
-    private static double EaseOutQuad(double p) => 1 - ((1 - p) * (1 - p));
 
     private void CountDraw(int n) => _statDrawsTotal += n;
   }

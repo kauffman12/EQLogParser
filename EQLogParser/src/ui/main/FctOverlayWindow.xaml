@@ -19,21 +19,22 @@
         UseLayoutRounding="True"
         WindowStyle="None"
         KeyDown="WindowKeyDown">
-  <Border CornerRadius="10" Background="#350D131A" BorderBrush="#5C7A99" BorderThickness="1">
+  <Border x:Name="rootBorder" CornerRadius="10" Background="#350D131A" BorderBrush="#5C7A99" BorderThickness="1">
     <Grid Margin="12,8,12,12">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
-      <!-- the only interactive band: drag to move the overlay; the canvas below is watch-only -->
+      <!-- the only interactive band while unlocked: drag to move; locking makes the whole window click-through -->
       <Grid Grid.Row="0" Margin="2,0,2,6" MouseLeftButtonDown="HeaderDrag">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="FCT" FontSize="13" FontWeight="Bold" Foreground="#D6E1EC" VerticalAlignment="Center" />
           <CheckBox x:Name="fountainCheck" Content=" fountain (rise-fall-shrink)" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="FountainChanged" Unchecked="FountainChanged" />
+          <CheckBox x:Name="lockCheck" Content=" lock (click-through)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="LockChanged" Unchecked="LockChanged" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <TextBlock x:Name="statsText" Margin="0,0,10,0" FontSize="12" Foreground="#7FD1FF" />
-          <TextBlock FontSize="11" Foreground="#6B7A8C" Text="drag header to move · Esc closes" />
+          <TextBlock x:Name="hintText" FontSize="11" Foreground="#6B7A8C" Text="drag header to move · Esc closes" />
         </StackPanel>
       </Grid>
       <local:FctSkiaCanvas x:Name="fctCanvas" Grid.Row="1" />

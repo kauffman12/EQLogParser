@@ -180,16 +180,21 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   renders all hits into one CPU-raster `SKSurface` per frame and blits it as a single image.
   Outline collapses NAG's 5 shadows into a two-pass `StrokeAndFill` + fill; glow is a true Gaussian
   blur (`SKMaskFilter.CreateBlur`) baked once per unique crit value into a ref-counted halo sprite.
-  Both backends implement `IFctSimCanvas`, so production code targets one interface and the winner
-  of the A/B test is the only thing that ships.
+  Both backends implement `IFctCanvas` (feed + lifecycle) with the tuning counters split off into
+  `IFctDiagnostics`, so production code targets one interface and the winner of the A/B test is the only thing
+  that ships. `TryAccumulate` left the interface once folding became shared ingest policy (`FctIngest`): a
+  renderer should not be asked to decide whether a hit deserves its own number.
 - **Package pinning:** core `SkiaSharp` only, pinned to **3.119.2** — the last line whose core still
   targets plain net8 (3.119.4 dropped it; 4.x changed the text API and its assets target net9/net10).
   `SkiaSharp.Views.WPF` was initially referenced for one `ToWriteableBitmap()` extension and has been
   dropped: every one of its dependency groups pulls OpenTK — below a Win10-19041 project platform it
   resolves through the net4x build (NU1701), and at ≥19041 its net8 asset demands the OpenTK 4.3 family,
   which conflicts with KokoroSharp's OpenTK 5.0.0-pre.13 (NU1608, cascading into XAML markup-compile
-  failures). The CPU-surface → WPF blit is now inlined as `FctSkiaCanvas.ToWriteableBitmap` (pinned
-  `ReadPixels` of Bgra8888/premultiplied into WPF's native `Bgra32`, no conversion).
+  failures). The CPU-surface → WPF blit is now inlined in `FctSkiaCanvas` (`EnsureSurface` + `Blit`: pinned
+  `ReadPixels` of Bgra8888/premultiplied into WPF's native `Bgra32`, no conversion). The destination
+  `WriteableBitmap` and its pinned copy buffer are allocated per resize rather than per frame, and painting is
+  capped near 60 Hz (`TargetFrameMs`) because `CompositionTarget.Rendering` fires at display refresh — see
+  docs/DesignNotes.md → Floating Combat Text.
 - **Rejected outright:** WebView2 (could port NAG's CSS keyframes unchanged, but adds a browser runtime
   for text popups) and Direct2D via Vortice/SharpDX (we would hand-roll DirectWrite layout; the scale does
   not justify it).
@@ -216,7 +221,8 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
    float upward with a sideways arc that grows as they rise; incoming lanes (damage taken red,
    healing received green) arc within the left half of center, outgoing lanes (damage dealt yellow,
    crits orange, heals dealt green) within the right half. Crits keep the blowout + glow but stay on
-   the half of their source lane. Display time starts at NAG's 7 s default and is compressed per lane
+   the half of their source lane. Display time starts at 3.5 s — half NAG's 7 s default, because at raid hit
+   rates 7 s of overlapping numbers is unreadable and a lane should be clear between pulls — and is compressed per lane
    by predicted congestion (`FctLifeController`: lifetime = slack/live-rate, 1 s floor; crits fixed).
    Deliberate NAG deviations: no fixed flex columns (free float + arc
    instead), and **no crit cell grid** (decided): crit emphasis is larger size + orange + glow/blowout,
@@ -226,6 +232,30 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
 2. Record plumbing (done): `EventsHealProcessed`, per-line `IsMonitor` gate, `FctManager` (records →
    lane-matched hit batches; smart group matching comes with the config phase).
 3. Group config: editor UI, styles, starting positions, animation choices, JSON persistence in the config
-   dir, import/export.
-4. Smart features: median tracking, accumulate/ignore thresholds, per-character enable.
+   dir, import/export. Not built: the overlay runs on fixed per-lane styles from `FctStyle`.
+4. Smart features: **median tracking and the accumulate threshold are implemented** (`FctMedianTracker`,
+   `FctIngest`) — a direct hit under half its lane's rolling median counts up on a live number, periodic DoT/HoT
+   ticks always fold, healing never folds, and the lane cap merges before it drops (and counts what it loses).
+   Deviation from NAG: nothing is *ignored*. NAG can drop hits below its threshold; here they fold, so no damage
+   disappears from an overlay whose job is to lose nothing measurable. Per-character enable waits on group config.
    (Crit cell grid evaluated and rejected — see layout v1 above.)
+
+### Product pass (v1): what changed once it fed real records
+
+Recorded so these are not mistaken for NAG ports or quietly reversed; full rationale in docs/DesignNotes.md →
+Floating Combat Text.
+
+- **Feed:** `FctManager` publishes a `ConcurrentQueue` drained once per painted frame rather than raising one
+  event per record, drops commands older than 500 ms, and is gated by `Enabled` so an overlay nobody opened costs
+  the parse loop nothing. `Create()`/`Dispose()` pair with the window's life.
+- **Model:** one `FctLane` enum in Core (`FctSimLane` deleted); `Source` carries a bare ability/verb name —
+  wrapping it in parentheses belongs to the renderer, and doing it in both places drew `((Fireball))`.
+- **Zero-damage labels:** commands carry `ValueText`, and `FctMotion.RefreshText` guarantees a label is never
+  replaced by its formatted `Value` (which is 0 — Dodge was drawing as "0").
+- **Shared policy:** layout, motion, lifetime and folding extracted out of the two canvases into `FctIngest`,
+  `FctLayout`, `FctMotion`, `FctStyle`; a backend keeps only substrate resources and its draw loop.
+- **Usable in game:** click-through lock (`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE`) unlocked from the Tools menu, geometry
+  plus lock/fountain/enabled persisted through `ConfigUtil`, hidden overlay stops its canvas and gates the feed,
+  and a protected center band keeps numbers off the target/cast area.
+- **Still NAG-shaped:** lane colors and sizes, two-pass outline, crit blowout + Gaussian halo, count-up folding,
+  adaptive lifetime.
