@@ -152,11 +152,12 @@ namespace EQLogParser
       }
 
       // home band: each side's lanes centered as a pair within their own half (text is drawn
-      // center-aligned on x); crits sit at the middle of their half and spread wider
+      // center-aligned on x); the busy damage lane takes the inner, center-near slot on both sides,
+      // healing the outer one; crits sit at the middle of their half and spread wider
       var cx = lane switch
       {
-        FctSimLane.DamageTaken => w * 0.14,
-        FctSimLane.HealingReceived => w * 0.35,
+        FctSimLane.DamageTaken => w * 0.35,
+        FctSimLane.HealingReceived => w * 0.14,
         FctSimLane.Crit => leftSide ? w * 0.25 : w * 0.75,
         FctSimLane.HealingDealt => w * 0.86,
         _ => w * 0.65, // DamageDealt
