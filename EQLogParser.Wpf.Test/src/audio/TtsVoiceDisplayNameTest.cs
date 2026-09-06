@@ -130,16 +130,30 @@ namespace EQLogParser.Wpf.Test.src.audio
      * Ordering is by the label the picker prints, not by the id behind it. Kokoro ids lead with accent and gender, so an
      * id-ordered list puts every American woman in front of Adam and files the Chinese voice between Hindi and Italian -
      * correct on paper and unusable in a dropdown.
+     *
+     * ByLabel hands back exactly what it was given - the ids a setting stores - arranged in the order their labels read,
+     * so this assertion has to be written in ids. Expecting the labels here looked reasonable and could never pass: the
+     * first element of one list is "Adam (US)" and of the other "am_adam", forever. Asserted both ways on purpose -
+     * which ids came back, and that reading their labels out loud spells them alphabetically - because the id list alone
+     * says nothing about why that order was chosen.
      */
     [TestMethod]
     public void VoicesAreOrderedByTheLabelTheyShow()
     {
       var ordered = TtsVoiceOrder.ByLabel(
-        new[] { "zm_yunxi", "am_adam", "hf_priya", "af_nicole", "bf_emma", "jm_kumo" },
+        new[] { "zm_yunxi", "am_adam", "hf_priya", "af_nicole", "bf_emma", "jm_kumo", "pm_alex", "if_sara" },
         KokoroTtsEngine.DisplayNameFor);
 
       CollectionAssert.AreEqual(
-        new[] { "Adam (US)", "Emma (GB)", "Kumo (JP)", "Nicole (US)", "Priya (HI)", "Yunxi (CN)" }, ordered);
+        new[] { "am_adam", "pm_alex", "bf_emma", "jm_kumo", "af_nicole", "hf_priya", "if_sara", "zm_yunxi" }, ordered);
+
+      CollectionAssert.AreEqual(
+        new[] { "Adam (US)", "Alex (PT)", "Emma (GB)", "Kumo (JP)", "Nicole (US)", "Priya (HI)", "Sara (IT)", "Yunxi (CN)" },
+        ordered.Select(KokoroTtsEngine.DisplayNameFor).ToList());
+
+      // and this sample genuinely distinguishes the two orders: if these matched, the test above would prove nothing
+      CollectionAssert.AreNotEqual(ordered.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList(), ordered,
+        "the sample voices happen to read alphabetically by id; pick ids that do not");
     }
 
     [TestMethod]
