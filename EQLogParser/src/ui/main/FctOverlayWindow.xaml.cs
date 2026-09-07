@@ -54,8 +54,8 @@ namespace EQLogParser
       Bottom = 8
     }
 
-    private readonly IFctCanvas _canvas;
-    private readonly IFctDiagnostics _diagnostics;
+    /* The renderer and its counters are the same object now that there is one backend. */
+    private readonly FctSkiaCanvas _canvas;
     private readonly List<FctHitCommand> _pending = [];
 
     /*
@@ -105,7 +105,6 @@ namespace EQLogParser
       InitializeComponent();
 
       _canvas = fctCanvas;
-      _diagnostics = fctCanvas;
 
       RestoreSettings();
 
@@ -416,10 +415,10 @@ namespace EQLogParser
       }
 
       _lastStatsMs = now;
-      var dropped = _diagnostics.DroppedCount + FctManager.Instance.DroppedCount;
+      var dropped = _canvas.DroppedCount + FctManager.Instance.DroppedCount;
       statsText.Text = dropped > 0
-        ? $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} live · {dropped} dropped"
-        : $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} live";
+        ? $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live · {dropped} dropped"
+        : $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live";
     }
 
     /*

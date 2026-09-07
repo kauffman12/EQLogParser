@@ -169,7 +169,7 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
 - **Rejected:** `Storyboard`/`DoubleAnimation` clocks — one running clock per animated element means
   dispatcher + GC pressure at FCT hit rates. Rejected: per-hit `TextBlock` + `DropShadowEffect` — element
   churn on spawn/teardown plus per-element GPU effect rasterization.
-- **Adopted:** a single custom `FrameworkElement` (see `EQLogParser/src/ui/control/FctSimCanvas.cs`,
+- **Adopted:** a single custom `FrameworkElement` (see `EQLogParser/src/ui/control/FctSkiaCanvas.cs`,
   started as the simulation renderer). `CompositionTarget.Rendering` drives one per-frame update pass;
   `OnRender` does `DrawText` for every active hit; each hit is plain data with a **cached `FormattedText`**
   that is only re-laid-out when its displayed value changes (count-ups). Outline/glow use NAG's exact
@@ -180,10 +180,10 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   renders all hits into one CPU-raster `SKSurface` per frame and blits it as a single image.
   Outline collapses NAG's 5 shadows into a two-pass `StrokeAndFill` + fill; glow is a true Gaussian
   blur (`SKMaskFilter.CreateBlur`) baked once per unique crit value into a ref-counted halo sprite.
-  Both backends implement `IFctCanvas` (feed + lifecycle) with the tuning counters split off into
-  `IFctDiagnostics`, so production code targets one interface and the winner of the A/B test is the only thing
-  that ships. `TryAccumulate` left the interface once folding became shared ingest policy (`FctIngest`): a
-  renderer should not be asked to decide whether a hit deserves its own number.
+  Both backends implemented one feed-and-lifecycle contract while the comparison was live. After the verdict below the WPF
+  vector canvas was deleted, and the interfaces with it: a seam with a single implementation is not a seam, it is a second copy of every rule the
+  canvas has to follow (docs/DesignNotes.md -> "Shared policy, one renderer"). `TryAccumulate` had already left that contract once folding became
+  shared ingest policy (`FctIngest`): a renderer should not be asked to decide whether a hit deserves its own number.
 - **Package pinning:** core `SkiaSharp` only, pinned to **3.119.2** — the last line whose core still
   targets plain net8 (3.119.4 dropped it; 4.x changed the text API and its assets target net9/net10).
   `SkiaSharp.Views.WPF` was initially referenced for one `ToWriteableBitmap()` extension and has been
@@ -208,15 +208,17 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
 - **SkiaSharp (`FctSkiaCanvas`): ~100 fps** and visually much better — true Gaussian crit glow, no
   perceptible lag at ×10. The single-image blit holds steady because per-frame cost scales with C++
   draw ops (~5/hit), not WPF display-list elements.
-- **Decision:** the SkiaSharp backend is the production renderer. `FctSimCanvas` stays in the tree only
-  as the A/B reference; it has no menu entry (it is a measurement tool, not a feature) and starts with `/fctsim vector` on the command
-line, so a released build can still be measured on the machine that misbehaves.
+- **Decision:** the SkiaSharp backend is the production renderer. The vector canvas stayed afterwards as an A/B reference and has since been
+  deleted. It needed its own frame pump and its own copy of everything added later, and one of those copies drifted the moment the configure-mode demo
+  appeared - numbers hung between cues then jumped, because half the code that asks for drawing had never heard of the thing animating. The harness
+  survives as `/fctsim`, now without a backend argument, because reproducing raid-pull load on a machine that misbehaves is worth more than preserving
+  a renderer that lost by 3x.
 
 ### Phasing
 
-1. **Performance simulation** (done, verdict above): `/fctsim vector` and `/fctsim skia` each run a fixed-seed 60-second, raid-scale (~7,500 records at
-   ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
-   draw ops per second in the header. Same record stream, same lane/stack/fold logic, two renderers.
+1. **Performance simulation** (done, verdict above): a fixed-seed 60-second, raid-scale (~7,500 records at x10 rate, bursts to ~200/s) run started
+   with `/fctsim`, reporting fps against measured refresh / active hits / last-average-and-worst frame ms / draw ops per second in the header. It ran
+   once per backend while the comparison was live; it now measures the renderer that ships.
    **Winner: SkiaSharp.**
 1b. **Layout v1** (user-specified, implemented in both canvases): hits spawn in the bottom third and
    float upward with a sideways arc that grows as they rise; incoming lanes (damage taken red,

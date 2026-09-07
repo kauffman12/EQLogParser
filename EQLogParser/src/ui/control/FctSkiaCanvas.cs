@@ -10,16 +10,17 @@ using SkiaSharp;
 namespace EQLogParser
 {
   /*
-   * SkiaSharp FCT renderer — the production backend. All hits rasterize into one CPU SKSurface per frame
-   * and blit into the WPF tree as a single image, so per-frame cost tracks C++ draw ops (~5 per hit)
-   * rather than WPF display-list elements. Hit policy is shared with the vector backend through
-   * FctIngest/FctLayout/FctMotion; this file owns only Skia resources and the draw/blit.
+   * The FCT renderer. All hits rasterize into one CPU SKSurface per frame and blit into the WPF tree as a single image, so per-frame cost
+   * tracks C++ draw ops (~5 per hit) rather than WPF display-list elements - the measured reason it beat a DrawingContext path roughly 100 fps
+   * to 30 under raid spam (docs/NagFctReference.md, and that rival path is now deleted: keeping a loser around meant every pump rule had to be
+   * written twice and kept in step, which is exactly how the configure-mode demo ended up animating at two frames a second). Hit policy lives in
+   * FctIngest/FctLayout/FctMotion; this file owns Skia resources, the frame pump and the blit.
    *
    * Outline is FillAndStroke (2 passes instead of NAG's 5), glow is a true Gaussian blur baked once per
    * unique crit label into a ref-counted halo sprite. See docs/NagFctReference.md and
    * docs/DesignNotes.md → Floating Combat Text.
    */
-  internal class FctSkiaCanvas : FrameworkElement, IFctCanvas, IFctDiagnostics
+  internal class FctSkiaCanvas : FrameworkElement
   {
 
     // re-read DPI about once a second: per-monitor scaling changes neither the size nor any event we get

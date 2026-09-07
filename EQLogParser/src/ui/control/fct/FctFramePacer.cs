@@ -3,10 +3,9 @@ using System;
 namespace EQLogParser
 {
   /*
-   * Frame pacing for the CompositionTarget.Rendering handlers in FctSkiaCanvas / FctSimCanvas: one place that decides
-   * which render ticks get rastered, so both backends cadence identically and the rule is testable against synthetic
-   * tick streams (EQLogParser.Wpf.Test/src/ui/control/FctFramePacerTest.cs). Rationale in docs/DesignNotes.md →
-   * Floating Combat Text.
+   * Frame pacing for the CompositionTarget.Rendering handler in FctSkiaCanvas: the one place that decides which render ticks get rastered,
+   * kept out of the canvas so the rule is testable against synthetic tick streams
+   * (EQLogParser.Wpf.Test/src/ui/control/FctFramePacerTest.cs). Rationale in docs/DesignNotes.md → Floating Combat Text.
    */
   internal sealed class FctFramePacer
   {

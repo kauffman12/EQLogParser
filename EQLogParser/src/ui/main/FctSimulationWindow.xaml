@@ -30,8 +30,7 @@
         <TextBlock x:Name="statsText" Margin="0,3,0,0" FontSize="12" Foreground="#C6CBD1" />
         <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="#8A9096" Text="Click or press Esc to stop early. Auto-closes when the 60 seconds are up." />
       </StackPanel>
-      <local:FctSimCanvas x:Name="fctCanvas" Grid.Row="1" />
-      <local:FctSkiaCanvas x:Name="fctSkiaCanvas" Grid.Row="1" Visibility="Collapsed" />
+      <local:FctSkiaCanvas x:Name="fctCanvas" Grid.Row="1" />
     </Grid>
   </Border>
 </Window>

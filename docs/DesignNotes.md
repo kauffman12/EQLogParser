@@ -486,10 +486,10 @@ of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
 
 ## Floating Combat Text
 
-`View → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is
-settled and recorded in `docs/NagFctReference.md` (SkiaSharp beat the WPF vector path ~100 fps vs ~30 fps at
-×10 raid scale); this section covers why the *plumbing* is shaped the way it is, because that is the part a
-later change is most likely to undo by accident.
+`View → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is settled and recorded in
+`docs/NagFctReference.md` (SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale), and the loser has since been deleted rather
+than kept as a reference - see "Shared policy, one renderer" below. This section covers why the *plumbing* is shaped the way it is, because that is
+the part a later change is most likely to undo by accident.
 
 ### One queue, drained on the render tick
 
@@ -519,10 +519,14 @@ A window owns exactly one manager: `FctManager.Create()` on construction, `Dispo
 both parsers) on close. Without that pairing a closed overlay keeps a live handler chain feeding a queue nobody
 drains, which is invisible until the next session shows yesterday's fight.
 
-### Shared policy, per-backend drawing
+### Shared policy, one renderer
 
-The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. Now
-`FctHitState` is plain data and the decisions live in one place:
+The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. That is why `FctHitState` is plain data
+and the decisions live in one place - and why there is now one renderer instead of two behind an interface. The second backend survived its own A/B
+verdict and stayed "for reference", during which the frame pump existed twice; when the configure-mode demo was added, `FctSkiaCanvas` learned to
+ask for frames on its behalf and `FctSimCanvas` did not, and the loop ran at about two frames a second - numbers frozen between cues, then jumping.
+Nothing was expensive; half the code that asks for drawing had never heard of the thing animating. A seam with one implementation is not a seam, it
+is a second copy of a rule:
 
 - `FctIngest` — fold a repeat into the number already showing that exact hit, spawn, take a full lane's slot from a less
   significant number, or count a drop.
@@ -531,13 +535,12 @@ The two canvases used to carry near-copies of the same layout and motion code, a
   numbers already in flight (§"Travelling numbers pick a gap to go through").
 - `FctMotion` — position, scale and opacity as pure functions of `(hit, age)`, plus the rule for the main line (one hit's
   face value, plus how many identical hits it stands for).
-- `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
+- `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so no renderer owns a palette copy.
 - `FctLifeController` — adaptive lifetime.
 
-A backend keeps only what genuinely differs: substrate resources (Skia `SKFont`/`SKPaint`/halo sprites, WPF
-`FormattedText`/brushes) and its draw loop. That split is also what makes the animation unit-testable
-(`EQLogParser.Wpf.Test/src/ui/control/Fct*Test.cs`) without a window, dispatcher or GPU — worth keeping in mind
-before moving maths back into a canvas.
+What is left in `FctSkiaCanvas` is what genuinely belongs to a renderer: substrate resources (`SKFont`/`SKPaint`/halo sprites), the frame pump and
+the blit. That split is also what makes the animation unit-testable (`EQLogParser.Wpf.Test/src/ui/control/Fct*Test.cs`) without a window, dispatcher
+or GPU — worth keeping in mind before moving maths back into a canvas.
 
 `FctMotion.RefreshText` having the text rule is deliberate and fixes a real bug: zero-damage records (Dodge,
 Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the numeric string each frame overwrote
@@ -564,10 +567,14 @@ a raid-wide panic is silently invisible", and the point of showing healing at al
 ### Raster at most 60 times a second, and never on a beat pattern
 
 `CompositionTarget.Rendering` fires at display refresh, so on a 144 Hz monitor an animated canvas would raster a
-full surface 144 times a second for text nobody can read faster. The cap lives in `FctFramePacer` (shared by both
-backends, since both are driven by the same callback); the tick still fires `EventsFrame` (the simulation paces its
-record schedule off it) but the surface memset + draw + blit does not run. On a 980×640 overlay at 150% scaling, each
-skipped raster is ~3.5 MB of pixel work avoided.
+full surface 144 times a second for text nobody can read faster. The cap lives in `FctFramePacer`, kept out of the canvas so the rule is testable
+against synthetic tick streams; the tick still fires `EventsFrame` (the simulation paces its record schedule off it) but the surface memset + draw +
+blit does not run. On an 800×560 overlay at 150% scaling, each skipped raster is ~2.3 MB of pixel work avoided.
+
+**The pump asks about every list that moves.** It invalidates while there is animated content, and the configure-mode demo is animated content that
+deliberately does not live in the canvas's own hit list - keeping it out is what protects the counters. A pump keyed on that one list repaints twice a
+second during configuring. `FctDemo.Animated` is the demo's answer to the question, and `Animated_DemandsAFrameForEveryFlight` counts frames rather
+than trusting intent: over 90 % of ticks across the busy part of a cycle must have something in flight.
 
 **The cap counts whole ticks, and that detail is the difference between smooth and juddery.** The first version asked
 "has `TargetFrameMs` (16.67 ms) elapsed since the last paint?" — a threshold tuned to 60 Hz sitting on top of a 60 Hz
@@ -867,8 +874,8 @@ furniture around them changed.
 `View → FCT Overlay` offers **Enable Overlay**, **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows
 above it, using this app's convention for menu state (a check icon plus an Enable/Disable header, not a checkable item) because an
 overlay filed in a different menu with different mechanics is something players have to learn twice. Nothing FCT-related sits under
-Tools any more; the two render-backend simulations that used to live there are development tools and now start from the command line
-(`/fctsim skia` or `/fctsim vector`), so a released build can still be measured where it misbehaves without shipping menu clutter.
+Tools any more; the render simulation that used to live there is a development tool and starts from the command line (`/fctsim`), so a released
+build can still be measured where it misbehaves without shipping menu clutter. It took a backend argument while there were two renderers to compare.
 
 **Reset Position** closes the overlay, forgets `FctOverlayLeft/Top/Width/Height`, and rebuilds it only if it was on screen. Rebuilding
 rather than moving is deliberate: the shipped size and the centring live in one place (`RestoreSettings`), and a reset that merely

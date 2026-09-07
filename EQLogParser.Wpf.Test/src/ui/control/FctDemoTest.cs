@@ -47,13 +47,9 @@ namespace EQLogParser
     [TestMethod]
     public void Script_UsesEverQuestsOwnVocabulary()
     {
+      // LoadNames fails the test rather than returning nothing: a vocabulary check that quietly ran against an empty set would pass forever
       var spells = LoadNames("spells.txt");
       var procs = LoadNames("procs.txt");
-
-      if (spells is null && procs is null)
-      {
-        Assert.Inconclusive("no data/ directory next to the test binaries or at $EQLOGPARSER_DATA - vocabulary not checked");
-      }
 
       foreach (var cue in FctDemo.Script)
       {
@@ -66,13 +62,13 @@ namespace EQLogParser
 
         Assert.IsNotNull(cue.Source, "a numeric event with no source line has nothing to show and teaches nothing");
 
-        if (MeleeVerbs.Contains(cue.Source))
+        if (MeleeVerbs.Contains(cue.Source!))
         {
           continue; // melee verbs come from the parser's own list, not from spells.txt
         }
 
-        var inSpells = spells?.Contains(cue.Source) == true;
-        var inProcs = procs?.Contains(cue.Source) == true;
+        var inSpells = spells.Contains(cue.Source!);
+        var inProcs = procs.Contains(cue.Source!);
         Assert.IsTrue(inSpells || inProcs, $"\"{cue.Source}\" is not a spell or proc EQLogParser knows - invented vocabulary");
 
         if (cue.Proc)
@@ -80,18 +76,6 @@ namespace EQLogParser
           Assert.IsTrue(inProcs, $"{cue.Source} is shown as a proc but is not in data/procs.txt");
         }
       }
-    }
-
-    [TestMethod]
-    public void Script_LeavesRoomForEveryNumberToFinish()
-    {
-      var last = FctDemo.Script[^1].OffsetMs;
-
-      Assert.IsTrue(FctDemo.Script.Select(c => c.OffsetMs).SequenceEqual(FctDemo.Script.Select(c => c.OffsetMs).OrderBy(x => x)),
-        "Advance walks the script once per cycle, so offsets have to be in order");
-
-      // the longest lifetime in play is around 2.8 s (hold/pulse at default tempo); the tail is measured off that
-      Assert.IsTrue(FctDemo.TailMs >= 4000, $"the last cue lands at {last:F0} ms with only {FctDemo.TailMs:F0} ms of loop left");
     }
 
     [TestMethod]
@@ -132,12 +116,19 @@ namespace EQLogParser
     [TestMethod]
     public void Script_LetsEveryNumberFinishInsideTheLoop()
     {
-      // 3 s is longer than anything the overlay gives a number today (hold and pulse run 2.8 s at default tempo)
-      const double LongestFlightMs = 3000;
+      Assert.IsTrue(FctDemo.Script.Select(c => c.OffsetMs).SequenceEqual(FctDemo.Script.Select(c => c.OffsetMs).OrderBy(x => x)),
+        "Advance walks the script once per cycle, so the offsets have to be in order");
+
+      /* Measured off the overlay rather than remembered: hold and pulse live 1.4 motion windows, which is the longest anything gets. Comparing
+         the last cue against that number is what notices when the loop gets crowded or the lifetimes get longer. */
+      /* Hold lives 1.4 motion windows, the longest anything gets. */
+      var longest = FctMotion.MotionWindowMs * 1.4;
+
+      Assert.IsTrue(longest < FctDemo.TailMs, $"a number can live {longest:F0} ms but the loop leaves only {FctDemo.TailMs:F0} ms of tail");
 
       foreach (var cue in FctDemo.Script)
       {
-        Assert.IsTrue(cue.OffsetMs + LongestFlightMs <= FctDemo.CycleMs,
+        Assert.IsTrue(cue.OffsetMs + longest <= FctDemo.CycleMs,
           $"the cue at {cue.OffsetMs:F0} ms cannot finish inside a {FctDemo.CycleMs:F0} ms cycle");
       }
     }
@@ -228,10 +219,11 @@ namespace EQLogParser
      */
     private static HashSet<string> LoadNames(string file)
     {
-      var path = FindDataFile(file);
-      if (path is null)
+      if (FindDataFile(file) is not string path)
       {
-        return null;
+        /* A check that skipped silently is a check that passes forever, which is worse than a failing one. */
+        Assert.Fail($"{file} was not found next to the binaries or in the repo; the vocabulary claim needs it (EQLOGPARSER_DATA points at it explicitly)");
+        return [];
       }
 
       var names = new HashSet<string>();
@@ -249,7 +241,7 @@ namespace EQLogParser
       return names;
     }
 
-    private static string FindDataFile(string file)
+    private static string? FindDataFile(string file)
     {
       var roots = new List<string>();
       var env = Environment.GetEnvironmentVariable("EQLOGPARSER_DATA");

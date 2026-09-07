@@ -161,30 +161,27 @@ namespace EQLogParser
     }
 
     /*
-     * The FCT render-backend simulations are measurement tools, not features: each runs 60 seconds of frames and closes itself. They
-     * have no menu entry because nothing about them is for a player, but a released build still has to be measurable on the machine
-     * where it misbehaves, so /fctsim skia | vector opens one from an installed exe — no source tree, no Debug build.
+     * The FCT performance harness is a measurement tool, not a feature: it runs 60 seconds of raid-pull load and closes itself. It has no menu
+     * entry because nothing about it is for a player, but a released build still has to be measurable on the machine where it misbehaves, so
+     * /fctsim opens it from an installed exe — no source tree, no Debug build. It used to take a backend argument to A/B two renderers; the WPF
+     * vector path lost that comparison and is gone, but an old command line still gets a run rather than dead-ending on a remembered switch.
      */
     private static void OpenFctSimulationFromCommandLine(string[] args)
     {
       var switchAt = Array.FindIndex(args, a => a.Equals("/fctsim", StringComparison.OrdinalIgnoreCase) || a.Equals("-fctsim", StringComparison.OrdinalIgnoreCase));
 
-      if (switchAt < 0 || switchAt + 1 >= args.Length)
+      if (switchAt < 0)
       {
         return;
       }
 
-      var backend = args[switchAt + 1];
-      var skia = backend.Equals("skia", StringComparison.OrdinalIgnoreCase);
-
-      if (!skia && !backend.Equals("vector", StringComparison.OrdinalIgnoreCase))
+      if (switchAt + 1 < args.Length && args[switchAt + 1].Equals("vector", StringComparison.OrdinalIgnoreCase))
       {
-        Log.Warn($"Unknown /fctsim backend '{backend}': expected 'skia' or 'vector'.");
-        return;
+        Log.Warn("/fctsim vector: the WPF vector renderer lost the A/B run and was removed. Measuring the one renderer this ships with.");
       }
 
-      Log.Info($"Opening the FCT {backend.ToLowerInvariant()} simulation from the command line.");
-      new FctSimulationWindow(useSkia: skia).Show();
+      Log.Info("Opening the FCT render simulation from the command line.");
+      new FctSimulationWindow().Show();
     }
 
     protected override async void OnExit(ExitEventArgs e)

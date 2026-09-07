@@ -6,11 +6,11 @@ using System.Windows.Input;
 namespace EQLogParser
 {
   /*
-   * Throwaway performance harness for the FCT render backends (Tools > FCT Simulation). Generates a fixed,
-   * realistic mix of damage/heal/evade records over 60 seconds — melee/spell/DoT damage dealt, damage taken,
-   * heals, crits, periodic ticks and misses — and feeds them at the recorded pace to either backend (SkiaSharp
-   * or WPF vector) while its header reports fps, active hits, frame time, draw ops/sec and drops. The seed is
-   * fixed so runs are comparable; click or Esc stops early. Folding/count-up is no longer simulated here: the
+   * Performance harness for the FCT renderer (/fctsim). Generates a fixed, realistic mix of damage/heal/evade records over 60 seconds —
+   * melee/spell/DoT damage dealt, damage taken, heals, crits, periodic ticks and misses — and feeds them at the recorded pace while its header
+   * reports fps against the measured refresh, active hits, frame time (last, average and worst), draw ops/sec and drops. The seed is fixed so
+   * runs are comparable and a change can be measured rather than felt; click or Esc stops early. It was built to A/B two render backends and
+   * outlived the loser: what it is good for now is reproducing raid-pull load on a machine that misbehaves. Folding/count-up is no longer simulated here: the
    * canvas does it for real through FctIngest, which is the point of the comparison. The region scheme comes from
    * the same setting the live overlay uses, so a bands run and a halves run differ in nothing but layout.
    */
@@ -44,25 +44,21 @@ namespace EQLogParser
     private double _lastHeaderUpdateMs = -1000;
     private bool _closed;
 
-    /* Active render backend: SkiaSharp (FctSkiaCanvas) or WPF vector (FctSimCanvas), behind one interface. */
-    private IFctCanvas _canvas;
-    private IFctDiagnostics _diagnostics;
+    private readonly FctSkiaCanvas _canvas;
 
-    public FctSimulationWindow(bool useSkia = false)
+    public FctSimulationWindow()
     {
       InitializeComponent();
       BuildEvents();
 
-      _canvas = useSkia ? fctSkiaCanvas : fctCanvas;
-      _diagnostics = (IFctDiagnostics)_canvas;
-      // same motion and same presentation dials as the real overlay: comparing two backends, or two styles, on a size nobody
-      // fights with measures nothing — and a run at a different text scale from the overlay is a second variable nobody set
+      _canvas = fctCanvas;
+
+      /* Same motion and the same presentation dials as the real overlay: a run at a size or tempo nobody fights with measures nothing, and a
+         second variable that nobody set is exactly what a measurement harness has to eliminate. */
       _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
       FctScale.Text = FctOverlaySettings.LoadTextScale();
       FctScale.Time = FctOverlaySettings.LoadTimeScale();
-      fctCanvas.Visibility = useSkia ? Visibility.Collapsed : Visibility.Visible;
-      fctSkiaCanvas.Visibility = useSkia ? Visibility.Visible : Visibility.Collapsed;
-      titleText.Text = $"FCT Render Simulation ({(useSkia ? "SkiaSharp" : "WPF vector")}) — 60 seconds, {_events.Count:N0} simulated records (rate ×{RateMultiplier:0.#})";
+      titleText.Text = $"FCT Render Simulation — 60 seconds, {_events.Count:N0} simulated records (rate ×{RateMultiplier:0.#})";
     }
 
     protected override void OnContentRendered(EventArgs e)
@@ -119,8 +115,8 @@ namespace EQLogParser
       {
         _lastHeaderUpdateMs = nowMs;
         statsText.Text = $"t {nowMs / 1000.0:0} s / {DurationMs / 1000.0:0} s   |   records {_generatedCount}/{_events.Count}   |   active {_canvas.ActiveCount}" +
-                         $"   |   fps {_diagnostics.Fps:0} on {_diagnostics.DisplayHz:0} Hz   |   frame {_diagnostics.LastFrameMs:0.##} ms (avg {_diagnostics.AvgFrameMs:0.##} / max {_diagnostics.MaxFrameMs:0.##})" +
-                         $"   |   draw ops {_diagnostics.DrawsPerSec:0}/s   |   dropped {_diagnostics.DroppedCount}";
+                         $"   |   fps {_canvas.Fps:0} on {_canvas.DisplayHz:0} Hz   |   frame {_canvas.LastFrameMs:0.##} ms (avg {_canvas.AvgFrameMs:0.##} / max {_canvas.MaxFrameMs:0.##})" +
+                         $"   |   draw ops {_canvas.DrawsPerSec:0}/s   |   dropped {_canvas.DroppedCount}";
       }
 
       if (nowMs >= DurationMs)
