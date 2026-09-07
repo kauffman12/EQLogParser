@@ -13,11 +13,16 @@ namespace EQLogParser
    * life; six numbers held in one band collided 71% of pairs. The grid is the right answer for text that stays still
    * (FctCellGrid) and the wrong one here: thrown text has to look thrown, and filing it into slots is a different style's job.
    *
-   * So: throw several legal spawns, watch where each one would actually go against the hits already in flight, and keep the
-   * one that gets its own space. Every candidate comes out of FctLayout.Spawn, which is what keeps this honest — no
-   * candidate can sit in the protected strip, outside the window or on a band the layout would not have chosen, because it is
-   * the layout's own geometry with a wider dice cup. Nothing is dropped for want of room: if every option crowds, the best
-   * of them is still placed, exactly as before this file existed.
+   * So: ask where a number would actually go from a lattice of legal launch points across its band, and keep the one that gets
+   * its own space. Every candidate comes out of `FctLayout.Spawn`, which is what keeps this honest — no candidate can sit in the
+   * protected strip, outside the window or on a band the layout would not have chosen, because it is the layout's own geometry
+   * asked for a specific origin rather than a dice roll. Nothing is dropped for want of room: if every option crowds, the best of
+   * them is still placed, exactly as before this file existed.
+   *
+   * Two mistakes are recorded here because both were made while building it, and both cost more than the bug they were fixing.
+   * Widening the throw on both axes sent damage numbers to the left screen border — see LateralSearchTexts. Probing with random
+   * throws instead of a lattice found far less room than walking the band does, which is what made the first version look broken
+   * once the sideways freedom was taken back away from it.
    *
    * Cost is measured along the flight rather than at the origin, because that is what the player watches. Fountain travels a
    * band and falls back through it, so two spawns that start apart can still collide on the way down — sampling positions at
@@ -26,21 +31,41 @@ namespace EQLogParser
   internal static class FctPlacement
   {
     /*
-     * How many draws to try. The first keeps the layout's own gentle jitter, so an uncrowded overlay looks exactly as it did
-     * before; the rest search wider. Twelve takes the three-fountain case above to 3% of pairs and a crowded hold band from
-     * 71% to 6%, and beyond it the curve is flat enough that the extra measuring buys nothing — a whole lane of twelve live
-     * numbers costs about 1.3 us per placement, which is why spending more of it is cheap but pointless.
+     * The search grid: how many launch points across the column's sideways reach, and how many down the depth of its band.
+     * Probing is systematic on purpose. Twelve random throws at a crowded band found much less room than walking it — a third of
+     * held pairs still collided once sideways freedom was restricted — while this finds the gaps that are there instead of
+     * hoping a dice roll lands in one. Three columns because a column offers about three places to sit beside somebody; six rows
+     * because that is roughly how many rows of text the band depth allows, measured rather than derived: 3x6 and 5x8 came out
+     * within a couple of points of each other on overlap, so the grid is sized to the space, not tuned for luck.
      */
-    public const int Candidates = 12;
+    public const int LateralSteps = 3;
+    public const int DepthSteps = 6;
+
+    /* How far a candidate drifts off its lattice point, as a share of the lattice spacing. Enough that no two numbers land in
+     * the same pixel twice, small enough that the search still covers the band instead of clumping. */
+    public const double LatticeJitter = 0.35;
+
+    /* Total candidates considered, including the layout's own throw. Reported in diagnostics. */
+    public static int Candidates => LateralSteps * DepthSteps + 1;
 
     /*
-     * How much wider the later draws may reach, as a multiple of the layout's own origin jitter — sideways and away from the
-     * protected strip at once. This is the "there was plenty of room" the layout was not using: its jitter spends about an
-     * eighth of a band, so with one number already in flight there was barely anywhere else to go. Reach matters more than
-     * candidate count here (five wide draws beat twelve narrow ones), and past this the mean origin moves visibly away from
-     * where the lane puts things, which stops looking like one lane throwing numbers and starts looking like a scatter.
+     * How far sideways the search may reach from the column's centre, in widths of the number's own text — the question "could a
+     * neighbour sit beside this one?" is about how wide the text is, not how wide the window is: at 34 pt on a 980 overlay one
+     * text is ~0.16 of the width and on a 560 overlay ~0.28, so a fixed canvas fraction would be too tight on the small window,
+     * where crowding hurts most, and too loose on the big one.
+     *
+     * Depth is free and sideways is not, which is the whole reason this is a separate number. The first version of this file used
+     * the same widening on both axes — five times the layout's jitter — and that is how a hit came to start at the far left border
+     * of the overlay and sway inland on the way up: the damage column sits at 0.42 of the width, so a ±0.45 throw went off the left
+     * edge, the clamp pinned it to the wall, and the search scored that wall as empty space. Measured afterwards: numbers averaged
+     * 22% of the overlay away from their own column, with 7% starting flush against an edge. The column is what tells damage and
+     * healing apart without reading a word, so sideways reach is priced in text widths and capped by LateralSearchMaxFrac.
      */
-    public const double SearchFrac = 5.0;
+    public const double LateralSearchTexts = 1.9;
+
+    /* Never further than this share of the overlay width from the column's centre, whatever the text says: a small window, a
+     * wide crit or an eleven-character total must not be able to buy its way across the screen with room. */
+    public const double LateralSearchMaxFrac = 0.22;
 
     /* Samples per pair along their shared flight. Enough to catch a crossing without weighting any one instant. */
     public const int TimeSamples = 6;
@@ -61,6 +86,12 @@ namespace EQLogParser
     public const double DriftWeight = 0.02;
 
     /*
+     * The same preference sideways, and deliberately several times stronger: drifting a number three rows down its band costs it
+     * nothing in meaning, while drifting it across the overlay quietly moves it into another column's territory.
+     */
+    public const double LateralDriftWeight = 0.12;
+
+    /*
      * Returns the placed hit, which is not necessarily the one passed in: candidates are trials of the same hit, and the best
      * is returned for the caller to add to its list. `hit` is returned untouched when there is nothing to dodge.
      */
@@ -71,23 +102,43 @@ namespace EQLogParser
         return hit;   // the first number of a pull gets the lane's own spot, and costs nothing to find
       }
 
+      /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
+       * own jitter in place rather than inventing a reach. */
+      var slot = FctLayout.LaneSlot(hit.Lane, w);
+      var reach = Math.Min(w * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
+      var canonicalX = hit.X0;
       var canonicalY = hit.Y0;
+
       var best = hit;
-      var bestCost = Cost(hit, canonicalY, h, hits, 0);
+      var bestCost = Cost(hit, canonicalX, canonicalY, w, h, hits, 0);
 
-      for (var i = 1; i < Candidates; i++)
+      /* The band this hit was given, walked from edge to edge. Band edges come from the layout's own reserve maths, so every
+       * candidate below is inside a legal band before it is scored. */
+      var depth = hit.BandMaxY - hit.BandMinY;
+      var xStep = LateralSteps > 1 ? (2 * reach) / (LateralSteps - 1) : 0;
+
+      for (var row = 0; row < DepthSteps; row++)
       {
-        var trial = hit.Clone();
-        FctLayout.Spawn(trial, w, h, rand, SearchFrac);
+        var y = hit.BandMinY + (depth * ((row + 0.5) / DepthSteps));
 
-        // the fall belongs to the travel, so a candidate with a new origin needs it recomputed before it can be watched
-        FctLayout.ApplyFall(trial, h);
-
-        var cost = Cost(trial, canonicalY, h, hits, WideSearchCost);
-        if (cost < bestCost)
+        for (var col = 0; col < LateralSteps; col++)
         {
-          best = trial;
-          bestCost = cost;
+          var x = slot + ((col - ((LateralSteps - 1) / 2.0)) * xStep);
+
+          var trial = hit.Clone();
+          FctLayout.Spawn(trial, w, h, rand, origin: (
+            x + (xStep * LatticeJitter * (rand.NextDouble() * 2 - 1)),
+            y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1))));
+
+          // the fall belongs to the travel, so a candidate with a new origin needs it recomputed before it can be watched
+          FctLayout.ApplyFall(trial, h);
+
+          var cost = Cost(trial, canonicalX, canonicalY, w, h, hits, WideSearchCost);
+          if (cost < bestCost)
+          {
+            best = trial;
+            bestCost = cost;
+          }
         }
       }
 
@@ -101,9 +152,11 @@ namespace EQLogParser
      * Opacity is not part of it. Weighting by fade would make a collision at spawn look cheap — every hit fades in — and
      * spawn collisions are exactly what reads as one blob of unreadable text.
      */
-    private static double Cost(FctHitState candidate, double canonicalY, double h, List<FctHitState> hits, double penalty)
+    private static double Cost(FctHitState candidate, double canonicalX, double canonicalY, double w, double h, List<FctHitState> hits, double penalty)
     {
-      var cost = penalty + (DriftWeight * Math.Abs(candidate.Y0 - canonicalY) / h);
+      var cost = penalty
+        + (DriftWeight * Math.Abs(candidate.Y0 - canonicalY) / h)
+        + (LateralDriftWeight * Math.Abs(candidate.X0 - canonicalX) / w);
 
       for (var i = 0; i < hits.Count; i++)
       {

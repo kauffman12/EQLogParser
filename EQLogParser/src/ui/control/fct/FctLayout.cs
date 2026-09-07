@@ -93,6 +93,16 @@ namespace EQLogParser
       (hit.ValueFontSize * TextHeightFactor) +
       (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
 
+    /* Where a lane's column sits across the overlay. Kept here because Spawn and FctPlacement both need it, and a placement
+     * search that invented its own columns would be a second layout pretending not to be one. */
+    public static double LaneSlot(FctLane lane, double w) => lane switch
+    {
+      FctLane.HealingDealt or FctLane.HealingReceived => w * 0.63,
+      FctLane.Crit => w * 0.52,
+      FctLane.Defensive or FctLane.Missed => w * 0.50,
+      _ => w * 0.42, // DamageDealt, DamageTaken
+    };
+
     /* The largest a hit's block ever gets — the crit blowout outranks the style's swell, as it does in FctMotion.ScaleOf. */
     private static double PeakScaleOf(FctHitState hit) =>
       hit.Blowout ? FctMotion.CritPeakScale : hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
@@ -116,26 +126,30 @@ namespace EQLogParser
      * and labels centred over their band. Both bands carry two categories each, which is why the x slots survived the move
      * away from left/right — they stopped meaning who and now mean what.
      *
-     * `searchFrac` widens the origin draw — sideways and away from the strip at once — and belongs to FctPlacement, which
-     * asks for a wider throw when the lane's usual spot is already occupied. Every candidate still comes out of this one
-     * function, so widening costs range but never legality: the band, its reserve against the protected strip and the
-     * window edges are applied to the wide draws exactly as they are to the narrow ones.
+     * `origin` belongs to FctPlacement: an explicitly requested launch point instead of the layout's own throw, still run
+     * through every clamp below and still given travel appropriate to where it ended up. Candidates go through this function so
+     * that a search can never invent a position the layout would forbid — the band, its reserve against the protected strip and
+     * the window edges apply to a requested origin exactly as they do to a random one.
      */
-    public static void Spawn(FctHitState hit, double w, double h, Random rand, double searchFrac = 1.0)
+    public static void Spawn(FctHitState hit, double w, double h, Random rand, (double X, double Y)? origin = null)
     {
-      var cx = hit.Lane switch
-      {
-        FctLane.HealingDealt or FctLane.HealingReceived => w * 0.63,
-        FctLane.Crit => w * 0.52,
-        FctLane.Defensive or FctLane.Missed => w * 0.50,
-        _ => w * 0.42, // DamageDealt, DamageTaken
-      };
+      var cx = LaneSlot(hit.Lane, w);
 
-      var spread = (hit.Blowout ? 0.17 : 0.09) * searchFrac;
-      hit.X0 = cx + ((rand.NextDouble() * 2 - 1) * (w * spread));
+      hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (w * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
 
-      /* Nothing forbids an outgoing number's x any more, so the arc is only held inside the window; the text
-       * half-width allowance is applied on top of these by FctMotion.ArcedX. */
+      /*
+       * Clamped here as well as at draw time by FctMotion.ArcedX, which must hold anyway for a resize mid-flight. The reason to
+       * do it here too is candour: two candidates that both end up pinned against a window edge are one position, scored as two
+       * they read as empty space — the damage column sits left of centre, so its wide draws went off the left edge first, and
+       * numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
+       * there" comes from.
+       */
+      var sideMargin = (hit.ValueWidth * PeakScaleOf(hit)) / 2;
+      hit.X0 = w - EdgePad - sideMargin <= EdgePad + sideMargin
+        ? w / 2                                // text wider than the window: nothing to place, so centre it
+        : Math.Clamp(hit.X0, EdgePad + sideMargin, w - EdgePad - sideMargin);
+
+      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. */
       hit.SideMin = EdgePad;
       hit.SideMax = Math.Max(EdgePad + 1, w - EdgePad);
 
@@ -149,14 +163,21 @@ namespace EQLogParser
       if (hit.Incoming)
       {
         ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
-        hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * searchFrac * rand.NextDouble());
+        hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
         up = -1;  // away from the gap is downward here
       }
       else
       {
         ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
-        hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * searchFrac * rand.NextDouble());
+        hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
         up = 1;
+      }
+
+      /* An explicitly requested origin skips the depth jitter but not the travel: how far a number may go depends on where it
+       * started, and FctPlacement asks for origins precisely so it can compare whole flights, not just resting spots. */
+      if (origin.HasValue)
+      {
+        hit.Y0 = Math.Clamp(origin.Value.Y, hit.BandMinY, hit.BandMaxY);
       }
 
       /* A proc starts deeper in its band than the row of hits it arrived beside. Clamped by the band ends, which already

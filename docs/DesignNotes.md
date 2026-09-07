@@ -735,30 +735,44 @@ shared a spot somewhere in their overlapping lives; six held numbers in one band
 the same path are unreadable for the whole flight, and they did it while most of the band around them sat empty. That is a
 legibility defect wearing the clothes of a polish item.
 
-So travelling text is thrown twelve times and the throw with the least crowding wins (`FctPlacement`). Three things keep this from
-becoming a second layout:
+So travelling text asks where it would actually go from a grid of legal launch points across its band, and keeps the one with the
+least crowding (`FctPlacement`). Three things keep this from becoming a second layout:
 
-- **Every candidate comes out of `FctLayout.Spawn`** with a wider dice cup. The band, its reserve against the protected strip and
-  the window edges are applied to a wide draw exactly as they are to a narrow one, so no candidate can sit somewhere the layout
-  would forbid. Widening costs range, never legality.
+- **Every candidate comes out of `FctLayout.Spawn`**, asked for an origin instead of a dice roll. The band, its reserve against
+  the protected strip and the window edges apply to a requested launch point exactly as they do to a random one, so no candidate
+  can sit somewhere the layout would forbid.
 - **Cost is measured along the flight, not at the origin**, because that is what the player watches: fountain text falls back
   through the band it climbed, so two spawns that start apart can still collide on the way down. Samples are wall-clock aligned,
   so an older number is compared at where it really is rather than at the same phase of its animation.
-- **The first candidate is the layout's own throw and pays nothing**, and later ones pay a small penalty for reaching wide plus a
+- **The first candidate is the layout's own throw and pays nothing**, and the rest pay a small penalty for having searched plus a
   graded one for drifting from where the lane puts things. An uncrowded overlay therefore draws exactly what the layout alone
-  would have drawn; the search is only paid for when it buys space, and mean origin drift stays around a twentieth of band depth.
+  would have drawn; the search is only paid for when it buys space.
 
-Nothing is refused: if all twelve crowd, the least crowded is placed anyway. Capacity belongs to the lane cap and the life
+Probing is systematic rather than random, which took learning twice: twelve random throws at a crowded band found far less of the
+room that was there than walking the band does. The grid is three columns by six rows — six rows because that is about how many
+rows of text a band's depth allows, three columns because that is about how many numbers can sit side by side in one column — and
+every launch point is nudged off its lattice position afterwards so nothing marches in lockstep.
+
+Nothing is refused: if every launch point crowds, the least crowded is used anyway. Capacity belongs to the lane cap and the life
 shortener, and losing numbers belongs to nobody.
 
 Pulse text does not come through here — it has cells, which is the right answer for text that stays still. The evidence for that
 split is old: the deleted left/right preset's "floating" checkbox was free-float placement with nothing moving, measured at **85%
 of pairs overlapping**.
 
-Reach mattered more than attempts (five-wide draws beat twelve narrow ones), and past that the mean origin moves visibly away from
-its lane, which stops looking like one lane throwing numbers and starts looking like a scatter. Final figures for the same
-measurement: three fountains 58% → **3.3%** of pairs, six held numbers 71% → **6.2%**, eight spray numbers 40% → **3.3%**, at
-about 1.3 µs per placement with a full lane live — which is why twelve candidates is enough and twenty would be theatre.
+**Depth is free and sideways is not, so the two axes are searched differently, and that is a learned lesson too.** The first
+version widened both by the same factor — five times the layout's jitter — which is how a hit came to start at the far left border
+of the overlay and sway inland on the way up. The damage column sits at 0.42 of the width, so a ±0.45 throw went off the left edge,
+the clamp pinned it to the wall, and the search scored that wall as an empty gap: measured afterwards, numbers averaged 22% of the
+overlay away from their own column and 7% launched flush against an edge. Healing had the same trap waiting on the right. So depth
+is searched across the whole band, while sideways reach is measured **in widths of the number's own text** — the question "could a
+neighbour sit beside this one?" is about how wide the text is, not how wide the window is — and capped at 0.22 of the overlay
+width. Numbers now average 10–15% from their column, none start at an edge, and overlap is still cut by a factor of four to six.
+
+Final figures for the same measurement, on 980×640: three fountains 58% → **9.2%** of pairs colliding, six held numbers 71% →
+**16.5%**, eight spray numbers 40% → **~10%**, at about 1.5 µs per placement with a full lane live. Held numbers are the worst case
+because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
+and the life shortener are for, not what placement can solve.
 
 ### Colour answers "what", never "who"
 

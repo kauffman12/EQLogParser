@@ -274,7 +274,7 @@ namespace EQLogParser
       /*
        * The complaint this exists for: three numbers climbing, two of them on top of each other while the band around them sat
        * empty. Before the search, 58% of pairs on a 980x640 overlay shared a spot at some point in their overlapping lives;
-       * measured the same way now it is about 3%, so this fails on a regression rather than on noise.
+       * measured the same way now it is about 9%, so this fails on a regression rather than on noise.
        */
       var pairs = 0;
       var touched = 0;
@@ -299,7 +299,9 @@ namespace EQLogParser
     [TestMethod]
     public void AQueueOfHeldNumbersUsesTheDepthOfTheBand()
     {
-      // nothing travels to separate these, so where they were put is all there is: 71% of pairs collided before the search
+      /* Nothing travels to separate these, so where they were put is all there is: 71% of pairs collided before the search, and
+       * measured now it is about 17%. Held numbers are the worst case for this file — no flight to spread them out — and six of
+       * them in one band genuinely do not fit without touching, which is what the lane cap and the life shortener are for. */
       var pairs = 0;
       var touched = 0;
 
@@ -315,8 +317,86 @@ namespace EQLogParser
         CountOverlaps(hits, ref pairs, ref touched);
       }
 
-      Assert.IsTrue((double)touched / pairs < 0.20,
-        $"{touched} of {pairs} held pairs shared a spot out of {FctPlacement.Candidates} tries each");
+      Assert.IsTrue((double)touched / pairs < 0.25,
+        $"{touched} of {pairs} held pairs shared a spot despite searching {FctPlacement.LateralSteps}x{FctPlacement.DepthSteps} launch points each");
+    }
+
+    /*
+     * The bug this pins: a hit appearing at the far left border of the overlay and swaying inland on the way up. Widening the
+     * search sideways with no thought for the column is what did it — damage's column sits at 0.42 of the width, so a throw wide
+     * enough to reach past it got clamped to the wall, and the search read that wall as an empty gap. Healing had the same trap
+     * on the right side, waiting for a wide enough overlay.
+     */
+    [TestMethod]
+    public void NothingStartsFlushAgainstTheWindowEdge()
+    {
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Pulse })
+      {
+        for (var seed = 1; seed < 40; seed++)
+        {
+          var hits = new List<FctHitState>();
+          var ingest = new FctIngest(new Random(seed)) { Style = style };
+          for (var i = 0; i < 10; i++)
+          {
+            ingest.PruneExpired(hits, i * 260.0);
+
+            foreach (var lane in new[] { FctLane.DamageDealt, FctLane.HealingDealt, FctLane.DamageTaken, FctLane.HealingReceived })
+            {
+              var hit = ingest.Accept(hits, lane, 1000 + (i * 37), "Flurry", false, false, false, null, 980, 640, i * 260.0);
+              if (hit is null)
+              {
+                continue;
+              }
+
+              var x = FctMotion.ArcedX(hit, 0);
+              var half = hit.ValueWidth / 2.0;
+              Assert.IsTrue(x - half > FctLayout.EdgePad + 1,
+                $"{style} {lane} starts flush against the left edge: block left {(x - half):0.#}");
+              Assert.IsTrue(x + half < 980 - FctLayout.EdgePad - 1,
+                $"{style} {lane} starts flush against the right edge: block right {(x + half):0.#}");
+            }
+          }
+        }
+      }
+    }
+
+    [TestMethod]
+    public void NumbersStayInTheirColumn()
+    {
+      /* Sideways is not free space: the column is what separates damage from healing at a glance. So the bound is derived from
+       * the search's own knobs rather than picked — a number may sit no further from its column than the lateral reach allows,
+       * plus the jitter that keeps launch points off the lattice. Measured mean under fountain spam is ~15% of width; this
+       * assertion is what would fire if the search went looking across the overlay again, which is exactly the regression that
+       * shipped once already (see NothingStartsFlushAgainstTheWindowEdge). */
+      var limit = FctPlacement.LateralSearchMaxFrac * (1 + FctPlacement.LatticeJitter) + 0.01;
+      var sumAway = 0.0;
+      var count = 0;
+
+      for (var seed = 1; seed < 40; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain };
+        var slot = FctLayout.LaneSlot(FctLane.DamageDealt, 980);
+
+        for (var i = 0; i < 12; i++)
+        {
+          ingest.PruneExpired(hits, i * 260.0);
+          var hit = ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 43), "Flurry", false, false, false, null, 980, 640, i * 260.0);
+          if (hit is null)
+          {
+            continue;
+          }
+
+          var away = Math.Abs(hit.X0 - slot) / 980;
+          sumAway += away;
+          count++;
+          Assert.IsTrue(away < limit,
+            $"a damage number sat {(away * 100):0.#}% of the overlay from its column; the search is allowed {(limit * 100):0}%");
+        }
+      }
+
+      Assert.IsTrue(sumAway / Math.Max(1, count) < 0.18,
+        $"damage numbers averaged {(sumAway / Math.Max(1, count) * 100):0.#}% of the overlay from their column; a column is not a scatter");
     }
 
     [TestMethod]
