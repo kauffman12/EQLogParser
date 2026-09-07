@@ -12,6 +12,19 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctIngestTest
   {
+    /*
+     * Several assertions below are absolute choreography values — a fountain's life is the motion window, a proc is 0.7 of it — and those are the
+     * numbers measured at the base tempo. The player's speed dial is applied on top of them (FctIngest.ApplyPlayerTempo) and its shipped position is not
+     * 1.0 any more, so every test here starts from a flat scale or it measures whichever dial another test happened to leave parked. The dial's own
+     * behaviour is FctScaleTest's job.
+     */
+    [TestInitialize]
+    public void ResetPlayerScale()
+    {
+      FctScale.Text = FctScale.SizeDefault;
+      FctScale.Time = 1;
+    }
+
     private const double Width = 980;
     private const double Height = 640;
 

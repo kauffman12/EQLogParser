@@ -5,65 +5,100 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser
 {
   /*
-   * The two dials on the configure row, ±50 %. What matters here is not arithmetic but what an out-of-range value can do: a text scale of zero draws
-   * nothing and a negative one puts numbers outside the canvas, and both are reachable by hand-editing settings.ini. The other thing worth pinning is
-   * the direction of the second dial, because it is stored as speed and applied as a duration - a sign error there is invisible in the arithmetic and
-   * obvious on screen, as "faster" that slows everything down.
+   * The two dials on the configure row. What matters here is not arithmetic but three decisions that are invisible if somebody changes them: a text
+   * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the speed dial has to
+   * reach further toward fast than toward slow, because the slow end at half tempo is unusable in a fight; and the middle of that dial is a shipped
+   * tempo of 1.15 rather than 1.0, which is a preference about how the feature feels and wants pinning as loudly as any constant.
    */
   [TestClass]
   public class FctScaleTest
   {
     [TestMethod]
-    public void Clamp_HoldsTheRangeAndRescuesJunk()
+    public void ClampSize_HoldsTheRangeAndRescuesJunk()
     {
-      Assert.AreEqual(1.0, FctScale.Clamp(1.0), "the default survives");
-      Assert.AreEqual(0.5, FctScale.Min, "the dials are half to one and a half, or they are not plus or minus 50 %");
-      Assert.AreEqual(1.5, FctScale.Max);
-      // a value saved while the dial only went to 30 % is still legal here: raising the ceiling must not invalidate anybody's setting
+      Assert.AreEqual(1.0, FctScale.ClampSize(1.0), "the default survives");
+
+      /* Half to one and a half, or it is not plus or minus 50 %. Measured through the dial's own conversion rather than against the constants, so this
+         says something about the pair of them rather than restating a definition. */
+      var bottom = FctScale.SizeFromPercent(-50);
+      var top = FctScale.SizeFromPercent(50);
+      Assert.AreEqual(FctScale.SizeMin, bottom, 0.0001);
+      Assert.AreEqual(FctScale.SizeMax, top, 0.0001);
+
+      // a value saved while the dial only went to 30 % is still legal here: raising a ceiling must not invalidate anybody's setting
       foreach (var saved in new[] { 0.7, 0.85, 1.15, 1.3 })
       {
-        Assert.AreEqual(saved, FctScale.Clamp(saved), 0.0001, $"{saved} was rejected although it is inside the new range");
+        Assert.AreEqual(saved, FctScale.ClampSize(saved), 0.0001, $"{saved} was rejected although it is inside the range");
       }
-      Assert.AreEqual(FctScale.Min, FctScale.Clamp(0.49), "half and one-and-a-half are the ends, so that plus or minus 50 % means what it says");
-      Assert.AreEqual(FctScale.Max, FctScale.Clamp(1.51));
-      Assert.AreEqual(FctScale.Min, FctScale.Clamp(0.0001), "zero text would be invisible text");
-      Assert.AreEqual(FctScale.Min, FctScale.Clamp(-4));
-      Assert.AreEqual(FctScale.Max, FctScale.Clamp(9000));
-      Assert.AreEqual(FctScale.Default, FctScale.Clamp(double.NaN), "a hand-edited junk value lands on the default");
-      Assert.AreEqual(FctScale.Default, FctScale.ClampSpeed(double.PositiveInfinity), "and infinity has no end to clamp toward");
+
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.49));
+      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(1.51));
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.0001), "zero text would be invisible text");
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(-4));
+      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(9000));
+      Assert.AreEqual(FctScale.SizeDefault, FctScale.ClampSize(double.NaN), "a hand-edited junk value lands on the default");
     }
 
     /*
-     * Speed is what the dial measures and a duration is what a number gets, so the conversion runs through a division: 50 % faster means two thirds
-     * of the time on screen, and half speed means twice as long. Two things worth asserting explicitly - that the ends are those numbers, and that
-     * moving the dial right never makes anything slower. Both directions are also reversible, because an older build stored the duration and reading
-     * it back goes through this door.
+     * The shape of the speed dial, which is the thing a player noticed: half speed (twice as long on screen) is unusable while playing, and half again
+     * as fast was not enough. So the ends are -30 % and +90 % of the shipped tempo - it stops only a little past the pace that used to be neutral, and
+     * reaches roughly twice as fast as that pace. Both ends are asserted in duration as well as speed, because duration is what a number actually gets:
+     * 1.24x at the slow end and 0.46x at the fast one.
+     */
+    [TestMethod]
+    public void SpeedRange_ReachesFurtherUpThanDown()
+    {
+      // the middle of the track, in both units: 15 % quicker than the tempo everything was choreographed at, and the durations that implies
+      var shippedSpeed = FctScale.SpeedFromPercent(FctScale.SpeedPercentDefault);
+      var shippedTime = FctScale.TimeFromSpeed(shippedSpeed);
+      Assert.AreEqual(1.15, shippedSpeed, 0.0001, "the middle of the dial is the measured tempo plus 15 %, not 1.0");
+      Assert.AreEqual(0.87, shippedTime, 0.01, $"and a number at that setting lives {shippedTime:0.00} times as long as the baseline");
+
+      var slowest = FctScale.SpeedFromPercent(FctScale.SpeedPercentMin);
+      var fastest = FctScale.SpeedFromPercent(FctScale.SpeedPercentMax);
+      Assert.AreEqual(0.805, slowest, 0.0001, "-30 % of that tempo is the slow end");
+      Assert.AreEqual(2.185, fastest, 0.0001, "+90 % is the fast end");
+
+      var slowTime = FctScale.TimeFromSpeed(slowest);
+      var fastTime = FctScale.TimeFromSpeed(fastest);
+
+      Assert.IsTrue(slowTime < 1.3, $"the slow end should not be a slideshow (was {slowTime:0.00}x the measured time)");
+      Assert.IsTrue(fastTime < 0.5, $"the fast end should be well past the old two-thirds limit (was {fastTime:0.00}x)");
+
+      // and the extra reach is on the side people asked for
+      Assert.IsTrue(fastest - shippedSpeed > shippedSpeed - slowest, "the dial runs further toward fast than toward slow");
+    }
+
+    /*
+     * Speed is what the dial measures and a duration is what a number gets, so the conversion runs through a division: 100 % faster would be half the
+     * time on screen. Two things worth asserting - that moving right never makes anything slower, and that every snapped position on the track comes
+     * back as the percent it showed. Both directions are also how an older build's stored duration is read back.
      */
     [TestMethod]
     public void Speed_ReversesIntoDurationWithoutLosingTheSign()
     {
-      Assert.AreEqual(FctScale.Default, FctScale.TimeFromSpeed(FctScale.Default), 0.0001, "one times one is one: the shipped default is still in the middle");
+      Assert.AreEqual(1 / 1.15, FctScale.TimeFromSpeed(FctScale.SpeedDefault), 0.0001, "the shipped position converts to a duration, not to nothing");
 
-      Assert.AreEqual(2.0 / 3.0, FctScale.TimeFromSpeed(1.5), 0.0001, "+50 % speed should leave a number two thirds as long");
-      Assert.AreEqual(2.0, FctScale.TimeFromSpeed(0.5), 0.0001, "half speed should double the time on screen");
+      var previousDuration = double.MaxValue;
 
-      // monotonic in the direction the player is dragging: right is faster, and faster is shorter
-      double previousDuration = double.MaxValue;
-
-      for (var speed = FctScale.Min; speed <= FctScale.Max + 0.0001; speed += 0.05)
+      for (var percent = FctScale.SpeedPercentMin; percent <= FctScale.SpeedPercentMax; percent += 5)
       {
+        var speed = FctScale.SpeedFromPercent(percent);
         var duration = FctScale.TimeFromSpeed(speed);
 
-        Assert.IsTrue(duration < previousDuration, $"{speed:0.00} speed was not shorter than the slower setting before it");
+        Assert.IsTrue(duration < previousDuration, $"{percent:+0;-0;0}% was not shorter than the slower setting before it");
+        Assert.AreEqual(percent, FctScale.PercentOfSpeed(speed), "the readout does not say where the track is");
         Assert.AreEqual(speed, FctScale.SpeedFromTime(duration), 0.001, "the conversion does not come back the way it went");
+
         previousDuration = duration;
       }
 
       /* Junk from settings.ini: a zero duration is not "infinitely fast", and a negative one is not slow. Neither has a direction, so both land on
          the default rather than being honoured literally into an overlay that draws nothing. */
-      Assert.AreEqual(FctScale.Default, FctScale.SpeedFromTime(0));
-      Assert.AreEqual(FctScale.Default, FctScale.SpeedFromTime(-2));
-      Assert.AreEqual(FctScale.Default, FctScale.SpeedFromTime(double.NaN));
+      Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(0));
+      Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(-2));
+      Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(double.NaN));
+      Assert.AreEqual(FctScale.SpeedDefault, FctScale.ClampSpeed(double.PositiveInfinity), "and infinity has no end to clamp toward");
     }
 
     /*
@@ -75,48 +110,48 @@ namespace EQLogParser
     [TestMethod]
     public void Speed_ChangesNewNumbersOnlyAndNeverBelowAFlicker()
     {
-      var previous = FctScale.Time;
+      var previousTime = FctScale.Time;
       try
       {
-        FctScale.Time = FctScale.Default;
-        var normalLife = LifeOf(FctLane.DamageDealt, 500, false);
+        FctScale.Time = 1;
+        var baseLife = LifetimeOf(FctLane.DamageDealt, 500, false);
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.Max);
+        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedDefault);
+        Assert.IsTrue(LifetimeOf(FctLane.DamageDealt, 500, false) < baseLife, "the shipped speed did not shorten a new number against the measured baseline");
+
+        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMax);
         var quick = LifetimeOf(FctLane.DamageDealt, 500, false);
-        Assert.IsTrue(quick < normalLife, "the speed dial did not shorten a new number");
+        Assert.IsTrue(quick < baseLife * 0.6, $"the fast end barely reached (was {quick:0} against {baseLife:0})");
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.Min);
+        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMin);
         var slow = LifetimeOf(FctLane.DamageDealt, 500, false);
-        Assert.IsTrue(slow > normalLife, "the slow end of the dial did not make a new number last longer");
+        Assert.IsTrue(slow > baseLife, "the slow end of the dial did not make a new number last longer");
 
         // floors underneath: the fastest setting on the shortest kind of number is quick, not a blink
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.Max);
-        var tick = new FctIngest();
+        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMax);
         var tickHits = new List<FctHitState>();
-        var tickHit = tick.Accept(tickHits, FctLane.DamageTaken, 100, "Bite", false, false, true, null, 800, 560, 0);
-        Assert.IsNotNull(tickHit);
-        Assert.IsTrue(tickHit.LifetimeMs >= 900, $"a tick at the fastest setting fell to {tickHit.LifetimeMs} ms");
-        Assert.IsTrue(tickHit.FadeMs >= 200, "a fade under 200 ms is a blink, not a fade");
+        var tick = new FctIngest().Accept(tickHits, FctLane.DamageTaken, 100, "Bite", false, false, true, null, 800, 560, 0);
+        Assert.IsNotNull(tick);
+        Assert.IsTrue(tick.LifetimeMs >= 900, $"a tick at the fastest setting fell to {tick.LifetimeMs:0} ms");
+        Assert.IsTrue(tick.FadeMs >= 200, "a fade under 200 ms is a blink, not a fade");
 
         /* The promise the whole design rests on: a number already on screen keeps what it was born with, however the dial is moved afterwards. */
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.Max);
-        var stayed = new FctIngest();
-        var stayedHits = new List<FctHitState>();
-        var first = stayed.Accept(stayedHits, FctLane.DamageDealt, 400, "Flurry", false, false, false, null, 800, 560, 0);
+        var heldHits = new List<FctHitState>();
+        var first = new FctIngest().Accept(heldHits, FctLane.DamageDealt, 400, "Flurry", false, false, false, null, 800, 560, 0);
         Assert.IsNotNull(first);
         var bornLife = first.LifetimeMs;
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.Min);
+        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMin);
         Assert.AreEqual(bornLife, first.LifetimeMs, "a number on screen changed underneath the player");
       }
       finally
       {
-        FctScale.Time = previous;
+        FctScale.Time = previousTime;
       }
     }
 
     /* One hit through a fresh ingest, so the adaptive lifetime is not part of what a speed comparison means. */
-    private static double LifeOf(FctLane lane, int value, bool periodic)
+    private static double LifetimeOf(FctLane lane, int value, bool periodic)
     {
       var hits = new List<FctHitState>();
       var hit = new FctIngest().Accept(hits, lane, value, "Flurry", false, false, periodic, null, 800, 560, 0);
@@ -124,20 +159,18 @@ namespace EQLogParser
       return hit?.LifetimeMs ?? double.NaN;
     }
 
-    private static double LifetimeOf(FctLane lane, int value, bool periodic) => LifeOf(lane, value, periodic);
-
     [TestMethod]
-    public void Percent_RoundTripsThroughTheSlider()
+    public void PercentOfSize_RoundTripsThroughTheSlider()
     {
-      Assert.AreEqual(0, FctScale.Percent(1.0));
-      Assert.AreEqual(-50, FctScale.Percent(0.5));
-      Assert.AreEqual(50, FctScale.Percent(1.5));
-      Assert.AreEqual(10, FctScale.Percent(FctScale.FromPercent(10)));
+      Assert.AreEqual(0, FctScale.PercentOfSize(1.0));
+      Assert.AreEqual(-50, FctScale.PercentOfSize(0.5));
+      Assert.AreEqual(50, FctScale.PercentOfSize(1.5));
+      Assert.AreEqual(10, FctScale.PercentOfSize(FctScale.SizeFromPercent(10)));
 
       // the slider snaps to 5 % steps: every step must survive the round trip exactly, or the readout lies about where you are
       for (var percent = -50; percent <= 50; percent += 5)
       {
-        Assert.AreEqual(percent, FctScale.Percent(FctScale.FromPercent(percent)), $"{percent}% round trip");
+        Assert.AreEqual(percent, FctScale.PercentOfSize(FctScale.SizeFromPercent(percent)), $"{percent}% round trip");
       }
     }
   }

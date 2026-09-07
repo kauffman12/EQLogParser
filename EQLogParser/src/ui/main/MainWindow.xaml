@@ -152,13 +152,14 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
-          <!-- same shape as Damage Meter: enable, put it back, set it up. The FCT overlay is a mid-screen window rather
-               than a corner panel, so its setup mode shows its controls instead of a dialog — see FctOverlayWindow -->
-          <MenuItem Header="_FCT Overlay">
+          <!-- same shape as Damage Meter: enable, put it back, set it up. The overlay is a mid-screen window rather than a corner
+               panel, so its setup mode shows its controls instead of a dialog — see FctOverlayWindow. Spelled out in full here because
+               this is the first place a player meets the feature, and "FCT" is an abbreviation carried from other clients. -->
+          <MenuItem Header="_Floating Combat Text">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Bolt" />
             </MenuItem.Icon>
-            <MenuItem x:Name="fctOverlay" Header="Enable _Overlay" Click="ToggleFctOverlayClick">
+            <MenuItem x:Name="fctOverlay" Header="Enable _Floating Combat Text" Click="ToggleFctOverlayClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="fctOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>

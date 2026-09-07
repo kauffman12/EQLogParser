@@ -415,6 +415,15 @@ namespace EQLogParser
         _fctOverlay.EventsLockChanged += locked => SetFctOverlayMenu(_fctOverlay?.IsVisible == true, !locked);
       }
 
+      /* The first time this feature is switched on it opens on its own controls. Every one of these settings has a defensible default, but they are
+         this build's opinions, and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion exist
+         to be set — the demo loop shows all three inside a few seconds. Once anybody has pressed Save (FctOverlaySettings.IsConfigured) it opens as
+         usual; Cancel does not count, so the offer comes back next time rather than being forced on somebody who looked and decided. */
+      if (show && !FctOverlaySettings.IsConfigured())
+      {
+        _fctOverlay.SetLocked(false);
+      }
+
       SetFctOverlayMenu(show, !_fctOverlay.Locked);
       ConfigUtil.SetSetting("FctOverlayEnabled", show);
 
@@ -490,7 +499,9 @@ namespace EQLogParser
     private void SetFctOverlayMenu(bool enabled, bool configuring)
     {
       fctOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
-      fctOverlay.Header = enabled ? "Disable _Overlay" : "Enable _Overlay";
+
+      // the short form once it is running: the menu is already called Floating Combat Text, and "Disable Floating Combat Text" is a sentence
+      fctOverlay.Header = enabled ? "Disable FCT" : "Enable _Floating Combat Text";
       configureFctOverlay.Header = configuring ? "_Finish Setup" : "_Setup";
     }
 

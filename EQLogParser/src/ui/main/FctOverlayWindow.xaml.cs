@@ -86,8 +86,8 @@ namespace EQLogParser
        kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one mis-click
        silently changes somebody's setup, and there is no Undo next to the control that did it. */
     private FctMotionStyle _savedStyle;
-    private double _savedTextScale = FctScale.Default;
-    private double _savedSpeed = FctScale.Default;
+    private double _savedTextScale = FctScale.SizeDefault;
+    private double _savedSpeed = FctScale.SpeedDefault;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
@@ -125,9 +125,10 @@ namespace EQLogParser
     }
 
     /*
-     * Configure mode driven from the Tools menu, the only way in while clicks pass through. Entering it activates the window: a
-     * player who just asked to move it should get Esc and dragging immediately. Leaving it without Save puts the settings back —
-     * abandoning a configuration session is not the same gesture as approving one. (Save ends it from inside, via ApplyLock.)
+     * Configure mode driven from the View menu (and by the first enable of the feature, which comes in unlocked so the options are seen once) — the only
+     * way in while clicks pass through. Entering it activates the window: a player who just asked to move it should get the keyboard and dragging
+     * immediately. Leaving it any way other than Save puts the settings back, because abandoning a configuration session is not the same gesture as
+     * approving one — Cancel is that exit made visible, and Esc is its keyboard. (Save ends configuring from inside, via ApplyLock.)
      */
     public void SetLocked(bool locked)
     {
@@ -144,7 +145,7 @@ namespace EQLogParser
       FctScale.Text = _savedTextScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       sizeSlider.Value = _savedTextScale;
-      speedSlider.Value = _savedSpeed;
+      speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
 
       ApplyLock(true);
     }
@@ -302,28 +303,32 @@ namespace EQLogParser
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
 
-      /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers
-         would otherwise rebuild the preview and repaint on a window that is not even shown yet. */
+      /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers would
+         otherwise rebuild the preview and repaint on a window that is not even shown yet. Size's track is a multiplier and speed's is a percent of the
+         shipped tempo, which is what its readout shows, so one of the two is converted on the way onto the slider. */
       _savedTextScale = FctOverlaySettings.LoadTextScale();
       _savedSpeed = FctOverlaySettings.LoadSpeed();
       FctScale.Text = _savedTextScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       sizeSlider.Value = _savedTextScale;
-      speedSlider.Value = _savedSpeed;
+      speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
 
       _settingsReady = true;
       ShowScaleReadouts();
     }
 
-    /* -50 % … +50 % beside each dial: snapped to 5 % steps, so these are exact, and the shipped default reads as exactly nothing. On the speed dial
-       the sign is the player's, not the duration's - "+40 %" means forty per cent faster, which is a shorter time on screen. */
+    /*
+     * Where each dial landed, centred under its own track. Both are snapped to 5 % steps, so these are exact rather than drifting decimals, and the
+     * shipped position reads as a dash rather than a number: the middle is not a change, and "+0 %" would claim otherwise. On the speed dial the sign
+     * is the player's, not the duration's — "+45 %" means forty-five per cent faster, which is less time on screen.
+     */
     private void ShowScaleReadouts()
     {
-      sizeValue.Text = ScaleText(sizeSlider.Value);
-      speedValue.Text = ScaleText(speedSlider.Value);
+      sizeValue.Text = Signed(FctScale.PercentOfSize(sizeSlider.Value));
+      speedValue.Text = Signed((int)Math.Round(speedSlider.Value));
     }
 
-    private static string ScaleText(double scale) => $"{FctScale.Percent(scale):+0;-0;—}%";
+    private static string Signed(int percent) => $"{percent:+0;-0;—}";
 
     /*
      * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and write
@@ -337,8 +342,8 @@ namespace EQLogParser
         return;
       }
 
-      FctScale.Text = FctScale.Clamp(sizeSlider.Value);
-      FctScale.Time = FctScale.TimeFromSpeed(FctScale.ClampSpeed(speedSlider.Value));
+      FctScale.Text = FctScale.ClampSize(sizeSlider.Value);
+      FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedFromPercent(speedSlider.Value));
       ShowScaleReadouts();
       RefreshDemo();
     }
@@ -355,11 +360,11 @@ namespace EQLogParser
       {
         if (sender == sizeSlider)
         {
-          sizeSlider.Value = FctScale.Default;
+          sizeSlider.Value = FctScale.SizeDefault;
         }
         else if (sender == speedSlider)
         {
-          speedSlider.Value = FctScale.Default;
+          speedSlider.Value = FctScale.SpeedPercentDefault;
         }
       }
 
@@ -496,18 +501,31 @@ namespace EQLogParser
      * ends. There is no "lock" checkbox here any more because that box was never about locking — it was the way out, labelled with
      * a side effect, so a player clicking it to finish was surprised by their mouse being taken away.
      */
+    /*
+     * Save is the only thing that writes. It also marks the feature as configured, which is what stops the first-run behaviour: until somebody has
+     * committed a choice once, switching the overlay on opens it on these controls rather than on numbers nobody picked. Cancel is the same exit
+     * without either of those.
+     */
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       _savedStyle = _canvas.MotionStyle;
       _savedTextScale = FctScale.Text;
-      _savedSpeed = speedSlider.Value;
+      _savedSpeed = FctScale.SpeedFromPercent(speedSlider.Value);
 
       FctOverlaySettings.SaveMotion(_savedStyle);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
+      FctOverlaySettings.SaveConfigured();
       SaveSettings();
       ApplyLock(true);
     }
+
+    /*
+     * Back out of configure mode with nothing written, the values it was showing put back as they were. This used to be a sentence on the panel about
+     * pressing Esc, which described the normal way to end a look around as the absence of an action; now it is a button next to the one that means the
+     * opposite. Esc still does the same thing for anybody whose hand is already there.
+     */
+    private void CancelClick(object sender, RoutedEventArgs e) => SetLocked(true);
 
     /*
      * Every band does the same three things, so they are wired in one loop rather than with twenty-four XAML attributes. The
@@ -663,10 +681,11 @@ namespace EQLogParser
     }
 
     /*
-     * Esc ends configure mode without saving — the same thing the menu does when unticked, so one key cannot quietly commit what the
-     * preview was only showing off. It does not close the overlay: losing a carefully positioned window to a stray key is the worse
-     * failure, and hiding it is a menu action anyway. A locked window is click-through and WS_EX_NOACTIVATE, so in practice it gets
-     * no keyboard input at all — which is fine, because locked is where it starts and where Esc leaves you.
+     * Esc is the keyboard for the Cancel button: it ends configure mode without saving, the same thing the menu does when unticked, so one key cannot
+     * quietly commit what the preview was only showing off — and unlike that button's tooltip, it is not something the panel has to explain. It does
+     * not close the overlay: losing a carefully positioned window to a stray key is the worse failure, and hiding it is a menu action anyway. A locked
+     * window is click-through and WS_EX_NOACTIVATE, so in practice it gets no keyboard input at all — which is fine, because locked is where it starts
+     * and where Cancel leaves you.
      */
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {

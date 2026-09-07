@@ -11,15 +11,16 @@ namespace EQLogParser
   {
     public const string MotionKey = "FctOverlayMotion";
 
-    /* The two dials on the configure row, stored as multipliers (0.5 - 1.5) rather than percentages: the file is a place where a human may look,
-       and the value that means something to the code is the one worth writing. FctScale clamps on the way in, so a hand-edited "big" or 12 lands on
-       the default instead of drawing nothing. The second dial is stored as speed, because that is what it now measures - see FctScale. */
+    /* The two dials on the configure row, stored as multipliers rather than percentages: the file is a place where a human may look, and the value
+       that means something to the code is the one worth writing. Size runs 0.5 - 1.5; speed runs 0.805 - 2.185 around a shipped 1.15 (see FctScale for
+       why those ends are asymmetric, and why they are not the same numbers as the dial shows). FctScale clamps on the way in, so a hand-edited "big"
+       or 12 lands on that dial's default instead of drawing nothing or running at four times tempo. */
     public const string TextScaleKey = "FctOverlayTextScale";
     public const string SpeedKey = "FctOverlaySpeed";
 
-    public static double LoadTextScale() => FctScale.Clamp(ConfigUtil.GetSettingAsDouble(TextScaleKey, FctScale.Default));
+    public static double LoadTextScale() => FctScale.ClampSize(ConfigUtil.GetSettingAsDouble(TextScaleKey, FctScale.SizeDefault));
 
-    public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.Clamp(scale));
+    public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.ClampSize(scale));
 
     /*
      * Retired: FctOverlayTimeScale, which held a duration multiplier while that dial was called "time". It is still read once when the speed key is
@@ -37,10 +38,23 @@ namespace EQLogParser
         return FctScale.ClampSpeed(stored);
       }
 
-      return FctScale.SpeedFromTime(ConfigUtil.GetSettingAsDouble(LegacyTimeScaleKey, FctScale.Default));
+      /* Absent on both counts: the shipped tempo. A legacy 1.0 is a stored preference for the pace that used to ship, and stays slower than this. */
+      return FctScale.SpeedFromTime(ConfigUtil.GetSettingAsDouble(LegacyTimeScaleKey, 1 / FctScale.SpeedDefault));
     }
 
     public static void SaveSpeed(double speed) => ConfigUtil.SetSetting(SpeedKey, FctScale.ClampSpeed(speed));
+
+    /*
+     * Whether anybody has ever pressed Save on the configure row. The overlay's defaults are defensible but they are opinions, and a first enable that
+     * shows nothing but numbers being what the build decided keeps a player from learning that size, speed and motion are theirs to set - so the menu
+     * opens configure mode instead (see MainWindow.SetFctOverlayVisible). Written only by Save: Cancel, Esc and closing all leave it unset, which means
+     * the offer comes back rather than nagging into a setting nobody agreed to.
+     */
+    public const string ConfiguredKey = "FctOverlayConfigured";
+
+    public static bool IsConfigured() => ConfigUtil.IfSet(ConfiguredKey);
+
+    public static void SaveConfigured() => ConfigUtil.SetSetting(ConfiguredKey, true);
 
     /* Retired along with the left/right region scheme: a settings.ini from an older build still carries FctOverlayLayout,
      * nothing reads it now, and an unread key in this file is harmless, so it fades out on its own rather than needing a

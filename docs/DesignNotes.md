@@ -486,7 +486,7 @@ of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
 
 ## Floating Combat Text
 
-`View → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is settled and recorded in
+`View → Floating Combat Text` shows the player's own combat numbers from live log records. The rendering choice is settled and recorded in
 `docs/NagFctReference.md` (SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale), and the loser has since been deleted rather
 than kept as a reference - see "Shared policy, one renderer" below. This section covers why the *plumbing* is shaped the way it is, because that is
 the part a later change is most likely to undo by accident.
@@ -793,15 +793,18 @@ asked to look at while fighting, on a window whose whole job is to be out of the
 The row that remains got read for clutter at the same time: the hint sentence and the `motion` label in front of a combo that can only
 be a motion combo are gone, and so is the checkbox — see below.
 
-**Configuration is entered deliberately from the app menu** (View → FCT Overlay → Setup). Not from a button on the overlay: this
+**Configuration is entered deliberately from the app menu** (View → Floating Combat Text → Setup). Not from a button on the overlay: this
 window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park that in a corner.
 The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number — the moment you are
 positioning them is precisely when the layout must not shift.
 
-**Save is what writes**, and it is also the way out: press it and the settings stick and configuring ends. Everything else that ends
-configure mode — Esc, or Setup clicked again — puts back what was saved before, because abandoning a configuration session is not the
-same gesture as approving one. The motion combo previews live (the next numbers use the new style) and writes nothing, so trying a
-style costs a click and un-trying it costs nothing.
+**Save is what writes**, and **Cancel is the way out without writing**. Both sit at the right end of the configure row, stacked because there is no
+width to spare. Leaving without saving is a normal way to finish a look around — you came to see what the dials do, not to change them — and for a while
+the only way to do that was a sentence printed on the panel explaining the Esc key, which described the ordinary exit as the absence of an action. A
+button that says "Cancel" beside one that says "Save" removes the sentence and the reading. Esc still does the same thing for a hand already on it; it
+just no longer has to be documented mid-screen. Setup clicked again from the menu also backs out, and every one of those paths puts back whatever was
+saved before, because abandoning a configuration session is not the same gesture as approving one. The motion combo previews live (the next numbers use
+the new style) and writes nothing, so trying a style costs a click and un-trying it costs nothing.
 
 That replaces a "lock (click-through)" checkbox, which was never about locking. It was the only way out of configure mode wearing a
 side effect as its label, so the player who clicked it to finish got their mouse taken away and no way to notice they had also not
@@ -815,22 +818,33 @@ other retired key here.
 
 ### Two dials and a short loop: what configuring is for
 
-A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries
-two dials — **size** and **speed** — each clamped by `FctScale` to ±50 % and stepped at 5 %, so the shipped default is a place you can park rather
-than a value you have to hit by eye. Both sit on one line with the motion picker and Save, in the theme's own font size, with a bold `-` and `+` at
-either end of each dial; the marks are bigger than their labels on purpose, because they are the only part anybody consults while a thumb is moving.
+A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries two
+dials — **size** and **speed** — each stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial is
+three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed *underneath*. That shape is about room. The row
+started as one line with each number read out beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout
+that grows sideways runs out of window at some width somebody chose — so the numbers moved below, where they cost nothing, and another dial can be added
+beside them. The marks carry the size rather than the labels because they are what you consult while a thumb is moving. Everything wraps: a narrow
+overlay drops the speed dial under the size dial, never a button off the edge.
 
-**The second dial is speed, not time — it used to be called time, and it ran backwards.** A control labelled "time" whose right-hand end makes
-numbers appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So the
-dial says speed (bigger and faster at the right), is stored as `FctOverlaySpeed`, and `FctScale.Time` remains exactly what `FctIngest` has always
-multiplied: how long a number lives. The conversion is a division in one place (`TimeFromSpeed`) rather than an subtraction, because "50 % faster" is
-two thirds of the time on screen, not 50 % less of it. Two consequences worth knowing: ±50 % of *speed* is 0.67×–2× of duration, so the millisecond
-ends are deliberately asymmetric; and `FctScale.Time` must **not** be clamped to the dial's own range, which would silently cut the slow end off.
+**The second dial is speed, not time — it used to be called time, and it ran backwards.** A control labelled "time" whose right-hand end makes numbers
+appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So the dial says
+speed (bigger and faster at the right), is stored as `FctOverlaySpeed`, and `FctScale.Time` remains exactly what `FctIngest` has always multiplied: how
+long a number lives. The conversion is a division in one place (`TimeFromSpeed`) rather than a subtraction, because "50 % faster" is two thirds of the
+time on screen, not 50 % less of it. `FctScale.Time` must therefore **not** be clamped with the dial's own bounds, which would silently cut an end off.
 
-±50 % is still a measured limit rather than a round number. Everything about layout — lane columns as fractions of width, the vertical reserve a
-line of text needs (`FctLayout.TextReserve`), the adaptive lifetime under load — was measured at 1.0, and half again in either direction is where
-that measurement stops describing the thing: past it, damage and healing columns begin to occupy each other at ordinary window sizes, and a number can
-arrive and leave before it is readable. Values saved while the range was ±30 % stay legal, which is why raising a ceiling needs no migration.
+**The two dials are not symmetrical, and neither asymmetry is an accident.** Size runs ±50 % around 1.0, centred, because the type scale genuinely is
+centred on the size everything was measured at — lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextReserve`,
+the adaptive lifetime under load — and half again in either direction is where that stops describing the feature: past it, damage and healing columns
+begin to occupy each other at ordinary window sizes. Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
+
+Speed neither centres on 1.0 nor reaches equally far, because playing with it said so. Half speed — twice as long on screen — is unusable in a fight, and
+half again as fast was not enough; the tempo worth sitting at turned out to be about **15 % quicker than the one that shipped**. So this dial is measured
+in percent *of the shipped tempo*, runs **−30 % to +90 %**, and parks at `SpeedDefault = 1.15`: numbers live 0.87× what they used to by default, 1.24× at
+the slow end (a little past the old neutral pace rather than double it) and 0.46× at the fast end. A tempo is a preference about feel, so it moved as one
+number on one dial — re-scaling choreography, layout budgets and the adaptive controller to make 1.15 the new zero would have been the same opinion with
+forty constants in it, plus a re-measurement of everything measured at 1.0. The floors in `FctIngest` (900 ms of life, 200 ms of fade) are what keep the
+fast end from becoming a flicker, and they now apply at every setting including the default, since there is no longer an unset case where this dial
+should keep its hands off.
 
 Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
 tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
@@ -892,7 +906,14 @@ combat text has to stay readable at a glance across a whole screen of HUD, and 1
 
 ### Under View, beside the Damage Meter, behaving like it
 
-`View → FCT Overlay` offers **Enable Overlay**, **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows
+**The first time the feature is switched on, it opens on its controls.** Every default here is defensible and every one of them is this build's opinion,
+and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion are theirs to set. The demo loop shows
+all three within a couple of seconds, so enabling enters configure mode until somebody has pressed Save once — recorded as `FctOverlayConfigured`,
+written by Save alone. Cancel deliberately does *not* set it: backing out means "not today", and the offer comes back next time rather than a choice
+being forced on somebody who looked and decided.
+
+`View → Floating Combat Text` offers **Enable Floating Combat Text** (reading **Disable FCT** once running — the menu is already spelled out above, and an
+item that repeats it is a sentence), **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows
 above it, using this app's convention for menu state (a check icon plus an Enable/Disable header, not a checkable item) because an
 overlay filed in a different menu with different mechanics is something players have to learn twice. Nothing FCT-related sits under
 Tools any more; the render simulation that used to live there is a development tool and starts from the command line (`/fctsim`), so a released
@@ -1068,9 +1089,11 @@ and on each lock toggle instead of from a window hook — re-writing them per mo
 every hover over the overlay and buys nothing observable. Geometry persists through `ConfigUtil`
 (`FctOverlayLeft/Top/Width/Height/Enabled`) — written when a drag or resize is released, not by Save, because where you left the window
 is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
-*Two states*). The presentation switches — motion style (`FctOverlayMotion`) and the two dials (`FctOverlayTextScale`,
-`FctOverlayTimeScale`, multipliers rather than percentages because the file is somewhere a person may look) — persist through
-`FctOverlaySettings` and are written **only by the Save button**, read by the overlay and by both simulation windows so a hold run and a spray
+*Two states*). The presentation switches — motion style (`FctOverlayMotion`) and the two dials (`FctOverlayTextScale`, `FctOverlaySpeed`; multipliers
+rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) —
+persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
+actually chosen. The old `FctOverlayTimeScale` is still read once, inverted, when the speed key is absent; it is never written again. They are read by
+the overlay and by the simulation window so a hold run and a spray
 run differ in nothing but the thing being compared. Being presentation-only, these apply immediately and need neither a lock nor a re-parse —
 which is the exception that proves the rule above: data-shaped settings have to be re-read by everything, and these are read once when a number
 is built. `FctOverlayMotion` also reads the old
@@ -1078,9 +1101,9 @@ is built. `FctOverlayMotion` also reads the old
 chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.
 
-`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and
-dragging are live immediately, and asking to configure while the overlay is hidden shows it first rather than doing nothing silently.
-The menu item unticking ends configure mode the same way Esc does — settings back the way they were, overlay still open.
+`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and dragging are live
+immediately, and asking to configure while the overlay is hidden shows it first rather than doing nothing silently. The menu item unticking ends
+configure mode the same way Cancel does — settings back the way they were, overlay still open.
 
 `NativeMethods` exposes exactly two style vocabulary sets — `ExtendedWindowStyles` and `GetWindowLongFields` — and
 neither has a `WS_EX_APPWINDOW` member nor a plain `GWL_STYLE` accessor. Overlay windows stay toolwindows in both

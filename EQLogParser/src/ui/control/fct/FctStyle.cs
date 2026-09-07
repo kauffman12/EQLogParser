@@ -60,7 +60,7 @@ namespace EQLogParser
     {
       var loud = IsLoudLabel(hit.FixedText);
 
-      /* The player's own size preference (FctScale.Text, +/-50 %) goes in here, once, so hit.ValueFontSize is the real drawn
+      /* The player's own size preference (FctScale.Text, +/-50 % of measured) goes in here, once, so hit.ValueFontSize is the real drawn
          size from this point on: line height, vertical reserve, clamp bands, the pulse grid and glyph measurement all read it
          and follow without a second place that has to remember to scale. A hit keeps the size it was born with, so moving the
          slider changes what comes next rather than resizing text already in flight. */

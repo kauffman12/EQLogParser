@@ -363,19 +363,18 @@ namespace EQLogParser
      * scaling only the lifetime leaves a number hanging in mid-air past the end of its animation, which reads as a stutter and not as a slower overlay.
      *
      * The floor matters because the multipliers compound: a proc is already at 0.7 of its lane's life (ApplyProcTempo) under an adaptive lifetime that
-     * shrinks with load, so the fast end of the dial - two thirds of the time on screen - could otherwise ask for well under a second.
+     * shrinks with load, and the fast end of the dial leaves a number on screen for less than half the time it was choreographed at. Without floors that
+     * asks for well under a second, which is a flicker rather than a fast overlay.
      *
-     * Skipped entirely at the default: without that, the floor would quietly lengthen the shortest lifetimes the controller
-     * chooses today, and a settings change nobody made would show up in the numbers.
+     * Applied unconditionally, including at the shipped speed: SpeedDefault is 1.15 rather than 1.0 because the measured baseline turned out to sit on the
+     * slow side of useful (docs/DesignNotes.md), so there is no longer an "unset" case in which this should keep its hands off the numbers and let the
+     * floors stand down.
      */
     private static void ApplyPlayerTempo(FctHitState hit)
     {
-      if (FctScale.Time <= FctScale.Default - 0.001 || FctScale.Time >= FctScale.Default + 0.001)
-      {
-        hit.LifetimeMs = Math.Max(MinLifetimeMs, hit.LifetimeMs * FctScale.Time);
-        hit.MotionMs = Math.Min(hit.MotionMs * FctScale.Time, hit.LifetimeMs);
-        hit.FadeMs = Math.Clamp(hit.FadeMs * FctScale.Time, MinFadeMs, hit.LifetimeMs);
-      }
+      hit.LifetimeMs = Math.Max(MinLifetimeMs, hit.LifetimeMs * FctScale.Time);
+      hit.MotionMs = Math.Min(hit.MotionMs * FctScale.Time, hit.LifetimeMs);
+      hit.FadeMs = Math.Clamp(hit.FadeMs * FctScale.Time, MinFadeMs, hit.LifetimeMs);
     }
 
     /*
