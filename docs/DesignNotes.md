@@ -675,7 +675,7 @@ The fountain began as a checkbox, which was honest while there were two choices 
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
 be read, fade — the default in bands), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
 (no travel at all — it swells where it appeared), **spray** (a random cone out of the lane slot, then a short fall) and
-**parabola** (a constant-speed scroll bent sideways by t² — the shape the scrolling-text genre ships as its own default,
+**parabola** (a constant-speed scroll arcing out to a vertex at half height and back — the shape the scrolling-text genre ships as its own default,
 and halves' default for the same reason; see below). Where a hit goes, how it moves and how numbers stack are three
 orthogonal decisions, and cramming two of them into one boolean was how "fountain" came to mean several things at once.
 
@@ -697,15 +697,20 @@ Three rules keep five styles from becoming five behaviours:
   so a future sixth style has to pass the same bar).
 
 **The parabola is halves' default because it is what the genre ships.** MSBT's profiles are all of them
-`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and bend
-outward as they go, which is to say x is a function of y². FCT keeps its tempo system and borrows only the shape: the
-vertical runs `y = Y0 − Rise·t` — linear, not eased, because an eased scroll is no longer a parabola at all, it is an arc
-wearing one's coordinates — while the sideways travel is `x = X0 + Bow·t²`, zero slope at the spawn so a number leaves
-straight up or down and curves out as it scrolls. `Bow` is a share of the side's territory (`ParabolaBowFrac`, 30%),
-signed **away from the seam**: outward is the genre's bow, and the only drift direction that cannot reach the other side's
-stream. MSBT's curve reaches a full area-width at mid-height — its numbers leave the side sideways long before they finish
-fading; landing the drift inside the half instead is what keeps the end of the scroll readable (`FctParabolaTest` pins
-containment for life, both sides, both directions).
+`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and arc —
+x is a function of y². FCT keeps its tempo system and borrows the shape as MSBT actually writes it rather than as it
+reads in a still: `ScrollLeft/RightParabola…` computes `x = y²/4a` with **y measured from the area's mid-point**
+(`MSBTAnimationStyles.lua`), so the vertex is *mid-flight* — a number leaves its column straight up or down, bows out
+to the widest point at half height, and is back on the column by the time it fades. That symmetry is the semicircle
+chain in Mik's demos, each value tracing its neighbour's path; the monotonic outward drift this project shipped first
+(`x = X0 + Bow·t²`, vertex at spawn) never came back, and looked like nothing in the genre. The vertical run stays
+`y = Y0 − Rise·t` — linear, not eased, because an eased scroll is no longer a parabola at all, it is an arc wearing
+one's coordinates — and with y linear the mid-point formula comes out as `x = X0 + Bow·4t(1−t)`. `Bow` is signed
+**away from the seam** (the only bow that cannot reach the other side's stream) and measures a share of the side's
+territory (`ParabolaBowFrac`, 34%): MSBT's own curve swings a full area width, text running off its area while still
+fading, and 34% is as far an arc as this overlay can keep inside the half — far enough to read as a sweeping curve,
+near enough that the widest crit draw still clears both walls at the vertex (`FctParabolaTest` pins containment for
+life, both sides, both directions).
 
 Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
 and nothing about where the number ends, so a slower parabola is the same curve drawn more slowly, which is what a tempo
@@ -830,8 +835,8 @@ In halves the parabola is not thrown — it *queues* (`FctStream`). Every row la
 edge itself and reuses that column until a drawn number genuinely blocks it. This is what MSBT's display areas actually are — rows,
 with 8 px of minimum spacing between them (`MIN_VERTICAL_SPACING`; its columns keep `MIN_HORIZONTAL_SPACING` = 10) — and it is the
 part people mean when they say the genre "feels tidy" where free-float FCT sprays. Most of the discipline costs no computation at
-all: two rows born half a second apart on a constant-speed scroll stay half a second of travel apart for their whole lives, so the
-scroll *is* the queue. Only bursts need room made for them.
+all: every row shares the rail and the half's one beat (below), so two rows born half a second apart stay half a second of
+travel apart, on the same curve, for their whole lives — the scroll *is* the queue. Only bursts need room made for them.
 
 There is no second placement engine. The same flight-scored search (`FctPlacement`) scores three origins instead of a lattice of
 eighteen — centre first, then two emergency columns — through `FctLayout.Spawn` asked for an origin like any other candidate, with
@@ -839,21 +844,27 @@ one knob turned: the pair test is **padded** to MSBT's line gap, so "costs nothi
 merely not touching. (The lattice pays no padding; bit-identical search there, verified by the existing bands tests.) Centre wins
 ties, which is what makes an empty overlay one column rather than a coin flip.
 
-**The emergency columns braid upstream of the drift, and that was measured before it was understood.** Every row in a half bows
-outward for its whole life, so a column placed downstream of the sweep parks near the clamp wall — directly in the path the centre
-row is still travelling toward — and the two collide at the wall no matter how carefully their spawn rows were spaced: 28% of a
-block, caught by the burst test on the first run. Against the drift they stay parallel to everything and touch nothing. And where
+**The emergency columns braid upstream of the arc, and that was measured before it was understood.** Every row bows out to its
+vertex at half height, so a column placed downstream swings through the space the centre row is arcing into and pins against the
+clamp wall beside it — same arc, same beat, so they *stay* pinned for the whole flight: 28% of a block, caught by the burst test on
+the first run. Against the arc the extra columns swing inside ground the stream already covers and touch nothing. And where
 the half cannot fit two full text widths of step — an ordinary font on somebody's 420 px overlay — the columns **compress evenly**
 rather than pinning to walls: adjacent lines graze by as much as the geometry allows and no row is ever lost. A parser overlay that
 dropped damage because the layout was busy is a trade the addon genre never had to make (its text was throttled upstream, so its
 layout always had room); it is not one this overlay makes either.
 
-**The parabola also had to stop parking.** The hold-style life was *travel, then rest at the end of the travel, then fade in
-place* — harmless where numbers rest wherever they landed, fatal for rows that move in single file, because every row ends at the
-same terminus: with a park phase the bottom of the centre column belongs to whichever number is dying there, and every later reuse
-must dodge a corpse. For the parabola alone the motion now spans the number's entire life — constant speed from edge to fade, the
-tempo dial still scaling the whole passage (endpoints unchanged), the fade arriving while the row is still moving, which is exactly
-how MSBT's text leaves. Reuse of the centre column is then decided by drawn spacing alone: spaced-or-blocked, nothing in between.
+**The rail runs to one beat per half, and the beat precedes placement.** The hold-style life was *travel, then rest at the end
+of the travel, then fade in place* — harmless where numbers rest wherever they landed, fatal for rows that move in single file,
+because every row ends at the same terminus: with a park phase the bottom of the centre column belongs to whichever number is dying
+there, and every later reuse must dodge a corpse. A stream life is therefore one beat for the whole half — region height × scroll
+rate (`ParabolaScrollMsPerPx`) — whatever the load, crit or proc: no adaptive lifetime, no fixed crit window, motion spanning the
+life so nothing ever parks and the fade arrives while the row is still moving, exactly how MSBT's text leaves. One beat rather than
+a speed per row is what makes the chain: rows of different font sizes travel slightly different distances inside it (each reserves
+room for its own height at both ends), a few percent apart in rate and invisible, while their arcs — and with them the column
+spacing that keeps bursts apart — stay identical. And the beat is applied **before** placement scores candidates, because candidates
+are whole flights: a trial cloned without a lifetime has already ended, every column reads as empty, and a same-frame burst files
+itself into one centre column — which is precisely how the first cut of this failed. Reuse of the centre column is then decided by
+drawn spacing alone: spaced-or-blocked, nothing in between.
 
 ### Two states: numbers only, or configuring
 

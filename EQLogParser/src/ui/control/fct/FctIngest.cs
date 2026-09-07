@@ -401,19 +401,38 @@ namespace EQLogParser
         return;
       }
 
+      /* The rail's tempo belongs to the stream, not here: placement re-spawns a stream row at its pinned edge,
+       * so this hit's Rise is still provisional at this point in Accept — and a duration computed from a distance
+       * that changes afterwards is how three rows on one rail each ended up with their own private tempo, phase drift
+       * shearing apart exactly the chain this style exists to make. See ApplyRailTempo. */
+      if (hit.Style is FctMotionStyle.Parabola)
+      {
+        return;
+      }
+
       // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
       hit.LifetimeMs = hit.Lane == FctLane.Crit ? CritLifetimeMs : _life.NextLifetime(hit.Lane, LiveCount(hits, hit.Lane), now);
-
-      /*
-       * The parabola scrolls until it is gone, which is MSBT's own timing law: no parked tail waiting to disappear.
-       * Parking is harmless where numbers rest wherever they landed, but the stream — the only place this shape runs —
-       * moves in single file, and a hold phase ends every row at the same terminus as the row before it. With motion
-       * spanning the life, constant speed holds from edge to fade and reusing the centre column is spaced-or-blocked
-       * by real drawn overlap rather than by two numbers queueing at the same parking spot.
-       */
-      hit.MotionMs = hit.Style is FctMotionStyle.Parabola ? hit.LifetimeMs : Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
+      hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
       ApplyProcTempo(hit);
+      ApplyPlayerTempo(hit);
+    }
+
+    /*
+     * The rail's tempo: how long a stream row takes to cross its half. Computed from the region's height rather than any
+     * one row's Rise — rows of different font sizes travel slightly different distances (each reserves room for its own
+     * height at both ends) and a SHARED beat keeps their bows, and so their column spacing, identical for the whole
+     * flight; the few percent of speed difference between the biggest and smallest text is the part MSBT never lets you
+     * notice either. Rows that parked at end of travel would all park in one place and the centre column would become a
+     * queue for a parking space (FctStream): motion spans the life, so nothing parks. The stream applies it BEFORE
+     * scoring candidate columns, because the candidates are whole flights and a trial cloned without a lifetime is
+     * a flight that already ended — every column would read as empty (which is exactly how this was first missed).
+     */
+    internal static void ApplyRailTempo(FctHitState hit, FctStage stage)
+    {
+      hit.LifetimeMs = stage.RegionFor(hit.Incoming).Height * FctMotion.ParabolaScrollMsPerPx;
+      hit.MotionMs = hit.LifetimeMs;
+      hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
       ApplyPlayerTempo(hit);
     }
 

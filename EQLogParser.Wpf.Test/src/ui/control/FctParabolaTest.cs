@@ -4,11 +4,12 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * The parabola (FctMotionStyle.Parabola): a constant-speed vertical scroll bent sideways by t² — the scrolling combat
-   * text genre's own default shape (MSBT). What these pin down: that it is a parabola and not an arc (y linear in t, x
-   * quadratic), that the bow points away from the seam in both halves, that it stays inside its half for life at every
-   * speed the dial can give, that bands ingest degrades it to hold instead of letting a number cross the strip, and that
-   * resize maps the bow the same way it maps everything else.
+   * The parabola (FctMotionStyle.Parabola): a constant-speed vertical scroll arcing out to a vertex at half height and
+   * back — MSBT's geometry as written, x = y²/4a measured from the rail's mid-point. What these pin down: that the arc
+   * leaves its column, reaches its widest away from the seam at half height, and returns to the column as it fades; that
+   * every value shares one path and one speed, crits and procs included — the chain of numbers following each other;
+   * that it stays inside its half at every speed the dial can give; that bands ingest degrades it to hold instead of
+   * letting a number cross the strip; and that resize maps the bow the same way it maps everything else.
    */
   [TestClass]
   public sealed class FctParabolaTest
@@ -33,7 +34,13 @@ namespace EQLogParser
 
       FctStyle.ApplyTo(hit, hit.Lane, minor: false);
       hit.ValueWidth = FctLayout.EstimateTextWidth("1,234", hit.ValueFontSize); // what FctIngest.Accept does after style
+
+      /* Spawned the way the stream spawns it: one pass to read the bands, then the column and edge pinned like FctStream
+       * does — so these asserts measure the arc itself, not the origin jitter an unstreamed throw would add to it. */
       FctLayout.Spawn(hit, stage, rand);
+      var region = stage.RegionFor(incoming);
+      var edgeY = stage.UpFor(incoming) > 0 ? hit.BandMaxY : hit.BandMinY;
+      FctLayout.Spawn(hit, stage, rand, (region.X + (region.Width / 2.0), edgeY));
       return hit;
     }
 
@@ -58,9 +65,10 @@ namespace EQLogParser
       Assert.AreEqual(y1 - y2, y2 - y3, 1e-9, "equal time steps must cover equal distances at constant speed");
     }
 
-    /* The shape's second clause: x is quadratic in t and bows away from the seam — left half drifts left, right half right. */
+    /* The shape's second clause — MSBT's formula as written (x = y²/4a from the rail's mid-point): the value leaves its
+     * column, bows out to a vertex at half height pointing away from the seam, and is back on the column when it fades. */
     [TestMethod]
-    public void TheBowIsQuadraticAndPointsAwayFromTheSeamInBothHalves()
+    public void TheArcBowsToAVertexAtHalfHeightAndReturnsToItsColumn()
     {
       foreach (var side in new[] { FctRegionSide.Left, FctRegionSide.Right })
       {
@@ -70,20 +78,13 @@ namespace EQLogParser
         var away = side is FctRegionSide.Left ? -1.0 : 1.0;
 
         Assert.AreEqual(away * stage.TerritoryFor(true) * FctLayout.ParabolaBowFrac, hit.Bow, 1e-9,
-          $"the bow must leave {side} half's stream pointing outward");
+          $"the vertex must sit outward of the column on {side} half's stream");
 
         var x0 = FctMotion.ArcedX(hit, 0.0);
-        var xm = FctMotion.ArcedX(hit, 0.5);
-        var xe = FctMotion.ArcedX(hit, 1.0);
-        var lo = region.X + 1.0;
-        var hi = region.X + region.Width - 1.0;
-
-        // where the drift ran unclamped, a quarter of the time is exactly a quarter of the drift: x ∝ t²
-        if (xm > lo && xm < hi && xe > lo && xe < hi)
-        {
-          Assert.AreEqual((xe - x0) * 0.25, (xm - x0), Math.Abs(xe - x0) * 0.01 + 1e-9,
-            "x ∝ t² means half the time carries a quarter of the sideways drift");
-        }
+        Assert.AreEqual(0.0, FctMotion.ArcedX(hit, 1.0) - x0, 1e-9, "ends — and begins — on its own column");
+        Assert.AreEqual(hit.Bow, FctMotion.ArcedX(hit, 0.5) - x0, 1e-9, "half height is the vertex");
+        Assert.AreEqual(0.75, (FctMotion.ArcedX(hit, 0.25) - x0) / hit.Bow, 1e-9,
+          "4·t(1−t): a quarter of the way in is three quarters of the bow");
 
         // and for the whole life, wherever it is, it is in the half that owns it
         for (var t = 0.0; t <= 1.0; t += 0.1)
@@ -92,6 +93,56 @@ namespace EQLogParser
           Assert.IsTrue(x >= region.X && x <= region.X + region.Width,
             $"t={t:0.0}: x {x:0.#} left its half [{region.X:0.#}..{region.X + region.Width:0.#}]");
         }
+      }
+    }
+
+    /*
+     * MSBT's chain law in one test: every value on the rail — plain, crit or proc — enters at the same edge on the same
+     * beat, because the hair of difference per row is what sheared the train apart before this: adaptive lifetimes made
+     * rows overtake their neighbours, travel jitter ended them in different places, and a tempo computed before the
+     * stream pinned the geometry gave three rows on one rail three private speeds. Same beat means same-size values
+     * also share speed and endpoint exactly; a crit's endpoint is its own because the band reserves room for how tall
+     * the text is — one rail per text size, which is as it should be: the big number stops where it stays inside.
+     */
+    [TestMethod]
+    public void EveryValueOnTheRailSharesItsPathAndSpeed()
+    {
+      var ingest = new FctIngest(new Random(71)) { Style = FctMotionStyle.Parabola, Layout = FctLayoutChoice.Shipped };
+      var hits = new List<FctHitState>();
+
+      // value, crit, proc: the rail does not care, and neither do these asserts
+      var spawns = new[] { (value: 1001.0, crit: false, proc: false), (value: 9001.0, crit: true, proc: false), (value: 604.0, crit: false, proc: true) };
+      double entry = 0, endpoint = 0, beat = 0, size = 0;
+
+      for (var i = 0; i < spawns.Length; i++)
+      {
+        var (value, crit, proc) = spawns[i];
+        var hit = ingest.Accept(hits, FctLane.DamageDealt, value, "Flurry", crit, false, proc, null,
+          Width, Height, i * 900.0);
+
+        Assert.IsNotNull(hit, $"value {value} belongs on the rail too");
+        Assert.AreEqual(FctMotionStyle.Parabola, hit.Style, "crits and procs ride the rail, they do not reroute off it");
+
+        if (i == 0)
+        {
+          entry = hit.Y0;
+          endpoint = FctMotion.RaisedY(hit, 1.0);
+          beat = hit.MotionMs;
+          size = hit.ValueFontSize;
+        }
+
+        Assert.AreEqual(entry, hit.Y0, 1e-9, $"one entrance: value {value} starts where the first one started");
+        Assert.AreEqual(beat, hit.MotionMs, 1e-9, $"one beat: value {value} cannot run to a private tempo");
+
+        if (hit.ValueFontSize == size)
+        {
+          // same size, entrance and beat leave nothing else free: identical endpoint means identical rate
+          Assert.AreEqual(endpoint, FctMotion.RaisedY(hit, 1.0), 1e-9,
+            $"one path at one rate: value {value} ends exactly where the first one ended");
+        }
+
+        Assert.AreEqual(0.0, FctMotion.ArcedX(hit, 1.0) - FctMotion.ArcedX(hit, 0.0), 1e-9,
+          "and every value returns to the column on its way out");
       }
     }
 

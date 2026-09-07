@@ -14,6 +14,16 @@ namespace EQLogParser
     public const double MotionWindowMs = 2000;
 
     /*
+     * The parabola’s cadence in ms per pixel of region height: MSBT scrolls every value in an area at ONE rate
+     * (ScrollUp is height × progress), and the chain look — each number following the one before along the same path
+     * — needs one shared beat rather than a speed per row, so a parabola’s lifetime comes from this and its region’s
+     * height rather than from the adaptive controller (FctIngest.ApplyRailTempo). Rows of different font sizes cover
+     * slightly different distances within the beat, a few percent apart in rate and invisible; 5 ms/px is ~200 px/s,
+     * the pace measured playable at default size, and like MSBT’s a taller region is a longer journey, not faster text.
+     */
+    public const double ParabolaScrollMsPerPx = 5;
+
+    /*
      * Spray's choreography is deliberately shorter than fountain's. Shape separates the two styles (see LateralProgress),
      * but timing was the other half of why they read as one thing: two 2 second flights look alike whatever path they draw.
      * Shrapnel is quick — out, over and down in about 1.7 s — which also lets a burst clear before the next one lands.
@@ -129,9 +139,13 @@ namespace EQLogParser
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
 
-      /* The parabola bends sideways on its own law — quadratic in t with zero slope at the spawn, so it leaves straight up
-         or down and curves out as it scrolls. x(t) = X0 + Bow·t² with y linear in t is the shape itself. */
-      var lateral = hit.Style is FctMotionStyle.Parabola ? hit.Bow * t * t : hit.Arc * LateralProgress(hit, t);
+      /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
+         in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
+         vertex at half height, and comes BACK to the column by the time it fades. Ends on the column, arc between them:
+         that is the semicircle chain in Mik's demos, and it is also why stream columns keep their spacing for the whole
+         flight — a shared bow cancels in every difference. (The old t² drift here was a curve with its vertex at the
+         spawn: outward forever, never back, and it read as nothing in the genre.) */
+      var lateral = hit.Style is FctMotionStyle.Parabola ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
 
       return Math.Clamp(hit.X0 + lateral, lo, hi);
     }

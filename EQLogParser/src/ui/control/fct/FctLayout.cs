@@ -187,17 +187,24 @@ namespace EQLogParser
       /* A proc starts deeper in its band than the row of hits it arrived beside — deeper being further along the travel,
        * away from the spawn edge. Clamped by the band ends, which already carry the vertical reserve on one side and the
        * edge pad on the other, so this cannot push anything out of the window; in bands it is the old "further from the
-       * strip" rule, and in halves there is no strip to measure from. */
-      if (hit.Proc)
+       * strip" rule, and in halves there is no strip to measure from. The parabola takes no depth start: its whole claim
+       * is that every value follows the previous one along one path (FctStream), and a proc beginning part-way down the
+       * rail breaks that chain for the sake of a distinction its smaller type already makes. */
+      if (hit.Proc && hit.Style is not FctMotionStyle.Parabola)
       {
         var inset = BandSpan(hit) * ProcInsetFrac;
         hit.Y0 = up > 0 ? Math.Max(hit.BandMinY, hit.Y0 - inset) : Math.Min(hit.BandMaxY, hit.Y0 + inset);
       }
 
-      // the far end of the band, minus a random share of slack: exactly how much room this hit has to travel in
-      var far = up > 0
-        ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
-        : hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
+      /* The far end of the band, minus a random share of slack: exactly how much room this hit has to travel in — and
+       * no two numbers the same, which is what stops hold-style rows parking in one another. The parabola takes no
+       * slack: its rail is defined by shared endpoints, one per region and direction, so every value stops where the
+       * one before it stopped and the chain reads as a train rather than as N separate journeys. */
+      var far = hit.Style is FctMotionStyle.Parabola
+        ? (up > 0 ? hit.BandMinY : hit.BandMaxY)
+        : up > 0
+          ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
+          : hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
 
       // a parabola bows away from the seam: outward is the genre's shape and the only drift that cannot reach the other
       // side's stream. Bands has no seam, so the sign is moot there (ingest will not run a parabola in it).
@@ -265,10 +272,12 @@ namespace EQLogParser
      * The territory parameter is what the sideways amounts measure against — canvas in bands, half-width in halves — so
      * "12% of width" keeps meaning 12% of this stream's own territory in both schemes.
      */
-    /* How wide a parabola's outward drift gets by the end of its travel, as a share of the side's territory. MSBT's own
-     * curve reaches a full area-width at mid-height — to say its numbers leave the side sideways long before they finish
-     * fading; this lands the drift inside the half instead, where it can be read (FctHalvesTest pins the containment). */
-    public const double ParabolaBowFrac = 0.30;
+    /* How far a parabola bows from its column at the vertex of its arc — half height — as a share of the side's
+     * territory, entering and leaving on the column either way (FctMotion.ArcedX). MSBT's own curve swings a full area
+     * width, text running off the side of its area while still fading; this keeps the arc inside the half where it can
+     * be read instead, 0.34 being as far out as the widest crit draw still clears both walls at the vertex
+     * (FctHalvesTest pins the containment). */
+    public const double ParabolaBowFrac = 0.34;
 
     private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable, double bowDir)
     {
@@ -293,8 +302,10 @@ namespace EQLogParser
 
       if (hit.Style is FctMotionStyle.Parabola)
       {
-        // the shape: a straight vertical scroll at constant speed, bent sideways by t² — MSBT's parabola, in the tempo
-        // system's own units (a share of the region, so the speed dial and resize keep working untouched)
+        /* The shape: a straight vertical scroll at one constant rate with a symmetric arc — out to the vertex at half
+         * height and back to the column — whose size is a share of the region, so resize and the speed dial keep working
+         * on it untouched. No jitter anywhere in this branch, and none in the far end that produced `usable`: two values
+         * a beat apart are meant to trace the same line at the same speed, one behind the other (FctStream). */
         hit.Rise = up * usable;
         hit.Arc = 0;
         hit.Bow = bowDir * territory * ParabolaBowFrac;
