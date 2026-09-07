@@ -161,6 +161,41 @@ namespace EQLogParser
       Assert.IsTrue(spawned > 0, "the script ran once and stopped - configure mode would go quiet");
     }
 
+    /*
+     * The reason the loop is an animation and not a slideshow. A render pump asks for the next frame when it has something moving, and what it
+     * looks at is the canvas's own list - which deliberately does not contain these numbers. Animated is the answer the demo gives that question,
+     * so it has to say yes for every tick a number is in flight: waking only when a cue fires repaints twice a second, and text hangs in place
+     * before jumping.
+     */
+    [TestMethod]
+    public void Animated_DemandsAFrameForEveryFlight()
+    {
+      var demo = new FctDemo();
+      demo.Start(0);
+      Assert.IsFalse(demo.Animated, "nothing is on screen yet");
+
+      var ticks = 0;
+      var moving = 0;
+
+      for (var now = 1000.0 / 60; now <= 9000; now += 1000.0 / 60)
+      {
+        ticks++;
+        demo.Advance(now, 800, 560, null, null);
+
+        if (demo.Animated)
+        {
+          moving++;
+        }
+      }
+
+      // from the first cue to the end of the last flight almost every frame has something in it; a pump that woke for cues alone would land far below
+      Assert.IsTrue(moving > ticks * 0.9, $"only {moving} of {ticks} ticks had anything moving");
+
+      /* The quiet seconds at the end of a cycle are dead time on purpose, and dead time must not cost rasters. */
+      demo.Advance(FctDemo.CycleMs - 1, 800, 560, null, null);
+      Assert.IsFalse(demo.Animated, "the tail between loops should stop asking for frames");
+    }
+
     [TestMethod]
     public void Player_ReleasesEveryNumberItHandsBack()
     {

@@ -13,8 +13,9 @@ namespace EQLogParser
    * The events run through a private FctIngest into a private list. Same choreography as play — style, band, travel, fold, placement,
    * adaptive lifetime — and the same text building, which is the only reason what you see is what you get. It is a separate ingest
    * rather than the overlay's real one because the real one owns the counters: folding a demo number into a live hit, or counting a
-   * demo drop as lost data, would put the demo inside the data. The list is drawn after the real numbers and nothing else about it is
-   * special: a real number that arrives during configure mode behaves exactly as it always has, and appears on top of the demo.
+   * demo drop as lost data, would put the demo inside the data. The list is drawn after the real numbers, and the only thing special about it is
+   * that it animates on its own account (Animated): the canvas pumps frames for its own numbers and has to be told these move too. A real number
+   * that arrives during configure mode behaves exactly as it always has, and appears on top of the demo.
    *
    * The vocabulary is EverQuest's own, taken from the files the parser itself reads: melee verbs are the ones in
    * StatsUtil.RegularMeleeTypes in the base form FctManager.DisplaySource shows them ("Bite", not "Bites"); spell names come from
@@ -106,6 +107,14 @@ namespace EQLogParser
 
     /* Drawn by the backend after the real hits, through the same per-hit draw path, aged from SpawnMs like any other number. */
     public IReadOnlyList<FctHitState> Hits => _hits;
+
+    /*
+     * True while demo text is on screen and moving, which is how the render pump knows to keep asking for frames. The question has to be asked of
+     * the demo explicitly: a pump that invalidates only when it holds live real numbers repaints twice a second here - once when a cue fires, once
+     * when something expires - so numbers hang in place and then jump, which is a slideshow and not an animation. Asking whenever the demo is merely
+     * switched on is the opposite mistake: it would paint an empty canvas for the four quiet seconds at the end of every cycle.
+     */
+    public bool Animated => Active && _hits.Count > 0;
 
     /* Begins (or restarts) a cycle. Live numbers already on screen stay live: restarting the loop is not a reason to blank the overlay. */
     public void Start(double nowMs)

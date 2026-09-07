@@ -292,11 +292,15 @@ namespace EQLogParser
       LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
       /*
-       * Animated content: a hit's position is a function of the clock, so any frame with live hits must
-       * repaint or the text stands still until the next spawn/expiry. _dirty alone adds the one frame that
-       * clears the canvas when the last hit expires.
+       * Animated content: a hit's position is a function of the clock, so any frame with live hits must repaint or the text stands still until the
+       * next spawn or expiry. _dirty adds the one extra frame that clears the canvas when the last one goes.
+       *
+       * "Live" means every list that moves, and the configure-mode demo is one of them. It deliberately does not live in _hits - keeping it out is
+       * what protects the counters - so a pump keyed on _hits alone stops asking for frames between cues, repaints twice a second, and the numbers
+       * hang in place before jumping: a slideshow. The demo answers that question about itself (Animated) rather than leaving each host to
+       * re-derive it, because the quiet tail at the end of a cycle must not cost four seconds of rasters per loop.
        */
-      if (_dirty || _hits.Count > 0)
+      if (_dirty || _hits.Count > 0 || _demo.Animated)
       {
         InvalidateVisual();
       }
