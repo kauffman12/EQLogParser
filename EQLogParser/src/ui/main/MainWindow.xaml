@@ -460,9 +460,9 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fctOverlayLock" Header="FCT Overlay Loc_ked" IsCheckable="True" Click="ToggleFctOverlayLockClick" ToolTip="Click-through: the overlay ignores the mouse and never takes focus from EverQuest. While locked it takes no input at all, so unlock it here.">
+          <MenuItem x:Name="configureFctOverlay" Header="_Configure FCT Overlay" IsCheckable="True" Click="ToggleConfigureFctOverlayClick" ToolTip="Shows the overlay's controls and lets the mouse at it, so you can drag it, resize it and pick a motion style. The overlay opens with nothing on screen but numbers and clicks pass through to EverQuest; this is the deliberate way to configure it, and Esc puts it back.">
             <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Lock" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Cog" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />

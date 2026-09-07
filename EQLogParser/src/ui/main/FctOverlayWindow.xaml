@@ -24,6 +24,8 @@
   <!-- while unlocked, any press that no control or resize band took moves the window; while locked rootBorder is not
        hit-test visible, so there is nothing to press and clicks reach EverQuest -->
   <Grid MouseLeftButtonDown="OverlayDrag">
+  <!-- the panel is configure-mode furniture: ApplyLock swaps its background and border to transparent while locked, so playing
+       shows numbers over EverQuest with nothing drawn behind them -->
   <Border x:Name="rootBorder" CornerRadius="10" Background="#350D131A" BorderBrush="#5C7A99" BorderThickness="1">
     <!-- the top inset clears the 12px resize band above it, so nothing clickable ever sits where a drag for size starts -->
     <Grid Margin="12,16,12,12">
@@ -34,7 +36,9 @@
       <!-- three columns so the header cannot collide with itself: controls on the left, the hint in the stretchable
            middle (it abbreviates on a narrow overlay), stats pinned right. A single-cell Grid of two StackPanels looked
            fine at 980px and overlapped as soon as somebody shrank the window over their HUD. -->
-      <Grid Grid.Row="0" Margin="2,0,2,6">
+      <!-- hidden, not collapsed, while locked: the row keeps its height so entering configure mode cannot move a single number,
+           and nothing in it paints or takes clicks while you are fighting -->
+      <Grid x:Name="headerGrid" Grid.Row="0" Margin="2,0,2,6">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" MinWidth="12" />

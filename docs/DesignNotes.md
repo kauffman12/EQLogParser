@@ -774,6 +774,26 @@ Final figures for the same measurement, on 980×640: three fountains 58% → **9
 because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
 and the life shortener are for, not what placement can solve.
 
+### Two states: numbers only, or configuring
+
+Locked is not a setting — it is what the overlay *is*. It opens locked, it is played with locked, and it has no header: while locked
+the controls row is hidden, the panel background and border are transparent, the resize bands are gone, and clicks pass through to
+EverQuest. What is on the screen is damage numbers and nothing else.
+
+That last part was a defect hiding inside a feature. The header (`FCT`, motion combo, lock checkbox, hint, stats) and a dark rounded
+panel used to paint in both states, over the middle of the game view — furniture nobody asked to look at while fighting, on a window
+whose whole job is to be out of the way. Making it numbers-only was not a cosmetics pass.
+
+**Configuration is entered deliberately from the app menu** (Tools → Configure FCT Overlay) and Esc puts it back. Not from a button on
+the overlay: this window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park
+that in a corner. The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number —
+the moment you are positioning them is precisely when the layout must not shift.
+
+Lock state is deliberately **not persisted**. A saved "unlocked" is a state that outlives the session it was meant for: next launch,
+the overlay is an invisible rectangle eating clicks over the game, and the player's only diagnosis is that the UI feels haunted. Same
+reasoning retired `FctOverlayLocked` outright rather than defaulting it to true — inert in existing settings.ini files, like every
+other retired key here.
+
 ### Drag an edge to resize, and it lands on a size that works
 
 A transparent, chromeless window gets no resize frame from Windows, and the middle of the overlay belongs to the numbers — so the
@@ -930,7 +950,7 @@ the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits
 (`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
 and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
 every hover over the overlay and buys nothing observable. Lock state and geometry persist through `ConfigUtil`
-(`FctOverlayLeft/Top/Width/Height/Locked/Enabled`) and the overlay reopens at startup if it was open on exit. The one
+(`FctOverlayLeft/Top/Width/Height/Enabled`) and the overlay reopens at startup, locked, if it was open on exit. The one
 presentation switch — motion style (`FctOverlayMotion`) — persists through
 `FctOverlaySettings`, read by the overlay and by both simulation windows so a hold run and a spray run differ in nothing
 but the thing being compared. `FctOverlayMotion` also reads the old
@@ -938,11 +958,11 @@ but the thing being compared. `FctOverlayMotion` also reads the old
 chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.
 
-Because a locked window cannot be clicked, its own checkbox is unreachable by design; the way out is the Tools
-menu's lock item, since locked also means `WS_EX_NOACTIVATE` and therefore no keyboard input either — which is what
-the overlay's hint line tells the user. (Esc still prefers unlock over close in the case where the window does hold
-focus: losing a positioned overlay to a stray Esc is the worse failure.) `MainWindow` mirrors the state so menu and
-checkbox never disagree, and unlocking from the menu calls `Activate()` so Esc and dragging are live afterwards.
+Because a locked window cannot be clicked — and `WS_EX_NOACTIVATE` means it gets no keyboard input either — **Tools → Configure FCT
+Overlay** is the only way into configure mode, and Esc is the way out again: it re-locks rather than closing, because losing a
+carefully positioned overlay to a stray key is the worse failure and hiding the overlay is a menu action anyway. `MainWindow` mirrors
+the state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and dragging are live immediately,
+and asking to configure while the overlay is hidden shows it first rather than doing nothing silently.
 
 `NativeMethods` exposes exactly two style vocabulary sets — `ExtendedWindowStyles` and `GetWindowLongFields` — and
 neither has a `WS_EX_APPWINDOW` member nor a plain `GWL_STYLE` accessor. Overlay windows stay toolwindows in both

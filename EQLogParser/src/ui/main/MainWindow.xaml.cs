@@ -405,16 +405,17 @@ namespace EQLogParser
       {
         _fctOverlay = new FctOverlayWindow();
 
-        // Esc closes the window: drop the reference so the next toggle builds a fresh one
+        // closing drops the reference so the next toggle builds a fresh one
         _fctOverlay.EventsClosed += () =>
         {
           fctOverlay.IsChecked = false;
-          fctOverlayLock.IsChecked = false;
+          configureFctOverlay.IsChecked = false;
           _fctOverlay = null;
         };
 
-        // the in-window checkbox or Esc changes the lock while the menu cannot see it
-        _fctOverlay.EventsLockChanged += locked => fctOverlayLock.IsChecked = locked;
+        // the in-window lock checkbox or Esc changes the state while the menu is looking the other way; the menu asks about
+        // configuring, which is the same switch seen from the other side
+        _fctOverlay.EventsLockChanged += locked => configureFctOverlay.IsChecked = !locked;
       }
 
       fctOverlay.IsChecked = show;
@@ -422,7 +423,7 @@ namespace EQLogParser
 
       if (show)
       {
-        fctOverlayLock.IsChecked = _fctOverlay.Locked;
+        configureFctOverlay.IsChecked = !_fctOverlay.Locked;
         _fctOverlay.Show();
 
         // an unlocked overlay needs focus for Esc to reach it; a locked one must never take it from the game
@@ -437,19 +438,25 @@ namespace EQLogParser
       }
     }
 
-    private void ToggleFctOverlayLockClick(object sender, RoutedEventArgs e) => SetFctOverlayLock(fctOverlayLock.IsChecked);
+    private void ToggleConfigureFctOverlayClick(object sender, RoutedEventArgs e) => SetFctOverlayConfiguring(configureFctOverlay.IsChecked);
 
     /*
-     * Lock means click-through (WS_EX_TRANSPARENT): the overlay stops eating clicks meant for EverQuest, which
-     * is the only sane state in game. Persisted even while the overlay is closed so the next session comes back
-     * click-through. Unlocking from here is the escape hatch - while locked the window cannot be clicked, so
-     * its own checkbox is unreachable.
+     * Configure mode is the only way in. Locked means click-through (WS_EX_TRANSPARENT) with no header and no panel — numbers over
+     * EverQuest and nothing else — and it is where the overlay always opens and what Esc returns you to: a state that outlived its
+     * session would turn an overlay into a click-eating rectangle the next time the game starts, so there is no setting for it.
+     * Asking from here is deliberate, because while locked the window takes no input at all and its own checkbox is unreachable —
+     * and this overlay lives mid-screen, where permanent settings furniture would fight the game. Asking to configure a hidden
+     * overlay shows it first: a menu item that silently did nothing would be a worse lie than one that pops up empty.
      */
-    private void SetFctOverlayLock(bool locked)
+    private void SetFctOverlayConfiguring(bool configuring)
     {
-      ConfigUtil.SetSetting("FctOverlayLocked", locked);
-      fctOverlayLock.IsChecked = locked;
-      _fctOverlay?.SetLocked(locked);
+      if (configuring && _fctOverlay is null)
+      {
+        SetFctOverlayVisible(true);
+      }
+
+      configureFctOverlay.IsChecked = configuring;
+      _fctOverlay?.SetLocked(!configuring);
     }
 
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");

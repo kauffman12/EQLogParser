@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace EQLogParser
 {
@@ -21,8 +22,14 @@ namespace EQLogParser
    * edge drags the size and FctResize offers the sizes it settles on. Position and size persist together, and numbers already in
    * flight move with the window rather than staying where the old one was (FctResize.Rescale, called by the canvas).
    *
-   * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
-   * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
+   * There are two states, and only one of them is a window. **Locked** is how it always opens and how it is played with: no header,
+   * no panel, nothing drawn but the numbers, click-through and non-activating (WS_EX_TRANSPARENT + WS_EX_NOACTIVATE — the same recipe
+   * TextOverlayWindow/TimerOverlayWindow use). **Configuring** is entered deliberately from the app menu and not from the overlay,
+   * because this window sits in the middle of the screen where a permanent settings row would be fighting the player's view of the
+   * game; the Damage Meter can carry a toolbar because you park it in a corner. Esc goes back to locked.
+   *
+   * Lock state is deliberately not a stored setting: "reopen unlocked" has no honest use, and a state that outlives the session it
+   * was meant for turns an overlay into a click-eating rectangle the next time the game starts.
    * Unlock from the Tools menu, or press Esc while it has focus to close.
    *
    * Direction is vertical and the only scheme there is: my hits rise above an empty middle strip, hits on me sink below
@@ -59,6 +66,10 @@ namespace EQLogParser
     private Edge _resizeEdge;
     private Point _resizeLastDevice;
     private double _resizeFreeW, _resizeFreeH, _resizeAnchorRight, _resizeAnchorBottom;
+
+    /* Configure-mode paint, swapped out while locked so playing draws numbers and nothing else. Frozen: shared by every frame. */
+    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0x35, 0x0D, 0x13, 0x1A));
+    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x5C, 0x7A, 0x99, 0xAA));
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
@@ -153,7 +164,13 @@ namespace EQLogParser
       /* A click-through window must not offer anything to click, including its own resize bands. */
       resizeLayer.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
 
-      ConfigUtil.SetSetting("FctOverlayLocked", locked);
+      /* Hidden rather than collapsed: the header keeps its height, so nothing drawn after it moves when you enter or leave
+         configure mode. A settings row that shifts the numbers while you are positioning them would defeat the point. */
+      headerGrid.Visibility = locked ? Visibility.Hidden : Visibility.Visible;
+
+      rootBorder.Background = locked ? Brushes.Transparent : PanelBackground;
+      rootBorder.BorderBrush = locked ? Brushes.Transparent : PanelBorder;
+
       EventsLockChanged?.Invoke(locked);
 
       if (_hwndSource is not null)
@@ -195,7 +212,10 @@ namespace EQLogParser
         Height = Math.Max(FctResize.MinHeight, height);
       }
 
-      _locked = ConfigUtil.IfSet("FctOverlayLocked");
+      /* Always locked: the overlay's whole reason to exist is to sit over the game without taking anything from it, so the state
+         you have to leave is configure mode, never the other way round. The old FctOverlayLocked key is neither read nor written —
+         a stale entry in someone's settings.ini is inert, as retired keys should be. */
+      _locked = true;
 
       _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
       SelectMotionOption(_canvas.MotionStyle);
@@ -212,13 +232,14 @@ namespace EQLogParser
     {
       if (locked)
       {
-        hintText.Text = "locked · unlock from the Tools menu";
+        /* Barely ever seen — checking this box is also the gesture that hides the row it lives in. */
+        hintText.Text = "locked · configure from the Tools menu";
         return;
       }
 
       // terse on purpose: the hint shares one row with the motion combo and the lock checkbox, and a legend that gets
       // ellipsised is a legend nobody can read while fighting
-      hintText.Text = "drag anywhere · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc closes";
+      hintText.Text = "drag anywhere · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc locks it back";
     }
 
     private void SaveSettings()
@@ -246,6 +267,13 @@ namespace EQLogParser
 
       if (now - _lastStatsMs < 500)
       {
+        return;
+      }
+
+      /* Stats are configure-mode furniture too: while locked the row they live in is hidden, so don't build the string. */
+      if (_locked)
+      {
+        _lastStatsMs = now;
         return;
       }
 
@@ -443,27 +471,18 @@ namespace EQLogParser
     }
 
     /*
-     * Esc closes while unlocked. A locked window is click-through and WS_EX_NOACTIVATE, so in practice it gets
-     * no keyboard input at all and the Tools menu is the only way out - which is what its hint line says. If the
-     * window does hold focus while locked, unlock rather than close: losing a carefully positioned overlay to a
-     * stray Esc is the worse failure.
+     * Esc ends configure mode. It does not close the overlay: losing a carefully positioned window to a stray key is the worse
+     * failure, and hiding it is a menu action either way. A locked window is click-through and WS_EX_NOACTIVATE, so in practice it
+     * receives no keyboard input at all — which is fine, because locked is where it starts and where Esc leaves you.
      */
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
-      if (e.Key != Key.Escape)
+      if (e.Key != Key.Escape || _locked)
       {
         return;
       }
 
-      if (_locked)
-      {
-        ApplyLock(false);
-        Activate();
-      }
-      else
-      {
-        Close();
-      }
+      ApplyLock(true);
     }
 
     private void OnClosed(object sender, EventArgs e)
