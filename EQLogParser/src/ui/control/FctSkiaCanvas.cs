@@ -81,7 +81,33 @@ namespace EQLogParser
 
     public int ActiveCount => _hits.Count;
     /* Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. */
-    public FctMotionStyle MotionStyle { get => _ingest.Style; set => _ingest.Style = value; }
+    /*
+     * Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. Hits already in flight keep the
+     * style they were born with, which is why changing it mid-fight is a way to compare rather than a way to break something.
+     *
+     * Configure mode is the exception worth restarting for: the loop exists to show this control's effect, and waiting up to twelve seconds for the
+     * next cycle to reach the part where the new style is visible is not an effect anybody can see. Only demo numbers are cleared - never real ones.
+     */
+    public FctMotionStyle MotionStyle
+    {
+      get => _ingest.Style;
+      set
+      {
+        if (_ingest.Style == value)
+        {
+          return;
+        }
+
+        _ingest.Style = value;
+
+        if (_demo.Animated && _clock is not null)
+        {
+          _demo.Clear(ReleaseHalo);
+          _demo.Start(_clock.Elapsed.TotalMilliseconds);
+          _dirty = true;
+        }
+      }
+    }
 
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
@@ -285,7 +311,7 @@ namespace EQLogParser
         _demo.Start(now);
       }
 
-      if (_demo.Advance(now, ActualWidth, ActualHeight, RebuildGlyphs, ReleaseHalo))
+      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, RebuildGlyphs, ReleaseHalo))
       {
         _dirty = true;
       }

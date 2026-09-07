@@ -82,14 +82,14 @@ namespace EQLogParser
     public void Player_SpawnsTheScriptIntoItsOwnList()
     {
       var demo = new FctDemo();
-      Assert.IsFalse(demo.Advance(100, 800, 560, null, null), "an unstarted demo must not run");
+      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, null, null), "an unstarted demo must not run");
 
       var spawned = 0;
       demo.Start(0);
 
       for (var now = 0.0; now <= 3000; now += 100)
       {
-        if (demo.Advance(now, 800, 560, _ => spawned++, null))
+        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, _ => spawned++, null))
         {
           Assert.IsTrue(demo.Hits.Count > 0, "a frame that changed should have something in it");
         }
@@ -105,6 +105,46 @@ namespace EQLogParser
       {
         Assert.IsTrue(hit.LifetimeMs > 0, $"{hit.Lane} landed with no lifetime");
         Assert.AreEqual(FctMotionStyle.Hold, hit.Style, "the default style is what the demo has to start on");
+      }
+    }
+
+    /*
+     * Why the style is an argument of Advance instead of something set on the demo once. The loop runs its own ingest - that is what keeps it out of
+     * the counters - which also means it holds its own copy of the motion style, and a copy set from outside can be forgotten. It was: selecting
+     * pulse played hold, and the dropdown looked dead. Everything the caller passes in beside the canvas size arrives every frame, so it cannot go
+     * stale between a control changing and a number spawning.
+     */
+    [TestMethod]
+    public void Advance_PlaysTheStyleTheCallerAskedFor()
+    {
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Pulse })
+      {
+        var demo = new FctDemo();
+        demo.Start(0);
+
+        var born = new List<FctHitState>();
+        for (var now = 100.0; now <= 900; now += 100)
+        {
+          demo.Advance(now, 800, 560, style, born.Add, null);
+        }
+
+        Assert.IsTrue(born.Count > 0, $"{style}: nothing was spawned to check");
+        Assert.IsTrue(born.All(h => h.Style == style),
+          $"{born.Count(h => h.Style != style)} of {born.Count} numbers were laid out for {string.Join(",", born.Select(h => h.Style))}, not {style}");
+
+        /*
+         * The other half of the fingerprint, and it is structural rather than a measurement of travel: only the choreographed styles get a gravity
+         * tail baked in (FctIngest calls ApplyFall for fountain and spray and nothing else), so their numbers must have depth to fall through.
+         *
+         * What this deliberately does NOT assert is that pulse has no travel. It has a little: FctCellGrid hands each number a short slide into its
+         * cell, measured at ~84 px of Rise against hold's ~178 in an 800x560 window. "Pulse means Rise == 0" reads true off AssignTravel and is
+         * wrong about the style, which is exactly the kind of confident assumption a test should not be built on. The swell-and-settle shape itself
+         * belongs to FctMotion and is covered in FctMotionTest.
+         */
+        var choreographed = style is FctMotionStyle.Fountain or FctMotionStyle.Spray;
+
+        Assert.IsTrue(choreographed ? born.All(h => Math.Abs(h.FallDist) > 0) : born.All(h => h.FallDist == 0),
+          $"{style}: {(choreographed ? "no gravity tail, so it is not the style it claims to be" : "got a gravity tail it should not have")}");
       }
     }
 
@@ -141,13 +181,13 @@ namespace EQLogParser
 
       for (var now = 0.0; now < FctDemo.CycleMs; now += 100)
       {
-        demo.Advance(now, 800, 560, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
       }
 
       Assert.AreEqual(0, demo.Hits.Count, "everything should have expired in the tail before the loop restarts");
 
       var spawned = 0;
-      demo.Advance(FctDemo.CycleMs + 700, 800, 560, _ => spawned++, null);
+      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, _ => spawned++, null);
 
       Assert.IsTrue(spawned > 0, "the script ran once and stopped - configure mode would go quiet");
     }
@@ -171,7 +211,7 @@ namespace EQLogParser
       for (var now = 1000.0 / 60; now <= 9000; now += 1000.0 / 60)
       {
         ticks++;
-        demo.Advance(now, 800, 560, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
 
         if (demo.Animated)
         {
@@ -183,7 +223,7 @@ namespace EQLogParser
       Assert.IsTrue(moving > ticks * 0.9, $"only {moving} of {ticks} ticks had anything moving");
 
       /* The quiet seconds at the end of a cycle are dead time on purpose, and dead time must not cost rasters. */
-      demo.Advance(FctDemo.CycleMs - 1, 800, 560, null, null);
+      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, null, null);
       Assert.IsFalse(demo.Animated, "the tail between loops should stop asking for frames");
     }
 
@@ -194,7 +234,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now < 1500; now += 100)
       {
-        demo.Advance(now, 800, 560, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
       }
 
       var live = demo.Hits.ToList();
@@ -210,7 +250,7 @@ namespace EQLogParser
 
       // and the loop can be started again after configure mode closes and opens
       demo.Start(2000);
-      Assert.IsTrue(demo.Advance(2100, 800, 560, null, null), "the demo cannot be restarted");
+      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, null, null), "the demo cannot be restarted");
     }
 
     /*

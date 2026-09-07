@@ -130,13 +130,20 @@ namespace EQLogParser
      *
      * Wrapping resets the schedule and nothing else. Old numbers are deliberately left alone to finish their flights: clearing them
      * at the seam would make every loop visibly truncate a fade, which looks like a bug in the overlay rather than like a loop.
+     *
+     * The motion style arrives as a parameter of the frame rather than as something set once on the demo, and that is the whole lesson of this
+     * class: the loop runs its own FctIngest so it cannot touch the real counters, which also means it has its own copy of the style. Set that
+     * copy from the outside and forgetting once is invisible - selecting pulse played hold, and the dropdown looked broken. Passed in beside the
+     * canvas size, there is nothing to remember, and it cannot go stale between a control changing and a number spawning.
      */
-    public bool Advance(double nowMs, double w, double h, Action<FctHitState> spawned, Action<FctHitState> released)
+    public bool Advance(double nowMs, double w, double h, FctMotionStyle style, Action<FctHitState> spawned, Action<FctHitState> released)
     {
       if (!Active)
       {
         return false;
       }
+
+      _ingest.Style = style;
 
       var changed = false;
       var elapsed = nowMs - _cycleStartMs;
