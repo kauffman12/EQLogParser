@@ -209,12 +209,12 @@ carries type, subType/skill, amount, `ModifiersMask`, attacker/defender owners).
   perceptible lag at ×10. The single-image blit holds steady because per-frame cost scales with C++
   draw ops (~5/hit), not WPF display-list elements.
 - **Decision:** the SkiaSharp backend is the production renderer. `FctSimCanvas` stays in the tree only
-  as the A/B reference behind the second Tools entry; retire it once FCT ships.
+  as the A/B reference; it has no menu entry (it is a measurement tool, not a feature) and starts with `/fctsim vector` on the command
+line, so a released build can still be measured on the machine that misbehaves.
 
 ### Phasing
 
-1. **Performance simulation** (done, verdict above): `Tools → FCT Simulation (Vector, Test)` and
-   `Tools → FCT Simulation (Skia, Test)` each run a fixed-seed 60-second, raid-scale (~7,500 records at
+1. **Performance simulation** (done, verdict above): `/fctsim vector` and `/fctsim skia` each run a fixed-seed 60-second, raid-scale (~7,500 records at
    ×10 rate, bursts to ~200/s) simulation on one backend and report fps / active hits / frame ms /
    draw ops per second in the header. Same record stream, same lane/stack/fold logic, two renderers.
    **Winner: SkiaSharp.**
@@ -269,9 +269,10 @@ Floating Combat Text.
   replaced by its formatted `Value` (which is 0 — Dodge was drawing as "0").
 - **Shared policy:** layout, motion, lifetime and folding extracted out of the two canvases into `FctIngest`,
   `FctLayout`, `FctMotion`, `FctStyle`; a backend keeps only substrate resources and its draw loop.
-- **Usable in game:** click-through lock (`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE`) unlocked from the Tools menu, geometry
-  and lock/enabled persisted through `ConfigUtil` plus region scheme and motion style through `FctOverlaySettings`
-  (`FctOverlayLayout`, `FctOverlayMotion`), hidden overlay stops its canvas and gates the feed,
+- **Usable in game:** numbers-only by default, click-through (`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE`) with setup entered from
+  View → FCT Overlay → Setup, geometry persisted through `ConfigUtil` (validated against the desktop on the way back) and motion style
+  through `FctOverlaySettings` (`FctOverlayMotion`; the older `FctOverlayLayout` and `FctOverlayLocked` keys are retired), hidden
+  overlay stops its canvas and gates the feed,
   and a protected center band keeps numbers off the target/cast area.
 - **Still NAG-shaped:** lane colors and sizes, two-pass outline, crit blowout + Gaussian halo, count-up folding,
   adaptive lifetime.

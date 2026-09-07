@@ -203,6 +203,11 @@ namespace EQLogParser
       }
     }
 
+    /* The size the overlay ships with, named so Reset Position and an unusable stored size land on something that was measured
+     * (§6.8) instead of on WPF's own default. These match the Width/Height attributes in the XAML. */
+    internal const double DefaultWidth = 800;
+    internal const double DefaultHeight = 560;
+
     private void RestoreSettings()
     {
       var left = ConfigUtil.GetSettingAsDouble("FctOverlayLeft", 0);
@@ -210,15 +215,26 @@ namespace EQLogParser
       var width = ConfigUtil.GetSettingAsDouble("FctOverlayWidth", 0);
       var height = ConfigUtil.GetSettingAsDouble("FctOverlayHeight", 0);
 
-      /* Restored exactly as saved apart from the layout's floor: a size stored by an older build (or a second monitor that has
-       * since gone) is raised to what the layout can draw in, but never snapped — reopening an overlay should not move it. */
-      if (left > 0 && top >= 0 && width > 100 && height > 100)
+      /* Restored exactly as saved apart from the layout's floor: a size stored by an older build is raised to what the layout can
+         draw in, but never snapped — reopening an overlay should not move it. The one thing that does move it is geometry that has
+         no home any more: a monitor that went away leaves the window off-screen with no title bar to drag back, which for a
+         chromeless click-through overlay is a feature that silently stopped existing. So a stored position must still have a
+         quarter of its area on the desktop, the same rule App uses for the main window — measured here in DIPs against
+         SystemParameters.VirtualScreen*, which is what Left/Top are in, rather than Screen.WorkingArea, which is in device pixels
+         and drifts at any scaling other than 100%. A negative Left is legitimate (a display left of primary) and only fails this
+         test if it genuinely hangs off the edge. */
+      WindowStartupLocation = WindowStartupLocation.Manual;
+
+      if (width > FctResize.MinWidth && height > FctResize.MinHeight && OnDesktop(left, top, width, height))
       {
-        WindowStartupLocation = WindowStartupLocation.Manual;
         Left = left;
         Top = top;
         Width = Math.Max(FctResize.MinWidth, width);
         Height = Math.Max(FctResize.MinHeight, height);
+      }
+      else
+      {
+        CenterOnWorkArea();
       }
 
       /* Always locked: the overlay's whole reason to exist is to sit over the game without taking anything from it, so the state
@@ -230,6 +246,44 @@ namespace EQLogParser
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
       _settingsReady = true;
+    }
+
+    /* How much of the window has to be on the desktop to count as findable. A quarter, like the main window's check: enough that
+       a deliberately overhanging placement survives, small enough that a lost monitor does not. */
+    private const double VisibleFraction = 0.25;
+
+    private static bool OnDesktop(double left, double top, double width, double height)
+    {
+      var desktopLeft = SystemParameters.VirtualScreenLeft;
+      var desktopTop = SystemParameters.VirtualScreenTop;
+      var overlapWidth = Math.Max(0, Math.Min(left + width, desktopLeft + SystemParameters.VirtualScreenWidth) - Math.Max(left, desktopLeft));
+      var overlapHeight = Math.Max(0, Math.Min(top + height, desktopTop + SystemParameters.VirtualScreenHeight) - Math.Max(top, desktopTop));
+
+      return overlapWidth * overlapHeight >= width * height * VisibleFraction;
+    }
+
+    private void CenterOnWorkArea()
+    {
+      var area = SystemParameters.WorkArea;
+
+      Width = DefaultWidth;
+      Height = DefaultHeight;
+      Left = area.Left + (area.Width - DefaultWidth) / 2;
+      Top = area.Top + (area.Height - DefaultHeight) / 2;
+    }
+
+    /*
+     * "Reset Position": forget the stored geometry so the next overlay built lands on the shipped size, centred. Written as empty
+     * strings because that is how this app retires a value (Damage Meter's Reset does the same) and an unreadable number already
+     * falls back to the default on the way in. Callers must do this after the window has closed — a closing overlay saves where it
+     * was, which would put back exactly what was just cleared.
+     */
+    internal static void ForgetStoredGeometry()
+    {
+      ConfigUtil.SetSetting("FctOverlayLeft", "");
+      ConfigUtil.SetSetting("FctOverlayTop", "");
+      ConfigUtil.SetSetting("FctOverlayWidth", "");
+      ConfigUtil.SetSetting("FctOverlayHeight", "");
     }
 
     private void SaveSettings()
@@ -409,11 +463,11 @@ namespace EQLogParser
         _resizeFreeH -= dy;
       }
 
-      /* Bounded by the primary work area: an overlay bigger than the screen cannot be shrunk back by dragging an edge that is
-       * off it, so the drag stops at the border instead of inventing a window nobody can reach. Multi-monitor sizing is a
-       * per-monitor metric WPF does not hand a chromeless window for free, and this overlay is 980px wide at its largest. */
-      var area = SystemParameters.WorkArea;
-      FctResize.Fit(_resizeFreeW, _resizeFreeH, area.Width, area.Height, out var w, out var h);
+      /* Bounded by the desktop rather than the primary monitor's work area: numbers spread across two displays are legitimate, and
+         a window that grew past the primary border could not be shrunk from an edge nobody can reach. VirtualScreen* is in DIPs,
+         which is what these properties are in; a true per-monitor bound would need Win32 monitor enumeration for a chromeless
+         window and buys nothing when the largest size offered is 980px. */
+      FctResize.Fit(_resizeFreeW, _resizeFreeH, SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight, out var w, out var h);
 
       Width = w;
       Height = h;

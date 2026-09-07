@@ -152,6 +152,28 @@
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
+          <!-- same shape as Damage Meter: enable, put it back, set it up. The FCT overlay is a mid-screen window rather
+               than a corner panel, so its setup mode shows its controls instead of a dialog — see FctOverlayWindow -->
+          <MenuItem Header="_FCT Overlay">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Bolt" />
+            </MenuItem.Icon>
+            <MenuItem x:Name="fctOverlay" Header="Enable _Overlay" Click="ToggleFctOverlayClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="fctOverlayIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Reset Position" Click="ResetFctOverlayClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_LocationArrow" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem x:Name="configureFctOverlay" Header="_Setup" Click="ToggleConfigureFctOverlayClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Cog" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuItem>
           <Separator />
           <MenuItem x:Name="playerDataView" Header="_Events">
             <MenuItem.Icon>
@@ -442,27 +464,6 @@
           <MenuItem Header="_Open Sounds Folder" Click="OpenSoundsFolderClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_FolderOpen" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <Separator />
-          <MenuItem Header="FCT Simul_ation (Vector, Test)" Click="OpenFctSimulationClick" ToolTip="Runs a 60-second floating combat text rendering performance simulation on the WPF vector backend">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem Header="_FCT Simulation (Skia, Test)" Click="OpenFctSkiaSimulationClick" ToolTip="Runs the 60-second floating combat text simulation on the SkiaSharp backend">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="fctOverlay" Header="FCT _Overlay" IsCheckable="True" Click="ToggleFctOverlayClick" ToolTip="Show or hide floating combat text from the live log.">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="configureFctOverlay" Header="_Configure FCT Overlay" IsCheckable="True" Click="ToggleConfigureFctOverlayClick" ToolTip="Show the overlay's controls so you can drag it, resize it and pick a motion style. Save keeps them, Esc does not.">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Cog" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator />

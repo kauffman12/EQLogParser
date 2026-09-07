@@ -486,7 +486,7 @@ of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
 
 ## Floating Combat Text
 
-`Tools → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is
+`View → FCT Overlay` shows the player's own combat numbers from live log records. The rendering choice is
 settled and recorded in `docs/NagFctReference.md` (SkiaSharp beat the WPF vector path ~100 fps vs ~30 fps at
 ×10 raid scale); this section covers why the *plumbing* is shaped the way it is, because that is the part a
 later change is most likely to undo by accident.
@@ -786,13 +786,13 @@ asked to look at while fighting, on a window whose whole job is to be out of the
 The row that remains got read for clutter at the same time: the hint sentence and the `motion` label in front of a combo that can only
 be a motion combo are gone, and so is the checkbox — see below.
 
-**Configuration is entered deliberately from the app menu** (Tools → Configure FCT Overlay). Not from a button on the overlay: this
+**Configuration is entered deliberately from the app menu** (View → FCT Overlay → Setup). Not from a button on the overlay: this
 window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park that in a corner.
 The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number — the moment you are
 positioning them is precisely when the layout must not shift.
 
 **Save is what writes**, and it is also the way out: press it and the settings stick and configuring ends. Everything else that ends
-configure mode — Esc, unticking the menu item — puts back what was saved before, because abandoning a configuration session is not the
+configure mode — Esc, or Setup clicked again — puts back what was saved before, because abandoning a configuration session is not the
 same gesture as approving one. The motion combo previews live (the next numbers use the new style) and writes nothing, so trying a
 style costs a click and un-trying it costs nothing.
 
@@ -805,6 +805,26 @@ Lock state is deliberately **not persisted**. A saved "unlocked" is a state that
 the overlay is an invisible rectangle eating clicks over the game, and the player's only diagnosis is that the UI feels haunted. Same
 reasoning retired `FctOverlayLocked` outright rather than defaulting it to true — inert in existing settings.ini files, like every
 other retired key here.
+
+### Under View, beside the Damage Meter, behaving like it
+
+`View → FCT Overlay` offers **Enable Overlay**, **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows
+above it, using this app's convention for menu state (a check icon plus an Enable/Disable header, not a checkable item) because an
+overlay filed in a different menu with different mechanics is something players have to learn twice. Nothing FCT-related sits under
+Tools any more; the two render-backend simulations that used to live there are development tools and now start from the command line
+(`/fctsim skia` or `/fctsim vector`), so a released build can still be measured where it misbehaves without shipping menu clutter.
+
+**Reset Position** closes the overlay, forgets `FctOverlayLeft/Top/Width/Height`, and rebuilds it only if it was on screen. Rebuilding
+rather than moving is deliberate: the shipped size and the centring live in one place (`RestoreSettings`), and a reset that merely
+carried the current window elsewhere would leave behind the stored size that caused the problem. The order matters too — a closing
+overlay writes where it was, so the forgetting has to happen after the close.
+
+Which connects to the reason a stored position is now validated at all. A chromeless, click-through window that lands off-screen —
+because the monitor it lived on was unplugged — is not an annoyance but a feature that silently stopped existing, with no title bar to
+drag it back by. So restored geometry must keep a quarter of its area on the desktop, the same rule `App` applies to the main window,
+measured in DIPs against `SystemParameters.VirtualScreen*` rather than `Screen.WorkingArea`, which is device pixels and drifts at any
+scaling that is not 100%. A negative `Left` — a display sitting left of primary, which the old check rejected as "unset" — is
+legitimate and passes. Resizing is bounded by the desktop for the same reason instead of by the primary monitor's work area.
 
 ### Drag an edge to resize, and it lands on a size that works
 
