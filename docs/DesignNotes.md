@@ -824,6 +824,37 @@ Final figures for the same measurement, on 980×640: three fountains 58% → **9
 because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
 and the life shortener are for, not what placement can solve.
 
+### The parabola runs as a stream, not a scatter
+
+In halves the parabola is not thrown — it *queues* (`FctStream`). Every row launches from its region's exact centre at the spawn
+edge itself and reuses that column until a drawn number genuinely blocks it. This is what MSBT's display areas actually are — rows,
+with 8 px of minimum spacing between them (`MIN_VERTICAL_SPACING`; its columns keep `MIN_HORIZONTAL_SPACING` = 10) — and it is the
+part people mean when they say the genre "feels tidy" where free-float FCT sprays. Most of the discipline costs no computation at
+all: two rows born half a second apart on a constant-speed scroll stay half a second of travel apart for their whole lives, so the
+scroll *is* the queue. Only bursts need room made for them.
+
+There is no second placement engine. The same flight-scored search (`FctPlacement`) scores three origins instead of a lattice of
+eighteen — centre first, then two emergency columns — through `FctLayout.Spawn` asked for an origin like any other candidate, with
+one knob turned: the pair test is **padded** to MSBT's line gap, so "costs nothing" means that far clear of every row rather than
+merely not touching. (The lattice pays no padding; bit-identical search there, verified by the existing bands tests.) Centre wins
+ties, which is what makes an empty overlay one column rather than a coin flip.
+
+**The emergency columns braid upstream of the drift, and that was measured before it was understood.** Every row in a half bows
+outward for its whole life, so a column placed downstream of the sweep parks near the clamp wall — directly in the path the centre
+row is still travelling toward — and the two collide at the wall no matter how carefully their spawn rows were spaced: 28% of a
+block, caught by the burst test on the first run. Against the drift they stay parallel to everything and touch nothing. And where
+the half cannot fit two full text widths of step — an ordinary font on somebody's 420 px overlay — the columns **compress evenly**
+rather than pinning to walls: adjacent lines graze by as much as the geometry allows and no row is ever lost. A parser overlay that
+dropped damage because the layout was busy is a trade the addon genre never had to make (its text was throttled upstream, so its
+layout always had room); it is not one this overlay makes either.
+
+**The parabola also had to stop parking.** The hold-style life was *travel, then rest at the end of the travel, then fade in
+place* — harmless where numbers rest wherever they landed, fatal for rows that move in single file, because every row ends at the
+same terminus: with a park phase the bottom of the centre column belongs to whichever number is dying there, and every later reuse
+must dodge a corpse. For the parabola alone the motion now spans the number's entire life — constant speed from edge to fade, the
+tempo dial still scaling the whole passage (endpoints unchanged), the fade arriving while the row is still moving, which is exactly
+how MSBT's text leaves. Reuse of the centre column is then decided by drawn spacing alone: spaced-or-blocked, nothing in between.
+
 ### Two states: numbers only, or configuring
 
 Locked is not a setting — it is what the overlay *is*. It opens locked, it is played with locked, and it has no header: while locked
@@ -897,6 +928,17 @@ Values saved while the ceiling was ±30 % stay legal, which is why raising it ne
 configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples
 can be switched off next to the speed dial. It is a view aid for the session rather than a setting — nothing writes it, and setup opens with them back on,
 because the next time somebody opens this panel they almost certainly want to see what a dial does again.
+
+**"Hide under" is a ladder, not a dial.** The damage threshold (MSBT's `damageThreshold`, off by default like theirs) stops drawing
+*damage numbers* below its rung — off, 250, 500, 1k, 2k, 5k — because the dial's whole job is "stop the white noise of the rotation",
+which wants three glances rather than eighty positions. Heals and the zero-damage words are exempt by design: they are information,
+not volume, and hiding the fact that you are being resisted because the number beside it happened to be small is exactly the surprise
+this control must not produce; crits are not exempt, because a small crit is still small noise. Nothing this hides goes quietly — the
+stats line reads `… · 37 hidden` beside the drop count when nonzero, one number per reason text does not appear: "dropped" is the
+overlay out of room, "hidden" is the player's own filter working. The gate sits at the top of `FctIngest.Accept`, before folding, so a
+hidden tick never inflates an `×N` count that nobody saw anyway. It persists as `FctOverlayThreshold`, and loading **snaps to the
+nearest rung**: a hand-written 300 becomes a threshold the combo can actually show, because a filter that works while its control lies
+about it is two bugs for the price of one.
 
 Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
 tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
@@ -1146,8 +1188,9 @@ and on each lock toggle instead of from a window hook — re-writing them per mo
 every hover over the overlay and buys nothing observable. Geometry persists through `ConfigUtil`
 (`FctOverlayLeft/Top/Width/Height/Enabled`) — written when a drag or resize is released, not by Save, because where you left the window
 is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
-*Two states*). The presentation switches — motion style (`FctOverlayMotion`) and the two dials (`FctOverlayTextScale`, `FctOverlaySpeed`; multipliers
-rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) —
+*Two states*). The presentation switches — motion style (`FctOverlayMotion`), the two dials (`FctOverlayTextScale`, `FctOverlaySpeed`; multipliers
+rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) and
+the hide-under ladder (`FctOverlayThreshold`, stored as the plain number it shows) —
 persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
 actually chosen. The old `FctOverlayTimeScale` is still read once, inverted, when the speed key is absent; it is never written again. They are read by
 the overlay and by the simulation window so a hold run and a spray

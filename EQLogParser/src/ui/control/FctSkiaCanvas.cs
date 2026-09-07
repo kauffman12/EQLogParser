@@ -134,6 +134,31 @@ namespace EQLogParser
     public double DrawsPerSec { get; private set; }
     public int DroppedCount => _ingest.DroppedCount;
 
+    /* How many numbers the "hide under" filter has taken off screen; shown beside the drop count, because a filter
+     * doing its job and a bug swallowing numbers should never look the same from outside. */
+    public int HiddenCount => _ingest.HiddenCount;
+
+    /*
+     * The display threshold forwarded to ingest with MotionStyle's contract: it changes what gets through the gate,
+     * never what is already on screen, and configure mode restarts its demo loop so the effect can be judged on the
+     * next number rather than after a Save. The demo runs small heals and big crits precisely so this dial has
+     * something to filter.
+     */
+    public double Threshold
+    {
+      get => _ingest.Threshold;
+      set
+      {
+        if (Math.Abs(_ingest.Threshold - value) < 0.001)
+        {
+          return;
+        }
+
+        _ingest.Threshold = value;
+        RestartDemo();
+      }
+    }
+
     /* The host drains its feed from EventsFrame, which fires before the paint decision below. */
     public void Start()
     {

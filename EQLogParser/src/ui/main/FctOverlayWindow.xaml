@@ -149,6 +149,23 @@
             <TextBlock x:Name="speedValue" FontWeight="Bold" Foreground="#D4D8DD" HorizontalAlignment="Center" TextAlignment="Center" />
           </StackPanel>
 
+          <!-- The damage threshold, offered as a ladder instead of a dial: its job is "stop the white noise", which wants
+               three glances rather than eighty positions. Damage only — heals and words like Miss or Resist are information,
+               not volume, and are never hidden. What it hides is counted in the stats line, because a filter should be able
+               to say what it cost. -->
+          <StackPanel x:Name="thresholdPanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="thresholdLabel" Text="hide under" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="stop showing your damage numbers below this value (heals and words like Miss are never hidden); hidden hits are counted, not lost" />
+            <ComboBox x:Name="thresholdCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="ThresholdChanged">
+              <ComboBoxItem Content="off" Tag="0" />
+              <ComboBoxItem Content="250" Tag="250" />
+              <ComboBoxItem Content="500" Tag="500" />
+              <ComboBoxItem Content="1k" Tag="1000" />
+              <ComboBoxItem Content="2k" Tag="2000" />
+              <ComboBoxItem Content="5k" Tag="5000" />
+            </ComboBox>
+          </StackPanel>
+
           <!-- Direction is the one thing worth spelling out, and it shares the bottom line with the readouts rather than costing a row: two arrows say
                what the bands mean, where what used to sit here was a sentence about cast bars that nobody read twice. -->
           <!-- Kept in sync with the scheme by code (SetLegend): bands say it with up/down arrows, halves with the sides a

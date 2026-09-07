@@ -56,6 +56,41 @@ namespace EQLogParser
     public static void SaveSpeed(double speed) => ConfigUtil.SetSetting(SpeedKey, FctScale.ClampSpeed(speed));
 
     /*
+     * "Hide under": the damage threshold (MSBT's damageThreshold, off by default like theirs) offered as a ladder —
+     * off, 250, 500, 1k, 2k, 5k — rather than a continuum, because the dial's whole job is "stop the white noise",
+     * which wants three positions a glance can set, not eighty. Stored as a number; loading snaps to the nearest rung,
+     * so a hand-edited settings.ini of 300 becomes a threshold the combo can actually show rather than a filter that
+     * works while its control lies about it. Junk reads as off, which is the MSBT default and the safe direction.
+     */
+    public const string ThresholdKey = "FctOverlayThreshold";
+
+    internal static readonly double[] ThresholdLadder = [0d, 250d, 500d, 1000d, 2000d, 5000d];
+
+    public static double LoadThreshold() => SnapToLadder(ConfigUtil.GetSettingAsDouble(ThresholdKey, 0));
+
+    public static void SaveThreshold(double value) => ConfigUtil.SetSetting(ThresholdKey, SnapToLadder(value));
+
+    /* Pure for testability: nearest rung wins; nothing and nonsense both land on off. */
+    internal static double SnapToLadder(double value)
+    {
+      if (!double.IsFinite(value) || value <= 0)
+      {
+        return 0;
+      }
+
+      var best = ThresholdLadder[0];
+      for (var i = 1; i < ThresholdLadder.Length; i++)
+      {
+        if (Math.Abs(value - ThresholdLadder[i]) < Math.Abs(value - best))
+        {
+          best = ThresholdLadder[i];
+        }
+      }
+
+      return best;
+    }
+
+    /*
      * Whether anybody has ever pressed Save on the configure row. The overlay's defaults are defensible but they are opinions, and a first enable that
      * shows nothing but numbers being what the build decided keeps a player from learning that size, speed and motion are theirs to set - so the menu
      * opens configure mode instead (see MainWindow.SetFctOverlayVisible). Written only by Save: Cancel, Esc and closing all leave it unset, which means

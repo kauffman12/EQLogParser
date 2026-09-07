@@ -136,13 +136,9 @@ namespace EQLogParser
         {
           var x = slot + ((col - ((LateralSteps - 1) / 2.0)) * xStep);
 
-          var trial = hit.Clone();
-          FctLayout.Spawn(trial, stage, rand, origin: (
+          var trial = Trial(hit, stage, rand,
             x + (xStep * LatticeJitter * (rand.NextDouble() * 2 - 1)),
-            y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1))));
-
-          // the fall belongs to the travel, so a candidate with a new origin needs it recomputed before it can be watched
-          FctLayout.ApplyFall(trial, stage);
+            y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1)));
 
           var cost = Cost(trial, canonicalX, canonicalY, stage.W, stage.H, hits, WideSearchCost);
           if (cost < bestCost)
@@ -157,13 +153,54 @@ namespace EQLogParser
     }
 
     /*
+     * A search over a caller-supplied list of launch points instead of the lattice — this is what FctStream scores
+     * its three row positions with, and why "stream vs scatter" is one difference of candidate sets rather than two
+     * scoring engines. Unlike Place it has no nothing-to-dodge shortcut: the trial IS the placement even against an
+     * empty overlay, because the caller's origin (the stream's centre) outranks wherever the free throw landed.
+     * `pad` inflates every pair test; see Cost.
+     */
+    internal static FctHitState PlaceOrigins(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand,
+      (double X, double Y)[] origins, double anchorX, double anchorY, double pad)
+    {
+      var best = Trial(hit, stage, rand, origins[0].X, origins[0].Y);
+      var bestCost = Cost(best, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
+
+      for (var i = 1; i < origins.Length; i++)
+      {
+        var trial = Trial(hit, stage, rand, origins[i].X, origins[i].Y);
+        var cost = Cost(trial, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
+        if (cost < bestCost)
+        {
+          best = trial;
+          bestCost = cost;
+        }
+      }
+
+      return best;
+    }
+
+    /* One scored candidate: the layout's own spawn at a requested origin, with its fall recomputed because the
+     * fall belongs to the travel and a new origin is new travel. */
+    private static FctHitState Trial(FctHitState hit, FctStage stage, Random rand, double x, double y)
+    {
+      var trial = hit.Clone();
+      FctLayout.Spawn(trial, stage, rand, origin: (x, y));
+      FctLayout.ApplyFall(trial, stage);
+      return trial;
+    }
+
+    /*
      * Crowding cost: for every live number in flight with this one, the worst fraction of the smaller block that the two
      * cover at any sampled moment of their shared life, plus the candidate's own wide-search penalty.
      *
      * Opacity is not part of it. Weighting by fade would make a collision at spawn look cheap — every hit fades in — and
      * spawn collisions are exactly what reads as one blob of unreadable text.
+     *
+     * `pad` grows every pair test by that many pixels: with padding, "costs nothing" means *this far apart*, not merely
+     * *not touching* — which is how FctStream keeps MSBT's minimum line gap without changing what the lattice search
+     * (pad 0) scores. Bit-identical for the old call sites because 0 inflation is arithmetic nobody can feel.
      */
-    private static double Cost(FctHitState candidate, double canonicalX, double canonicalY, double w, double h, List<FctHitState> hits, double penalty)
+    private static double Cost(FctHitState candidate, double canonicalX, double canonicalY, double w, double h, List<FctHitState> hits, double penalty, double pad = 0)
     {
       var cost = penalty
         + (DriftWeight * Math.Abs(candidate.Y0 - canonicalY) / h)
@@ -171,13 +208,13 @@ namespace EQLogParser
 
       for (var i = 0; i < hits.Count; i++)
       {
-        cost += WorstOverlap(candidate, hits[i]);
+        cost += WorstOverlap(candidate, hits[i], pad);
       }
 
       return cost;
     }
 
-    private static double WorstOverlap(FctHitState candidate, FctHitState other)
+    private static double WorstOverlap(FctHitState candidate, FctHitState other, double pad)
     {
       /* A drawn block never leaves its own [SideMin, SideMax]: ArcedX clamps the centre to that range with the half-width
        * priced at peak scale, and the block is never wider than it was priced. Two numbers whose side ranges do not overlap
@@ -207,7 +244,7 @@ namespace EQLogParser
       for (var s = 0; s <= TimeSamples; s++)
       {
         var age = shared * s / TimeSamples;
-        var overlap = Overlap(Block(candidate, age), Block(other, age + ageOffset));
+        var overlap = Overlap(Block(candidate, age, pad), Block(other, age + ageOffset, pad));
         if (overlap > worst)
         {
           worst = overlap;
@@ -234,18 +271,19 @@ namespace EQLogParser
       return smaller <= 0 ? 0 : (ix * iy) / smaller;
     }
 
-    /* Where the drawn block actually is at a given age: the same maths the canvases draw with, centre-anchored like the text. */
-    private static (double Left, double Top, double Right, double Bottom) Block(FctHitState hit, double ageMs)
+    /* Where the drawn block actually is at a given age: the same maths the canvases draw with, centre-anchored like
+     * the text, then grown by pad on every side — "within padding of" is what a stream counts as a blocked row. */
+    private static (double Left, double Top, double Right, double Bottom) Block(FctHitState hit, double ageMs, double pad)
     {
       var t = FctMotion.Progress(hit, ageMs);
       var scale = FctMotion.ScaleOf(hit, ageMs);
-      var half = (hit.ValueWidth * scale) / 2.0;
+      var half = (hit.ValueWidth * scale) / 2.0 + pad;
 
       // no fade-out gate here: a number that is on screen at all is one the player could be trying to read
       var x = FctMotion.ArcedX(hit, t);
       var y = FctMotion.RaisedY(hit, t);
 
-      return (x - half, y, x + half, y + (FctLayout.TextHeight(hit) * scale));
+      return (x - half, y - pad, x + half, y + (FctLayout.TextHeight(hit) * scale) + pad);
     }
   }
 }

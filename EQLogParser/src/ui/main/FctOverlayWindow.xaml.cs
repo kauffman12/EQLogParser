@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -90,6 +91,7 @@ namespace EQLogParser
     private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
     private double _savedTextScale = FctScale.SizeDefault;
     private double _savedSpeed = FctScale.SpeedDefault;
+    private double _savedThreshold;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
@@ -152,6 +154,9 @@ namespace EQLogParser
       sizeSlider.Value = _savedTextScale;
       speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
 
+      _canvas.Threshold = _savedThreshold;
+      SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
+
       ApplyLock(true);
     }
 
@@ -176,6 +181,7 @@ namespace EQLogParser
       sideLabel.FontSize = size + 2;
       outDirLabel.FontSize = size + 2;
       inDirLabel.FontSize = size + 2;
+      thresholdLabel.FontSize = size + 2;
 
       sizeMinus.FontSize = size + 7;
       sizePlus.FontSize = size + 7;
@@ -356,6 +362,12 @@ namespace EQLogParser
       sizeSlider.Value = _savedTextScale;
       speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
 
+      /* The threshold arrives already snapped to its ladder (FctOverlaySettings.LoadThreshold), so the combo and the
+         filter cannot disagree even from a hand-edited file, and SelectByTag below always finds its item. */
+      _savedThreshold = FctOverlaySettings.LoadThreshold();
+      _canvas.Threshold = _savedThreshold;
+      SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
+
       _settingsReady = true;
       ShowScaleReadouts();
     }
@@ -524,9 +536,22 @@ namespace EQLogParser
 
       _lastStatsMs = now;
       var dropped = _canvas.DroppedCount + FctManager.Instance.DroppedCount;
-      statsText.Text = dropped > 0
-        ? $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live · {dropped} dropped"
-        : $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live";
+      var hidden = _canvas.HiddenCount;
+
+      /* Both counters ride along when nonzero because neither loss is silent here: "dropped" is the overlay running out
+         of room and "hidden" is the player's own filter doing its job — two different numbers for two different reasons. */
+      var stats = $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live";
+      if (dropped > 0)
+      {
+        stats += $" · {dropped} dropped";
+      }
+
+      if (hidden > 0)
+      {
+        stats += $" · {hidden} hidden";
+      }
+
+      statsText.Text = stats;
     }
 
     /*
@@ -542,6 +567,24 @@ namespace EQLogParser
 
       /* Preview only: the next numbers use it so the style can be judged, and nothing reaches settings.ini until Save. */
       _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
+      RefreshDemo();
+    }
+
+    /*
+     * The threshold previews like everything else on the row: what gets through the gate changes from the next number
+     * on — demo and real alike — and nothing reaches settings.ini until Save. An unreadable tag reads as off, which is
+     * also where a fresh overlay starts; the ladder itself lives in FctOverlaySettings.
+     */
+    private void ThresholdChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (!_settingsReady || thresholdCombo.SelectedItem is not ComboBoxItem item)
+      {
+        return;
+      }
+
+      _canvas.Threshold = double.TryParse(item.Tag as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+        ? Math.Max(0, value)
+        : 0;
       RefreshDemo();
     }
 
@@ -668,11 +711,13 @@ namespace EQLogParser
       _savedLayout = _canvas.Layout;
       _savedTextScale = FctScale.Text;
       _savedSpeed = FctScale.SpeedFromPercent(speedSlider.Value);
+      _savedThreshold = _canvas.Threshold;
 
       FctOverlaySettings.SaveMotion(_savedStyle);
       FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
+      FctOverlaySettings.SaveThreshold(_savedThreshold);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();
       ApplyLock(true);

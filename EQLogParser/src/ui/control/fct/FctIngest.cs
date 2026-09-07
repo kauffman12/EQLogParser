@@ -66,6 +66,17 @@ namespace EQLogParser
     /* Hits that had nowhere to go, surfaced in the overlay header so overload stays visible. */
     public int DroppedCount { get; private set; }
 
+    /*
+     * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered on the configure row. It is a
+     * display filter applied at the gate, not a parser change: the log and every counter still see all of it. Zero (the
+     * default) means off. Heals and zero-damage labels are exempt by design; see Accept.
+     */
+    public double Threshold;
+
+    /* How many numbers the threshold has hidden, surfaced next to the drop count so a filter that is working is never
+     * mistaken for a filter that is losing things silently. */
+    public int HiddenCount { get; private set; }
+
     public int LiveCount(List<FctHitState> hits, FctLane lane)
     {
       var live = 0;
@@ -100,6 +111,18 @@ namespace EQLogParser
       /* Also captured before pooling, for the same reason: a heal crit lands on FctLane.Crit, where its lane no longer says what it was. */
       var heal = lane is FctLane.HealingDealt or FctLane.HealingReceived;
       var pooled = crit ? FctLane.Crit : lane;
+
+      /*
+       * The threshold gate, before folding, eviction and everything else: a number the player asked not to see should
+       * cost none of that. Only damage is filtered — heals and the fixed-text labels (Miss, Dodge, Resist) are information
+       * rather than volume, and hiding "you are being resisted" because the number beside it is small is exactly the
+       * surprise this dial must not produce. Nothing disappears silently: HiddenCount says how many it has taken.
+       */
+      if (Threshold > 0 && fixedText is null && !heal && value < Threshold)
+      {
+        HiddenCount++;
+        return null;
+      }
 
       /* Everything below measures against the side's own region, and a stage is that question answered for this size. */
       var stage = Layout.Stage(w, h);
@@ -198,6 +221,14 @@ namespace EQLogParser
             evicting?.Invoke(bumped);
           }
         }
+      }
+      else if (style is FctMotionStyle.Parabola && stage.Mode is FctLayoutMode.Halves)
+      {
+        /*
+         * The parabola in halves is the stream, not a scatter: one centre column at the spawn edge with braided side
+         * columns only for bursts, scored by the same flight maths as every other placement (FctStream).
+         */
+        hit = FctStream.Place(hit, hits, stage, _rand);
       }
       else
       {
@@ -372,7 +403,15 @@ namespace EQLogParser
 
       // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
       hit.LifetimeMs = hit.Lane == FctLane.Crit ? CritLifetimeMs : _life.NextLifetime(hit.Lane, LiveCount(hits, hit.Lane), now);
-      hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
+
+      /*
+       * The parabola scrolls until it is gone, which is MSBT's own timing law: no parked tail waiting to disappear.
+       * Parking is harmless where numbers rest wherever they landed, but the stream — the only place this shape runs —
+       * moves in single file, and a hold phase ends every row at the same terminus as the row before it. With motion
+       * spanning the life, constant speed holds from edge to fade and reusing the centre column is spaced-or-blocked
+       * by real drawn overlap rather than by two numbers queueing at the same parking spot.
+       */
+      hit.MotionMs = hit.Style is FctMotionStyle.Parabola ? hit.LifetimeMs : Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
       ApplyProcTempo(hit);
       ApplyPlayerTempo(hit);
