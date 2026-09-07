@@ -59,7 +59,12 @@ namespace EQLogParser
     public static void ApplyTo(FctHitState hit, FctLane lane, bool minor, bool proc = false)
     {
       var loud = IsLoudLabel(hit.FixedText);
-      var size = ValueSize(lane, minor, loud);
+
+      /* The player's own size preference (FctScale.Text, ±30 %) goes in here, once, so hit.ValueFontSize is the real drawn
+         size from this point on: line height, vertical reserve, clamp bands, the pulse grid and glyph measurement all read it
+         and follow without a second place that has to remember to scale. A hit keeps the size it was born with, so moving the
+         slider changes what comes next rather than resizing text already in flight. */
+      var size = ValueSize(lane, minor, loud) * FctScale.Text;
 
       // scaled here rather than at draw time so the vertical reserve and the width estimate see the real size
       if (proc && lane is not FctLane.Crit)
@@ -74,8 +79,13 @@ namespace EQLogParser
       hit.Blowout = lane == FctLane.Crit;
     }
 
-    /* The source line rides at 42% of the value size, floored so it stays legible on small hits. */
-    public static double SourceSize(double valueFontSize) => valueFontSize * 0.42 > SourceFontMin ? valueFontSize * 0.42 : SourceFontMin;
+    /*
+     * The source line rides at 42% of the value size, floored so it stays legible on small hits. The floor scales with the
+     * player's size setting too: an unscaled 14 px minimum would be a bigger share of a −30 % number than it is of a
+     * full-size one, and the label under a small hit would end up proportionally larger than the label under a crit.
+     */
+    public static double SourceSize(double valueFontSize) =>
+      valueFontSize * 0.42 > SourceFontMin * FctScale.Text ? valueFontSize * 0.42 : SourceFontMin * FctScale.Text;
 
     /* The labels that mean "stop casting at this", as written by DamageLineParser into FctHitCommand.ValueText. */
     public static bool IsLoudLabel(string fixedText) => fixedText is Labels.Invulnerable or Labels.Absorb;

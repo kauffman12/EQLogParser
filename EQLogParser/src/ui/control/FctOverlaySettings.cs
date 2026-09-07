@@ -11,6 +11,20 @@ namespace EQLogParser
   {
     public const string MotionKey = "FctOverlayMotion";
 
+    /* The two dials on the configure row, stored as multipliers (0.7 – 1.3) rather than percentages: the file is a place where a
+       human may look, and the value that means something to the code is the one worth writing. FctScale clamps on the way in,
+       so a hand-edited "big" or 12 lands on the default instead of drawing nothing. */
+    public const string TextScaleKey = "FctOverlayTextScale";
+    public const string TimeScaleKey = "FctOverlayTimeScale";
+
+    public static double LoadTextScale() => FctScale.Clamp(ConfigUtil.GetSettingAsDouble(TextScaleKey, FctScale.Default));
+
+    public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.Clamp(scale));
+
+    public static double LoadTimeScale() => FctScale.Clamp(ConfigUtil.GetSettingAsDouble(TimeScaleKey, FctScale.Default));
+
+    public static void SaveTimeScale(double scale) => ConfigUtil.SetSetting(TimeScaleKey, FctScale.Clamp(scale));
+
     /* Retired along with the left/right region scheme: a settings.ini from an older build still carries FctOverlayLayout,
      * nothing reads it now, and an unread key in this file is harmless, so it fades out on its own rather than needing a
      * migration pass. Documented here because "why is there no layout key any more" is otherwise an archaeology question. */

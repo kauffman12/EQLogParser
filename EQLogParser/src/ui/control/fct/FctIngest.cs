@@ -29,6 +29,11 @@ namespace EQLogParser
     /* Crits do not adapt (they must stay prominent) and do not absorb; this is their whole display time. */
     private const double CritLifetimeMs = 2800;
 
+    /* What "as short as a number may get" means once the player has asked for a faster overlay (§FctScale): below this a hit
+     * appears and disappears quicker than it can be read, which is a flicker blamed on the overlay rather than snappiness. */
+    private const double MinLifetimeMs = 900;
+    private const double MinFadeMs = 200;
+
     /*
      * A full lane is a decision about who owns the slot, so a newcomer takes one away from something else only when it is
      * clearly the more informative of the two: at least this many times as significant. Significance is face value with a
@@ -339,6 +344,7 @@ namespace EQLogParser
         // Rise is already assigned: layout runs before lifetime assignment. FctPlacement re-runs the same call on a trial origin.
         FctLayout.ApplyFall(hit, h);
         ApplyProcTempo(hit);
+        ApplyPlayerTempo(hit);
         return;
       }
 
@@ -347,6 +353,29 @@ namespace EQLogParser
       hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
       ApplyProcTempo(hit);
+      ApplyPlayerTempo(hit);
+    }
+
+    /*
+     * The player's tempo setting last and on top of everything above, because it is the outermost dial: proc shortening and the
+     * adaptive controller decide a number's tempo, this decides how fast that tempo plays. Lifetime, travel and fade scale
+     * together — scaling only the lifetime leaves a number hanging in mid-air past the end of its animation, which reads as a
+     * stutter and not as a slower overlay.
+     *
+     * The floor matters because the multipliers compound: a proc is already at 0.7 of its lane's life (ApplyProcTempo) under an
+     * adaptive lifetime that shrinks with load, so −30 % on top could otherwise ask for well under a second on screen.
+     *
+     * Skipped entirely at the default: without that, the floor would quietly lengthen the shortest lifetimes the controller
+     * chooses today, and a settings change nobody made would show up in the numbers.
+     */
+    private static void ApplyPlayerTempo(FctHitState hit)
+    {
+      if (FctScale.Time <= FctScale.Default - 0.001 || FctScale.Time >= FctScale.Default + 0.001)
+      {
+        hit.LifetimeMs = Math.Max(MinLifetimeMs, hit.LifetimeMs * FctScale.Time);
+        hit.MotionMs = Math.Min(hit.MotionMs * FctScale.Time, hit.LifetimeMs);
+        hit.FadeMs = Math.Clamp(hit.FadeMs * FctScale.Time, MinFadeMs, hit.LifetimeMs);
+      }
     }
 
     /*
