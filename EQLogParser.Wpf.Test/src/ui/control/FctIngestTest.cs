@@ -115,7 +115,21 @@ namespace EQLogParser
       foreach (var hit in _hits)
       {
         Assert.AreEqual(1, hit.MergeCount, "six casts of 1,500 stay six numbers");
+        Assert.AreEqual("+1,500", hit.DisplayText, "a heal reads as a plus, whatever band it floats in");
       }
+    }
+
+    [TestMethod]
+    public void HealingNumbersKeepThePlusEvenWhenPooledAsCrits()
+    {
+      var ingest = NewIngest();
+
+      var heal = ingest.Accept(_hits, FctLane.HealingReceived, 9409, "Healing Word", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var critHeal = ingest.Accept(_hits, FctLane.HealingDealt, 3200, "Chain Lightning", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 100);
+
+      Assert.AreEqual("+9,409", heal.DisplayText);
+      Assert.AreEqual(FctLane.Crit, critHeal.Lane, "a heal crit pools with the other crits");
+      Assert.AreEqual("+3,200", critHeal.DisplayText, "the pooled lane no longer says it is a heal; the sign still does");
     }
 
     /*

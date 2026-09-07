@@ -202,7 +202,7 @@ namespace EQLogParser
      */
     public static void RefreshText(FctHitState hit)
     {
-      var text = hit.FixedText ?? FctText.FormatHit(hit.Value, hit.MergeCount);
+      var text = hit.FixedText ?? FctText.FormatHit(hit.Value, hit.MergeCount, hit.Heal);
       if (text == hit.DisplayText)
       {
         return;

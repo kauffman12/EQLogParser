@@ -43,6 +43,21 @@ namespace EQLogParser
     public void FormatsTheValueWithItsRepeatCount(double value, int mergeCount, string expected) =>
       Assert.AreEqual(expected, FctText.FormatHit(value, mergeCount));
 
+    /*
+     * Healing numbers wear a leading plus, with or without the count trailer. It is the one glyph that keeps a heal
+     * readable as good news for anyone who cannot tell green from red, and it follows the value through a fold.
+     */
+    [TestMethod]
+    [DataRow(9409d, 1, "+9,409")]
+    [DataRow(12_500d, 3, "+12.5k ×3")]
+    [DataRow(1d, 1, "+1")]
+    public void HealingNumbersCarryThePlus(double value, int mergeCount, string expected) =>
+      Assert.AreEqual(expected, FctText.FormatHit(value, mergeCount, heal: true));
+
+    [TestMethod]
+    public void DamageNumbersNeverPickUpThePlus() =>
+      Assert.IsFalse(FctText.FormatHit(12_500, 3, heal: false).StartsWith("+"), "the sign belongs to heals only");
+
     /* The output is always invariant: a German locale must not print "12,5k" for a damage number. */
     [TestMethod]
     public void FormatsWithoutDependingOnTheCurrentCulture()
@@ -53,6 +68,7 @@ namespace EQLogParser
         CultureInfo.CurrentCulture = new CultureInfo("de-DE");
         Assert.AreEqual("12.5k", FctText.FormatHitValue(12_500));
         Assert.AreEqual("12.5k ×3", FctText.FormatHit(12_500, 3), "and the count must not pick up a locale's separators");
+        Assert.AreEqual("+12.5k ×3", FctText.FormatHit(12_500, 3, heal: true), "the plus signs nothing that a locale owns");
         Assert.AreEqual("1,234", FctText.FormatHitValue(1234));
       }
       finally

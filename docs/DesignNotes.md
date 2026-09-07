@@ -987,6 +987,11 @@ step dimmer for my own whiff — with amber reserved for `Invulnerable`/`Absorb`
 from here is wasted" and so deserve to beat the routine one next to them. The source line went neutral grey for the
 same reason: it must not compete with a value colour for meaning.
 
+Healing values additionally wear a **leading plus** ("+9,409", "+12.5k ×3") — a fifth channel that costs one glyph. It
+exists for the readers colour is already failing: red/green separation is what roughly one man in twelve cannot do at a
+glance, and for them a heal in either band is otherwise readable only by position. The sign follows the value through a fold and survives crit pooling (`FctHitState.Heal` is captured from the producing
+lane, before a heal crit lands on `FctLane.Crit`, where its lane no longer says it was a heal).
+
 Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive lifetime
 aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop folds a repeat into a live
 number before it drops anything, so overload compresses the display instead of eating damage. The age rules are about

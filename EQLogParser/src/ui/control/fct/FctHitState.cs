@@ -18,6 +18,10 @@ namespace EQLogParser
      * could be a swing or a tick, and letting those share a number is how one ends up claiming to be something it is not. */
     public bool Periodic;
 
+    /* A healing number rather than a damaging one, captured from the producing lane before crit pooling: a heal crit pools onto
+     * FctLane.Crit like any other, and without this flag the "+" in "its" text would lose track of what it was signing. */
+    public bool Heal;
+
     /*
      * Index of this hit's cell in its band's fixed grid, or -1 while it floats. Only pulse mode allocates cells; the pool
      * is picked by band and by whether the hit is a proc, so this one number names the slot. FctCellGrid owns it.

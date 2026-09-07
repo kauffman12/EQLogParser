@@ -89,6 +89,8 @@ namespace EQLogParser
       }
 
       var incoming = FctLayout.IsIncoming(lane);          // before pooling: a taken crit stays on the incoming side
+      /* Also captured before pooling, for the same reason: a heal crit lands on FctLane.Crit, where its lane no longer says what it was. */
+      var heal = lane is FctLane.HealingDealt or FctLane.HealingReceived;
       var pooled = crit ? FctLane.Crit : lane;
 
       /*
@@ -139,6 +141,7 @@ namespace EQLogParser
         Lane = pooled,
         Proc = proc,
         Periodic = periodic,
+        Heal = heal,
         Incoming = incoming,
         Style = Style,
         SpawnMs = now,
@@ -155,7 +158,7 @@ namespace EQLogParser
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
-      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1), hit.ValueFontSize);
+      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1, heal), hit.ValueFontSize);
 
       if (celled)
       {

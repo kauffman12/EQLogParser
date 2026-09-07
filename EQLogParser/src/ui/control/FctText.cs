@@ -42,9 +42,16 @@ namespace EQLogParser
      * routine ticks wear the face value of a big one — which is the mistake the fold policy exists to avoid. "2,040 ×2"
      * answers both questions a glance can ask: how big was a hit like this, and did several happen.
      */
-    internal static string FormatHit(double value, int mergeCount) => mergeCount > 1
-      ? $"{FormatHitValue(value)} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
-      : FormatHitValue(value);
+    /*
+     * Healing numbers wear a leading plus sign. The panel separates good news from bad with four channels - direction says who,
+     * colour says what, size says how big, x-band says which lane - and the sign is a fifth that costs one glyph: a reader whose
+     * eyes cannot separate green from red can still tell a heal from a crit on sight, in either band, without the colour at all.
+     * It is the value's face and travels with it (a fold reads "+412 ×3"), never the source line underneath.
+     */
+    internal static string FormatHit(double value, int mergeCount, bool heal = false) =>
+      (heal ? "+" : string.Empty) + (mergeCount > 1
+        ? $"{FormatHitValue(value)} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
+        : FormatHitValue(value));
 
     /* "0.#" keeps 12k looking like 12k and 12.5k looking like 12.5k. */
     private static string Shorten(double value, string suffix) => value.ToString("0.#", CultureInfo.InvariantCulture) + suffix;
