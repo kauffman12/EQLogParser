@@ -266,5 +266,165 @@ namespace EQLogParser
       FctLayout.Spawn(hit, w, h, rand);
       return hit;
     }
+
+    // ---- placement: throwing text so it does not land on text already in flight (FctPlacement) ----
+    [TestMethod]
+    public void ThreeFountainsGetTheirOwnAir()
+    {
+      /*
+       * The complaint this exists for: three numbers climbing, two of them on top of each other while the band around them sat
+       * empty. Before the search, 58% of pairs on a 980x640 overlay shared a spot at some point in their overlapping lives;
+       * measured the same way now it is about 3%, so this fails on a regression rather than on noise.
+       */
+      var pairs = 0;
+      var touched = 0;
+
+      for (var seed = 1; seed <= 60; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain };
+        for (var i = 0; i < 3; i++)
+        {
+          ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 700.0);
+        }
+
+        CountOverlaps(hits, ref pairs, ref touched);
+      }
+
+      Assert.IsTrue(pairs > 0, "no overlapping lifetimes to measure");
+      Assert.IsTrue((double)touched / pairs < 0.15,
+        $"{touched} of {pairs} fountain pairs shared a spot; the band has room for three");
+    }
+
+    [TestMethod]
+    public void AQueueOfHeldNumbersUsesTheDepthOfTheBand()
+    {
+      // nothing travels to separate these, so where they were put is all there is: 71% of pairs collided before the search
+      var pairs = 0;
+      var touched = 0;
+
+      for (var seed = 1; seed <= 60; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Hold };
+        for (var i = 0; i < 6; i++)
+        {
+          ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 500.0);
+        }
+
+        CountOverlaps(hits, ref pairs, ref touched);
+      }
+
+      Assert.IsTrue((double)touched / pairs < 0.20,
+        $"{touched} of {pairs} held pairs shared a spot out of {FctPlacement.Candidates} tries each");
+    }
+
+    [TestMethod]
+    public void SearchingForRoomStillNeverPutsTextOffScreen()
+    {
+      // the search widens the throw sideways and away from the protected strip, so the old invariants have to be re-proved
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      {
+        foreach (var size in new[] { (W: 980.0, H: 640.0), (W: 1280.0, H: 300.0), (W: 700.0, H: 280.0) })
+        {
+          for (var seed = 1; seed < 40; seed++)
+          {
+            var hits = new List<FctHitState>();
+            var ingest = new FctIngest(new Random(seed)) { Style = style };
+            for (var i = 0; i < 6; i++)
+            {
+              ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 31), "Flurry", false, false, false, null, size.W, size.H, i * 400.0);
+              ingest.Accept(hits, FctLane.DamageTaken, 900 + (i * 29), "Claw", false, false, false, null, size.W, size.H, i * 400.0 + 200);
+            }
+
+            foreach (var hit in hits)
+            {
+              for (var s = 0; s <= 8; s++)
+              {
+                var b = BlockOf(hit, hit.LifetimeMs * s / 8);
+                Assert.IsTrue(b.Left > -0.5 && b.Right < size.W + 0.5 && b.Top > -0.5 && b.Bottom < size.H + 0.5,
+                  $"{style} at {size.W:0}x{size.H:0} drew outside the window: {b}");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    [TestMethod]
+    public void SearchingForRoomPlacesEverythingItIsGiven()
+    {
+      // no capacity gate in here: a crowded overlay may overlap, it may not lose a number
+      var hits = new List<FctHitState>();
+      var ingest = new FctIngest(new Random(7)) { Style = FctMotionStyle.Fountain };
+
+      var placed = 0;
+      for (var i = 0; i < 40; i++)
+      {
+        ingest.PruneExpired(hits, i * 300.0);
+        if (ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 7), "Flurry", false, false, false, null, 980, 640, i * 300.0) is not null)
+        {
+          placed++;
+        }
+      }
+
+      Assert.AreEqual(40, placed);
+      Assert.AreEqual(0, ingest.DroppedCount);
+    }
+
+    [TestMethod]
+    public void TheFirstNumberGetsTheLanesOwnSpot()
+    {
+      /*
+       * With nothing to dodge there is nothing to measure: the hit that came in goes out again, geometry and all, so an
+       * uncrowded overlay draws exactly what FctLayout alone would have drawn.
+       */
+      var hit = Spawn(FctLane.DamageDealt, incoming: false, new Random(3), style: FctMotionStyle.Fountain);
+
+      Assert.AreSame(hit, FctPlacement.Place(hit, new List<FctHitState>(), Width, Height, new Random(4)));
+    }
+
+    /* Worst instant over the part of the two lives they share, which is what a player sees as one blob: the same measure the
+     * placement probe uses. */
+    private static void CountOverlaps(List<FctHitState> hits, ref int pairs, ref int touched)
+    {
+      for (var a = 0; a < hits.Count; a++)
+      {
+        for (var b = a + 1; b < hits.Count; b++)
+        {
+          var offset = hits[b].SpawnMs - hits[a].SpawnMs;
+          var shared = Math.Min(hits[a].LifetimeMs - offset, hits[b].LifetimeMs);
+          if (shared <= 0)
+          {
+            continue;   // never on screen together
+          }
+
+          pairs++;
+          for (var s = 0; s <= 12; s++)
+          {
+            var ageB = shared * s / 12;
+            if (Intersects(BlockOf(hits[a], ageB + offset), BlockOf(hits[b], ageB)))
+            {
+              touched++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    private static bool Intersects((double Left, double Top, double Right, double Bottom) a, (double Left, double Top, double Right, double Bottom) b) =>
+      a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
+
+    /* Where the drawn block actually is at an age: the same maths the canvases draw with, centre-anchored like the text. */
+    private static (double Left, double Top, double Right, double Bottom) BlockOf(FctHitState hit, double ageMs)
+    {
+      var t = FctMotion.Progress(hit, ageMs);
+      var scale = FctMotion.ScaleOf(hit, ageMs);
+      var half = (hit.ValueWidth * scale) / 2.0;
+      var x = FctMotion.ArcedX(hit, t);
+
+      return (x - half, FctMotion.RaisedY(hit, t), x + half, FctMotion.RaisedY(hit, t) + (FctLayout.TextHeight(hit) * scale));
+    }
   }
 }

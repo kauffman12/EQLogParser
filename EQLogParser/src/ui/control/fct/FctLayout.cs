@@ -83,16 +83,19 @@ namespace EQLogParser
      * over-reserves slightly and never clips. Reserving one em instead is what let incoming hits — which travel downwards
      * and finish their life at the bottom of the band — run their descenders and source line off the edge of the overlay.
      */
-    public static double TextReserve(FctHitState hit)
-    {
-      var block = (hit.ValueFontSize * TextHeightFactor) +
-                  (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
+    public static double TextReserve(FctHitState hit) => TextHeight(hit) * PeakScaleOf(hit);
 
-      // a crit's blowout outranks its style's swell, exactly as it does in FctMotion.ScaleOf
-      var peak = hit.Blowout ? FctMotion.CritPeakScale : hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
+    /*
+     * The drawn block at full size: the value plus its source line, with no scale applied. FctPlacement measures live hits
+     * against each other at moments partway through a flight, where a crit is smaller or larger than its peak.
+     */
+    public static double TextHeight(FctHitState hit) =>
+      (hit.ValueFontSize * TextHeightFactor) +
+      (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
 
-      return block * peak;
-    }
+    /* The largest a hit's block ever gets — the crit blowout outranks the style's swell, as it does in FctMotion.ScaleOf. */
+    private static double PeakScaleOf(FctHitState hit) =>
+      hit.Blowout ? FctMotion.CritPeakScale : hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
 
     /*
      * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest
@@ -112,8 +115,13 @@ namespace EQLogParser
      * Direction is vertical, so x is only a lane slot: damage toward the middle of the overlay, healing out wide, crits
      * and labels centred over their band. Both bands carry two categories each, which is why the x slots survived the move
      * away from left/right — they stopped meaning who and now mean what.
+     *
+     * `searchFrac` widens the origin draw — sideways and away from the strip at once — and belongs to FctPlacement, which
+     * asks for a wider throw when the lane's usual spot is already occupied. Every candidate still comes out of this one
+     * function, so widening costs range but never legality: the band, its reserve against the protected strip and the
+     * window edges are applied to the wide draws exactly as they are to the narrow ones.
      */
-    public static void Spawn(FctHitState hit, double w, double h, Random rand)
+    public static void Spawn(FctHitState hit, double w, double h, Random rand, double searchFrac = 1.0)
     {
       var cx = hit.Lane switch
       {
@@ -123,7 +131,7 @@ namespace EQLogParser
         _ => w * 0.42, // DamageDealt, DamageTaken
       };
 
-      var spread = hit.Blowout ? 0.17 : 0.09;
+      var spread = (hit.Blowout ? 0.17 : 0.09) * searchFrac;
       hit.X0 = cx + ((rand.NextDouble() * 2 - 1) * (w * spread));
 
       /* Nothing forbids an outgoing number's x any more, so the arc is only held inside the window; the text
@@ -141,13 +149,13 @@ namespace EQLogParser
       if (hit.Incoming)
       {
         ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
-        hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
+        hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * searchFrac * rand.NextDouble());
         up = -1;  // away from the gap is downward here
       }
       else
       {
         ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
-        hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
+        hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * searchFrac * rand.NextDouble());
         up = 1;
       }
 
@@ -200,6 +208,31 @@ namespace EQLogParser
 
       hit.Rise = up * usable;
       hit.Arc = (rand.NextDouble() * 2 - 1) * w * (hit.Blowout ? 0.15 : 0.12);
+    }
+
+    /*
+     * The gravity tail of the choreographed styles, and note the sign runs opposite to Rise because it is screen-relative:
+     * positive falls toward the bottom of the screen, negative back up toward the protected strip, which is how the incoming
+     * band mirrors an outgoing fountain instead of parking it against its own bottom edge. Hold and pulse have no fall and
+     * are left at zero.
+     *
+     * Depth itself is deliberately not one number. Spray measures against the height this particular number reached —
+     * falling less than it rose is what stops any angle of the cone from returning a number to the band edge it left, so the
+     * strip stays clear for every random draw rather than for the lucky ones. A mirrored fountain uses a share of how far it
+     * sank; an outgoing one takes the canvas-relative throw it has always had, held honest by the band clamp.
+     */
+    public static void ApplyFall(FctHitState hit, double h)
+    {
+      if (hit.Style is not (FctMotionStyle.Fountain or FctMotionStyle.Spray))
+      {
+        return;
+      }
+
+      var depth = hit.Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * SprayFallFrac
+        : hit.Incoming ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
+        : h * 0.28;
+
+      hit.FallDist = hit.Incoming ? -depth : depth;
     }
 
     /* Keeps the band drawable: a window short enough to invert it degrades to "inside the edges" rather than to a

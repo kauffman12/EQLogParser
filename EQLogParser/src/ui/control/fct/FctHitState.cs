@@ -30,8 +30,8 @@ namespace EQLogParser
      * already on screen. */
     public FctMotionStyle Style;
 
-    /* Whether this hit is about something happening to me: the bottom band (bands mode) or the left half (halves
-     * mode). Captured from the producing lane before crit pooling, so a taken crit stays on the incoming side. */
+    /* Whether this hit is about something happening to me — the bottom band, which it sinks away from. Captured from the
+     * producing lane before crit pooling, so a taken crit stays on the incoming side. */
     public bool Incoming;
 
     // spawn anchor: x is the value text's center, y its top
@@ -94,5 +94,12 @@ namespace EQLogParser
 
     // set when DisplayText changed; the backend rebuilds glyphs + ValueWidth and clears it
     public bool TextDirty;
+
+    /*
+     * Shallow copy, for FctPlacement's trials: geometry is fields and everything else (value, source, style, colours) is
+     * read-only from here on, so a copy that shares the strings is enough to test a different launch position. Nothing that
+     * owns a substrate resource is cloned — a trial never reaches a canvas, and only canvases cache per-hit resources.
+     */
+    public FctHitState Clone() => (FctHitState) MemberwiseClone();
   }
 }

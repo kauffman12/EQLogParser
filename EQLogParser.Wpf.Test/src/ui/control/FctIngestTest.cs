@@ -444,8 +444,11 @@ namespace EQLogParser
     }
 
     /*
-     * Spray exists to fan repeated hits out instead of stacking them into one unreadable column, so the assertion is
-     * relative to hold rather than an absolute pixel figure — that would just be a second constant to maintain.
+     * Spray exists to fan repeated hits out instead of stacking them into one unreadable column, and it does that by flying
+     * sideways, which is what is measured here — every style gets a gentle sway, so total coverage is not the question. It used
+     * to be asserted as coverage against hold, and that stopped meaning anything once FctPlacement started spreading held
+     * numbers into whatever room the band had: two mechanisms, similar footprints, one measurement that could not tell them
+     * apart. What has to differ is the flight — spray's cone several times wider than the sway.
      */
     [TestMethod]
     public void SprayFansWiderThanHold()
@@ -453,9 +456,10 @@ namespace EQLogParser
       var held = Sweep(FctMotionStyle.Hold);
       var sprayed = Sweep(FctMotionStyle.Spray);
 
-      // a modest margin on purpose: spray should be visibly wider, not a different universe of chaos
-      Assert.IsTrue(sprayed.Width > held.Width * 1.35,
-        $"spray is supposed to fan out: hold covered {held.Width:0} px of x, spray {sprayed.Width:0} px");
+      Assert.IsTrue(sprayed.Travel > held.Travel * 2,
+        $"spray is supposed to fan out: hold sways {held.Travel:0} px sideways on average, spray travels {sprayed.Travel:0} px");
+      Assert.IsTrue(sprayed.Width > Width * 0.55,
+        $"the cone should reach most of the overlay width, covered {sprayed.Width:0} px");
     }
 
     /* Every style owes the same two promises; sweep asserts them for hold, fountain, pulse and spray alike. */
@@ -628,7 +632,7 @@ namespace EQLogParser
      * window horizontally, and reporting how much x the drawn text covered. Spacing is wide (900 ms) so hits overlap the
      * way a slow fight does rather than tripping the lane cap, which would test dropping instead of geometry.
      */
-    private (double Width, double MinX, double MaxX) Sweep(FctMotionStyle style)
+    private (double Width, double MinX, double MaxX, double Travel) Sweep(FctMotionStyle style)
     {
       var hits = new List<FctHitState>();
       var ingest = NewIngest();
@@ -637,6 +641,8 @@ namespace EQLogParser
       var gapTop = Height * FctLayout.GapTopFrac;
       var minX = double.MaxValue;
       var maxX = double.MinValue;
+      var travel = 0.0;
+      var flown = 0;
 
       for (var i = 0; i < 40; i++)
       {
@@ -649,6 +655,9 @@ namespace EQLogParser
         {
           continue; // folded into a live number: real behaviour, just not this test's subject
         }
+
+        travel += Math.Abs(FctMotion.ArcedX(hit, 1) - FctMotion.ArcedX(hit, 0));
+        flown++;
 
         for (var t = 0.0; t <= 1.0; t += 0.05)
         {
@@ -663,7 +672,7 @@ namespace EQLogParser
         }
       }
 
-      return (maxX - minX, minX, maxX);
+      return (maxX - minX, minX, maxX, flown == 0 ? 0 : travel / flown);
     }
 
     private FctHitState OnlyWith(string source)

@@ -152,23 +152,35 @@ namespace EQLogParser
        */
       hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1), hit.ValueFontSize);
 
-      /*
-       * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
-       * static placement FctLayout gave it. Losing the layout is fine, losing the number is not.
-       */
-      if (celled && FctCellGrid.HasRoom(hit, h))
+      if (celled)
       {
-        if (!FctCellGrid.Assign(hit, hits, w, h, now, out var bumped))
+        /*
+         * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
+         * static placement FctLayout gave it. Losing the layout is fine, losing the number is not.
+         */
+        if (FctCellGrid.HasRoom(hit, h))
         {
-          /* Every cell in the block is held by a crit and this is not one: drop it rather than erase a bigger number. */
-          DroppedCount++;
-          return null;
-        }
+          if (!FctCellGrid.Assign(hit, hits, w, h, now, out var bumped))
+          {
+            /* Every cell in the block is held by a crit and this is not one: drop it rather than erase a bigger number. */
+            DroppedCount++;
+            return null;
+          }
 
-        if (bumped is not null)
-        {
-          evicting?.Invoke(bumped);
+          if (bumped is not null)
+          {
+            evicting?.Invoke(bumped);
+          }
         }
+      }
+      else
+      {
+        /*
+         * Text that travels gets free placement rather than cells, and FctPlacement is what keeps it off a number already in
+         * flight: several legal throws are measured along their whole paths and the least crowded one wins. The hit that comes
+         * back may be one of those trials rather than the object that went in.
+         */
+        hit = FctPlacement.Place(hit, hits, w, h, _rand);
       }
 
       FctMotion.RefreshText(hit);
@@ -311,11 +323,9 @@ namespace EQLogParser
        * protected strip because the return is a fraction of travel already spent below it.
        *
        * Pulse and Hold fall through to the adaptive lifetime: neither has a fall, so neither needs its life dictated
-       * by a choreography.
+       * by a choreography. The fall itself is FctLayout.ApplyFall's, because placement may re-roll the origin afterwards
+       * and has to be able to ask for it again.
        */
-      // mirrored on the incoming band, where a downward fall has nowhere legal to go
-      var mirrored = hit.Incoming;
-
       if (Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
         // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall. Each style
@@ -326,9 +336,8 @@ namespace EQLogParser
         hit.MotionMs = window;
         hit.FadeMs = window * FctMotion.FallPhaseFrac;
 
-        // Rise is already assigned: layout runs before lifetime assignment
-        var depth = FallDepth(hit, h, mirrored);
-        hit.FallDist = mirrored ? -depth : depth;
+        // Rise is already assigned: layout runs before lifetime assignment. FctPlacement re-runs the same call on a trial origin.
+        FctLayout.ApplyFall(hit, h);
         ApplyProcTempo(hit);
         return;
       }
@@ -361,17 +370,5 @@ namespace EQLogParser
       hit.FadeMs *= FctMotion.ProcTimeFrac;
     }
 
-    /*
-     * How far gravity carries a choreographed hit past its apex, always positive — the caller applies the sign. Spray
-     * measures against the height this particular number reached: falling less than it rose is what stops any angle of
-     * the cone from returning a number to the band edge it left, which keeps the protected strip clear for every random
-     * draw rather than for the lucky ones. A mirrored fountain — any incoming one, whose downward fall would park it on its
-     * own band edge — uses a share of how far it sank; an outgoing one takes the canvas-relative throw it has always had,
-     * held honest by the band clamp.
-     */
-    private double FallDepth(FctHitState hit, double h, bool mirrored) =>
-      Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * FctLayout.SprayFallFrac
-        : mirrored ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
-        : h * 0.28;
   }
 }
