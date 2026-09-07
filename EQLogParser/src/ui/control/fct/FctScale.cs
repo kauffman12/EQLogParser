@@ -8,26 +8,22 @@ namespace EQLogParser
    * That is also why these live here rather than being read at draw time: motion is a pure function of (hit, age), and a number whose size or timing
    * changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the class of bug that layout was built to avoid.
    *
-   * The two dials are not symmetrical any more, and both asymmetries are deliberate:
+   * **Both dials are ±50 % and both can be parked by feel on their default**, which they were not for a while. Speed used to be a tempo multiplier
+   * running -30 % to +90 %, because playing with the feature said the usable band sat faster than the measured baseline and did not extend nearly as far
+   * toward slow as a symmetric dial implies. That is all still true; what changed is where the arithmetic happens. The middle is now the midpoint of
+   * that band's two results - see TimeDefault - so the dial is centred, symmetric and reads the way a slider should, and the shape of the usable range
+   * lives in one number instead of in two asymmetric ends.
    *
-   * **Size is ±50 %**, centred on 1.0, because a slider whose default is not in the middle cannot be parked by feel and the type scale genuinely is
-   * centred on the size everything was measured at.
+   * **The unit is time, not rate.** A control called speed whose right end is faster, measured in percent of how long a number stays up: +50 % takes
+   * half as long on screen, -50 % lasts half again as long, and the middle is nothing. The first version of this row was labelled "time" and its right
+   * end was the slower one, which was reported as confusing rather than imagined; naming it speed is what fixed that, and the direction of the sign is
+   * handled here once (TimeFromPercent) so that nothing downstream has to hold the inversion in its head. settings.ini still stores a rate
+   * (`FctOverlaySpeed`), because "1.4" reads as faster and "0.7" reads as slower without having to think about reciprocals.
    *
-   * **Speed runs -30 % to +90 % of the tempo that was measured, and its centre of gravity is above the old one.** Played against the game, half speed
-   * (twice as long on screen) is unusable and half again as fast was not enough; the tempo worth sitting at turned out to be about 15 % quicker than
-   * the one that shipped. So `SpeedDefault` is that tempo - which means the shipped overlay now runs slightly faster than it did, and the useful range
-   * opens upward: 2.2x speed at the top end, and on the slow side only enough to get back to the old pace and a little past it. What "a little" means is
-   * written once, as percentages, and the absolute ends are derived from it.
-   *
-   * **The player adjusts speed; numbers only ever get a duration.** A control called "time" whose right-hand end makes things happen sooner is
-   * backwards, and it was - the first version of this row was labelled time, and the confusion it causes was reported rather than imagined. So the dial
-   * speaks speed, and FctScale.Time stays what FctIngest has always multiplied by: how long a number shows, travels and fades. A speed therefore costs
-   * a division (TimeFromSpeed), because "50 % faster" is two thirds of the time on screen rather than 50 % less of it.
-   *
-   * As for the outer limits: everything about the layout - lane columns at fractions of the width, the vertical reserve a line of text needs, the
-   * adaptive lifetime under load - was measured at the shipped tempo and size (see docs/DesignNotes.md). Beyond half again the size, the damage and
-   * healing columns begin to overlap at ordinary window sizes; a tempo past 2.2x arrives and leaves before it is readable, which the floors in
-   * FctIngest are underneath to prevent rather than the dial's own bounds.
+   * As for how far the ranges go: everything about the layout - lane columns at fractions of the width, the vertical reserve a line of text needs, the
+   * adaptive lifetime under load - was measured at 1.0 and at 1x (see docs/DesignNotes.md). Past half again the size, damage and healing columns begin to
+   * overlap at ordinary window sizes; at the fast end of speed a number arrives and leaves before it is readable, which is what the floors in FctIngest
+   * are underneath for rather than the dial's own bounds.
    */
   internal static class FctScale
   {
@@ -35,22 +31,28 @@ namespace EQLogParser
     public const double SizeMax = 1.5;
     public const double SizeDefault = 1.0;
 
-    /* The speed dial is measured in percent of the tempo everything was choreographed at, so its ends are ± that rather than raw multipliers. */
-    public const int SpeedPercentMin = -30;
-    public const int SpeedPercentMax = 90;
+    /* Both ends of the speed dial, in percent of the time a number spends on screen. + is less time, which is faster. */
+    public const int SpeedPercentMin = -50;
+    public const int SpeedPercentMax = 50;
     public const int SpeedPercentDefault = 0;
 
     /*
-     * The tempo the feature ships at, and it is not 1.0. Playing with the overlay made the measured baseline feel like it was sitting on the slow
-     * side of useful, roughly 15 % too leisurely, so that is where the middle of this dial now is: the shipped default IS today's "+15 %" from before
-     * the change. Re-scaling everything else to match would have meant re-measuring layout, choreography and the adaptive controller for a preference;
-     * moving the centre of one dial is the same result with one number in it.
+     * The centre of the dial, as a share of the time everything was choreographed at. It is the midpoint of the two ends that playing with the previous
+     * dial produced: its slow end left numbers up about 1.24 times as long as measured and its fast end about 0.51 times, and halfway between those
+     * results is 0.877 - which is also roughly the tempo the feature had settled on shipping at, so this is a re-centring rather than a re-tuning.
+     *
+     * Choosing it in time rather than in rate matters: it is the thing being judged by eye, and averaging rates would have put the middle somewhere the
+     * band does not do anything interesting. ±50 % of it gives 1.32x on the slow side (past the old neutral pace, nowhere near the twice-as-long that
+     * nobody can play under) and 0.44x on the fast (further than the old +90 %, which is where the request to open things up came from).
      */
-    public const double SpeedDefault = 1.15;
+    public const double TimeDefault = 0.877;
+    public const double TimeMin = TimeDefault * (1 - SpeedPercentMax / 100.0);
+    public const double TimeMax = TimeDefault * (1 - SpeedPercentMin / 100.0);
 
-    /* The ends that percent span implies: 0.805 (24 % longer on screen) to 2.185 (46 % of the time on screen). */
-    public const double SpeedMin = SpeedDefault * (1 + SpeedPercentMin / 100.0);
-    public const double SpeedMax = SpeedDefault * (1 + SpeedPercentMax / 100.0);
+    /* The same three points as a rate, which is what settings.ini holds: stored as speed because that is what the control is called. */
+    public const double SpeedDefault = 1 / TimeDefault;
+    public const double SpeedMin = 1 / TimeMax;
+    public const double SpeedMax = 1 / TimeMin;
 
     /*
      * A multiplier on every type size, applied once in FctStyle.ApplyTo so the hit carries its real drawn size and everything downstream - line
@@ -59,11 +61,12 @@ namespace EQLogParser
     public static double Text = SizeDefault;
 
     /*
-     * A multiplier on how long a number lives, its travel and its fade together, in the range 1/SpeedMax .. 1/SpeedMin (0.46 to 1.24). Scaling only the
-     * lifetime would leave a number hanging in mid-air past the end of its animation, which reads as a stutter rather than as a slower overlay. Nothing
-     * clamps this to the size dial's range: it is the reciprocal of what the other dial measures.
+     * A multiplier on how long a number lives, its travel and its fade together, in the range TimeMin .. TimeMax. Scaling only the lifetime would leave a
+     * number hanging in mid-air past the end of its animation, which reads as a stutter rather than as a slower overlay. It opens at the middle of the
+     * dial rather than at 1.0: the measured baseline turned out to sit on the slow side of useful, so there is no "unset" case left in which FctIngest
+     * should let its floors stand down.
      */
-    public static double Time = TimeFromSpeed(SpeedDefault);
+    public static double Time = TimeDefault;
 
     /*
      * These come from settings.ini, where a hand edit can put "big" or 12 in place of a fraction. Two rules, in this order:
@@ -77,23 +80,33 @@ namespace EQLogParser
      */
     public static double ClampSize(double value) => !double.IsFinite(value) ? SizeDefault : Math.Clamp(value, SizeMin, SizeMax);
 
-    public static double ClampSpeed(double value) => !double.IsFinite(value) ? SpeedDefault : Math.Clamp(value, SpeedMin, SpeedMax);
+    public static double ClampTime(double time) => !double.IsFinite(time) ? TimeDefault : Math.Clamp(time, TimeMin, TimeMax);
 
-    /* Where a position on the speed dial lands, and back. Percent is of the shipped tempo, so 0 is not "no speed change" but "the default". */
-    public static double SpeedFromPercent(double percent) => SpeedDefault * (1 + Math.Clamp(percent, SpeedPercentMin, SpeedPercentMax) / 100.0);
-
-    public static int PercentOfSpeed(double speed) => (int)Math.Round((ClampSpeed(speed) / SpeedDefault - 1) * 100);
+    public static double ClampSpeed(double speed) => !double.IsFinite(speed) ? SpeedDefault : Math.Clamp(speed, SpeedMin, SpeedMax);
 
     /*
-     * The duration multiplier a given speed means, and the one place that reversal lives. Going the other way by hand - scaling durations by -50 % -
-     * would make the right-hand end of the slider the slower one again, which is what this is here to stop.
+     * Where a position on the speed dial lands. One subtraction from the whole and one multiplication, in time units, because that is what the dial is
+     * measured in: +50 % of speed is half the time up, not 1/1.5 of it. Everything downstream - FctIngest scaling a number's life, travel and fade - sees
+     * only the duration multiplier this returns.
+     */
+    public static double TimeFromPercent(double percent) => ClampTime(TimeDefault * (1 - Math.Clamp(percent, SpeedPercentMin, SpeedPercentMax) / 100.0));
+
+    public static int PercentOfTime(double time) => (int)Math.Round((1 - ClampTime(time) / TimeDefault) * 100);
+
+    /* The stored form of the same position, and back. */
+    public static double SpeedFromPercent(double percent) => 1 / TimeFromPercent(percent);
+
+    public static int PercentOfSpeed(double speed) => PercentOfTime(TimeFromSpeed(speed));
+
+    /*
+     * Rate to duration and back, for anything thinking in tempo rather than in dial positions. A nonsense rate - zero, negative, not a number - has no
+     * direction to clamp toward, so it lands on the default instead of being honoured literally into an overlay that draws nothing.
      */
     public static double TimeFromSpeed(double speed) => 1 / ClampSpeed(speed);
 
-    /* Back the other way, for reading a duration scale written by an older build. A zero or nonsense duration means "no idea", so: default. */
     public static double SpeedFromTime(double time) => !double.IsFinite(time) || time <= 0 ? SpeedDefault : ClampSpeed(1 / time);
 
-    /* The size dial's own readout: -50 % … +50 % rather than 0.5 … 1.5, because "bigger" is what the player is thinking in. */
+    /* The size dial's own readout: -50 % ... +50 % rather than 0.5 ... 1.5, because "bigger" is what the player is thinking in. */
     public static int PercentOfSize(double scale)
     {
       var clamped = ClampSize(scale);

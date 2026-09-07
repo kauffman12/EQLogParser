@@ -366,9 +366,9 @@ namespace EQLogParser
      * shrinks with load, and the fast end of the dial leaves a number on screen for less than half the time it was choreographed at. Without floors that
      * asks for well under a second, which is a flicker rather than a fast overlay.
      *
-     * Applied unconditionally, including at the shipped speed: SpeedDefault is 1.15 rather than 1.0 because the measured baseline turned out to sit on the
-     * slow side of useful (docs/DesignNotes.md), so there is no longer an "unset" case in which this should keep its hands off the numbers and let the
-     * floors stand down.
+     * Applied unconditionally, including at the shipped speed: the dial's middle is 0.877 of the measured time rather than 1.0, because the baseline
+     * turned out to sit on the slow side of useful (docs/DesignNotes.md). There is no longer an "unset" case in which this should keep its hands off the
+     * numbers and let the floors stand down.
      */
     private static void ApplyPlayerTempo(FctHitState hit)
     {

@@ -172,6 +172,9 @@ namespace EQLogParser
       speedMinus.FontSize = size + 7;
       speedPlus.FontSize = size + 7;
 
+      sizeValue.FontSize = size + 1;
+      speedValue.FontSize = size + 1;
+
       legendText.FontSize = size;
       statsText.FontSize = size > 2 ? size - 1 : size;
     }
@@ -230,6 +233,10 @@ namespace EQLogParser
       else
       {
         ApplyTypography();
+
+        /* Every entry into setup starts with the examples on, whatever they were left at. They are a view aid for this pass over the controls, not a
+           preference: somebody who switched them off to place the overlay during a fight wants them back next time they want to see what a dial does. */
+        sampleDataCheck.IsChecked = true;
         RefreshDemo();
       }
 
@@ -318,9 +325,9 @@ namespace EQLogParser
     }
 
     /*
-     * Where each dial landed, centred under its own track. Both are snapped to 5 % steps, so these are exact rather than drifting decimals, and the
-     * shipped position reads as a dash rather than a number: the middle is not a change, and "+0 %" would claim otherwise. On the speed dial the sign
-     * is the player's, not the duration's — "+45 %" means forty-five per cent faster, which is less time on screen.
+     * Where each dial landed, centred under its own track with its own percent sign — a bare 50 next to a slider reads like a count. Both are snapped to
+     * 5 % steps, so these are exact rather than drifting decimals, and the middle reads as a dash: "+0%" would claim a change where there is none. The
+     * speed dial's sign is the player's, not the duration's — "+40%" means a number spends forty per cent less time on screen.
      */
     private void ShowScaleReadouts()
     {
@@ -328,7 +335,7 @@ namespace EQLogParser
       speedValue.Text = Signed((int)Math.Round(speedSlider.Value));
     }
 
-    private static string Signed(int percent) => $"{percent:+0;-0;—}";
+    private static string Signed(int percent) => percent == 0 ? "—" : $"{percent:+0;-0}%";
 
     /*
      * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and write
@@ -343,7 +350,7 @@ namespace EQLogParser
       }
 
       FctScale.Text = FctScale.ClampSize(sizeSlider.Value);
-      FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedFromPercent(speedSlider.Value));
+      FctScale.Time = FctScale.TimeFromPercent(speedSlider.Value);
       ShowScaleReadouts();
       RefreshDemo();
     }
@@ -372,15 +379,37 @@ namespace EQLogParser
     }
 
     /*
-     * Keeps the demo running while configure mode is up, and restarts its cycle on every control change: the next cue lands at the new
-     * size and tempo, so a slider can be dragged slowly and watched. Idempotent — a canvas that is already running just keeps going
-     * (FctDemo does not restart a cycle from here), and a locked or hidden window never asks for it.
+     * Keeps the sample numbers running while configure mode is up, and restarts their cycle on every control change: the next cue lands at the new size
+     * and speed, so a dial can be dragged slowly and watched. Idempotent — a canvas that is already running just keeps going (FctDemo does not restart a
+     * cycle from here), and a locked or hidden window never asks for it. Nothing happens while the checkbox is off: that is the mode where somebody is
+     * placing the overlay in the middle of a fight and wants to see only what is really landing.
      */
     private void RefreshDemo()
     {
-      if (!_locked && IsVisible)
+      if (!_locked && IsVisible && sampleDataCheck?.IsChecked == true)
       {
         _canvas.StartDemo();
+      }
+    }
+
+    /*
+     * Sample data on and off. It is a view aid for this session rather than a setting — nothing writes it, it comes back on when setup opens again, and a
+     * player who turns it off to work over a live fight should get the examples again next time they want to see what a dial does.
+     */
+    private void SampleDataChanged(object sender, RoutedEventArgs e)
+    {
+      if (_canvas is null)
+      {
+        return; // the checkbox arrives before the canvas does, and its initial "checked" state must not reach for it
+      }
+
+      if (sampleDataCheck.IsChecked == true && !_locked && IsVisible)
+      {
+        _canvas.StartDemo();
+      }
+      else
+      {
+        _canvas.StopDemo();
       }
     }
 

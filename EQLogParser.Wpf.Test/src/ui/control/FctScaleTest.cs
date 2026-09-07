@@ -5,10 +5,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser
 {
   /*
-   * The two dials on the configure row. What matters here is not arithmetic but three decisions that are invisible if somebody changes them: a text
-   * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the speed dial has to
-   * reach further toward fast than toward slow, because the slow end at half tempo is unusable in a fight; and the middle of that dial is a shipped
-   * tempo of 1.15 rather than 1.0, which is a preference about how the feature feels and wants pinning as loudly as any constant.
+   * The two dials on the configure row. What matters here is not arithmetic but the three decisions that are invisible if somebody changes them: a text
+   * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the speed dial is
+   * measured in percent of the time a number spends on screen, so +50 % has to mean half as long and not two thirds; and its middle is 0.877 of the
+   * measured time rather than 1.0, which is a preference about how the feature feels and wants pinning as loudly as any constant.
    */
   [TestClass]
   public class FctScaleTest
@@ -40,65 +40,68 @@ namespace EQLogParser
     }
 
     /*
-     * The shape of the speed dial, which is the thing a player noticed: half speed (twice as long on screen) is unusable while playing, and half again
-     * as fast was not enough. So the ends are -30 % and +90 % of the shipped tempo - it stops only a little past the pace that used to be neutral, and
-     * reaches roughly twice as fast as that pace. Both ends are asserted in duration as well as speed, because duration is what a number actually gets:
-     * 1.24x at the slow end and 0.46x at the fast one.
+     * The shape of the speed dial. It is centred — plus or minus 50 % of the time a number is on screen, with the middle meaning nothing — and where
+     * that middle sits is a decision: it is the midpoint of the band that playing with the previous asymmetric dial produced, about 0.877 of the time
+     * everything was choreographed at. Half the time on screen at one end (0.44x), half again as long at the other (1.32x), and neither end in the
+     * twice-as-long territory nobody can play under.
      */
     [TestMethod]
-    public void SpeedRange_ReachesFurtherUpThanDown()
+    public void SpeedDial_IsCentredAndMeasuredInTimeOnScreen()
     {
-      // the middle of the track, in both units: 15 % quicker than the tempo everything was choreographed at, and the durations that implies
-      var shippedSpeed = FctScale.SpeedFromPercent(FctScale.SpeedPercentDefault);
-      var shippedTime = FctScale.TimeFromSpeed(shippedSpeed);
-      Assert.AreEqual(1.15, shippedSpeed, 0.0001, "the middle of the dial is the measured tempo plus 15 %, not 1.0");
-      Assert.AreEqual(0.87, shippedTime, 0.01, $"and a number at that setting lives {shippedTime:0.00} times as long as the baseline");
+      var middle = FctScale.TimeFromPercent(FctScale.SpeedPercentDefault);
+      Assert.AreEqual(0.877, middle, 0.0001, "the middle is the midpoint of the band people actually used, not 1.0");
 
-      var slowest = FctScale.SpeedFromPercent(FctScale.SpeedPercentMin);
-      var fastest = FctScale.SpeedFromPercent(FctScale.SpeedPercentMax);
-      Assert.AreEqual(0.805, slowest, 0.0001, "-30 % of that tempo is the slow end");
-      Assert.AreEqual(2.185, fastest, 0.0001, "+90 % is the fast end");
+      /* The ends are ±50 of the same unit — symmetry is what makes the middle parkable by feel, and the loop in
+         Speed_ReversesIntoDurationWithoutLosingTheSign walks every snapped position between them. */
 
-      var slowTime = FctScale.TimeFromSpeed(slowest);
-      var fastTime = FctScale.TimeFromSpeed(fastest);
+      var fastest = FctScale.TimeFromPercent(FctScale.SpeedPercentMax);
+      var slowest = FctScale.TimeFromPercent(FctScale.SpeedPercentMin);
 
-      Assert.IsTrue(slowTime < 1.3, $"the slow end should not be a slideshow (was {slowTime:0.00}x the measured time)");
-      Assert.IsTrue(fastTime < 0.5, $"the fast end should be well past the old two-thirds limit (was {fastTime:0.00}x)");
+      Assert.AreEqual(middle * 0.5, fastest, 0.0001, "+50 % of speed is half the time on screen, not two thirds of it");
+      Assert.AreEqual(middle * 1.5, slowest, 0.0001, "and -50 % is half again as long");
+      Assert.IsTrue(slowest < 1.35, $"the slow end must stay playable (was {slowest:0.00}x the measured time)");
+      Assert.IsTrue(fastest > 0.4, $"the fast end must stay readable (was {fastest:0.00}x)");
 
-      // and the extra reach is on the side people asked for
-      Assert.IsTrue(fastest - shippedSpeed > shippedSpeed - slowest, "the dial runs further toward fast than toward slow");
+      // the same positions as a rate, which is what settings.ini holds and what an older build stored: about twice the measured tempo one way and
+      // three quarters of it the other, so the reach is where playing with the feature put it rather than where a symmetric rate dial would have
+      var fastRate = FctScale.SpeedFromPercent(FctScale.SpeedPercentMax);
+      var slowRate = FctScale.SpeedFromPercent(FctScale.SpeedPercentMin);
+      Assert.AreEqual(2.28, fastRate, 0.01, $"the fast end reaches past where the old dial stopped (was {fastRate:0.00}x tempo)");
+      Assert.AreEqual(0.76, slowRate, 0.01, $"and the slow end stops well short of twice as long up (was {slowRate:0.00}x tempo)");
     }
 
     /*
-     * Speed is what the dial measures and a duration is what a number gets, so the conversion runs through a division: 100 % faster would be half the
-     * time on screen. Two things worth asserting - that moving right never makes anything slower, and that every snapped position on the track comes
-     * back as the percent it showed. Both directions are also how an older build's stored duration is read back.
+     * Speed is what the dial shows and a duration is what a number gets, so every position has to survive the trip out and back: monotonic in the
+     * direction the player drags (right never slower), and the readout saying exactly where the thumb is. Both directions are also how a stored rate
+     * from an older build is read back, so junk there lands on the default rather than being honoured literally.
      */
     [TestMethod]
     public void Speed_ReversesIntoDurationWithoutLosingTheSign()
     {
-      Assert.AreEqual(1 / 1.15, FctScale.TimeFromSpeed(FctScale.SpeedDefault), 0.0001, "the shipped position converts to a duration, not to nothing");
-
       var previousDuration = double.MaxValue;
 
       for (var percent = FctScale.SpeedPercentMin; percent <= FctScale.SpeedPercentMax; percent += 5)
       {
+        var time = FctScale.TimeFromPercent(percent);
         var speed = FctScale.SpeedFromPercent(percent);
-        var duration = FctScale.TimeFromSpeed(speed);
 
-        Assert.IsTrue(duration < previousDuration, $"{percent:+0;-0;0}% was not shorter than the slower setting before it");
-        Assert.AreEqual(percent, FctScale.PercentOfSpeed(speed), "the readout does not say where the track is");
-        Assert.AreEqual(speed, FctScale.SpeedFromTime(duration), 0.001, "the conversion does not come back the way it went");
+        Assert.IsTrue(time < previousDuration, $"{percent:+0;-0;0}% was not shorter than the slower setting before it");
+        Assert.AreEqual(percent, FctScale.PercentOfTime(time), "the readout does not say where the track is");
+        Assert.AreEqual(percent, FctScale.PercentOfSpeed(speed), "the stored rate does not come back as the position it came from");
+        Assert.AreEqual(speed, FctScale.SpeedFromTime(time), 0.001, "rate and duration do not agree with each other");
 
-        previousDuration = duration;
+        previousDuration = time;
       }
 
-      /* Junk from settings.ini: a zero duration is not "infinitely fast", and a negative one is not slow. Neither has a direction, so both land on
-         the default rather than being honoured literally into an overlay that draws nothing. */
+      /* Junk from settings.ini: a zero duration is not "infinitely fast", and a negative one is not slow. */
       Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(0));
       Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(-2));
       Assert.AreEqual(FctScale.SpeedDefault, FctScale.SpeedFromTime(double.NaN));
       Assert.AreEqual(FctScale.SpeedDefault, FctScale.ClampSpeed(double.PositiveInfinity), "and infinity has no end to clamp toward");
+      // a hand-edited number is clamped toward the end it was reaching for; only a value with no direction at all falls back to the middle
+      Assert.AreEqual(FctScale.TimeMin, FctScale.ClampTime(0.0001), "a duration of almost nothing means the fastest setting");
+      Assert.AreEqual(FctScale.TimeMax, FctScale.ClampTime(40));
+      Assert.AreEqual(FctScale.TimeDefault, FctScale.ClampTime(double.NaN));
     }
 
     /*
@@ -116,19 +119,19 @@ namespace EQLogParser
         FctScale.Time = 1;
         var baseLife = LifetimeOf(FctLane.DamageDealt, 500, false);
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedDefault);
-        Assert.IsTrue(LifetimeOf(FctLane.DamageDealt, 500, false) < baseLife, "the shipped speed did not shorten a new number against the measured baseline");
+        FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentDefault);
+        Assert.IsTrue(LifetimeOf(FctLane.DamageDealt, 500, false) < baseLife, "the middle of the dial did not shorten a new number against the measured baseline");
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMax);
+        FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentMax);
         var quick = LifetimeOf(FctLane.DamageDealt, 500, false);
         Assert.IsTrue(quick < baseLife * 0.6, $"the fast end barely reached (was {quick:0} against {baseLife:0})");
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMin);
+        FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentMin);
         var slow = LifetimeOf(FctLane.DamageDealt, 500, false);
         Assert.IsTrue(slow > baseLife, "the slow end of the dial did not make a new number last longer");
 
         // floors underneath: the fastest setting on the shortest kind of number is quick, not a blink
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMax);
+        FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentMax);
         var tickHits = new List<FctHitState>();
         var tick = new FctIngest().Accept(tickHits, FctLane.DamageTaken, 100, "Bite", false, false, true, null, 800, 560, 0);
         Assert.IsNotNull(tick);
@@ -141,7 +144,7 @@ namespace EQLogParser
         Assert.IsNotNull(first);
         var bornLife = first.LifetimeMs;
 
-        FctScale.Time = FctScale.TimeFromSpeed(FctScale.SpeedMin);
+        FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentMin);
         Assert.AreEqual(bornLife, first.LifetimeMs, "a number on screen changed underneath the player");
       }
       finally

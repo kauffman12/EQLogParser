@@ -12,9 +12,9 @@ namespace EQLogParser
     public const string MotionKey = "FctOverlayMotion";
 
     /* The two dials on the configure row, stored as multipliers rather than percentages: the file is a place where a human may look, and the value
-       that means something to the code is the one worth writing. Size runs 0.5 - 1.5; speed runs 0.805 - 2.185 around a shipped 1.15 (see FctScale for
-       why those ends are asymmetric, and why they are not the same numbers as the dial shows). FctScale clamps on the way in, so a hand-edited "big"
-       or 12 lands on that dial's default instead of drawing nothing or running at four times tempo. */
+       that means something to the code is the one worth writing. Size runs 0.5 - 1.5; speed runs 0.76 - 2.28 around a shipped 1.14, which are the ends of
+       a dial measured in percent of time taken rather than in rate (see FctScale). FctScale clamps on the way in, so a hand-edited "big" or 12 lands on
+       that dial's default instead of drawing nothing or running at four times tempo. */
     public const string TextScaleKey = "FctOverlayTextScale";
     public const string SpeedKey = "FctOverlaySpeed";
 
@@ -39,7 +39,7 @@ namespace EQLogParser
       }
 
       /* Absent on both counts: the shipped tempo. A legacy 1.0 is a stored preference for the pace that used to ship, and stays slower than this. */
-      return FctScale.SpeedFromTime(ConfigUtil.GetSettingAsDouble(LegacyTimeScaleKey, 1 / FctScale.SpeedDefault));
+      return FctScale.SpeedFromTime(ConfigUtil.GetSettingAsDouble(LegacyTimeScaleKey, FctScale.TimeDefault));
     }
 
     public static void SaveSpeed(double speed) => ConfigUtil.SetSetting(SpeedKey, FctScale.ClampSpeed(speed));

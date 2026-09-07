@@ -819,32 +819,41 @@ other retired key here.
 ### Two dials and a short loop: what configuring is for
 
 A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries two
-dials — **size** and **speed** — each stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial is
-three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed *underneath*. That shape is about room. The row
-started as one line with each number read out beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout
-that grows sideways runs out of window at some width somebody chose — so the numbers moved below, where they cost nothing, and another dial can be added
-beside them. The marks carry the size rather than the labels because they are what you consult while a thumb is moving. Everything wraps: a narrow
+dials — **size** and **speed** — each ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
+is three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed underneath — **with its own percent sign**,
+because a bare 50 next to a slider reads like a count of something. That shape is about room. The row started as one line with each number read out
+beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout that grows sideways runs out of window at some
+width somebody chose — so the numbers moved below, where they cost nothing, and another dial can be added beside them. The marks carry the size rather
+than the labels because they are what you consult while a thumb is moving. Nothing gets a row to itself: the direction legend (`↑ yours ↓ on you`) sits
+on that same bottom line rather than underneath everything, which is why the header is about 60 px and not three bands of it. Everything wraps: a narrow
 overlay drops the speed dial under the size dial, never a button off the edge.
 
 **The second dial is speed, not time — it used to be called time, and it ran backwards.** A control labelled "time" whose right-hand end makes numbers
-appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So the dial says
-speed (bigger and faster at the right), is stored as `FctOverlaySpeed`, and `FctScale.Time` remains exactly what `FctIngest` has always multiplied: how
-long a number lives. The conversion is a division in one place (`TimeFromSpeed`) rather than a subtraction, because "50 % faster" is two thirds of the
-time on screen, not 50 % less of it. `FctScale.Time` must therefore **not** be clamped with the dial's own bounds, which would silently cut an end off.
+appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So it says speed,
+bigger and faster at the right, and stores `FctOverlaySpeed`. What it is *measured in* is percent of how long a number stays up: **+50 % takes half as
+long on screen, −50 % lasts half again as long**, and the middle is nothing. Naming it speed and measuring it in time are two different things and both
+were needed — the name is for the gesture, the unit is for the eye, and the inversion lives in one function (`FctScale.TimeFromPercent`) so that nothing
+downstream holds a reciprocal in its head. `FctScale.Time` stays exactly what `FctIngest` has always multiplied: how long a number lives, travels and
+fades.
 
-**The two dials are not symmetrical, and neither asymmetry is an accident.** Size runs ±50 % around 1.0, centred, because the type scale genuinely is
-centred on the size everything was measured at — lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextReserve`,
-the adaptive lifetime under load — and half again in either direction is where that stops describing the feature: past it, damage and healing columns
-begin to occupy each other at ordinary window sizes. Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
+**Both dials centre on their default now, and getting there moved the middle of this one.** It used to run −30 % to +90 % of a tempo — asymmetric because
+playing with the feature said the usable band sat faster than the measured baseline (twice as long on screen is unplayable; half again as fast was not
+enough) — and an asymmetric dial cannot be parked by feel. So the centre became the midpoint of that band's two *results*: numbers lived 1.24× as long at
+one end and 0.51× at the other, and halfway between those is `TimeDefault = 0.877` of the measured time — about 1.14× the tempo, which is all but the pace
+the dial had already settled on shipping at. ±50 % of that gives 0.44× at the fast end (past where the old dial stopped) and 1.32× at the slow (nowhere
+near the twice-as-long nobody can fight under). The shape of the usable band survived; it just moved out of two asymmetric ends and into one number.
+Re-scaling choreography, layout budgets and the adaptive controller to make that the new 1.0 would have been the same opinion with forty constants in it,
+plus re-measuring everything measured at 1.0.
 
-Speed neither centres on 1.0 nor reaches equally far, because playing with it said so. Half speed — twice as long on screen — is unusable in a fight, and
-half again as fast was not enough; the tempo worth sitting at turned out to be about **15 % quicker than the one that shipped**. So this dial is measured
-in percent *of the shipped tempo*, runs **−30 % to +90 %**, and parks at `SpeedDefault = 1.15`: numbers live 0.87× what they used to by default, 1.24× at
-the slow end (a little past the old neutral pace rather than double it) and 0.46× at the fast end. A tempo is a preference about feel, so it moved as one
-number on one dial — re-scaling choreography, layout budgets and the adaptive controller to make 1.15 the new zero would have been the same opinion with
-forty constants in it, plus a re-measurement of everything measured at 1.0. The floors in `FctIngest` (900 ms of life, 200 ms of fade) are what keep the
-fast end from becoming a flicker, and they now apply at every setting including the default, since there is no longer an unset case where this dial
-should keep its hands off.
+Size is ±50 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
+lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextReserve`, the adaptive lifetime under load — and half again in
+either direction is where that stops describing the feature: past it, damage and healing columns begin to occupy each other at ordinary window sizes.
+Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
+
+**Sample data has a checkbox, on by default.** The scripted loop is the reason configure mode teaches anything, but there is a second thing people do in
+configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples
+can be switched off next to the speed dial. It is a view aid for the session rather than a setting — nothing writes it, and setup opens with them back on,
+because the next time somebody opens this panel they almost certainly want to see what a dial does again.
 
 Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
 tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
