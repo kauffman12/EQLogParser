@@ -26,17 +26,19 @@ namespace EQLogParser
    * no panel, nothing drawn but the numbers, click-through and non-activating (WS_EX_TRANSPARENT + WS_EX_NOACTIVATE — the same recipe
    * TextOverlayWindow/TimerOverlayWindow use). **Configuring** is entered deliberately from the app menu and not from the overlay,
    * because this window sits in the middle of the screen where a permanent settings row would be fighting the player's view of the
-   * game; the Damage Meter can carry a toolbar because you park it in a corner. Esc goes back to locked.
+   * game; the Damage Meter can carry a toolbar because you park it in a corner. Save finishes configuring and keeps the settings;
+   * Esc finishes without keeping them.
    *
-   * Lock state is deliberately not a stored setting: "reopen unlocked" has no honest use, and a state that outlives the session it
-   * was meant for turns an overlay into a click-eating rectangle the next time the game starts.
-   * Unlock from the Tools menu, or press Esc while it has focus to close.
+   * Configure mode is deliberately not a stored setting: nothing good comes from a window that reopens having grabbed the mouse, and
+   * a state that outlives the session it was meant for turns an overlay into a click-eating rectangle the next time the game starts.
+   * Settings are staged while configuring and written only by the Save button; Esc ends configuring with the previous ones back.
+   * Placement is the exception, saved as soon as a drag or resize is released — where you left it is never ambiguous.
    *
    * Direction is vertical and the only scheme there is: my hits rise above an empty middle strip, hits on me sink below
    * it. The overlay cannot know where the player's target is on screen, so what makes direction readable is that strip plus
-   * the direction of travel; the hint line states which is which because it is the only documentation a player sees while
-   * fighting. The old left/right halves switch is gone — see the FctLayout header for why it could not be made to work with
-   * the styles built after it.
+   * the direction of travel, so configure mode states it in two arrows and nothing else; a sentence about it gets read once and then
+   * sits there being clutter. The old left/right halves switch is gone — see the FctLayout header for why it could not be made to
+   * work with the styles built after it.
    */
   public partial class FctOverlayWindow : Window
   {
@@ -75,13 +77,18 @@ namespace EQLogParser
     private double _lastStatsMs = -1000;
     private bool _locked;
 
+    /* Settings are staged while configuring and committed by Save: the combo previews live so a style can be judged before it is
+       kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one mis-click
+       silently changes somebody's setup, and there is no Undo next to the control that did it. */
+    private FctMotionStyle _savedStyle;
+
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
 
     // lets the Tools menu item uncheck itself when the window is closed with Esc
     public event Action EventsClosed;
 
-    // keeps the menu's lock item and the in-window checkbox telling the same story
+    // keeps the Tools menu's Configure item and the window telling the same story
     public event Action<bool> EventsLockChanged;
 
     public bool Locked => _locked;
@@ -108,17 +115,22 @@ namespace EQLogParser
     }
 
     /*
-     * Lock state driven from the Tools menu (the in-window checkbox is unreachable while clicks pass through).
-     * Unlocking activates the window: a user who just asked to move it should get Esc and typing-free dragging.
+     * Configure mode driven from the Tools menu, the only way in while clicks pass through. Entering it activates the window: a
+     * player who just asked to move it should get Esc and dragging immediately. Leaving it without Save puts the settings back —
+     * abandoning a configuration session is not the same gesture as approving one. (Save ends it from inside, via ApplyLock.)
      */
     public void SetLocked(bool locked)
     {
-      ApplyLock(locked);
-
       if (!locked)
       {
+        ApplyLock(false);
         Activate();
+        return;
       }
+
+      _canvas.MotionStyle = _savedStyle;
+      SelectMotionOption(_savedStyle);
+      ApplyLock(true);
     }
 
     private void OnSourceInitialized(object sender, EventArgs e)
@@ -130,8 +142,8 @@ namespace EQLogParser
     /*
      * Extended styles for the current lock state, driven through the same NativeMethods constants as the timer,
      * text and toolbar overlays. Layered is what lets a transparent WPF window be hit-tested at all; toolwindow
-     * keeps it out of the taskbar and Alt+Tab in both states (the window is draggable while unlocked and Esc closes it, so an
-     * overlay being positioned does not need an Alt+Tab entry to be reachable). Locked adds transparent — clicks
+     * keeps it out of the taskbar and Alt+Tab in both states (it is draggable while configuring and Esc ends that, so positioning an
+     * overlay never needs an Alt+Tab entry to be reachable). Locked adds transparent — clicks
      * fall through to EverQuest — and no-activate, so showing or moving it never takes focus mid-fight.
      */
     private int CurrentStyles()
@@ -154,9 +166,6 @@ namespace EQLogParser
     private void ApplyLock(bool locked)
     {
       _locked = locked;
-
-      lockCheck.IsChecked = locked;
-      UpdateHint(locked);
 
       // belt-and-braces for frames between the request and the style actually landing
       rootBorder.IsHitTestVisible = !locked;
@@ -217,29 +226,10 @@ namespace EQLogParser
          a stale entry in someone's settings.ini is inert, as retired keys should be. */
       _locked = true;
 
-      _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
-      SelectMotionOption(_canvas.MotionStyle);
-
-      UpdateHint(_locked);
+      _savedStyle = FctOverlaySettings.LoadMotion();
+      _canvas.MotionStyle = _savedStyle;
+      SelectMotionOption(_savedStyle);
       _settingsReady = true;
-    }
-
-    /*
-     * The hint is the only documentation on screen, so it says what the layout means instead of a generic "drag to move":
-     * the strip to line up with your cast bar is the one instruction that makes direction click.
-     */
-    private void UpdateHint(bool locked)
-    {
-      if (locked)
-      {
-        /* Barely ever seen — checking this box is also the gesture that hides the row it lives in. */
-        hintText.Text = "locked · configure from the Tools menu";
-        return;
-      }
-
-      // terse on purpose: the hint shares one row with the motion combo and the lock checkbox, and a legend that gets
-      // ellipsised is a legend nobody can read while fighting
-      hintText.Text = "drag anywhere · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc locks it back";
     }
 
     private void SaveSettings()
@@ -280,8 +270,8 @@ namespace EQLogParser
       _lastStatsMs = now;
       var dropped = _diagnostics.DroppedCount + FctManager.Instance.DroppedCount;
       statsText.Text = dropped > 0
-        ? $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} active · {dropped} dropped"
-        : $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} active";
+        ? $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} live · {dropped} dropped"
+        : $"{_diagnostics.Fps:0} fps · {_canvas.ActiveCount} live";
     }
 
     /*
@@ -295,8 +285,8 @@ namespace EQLogParser
         return;
       }
 
+      /* Preview only: the next numbers use it so the style can be judged, and nothing reaches settings.ini until Save. */
       _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
-      FctOverlaySettings.SaveMotion(_canvas.MotionStyle);
     }
 
     private void SelectMotionOption(FctMotionStyle style)
@@ -315,7 +305,18 @@ namespace EQLogParser
       motionCombo.SelectedIndex = 0; // an unknown stored name: show the default rather than an empty box
     }
 
-    private void LockChanged(object sender, RoutedEventArgs e) => ApplyLock(lockCheck.IsChecked == true);
+    /*
+     * Save is the only thing that writes: the previewed style becomes the setting, the window keeps its place, and configuring
+     * ends. There is no "lock" checkbox here any more because that box was never about locking — it was the way out, labelled with
+     * a side effect, so a player clicking it to finish was surprised by their mouse being taken away.
+     */
+    private void SaveClick(object sender, RoutedEventArgs e)
+    {
+      _savedStyle = _canvas.MotionStyle;
+      FctOverlaySettings.SaveMotion(_savedStyle);
+      SaveSettings();
+      ApplyLock(true);
+    }
 
     /*
      * Every band does the same three things, so they are wired in one loop rather than with twenty-four XAML attributes. The
@@ -471,9 +472,10 @@ namespace EQLogParser
     }
 
     /*
-     * Esc ends configure mode. It does not close the overlay: losing a carefully positioned window to a stray key is the worse
-     * failure, and hiding it is a menu action either way. A locked window is click-through and WS_EX_NOACTIVATE, so in practice it
-     * receives no keyboard input at all — which is fine, because locked is where it starts and where Esc leaves you.
+     * Esc ends configure mode without saving — the same thing the menu does when unticked, so one key cannot quietly commit what the
+     * preview was only showing off. It does not close the overlay: losing a carefully positioned window to a stray key is the worse
+     * failure, and hiding it is a menu action anyway. A locked window is click-through and WS_EX_NOACTIVATE, so in practice it gets
+     * no keyboard input at all — which is fine, because locked is where it starts and where Esc leaves you.
      */
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
@@ -482,7 +484,7 @@ namespace EQLogParser
         return;
       }
 
-      ApplyLock(true);
+      SetLocked(true);
     }
 
     private void OnClosed(object sender, EventArgs e)

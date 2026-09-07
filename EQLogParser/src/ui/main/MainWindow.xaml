@@ -455,12 +455,12 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="fctOverlay" Header="FCT _Overlay" IsCheckable="True" Click="ToggleFctOverlayClick" ToolTip="Floating combat text from real log records (live monitor lines only)">
+          <MenuItem x:Name="fctOverlay" Header="FCT _Overlay" IsCheckable="True" Click="ToggleFctOverlayClick" ToolTip="Show or hide floating combat text from the live log.">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Bolt" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="configureFctOverlay" Header="_Configure FCT Overlay" IsCheckable="True" Click="ToggleConfigureFctOverlayClick" ToolTip="Shows the overlay's controls and lets the mouse at it, so you can drag it, resize it and pick a motion style. The overlay opens with nothing on screen but numbers and clicks pass through to EverQuest; this is the deliberate way to configure it, and Esc puts it back.">
+          <MenuItem x:Name="configureFctOverlay" Header="_Configure FCT Overlay" IsCheckable="True" Click="ToggleConfigureFctOverlayClick" ToolTip="Show the overlay's controls so you can drag it, resize it and pick a motion style. Save keeps them, Esc does not.">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Visibility="Visible" Icon="Solid_Cog" />
             </MenuItem.Icon>

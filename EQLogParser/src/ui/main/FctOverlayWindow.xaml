@@ -21,7 +21,7 @@
         UseLayoutRounding="True"
         WindowStyle="None"
         KeyDown="WindowKeyDown">
-  <!-- while unlocked, any press that no control or resize band took moves the window; while locked rootBorder is not
+  <!-- while configuring, any press that no control or resize band took moves the window; while locked rootBorder is not
        hit-test visible, so there is nothing to press and clicks reach EverQuest -->
   <Grid MouseLeftButtonDown="OverlayDrag">
   <!-- the panel is configure-mode furniture: ApplyLock swaps its background and border to transparent while locked, so playing
@@ -33,9 +33,8 @@
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
-      <!-- three columns so the header cannot collide with itself: controls on the left, the hint in the stretchable
-           middle (it abbreviates on a narrow overlay), stats pinned right. A single-cell Grid of two StackPanels looked
-           fine at 980px and overlapped as soon as somebody shrank the window over their HUD. -->
+      <!-- three columns so this row cannot collide with itself: controls left, legend centred, diagnostics right. A
+           single-cell pile looked fine at 980px and overlapped as soon as somebody shrank the window. -->
       <!-- hidden, not collapsed, while locked: the row keeps its height so entering configure mode cannot move a single number,
            and nothing in it paints or takes clicks while you are fighting -->
       <Grid x:Name="headerGrid" Grid.Row="0" Margin="2,0,2,6">
@@ -46,20 +45,20 @@
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="FCT" FontSize="13" FontWeight="Bold" Foreground="#D6E1EC" VerticalAlignment="Center" />
-          <TextBlock Text="motion" Margin="12,0,4,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" />
-          <ComboBox x:Name="motionCombo" Width="86" FontSize="12" VerticalAlignment="Center" SelectionChanged="MotionChanged"
-                    ToolTip="hold: travel, stop, fade in place&#10;fountain: overshoot, then fall (mirrored on the lower band)&#10;pulse: fixed cells, one number each, swells as it lands&#10;spray: wide random arcs, out then down&#10;&#10;applies to new hits, so you can switch mid-fight to see which reads best">
+          <ComboBox x:Name="motionCombo" Width="86" Margin="10,0,0,0" FontSize="12" VerticalAlignment="Center"
+                    SelectionChanged="MotionChanged" ToolTip="motion style — applies to numbers from now on">
             <ComboBoxItem Content="hold" Tag="hold" />
             <ComboBoxItem Content="fountain" Tag="fountain" />
             <ComboBoxItem Content="pulse" Tag="pulse" />
             <ComboBoxItem Content="spray" Tag="spray" />
           </ComboBox>
-          <CheckBox x:Name="lockCheck" Content=" lock (click-through)" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="#9FB4C8" Checked="LockChanged" Unchecked="LockChanged" />
+          <Button x:Name="saveButton" Content="Save" Margin="12,0,0,0" Padding="12,2" FontSize="12" Click="SaveClick"
+                  ToolTip="keep these settings and stop configuring — Esc leaves them unsaved" />
         </StackPanel>
-        <!-- the hint is the only documentation a player reads mid-fight, so it gets the flexible column and trims
-             rather than pushing over the controls; a press on the hint bubbles up and moves the window -->
-        <TextBlock x:Name="hintText" Grid.Column="1" Margin="14,0,14,0" FontSize="11" Foreground="#6B7A8C"
-                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <!-- the whole legend. Direction is the one thing worth saying, and two arrows say it; what used to sit here was a
+             sentence about cast bars and mouse buttons that nobody read twice -->
+        <TextBlock Grid.Column="1" Text="↑ yours   ↓ on you" Margin="14,0,14,0" FontSize="12" Foreground="#8FA6BC"
+                   VerticalAlignment="Center" HorizontalAlignment="Center" />
         <TextBlock x:Name="statsText" Grid.Column="2" FontSize="12" Foreground="#7FD1FF" VerticalAlignment="Center" />
       </Grid>
       <local:FctSkiaCanvas x:Name="fctCanvas" Grid.Row="1" />

@@ -628,8 +628,8 @@ neighbours, so plain placement gave 11-22 overlapping pairs on the same burst. H
 choreographed styles to fall inside, which is why their fall had a mode-specific special case. Two geometry systems that
 each satisfy half the styles cost more than one that satisfies all of them, and the fallback was not earning its keep, so it
 was removed rather than fixed; a stale `FctOverlayLayout` entry in an existing settings.ini is simply unread now. The
-overlay's hint line still states what the layout means, because that line is the only documentation anyone reads while
-fighting.
+configure row labels the direction of travel and nothing else — `↑ yours   ↓ on you` — because that is the one thing the geometry
+cannot say for itself. The sentence-long hint it replaced was read once and then became clutter.
 
 A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
 incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own
@@ -780,14 +780,26 @@ Locked is not a setting — it is what the overlay *is*. It opens locked, it is 
 the controls row is hidden, the panel background and border are transparent, the resize bands are gone, and clicks pass through to
 EverQuest. What is on the screen is damage numbers and nothing else.
 
-That last part was a defect hiding inside a feature. The header (`FCT`, motion combo, lock checkbox, hint, stats) and a dark rounded
-panel used to paint in both states, over the middle of the game view — furniture nobody asked to look at while fighting, on a window
-whose whole job is to be out of the way. Making it numbers-only was not a cosmetics pass.
+That last part was a defect hiding inside a feature. The header (`FCT`, motion combo, a "lock (click-through)" checkbox, a
+sentence-long hint, stats) and a dark rounded panel used to paint in both states, over the middle of the game view — furniture nobody
+asked to look at while fighting, on a window whose whole job is to be out of the way. Making it numbers-only was not a cosmetics pass.
+The row that remains got read for clutter at the same time: the hint sentence and the `motion` label in front of a combo that can only
+be a motion combo are gone, and so is the checkbox — see below.
 
-**Configuration is entered deliberately from the app menu** (Tools → Configure FCT Overlay) and Esc puts it back. Not from a button on
-the overlay: this window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park
-that in a corner. The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number —
-the moment you are positioning them is precisely when the layout must not shift.
+**Configuration is entered deliberately from the app menu** (Tools → Configure FCT Overlay). Not from a button on the overlay: this
+window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park that in a corner.
+The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number — the moment you are
+positioning them is precisely when the layout must not shift.
+
+**Save is what writes**, and it is also the way out: press it and the settings stick and configuring ends. Everything else that ends
+configure mode — Esc, unticking the menu item — puts back what was saved before, because abandoning a configuration session is not the
+same gesture as approving one. The motion combo previews live (the next numbers use the new style) and writes nothing, so trying a
+style costs a click and un-trying it costs nothing.
+
+That replaces a "lock (click-through)" checkbox, which was never about locking. It was the only way out of configure mode wearing a
+side effect as its label, so the player who clicked it to finish got their mouse taken away and no way to notice they had also not
+saved anything. A button that says what happens is worth more than a toggle that guesses. Placement is the one thing saved without
+being asked: geometry is written when a drag or resize is released, because where you left the window is never ambiguous.
 
 Lock state is deliberately **not persisted**. A saved "unlocked" is a state that outlives the session it was meant for: next launch,
 the overlay is an invisible rectangle eating clicks over the game, and the player's only diagnosis is that the UI feels haunted. Same
@@ -801,9 +813,9 @@ grip is a 12 px band along each edge: corners size both axes, edges size one. Th
 window whose clicks pass through to EverQuest must not offer anything to click, and the header's top inset was raised past them so
 no control sits where a drag for size starts.
 
-Moving it is not a treasure hunt either: while unlocked, any press that no control and no resize band took moves the window. The
+Moving it is not a treasure hunt either: while configuring, any press that no control and no resize band took moves the window. The
 header used to be the only draggable band, which meant hunting for twelve pixels of chrome while a number floated past where you were
-aiming. Controls keep their own clicks because a combo or checkbox handles the press before it bubbles, and locking removes the whole
+aiming. Controls keep their own clicks because a combo or button handles the press before it bubbles, and locked removes the whole
 question by making the window click-through.
 
 What it settles on is a **magnet, not a menu** (`FctResize`): drag freely and each axis is pulled onto an offered value when it
@@ -941,7 +953,7 @@ though `Type` carries the label there. Miss that and the same swing reads "Crush
 number — invisible in a log file, obvious in peripheral vision. Nothing else is ever conjugated: every other `SubType`
 is a spell name, and proper nouns keep their letters (`Crown of Stars` is not `Crown of Star`).
 
-### Locked by default: click-through and persistence
+### Click-through and persistence
 
 In game the overlay must not eat clicks or take focus, so `FctOverlayWindow` runs layered plus
 `WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` while locked — the same recipe as the timer, text and toolbar overlays: read
@@ -949,20 +961,19 @@ the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits
 `NativeMethods.SetWindowLong` through `GetWindowLongFields.GwlExstyle`. Transparency itself is declared once in XAML
 (`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
 and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
-every hover over the overlay and buys nothing observable. Lock state and geometry persist through `ConfigUtil`
-(`FctOverlayLeft/Top/Width/Height/Enabled`) and the overlay reopens at startup, locked, if it was open on exit. The one
-presentation switch — motion style (`FctOverlayMotion`) — persists through
-`FctOverlaySettings`, read by the overlay and by both simulation windows so a hold run and a spray run differ in nothing
-but the thing being compared. `FctOverlayMotion` also reads the old
+every hover over the overlay and buys nothing observable. Geometry persists through `ConfigUtil`
+(`FctOverlayLeft/Top/Width/Height/Enabled`) — written when a drag or resize is released, not by Save, because where you left the window
+is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
+*Two states*). The one presentation switch — motion style (`FctOverlayMotion`) — persists through `FctOverlaySettings` and is written
+**only by the Save button**, read by the overlay and by both simulation windows so a hold run and a spray run differ in nothing but the
+thing being compared. `FctOverlayMotion` also reads the old
 `FctOverlayFountain` boolean when its own key is absent: an upgrade should keep the choreography somebody had already
 chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.
 
-Because a locked window cannot be clicked — and `WS_EX_NOACTIVATE` means it gets no keyboard input either — **Tools → Configure FCT
-Overlay** is the only way into configure mode, and Esc is the way out again: it re-locks rather than closing, because losing a
-carefully positioned overlay to a stray key is the worse failure and hiding the overlay is a menu action anyway. `MainWindow` mirrors
-the state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and dragging are live immediately,
-and asking to configure while the overlay is hidden shows it first rather than doing nothing silently.
+`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and
+dragging are live immediately, and asking to configure while the overlay is hidden shows it first rather than doing nothing silently.
+The menu item unticking ends configure mode the same way Esc does — settings back the way they were, overlay still open.
 
 `NativeMethods` exposes exactly two style vocabulary sets — `ExtendedWindowStyles` and `GetWindowLongFields` — and
 neither has a `WS_EX_APPWINDOW` member nor a plain `GWL_STYLE` accessor. Overlay windows stay toolwindows in both
