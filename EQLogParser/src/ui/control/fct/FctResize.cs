@@ -12,7 +12,7 @@ namespace EQLogParser
    * The offered sizes are a magnet, not a menu. Drag freely and the axes snap when they come near an offered value, so a precise
    * drag can still land anywhere legal and a sloppy one lands somewhere sensible. They snap per axis rather than as whole presets:
    * dragging a single edge gets the same help as dragging a corner, and a corner dragged near 800x560 settles exactly on it. The
-   * combinations in between are legal too — every size down to MinWidth/MinHeight keeps all four styles inside the window and out
+   * combinations in between are legal too — every size down to MinWidth/MinHeight keeps every style inside the window and out
    * of the protected strip, which was probed at 980x640, 900x600, 700x520, 560x420, 460x360 and 420x300 rather than assumed.
    *
    * 980x640 is the size the layout was designed and measured at. The three smaller ones exist because that is wider than most

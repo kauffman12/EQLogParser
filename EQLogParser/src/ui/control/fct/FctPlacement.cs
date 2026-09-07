@@ -179,6 +179,17 @@ namespace EQLogParser
 
     private static double WorstOverlap(FctHitState candidate, FctHitState other)
     {
+      /* A drawn block never leaves its own [SideMin, SideMax]: ArcedX clamps the centre to that range with the half-width
+       * priced at peak scale, and the block is never wider than it was priced. Two numbers whose side ranges do not overlap
+       * therefore cannot touch at any sampled instant — in halves that answers every cross-region pair before a single sample
+       * is spent (the two halves' ranges are disjoint by construction), while in bands both sides carry the canvas range and
+       * no pair is ever skipped. Bit-identical output, because the sweep these pairs would run always scored zero.
+       */
+      if (candidate.SideMax <= other.SideMin || other.SideMax <= candidate.SideMin)
+      {
+        return 0;
+      }
+
       // wall-clock alignment: the other hit was spawned earlier, so it is that much further along at any candidate age
       var ageOffset = candidate.SpawnMs - other.SpawnMs;
       if (ageOffset >= other.LifetimeMs)

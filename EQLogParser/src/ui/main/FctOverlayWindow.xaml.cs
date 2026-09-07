@@ -332,6 +332,15 @@ namespace EQLogParser
         _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
       }
 
+      /* A hand-written settings.ini can name a motion the scheme cannot run — bands plus parabola is exactly that pairing, and
+         it gets stored whether by edited file or by an older build. Configure mode must not show it selected (a disabled combo
+         item with a number stream that quietly ISN'T it) while ingest draws something else, so the stored combination is legalised
+         here, before anything reads it: same rule LayoutChanged enforces at selection time, applied to what was loaded. */
+      if (_savedLayout.Mode is FctLayoutMode.Bands && _savedStyle is FctMotionStyle.Parabola)
+      {
+        _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
+      }
+
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
       _canvas.Layout = _savedLayout;
