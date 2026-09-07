@@ -21,7 +21,7 @@ namespace EQLogParser
     private static readonly string[] MeleeVerbs = ["Bite", "Claw", "Crush", "Pierce", "Punch", "Slash"];
 
     private static readonly string[] Words =
-      [Labels.Dodge, Labels.Parry, Labels.Block, Labels.Miss, Labels.Riposte, Labels.Absorb, Labels.Invulnerable];
+      [Labels.Dodge, Labels.Parry, Labels.Block, Labels.Miss, Labels.Riposte, Labels.Absorb, Labels.Invulnerable, Labels.Resist];
 
     [TestMethod]
     public void Script_CoversWhatAPlayerHasToTellApart()

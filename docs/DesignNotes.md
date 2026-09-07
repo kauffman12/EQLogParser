@@ -1170,8 +1170,13 @@ constant deliberately rather than assume it is there.
 ### What is deliberately not here yet
 
 - Party-wide and other-players' heals: fed only when group configuration exists to scope them.
-- Resist/immune as distinct event classes: the parser reports partial resists as reduced totals (which display
-  correctly) and full immunity as `Labels.Invulnerable`; there is no "resisted 75%" record to show, so nothing is invented.
+- Resist percentages as data: the parser reports partial resists as reduced totals (which display correctly) and full immunity as
+  `Labels.Invulnerable`; there is no "resisted 75%" record to show, so nothing is invented. Full resist *lines* do now reach the overlay
+  as the word `Resist` — `MiscLineParser` already recognised and stored them (`Restless Tijoely resisted your Stormjolt Vortex Effect!`)
+  but nothing was listening; a new event carries the stored record to `FctManager`, which routes it exactly like a blocked punch — my
+  spell failed goes to the Missed lane, I resisted theirs to Defensive — because a punch that gets blocked and a spell that gets resisted
+  are the same piece of information wearing different grammar. The spell name rides along as the source line (the parser's "your pet's X"
+  quirk gets "pet's " stripped on the way); party mates' resists stay out, like the rest of the feed.
 - Per-character or per-lane configuration, palette customization, and a reduced-motion mode. Colour is deliberately
   not load-bearing for reading the overlay — direction comes from region plus travel, and the two lanes that could
   be confused (my whiff vs a defence that worked) are also separated by size and band — so a palette switch is a

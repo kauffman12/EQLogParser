@@ -33,7 +33,7 @@ namespace EQLogParser
     public const double CycleMs = 12000;
 
     /* How far the last cue sits from the end of the cycle: enough for the longest lifetime in play to finish inside the loop. */
-    internal const double TailMs = CycleMs - 7150;
+    internal const double TailMs = CycleMs - 7480;
 
     /* One scheduled event. Same shape as the queue command a real log line becomes, which is deliberate: the demo feeds the ingest
        nothing a parse could not have fed it. */
@@ -94,6 +94,9 @@ namespace EQLogParser
       new Cue(6300, FctLane.DamageDealt, 896, "Pierce"),
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
       new Cue(7150, FctLane.DamageDealt, 4126, "Slash", crit: true),
+
+      // my spell failed the way a punch gets blocked: the word lane for outgoing failures, same as Miss
+      new Cue(7480, FctLane.Missed, valueText: Labels.Resist),
     };
 
     /* Its own ingest on purpose: see the class comment. Nothing in here can reach the overlay's counters or its live numbers. */

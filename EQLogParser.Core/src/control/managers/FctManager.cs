@@ -49,6 +49,7 @@ namespace EQLogParser
     {
       DamageLineParser.EventsDamageProcessed += HandleDamage;
       HealingLineParser.EventsHealProcessed += HandleHeal;
+      MiscLineParser.EventsResistProcessed += HandleResist;
     }
 
     /* Drops the pending feed and unsubscribes from the parsers, so a replaced Instance does not stay
@@ -58,6 +59,7 @@ namespace EQLogParser
       Enabled = false;
       DamageLineParser.EventsDamageProcessed -= HandleDamage;
       HealingLineParser.EventsHealProcessed -= HandleHeal;
+      MiscLineParser.EventsResistProcessed -= HandleResist;
       Clear();
     }
 
@@ -170,6 +172,48 @@ namespace EQLogParser
         Periodic = e.Record.Type == Labels.Hot,
         Value = e.Record.Total,
         Source = string.IsNullOrEmpty(e.Record.SubType) ? null : e.Record.SubType,
+      });
+    }
+
+    /*
+     * A resist is a punch that was blocked, wearing a spell: same one-word label, same lane rule — my spell failed
+     * goes to Missed (outgoing), I resisted theirs goes to Defensive. MiscLineParser already recognised and stored
+     * the line ("Restless Tijoely resisted your Stormjolt Vortex Effect!"); this turns it into the label command,
+     * because until now the event had no listener and FCT showed nothing at all for a resisted cast.
+     *
+     * The parser's "your" branch leaves "pet's " glued to the spell when the line was "resisted your pet's X" —
+     * stripped here so the source line reads as the spell, not the grammar around it. FCT covers my character only,
+     * like the damage feed: a party mate's resisted cast is noise.
+     */
+    internal void HandleResist(ResistEvent e)
+    {
+      if (!Enabled || e.Record is null || !e.IsMonitor)
+      {
+        return;
+      }
+
+      var iAmCaster = e.Record.Attacker == ConfigUtil.PlayerName ||
+                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Attacker) == ConfigUtil.PlayerName;
+      var iAmResister = e.Record.Defender == ConfigUtil.PlayerName ||
+                        e.Record.Defender == "You" || // a line worded with the literal "You" still means me
+                        PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Defender) == ConfigUtil.PlayerName;
+
+      if (!iAmCaster && !iAmResister)
+      {
+        return;
+      }
+
+      var spell = e.Record.Spell;
+      if (spell is not null && spell.StartsWith("pet's ", StringComparison.Ordinal))
+      {
+        spell = spell[6..];
+      }
+
+      Enqueue(new FctHitCommand
+      {
+        Lane = iAmCaster ? FctLane.Missed : FctLane.Defensive,
+        ValueText = Labels.Resist,
+        Source = spell,
       });
     }
 

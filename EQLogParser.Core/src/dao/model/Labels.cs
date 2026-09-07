@@ -37,5 +37,9 @@ namespace EQLogParser
     public const string Parry = "Parry";
     public const string Block = "Block";
     public const string Invulnerable = "Invulnerable";
+
+    /* FCT label for a spell event with no number: the log spells it past tense ("X resisted your Y") and the
+     * overlay speaks the same one-word dialect as Miss/Dodge/Block. See FctManager.HandleResist. */
+    public const string Resist = "Resist";
   }
 }
