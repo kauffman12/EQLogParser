@@ -806,7 +806,7 @@ the overlay is an invisible rectangle eating clicks over the game, and the playe
 reasoning retired `FctOverlayLocked` outright rather than defaulting it to true — inert in existing settings.ini files, like every
 other retired key here.
 
-### Two dials and five frozen numbers: what configuring is for
+### Two dials and a short loop: what configuring is for
 
 A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row
 carries two sliders — text size, and how long a number takes to show and finish — each clamped by `FctScale` to ±30 % and stepped at 5 %, so
@@ -825,32 +825,42 @@ prevent. Two consequences worth stating: changing size leaves everything current
 speed, which reads as a stutter rather than as a slower overlay. Floors hold underneath — never below 900 ms of life or 200 ms of fade — so
 ±30 % compounded on top of what `FctLifeController` does under raid load makes numbers quick rather than flickering.
 
-**Five frozen examples**, because hovering a slider in a game overlay would otherwise mean waiting for combat to produce one of each type on
-demand:
+**A short scripted loop plays while configure mode is up**, because hovering a slider in a game overlay would otherwise mean waiting for combat
+to produce one of each type on demand:
 
 ```csharp
-foreach (var hit in FctPreview.Build(ActualWidth, ActualHeight, MotionStyle))
+foreach (var hit in _demo.Hits)   // FctDemo: about twenty events over twelve seconds
 ```
 
-A crit, a normal hit with its ability line, a zero-damage word, healing on the incoming side, and a periodic tick carrying a fold count — the
-five things a player has to be able to tell apart, including the smallest tier and the only one that reads `×3`. They are drawn after the real
-numbers through the identical per-hit draw path, kept in a canvas list apart from `_hits`, each stamped with `PreviewPhase`: one field meaning
-"draw me at this fraction of my life instead of at wall-clock age". That single field is also why they cannot do damage anywhere else — they
-are never handed to `FctIngest`, so they hold no lane slot, cannot be folded into or evicted, do not age, and are absent from `ActiveCount` and
-from every loss counter. An example that displaced a real number would make the settings row part of the game.
+Melee swings, a crit or two, a spell damage-over-time ticking the same amount three times so it folds into `412 ×3`, a proc, healing received
+(including a crit heal), a hit landing on you, and the zero-damage words — the things a player has to be able to tell apart, arriving in roughly
+the order a fight sends them. Still frames were built first and were wrong: five exhibits pinned to a board cannot show tempo at all, and the row
+looked like a diagram of the overlay instead of the overlay.
 
-Two choices inside it. They are spread across the width rather than standing in their lane columns: five examples cannot share three columns,
-and what has to be readable is size, shape and which side of the middle a number runs on — so the columns give way while band and direction
-stay exactly as real hits have them. And they are built through the same geometry calls, in the same order, that a live hit gets, including the
-fall `FctIngest` bakes for fountain and spray (`FctLayout.ApplyFall`, mirrored: an outgoing number turns over toward the bottom of the screen,
-an incoming one back up toward the strip). A preview showing a look the real overlay does not have would be worse than none — it would teach
-that the control does something it does not. The examples arrive with the controls and leave with them: an example still on screen after Save
-is a fake hit the player has to learn to ignore.
+It runs through a **private `FctIngest` into a private list**, not the overlay's. Same choreography — style, band, travel, folding, placement,
+adaptive lifetime — and the same text building, which is why dragging either dial shows up in the numbers as they land. Separate rather than
+shared because the real ingest owns the counters: folding a demo number into a live one, or counting a demo drop as lost data, would put the demo
+inside the data. `ActiveCount` and every loss counter stay honest, and a real number that arrives while configuring behaves exactly as it always
+has — drawn after the demo, so on top of it.
 
-The panel itself is neutral now — black glass, a `#4DFFFFFF` hairline, grey-white labels — where it was blue steel (`#5C7A99` on `#0D131A`). It
-has to read over a snow zone and over a dungeon corridor, and the app's palette has no blue in it: framed in steel blue the overlay looked like
-somebody else's addon pasted on top. The numbers keep their colours; those are the vocabulary (§Colour answers "what", never "who") and only
-the furniture around them changed.
+The script's vocabulary is EverQuest's own, and that is a checked claim rather than an impression: melee verbs are the parser's
+(`StatsUtil.RegularMeleeTypes`, in the base form `FctManager.DisplaySource` prints — "Bite", not "Bites"), spell names appear in the shipped
+`data/spells.txt`, proc names in `data/procs.txt`, and the words are `Labels` constants so they cannot drift from what the parser assigns.
+Invented vocabulary — an early draft said "Backhand" — teaches a player to expect text that never appears. `FctDemoTest` asserts every name in the
+script against those files.
+
+Scheduling carries one promise: the last cue lands 7.15 s into a 12 s cycle, so every number has launched, travelled, held and faded before the
+loop restarts. A cycle that cleared live text at the seam would look like the overlay truncates fades, which reads as a bug in the feature rather
+than as a loop. The four quiet seconds at the end are also what makes it legible as a loop instead of as noise.
+
+And like the controls, the demo starts with configure mode and stops with it — unlike static exhibits, an un-stopped loop keeps asking for frames,
+which a window you are fighting in should not spend.
+
+The panel is neutral and translucent: `#73000000` (about 45 % black) with a hairline brighter than its own fill (`#8CFFFFFF`) so the frame stays
+findable against a bright zone, plus grey-white labels. It was blue steel (`#5C7A99` on `#0D131A`) over an 80 % black wall: the app's palette has
+no blue in it, so framed in steel blue the overlay read as somebody else's addon pasted on top — and at that opacity the panel hid exactly what the
+numbers are being positioned against. The numbers keep their colours; those are the vocabulary (§Colour answers "what", never "who") and only the
+furniture around them changed.
 
 ### Under View, beside the Damage Meter, behaving like it
 

@@ -62,17 +62,6 @@ namespace EQLogParser
     public double LifetimeMs, FadeMs;
     public double ValueFontSize, SourceFontSize;
 
-    /*
-     * 0..1 = draw this hit frozen at that fraction of its life instead of at wall-clock age: the configure-mode examples
-     * (FctPreview) are held up by this one field. Everything else leaves it at -1 and reads age from SpawnMs as usual.
-     *
-     * A phase rather than a pinned age, so a preview sits at the same point of its flight whatever tempo it was built with;
-     * and a field on the hit rather than a parallel list policy, so no age comparison anywhere has to know about previews. Previews
-     * are never handed to FctIngest, which is what keeps an example from taking a lane slot, being folded into, evicted, aged out
-     * or counted as anything.
-     */
-    public double PreviewPhase = -1;
-
     // 0xAARRGGBB, converted per substrate; keeps the style table free of WPF/Skia types
     public int ValueArgb, SourceArgb;
 

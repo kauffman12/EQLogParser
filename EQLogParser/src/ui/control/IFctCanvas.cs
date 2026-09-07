@@ -27,16 +27,18 @@ namespace EQLogParser
     void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false);
 
     /*
-     * Draw the frozen examples (FctPreview) of the current size and style, or take them away. Configure mode uses this so a setting
-     * can be judged without waiting for combat to produce a crit, a tick, a dodge and a heal in one glance.
+     * Run / stop the configure-mode demo (FctDemo): a short scripted loop — melee, crits, a folding damage-over-time tick, a proc,
+     * heals, a hit landing on you, the zero-damage words — so a size, speed or style change can be seen moving without waiting for
+     * combat to produce one of each type on demand.
      *
-     * Examples are not hits: they never reach FctIngest, so they hold no lane slot, cannot be folded into or evicted, do not age,
-     * and are absent from ActiveCount and every other diagnostic. ShowPreview rebuilds from the canvas's current size and settings,
-     * so it is cheap enough to call on every control change — a preview that lags a slider is worse than no preview.
+     * The demo runs through its own FctIngest into its own list: it holds no lane slot in play, cannot be folded into a real number,
+     * cannot evict one, and is absent from ActiveCount and every loss counter. It is drawn by the same per-hit path as real numbers and
+     * responds to the motion style and both dials exactly as they do, which is the whole point: starting it again after a control change
+     * costs nothing and shows the truth. Live numbers keep behaving normally while it plays.
      */
-    void ShowPreview();
+    void StartDemo();
 
-    void ClearPreview();
+    void StopDemo();
   }
 
   /* Per-second counters for tuning and dogfooding. Overload has to be visible to be fixed. */

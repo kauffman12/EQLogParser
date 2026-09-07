@@ -26,7 +26,9 @@
   <Grid MouseLeftButtonDown="OverlayDrag">
   <!-- the panel is configure-mode furniture: ApplyLock swaps its background and border to transparent while locked, so playing
        shows numbers over EverQuest with nothing drawn behind them -->
-  <Border x:Name="rootBorder" CornerRadius="10" Background="#CC000000" BorderBrush="#4DFFFFFF" BorderThickness="1">
+  <!-- translucent on purpose: this panel sits over the game, and a wall of black hides what you are trying to look at while
+       configuring it. The hairline is brighter than the fill so the frame is still findable against a bright zone. -->
+  <Border x:Name="rootBorder" CornerRadius="10" Background="#73000000" BorderBrush="#8CFFFFFF" BorderThickness="1">
     <!-- the top inset clears the 12px resize band above it, so nothing clickable ever sits where a drag for size starts -->
     <Grid Margin="12,16,12,12">
       <Grid.RowDefinitions>

@@ -39,7 +39,10 @@ namespace EQLogParser
     private readonly Dictionary<FctHitState, Glyphs> _glyphs = [];
 
     /* The configure-mode examples, kept apart from _hits so no policy path — folding, eviction, expiry, diagnostics — ever sees them. */
-    private readonly List<FctHitState> _preview = [];
+    /* The configure-mode demo (FctDemo): its own ingest, its own list, drawn after the real numbers. The overlay uses this canvas too
+       in the simulations, so the same loop is available for comparing backends on identical scripted input. */
+    private readonly FctDemo _demo = new();
+    private bool _demoWanted;
     private readonly Brush _outlineBrush = FrozenBrush(BlackArgb);
     private readonly Brush _glowBrush = FrozenBrush(unchecked((int)0x40000000));
 
@@ -95,42 +98,26 @@ namespace EQLogParser
       CompositionTarget.Rendering -= OnRendering;
       _hits.Clear();
       _glyphs.Clear();
-      _preview.Clear();
+      _demo.Clear(null);
+      _demoWanted = false;
     }
 
-    /* Shows / hides the frozen configure-mode examples (FctPreview), drawn exactly like real hits but never handed to ingest. */
-    public void ShowPreview()
+    /*
+     * Starts / stops the configure-mode demo (FctDemo). Its numbers run through a private FctIngest into a private list, so they take no
+     * slot from play, cannot be folded into a real hit and are counted as nothing - but they are built, placed and drawn by the same code
+     * a log line becomes, which is what makes them worth looking at.
+     */
+    public void StartDemo()
     {
-      ReleasePreview();
-      _preview.Clear();
-
-      foreach (var hit in FctPreview.Build(ActualWidth, ActualHeight, MotionStyle))
-      {
-        BuildGlyphs(hit);
-        _preview.Add(hit);
-      }
-
+      _demoWanted = true;
       _dirty = true;
     }
 
-    public void ClearPreview()
+    public void StopDemo()
     {
-      if (_preview.Count == 0)
-      {
-        return;
-      }
-
-      ReleasePreview();
-      _preview.Clear();
+      _demoWanted = false;
+      _demo.Clear(h => _glyphs.Remove(h));
       _dirty = true;
-    }
-
-    private void ReleasePreview()
-    {
-      foreach (var hit in _preview)
-      {
-        _glyphs.Remove(hit);
-      }
     }
 
     public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false)
@@ -161,10 +148,7 @@ namespace EQLogParser
       RefreshDpi();
       FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
 
-      if (_preview.Count > 0)
-      {
-        ShowPreview(); // laid out for the old window, so rebuilt rather than stretched
-      }
+      _demo.Rescale(sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
 
       _dirty = true;
     }
@@ -185,10 +169,17 @@ namespace EQLogParser
         }
       }
 
-      /* The examples last: their age comes from their phase instead of the clock, which is what holds them still. */
-      foreach (var hit in _preview)
+      /* The demo last, and in two passes for the same reason the real hits are: a crit sits above what was already on screen. Its
+         numbers age from their own spawn time like any other hit - this is animation, not an exhibit. */
+      for (var pass = 0; pass < 2; pass++)
       {
-        DrawHit(dc, hit, hit.PreviewPhase * hit.LifetimeMs);
+        foreach (var hit in _demo.Hits)
+        {
+          if (hit.Blowout == (pass == 1))
+          {
+            DrawHit(dc, hit, now - hit.SpawnMs);
+          }
+        }
       }
 
       _dirty = false;
@@ -210,7 +201,8 @@ namespace EQLogParser
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
-      if (_hits.Count == 0 && !_dirty)
+      /* A wanted or running demo is never idle: animation that is not pumped stands still. */
+      if (_hits.Count == 0 && !_dirty && !_demoWanted && !_demo.Active)
       {
         return;
       }
@@ -230,6 +222,16 @@ namespace EQLogParser
       }
 
       if (_ingest.PruneExpired(_hits, now, h => _glyphs.Remove(h)) > 0)
+      {
+        _dirty = true;
+      }
+
+      if (_demoWanted && !_demo.Active)
+      {
+        _demo.Start(now);
+      }
+
+      if (_demo.Advance(now, ActualWidth, ActualHeight, BuildGlyphs, h => _glyphs.Remove(h)))
       {
         _dirty = true;
       }

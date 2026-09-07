@@ -18,7 +18,8 @@
         UseLayoutRounding="True"
         WindowStyle="None"
         KeyDown="WindowKeyDown">
-  <Border CornerRadius="10" Background="#F5000000" BorderBrush="#4DFFFFFF" BorderThickness="1" MouseLeftButtonUp="RootMouseLeftButtonUp">
+  <!-- translucent like the overlay: these windows sit over the game and are read against it, not instead of it -->
+  <Border CornerRadius="10" Background="#A6000000" BorderBrush="#8CFFFFFF" BorderThickness="1" MouseLeftButtonUp="RootMouseLeftButtonUp">
     <Grid Margin="16,12,16,14">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />

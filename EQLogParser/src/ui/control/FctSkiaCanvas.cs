@@ -47,7 +47,10 @@ namespace EQLogParser
     private readonly Dictionary<FctHitState, string> _haloKey = [];
 
     /* The configure-mode examples, kept apart from _hits so no policy path — folding, eviction, expiry, diagnostics — ever sees them. */
-    private readonly List<FctHitState> _preview = [];
+    /* The configure-mode demo (FctDemo): its own ingest and its own list, drawn after the real numbers. Wanted is separate from
+       active because the clock may not exist yet when configure mode opens - the pump starts it as soon as there is one. */
+    private readonly FctDemo _demo = new();
+    private bool _demoWanted;
 
     private SKTypeface _boldTypeface, _regularTypeface;
     private SKMaskFilter _glowBlur;
@@ -144,51 +147,31 @@ namespace EQLogParser
       RefreshDpi();
       FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
 
-      /* The examples were laid out for the window they were built in; rebuild rather than stretch, since their whole job is to
-         be in the right place at the size being looked at. */
-      if (_preview.Count > 0)
-      {
-        ShowPreview();
-      }
+      /* Demo numbers were laid out against the old size too, and motion never revisits that: mapped like any other live hit. */
+      _demo.Rescale(sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
 
       _dirty = true;
     }
 
-    /* Shows / hides the frozen configure-mode examples (FctPreview). They are drawn by the same path as real hits but never
-       handed to ingest, so they take no lane slot and cannot be folded into, evicted or counted. */
-    public void ShowPreview()
+    /*
+     * Starts / stops the configure-mode demo (FctDemo): a short loop of events - melee, crits, a folding DoT, a proc, heals, a hit on
+     * you, the zero-damage words - so a size or style change can be seen moving without a fight.
+     *
+     * They run through a private FctIngest into a private list, so nothing here touches the overlay's counters or its real numbers:
+     * no lane slot taken from play, nothing folded into a live hit, no demo drop counted as lost data. Every one of them owns substrate
+     * like any other number - glyph run, and for a crit, a referenced halo - so both paths release through ReleaseHalo.
+     */
+    public void StartDemo()
     {
-      ReleasePreview();
-      _preview.Clear();
-
-      foreach (var hit in FctPreview.Build(ActualWidth, ActualHeight, MotionStyle))
-      {
-        RebuildGlyphs(hit);
-        _preview.Add(hit);
-      }
-
+      _demoWanted = true;
       _dirty = true;
     }
 
-    public void ClearPreview()
+    public void StopDemo()
     {
-      if (_preview.Count == 0)
-      {
-        return;
-      }
-
-      ReleasePreview();
-      _preview.Clear();
+      _demoWanted = false;
+      _demo.Clear(ReleaseHalo);
       _dirty = true;
-    }
-
-    /* Every preview owns substrate like any other hit: its glyph run and, for a crit example, a referenced halo surface. */
-    private void ReleasePreview()
-    {
-      foreach (var hit in _preview)
-      {
-        ReleaseHalo(hit);
-      }
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -237,9 +220,17 @@ namespace EQLogParser
 
       /* The examples last and on top: they are what configure mode is looking at, and they cannot collide with anything because
          nothing about them is real. Their age comes from their phase, not the clock, which is what holds them still. */
-      foreach (var hit in _preview)
+      /* The demo last and on top, aged from its own spawn time like any real number: it is animation, not an exhibit. Two passes for
+         the same reason the real hits get two - a crit should sit above what was already on screen. */
+      for (var pass = 0; pass < 2; pass++)
       {
-        DrawHit(canvas, hit, hit.PreviewPhase * hit.LifetimeMs);
+        foreach (var hit in _demo.Hits)
+        {
+          if (hit.Blowout == (pass == 1))
+          {
+            DrawHit(canvas, hit, now - hit.SpawnMs);
+          }
+        }
       }
 
       Blit(dc, scale);
@@ -262,8 +253,9 @@ namespace EQLogParser
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
-      // idle and nothing to clear: skip the raster entirely
-      if (_hits.Count == 0 && !_dirty)
+      /* Idle and nothing to clear: skip the raster entirely. A wanted or running demo is never idle - it is animation, and animation
+         that is not pumped stands still, which is the difference between a preview and an empty window. */
+      if (_hits.Count == 0 && !_dirty && !_demoWanted && !_demo.Active)
       {
         return;
       }
@@ -283,6 +275,16 @@ namespace EQLogParser
       }
 
       if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+      {
+        _dirty = true;
+      }
+
+      if (_demoWanted && !_demo.Active)
+      {
+        _demo.Start(now);
+      }
+
+      if (_demo.Advance(now, ActualWidth, ActualHeight, RebuildGlyphs, ReleaseHalo))
       {
         _dirty = true;
       }
@@ -660,7 +662,7 @@ namespace EQLogParser
       _halos.Clear();
       _haloKey.Clear();
       _hits.Clear();
-      _preview.Clear(); // the halos they referenced were disposed with every other halo above
+      _demo.Clear(null); // the halos its numbers referenced were disposed with every other halo above
       ReleaseSurface();
 
       _glowBlur?.Dispose();

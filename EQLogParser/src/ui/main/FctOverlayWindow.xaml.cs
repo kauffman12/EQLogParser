@@ -75,8 +75,8 @@ namespace EQLogParser
      * over a dungeon corridor alike — the app's own palette has no blue in it, and a steel-blue frame looked like somebody else's
      * overlay pasted on top.
      */
-    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0xCC, 0x00, 0x00, 0x00));
-    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
+    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0x73, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x8C, 0xFF, 0xFF, 0xFF));
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
@@ -115,9 +115,9 @@ namespace EQLogParser
 
       HookResizeBands();
 
-      /* First paint is when the canvas knows its size, which is also the first moment examples can be laid out: configure mode
-         opened on a window that had never been drawn would otherwise show none (FctPreview builds nothing in a zero-sized canvas). */
-      ContentRendered += (_, _) => UpdatePreview();
+      /* The demo wants the window's real size to place its numbers, which is not known until the first layout pass. Starting it is
+         cheap and idempotent, so ask again after first paint rather than guessing at a size. */
+      ContentRendered += (_, _) => RefreshDemo();
 
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
@@ -194,15 +194,16 @@ namespace EQLogParser
          configure mode. A settings row that shifts the numbers while you are positioning them would defeat the point. */
       headerGrid.Visibility = locked ? Visibility.Hidden : Visibility.Visible;
 
-      /* The examples belong to configure mode: they appear with the controls and go with them, so a locked overlay over the game
-         shows nothing but real numbers — an example that outlived setup would be a fake hit the player has to learn to ignore. */
+      /* The demo belongs to configure mode: it starts with the controls and stops with them, so a locked overlay over the game shows
+         nothing but real numbers. Demo text that outlived setup would be fake damage the player has to learn to ignore — and unlike a
+         static example, an un-stopped loop keeps asking for frames, which a window you are fighting in should not spend. */
       if (locked)
       {
-        _canvas.ClearPreview();
+        _canvas.StopDemo();
       }
       else
       {
-        UpdatePreview();
+        RefreshDemo();
       }
 
       rootBorder.Background = locked ? Brushes.Transparent : PanelBackground;
@@ -223,7 +224,7 @@ namespace EQLogParser
       {
         FctManager.Instance.Enabled = true;
         _canvas.Start();
-        UpdatePreview(); // coming back on screen while configuring: the examples belong with the controls
+        RefreshDemo(); // coming back on screen while configuring: the demo belongs with the controls
       }
       else
       {
@@ -298,10 +299,9 @@ namespace EQLogParser
     private static string ScaleText(double scale) => $"{FctScale.Percent(scale):+0;-0;—}%";
 
     /*
-     * Both dials preview the moment they move — onto the examples, and onto any real number that lands afterwards — and write
-     * nothing. Sizing is applied at style time (FctStyle.ApplyTo) and tempo at spawn (FctIngest), so dragging a slider never tugs
-     * at text already in flight; the examples are rebuilt so there is always something on screen showing the change, which is what
-     * lets you judge a size without waiting for a crit.
+     * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and
+     * write nothing. Sizing is applied at style time (FctStyle.ApplyTo) and tempo at spawn (FctIngest), so dragging a slider never tugs at
+     * text already in flight; the demo keeps producing events, which is what lets you watch a change arrive instead of imagining it.
      */
     private void ScaleChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -313,7 +313,7 @@ namespace EQLogParser
       FctScale.Text = FctScale.Clamp(sizeSlider.Value);
       FctScale.Time = FctScale.Clamp(timeSlider.Value);
       ShowScaleReadouts();
-      UpdatePreview();
+      RefreshDemo();
     }
 
     /* Snap-to-tick makes the middle reachable by feel, but a slider dragged near the middle is still worth a certain way back. */
@@ -329,12 +329,16 @@ namespace EQLogParser
       }
     }
 
-    /* The examples follow every control change: five numbers rebuilt is nothing, and a preview that lags a control is worse than none. */
-    private void UpdatePreview()
+    /*
+     * Keeps the demo running while configure mode is up, and restarts its cycle on every control change: the next cue lands at the new
+     * size and tempo, so a slider can be dragged slowly and watched. Idempotent — a canvas that is already running just keeps going
+     * (FctDemo does not restart a cycle from here), and a locked or hidden window never asks for it.
+     */
+    private void RefreshDemo()
     {
       if (!_locked && IsVisible)
       {
-        _canvas.ShowPreview();
+        _canvas.StartDemo();
       }
     }
 
@@ -431,7 +435,7 @@ namespace EQLogParser
 
       /* Preview only: the next numbers use it so the style can be judged, and nothing reaches settings.ini until Save. */
       _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
-      UpdatePreview();
+      RefreshDemo();
     }
 
     private void SelectMotionOption(FctMotionStyle style)
