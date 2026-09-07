@@ -8,12 +8,12 @@ namespace EQLogParser
    * text about my own body sinks out of the bottom, with a band across the middle kept clear because that is where EQ's
    * own windows sit and where the spell effects being looked at happen (docs/combat-text-overlay-design.md §1).
    *
-   * There is deliberately one region scheme. The original left/right halves split survived here for a while as a
-   * switchable fallback, and every style added afterwards had to be told about it: the cell grid's columns are measured
-   * against the canvas width, so halves collapsed several "distinct" cells onto one place (4 overlapping numbers in 8),
-   * while taking the grid away there was worse (11-22), and halves offered no vertical band for the choreographed styles
-   * to fall inside. Two geometry systems that each satisfy half the styles is worse than one that satisfies all of them,
-   * so the split is gone rather than fixed. Rationale: docs/DesignNotes.md → Floating Combat Text.
+   * There are two region schemes, and which one is live is a FctStage: bands (the original — the vertical direction above
+   * is its invariant) and halves (two side-by-side streams, the genre standard, with per-side direction). Halves was removed
+   * once, as a fallback, for two reasons that are now both fixed on the region rather than on the styles: every geometry
+   * below is measured against the hit's own region (FctCellGrid included — the old collapse was columns measured against
+   * canvas width), and halves has no protected strip to fall into because the regions do not overlap, so the choreographed
+   * falls bounce off the far end of their own half instead. Rationale for both: docs/DesignNotes.md → Floating Combat Text.
    */
   internal static class FctLayout
   {
@@ -93,8 +93,12 @@ namespace EQLogParser
       (hit.ValueFontSize * TextHeightFactor) +
       (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
 
-    /* Where a lane's column sits across the overlay. Kept here because Spawn and FctPlacement both need it, and a placement
-     * search that invented its own columns would be a second layout pretending not to be one. */
+    /*
+     * Where a lane's column sits across the overlay, in bands — the "what" carrier there: damage toward the middle of the
+     * band, healing out wide, crits and labels centred. Halves has none of these columns (one stream per side; type is read
+     * from colour, size and the heal sign), so halves callers never ask it. Kept in this class because Spawn and FctPlacement
+     * both need it, and a placement search that invented its own columns would be a second layout pretending not to be one.
+     */
     public static double LaneSlot(FctLane lane, double w) => lane switch
     {
       FctLane.HealingDealt or FctLane.HealingReceived => w * 0.63,
@@ -132,34 +136,46 @@ namespace EQLogParser
      * the window edges apply to a requested origin exactly as they do to a random one.
      */
     public static void Spawn(FctHitState hit, double w, double h, Random rand, (double X, double Y)? origin = null)
-    {
-      var cx = LaneSlot(hit.Lane, w);
+      => Spawn(hit, FctStage.Bands(w, h), rand, origin);
 
-      hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (w * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
+    /*
+     * Everything a number needs before it can move: where it starts (x and y), how far it may go (Rise/Arc, via
+     * AssignTravel) and the clamp band it stays inside (via Refit). All of it comes out of the hit's stage — bands and halves
+     * are one code path that differs in which rect owns the side and which sign its travel has, not two layouts.
+     */
+    public static void Spawn(FctHitState hit, FctStage stage, Random rand, (double X, double Y)? origin = null)
+    {
+      var region = stage.RegionFor(hit.Incoming);
+      var territory = stage.TerritoryFor(hit.Incoming);
+
+      /* Halves has no lane columns — one stream per side, so every lane spawns in the half's own centre. Bands keeps them. */
+      var cx = stage.Mode is FctLayoutMode.Halves ? region.X + (region.Width / 2) : LaneSlot(hit.Lane, stage.W);
+
+      hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
 
       /*
        * Clamped here as well as at draw time by FctMotion.ArcedX, which must hold anyway for a resize mid-flight. The reason to
        * do it here too is candour: two candidates that both end up pinned against a window edge are one position, scored as two
        * they read as empty space — the damage column sits left of centre, so its wide draws went off the left edge first, and
        * numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
-       * there" comes from.
+       * there" comes from. In halves the walls are the half's own edges, which is what keeps a stream inside its territory.
        */
       var sideMargin = (hit.ValueWidth * PeakScaleOf(hit)) / 2;
-      hit.X0 = w - EdgePad - sideMargin <= EdgePad + sideMargin
-        ? w / 2                                // text wider than the window: nothing to place, so centre it
-        : Math.Clamp(hit.X0, EdgePad + sideMargin, w - EdgePad - sideMargin);
+      var xLo = region.X + EdgePad + sideMargin;
+      var xHi = region.X + region.Width - EdgePad - sideMargin;
+      hit.X0 = xHi <= xLo
+        ? region.X + (region.Width / 2)        // text wider than its territory: nothing to place, so centre it there
+        : Math.Clamp(hit.X0, xLo, xHi);
 
-      var up = 1;
-      Refit(hit, w, h);
-      if (hit.Incoming)
-      {
-        hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
-        up = -1;  // away from the gap is downward here
-      }
-      else
-      {
-        hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
-      }
+      var up = stage.UpFor(hit.Incoming);
+      Refit(hit, stage);
+
+      /* The spawn edge is whichever end the side starts from: down-travelling numbers start at the top of their band and
+       * rising ones at the bottom. Bands arrives here with out-up/in-down, so this is the old rule expressed through the sign;
+       * halves reads the same two lines for whatever direction each side was given. */
+      hit.Y0 = up > 0
+        ? hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble())
+        : hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
 
       /* An explicitly requested origin skips the depth jitter but not the travel: how far a number may go depends on where it
        * started, and FctPlacement asks for origins precisely so it can compare whole flights, not just resting spots. */
@@ -168,23 +184,22 @@ namespace EQLogParser
         hit.Y0 = Math.Clamp(origin.Value.Y, hit.BandMinY, hit.BandMaxY);
       }
 
-      /* A proc starts deeper in its band than the row of hits it arrived beside. Clamped by the band ends, which already
-       * carry the vertical reserve on one side and the edge pad on the other, so this cannot push anything into the strip or
-       * out of the window — it only ever moves hits away from the strip, further up in my band and further down in theirs. */
+      /* A proc starts deeper in its band than the row of hits it arrived beside — deeper being further along the travel,
+       * away from the spawn edge. Clamped by the band ends, which already carry the vertical reserve on one side and the
+       * edge pad on the other, so this cannot push anything out of the window; in bands it is the old "further from the
+       * strip" rule, and in halves there is no strip to measure from. */
       if (hit.Proc)
       {
         var inset = BandSpan(hit) * ProcInsetFrac;
-        hit.Y0 = hit.Incoming
-          ? Math.Min(hit.BandMaxY, hit.Y0 + inset)
-          : Math.Max(hit.BandMinY, hit.Y0 - inset);
+        hit.Y0 = up > 0 ? Math.Max(hit.BandMinY, hit.Y0 - inset) : Math.Min(hit.BandMaxY, hit.Y0 + inset);
       }
 
       // the far end of the band, minus a random share of slack: exactly how much room this hit has to travel in
-      var far = hit.Incoming
-        ? hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
-        : hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
+      var far = up > 0
+        ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
+        : hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
 
-      AssignTravel(hit, w, rand, up, Math.Abs(hit.Y0 - far));
+      AssignTravel(hit, territory, rand, up, Math.Abs(hit.Y0 - far));
     }
 
     /*
@@ -201,20 +216,39 @@ namespace EQLogParser
      * FctMotion clamps anyway because the fountain fall is the same maths asked to do more.
      */
     public static void Refit(FctHitState hit, double w, double h)
+      => Refit(hit, FctStage.Bands(w, h));
+
+    public static void Refit(FctHitState hit, FctStage stage)
     {
-      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. */
-      hit.SideMin = EdgePad;
-      hit.SideMax = Math.Max(EdgePad + 1, w - EdgePad);
+      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. Halves measures them
+       * against the half, which is what keeps a sideways sway inside one stream instead of reaching across the seam. */
+      var region = stage.RegionFor(hit.Incoming);
+      hit.SideMin = region.X + EdgePad;
+      hit.SideMax = Math.Max(region.X + EdgePad + 1, region.X + region.Width - EdgePad);
 
       var reserve = TextReserve(hit);
-      if (hit.Incoming)
+      if (stage.Mode is FctLayoutMode.Bands)
       {
-        ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
+        if (hit.Incoming)
+        {
+          ApplyBand(hit, stage.H * GapBottomFrac, Math.Max(stage.H * GapBottomFrac, stage.H - EdgePad - reserve),
+            EdgePad, Math.Max(EdgePad + 1, stage.H - EdgePad));
+        }
+        else
+        {
+          ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (stage.H * GapTopFrac) - reserve),
+            EdgePad, Math.Max(EdgePad + 1, stage.H - EdgePad));
+        }
+        return;
       }
-      else
-      {
-        ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
-      }
+
+      /* Halves: the whole height of the side's own half is travel space — there is no strip inside it. The bottom end carries
+       * the text reserve in both schemes, because the drawn block hangs down from its anchor and the bottom edge is what it
+       * must not leave. A window short enough to invert the band degrades to the region inset by its own edge pad, never to a
+       * clamp that throws every frame. */
+      var top = region.Y + EdgePad;
+      ApplyBand(hit, top, Math.Max(top + 1, region.Y + region.Height - EdgePad - reserve),
+        top, Math.Max(top + 1, region.Y + region.Height - EdgePad));
     }
 
     /*
@@ -224,7 +258,11 @@ namespace EQLogParser
      * inside a cone. Adding a style means adding a branch here and, if it needs gravity, one in AssignLifetime; nothing
      * in a backend changes, which is the point of keeping geometry in one table.
      */
-    private static void AssignTravel(FctHitState hit, double w, Random rand, double up, double usable)
+    /*
+     * The territory parameter is what the sideways amounts measure against — canvas in bands, half-width in halves — so
+     * "12% of width" keeps meaning 12% of this stream's own territory in both schemes.
+     */
+    private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable)
     {
       if (hit.Style is FctMotionStyle.Pulse)
       {
@@ -241,12 +279,12 @@ namespace EQLogParser
 
         // height is capped at what the band offers, which is what keeps every angle of the cone out of the strip
         hit.Rise = up * Math.Min(usable, reach * Math.Cos(theta));
-        hit.Arc = Math.Clamp(reach * Math.Sin(theta), -(w * SprayMaxLateralFrac), w * SprayMaxLateralFrac);
+        hit.Arc = Math.Clamp(reach * Math.Sin(theta), -(territory * SprayMaxLateralFrac), territory * SprayMaxLateralFrac);
         return;
       }
 
       hit.Rise = up * usable;
-      hit.Arc = (rand.NextDouble() * 2 - 1) * w * (hit.Blowout ? 0.15 : 0.12);
+      hit.Arc = (rand.NextDouble() * 2 - 1) * territory * (hit.Blowout ? 0.15 : 0.12);
     }
 
     /*
@@ -261,22 +299,35 @@ namespace EQLogParser
      * sank; an outgoing one takes the canvas-relative throw it has always had, held honest by the band clamp.
      */
     public static void ApplyFall(FctHitState hit, double h)
+      => ApplyFall(hit, FctStage.Bands(0, h));
+
+    /*
+     * The sign follows the travel, which is how both schemes get the same shape: a number that rose gets its fall back down
+     * (screen-positive), one that sank gets it back up. In bands the outgoing rise falls a canvas-relative h*0.28 — the strip
+     * is behind it and the bottom edge is clamped — while every sink, in both schemes, bounces a fixed share of the distance
+     * it already spent: in halves there is no strip on either side, so a literal screen-down fall at the bottom of a down-
+     * travelling half would park against its own edge exactly as badly as it did in the old incoming band. Fountain and spray
+     * always carry a nonzero Rise (spawn and far end are distinct), which is what the sign is read from.
+     */
+    public static void ApplyFall(FctHitState hit, FctStage stage)
     {
       if (hit.Style is not (FctMotionStyle.Fountain or FctMotionStyle.Spray))
       {
         return;
       }
 
+      var rose = hit.Rise >= 0;
       var depth = hit.Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * SprayFallFrac
-        : hit.Incoming ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
-        : h * 0.28;
+        : stage.Mode is FctLayoutMode.Halves || !rose
+          ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
+          : stage.H * 0.28;
 
-      hit.FallDist = hit.Incoming ? -depth : depth;
+      hit.FallDist = rose ? depth : -depth;
     }
 
-    /* Keeps the band drawable: a window short enough to invert it degrades to "inside the edges" rather than to a
+    /* Keeps the band drawable: a window short enough to invert it degrades to the region's own edge pad rather than to a
      * clamp that throws every frame. */
-    private static void ApplyBand(FctHitState hit, double top, double bottom, double h)
+    private static void ApplyBand(FctHitState hit, double top, double bottom, double fallbackTop, double fallbackBottom)
     {
       if (bottom > top)
       {
@@ -285,8 +336,8 @@ namespace EQLogParser
         return;
       }
 
-      hit.BandMinY = EdgePad;
-      hit.BandMaxY = Math.Max(EdgePad + 1, h - EdgePad);
+      hit.BandMinY = fallbackTop;
+      hit.BandMaxY = Math.Max(fallbackTop + 1, fallbackBottom);
     }
 
     private static double BandSpan(FctHitState hit) => Math.Max(0, hit.BandMaxY - hit.BandMinY);

@@ -1,3 +1,5 @@
+using System;
+
 namespace EQLogParser
 {
   /*
@@ -10,6 +12,15 @@ namespace EQLogParser
   internal static class FctOverlaySettings
   {
     public const string MotionKey = "FctOverlayMotion";
+
+    /*
+     * The region scheme and how halves is oriented (see FctStage). halves came back as the shipped default with its failure mode fixed,
+     * so these four keys are read on every start; junk or missing values land on the shipped choice through the parse helpers below.
+     */
+    public const string LayoutKey = "FctOverlayLayout";
+    public const string IncomingSideKey = "FctOverlayIncomingSide";
+    public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
+    public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
     /* The two dials on the configure row, stored as multipliers rather than percentages: the file is a place where a human may look, and the value
        that means something to the code is the one worth writing. Size runs 0.5 - 1.5; speed runs 0.76 - 2.28 around a shipped 1.14, which are the ends of
@@ -56,9 +67,39 @@ namespace EQLogParser
 
     public static void SaveConfigured() => ConfigUtil.SetSetting(ConfiguredKey, true);
 
-    /* Retired along with the left/right region scheme: a settings.ini from an older build still carries FctOverlayLayout,
-     * nothing reads it now, and an unread key in this file is harmless, so it fades out on its own rather than needing a
-     * migration pass. Documented here because "why is there no layout key any more" is otherwise an archaeology question. */
+    /*
+     * Halves came back (FctStage), and with it this key: the pre-release build that had a layout checkbox wrote enum names,
+     * so a settings.ini that carries "halves" or "bands" means exactly what it says and needs no migration. The side and
+     * direction keys are new; LoadLayout parses all four through the pure helpers below, which is where junk gets the shipped
+     * default instead of reaching the geometry as garbage.
+     */
+
+    public static FctLayoutChoice LoadLayout() => new(
+      ParseMode(ConfigUtil.GetSetting(LayoutKey, null)),
+      ParseSide(ConfigUtil.GetSetting(IncomingSideKey, null)),
+      ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
+      ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)));
+
+    public static void SaveLayout(FctLayoutChoice layout)
+    {
+      ConfigUtil.SetSetting(LayoutKey, layout.Mode == FctLayoutMode.Halves ? "halves" : "bands");
+      ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(IncomingDirectionKey, layout.IncomingUp ? "up" : "down");
+      ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
+    }
+
+    /*
+     * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
+     * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
+     */
+    internal static FctLayoutMode ParseMode(string raw) =>
+      string.Equals(raw, "halves", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.Halves : FctLayoutMode.Bands;
+
+    internal static FctRegionSide ParseSide(string raw) =>
+      string.Equals(raw, "right", StringComparison.OrdinalIgnoreCase) ? FctRegionSide.Right : FctRegionSide.Left;
+
+    internal static bool ParseUp(string raw) =>
+      string.Equals(raw, "up", StringComparison.OrdinalIgnoreCase);
 
     /* The pre-motion-style boolean: still read so an upgrade keeps the choreography somebody had already chosen. */
     private const string LegacyFountainKey = "FctOverlayFountain";

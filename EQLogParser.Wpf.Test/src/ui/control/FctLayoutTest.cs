@@ -282,7 +282,7 @@ namespace EQLogParser
       for (var seed = 1; seed <= 60; seed++)
       {
         var hits = new List<FctHitState>();
-        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain };
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
         for (var i = 0; i < 3; i++)
         {
           ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 700.0);
@@ -308,7 +308,7 @@ namespace EQLogParser
       for (var seed = 1; seed <= 60; seed++)
       {
         var hits = new List<FctHitState>();
-        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Hold };
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Hold, Layout = FctLayoutChoice.Bands };
         for (var i = 0; i < 6; i++)
         {
           ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 500.0);
@@ -335,7 +335,7 @@ namespace EQLogParser
         for (var seed = 1; seed < 40; seed++)
         {
           var hits = new List<FctHitState>();
-          var ingest = new FctIngest(new Random(seed)) { Style = style };
+          var ingest = new FctIngest(new Random(seed)) { Style = style, Layout = FctLayoutChoice.Bands };
           for (var i = 0; i < 10; i++)
           {
             ingest.PruneExpired(hits, i * 260.0);
@@ -375,7 +375,7 @@ namespace EQLogParser
       for (var seed = 1; seed < 40; seed++)
       {
         var hits = new List<FctHitState>();
-        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain };
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
         var slot = FctLayout.LaneSlot(FctLane.DamageDealt, 980);
 
         for (var i = 0; i < 12; i++)
@@ -410,7 +410,7 @@ namespace EQLogParser
           for (var seed = 1; seed < 40; seed++)
           {
             var hits = new List<FctHitState>();
-            var ingest = new FctIngest(new Random(seed)) { Style = style };
+            var ingest = new FctIngest(new Random(seed)) { Style = style, Layout = FctLayoutChoice.Bands };
             for (var i = 0; i < 6; i++)
             {
               ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 31), "Flurry", false, false, false, null, size.W, size.H, i * 400.0);
@@ -436,7 +436,7 @@ namespace EQLogParser
     {
       // no capacity gate in here: a crowded overlay may overlap, it may not lose a number
       var hits = new List<FctHitState>();
-      var ingest = new FctIngest(new Random(7)) { Style = FctMotionStyle.Fountain };
+      var ingest = new FctIngest(new Random(7)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
 
       var placed = 0;
       for (var i = 0; i < 40; i++)

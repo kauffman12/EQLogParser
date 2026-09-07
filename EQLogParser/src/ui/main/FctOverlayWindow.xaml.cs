@@ -34,11 +34,10 @@ namespace EQLogParser
    * Settings are staged while configuring and written only by the Save button; Esc ends configuring with the previous ones back.
    * Placement is the exception, saved as soon as a drag or resize is released — where you left it is never ambiguous.
    *
-   * Direction is vertical and the only scheme there is: my hits rise above an empty middle strip, hits on me sink below
-   * it. The overlay cannot know where the player's target is on screen, so what makes direction readable is that strip plus
-   * the direction of travel, so configure mode states it in two arrows and nothing else; a sentence about it gets read once and then
-   * sits there being clutter. The old left/right halves switch is gone — see the FctLayout header for why it could not be made to
-   * work with the styles built after it.
+   * There are two region schemes (FctStage): halves — one stream per side, the genre standard — and bands — top and bottom
+   * around a clear middle strip. In bands, direction of travel is the "who" carrier (mine rise, hits on me sink), so it is not a
+   * setting there; in halves, position carries who and each side's up/down is free to choose. Configure mode states whichever is on
+   * screen with a four-character legend and nothing else — a sentence about it gets read once and then sits there being clutter.
    */
   public partial class FctOverlayWindow : Window
   {
@@ -82,10 +81,11 @@ namespace EQLogParser
     private double _lastStatsMs = -1000;
     private bool _locked;
 
-    /* Settings are staged while configuring and committed by Save: the combo previews live so a style can be judged before it is
-       kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one mis-click
-       silently changes somebody's setup, and there is no Undo next to the control that did it. */
+    /* Settings are staged while configuring and committed by Save: the combos preview live so a style or a layout can be judged
+       before it is kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one
+       mis-click silently changes somebody's setup, and there is no Undo next to the control that did it. */
     private FctMotionStyle _savedStyle;
+    private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
     private double _savedTextScale = FctScale.SizeDefault;
     private double _savedSpeed = FctScale.SpeedDefault;
 
@@ -142,6 +142,9 @@ namespace EQLogParser
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
 
+      _canvas.Layout = _savedLayout;
+      SelectLayoutOptions(_savedLayout);
+
       FctScale.Text = _savedTextScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       sizeSlider.Value = _savedTextScale;
@@ -166,6 +169,11 @@ namespace EQLogParser
       titleLabel.FontSize = size + 2;
       sizeLabel.FontSize = size + 2;
       speedLabel.FontSize = size + 2;
+
+      layoutLabel.FontSize = size + 2;
+      sideLabel.FontSize = size + 2;
+      outDirLabel.FontSize = size + 2;
+      inDirLabel.FontSize = size + 2;
 
       sizeMinus.FontSize = size + 7;
       sizePlus.FontSize = size + 7;
@@ -309,6 +317,12 @@ namespace EQLogParser
       _savedStyle = FctOverlaySettings.LoadMotion();
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
+
+      /* The region scheme and, in halves, which side incoming sits on and which way each half travels. Same preview contract as the
+         style: the canvas draws with it now, Save is what writes it, and leaving without Save puts it back. */
+      _savedLayout = FctOverlaySettings.LoadLayout();
+      _canvas.Layout = _savedLayout;
+      SelectLayoutOptions(_savedLayout);
 
       /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers would
          otherwise rebuild the preview and repaint on a window that is not even shown yet. Size's track is a multiplier and speed's is a percent of the
@@ -509,20 +523,88 @@ namespace EQLogParser
       RefreshDemo();
     }
 
-    private void SelectMotionOption(FctMotionStyle style)
-    {
-      var name = FctOverlaySettings.Name(style);
+    private void SelectMotionOption(FctMotionStyle style) => SelectByTag(motionCombo, FctOverlaySettings.Name(style));
 
-      for (var i = 0; i < motionCombo.Items.Count; i++)
+    /* A combo's items name themselves with Tag; an unknown stored value lands on the first item rather than an empty box. */
+    private static void SelectByTag(ComboBox combo, string tag)
+    {
+      for (var i = 0; i < combo.Items.Count; i++)
       {
-        if (motionCombo.Items[i] is ComboBoxItem item && item.Tag as string == name)
+        if (combo.Items[i] is ComboBoxItem item && item.Tag as string == tag)
         {
-          motionCombo.SelectedIndex = i;
+          combo.SelectedIndex = i;
           return;
         }
       }
 
-      motionCombo.SelectedIndex = 0; // an unknown stored name: show the default rather than an empty box
+      combo.SelectedIndex = 0;
+    }
+
+    /*
+     * The four region controls act as one: together they name a stage (FctStage), and changing any of them re-stages the demo so
+     * the next number is judged in its new place instead of twelve seconds into the cycle. Preview only, like the style — nothing
+     * reaches settings.ini until Save.
+     */
+    private void LayoutChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (!_settingsReady || layoutCombo.SelectedItem is not ComboBoxItem layout
+        || sideCombo.SelectedItem is not ComboBoxItem side
+        || outDirCombo.SelectedItem is not ComboBoxItem outDir
+        || inDirCombo.SelectedItem is not ComboBoxItem inDir)
+      {
+        return;
+      }
+
+      var choice = new FctLayoutChoice(
+        layout.Tag as string == "halves" ? FctLayoutMode.Halves : FctLayoutMode.Bands,
+        side.Tag as string == "right" ? FctRegionSide.Right : FctRegionSide.Left,
+        inDir.Tag as string == "up",
+        outDir.Tag as string == "up");
+
+      _canvas.Layout = choice;
+      SelectLayoutOptions(choice);
+      RefreshDemo();
+    }
+
+    /* Restores what the controls say for a staged layout: the scheme, and the halves orientation behind it. */
+    private void SelectLayoutOptions(FctLayoutChoice layout)
+    {
+      SelectByTag(layoutCombo, layout.Mode is FctLayoutMode.Halves ? "halves" : "bands");
+      SelectByTag(sideCombo, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
+      SelectByTag(outDirCombo, layout.OutgoingUp ? "up" : "down");
+      SelectByTag(inDirCombo, layout.IncomingUp ? "up" : "down");
+
+      SetHalvesOptionsVisible(layout.Mode is FctLayoutMode.Halves);
+      SetLegend(layout);
+    }
+
+    /*
+     * Side and direction only exist as settings in halves: in bands the protected strip owns each side's direction of travel
+     * (FctStage), so a control for it there would be a setting with no effect — the kind of thing configure mode was cleaned up to
+     * stop showing. Collapsed rather than hidden so nothing else on the row jumps when the scheme changes.
+     */
+    private void SetHalvesOptionsVisible(bool halves)
+    {
+      var visibility = halves ? Visibility.Visible : Visibility.Collapsed;
+      sidePanel.Visibility = visibility;
+      outDirPanel.Visibility = visibility;
+      inDirPanel.Visibility = visibility;
+    }
+
+    /*
+     * The legend is the only position explanation on the row, so it has to be true for the scheme on screen: bands say it with
+     * the up/down arrows, halves with the side a number sits on. Mirroring the incoming side mirrors the sentence.
+     */
+    private void SetLegend(FctLayoutChoice layout)
+    {
+      if (layout.Mode is FctLayoutMode.Bands)
+      {
+        legendText.Text = "↑ yours   ↓ on you";
+        return;
+      }
+
+      var incomingLeft = layout.IncomingSide == FctRegionSide.Left;
+      legendText.Text = incomingLeft ? "← on you   yours →" : "← yours   on you →";
     }
 
     /*
@@ -538,10 +620,12 @@ namespace EQLogParser
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       _savedStyle = _canvas.MotionStyle;
+      _savedLayout = _canvas.Layout;
       _savedTextScale = FctScale.Text;
       _savedSpeed = FctScale.SpeedFromPercent(speedSlider.Value);
 
       FctOverlaySettings.SaveMotion(_savedStyle);
+      FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
       FctOverlaySettings.SaveConfigured();

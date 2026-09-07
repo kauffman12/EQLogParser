@@ -82,14 +82,14 @@ namespace EQLogParser
     public void Player_SpawnsTheScriptIntoItsOwnList()
     {
       var demo = new FctDemo();
-      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, null, null), "an unstarted demo must not run");
+      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null), "an unstarted demo must not run");
 
       var spawned = 0;
       demo.Start(0);
 
       for (var now = 0.0; now <= 3000; now += 100)
       {
-        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, _ => spawned++, null))
+        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, _ => spawned++, null))
         {
           Assert.IsTrue(demo.Hits.Count > 0, "a frame that changed should have something in it");
         }
@@ -125,7 +125,7 @@ namespace EQLogParser
         var born = new List<FctHitState>();
         for (var now = 100.0; now <= 900; now += 100)
         {
-          demo.Advance(now, 800, 560, style, born.Add, null);
+          demo.Advance(now, 800, 560, style, FctLayoutChoice.Shipped, born.Add, null);
         }
 
         Assert.IsTrue(born.Count > 0, $"{style}: nothing was spawned to check");
@@ -181,13 +181,13 @@ namespace EQLogParser
 
       for (var now = 0.0; now < FctDemo.CycleMs; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
       }
 
       Assert.AreEqual(0, demo.Hits.Count, "everything should have expired in the tail before the loop restarts");
 
       var spawned = 0;
-      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, _ => spawned++, null);
+      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, _ => spawned++, null);
 
       Assert.IsTrue(spawned > 0, "the script ran once and stopped - configure mode would go quiet");
     }
@@ -211,7 +211,7 @@ namespace EQLogParser
       for (var now = 1000.0 / 60; now <= 9000; now += 1000.0 / 60)
       {
         ticks++;
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
 
         if (demo.Animated)
         {
@@ -223,7 +223,7 @@ namespace EQLogParser
       Assert.IsTrue(moving > ticks * 0.9, $"only {moving} of {ticks} ticks had anything moving");
 
       /* The quiet seconds at the end of a cycle are dead time on purpose, and dead time must not cost rasters. */
-      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, null, null);
+      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
       Assert.IsFalse(demo.Animated, "the tail between loops should stop asking for frames");
     }
 
@@ -234,7 +234,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now < 1500; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
       }
 
       var live = demo.Hits.ToList();
@@ -250,7 +250,7 @@ namespace EQLogParser
 
       // and the loop can be started again after configure mode closes and opens
       demo.Start(2000);
-      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, null, null), "the demo cannot be restarted");
+      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null), "the demo cannot be restarted");
     }
 
     /*

@@ -102,6 +102,26 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Which region scheme new hits spawn into (see FctStage): halves, bands, and which side incoming sits on. Forwarded to ingest the way
+     * MotionStyle is, with the same contract — in-flight numbers keep the stage they were born under, and configure mode restarts its loop
+     * on a change so the choice can be judged on the very next number rather than twelve seconds later.
+     */
+    public FctLayoutChoice Layout
+    {
+      get => _ingest.Layout;
+      set
+      {
+        if (_ingest.Layout.Equals(value))
+        {
+          return;
+        }
+
+        _ingest.Layout = value;
+        RestartDemo();
+      }
+    }
+
     public double Fps { get; private set; }
     public double AvgFrameMs { get; private set; }
 
@@ -165,7 +185,11 @@ namespace EQLogParser
     {
       base.OnRenderSizeChanged(sizeInfo);
       RefreshDpi();
-      FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+
+      /* The stage carries the layout: a number's side comes from its lane at spawn, but its band and territory are fractions of whatever the
+         regions are now, and motion never revisits either. */
+      var stage = _ingest.Layout.Stage(sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+      FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, stage);
 
       /* Demo numbers were laid out against the old size too, and motion never revisits that: mapped like any other live hit. */
       _demo.Rescale(sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
@@ -326,7 +350,7 @@ namespace EQLogParser
         _demo.Start(now);
       }
 
-      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, RebuildGlyphs, ReleaseHalo))
+      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo))
       {
         _dirty = true;
       }

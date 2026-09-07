@@ -604,39 +604,58 @@ The remaining copy (surface → snapshot → pinned array → back buffer) is th
 shared Skia surface would remove it. It is not taken here because it needs a real GPU to validate against, and
 three memcpys are not what limits this renderer today.
 
-### One region scheme, and why direction went vertical
+### Two region schemes: halves and bands
 
-The overlay cannot know where the player's target ring, cast bar or spell gems sit in the game window, so it can only
-promise that a band across its middle stays clear. The first scheme spent that promise horizontally: incoming lanes
-on the left half, outgoing on the right, `FctLayout.CenterClearance` reserving the column between them and
-`FctMotion.ArcedX` clamping with half the *scaled* text width so even a crit at full blowout cannot slide over the
-middle. It worked for numbers and failed for everything else — left/right is a convention that has to be learned and
-remembered, and it has no analogue anywhere in EQ's own UI.
+The overlay cannot know where the player's target ring, cast bar or spell gems sit in the game window, so every scheme is
+a promise about what stays where. There are two of them, chosen on the configure row (`FctOverlayLayout`), and both live on
+one geometry path: `FctStage` resolves (choice, canvas size) into the three questions the layout actually asks — whose region
+is this, which way does it travel, and what do the style amplitudes measure against. Bands answers "the whole canvas, out up
+and in down"; halves answers "one of two side-by-side halves, whichever way that side was told".
 
-The default makes direction vertical, which is how nearly every game with floating text does
-it: text about my target rises out of the top of the overlay, text about my body sinks out of the bottom, and both
-travel *away* from the protected strip between them (`GapTopFrac`/`GapBottomFrac`). Three things came out of that for
-free:
+**Halves** is the shipped default because it is the genre standard: Mik's Scrolling Battle Text ships two side-by-side
+scroll areas — incoming left, outgoing right, both scrolling down with a parabola bow (fork `Placidina/MikScrollingBattleText`,
+`MSBTProfiles.lua`: classic master profile L175–196, retail L1640–1668, both `animationStyle = "Parabola"`,
+`direction = "Down"`). What halves gives that bands cannot: position carries *who* (which half a number is in), which frees
+the direction of travel to be a per-side setting — each half owns its whole height, so a number rising on one side cannot
+meet anything it should not. There is no protected strip, because the regions do not overlap; and there are no lane columns
+inside a half, because one stream per side is what the standard ships, and x is an auxiliary channel anyway (spawn jitter is
+±9% of territory against ~8–11% column spacing even in bands).
+
+**Bands** keeps the original promise: a strip across the middle stays empty, mine rise above it, hits on me sink below it,
+and both travel *away* from the gap (`GapTopFrac`/`GapBottomFrac`). The history that got it there: the first scheme spent
+clearance horizontally — incoming lanes on the left half, outgoing on the right, a reserved centre column and a per-frame
+clamp keeping even a blowout crit off it. It worked for numbers and failed for everything else (left/right is a convention
+that has to be learned, with no analogue in EQ's own UI), so direction went vertical, which is how nearly every game with
+floating text does it. Three things came out of that for free:
 
 - The empty middle is empty **by construction** rather than by clamping traffic out of it. Diverging travel cannot
-  cross the gap it started outside, where the old scheme needed a per-frame clamp to keep two opposing fountains apart.
+  cross the gap it started outside.
 - Direction has two independent carriers (band and direction of motion) instead of one, so it survives a glance,
   peripheral vision and a colorblind player.
-- The x axis stopped meaning *who* and went back to meaning *what*: damage sits toward the middle of its band,
-  healing out wide, crits and labels centered. Each band carries two categories, so lane slots are still needed —
-  they were never the problem; overloading one axis with two meanings was.
+- The x axis stopped meaning *who* and went back to meaning *what*: damage sits toward the middle of its band, healing out
+  wide, crits and labels centered. Lane slots are still needed — overloading one axis with two meanings was the sin, not the
+  slots.
 
-There is one region scheme, deliberately. The original left/right split (`FctLayoutMode.Halves`, a checkbox on the header,
-`FctOverlayLayout` in settings.ini) stayed as a fallback long after bands became the default, and every style added
-afterwards had to be told about it. The cell grid measures its columns against the canvas width, so in halves the outer
-columns fell under the protected centre column and the clamp collapsed several "distinct" cells onto one place — measured:
-4 overlapping numbers in 8. Taking the grid away there was worse: a pulse hit has no travel to separate it from its
-neighbours, so plain placement gave 11-22 overlapping pairs on the same burst. Halves also offered no vertical band for the
-choreographed styles to fall inside, which is why their fall had a mode-specific special case. Two geometry systems that
-each satisfy half the styles cost more than one that satisfies all of them, and the fallback was not earning its keep, so it
-was removed rather than fixed; a stale `FctOverlayLayout` entry in an existing settings.ini is simply unread now. The
-configure row labels the direction of travel and nothing else — `↑ yours   ↓ on you` — because that is the one thing the geometry
-cannot say for itself. The sentence-long hint it replaced was read once and then became clutter.
+Because direction is the "who" carrier in bands and the strip's emptiness depends on both sides moving away from it,
+incoming-side and per-side up/down are **settings only in halves**. The configure row collapses the three controls that belong
+to them when bands is chosen — a setting with no effect is a control configure mode was cleaned up to stop showing. And the
+legend, the row's one position explanation, stays true for the scheme on screen: `↑ yours   ↓ on you` in bands, `← on you
+   yours →` in halves (mirrored with the incoming-side choice) — kept in sync by code rather than prose, because a sentence
+about it gets read once and then sits there being clutter.
+
+The history matters because halves was here before, and broke in a specific way. It stayed as a fallback long after bands
+became the default, and its cell grid counted columns against the *canvas* width: in halves the outer columns fell under the
+centre and the clamp collapsed several "distinct" cells onto one place (measured: 4 overlapping numbers in 8). Without the
+grid it was worse — a pulse hit has no travel to separate it from its neighbours, so plain placement gave 11–22 overlapping
+pairs on the same burst. What failed was the measurement, not the shape. Rebuilding the geometry around `FctStage` — regions,
+cell blocks, placement probing and travel all measured against the side's own rect — is what lets halves ship: `FctHalvesTest`
+pins a number inside its half for its whole life in every style, direction and seed, and pins bands against its old entry
+points draw for draw.
+
+A settings.ini from that era carries `FctOverlayLayout` written as an enum name (`"halves"` / `"bands"`) by a build that never
+released; those values are valid again and map to themselves, so no migration exists. The incoming-side and direction keys
+are new, and a missing or hand-broken one lands on the shipped choice through the pure parse helpers in `FctOverlaySettings`,
+which is where junk gets a default rather than reaching the geometry as garbage.
 
 A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
 incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own

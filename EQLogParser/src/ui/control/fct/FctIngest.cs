@@ -49,11 +49,19 @@ namespace EQLogParser
     public FctIngest(Random rand = null) => _rand = rand ?? new Random();
 
     /*
-     * Motion style for new hits (see FctMotionStyle): how text moves, as opposed to where it goes, which FctLayout decides
-     * and does not ask about. A canvas setting rather than a per-record one: a feed that mixed styles from log line to log
-     * line would look like a bug, not a feature.
+     * Motion style for new hits (see FctMotionStyle): how text moves, as opposed to where it goes, which the layout
+     * decides and does not ask about. A canvas setting rather than a per-record one: a feed that mixed styles from log
+     * line to log line would look like a bug, not a feature.
      */
     public FctMotionStyle Style = FctMotionStyle.Hold;
+
+    /*
+     * The region scheme for new hits (see FctStage): where a number goes — which stream it belongs to, which edge it starts
+     * from and how far the territory is — as opposed to how it moves, which Style decides. Same canvas-setting contract:
+     * in-flight numbers keep the stage they were born under (it is baked into their bands and travel at spawn), so flipping
+     * the layout mid-fight changes what comes next rather than teleporting what is already on screen.
+     */
+    public FctLayoutChoice Layout = FctLayoutChoice.Shipped;
 
     /* Hits that had nowhere to go, surfaced in the overlay header so overload stays visible. */
     public int DroppedCount { get; private set; }
@@ -92,6 +100,9 @@ namespace EQLogParser
       /* Also captured before pooling, for the same reason: a heal crit lands on FctLane.Crit, where its lane no longer says what it was. */
       var heal = lane is FctLane.HealingDealt or FctLane.HealingReceived;
       var pooled = crit ? FctLane.Crit : lane;
+
+      /* Everything below measures against the side's own region, and a stage is that question answered for this size. */
+      var stage = Layout.Stage(w, h);
 
       /*
        * Pulse mode allocates cells, and cells are its capacity: folding a number into a running total that lives in some
@@ -151,8 +162,8 @@ namespace EQLogParser
       };
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic, proc);
-      FctLayout.Spawn(hit, w, h, _rand);
-      AssignLifetime(hit, hits, h, now);
+      FctLayout.Spawn(hit, stage, _rand);
+      AssignLifetime(hit, hits, stage, now);
 
       /*
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
@@ -166,9 +177,9 @@ namespace EQLogParser
          * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
          * static placement FctLayout gave it. Losing the layout is fine, losing the number is not.
          */
-        if (FctCellGrid.HasRoom(hit, h))
+        if (FctCellGrid.HasRoom(hit, stage))
         {
-          if (!FctCellGrid.Assign(hit, hits, w, h, now, out var bumped))
+          if (!FctCellGrid.Assign(hit, hits, stage, now, out var bumped))
           {
             /* Every cell in the block is held by a crit and this is not one: drop it rather than erase a bigger number. */
             DroppedCount++;
@@ -188,7 +199,7 @@ namespace EQLogParser
          * flight: several legal throws are measured along their whole paths and the least crowded one wins. The hit that comes
          * back may be one of those trials rather than the object that went in.
          */
-        hit = FctPlacement.Place(hit, hits, w, h, _rand);
+        hit = FctPlacement.Place(hit, hits, stage, _rand);
       }
 
       FctMotion.RefreshText(hit);
@@ -319,7 +330,7 @@ namespace EQLogParser
       return weakest is not null && weakestScore * EvictValueFactor <= incomingSignificance ? weakest : null;
     }
 
-    private void AssignLifetime(FctHitState hit, List<FctHitState> hits, double h, double now)
+    private void AssignLifetime(FctHitState hit, List<FctHitState> hits, FctStage stage, double now)
     {
       /*
        * The choreographed styles (fountain, spray) share one shape: travel, then accelerate along a fall for the rest
@@ -345,7 +356,7 @@ namespace EQLogParser
         hit.FadeMs = window * FctMotion.FallPhaseFrac;
 
         // Rise is already assigned: layout runs before lifetime assignment. FctPlacement re-runs the same call on a trial origin.
-        FctLayout.ApplyFall(hit, h);
+        FctLayout.ApplyFall(hit, stage);
         ApplyProcTempo(hit);
         ApplyPlayerTempo(hit);
         return;

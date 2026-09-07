@@ -85,14 +85,22 @@ namespace EQLogParser
      * and FctLayout's and FctMotion's clamps are why this can be a mapping instead of a rebuild.
      */
     internal static void Rescale(List<FctHitState> hits, double oldW, double oldH, double w, double h)
+      => Rescale(hits, oldW, oldH, FctStage.Bands(w, h));
+
+    /*
+     * Halves needs no special case here: the regions are fixed fractions of the canvas, so a proportional map sends each
+     * half onto its new self and nothing crosses the seam — a number's side is decided by its lane at spawn, never by where
+     * it happens to be. What does change with the size is everything derived from it, which Refit and Reseat re-derive.
+     */
+    internal static void Rescale(List<FctHitState> hits, double oldW, double oldH, FctStage stage)
     {
-      if (hits is null || hits.Count == 0 || oldW <= 0 || oldH <= 0 || w <= 0 || h <= 0)
+      if (hits is null || hits.Count == 0 || oldW <= 0 || oldH <= 0 || stage.W <= 0 || stage.H <= 0)
       {
         return;
       }
 
-      var sx = w / oldW;
-      var sy = h / oldH;
+      var sx = stage.W / oldW;
+      var sy = stage.H / oldH;
       if (Math.Abs(sx - 1) < 0.001 && Math.Abs(sy - 1) < 0.001)
       {
         return;
@@ -103,11 +111,11 @@ namespace EQLogParser
         var hit = hits[i];
         var y0 = hit.Y0 * sy;
 
-        FctLayout.Refit(hit, w, h);
+        FctLayout.Refit(hit, stage);
 
         if (hit.Cell >= 0)
         {
-          FctCellGrid.Reseat(hit, w, h);
+          FctCellGrid.Reseat(hit, stage);
           continue;
         }
 

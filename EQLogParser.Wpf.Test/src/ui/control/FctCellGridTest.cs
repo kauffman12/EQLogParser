@@ -301,7 +301,8 @@ namespace EQLogParser
       Assert.AreEqual(0, ingest.DroppedCount, "nothing here is overload");
     }
 
-    private static FctIngest Pulse() => new() { Style = FctMotionStyle.Pulse };
+    /* Bands, said out loud: the strip, the band edges and "outer row" are all defined against it. */
+    private static FctIngest Pulse() => new() { Style = FctMotionStyle.Pulse, Layout = FctLayoutChoice.Bands };
 
     private static FctHitState Add(FctIngest ingest, List<FctHitState> hits, FctLane lane, double now, double w = Width, double h = Height,
       bool proc = false, bool crit = false, Action<FctHitState>? evicting = null)

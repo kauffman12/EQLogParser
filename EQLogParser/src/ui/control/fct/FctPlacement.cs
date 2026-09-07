@@ -96,21 +96,32 @@ namespace EQLogParser
      * is returned for the caller to add to its list. `hit` is returned untouched when there is nothing to dodge.
      */
     internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, double w, double h, Random rand)
+      => Place(hit, hits, FctStage.Bands(w, h), rand);
+
+    /*
+     * The search walks the candidate's own band and column territory: in halves both are one side's half, so a candidate can
+     * never be proposed across the seam, and the overlap pass below never spends a sample on a number that cannot reach it.
+     */
+    internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand)
     {
-      if (hits.Count == 0 || w <= 0 || h <= 0)
+      if (hits.Count == 0 || stage.W <= 0 || stage.H <= 0)
       {
         return hit;   // the first number of a pull gets the lane's own spot, and costs nothing to find
       }
 
+      var region = stage.RegionFor(hit.Incoming);
+
       /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
-       * own jitter in place rather than inventing a reach. */
-      var slot = FctLayout.LaneSlot(hit.Lane, w);
-      var reach = Math.Min(w * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
+       * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the half's own
+       * centre in halves — there are no columns there to drift back toward, and the canonical-x preference below does the
+       * job of keeping a stream centred on its side instead. */
+      var slot = stage.Mode is FctLayoutMode.Halves ? region.X + (region.Width / 2) : FctLayout.LaneSlot(hit.Lane, stage.W);
+      var reach = Math.Min(stage.TerritoryFor(hit.Incoming) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
       var canonicalX = hit.X0;
       var canonicalY = hit.Y0;
 
       var best = hit;
-      var bestCost = Cost(hit, canonicalX, canonicalY, w, h, hits, 0);
+      var bestCost = Cost(hit, canonicalX, canonicalY, stage.W, stage.H, hits, 0);
 
       /* The band this hit was given, walked from edge to edge. Band edges come from the layout's own reserve maths, so every
        * candidate below is inside a legal band before it is scored. */
@@ -126,14 +137,14 @@ namespace EQLogParser
           var x = slot + ((col - ((LateralSteps - 1) / 2.0)) * xStep);
 
           var trial = hit.Clone();
-          FctLayout.Spawn(trial, w, h, rand, origin: (
+          FctLayout.Spawn(trial, stage, rand, origin: (
             x + (xStep * LatticeJitter * (rand.NextDouble() * 2 - 1)),
             y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1))));
 
           // the fall belongs to the travel, so a candidate with a new origin needs it recomputed before it can be watched
-          FctLayout.ApplyFall(trial, h);
+          FctLayout.ApplyFall(trial, stage);
 
-          var cost = Cost(trial, canonicalX, canonicalY, w, h, hits, WideSearchCost);
+          var cost = Cost(trial, canonicalX, canonicalY, stage.W, stage.H, hits, WideSearchCost);
           if (cost < bestCost)
           {
             best = trial;

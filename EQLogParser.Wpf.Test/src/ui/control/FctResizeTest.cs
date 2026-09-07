@@ -163,7 +163,8 @@ namespace EQLogParser
     private static List<FctHitState> LiveHits(FctMotionStyle style, double w, double h, int count)
     {
       var hits = new List<FctHitState>();
-      var ingest = new FctIngest(new Random(5)) { Style = style };
+      /* Bands, said out loud: these live hits exist so a resize can be watched against the strip it keeps clear. */
+      var ingest = new FctIngest(new Random(5)) { Style = style, Layout = FctLayoutChoice.Bands };
 
       for (var i = 0; i < count; i++)
       {

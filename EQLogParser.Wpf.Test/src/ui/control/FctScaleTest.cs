@@ -133,14 +133,14 @@ namespace EQLogParser
         // floors underneath: the fastest setting on the shortest kind of number is quick, not a blink
         FctScale.Time = FctScale.TimeFromPercent(FctScale.SpeedPercentMax);
         var tickHits = new List<FctHitState>();
-        var tick = new FctIngest().Accept(tickHits, FctLane.DamageTaken, 100, "Bite", false, false, true, null, 800, 560, 0);
+        var tick = new FctIngest { Layout = FctLayoutChoice.Bands }.Accept(tickHits, FctLane.DamageTaken, 100, "Bite", false, false, true, null, 800, 560, 0);
         Assert.IsNotNull(tick);
         Assert.IsTrue(tick.LifetimeMs >= 900, $"a tick at the fastest setting fell to {tick.LifetimeMs:0} ms");
         Assert.IsTrue(tick.FadeMs >= 200, "a fade under 200 ms is a blink, not a fade");
 
         /* The promise the whole design rests on: a number already on screen keeps what it was born with, however the dial is moved afterwards. */
         var heldHits = new List<FctHitState>();
-        var first = new FctIngest().Accept(heldHits, FctLane.DamageDealt, 400, "Flurry", false, false, false, null, 800, 560, 0);
+        var first = new FctIngest { Layout = FctLayoutChoice.Bands }.Accept(heldHits, FctLane.DamageDealt, 400, "Flurry", false, false, false, null, 800, 560, 0);
         Assert.IsNotNull(first);
         var bornLife = first.LifetimeMs;
 
@@ -157,7 +157,7 @@ namespace EQLogParser
     private static double LifetimeOf(FctLane lane, int value, bool periodic)
     {
       var hits = new List<FctHitState>();
-      var hit = new FctIngest().Accept(hits, lane, value, "Flurry", false, false, periodic, null, 800, 560, 0);
+      var hit = new FctIngest { Layout = FctLayoutChoice.Bands }.Accept(hits, lane, value, "Flurry", false, false, periodic, null, 800, 560, 0);
 
       return hit?.LifetimeMs ?? double.NaN;
     }

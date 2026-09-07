@@ -30,7 +30,11 @@ namespace EQLogParser
 
     private readonly List<FctHitState> _hits = [];
 
-    private static FctIngest NewIngest() => new(new Random(20_260_714));
+    /*
+     * These tests pin the bands scheme — the strip and its directions are what most of them assert about — so they say so
+     * instead of inheriting whatever the overlay ships with.
+     */
+    private static FctIngest NewIngest() => new(new Random(20_260_714)) { Layout = FctLayoutChoice.Bands };
 
     [TestMethod]
     public void FirstHitSpawnsOnItsSide()
