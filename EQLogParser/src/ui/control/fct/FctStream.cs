@@ -36,7 +36,7 @@ namespace EQLogParser
        * costs nothing per column and cannot disagree with itself (FctIngest.ApplyRailTempo). */
       FctIngest.ApplyRailTempo(hit, stage);
 
-      var region = stage.RegionFor(hit.Incoming);
+      var region = stage.RegionFor(hit);
       var cx = region.X + (region.Width / 2);
       var edgeY = stage.UpFor(hit.Incoming) > 0 ? hit.BandMaxY : hit.BandMinY;
 
@@ -44,7 +44,11 @@ namespace EQLogParser
       for (var i = 0; i < hits.Count; i++)
       {
         // only this side's numbers can crowd this side's stream; the other half is a different region entirely
-        if (hits[i].Incoming != hit.Incoming)
+        /* Neighbours are counted by territory, not by side-of-the-stream ownership: in halves the two directions' ranges
+         * are disjoint so this skips exactly what the old direction check skipped, and in by type — where a column can
+         * carry both an outgoing and an incoming train at once — it counts the crossings that a direction check would
+         * have waved straight through. */
+        if (hits[i].SideMax < hit.SideMin || hits[i].SideMin > hit.SideMax)
         {
           continue;
         }

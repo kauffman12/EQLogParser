@@ -14,11 +14,15 @@ namespace EQLogParser
     public const string MotionKey = "FctOverlayMotion";
 
     /*
-     * The region scheme and how halves is oriented (see FctStage). halves came back as the shipped default with its failure mode fixed,
-     * so these four keys are read on every start; junk or missing values land on the shipped choice through the parse helpers below.
+     * The region scheme and how it is oriented (see FctStage): which side incoming owns in halves, which side healing owns
+     * in by type, and which way each side travels. halves is the shipped default — with its failure mode fixed — and these
+     * keys are read on every start; missing values land on that choice, junk on bands (ParseMode explains the split).
      */
     public const string LayoutKey = "FctOverlayLayout";
     public const string IncomingSideKey = "FctOverlayIncomingSide";
+
+    /* By type only: which column healing owns (the request this mode exists for: heals left, damage right). */
+    public const string HealSideKey = "FctOverlayHealSide";
     public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
     public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
@@ -113,12 +117,19 @@ namespace EQLogParser
       ParseMode(ConfigUtil.GetSetting(LayoutKey, null)),
       ParseSide(ConfigUtil.GetSetting(IncomingSideKey, null)),
       ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
-      ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)));
+      ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)),
+      ParseSide(ConfigUtil.GetSetting(HealSideKey, null)));
 
     public static void SaveLayout(FctLayoutChoice layout)
     {
-      ConfigUtil.SetSetting(LayoutKey, layout.Mode == FctLayoutMode.Halves ? "halves" : "bands");
+      ConfigUtil.SetSetting(LayoutKey, layout.Mode switch
+      {
+        FctLayoutMode.Halves => "halves",
+        FctLayoutMode.ByType => "bytype",
+        _ => "bands",
+      });
       ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(HealSideKey, layout.HealSide == FctRegionSide.Right ? "right" : "left");
       ConfigUtil.SetSetting(IncomingDirectionKey, layout.IncomingUp ? "up" : "down");
       ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
     }
@@ -127,8 +138,14 @@ namespace EQLogParser
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
      * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
      */
+    /* Two fallbacks with two jobs. No setting at all is the first run and gets the shipped opinion — halves, like
+     * FctLayoutChoice.Shipped and every document that names a default; falling to bands there made the never-saved
+     * overlay disagree with its own documentation. A setting that exists but names something unknown is junk somebody
+     * typed or an abandoned plan's value ("center" was one), and bands is the scheme every build can draw. */
     internal static FctLayoutMode ParseMode(string raw) =>
-      string.Equals(raw, "halves", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.Halves : FctLayoutMode.Bands;
+      raw is null || string.Equals(raw, "halves", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.Halves
+        : string.Equals(raw, "bytype", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.ByType
+          : FctLayoutMode.Bands;
 
     internal static FctRegionSide ParseSide(string raw) =>
       string.Equals(raw, "right", StringComparison.OrdinalIgnoreCase) ? FctRegionSide.Right : FctRegionSide.Left;

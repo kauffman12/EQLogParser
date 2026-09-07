@@ -90,7 +90,7 @@ namespace EQLogParser
      * strip-facing end. Halves: the whole half, no strip to keep off — the spawn edge is whichever end the side travels
      * away from, and the block grows from there.
      */
-    private static Area AreaOf(FctStage stage, bool incoming)
+    private static Area AreaOf(FctStage stage, bool incoming, bool heal = false)
     {
       var reserve = MainReserve(incoming);
       if (stage.Mode is FctLayoutMode.Bands)
@@ -101,7 +101,7 @@ namespace EQLogParser
           StripMarginFrac, incoming, reserve);
       }
 
-      var region = stage.RegionFor(incoming);
+      var region = stage.RegionFor(incoming, heal);
       var top = region.Y + FctLayout.EdgePad;
       return new Area(region.X, region.Width, top, region.Y + region.Height - FctLayout.EdgePad - reserve,
         0.0, stage.UpFor(incoming) < 0, reserve);
@@ -120,14 +120,14 @@ namespace EQLogParser
     {
       evicted = null;
 
-      var area = AreaOf(stage, hit.Incoming);
+      var area = AreaOf(stage, hit.Incoming, hit.Heal);
       var count = CellCount(area, hit.Proc);
       if (count <= 0)
       {
         return false;
       }
 
-      var taken = Claimed(hits, hit.Incoming, hit.Proc, count);
+      var taken = Claimed(hits, PoolKey(stage, hit), hit.Proc, count);
       var index = -1;
       for (var i = 0; i < count; i++)
       {
@@ -141,7 +141,7 @@ namespace EQLogParser
       if (index < 0)
       {
         /* Full: take the oldest cell, but never a crit's for anything smaller. */
-        var oldest = OldestOf(hits, hit.Incoming, hit.Proc, hit.Lane is FctLane.Crit);
+        var oldest = OldestOf(hits, PoolKey(stage, hit), hit.Proc, hit.Lane is FctLane.Crit);
         if (oldest is null)
         {
           return false;
@@ -179,7 +179,7 @@ namespace EQLogParser
      */
     internal static bool HasRoom(FctHitState hit, double h) => HasRoom(hit, FctStage.Bands(0, h));
 
-    internal static bool HasRoom(FctHitState hit, FctStage stage) => CellCount(AreaOf(stage, hit.Incoming), hit.Proc) > 0;
+    internal static bool HasRoom(FctHitState hit, FctStage stage) => CellCount(AreaOf(stage, hit.Incoming, hit.Heal), hit.Proc) > 0;
 
     /*
      * Re-seat a hit that already holds a cell after the canvas changed size. The index survives — that is what an index is
@@ -193,7 +193,7 @@ namespace EQLogParser
 
     internal static void Reseat(FctHitState hit, FctStage stage)
     {
-      var area = AreaOf(stage, hit.Incoming);
+      var area = AreaOf(stage, hit.Incoming, hit.Heal);
       var count = CellCount(area, hit.Proc);
       if (count <= 0)
       {
@@ -314,8 +314,9 @@ namespace EQLogParser
     }
 
     /* Which cells this pool has live claims on. Derived from the hits themselves, so nothing can drift out of sync when a
-     * hit expires, is absorbed into a total, or is dropped — the list is the only bookkeeping there is. The (incoming, proc)
-     * flags are the region's identity: in halves each half owns its own grid, and a hit can never claim across the seam. */
+     * hit expires, is absorbed into a total, or is dropped — the list is the only bookkeeping there is. The (pool, proc)
+     * pair is the region's identity — and which question the pool answers follows the scheme (PoolKey): in halves each half
+     * owns its own grid, and a hit can never claim across the seam. */
     private static bool[] Claimed(List<FctHitState> hits, bool incoming, bool proc, int count)
     {
       var claimed = new bool[Math.Max(1, count)];
@@ -330,6 +331,12 @@ namespace EQLogParser
 
       return claimed;
     }
+
+    /* The grid lives in a side's region; the pool that shares it is whichever half of ownership the scheme draws — by
+     * direction in halves and bands, by category in by type, where healing's column holds its own grid whatever the
+     * direction its numbers travel (FctStage). */
+    private static bool PoolKey(FctStage stage, FctHitState hit) =>
+      stage.Mode is FctLayoutMode.ByType ? hit.Heal : hit.Incoming;
 
     private static FctHitState OldestOf(List<FctHitState> hits, bool incoming, bool proc, bool newcomerIsCrit)
     {

@@ -145,11 +145,11 @@ namespace EQLogParser
      */
     public static void Spawn(FctHitState hit, FctStage stage, Random rand, (double X, double Y)? origin = null)
     {
-      var region = stage.RegionFor(hit.Incoming);
-      var territory = stage.TerritoryFor(hit.Incoming);
+      var region = stage.RegionFor(hit);
+      var territory = stage.TerritoryFor(hit);
 
-      /* Halves has no lane columns — one stream per side, so every lane spawns in the half's own centre. Bands keeps them. */
-      var cx = stage.Mode is FctLayoutMode.Halves ? region.X + (region.Width / 2) : LaneSlot(hit.Lane, stage.W);
+      /* Halves and by type have no lane columns — one stream per side, so every lane spawns in the side's own centre. Bands keeps them. */
+      var cx = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : LaneSlot(hit.Lane, stage.W);
 
       hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
 
@@ -232,7 +232,7 @@ namespace EQLogParser
     {
       /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. Halves measures them
        * against the half, which is what keeps a sideways sway inside one stream instead of reaching across the seam. */
-      var region = stage.RegionFor(hit.Incoming);
+      var region = stage.RegionFor(hit);
       hit.SideMin = region.X + EdgePad;
       hit.SideMax = Math.Max(region.X + EdgePad + 1, region.X + region.Width - EdgePad);
 
@@ -347,7 +347,7 @@ namespace EQLogParser
 
       var rose = hit.Rise >= 0;
       var depth = hit.Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * SprayFallFrac
-        : stage.Mode is FctLayoutMode.Halves || !rose
+        : stage.Mode is not FctLayoutMode.Bands || !rose
           ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
           : stage.H * 0.28;
 

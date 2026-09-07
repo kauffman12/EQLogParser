@@ -657,6 +657,12 @@ released; those values are valid again and map to themselves, so no migration ex
 are new, and a missing or hand-broken one lands on the shipped choice through the pure parse helpers in `FctOverlaySettings`,
 which is where junk gets a default rather than reaching the geometry as garbage.
 
+`ParseMode` alone distinguishes two fallbacks, because the two cases mean different things: **no setting at all** is a first
+run and lands on the shipped opinion (halves — until this was split out, fresh installs were shipping bands against every
+document that named a default); a setting that exists but names nothing is junk somebody typed, or an abandoned plan's
+`"center"`, and lands on bands, the scheme every build can draw. Side and direction keys have one fallback each and it is
+the shipped one.
+
 A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
 incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own
 band edge for half its life, which reads as stuck rather than as physics, so `FctIngest.AssignLifetime` **mirrors** it:
@@ -668,6 +674,30 @@ the protected strip because it is a fraction of travel already spent below it.
 The layout keeps its promises at any window size: a band that a short window would invert falls back to "inside the edges"
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
+
+### By type: columns owned by category, directions sharing a rail
+
+The *heals left, damage right, mine up, theirs down* request is nearly MSBT's default geometry, and MSBT cannot actually
+serve it: a scroll area scrolls **one** way (the direction argument to `AnimationManager.Add`), so his users build this
+layout out of Add Scroll Area plus re-mapping heal events into the extra area. The layout asks two independent questions,
+and conflating them is what made it look impossible: **ownership** of a column (by side in halves, by category here) and
+**travel** inside it (still each direction's own setting). `FctLayoutMode.ByType` therefore flips exactly one bit:
+
+```
+owner = mode is ByType ? hit.Heal : hit.Incoming     // FctStage.RegionFor / FctCellGrid.PoolKey
+```
+
+Because every region, territory, and stream rule already reads through that one function, the mode came free: resize
+mapping, cell grids, parabola legality, and the rail's one-beat tempo all ask the stage, never the mode. `Heal` is
+captured at spawn the way `Incoming` was — same reason one layer up: a heal crit lands on `FctLane.Crit`, where the lane
+no longer says what it was. Direction-independent ownership does introduce one genuine novelty: **two trains passing in
+one column**, my heals rising against heals landing on me. No new machinery was needed — flight-scored placement treats
+any overlapping candidates as one puzzle, so opposing traffic was already solvable — but the stream's column accounting
+had to stop grouping neighbours by `Incoming` and group by territory overlap instead, or the braid would ignore the train
+it shares a rail with. Configure mode shows exactly one side-picker per scheme (half for *"incoming"*, half for *"heals"*),
+the legend reads `← heals   damage →`, and the parabola is by type's default as it is halves'. `FctByTypeTest` pins the
+ownership both ways, the shared-column traffic (no losses, no seam crossings, alternating head-on), the inertness of the
+heal bit on a halves stage, and the rail running here exactly as in halves.
 
 ### Five motion styles, and the one thing none of them may change
 

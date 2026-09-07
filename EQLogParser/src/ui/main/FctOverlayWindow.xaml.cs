@@ -333,7 +333,7 @@ namespace EQLogParser
        * A fresh halves overlay gets the genre's own shape (the parabola) — but a player who deliberately picked hold keeps it, which is
        * what HasStoredMotion is there to tell apart.
        */
-      if (_savedLayout.Mode is FctLayoutMode.Halves && !FctOverlaySettings.HasStoredMotion())
+      if (_savedLayout.Mode is not FctLayoutMode.Bands && !FctOverlaySettings.HasStoredMotion())
       {
         _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
       }
@@ -614,6 +614,7 @@ namespace EQLogParser
     {
       if (!_settingsReady || layoutCombo.SelectedItem is not ComboBoxItem layout
         || sideCombo.SelectedItem is not ComboBoxItem side
+        || healSideCombo.SelectedItem is not ComboBoxItem healSide
         || outDirCombo.SelectedItem is not ComboBoxItem outDir
         || inDirCombo.SelectedItem is not ComboBoxItem inDir)
       {
@@ -621,10 +622,11 @@ namespace EQLogParser
       }
 
       var choice = new FctLayoutChoice(
-        layout.Tag as string == "halves" ? FctLayoutMode.Halves : FctLayoutMode.Bands,
+        (layout.Tag as string) switch { "halves" => FctLayoutMode.Halves, "bytype" => FctLayoutMode.ByType, _ => FctLayoutMode.Bands },
         side.Tag as string == "right" ? FctRegionSide.Right : FctRegionSide.Left,
         inDir.Tag as string == "up",
-        outDir.Tag as string == "up");
+        outDir.Tag as string == "up",
+        healSide.Tag as string == "right" ? FctRegionSide.Right : FctRegionSide.Left);
 
       /*
        * A style can be legal in one scheme and not the other: the parabola scrolls across the whole region it owns, which in bands is
@@ -645,12 +647,18 @@ namespace EQLogParser
     /* Restores what the controls say for a staged layout: the scheme, and the halves orientation behind it. */
     private void SelectLayoutOptions(FctLayoutChoice layout)
     {
-      SelectByTag(layoutCombo, layout.Mode is FctLayoutMode.Halves ? "halves" : "bands");
+      SelectByTag(layoutCombo, layout.Mode switch
+      {
+        FctLayoutMode.Halves => "halves",
+        FctLayoutMode.ByType => "bytype",
+        _ => "bands",
+      });
       SelectByTag(sideCombo, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
+      SelectByTag(healSideCombo, layout.HealSide == FctRegionSide.Right ? "right" : "left");
       SelectByTag(outDirCombo, layout.OutgoingUp ? "up" : "down");
       SelectByTag(inDirCombo, layout.IncomingUp ? "up" : "down");
 
-      SetHalvesOptionsVisible(layout.Mode is FctLayoutMode.Halves);
+      SetLayoutPanelVisible(layout.Mode);
       SetParabolaLegal(layout.Mode is not FctLayoutMode.Bands);
       SetLegend(layout);
     }
@@ -663,20 +671,24 @@ namespace EQLogParser
     private void SetParabolaLegal(bool legal)
     {
       parabolaItem.IsEnabled = legal;
-      parabolaItem.ToolTip = legal ? null : "the parabola scrolls across a half — halves only";
+      parabolaItem.ToolTip = legal ? null : "the parabola scrolls across a side — halves and by type only";
     }
 
     /*
-     * Side and direction only exist as settings in halves: in bands the protected strip owns each side's direction of travel
-     * (FctStage), so a control for it there would be a setting with no effect — the kind of thing configure mode was cleaned up to
+     * Each scheme shows exactly the controls it obeys. Halves: which side incoming owns, and both directions. By type:
+     * which side healing owns, and both directions — the side question is a different word for a different owner, not a
+     * second copy of the same one. Bands: neither; the protected strip owns each side's direction of travel (FctStage),
+     * so a control for it there would be a setting with no effect — the kind of thing configure mode was cleaned up to
      * stop showing. Collapsed rather than hidden so nothing else on the row jumps when the scheme changes.
      */
-    private void SetHalvesOptionsVisible(bool halves)
+    private void SetLayoutPanelVisible(FctLayoutMode mode)
     {
-      var visibility = halves ? Visibility.Visible : Visibility.Collapsed;
-      sidePanel.Visibility = visibility;
-      outDirPanel.Visibility = visibility;
-      inDirPanel.Visibility = visibility;
+      sidePanel.Visibility = mode is FctLayoutMode.Halves ? Visibility.Visible : Visibility.Collapsed;
+      healPanel.Visibility = mode is FctLayoutMode.ByType ? Visibility.Visible : Visibility.Collapsed;
+
+      var directions = mode is not FctLayoutMode.Bands ? Visibility.Visible : Visibility.Collapsed;
+      outDirPanel.Visibility = directions;
+      inDirPanel.Visibility = directions;
     }
 
     /*
@@ -688,6 +700,12 @@ namespace EQLogParser
       if (layout.Mode is FctLayoutMode.Bands)
       {
         legendText.Text = "↑ yours   ↓ on you";
+        return;
+      }
+
+      if (layout.Mode is FctLayoutMode.ByType)
+      {
+        legendText.Text = layout.HealSide == FctRegionSide.Left ? "← heals   damage →" : "← damage   heals →";
         return;
       }
 

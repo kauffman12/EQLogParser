@@ -109,14 +109,14 @@ namespace EQLogParser
         return hit;   // the first number of a pull gets the lane's own spot, and costs nothing to find
       }
 
-      var region = stage.RegionFor(hit.Incoming);
+      var region = stage.RegionFor(hit);
 
       /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
        * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the half's own
        * centre in halves — there are no columns there to drift back toward, and the canonical-x preference below does the
        * job of keeping a stream centred on its side instead. */
-      var slot = stage.Mode is FctLayoutMode.Halves ? region.X + (region.Width / 2) : FctLayout.LaneSlot(hit.Lane, stage.W);
-      var reach = Math.Min(stage.TerritoryFor(hit.Incoming) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
+      var slot = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : FctLayout.LaneSlot(hit.Lane, stage.W);
+      var reach = Math.Min(stage.TerritoryFor(hit) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
       var canonicalX = hit.X0;
       var canonicalY = hit.Y0;
 

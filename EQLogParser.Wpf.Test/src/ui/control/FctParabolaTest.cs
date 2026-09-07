@@ -117,8 +117,8 @@ namespace EQLogParser
       for (var i = 0; i < spawns.Length; i++)
       {
         var (value, crit, proc) = spawns[i];
-        var hit = ingest.Accept(hits, FctLane.DamageDealt, value, "Flurry", crit, false, proc, null,
-          Width, Height, i * 900.0);
+        var hit = ingest.Accept(hits, FctLane.DamageDealt, value, "Flurry", crit, false, false, null,
+          Width, Height, i * 900.0, proc);
 
         Assert.IsNotNull(hit, $"value {value} belongs on the rail too");
         Assert.AreEqual(FctMotionStyle.Parabola, hit.Style, "crits and procs ride the rail, they do not reroute off it");

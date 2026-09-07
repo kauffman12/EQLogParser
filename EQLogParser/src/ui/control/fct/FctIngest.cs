@@ -222,11 +222,13 @@ namespace EQLogParser
           }
         }
       }
-      else if (style is FctMotionStyle.Parabola && stage.Mode is FctLayoutMode.Halves)
+      else if (style is FctMotionStyle.Parabola && stage.Mode is not FctLayoutMode.Bands)
       {
         /*
-         * The parabola in halves is the stream, not a scatter: one centre column at the spawn edge with braided side
-         * columns only for bursts, scored by the same flight maths as every other placement (FctStream).
+         * The parabola in a side scheme is the stream, not a scatter: one centre column at the spawn edge with braided
+         * side columns only for bursts, scored by the same flight maths as every other placement (FctStream). By type
+         * runs the same engine — and needs it: two directions can share a column there, and the flight scoring is what
+         * keeps opposing trains from wearing the same pixels.
          */
         hit = FctStream.Place(hit, hits, stage, _rand);
       }
@@ -430,7 +432,7 @@ namespace EQLogParser
      */
     internal static void ApplyRailTempo(FctHitState hit, FctStage stage)
     {
-      hit.LifetimeMs = stage.RegionFor(hit.Incoming).Height * FctMotion.ParabolaScrollMsPerPx;
+      hit.LifetimeMs = stage.RegionFor(hit).Height * FctMotion.ParabolaScrollMsPerPx;
       hit.MotionMs = hit.LifetimeMs;
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
       ApplyPlayerTempo(hit);

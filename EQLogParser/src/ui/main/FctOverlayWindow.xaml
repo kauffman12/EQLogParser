@@ -63,15 +63,17 @@
             </ComboBox>
           </StackPanel>
 
-          <!-- The region scheme, and how halves is oriented. The three controls after it exist only in halves: in bands the
-               protected strip owns each side's direction of travel, so offering one there would be a setting with no effect.
-               They collapse with the scheme rather than sit disabled, and nothing on the row jumps when they go. -->
+          <!-- The region scheme, and how it is oriented. The controls after it belong to particular schemes only — which side
+               incoming owns is halves' question, which side healing owns is by type's, and bands obeys neither: its protected
+               strip owns each side's direction of travel. They collapse with the scheme rather than sit disabled, and nothing
+               on the row jumps when they go. -->
           <StackPanel Orientation="Vertical" Margin="18,0,0,0">
             <TextBlock x:Name="layoutLabel" Text="layout" FontWeight="Bold" Foreground="#EDEFF2"
                        ToolTip="where the numbers sit; applies to the ones after this" />
             <ComboBox x:Name="layoutCombo" Width="104" Margin="0,3,0,0" HorizontalAlignment="Left"
-                      SelectionChanged="LayoutChanged" ToolTip="halves: one stream per side, how most scrolling combat text ships. bands: top and bottom around a clear middle">
+                      SelectionChanged="LayoutChanged" ToolTip="halves: one stream per side, how most scrolling combat text ships. by type: healing gets its own column, everything else the other. bands: top and bottom around a clear middle">
               <ComboBoxItem Content="halves" Tag="halves" />
+              <ComboBoxItem Content="by type" Tag="bytype" />
               <ComboBoxItem Content="bands" Tag="bands" />
             </ComboBox>
           </StackPanel>
@@ -80,6 +82,15 @@
             <TextBlock x:Name="sideLabel" Text="incoming" FontWeight="Bold" Foreground="#EDEFF2"
                        ToolTip="which half of the overlay incoming numbers sit in (halves only)" />
             <ComboBox x:Name="sideCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+              <ComboBoxItem Content="left" Tag="left" />
+              <ComboBoxItem Content="right" Tag="right" />
+            </ComboBox>
+          </StackPanel>
+
+          <StackPanel x:Name="healPanel" Orientation="Vertical" Margin="18,0,0,0" Visibility="Collapsed">
+            <TextBlock x:Name="healLabel" Text="heals" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="which column healing sits in (by type only)" />
+            <ComboBox x:Name="healSideCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
               <ComboBoxItem Content="left" Tag="left" />
               <ComboBoxItem Content="right" Tag="right" />
             </ComboBox>
