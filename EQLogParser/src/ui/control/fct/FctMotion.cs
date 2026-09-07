@@ -91,7 +91,10 @@ namespace EQLogParser
     {
       if (hit.FallDist == 0.0)
       {
-        return hit.Y0 - (hit.Rise * Ease(t));
+        /* The parabola scrolls at constant vertical speed — that is the shape: with y linear in t and x quadratic in t,
+           x is a function of y², which is what makes it a parabola rather than an arc. Everything else eases. */
+        var v = hit.Style is FctMotionStyle.Parabola ? t : Ease(t);
+        return hit.Y0 - (hit.Rise * v);
       }
 
       const double riseFrac = 1.0 - FallPhaseFrac;
@@ -126,7 +129,11 @@ namespace EQLogParser
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
 
-      return Math.Clamp(hit.X0 + (hit.Arc * LateralProgress(hit, t)), lo, hi);
+      /* The parabola bends sideways on its own law — quadratic in t with zero slope at the spawn, so it leaves straight up
+         or down and curves out as it scrolls. x(t) = X0 + Bow·t² with y linear in t is the shape itself. */
+      var lateral = hit.Style is FctMotionStyle.Parabola ? hit.Bow * t * t : hit.Arc * LateralProgress(hit, t);
+
+      return Math.Clamp(hit.X0 + lateral, lo, hi);
     }
 
     /*

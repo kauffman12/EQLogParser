@@ -103,7 +103,7 @@ namespace EQLogParser
     public void HalvesNumbersStayInsideTheirOwnHalfForTheirWholeLife()
     {
       var rand = new Random(4_242);
-      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray };
+      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray, FctMotionStyle.Parabola };
 
       foreach (var style in styles)
       {

@@ -669,29 +669,53 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
-### Four motion styles, and the one thing none of them may change
+### Five motion styles, and the one thing none of them may change
 
 The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
-be read, fade — the default), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse** (no
-travel at all — it swells where it appeared) and **spray** (a random cone out of the lane slot, then a short fall).
-Where a hit goes, how it moves and how numbers stack are three orthogonal decisions, and cramming two of them into one
-boolean was how "fountain" came to mean several things at once.
+be read, fade — the default in bands), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
+(no travel at all — it swells where it appeared), **spray** (a random cone out of the lane slot, then a short fall) and
+**parabola** (a constant-speed scroll bent sideways by t² — the shape the scrolling-text genre ships as its own default,
+and halves' default for the same reason; see below). Where a hit goes, how it moves and how numbers stack are three
+orthogonal decisions, and cramming two of them into one boolean was how "fountain" came to mean several things at once.
 
-Three rules keep four styles from becoming four behaviours:
+Three rules keep five styles from becoming five behaviours:
 
-- **Motion is presentation, never information.** Band and direction of travel still say who acted whichever style is
-  running, which is what makes "try each during the next pull" a safe thing to offer. The combo therefore applies to
-  hits spawned *after* the change rather than restyling what is already on screen.
+- **Motion is presentation, never information.** Band (or half) and direction of travel still say who acted whichever
+  style is running, which is what makes "try each during the next pull" a safe thing to offer. The combo therefore applies
+  to hits spawned *after* the change rather than restyling what is already on screen.
 - **A hit keeps the style it was born with** (`FctHitState.Style`, snapshotted by `FctIngest.Accept`). If the renderer
   read one live setting, switching fountain → hold mid-flight would hand every parabola in progress a different
   velocity for its remaining frames. Snapshotting an enum per hit is what makes switching free.
-- **The protected strip stays clear by construction, for all four.** Pulse's cells are laid out inside a margin off the
+- **The protected middle stays clear by construction, for all five.** Pulse's cells are laid out inside a margin off the
   strip's edge and every one is measured against it (`FctCellGrid`); spray falls
   back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; hold
   never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
-  the strip is behind it and the bottom edge is clamped. A test sweeps each style across its whole curve asserting none
-  enters the strip or leaves the window, so a future fifth style has to pass the same bar.
+  the strip is behind it and the bottom edge is clamped. The parabola lives in halves, where there is no strip to cross
+  because the regions do not overlap; if settings.ini forces it into bands anyway, `FctIngest` degrades it to hold rather
+  than run it (a test sweeps each style across its whole curve asserting nothing enters the strip or leaves the window,
+  so a future sixth style has to pass the same bar).
+
+**The parabola is halves' default because it is what the genre ships.** MSBT's profiles are all of them
+`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and bend
+outward as they go, which is to say x is a function of y². FCT keeps its tempo system and borrows only the shape: the
+vertical runs `y = Y0 − Rise·t` — linear, not eased, because an eased scroll is no longer a parabola at all, it is an arc
+wearing one's coordinates — while the sideways travel is `x = X0 + Bow·t²`, zero slope at the spawn so a number leaves
+straight up or down and curves out as it scrolls. `Bow` is a share of the side's territory (`ParabolaBowFrac`, 30%),
+signed **away from the seam**: outward is the genre's bow, and the only drift direction that cannot reach the other side's
+stream. MSBT's curve reaches a full area-width at mid-height — its numbers leave the side sideways long before they finish
+fading; landing the drift inside the half instead is what keeps the end of the scroll readable (`FctParabolaTest` pins
+containment for life, both sides, both directions).
+
+Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
+and nothing about where the number ends, so a slower parabola is the same curve drawn more slowly, which is what a tempo
+dial should do for a constant-speed motion (a test checks the endpoints agree to the bit at both dial extremes). And a
+resize maps `Bow` by the x factor exactly like `Arc`, so a number mid-scroll still ends in its new half. Legality lives in
+one place — `FctStage.DefaultMotion`: halves → parabola, bands → hold — and the configure row enforces it twice over: the
+parabola item is disabled in bands, and choosing bands while previewing a parabola swaps the preview to that scheme's
+default instead of showing a motion ingest is about to degrade anyway. A first-time halves user gets that default even
+though nothing was saved: `ParseMotion`'s hold is the fallback for junk data, not a first-run opinion, and
+`HasStoredMotion` is what tells the two apart.
 
 Spray needed one constant that measurement forced: `SprayReachFactor`, roughly twice the depth of a band, with height
 capped at what the band offers. Given only the band's own travel budget (`usable * sin(theta)`), spray's horizontal
@@ -747,7 +771,7 @@ one place, GW2 groups into fixed areas. Deterministic positions are the point: t
 
 Pulse is also the nearest thing here to the reduced-motion option the design document asks for: nothing translates, so
 the information arrives without movement. It is not labelled that way yet — an explicit reduced-motion setting should
-pick pulse and shorten lifetimes rather than invent a fifth style.
+pick pulse and shorten lifetimes; the fifth style that did eventually arrive (parabola) moves more, not less.
 
 What was deliberately **not** built is anchored-follow (a number tracking its own mob across the screen). EQ's log
 never contains actor positions, only names, so there is nothing to anchor to; that absence is the whole reason the

@@ -199,7 +199,10 @@ namespace EQLogParser
         ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
         : hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
 
-      AssignTravel(hit, territory, rand, up, Math.Abs(hit.Y0 - far));
+      // a parabola bows away from the seam: outward is the genre's shape and the only drift that cannot reach the other
+      // side's stream. Bands has no seam, so the sign is moot there (ingest will not run a parabola in it).
+      var bowDir = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
+      AssignTravel(hit, territory, rand, up, Math.Abs(hit.Y0 - far), bowDir);
     }
 
     /*
@@ -262,7 +265,12 @@ namespace EQLogParser
      * The territory parameter is what the sideways amounts measure against — canvas in bands, half-width in halves — so
      * "12% of width" keeps meaning 12% of this stream's own territory in both schemes.
      */
-    private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable)
+    /* How wide a parabola's outward drift gets by the end of its travel, as a share of the side's territory. MSBT's own
+     * curve reaches a full area-width at mid-height — to say its numbers leave the side sideways long before they finish
+     * fading; this lands the drift inside the half instead, where it can be read (FctHalvesTest pins the containment). */
+    public const double ParabolaBowFrac = 0.30;
+
+    private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable, double bowDir)
     {
       if (hit.Style is FctMotionStyle.Pulse)
       {
@@ -280,6 +288,16 @@ namespace EQLogParser
         // height is capped at what the band offers, which is what keeps every angle of the cone out of the strip
         hit.Rise = up * Math.Min(usable, reach * Math.Cos(theta));
         hit.Arc = Math.Clamp(reach * Math.Sin(theta), -(territory * SprayMaxLateralFrac), territory * SprayMaxLateralFrac);
+        return;
+      }
+
+      if (hit.Style is FctMotionStyle.Parabola)
+      {
+        // the shape: a straight vertical scroll at constant speed, bent sideways by t² — MSBT's parabola, in the tempo
+        // system's own units (a share of the region, so the speed dial and resize keep working untouched)
+        hit.Rise = up * usable;
+        hit.Arc = 0;
+        hit.Bow = bowDir * territory * ParabolaBowFrac;
         return;
       }
 

@@ -54,11 +54,12 @@
           <StackPanel Orientation="Vertical">
             <TextBlock x:Name="titleLabel" Text="FCT" FontWeight="Bold" Foreground="#EDEFF2" />
             <ComboBox x:Name="motionCombo" Width="112" Margin="0,3,0,0" HorizontalAlignment="Left"
-                      SelectionChanged="MotionChanged" ToolTip="how the numbers move; applies to the ones after this">
+                      SelectionChanged="MotionChanged" ToolTip="how the numbers move; applies to the ones after this. Parabola is halves-only — it scrolls across a whole region">
               <ComboBoxItem Content="hold" Tag="hold" />
               <ComboBoxItem Content="fountain" Tag="fountain" />
               <ComboBoxItem Content="pulse" Tag="pulse" />
               <ComboBoxItem Content="spray" Tag="spray" />
+              <ComboBoxItem x:Name="parabolaItem" Content="parabola" Tag="parabola" />
             </ComboBox>
           </StackPanel>
 

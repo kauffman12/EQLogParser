@@ -493,11 +493,15 @@ namespace EQLogParser
         $"the cone should reach most of the overlay width, covered {sprayed.Width:0} px");
     }
 
-    /* Every style owes the same two promises; sweep asserts them for hold, fountain, pulse and spray alike. */
+    /*
+     * Every style owes the same two promises; sweep asserts them for all of them alike. The parabola is in on purpose: in bands
+     * ingest degrades it to hold (FctIngest), and this is the test that proves the degradation keeps the strip clear rather
+     * than merely being present.
+     */
     [TestMethod]
     public void EveryMotionStyleKeepsTheStripClearAndTheWindowInside()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray })
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray, FctMotionStyle.Parabola })
       {
         var coverage = Sweep(style);
 

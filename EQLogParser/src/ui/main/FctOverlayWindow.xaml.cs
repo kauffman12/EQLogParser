@@ -14,9 +14,11 @@ namespace EQLogParser
    * canvas's EventsFrame, so a log burst becomes one cross-thread hop instead of one dispatcher item per
    * record. Position, motion style and the click-through lock persist like every other overlay window.
    *
-   * Motion is a combo rather than the old fountain checkbox because there are four styles now (hold, fountain, pulse,
-   * spray) and they are presentation, not information: whichever is chosen, band and direction of travel still say who
-   * acted. It applies to hits spawned afterwards, so trying a style during a pull is safe.
+   * Motion is a combo rather than the old fountain checkbox because there are five styles now (hold, fountain, pulse,
+   * spray, parabola) and they are presentation, not information: whichever is chosen, half or band and direction of travel
+   * still say who acted. It applies to hits spawned afterwards, so trying a style during a pull is safe. The parabola is the
+   * one style whose legality depends on the region scheme — it scrolls across whatever owns the side, which in bands is the
+   * strip included — so its item disables under bands and FctStage.DefaultMotion says what each scheme moves with instead.
    *
    * It is resizable without being resizeable: Windows gives a transparent, chromeless window no frame to grab, so a band along each
    * edge drags the size and FctResize offers the sizes it settles on. Position and size persist together, and numbers already in
@@ -315,12 +317,23 @@ namespace EQLogParser
       _locked = true;
 
       _savedStyle = FctOverlaySettings.LoadMotion();
-      _canvas.MotionStyle = _savedStyle;
-      SelectMotionOption(_savedStyle);
 
       /* The region scheme and, in halves, which side incoming sits on and which way each half travels. Same preview contract as the
          style: the canvas draws with it now, Save is what writes it, and leaving without Save puts it back. */
       _savedLayout = FctOverlaySettings.LoadLayout();
+
+      /*
+       * The one default that is not somebody's stored choice: ParseMotion's hold is the fallback for junk data, not a first-run opinion.
+       * A fresh halves overlay gets the genre's own shape (the parabola) — but a player who deliberately picked hold keeps it, which is
+       * what HasStoredMotion is there to tell apart.
+       */
+      if (_savedLayout.Mode is FctLayoutMode.Halves && !FctOverlaySettings.HasStoredMotion())
+      {
+        _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
+      }
+
+      _canvas.MotionStyle = _savedStyle;
+      SelectMotionOption(_savedStyle);
       _canvas.Layout = _savedLayout;
       SelectLayoutOptions(_savedLayout);
 
@@ -561,6 +574,17 @@ namespace EQLogParser
         inDir.Tag as string == "up",
         outDir.Tag as string == "up");
 
+      /*
+       * A style can be legal in one scheme and not the other: the parabola scrolls across the whole region it owns, which in bands is
+       * the protected strip itself. If the scheme just chosen would run it there, swap the preview to that scheme's own default rather
+       * than leave it showing a motion ingest is about to degrade on its half of the same contract (FctIngest.Accept).
+       */
+      if (choice.Mode is FctLayoutMode.Bands && _canvas.MotionStyle is FctMotionStyle.Parabola)
+      {
+        _canvas.MotionStyle = FctStage.DefaultMotion(choice.Mode);
+        SelectMotionOption(_canvas.MotionStyle);
+      }
+
       _canvas.Layout = choice;
       SelectLayoutOptions(choice);
       RefreshDemo();
@@ -575,7 +599,19 @@ namespace EQLogParser
       SelectByTag(inDirCombo, layout.IncomingUp ? "up" : "down");
 
       SetHalvesOptionsVisible(layout.Mode is FctLayoutMode.Halves);
+      SetParabolaLegal(layout.Mode is not FctLayoutMode.Bands);
       SetLegend(layout);
+    }
+
+    /*
+     * The parabola scrolls across the whole region it owns, and in bands that is the strip included — so the item is disabled in bands
+     * rather than hidden: hiding it would change the row's geometry and make a player hunt for where it went, while a greyed item with
+     * a tooltip is the setting telling you why.
+     */
+    private void SetParabolaLegal(bool legal)
+    {
+      parabolaItem.IsEnabled = legal;
+      parabolaItem.ToolTip = legal ? null : "the parabola scrolls across a half — halves only";
     }
 
     /*

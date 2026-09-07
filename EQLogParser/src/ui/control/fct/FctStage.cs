@@ -133,5 +133,13 @@ namespace EQLogParser
      * what keeps a stream inside its own territory instead of reaching across the seam for room.
      */
     public double TerritoryFor(bool incoming) => Mode is FctLayoutMode.Bands ? W : RegionFor(incoming).Width;
+
+    /*
+     * What a scheme moves with when nothing explicit says otherwise: halves ships with the genre's own default shape (the
+     * parabola — MSBT runs it, docs/DesignNotes.md), and bands keeps its quiet hold. First-run configure uses this, and so
+     * does a layout change that would leave an illegal style selected.
+     */
+    public static FctMotionStyle DefaultMotion(FctLayoutMode mode)
+      => mode is FctLayoutMode.Bands ? FctMotionStyle.Hold : FctMotionStyle.Parabola;
   }
 }

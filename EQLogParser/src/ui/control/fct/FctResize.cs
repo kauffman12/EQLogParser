@@ -124,6 +124,7 @@ namespace EQLogParser
         hit.Rise *= sy;
         hit.FallDist *= sy;
         hit.Arc *= sx;
+        hit.Bow *= sx; // the bow is a territory share too: mapped the same way, so a parabola ends in its new half
       }
     }
   }

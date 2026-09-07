@@ -105,13 +105,20 @@ namespace EQLogParser
       var stage = Layout.Stage(w, h);
 
       /*
+       * The parabola is a halves shape: it scrolls straight across whatever region owns the side, and in bands that region
+       * is the canvas — strip included. The configure row cannot select it there, but settings.ini can be hand-written,
+       * which is why the degradation lives here rather than only in the UI (see FctMotionStyle.Parabola).
+       */
+      var style = stage.Mode is FctLayoutMode.Bands && Style is FctMotionStyle.Parabola
+        ? FctMotionStyle.Hold
+        : Style;
+
+      /*
        * Pulse mode allocates cells, and cells are its capacity: folding a number into a running total that lives in some
        * other cell would hide the fold, and the lane cap would drop hits that a free cell has room for. So the absorb and
-       * overflow paths below belong to the travelling styles only. The grid spans the canvas because there is one region
-       * scheme to lay cells out in; making halves mode available meant that promise was false in it, which is why halves is
-       * gone rather than patched (see the FctLayout header).
+       * overflow paths below belong to the travelling styles only.
        */
-      var celled = Style is FctMotionStyle.Pulse;
+      var celled = style is FctMotionStyle.Pulse;
 
       if (fixedText is null)
       {
@@ -154,7 +161,7 @@ namespace EQLogParser
         Periodic = periodic,
         Heal = heal,
         Incoming = incoming,
-        Style = Style,
+        Style = style,
         SpawnMs = now,
         Source = source,
         FixedText = fixedText,
@@ -345,11 +352,12 @@ namespace EQLogParser
        * by a choreography. The fall itself is FctLayout.ApplyFall's, because placement may re-roll the origin afterwards
        * and has to be able to ask for it again.
        */
-      if (Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
+      if (hit.Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
         // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall. Each style
         // owns its tempo — spray runs shorter, because sharing fountain's flight time was half of why the two looked alike
-        var window = Style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
+        // (and hit.Style, not the ingest's current one: a hit keeps the style it was born with)
+        var window = hit.Style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
 
         hit.LifetimeMs = window;
         hit.MotionMs = window;

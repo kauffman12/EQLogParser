@@ -46,6 +46,13 @@ namespace EQLogParser
     public double Rise, Arc;
 
     /*
+     * Parabola's sideways drift (px, signed): reaches Bow at t=1, quadratically — x ∝ t² while y runs linearly, which is
+     * exactly the genre's parabola with y as the independent variable. Separate from Arc because its time law differs
+     * (quadratic vs ease), and a shared field would force FctMotion to guess which law a number meant.
+     */
+    public double Bow;
+
+    /*
      * Fountain fall distance, and note the sign runs opposite to Rise because it is screen-relative: positive
      * accelerates toward the bottom of the screen (the usual gravity tail), negative back up toward the gap, which is
      * how the incoming band mirrors the outgoing fountain instead of parking against its own bottom edge. Zero means

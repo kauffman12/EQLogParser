@@ -124,6 +124,7 @@ namespace EQLogParser
         "fountain" => FctMotionStyle.Fountain,
         "pulse" => FctMotionStyle.Pulse,
         "spray" => FctMotionStyle.Spray,
+        "parabola" => FctMotionStyle.Parabola,
         _ => FctMotionStyle.Hold,
       };
 
@@ -133,7 +134,15 @@ namespace EQLogParser
         FctMotionStyle.Fountain => "fountain",
         FctMotionStyle.Pulse => "pulse",
         FctMotionStyle.Spray => "spray",
+        FctMotionStyle.Parabola => "parabola",
         _ => "hold",
       };
+
+    /*
+     * Whether the player ever chose a motion at all, as opposed to ParseMotion's hold default. A first-time halves user
+     * gets the genre's shape (the parabola) instead of that default — but somebody who picked hold on purpose keeps it.
+     */
+    public static bool HasStoredMotion()
+      => ConfigUtil.GetSetting(MotionKey, null) is { Length: > 0 } || ConfigUtil.IfSet(LegacyFountainKey);
   }
 }
