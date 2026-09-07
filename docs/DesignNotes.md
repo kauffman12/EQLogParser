@@ -774,6 +774,37 @@ Final figures for the same measurement, on 980×640: three fountains 58% → **9
 because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
 and the life shortener are for, not what placement can solve.
 
+### Drag an edge to resize, and it lands on a size that works
+
+A transparent, chromeless window gets no resize frame from Windows, and the middle of the overlay belongs to the numbers — so the
+grip is a 12 px band along each edge: corners size both axes, edges size one. The bands are collapsed while locked, because a
+window whose clicks pass through to EverQuest must not offer anything to click, and the header's top inset was raised past them so
+no control sits where a drag for size starts.
+
+What it settles on is a **magnet, not a menu** (`FctResize`): drag freely and each axis is pulled onto an offered value when it
+comes near — 980×640, 800×560, 760×520, 720×560 — and stays exactly where the hand stopped in between. Per-axis rather than whole
+presets, so dragging one edge gets the same help as a corner, and a corner near 800×560 lands on it. The floor is 420×300, the
+smallest size probed: every style still places every number inside the window and clear of the protected strip there, and below it
+a band is shallower than a line of text.
+
+The default moved from 980×640 to **800×560**, which is what most people need over a HUD. The honest cost, measured at each offered
+size (worst-instant pair overlap): fountain 3-in-flight 7.5% → 6.7%, spray 8-in-flight 8.3% → 7.7% — free of charge — while **six
+numbers held at once goes 15.5% → 20.7%**. Held text is the one thing that cannot trade space for motion, so it pays for the narrower
+window; everything else does not.
+
+**Numbers already flying move with the window.** Motion is a pure function of `(hit, age)` with no canvas argument: bands, side
+bounds, travel and pulse cells are pixels baked at spawn, so a resize that touches nothing leaves them drawing where the old window
+used to be. Probed at 980×640 → 620×400: **10 of 15** held numbers drawn outside the overlay, and pulse was worst (11 off-screen, 4
+in the protected strip) because its grid is computed once. It healed itself as hits expired, which is a way of being wrong politely,
+not a fix. So `FctResize.Rescale` maps them: free text by the ratio of each axis (a thrown number keeps its shape relative to the
+window it is thrown in), pulse numbers by re-seating them — the cell *index* survives, where that index sits is the grid's business —
+and bands plus side bounds are re-derived from the new size by the same function `Spawn` uses, never scaled approximately. Nowhere
+above is off-screen or in the strip any more, at 620×400, 1400×900 and at the floor.
+
+Fonts are deliberately not scaled: how big a number is drawn is a style decision, not a layout one. A smaller window therefore means
+less room per number, which is absorbed by the lane cap and the life shortener — the mechanism that already decides how many numbers
+fit — rather than by type nobody can read at arm's length.
+
 ### Colour answers "what", never "who"
 
 `FctStyle` used to paint the successful-defence lane blue, which put direction on colour — and blue in particular

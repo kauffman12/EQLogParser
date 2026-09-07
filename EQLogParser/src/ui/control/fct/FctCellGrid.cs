@@ -122,6 +122,30 @@ namespace EQLogParser
      */
     internal static bool HasRoom(FctHitState hit, double h) => CellCount(hit.Incoming, hit.Proc, h) > 0;
 
+    /*
+     * Re-seat a hit that already holds a cell after the canvas changed size. The index survives — that is what an index is for —
+     * but everything derived from it does not: cell centres, the block's margins and the band's single spawn point all come out of
+     * the current width and height, so a number that was mid-slide finishes its slide at where its cell is now rather than at
+     * where it was when the window was bigger. If the grid shrank under it, the index comes inward to the last cell that still
+     * exists: two numbers sharing a cell beats one drawn outside the overlay, and the cap is what stops that happening often.
+     */
+    internal static void Reseat(FctHitState hit, double w, double h)
+    {
+      var count = CellCount(hit.Incoming, hit.Proc, h);
+      if (count <= 0)
+      {
+        return; // no grid at this size any more: FctResize has already given it sane bands, so leave it where it is
+      }
+
+      hit.Cell = Math.Min(hit.Cell, count - 1);
+      hit.X0 = w * 0.5;
+      hit.Y0 = hit.Incoming ? BlockTop(hit.Incoming, h) : BlockBottom(hit.Incoming, h);
+
+      Position(hit.Incoming, hit.Proc, hit.Cell, w, h, FctLayout.TextReserve(hit), out var cellX, out var cellY);
+      hit.Arc = cellX - hit.X0;
+      hit.Rise = hit.Y0 - cellY;
+    }
+
     /* Rows of direct hits that actually fit, giving up the outer row first when the band is too shallow for two. */
     internal static int MainRowCount(bool incoming, double h)
     {

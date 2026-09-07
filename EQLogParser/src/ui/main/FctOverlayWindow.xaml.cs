@@ -17,6 +17,10 @@ namespace EQLogParser
    * spray) and they are presentation, not information: whichever is chosen, band and direction of travel still say who
    * acted. It applies to hits spawned afterwards, so trying a style during a pull is safe.
    *
+   * It is resizable without being resizeable: Windows gives a transparent, chromeless window no frame to grab, so a band along each
+   * edge drags the size and FctResize offers the sizes it settles on. Position and size persist together, and numbers already in
+   * flight move with the window rather than staying where the old one was (FctResize.Rescale, called by the canvas).
+   *
    * Locked (the in-game default) means WS_EX_TRANSPARENT + WS_EX_NOACTIVATE: clicks fall through to EverQuest
    * and the overlay stops stealing focus mid-fight — the same recipe TextOverlayWindow/TimerOverlayWindow use.
    * Unlock from the Tools menu, or press Esc while it has focus to close.
@@ -29,9 +33,32 @@ namespace EQLogParser
    */
   public partial class FctOverlayWindow : Window
   {
+    /* Which edges a resize drag pulls on. The XAML bands name themselves with Tag so the grip stays visible in the markup and
+     * the arithmetic lives here once, instead of eight copies of nearly the same handler. */
+    [Flags]
+    private enum Edge
+    {
+      None = 0,
+      Left = 1,
+      Right = 2,
+      Top = 4,
+      Bottom = 8
+    }
+
     private readonly IFctCanvas _canvas;
     private readonly IFctDiagnostics _diagnostics;
     private readonly List<FctHitCommand> _pending = [];
+
+    /*
+     * Resize drag state. The running size is kept unsnapped (_resizeFreeW/H) and snapped only when applied, which is what makes
+     * the offered sizes a magnet rather than a ratchet: leave the magnet's range and the drag continues from where it was rather
+     * than from where it settled. The anchored edge is the one being moved away from, so the far edge cannot creep during a long
+     * drag, and deltas are measured in device pixels then divided by the DPI scale because WPF gives DIPs while a moving window
+     * makes window-relative positions shift under the pointer.
+     */
+    private Edge _resizeEdge;
+    private Point _resizeLastDevice;
+    private double _resizeFreeW, _resizeFreeH, _resizeAnchorRight, _resizeAnchorBottom;
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
@@ -60,6 +87,8 @@ namespace EQLogParser
       // a fresh manager per window: it subscribes to the parsers and unsubscribes when we close, so a closed
       // overlay can never keep queueing hits for a dead window
       FctManager.Create();
+
+      HookResizeBands();
 
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
@@ -121,6 +150,9 @@ namespace EQLogParser
       // belt-and-braces for frames between the request and the style actually landing
       rootBorder.IsHitTestVisible = !locked;
 
+      /* A click-through window must not offer anything to click, including its own resize bands. */
+      resizeLayer.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+
       ConfigUtil.SetSetting("FctOverlayLocked", locked);
       EventsLockChanged?.Invoke(locked);
 
@@ -152,13 +184,15 @@ namespace EQLogParser
       var width = ConfigUtil.GetSettingAsDouble("FctOverlayWidth", 0);
       var height = ConfigUtil.GetSettingAsDouble("FctOverlayHeight", 0);
 
+      /* Restored exactly as saved apart from the layout's floor: a size stored by an older build (or a second monitor that has
+       * since gone) is raised to what the layout can draw in, but never snapped — reopening an overlay should not move it. */
       if (left > 0 && top >= 0 && width > 100 && height > 100)
       {
         WindowStartupLocation = WindowStartupLocation.Manual;
         Left = left;
         Top = top;
-        Width = width;
-        Height = height;
+        Width = Math.Max(FctResize.MinWidth, width);
+        Height = Math.Max(FctResize.MinHeight, height);
       }
 
       _locked = ConfigUtil.IfSet("FctOverlayLocked");
@@ -184,7 +218,7 @@ namespace EQLogParser
 
       // terse on purpose: the hint shares one row with the motion combo and the lock checkbox, and a legend that gets
       // ellipsised is a legend nobody can read while fighting
-      hintText.Text = "drag to move · gap above your cast bar · up = yours, down = hits on you · Esc closes";
+      hintText.Text = "drag to move · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc closes";
     }
 
     private void SaveSettings()
@@ -254,6 +288,140 @@ namespace EQLogParser
     }
 
     private void LockChanged(object sender, RoutedEventArgs e) => ApplyLock(lockCheck.IsChecked == true);
+
+    /*
+     * Every band does the same three things, so they are wired in one loop rather than with twenty-four XAML attributes. The
+     * centre cell is intentionally empty: it is where the numbers live.
+     */
+    private void HookResizeBands()
+    {
+      foreach (var child in resizeLayer.Children)
+      {
+        if (child is not FrameworkElement band)
+        {
+          continue;
+        }
+
+        band.MouseLeftButtonDown += ResizeEdgeDown;
+        band.MouseMove += ResizeEdgeMove;
+        band.MouseLeftButtonUp += ResizeEdgeUp;
+        band.LostMouseCapture += ResizeEdgeUp;
+      }
+    }
+
+    private static Edge EdgeOf(string name) => name switch
+    {
+      "l" => Edge.Left,
+      "r" => Edge.Right,
+      "t" => Edge.Top,
+      "b" => Edge.Bottom,
+      "tl" => Edge.Top | Edge.Left,
+      "tr" => Edge.Top | Edge.Right,
+      "bl" => Edge.Bottom | Edge.Left,
+      "br" => Edge.Bottom | Edge.Right,
+      _ => Edge.None
+    };
+
+    private void ResizeEdgeDown(object sender, MouseButtonEventArgs e)
+    {
+      if (_locked || e.ButtonState != MouseButtonState.Pressed || sender is not FrameworkElement band)
+      {
+        return;
+      }
+
+      var edge = EdgeOf(band.Tag as string);
+      if (edge is Edge.None)
+      {
+        return;
+      }
+
+      _resizeEdge = edge;
+      _resizeFreeW = ActualWidth;
+      _resizeFreeH = ActualHeight;
+      _resizeAnchorRight = Left + ActualWidth;
+      _resizeAnchorBottom = Top + ActualHeight;
+      _resizeLastDevice = PointToScreen(e.GetPosition(this));
+
+      // capture: a fast drag leaves the 12px band immediately, and losing the drag mid-way would leave the overlay half-sized
+      ((UIElement)band).CaptureMouse();
+      e.Handled = true;
+    }
+
+    private void ResizeEdgeMove(object sender, MouseEventArgs e)
+    {
+      if (_resizeEdge is Edge.None || e.LeftButton != MouseButtonState.Pressed)
+      {
+        return;
+      }
+
+      var at = PointToScreen(e.GetPosition(this));
+      var scale = DeviceScale();
+      var dx = (at.X - _resizeLastDevice.X) / scale;
+      var dy = (at.Y - _resizeLastDevice.Y) / scale;
+      _resizeLastDevice = at;
+
+      if ((_resizeEdge & Edge.Right) != 0)
+      {
+        _resizeFreeW += dx;
+      }
+
+      if ((_resizeEdge & Edge.Left) != 0)
+      {
+        _resizeFreeW -= dx;
+      }
+
+      if ((_resizeEdge & Edge.Bottom) != 0)
+      {
+        _resizeFreeH += dy;
+      }
+
+      if ((_resizeEdge & Edge.Top) != 0)
+      {
+        _resizeFreeH -= dy;
+      }
+
+      /* Bounded by the primary work area: an overlay bigger than the screen cannot be shrunk back by dragging an edge that is
+       * off it, so the drag stops at the border instead of inventing a window nobody can reach. Multi-monitor sizing is a
+       * per-monitor metric WPF does not hand a chromeless window for free, and this overlay is 980px wide at its largest. */
+      var area = SystemParameters.WorkArea;
+      FctResize.Fit(_resizeFreeW, _resizeFreeH, area.Width, area.Height, out var w, out var h);
+
+      Width = w;
+      Height = h;
+
+      if ((_resizeEdge & Edge.Left) != 0)
+      {
+        Left = _resizeAnchorRight - w;
+      }
+
+      if ((_resizeEdge & Edge.Top) != 0)
+      {
+        Top = _resizeAnchorBottom - h;
+      }
+    }
+
+    private void ResizeEdgeUp(object sender, MouseEventArgs e)
+    {
+      if (_resizeEdge is Edge.None)
+      {
+        return;
+      }
+
+      _resizeEdge = Edge.None;
+
+      if (sender is UIElement band && band.IsMouseCaptured)
+      {
+        band.ReleaseMouseCapture();
+      }
+
+      SaveSettings();
+    }
+
+    private double DeviceScale()
+    {
+      var m = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+      return m > 0 ? m : 1.0;
+    }
 
     /* DragMove throws if no button is actually held (synthetic events, double-fire on some setups). */
     private void HeaderDrag(object sender, MouseButtonEventArgs e)

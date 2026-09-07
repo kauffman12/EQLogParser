@@ -14,13 +14,17 @@
         TextOptions.TextFormattingMode="Display"
         Title="FCT Overlay"
         WindowStartupLocation="CenterScreen"
-        Width="980"
-        Height="640"
+        Width="800"
+        Height="560"
+        MinWidth="420"
+        MinHeight="300"
         UseLayoutRounding="True"
         WindowStyle="None"
         KeyDown="WindowKeyDown">
+  <Grid>
   <Border x:Name="rootBorder" CornerRadius="10" Background="#350D131A" BorderBrush="#5C7A99" BorderThickness="1">
-    <Grid Margin="12,8,12,12">
+    <!-- the top inset clears the 12px resize band above it, so nothing clickable ever sits where a drag for size starts -->
+    <Grid Margin="12,16,12,12">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
@@ -56,4 +60,31 @@
       <local:FctSkiaCanvas x:Name="fctCanvas" Grid.Row="1" />
     </Grid>
   </Border>
+  <!--
+       Drag bands for resizing. A transparent, chromeless window gets no resize frame from Windows, and the middle of the overlay
+       belongs to the numbers, so the grip is a band along each edge: corners size both axes, edges size one. Sizes settle on the
+       values FctResize offers, which is why you cannot make it the wrong shape by accident. Collapsed while locked, because a
+       click-through window must not offer anything to click.
+  -->
+  <Grid x:Name="resizeLayer">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="12" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="12" />
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="12" />
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="12" />
+    </Grid.ColumnDefinitions>
+    <Rectangle Grid.Row="0" Grid.Column="0" Fill="Transparent" Cursor="SizeNWSE" Tag="tl" />
+    <Rectangle Grid.Row="0" Grid.Column="2" Fill="Transparent" Cursor="SizeNESW" Tag="tr" />
+    <Rectangle Grid.Row="2" Grid.Column="0" Fill="Transparent" Cursor="SizeNESW" Tag="bl" />
+    <Rectangle Grid.Row="2" Grid.Column="2" Fill="Transparent" Cursor="SizeNWSE" Tag="br" />
+    <Rectangle Grid.Row="0" Grid.Column="1" Fill="Transparent" Cursor="SizeNS" Tag="t" />
+    <Rectangle Grid.Row="2" Grid.Column="1" Fill="Transparent" Cursor="SizeNS" Tag="b" />
+    <Rectangle Grid.Row="1" Grid.Column="0" Fill="Transparent" Cursor="SizeWE" Tag="l" />
+    <Rectangle Grid.Row="1" Grid.Column="2" Fill="Transparent" Cursor="SizeWE" Tag="r" />
+  </Grid>
+  </Grid>
 </Window>

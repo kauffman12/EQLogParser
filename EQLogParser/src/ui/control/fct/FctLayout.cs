@@ -149,28 +149,16 @@ namespace EQLogParser
         ? w / 2                                // text wider than the window: nothing to place, so centre it
         : Math.Clamp(hit.X0, EdgePad + sideMargin, w - EdgePad - sideMargin);
 
-      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. */
-      hit.SideMin = EdgePad;
-      hit.SideMax = Math.Max(EdgePad + 1, w - EdgePad);
-
-      /* The band facing the gap gives up the hit's whole drawn height — value, source line and crit pop — so an
-       * outgoing hit cannot drop into the protected strip and an incoming one cannot start inside it, and the band
-       * edge away from the gap keeps the same reserve against the window border. Both endpoints of the travel are
-       * placed inside the band, so nothing crosses during its life; FctMotion clamps anyway because the fountain fall
-       * is the same maths asked to do more. */
-      var reserve = TextReserve(hit);
-      double up;
+      var up = 1;
+      Refit(hit, w, h);
       if (hit.Incoming)
       {
-        ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
         hit.Y0 = hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
         up = -1;  // away from the gap is downward here
       }
       else
       {
-        ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
         hit.Y0 = hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
-        up = 1;
       }
 
       /* An explicitly requested origin skips the depth jitter but not the travel: how far a number may go depends on where it
@@ -197,6 +185,36 @@ namespace EQLogParser
         : hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
 
       AssignTravel(hit, w, rand, up, Math.Abs(hit.Y0 - far));
+    }
+
+    /*
+     * A hit's vertical band and its sideways clamp for a given canvas size: derived from the size and from how tall this text is,
+     * never from where the hit happens to be, so asking twice with the same size answers the same thing.
+     *
+     * Spawn calls it to place a new number. FctResize calls it when the window changes size under a number already in flight,
+     * which is the difference between a resize and a resize that leaves most of the overlay's numbers drawing where the old window
+     * used to be — travel is a pure function of (hit, age), so nothing else ever revisits these bounds.
+     *
+     * The band facing the gap gives up the hit's whole drawn height — value, source line and crit pop — so an outgoing hit cannot
+     * drop into the protected strip and an incoming one cannot start inside it, and the band edge away from the gap keeps the same
+     * reserve against the window border. Both endpoints of the travel sit inside the band, so nothing crosses during its life;
+     * FctMotion clamps anyway because the fountain fall is the same maths asked to do more.
+     */
+    public static void Refit(FctHitState hit, double w, double h)
+    {
+      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. */
+      hit.SideMin = EdgePad;
+      hit.SideMax = Math.Max(EdgePad + 1, w - EdgePad);
+
+      var reserve = TextReserve(hit);
+      if (hit.Incoming)
+      {
+        ApplyBand(hit, h * GapBottomFrac, Math.Max(h * GapBottomFrac, h - EdgePad - reserve), h);
+      }
+      else
+      {
+        ApplyBand(hit, EdgePad, Math.Max(EdgePad + 1, (h * GapTopFrac) - reserve), h);
+      }
     }
 
     /*

@@ -130,10 +130,17 @@ namespace EQLogParser
       _dirty = true;
     }
 
+    /*
+     * A resize moves the numbers that are already flying, not just the ones after it: their bands, travel and cells were measured
+     * against the old size and motion never revisits them. FctResize owns the mapping; _dirty so a paused canvas repaints the new
+     * geometry instead of waiting for the next hit.
+     */
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
       base.OnRenderSizeChanged(sizeInfo);
       RefreshDpi();
+      FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+      _dirty = true;
     }
 
     protected override void OnRender(DrawingContext dc)

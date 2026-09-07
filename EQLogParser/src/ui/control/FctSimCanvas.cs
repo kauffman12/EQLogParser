@@ -114,10 +114,14 @@ namespace EQLogParser
       _dirty = true;
     }
 
+    /* Numbers already in flight move with the canvas, exactly as they do on the overlay: see FctResize. The simulation window is
+     * an ordinary resizable window, which makes it the best place to see a resize behave before the overlay does. */
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
       base.OnRenderSizeChanged(sizeInfo);
       RefreshDpi();
+      FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+      _dirty = true;
     }
 
     protected override void OnRender(DrawingContext dc)
