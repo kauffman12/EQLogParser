@@ -119,7 +119,7 @@ namespace EQLogParser
     /*
      * Extended styles for the current lock state, driven through the same NativeMethods constants as the timer,
      * text and toolbar overlays. Layered is what lets a transparent WPF window be hit-tested at all; toolwindow
-     * keeps it out of the taskbar and Alt+Tab in both states (the header is draggable and Esc closes it, so an
+     * keeps it out of the taskbar and Alt+Tab in both states (the window is draggable while unlocked and Esc closes it, so an
      * overlay being positioned does not need an Alt+Tab entry to be reachable). Locked adds transparent — clicks
      * fall through to EverQuest — and no-activate, so showing or moving it never takes focus mid-fight.
      */
@@ -218,7 +218,7 @@ namespace EQLogParser
 
       // terse on purpose: the hint shares one row with the motion combo and the lock checkbox, and a legend that gets
       // ellipsised is a legend nobody can read while fighting
-      hintText.Text = "drag to move · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc closes";
+      hintText.Text = "drag anywhere · edge to resize · gap above your cast bar · up = yours, down = hits on you · Esc closes";
     }
 
     private void SaveSettings()
@@ -423,13 +423,20 @@ namespace EQLogParser
       return m > 0 ? m : 1.0;
     }
 
-    /* DragMove throws if no button is actually held (synthetic events, double-fire on some setups). */
-    private void HeaderDrag(object sender, MouseButtonEventArgs e)
+    /*
+     * Anywhere that is not a control or a resize band moves the window, which is what "drag it over the cast bar" wants: hunting
+     * for a 12-pixel header band with a number floating past it was the annoying version. Controls keep their own clicks because a
+     * ComboBox or CheckBox handles the press before it reaches here, and the resize bands mark theirs handled. DragMove throws if
+     * no button is actually held (synthetic events, double-fire on some setups), so that is checked rather than assumed.
+     */
+    private void OverlayDrag(object sender, MouseButtonEventArgs e)
     {
-      if (_locked || e.ButtonState != MouseButtonState.Pressed)
+      if (_locked || _resizeEdge is not Edge.None || e.ButtonState != MouseButtonState.Pressed)
       {
         return;
       }
+
+      e.Handled = true;
 
       DragMove();
       SaveSettings();

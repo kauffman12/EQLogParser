@@ -781,6 +781,11 @@ grip is a 12 px band along each edge: corners size both axes, edges size one. Th
 window whose clicks pass through to EverQuest must not offer anything to click, and the header's top inset was raised past them so
 no control sits where a drag for size starts.
 
+Moving it is not a treasure hunt either: while unlocked, any press that no control and no resize band took moves the window. The
+header used to be the only draggable band, which meant hunting for twelve pixels of chrome while a number floated past where you were
+aiming. Controls keep their own clicks because a combo or checkbox handles the press before it bubbles, and locking removes the whole
+question by making the window click-through.
+
 What it settles on is a **magnet, not a menu** (`FctResize`): drag freely and each axis is pulled onto an offered value when it
 comes near — 980×640, 800×560, 760×520, 720×560 — and stays exactly where the hand stopped in between. Per-axis rather than whole
 presets, so dragging one edge gets the same help as a corner, and a corner near 800×560 lands on it. The floor is 420×300, the
