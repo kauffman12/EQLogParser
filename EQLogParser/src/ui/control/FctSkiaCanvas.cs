@@ -46,6 +46,9 @@ namespace EQLogParser
     private readonly Dictionary<(byte style, int size), SKFont> _fonts = new();
     private readonly Dictionary<FctHitState, string> _haloKey = [];
 
+    /* The configure-mode examples, kept apart from _hits so no policy path — folding, eviction, expiry, diagnostics — ever sees them. */
+    private readonly List<FctHitState> _preview = [];
+
     private SKTypeface _boldTypeface, _regularTypeface;
     private SKMaskFilter _glowBlur;
 
@@ -140,7 +143,52 @@ namespace EQLogParser
       base.OnRenderSizeChanged(sizeInfo);
       RefreshDpi();
       FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+
+      /* The examples were laid out for the window they were built in; rebuild rather than stretch, since their whole job is to
+         be in the right place at the size being looked at. */
+      if (_preview.Count > 0)
+      {
+        ShowPreview();
+      }
+
       _dirty = true;
+    }
+
+    /* Shows / hides the frozen configure-mode examples (FctPreview). They are drawn by the same path as real hits but never
+       handed to ingest, so they take no lane slot and cannot be folded into, evicted or counted. */
+    public void ShowPreview()
+    {
+      ReleasePreview();
+      _preview.Clear();
+
+      foreach (var hit in FctPreview.Build(ActualWidth, ActualHeight, MotionStyle))
+      {
+        RebuildGlyphs(hit);
+        _preview.Add(hit);
+      }
+
+      _dirty = true;
+    }
+
+    public void ClearPreview()
+    {
+      if (_preview.Count == 0)
+      {
+        return;
+      }
+
+      ReleasePreview();
+      _preview.Clear();
+      _dirty = true;
+    }
+
+    /* Every preview owns substrate like any other hit: its glyph run and, for a crit example, a referenced halo surface. */
+    private void ReleasePreview()
+    {
+      foreach (var hit in _preview)
+      {
+        ReleaseHalo(hit);
+      }
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -185,6 +233,13 @@ namespace EQLogParser
 
           DrawHit(canvas, hit, now - hit.SpawnMs);
         }
+      }
+
+      /* The examples last and on top: they are what configure mode is looking at, and they cannot collide with anything because
+         nothing about them is real. Their age comes from their phase, not the clock, which is what holds them still. */
+      foreach (var hit in _preview)
+      {
+        DrawHit(canvas, hit, hit.PreviewPhase * hit.LifetimeMs);
       }
 
       Blit(dc, scale);
@@ -605,6 +660,7 @@ namespace EQLogParser
       _halos.Clear();
       _haloKey.Clear();
       _hits.Clear();
+      _preview.Clear(); // the halos they referenced were disposed with every other halo above
       ReleaseSurface();
 
       _glowBlur?.Dispose();

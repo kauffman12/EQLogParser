@@ -37,6 +37,9 @@ namespace EQLogParser
     private readonly List<FctHitState> _hits = [];
     private readonly FctIngest _ingest = new();
     private readonly Dictionary<FctHitState, Glyphs> _glyphs = [];
+
+    /* The configure-mode examples, kept apart from _hits so no policy path — folding, eviction, expiry, diagnostics — ever sees them. */
+    private readonly List<FctHitState> _preview = [];
     private readonly Brush _outlineBrush = FrozenBrush(BlackArgb);
     private readonly Brush _glowBrush = FrozenBrush(unchecked((int)0x40000000));
 
@@ -92,6 +95,42 @@ namespace EQLogParser
       CompositionTarget.Rendering -= OnRendering;
       _hits.Clear();
       _glyphs.Clear();
+      _preview.Clear();
+    }
+
+    /* Shows / hides the frozen configure-mode examples (FctPreview), drawn exactly like real hits but never handed to ingest. */
+    public void ShowPreview()
+    {
+      ReleasePreview();
+      _preview.Clear();
+
+      foreach (var hit in FctPreview.Build(ActualWidth, ActualHeight, MotionStyle))
+      {
+        BuildGlyphs(hit);
+        _preview.Add(hit);
+      }
+
+      _dirty = true;
+    }
+
+    public void ClearPreview()
+    {
+      if (_preview.Count == 0)
+      {
+        return;
+      }
+
+      ReleasePreview();
+      _preview.Clear();
+      _dirty = true;
+    }
+
+    private void ReleasePreview()
+    {
+      foreach (var hit in _preview)
+      {
+        _glyphs.Remove(hit);
+      }
     }
 
     public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false)
@@ -121,6 +160,12 @@ namespace EQLogParser
       base.OnRenderSizeChanged(sizeInfo);
       RefreshDpi();
       FctResize.Rescale(_hits, sizeInfo.PreviousSize.Width, sizeInfo.PreviousSize.Height, sizeInfo.NewSize.Width, sizeInfo.NewSize.Height);
+
+      if (_preview.Count > 0)
+      {
+        ShowPreview(); // laid out for the old window, so rebuilt rather than stretched
+      }
+
       _dirty = true;
     }
 
@@ -138,6 +183,12 @@ namespace EQLogParser
             DrawHit(dc, hit, now - hit.SpawnMs);
           }
         }
+      }
+
+      /* The examples last: their age comes from their phase instead of the clock, which is what holds them still. */
+      foreach (var hit in _preview)
+      {
+        DrawHit(dc, hit, hit.PreviewPhase * hit.LifetimeMs);
       }
 
       _dirty = false;

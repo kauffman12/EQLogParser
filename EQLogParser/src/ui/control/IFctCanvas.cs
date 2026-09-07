@@ -25,6 +25,18 @@ namespace EQLogParser
     /* valueText is the literal main line for zero-damage labels ("Dodge"); null means show Value. proc marks an item or
      * spell proc, which is drawn a little smaller and cleared sooner than the hit that provoked it. */
     void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false);
+
+    /*
+     * Draw the frozen examples (FctPreview) of the current size and style, or take them away. Configure mode uses this so a setting
+     * can be judged without waiting for combat to produce a crit, a tick, a dodge and a heal in one glance.
+     *
+     * Examples are not hits: they never reach FctIngest, so they hold no lane slot, cannot be folded into or evicted, do not age,
+     * and are absent from ActiveCount and every other diagnostic. ShowPreview rebuilds from the canvas's current size and settings,
+     * so it is cheap enough to call on every control change — a preview that lags a slider is worse than no preview.
+     */
+    void ShowPreview();
+
+    void ClearPreview();
   }
 
   /* Per-second counters for tuning and dogfooding. Overload has to be visible to be fixed. */

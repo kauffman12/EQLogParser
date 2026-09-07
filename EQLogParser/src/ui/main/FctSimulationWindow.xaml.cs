@@ -55,8 +55,11 @@ namespace EQLogParser
 
       _canvas = useSkia ? fctSkiaCanvas : fctCanvas;
       _diagnostics = (IFctDiagnostics)_canvas;
-      // same motion as the real overlay: comparing two backends on a style nobody fights with measures nothing
+      // same motion and same presentation dials as the real overlay: comparing two backends, or two styles, on a size nobody
+      // fights with measures nothing — and a run at a different text scale from the overlay is a second variable nobody set
       _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
+      FctScale.Text = FctOverlaySettings.LoadTextScale();
+      FctScale.Time = FctOverlaySettings.LoadTimeScale();
       fctCanvas.Visibility = useSkia ? Visibility.Collapsed : Visibility.Visible;
       fctSkiaCanvas.Visibility = useSkia ? Visibility.Visible : Visibility.Collapsed;
       titleText.Text = $"FCT Render Simulation ({(useSkia ? "SkiaSharp" : "WPF vector")}) — 60 seconds, {_events.Count:N0} simulated records (rate ×{RateMultiplier:0.#})";

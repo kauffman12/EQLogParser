@@ -69,9 +69,14 @@ namespace EQLogParser
     private Point _resizeLastDevice;
     private double _resizeFreeW, _resizeFreeH, _resizeAnchorRight, _resizeAnchorBottom;
 
-    /* Configure-mode paint, swapped out while locked so playing draws numbers and nothing else. Frozen: shared by every frame. */
-    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0x35, 0x0D, 0x13, 0x1A));
-    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x5C, 0x7A, 0x99, 0xAA));
+    /*
+     * Configure-mode paint, swapped out while locked so playing draws numbers and nothing else. Frozen: shared by every frame.
+     * Neutral black glass with a hairline that is neither light nor dark, because this panel has to be readable over a snow zone and
+     * over a dungeon corridor alike — the app's own palette has no blue in it, and a steel-blue frame looked like somebody else's
+     * overlay pasted on top.
+     */
+    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0xCC, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
@@ -81,14 +86,16 @@ namespace EQLogParser
        kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one mis-click
        silently changes somebody's setup, and there is no Undo next to the control that did it. */
     private FctMotionStyle _savedStyle;
+    private double _savedTextScale = FctScale.Default;
+    private double _savedTimeScale = FctScale.Default;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
 
-    // lets the Tools menu item uncheck itself when the window is closed with Esc
+    // lets the View menu untick the overlay when the window is closed with Esc
     public event Action EventsClosed;
 
-    // keeps the Tools menu's Configure item and the window telling the same story
+    // keeps the View menu's Setup item and the window telling the same story
     public event Action<bool> EventsLockChanged;
 
     public bool Locked => _locked;
@@ -107,6 +114,10 @@ namespace EQLogParser
       FctManager.Create();
 
       HookResizeBands();
+
+      /* First paint is when the canvas knows its size, which is also the first moment examples can be laid out: configure mode
+         opened on a window that had never been drawn would otherwise show none (FctPreview builds nothing in a zero-sized canvas). */
+      ContentRendered += (_, _) => UpdatePreview();
 
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
@@ -130,6 +141,12 @@ namespace EQLogParser
 
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
+
+      FctScale.Text = _savedTextScale;
+      FctScale.Time = _savedTimeScale;
+      sizeSlider.Value = _savedTextScale;
+      timeSlider.Value = _savedTimeScale;
+
       ApplyLock(true);
     }
 
@@ -177,6 +194,17 @@ namespace EQLogParser
          configure mode. A settings row that shifts the numbers while you are positioning them would defeat the point. */
       headerGrid.Visibility = locked ? Visibility.Hidden : Visibility.Visible;
 
+      /* The examples belong to configure mode: they appear with the controls and go with them, so a locked overlay over the game
+         shows nothing but real numbers — an example that outlived setup would be a fake hit the player has to learn to ignore. */
+      if (locked)
+      {
+        _canvas.ClearPreview();
+      }
+      else
+      {
+        UpdatePreview();
+      }
+
       rootBorder.Background = locked ? Brushes.Transparent : PanelBackground;
       rootBorder.BorderBrush = locked ? Brushes.Transparent : PanelBorder;
 
@@ -195,6 +223,7 @@ namespace EQLogParser
       {
         FctManager.Instance.Enabled = true;
         _canvas.Start();
+        UpdatePreview(); // coming back on screen while configuring: the examples belong with the controls
       }
       else
       {
@@ -245,7 +274,68 @@ namespace EQLogParser
       _savedStyle = FctOverlaySettings.LoadMotion();
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
+
+      /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers
+         would otherwise rebuild the preview and repaint on a window that is not even shown yet. */
+      _savedTextScale = FctOverlaySettings.LoadTextScale();
+      _savedTimeScale = FctOverlaySettings.LoadTimeScale();
+      FctScale.Text = _savedTextScale;
+      FctScale.Time = _savedTimeScale;
+      sizeSlider.Value = _savedTextScale;
+      timeSlider.Value = _savedTimeScale;
+
       _settingsReady = true;
+      ShowScaleReadouts();
+    }
+
+    /* -30 % … +30 %, next to each slider: snapped to 5 % steps, so these are exact and the shipped default reads as exactly nothing. */
+    private void ShowScaleReadouts()
+    {
+      sizeValue.Text = ScaleText(sizeSlider.Value);
+      timeValue.Text = ScaleText(timeSlider.Value);
+    }
+
+    private static string ScaleText(double scale) => $"{FctScale.Percent(scale):+0;-0;—}%";
+
+    /*
+     * Both dials preview the moment they move — onto the examples, and onto any real number that lands afterwards — and write
+     * nothing. Sizing is applied at style time (FctStyle.ApplyTo) and tempo at spawn (FctIngest), so dragging a slider never tugs
+     * at text already in flight; the examples are rebuilt so there is always something on screen showing the change, which is what
+     * lets you judge a size without waiting for a crit.
+     */
+    private void ScaleChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+      if (!_settingsReady)
+      {
+        return;
+      }
+
+      FctScale.Text = FctScale.Clamp(sizeSlider.Value);
+      FctScale.Time = FctScale.Clamp(timeSlider.Value);
+      ShowScaleReadouts();
+      UpdatePreview();
+    }
+
+    /* Snap-to-tick makes the middle reachable by feel, but a slider dragged near the middle is still worth a certain way back. */
+    private void ScaleDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+      if (sender == sizeSlider)
+      {
+        sizeSlider.Value = FctScale.Default;
+      }
+      else if (sender == timeSlider)
+      {
+        timeSlider.Value = FctScale.Default;
+      }
+    }
+
+    /* The examples follow every control change: five numbers rebuilt is nothing, and a preview that lags a control is worse than none. */
+    private void UpdatePreview()
+    {
+      if (!_locked && IsVisible)
+      {
+        _canvas.ShowPreview();
+      }
     }
 
     /* How much of the window has to be on the desktop to count as findable. A quarter, like the main window's check: enough that
@@ -341,6 +431,7 @@ namespace EQLogParser
 
       /* Preview only: the next numbers use it so the style can be judged, and nothing reaches settings.ini until Save. */
       _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
+      UpdatePreview();
     }
 
     private void SelectMotionOption(FctMotionStyle style)
@@ -367,7 +458,12 @@ namespace EQLogParser
     private void SaveClick(object sender, RoutedEventArgs e)
     {
       _savedStyle = _canvas.MotionStyle;
+      _savedTextScale = FctScale.Text;
+      _savedTimeScale = FctScale.Time;
+
       FctOverlaySettings.SaveMotion(_savedStyle);
+      FctOverlaySettings.SaveTextScale(_savedTextScale);
+      FctOverlaySettings.SaveTimeScale(_savedTimeScale);
       SaveSettings();
       ApplyLock(true);
     }
