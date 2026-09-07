@@ -527,6 +527,8 @@ The two canvases used to carry near-copies of the same layout and motion code, a
 - `FctIngest` — fold a repeat into the number already showing that exact hit, spawn, take a full lane's slot from a less
   significant number, or count a drop.
 - `FctLayout` — which band of the canvas a lane lives in, spawn position, travel, the protected middle.
+- `FctPlacement` — for travelling text, throwing that spawn several times and keeping the one whose flight least crosses the
+  numbers already in flight (§"Travelling numbers pick a gap to go through").
 - `FctMotion` — position, scale and opacity as pure functions of `(hit, age)`, plus the rule for the main line (one hit's
   face value, plus how many identical hits it stands for).
 - `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so neither backend owns a palette copy.
@@ -724,6 +726,39 @@ pick pulse and shorten lifetimes rather than invent a fifth style.
 What was deliberately **not** built is anchored-follow (a number tracking its own mob across the screen). EQ's log
 never contains actor positions, only names, so there is nothing to anchor to; that absence is the whole reason the
 design leans on bands and an empty strip instead of "numbers above your target".
+
+### Travelling numbers pick a gap to go through
+
+Choosing a lane slot and throwing a small random jitter at it — about an eighth of the band's depth, which is all the layout used
+to do — turned out not to be enough. Measured on a 980×640 overlay with a number arriving every 700 ms, **58% of fountain pairs**
+shared a spot somewhere in their overlapping lives; six held numbers in one band, **71% of pairs**. Two numbers climbing nearly
+the same path are unreadable for the whole flight, and they did it while most of the band around them sat empty. That is a
+legibility defect wearing the clothes of a polish item.
+
+So travelling text is thrown twelve times and the throw with the least crowding wins (`FctPlacement`). Three things keep this from
+becoming a second layout:
+
+- **Every candidate comes out of `FctLayout.Spawn`** with a wider dice cup. The band, its reserve against the protected strip and
+  the window edges are applied to a wide draw exactly as they are to a narrow one, so no candidate can sit somewhere the layout
+  would forbid. Widening costs range, never legality.
+- **Cost is measured along the flight, not at the origin**, because that is what the player watches: fountain text falls back
+  through the band it climbed, so two spawns that start apart can still collide on the way down. Samples are wall-clock aligned,
+  so an older number is compared at where it really is rather than at the same phase of its animation.
+- **The first candidate is the layout's own throw and pays nothing**, and later ones pay a small penalty for reaching wide plus a
+  graded one for drifting from where the lane puts things. An uncrowded overlay therefore draws exactly what the layout alone
+  would have drawn; the search is only paid for when it buys space, and mean origin drift stays around a twentieth of band depth.
+
+Nothing is refused: if all twelve crowd, the least crowded is placed anyway. Capacity belongs to the lane cap and the life
+shortener, and losing numbers belongs to nobody.
+
+Pulse text does not come through here — it has cells, which is the right answer for text that stays still. The evidence for that
+split is old: the deleted left/right preset's "floating" checkbox was free-float placement with nothing moving, measured at **85%
+of pairs overlapping**.
+
+Reach mattered more than attempts (five-wide draws beat twelve narrow ones), and past that the mean origin moves visibly away from
+its lane, which stops looking like one lane throwing numbers and starts looking like a scatter. Final figures for the same
+measurement: three fountains 58% → **3.3%** of pairs, six held numbers 71% → **6.2%**, eight spray numbers 40% → **3.3%**, at
+about 1.3 µs per placement with a full lane live — which is why twelve candidates is enough and twenty would be theatre.
 
 ### Colour answers "what", never "who"
 
