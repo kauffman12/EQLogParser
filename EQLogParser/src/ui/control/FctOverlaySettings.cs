@@ -11,19 +11,36 @@ namespace EQLogParser
   {
     public const string MotionKey = "FctOverlayMotion";
 
-    /* The two dials on the configure row, stored as multipliers (0.7 – 1.3) rather than percentages: the file is a place where a
-       human may look, and the value that means something to the code is the one worth writing. FctScale clamps on the way in,
-       so a hand-edited "big" or 12 lands on the default instead of drawing nothing. */
+    /* The two dials on the configure row, stored as multipliers (0.5 - 1.5) rather than percentages: the file is a place where a human may look,
+       and the value that means something to the code is the one worth writing. FctScale clamps on the way in, so a hand-edited "big" or 12 lands on
+       the default instead of drawing nothing. The second dial is stored as speed, because that is what it now measures - see FctScale. */
     public const string TextScaleKey = "FctOverlayTextScale";
-    public const string TimeScaleKey = "FctOverlayTimeScale";
+    public const string SpeedKey = "FctOverlaySpeed";
 
     public static double LoadTextScale() => FctScale.Clamp(ConfigUtil.GetSettingAsDouble(TextScaleKey, FctScale.Default));
 
     public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.Clamp(scale));
 
-    public static double LoadTimeScale() => FctScale.Clamp(ConfigUtil.GetSettingAsDouble(TimeScaleKey, FctScale.Default));
+    /*
+     * Retired: FctOverlayTimeScale, which held a duration multiplier while that dial was called "time". It is still read once when the speed key is
+     * absent and inverted on the way through, because 0.8 in that key meant "20 % shorter", which is 25 % faster - reusing the number as if it were
+     * a speed would quietly set most people's overlay to run slow, in the opposite direction from the one they asked for. It is never written again,
+     * so an old key simply stops being mentioned after one session.
+     */
+    private const string LegacyTimeScaleKey = "FctOverlayTimeScale";
 
-    public static void SaveTimeScale(double scale) => ConfigUtil.SetSetting(TimeScaleKey, FctScale.Clamp(scale));
+    public static double LoadSpeed()
+    {
+      var stored = ConfigUtil.GetSettingAsDouble(SpeedKey, double.NaN);
+      if (double.IsFinite(stored))
+      {
+        return FctScale.ClampSpeed(stored);
+      }
+
+      return FctScale.SpeedFromTime(ConfigUtil.GetSettingAsDouble(LegacyTimeScaleKey, FctScale.Default));
+    }
+
+    public static void SaveSpeed(double speed) => ConfigUtil.SetSetting(SpeedKey, FctScale.ClampSpeed(speed));
 
     /* Retired along with the left/right region scheme: a settings.ini from an older build still carries FctOverlayLayout,
      * nothing reads it now, and an unread key in this file is harmless, so it fades out on its own rather than needing a

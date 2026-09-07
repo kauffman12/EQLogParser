@@ -75,8 +75,8 @@ namespace EQLogParser
      * over a dungeon corridor alike — the app's own palette has no blue in it, and a steel-blue frame looked like somebody else's
      * overlay pasted on top.
      */
-    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0x73, 0x00, 0x00, 0x00));
-    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x8C, 0xFF, 0xFF, 0xFF));
+    private static readonly SolidColorBrush PanelBackground = new(Color.FromArgb(0x3A, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush PanelBorder = new(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
@@ -87,7 +87,7 @@ namespace EQLogParser
        silently changes somebody's setup, and there is no Undo next to the control that did it. */
     private FctMotionStyle _savedStyle;
     private double _savedTextScale = FctScale.Default;
-    private double _savedTimeScale = FctScale.Default;
+    private double _savedSpeed = FctScale.Default;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
@@ -142,11 +142,37 @@ namespace EQLogParser
       SelectMotionOption(_savedStyle);
 
       FctScale.Text = _savedTextScale;
-      FctScale.Time = _savedTimeScale;
+      FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       sizeSlider.Value = _savedTextScale;
-      timeSlider.Value = _savedTimeScale;
+      speedSlider.Value = _savedSpeed;
 
       ApplyLock(true);
+    }
+
+    /*
+     * The configure row follows the app's own font size (ThemeConfig.CurrentFontSize, which is the user's choice - 12 shipped, 13 and 14 common)
+     * instead of this window deciding for itself. It used to carry a hard-coded 12 px throughout, and on a machine set to 13 pt that is small print
+     * sitting over a game the player has already configured correctly. Two steps up for the words, so they are findable at a glance over a busy HUD;
+     * seven for the minus and plus marks, which are the only part anybody consults while a thumb is moving - "which end is bigger" should not have to
+     * be read. Re-applied on every entry into configure mode, because changing the font size in settings should not need a restart.
+     */
+    private void ApplyTypography()
+    {
+      /* The row's base size arrives through the EQContentSize resource bound in markup, which is what keeps the combo box and the Save button on the
+         theme without any code. What is set here is only the type that has to stand out from the base, measured against it. */
+      var size = ThemeConfig.CurrentFontSize;
+
+      titleLabel.FontSize = size + 2;
+      sizeLabel.FontSize = size + 2;
+      speedLabel.FontSize = size + 2;
+
+      sizeMinus.FontSize = size + 7;
+      sizePlus.FontSize = size + 7;
+      speedMinus.FontSize = size + 7;
+      speedPlus.FontSize = size + 7;
+
+      legendText.FontSize = size;
+      statsText.FontSize = size > 2 ? size - 1 : size;
     }
 
     private void OnSourceInitialized(object sender, EventArgs e)
@@ -202,6 +228,7 @@ namespace EQLogParser
       }
       else
       {
+        ApplyTypography();
         RefreshDemo();
       }
 
@@ -278,28 +305,29 @@ namespace EQLogParser
       /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers
          would otherwise rebuild the preview and repaint on a window that is not even shown yet. */
       _savedTextScale = FctOverlaySettings.LoadTextScale();
-      _savedTimeScale = FctOverlaySettings.LoadTimeScale();
+      _savedSpeed = FctOverlaySettings.LoadSpeed();
       FctScale.Text = _savedTextScale;
-      FctScale.Time = _savedTimeScale;
+      FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       sizeSlider.Value = _savedTextScale;
-      timeSlider.Value = _savedTimeScale;
+      speedSlider.Value = _savedSpeed;
 
       _settingsReady = true;
       ShowScaleReadouts();
     }
 
-    /* -30 % … +30 %, next to each slider: snapped to 5 % steps, so these are exact and the shipped default reads as exactly nothing. */
+    /* -50 % … +50 % beside each dial: snapped to 5 % steps, so these are exact, and the shipped default reads as exactly nothing. On the speed dial
+       the sign is the player's, not the duration's - "+40 %" means forty per cent faster, which is a shorter time on screen. */
     private void ShowScaleReadouts()
     {
       sizeValue.Text = ScaleText(sizeSlider.Value);
-      timeValue.Text = ScaleText(timeSlider.Value);
+      speedValue.Text = ScaleText(speedSlider.Value);
     }
 
     private static string ScaleText(double scale) => $"{FctScale.Percent(scale):+0;-0;—}%";
 
     /*
-     * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and
-     * write nothing. Sizing is applied at style time (FctStyle.ApplyTo) and tempo at spawn (FctIngest), so dragging a slider never tugs at
+     * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and write
+     * nothing. Size is applied at style time (FctStyle.ApplyTo) and speed at spawn (FctIngest, through a duration), so dragging a dial never tugs at
      * text already in flight; the demo keeps producing events, which is what lets you watch a change arrive instead of imagining it.
      */
     private void ScaleChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -310,22 +338,32 @@ namespace EQLogParser
       }
 
       FctScale.Text = FctScale.Clamp(sizeSlider.Value);
-      FctScale.Time = FctScale.Clamp(timeSlider.Value);
+      FctScale.Time = FctScale.TimeFromSpeed(FctScale.ClampSpeed(speedSlider.Value));
       ShowScaleReadouts();
       RefreshDemo();
     }
 
-    /* Snap-to-tick makes the middle reachable by feel, but a slider dragged near the middle is still worth a certain way back. */
-    private void ScaleDoubleClick(object sender, MouseButtonEventArgs e)
+    /*
+     * Letting go of a dial puts the configure-mode loop back to its first cue, so what was just set is on screen in the next second instead of
+     * whenever the twelve second cycle happens to come round. On release rather than on ValueChanged: restarting under a thumb that is still being
+     * dragged would blank the very thing being watched. A double-click on either dial returns it to the shipped value, which snap-to-tick makes easy
+     * to find but not certain.
+     */
+    private void ScaleReleased(object sender, MouseButtonEventArgs e)
     {
-      if (sender == sizeSlider)
+      if (e.ClickCount == 2)
       {
-        sizeSlider.Value = FctScale.Default;
+        if (sender == sizeSlider)
+        {
+          sizeSlider.Value = FctScale.Default;
+        }
+        else if (sender == speedSlider)
+        {
+          speedSlider.Value = FctScale.Default;
+        }
       }
-      else if (sender == timeSlider)
-      {
-        timeSlider.Value = FctScale.Default;
-      }
+
+      _canvas.RestartDemo();
     }
 
     /*
@@ -462,11 +500,11 @@ namespace EQLogParser
     {
       _savedStyle = _canvas.MotionStyle;
       _savedTextScale = FctScale.Text;
-      _savedTimeScale = FctScale.Time;
+      _savedSpeed = speedSlider.Value;
 
       FctOverlaySettings.SaveMotion(_savedStyle);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
-      FctOverlaySettings.SaveTimeScale(_savedTimeScale);
+      FctOverlaySettings.SaveSpeed(_savedSpeed);
       SaveSettings();
       ApplyLock(true);
     }

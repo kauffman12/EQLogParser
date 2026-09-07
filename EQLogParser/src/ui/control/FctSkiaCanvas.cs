@@ -80,13 +80,12 @@ namespace EQLogParser
     public event Action<double> EventsFrame; // canvas clock ms since Start()
 
     public int ActiveCount => _hits.Count;
-    /* Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. */
     /*
      * Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. Hits already in flight keep the
      * style they were born with, which is why changing it mid-fight is a way to compare rather than a way to break something.
      *
-     * Configure mode is the exception worth restarting for: the loop exists to show this control's effect, and waiting up to twelve seconds for the
-     * next cycle to reach the part where the new style is visible is not an effect anybody can see. Only demo numbers are cleared - never real ones.
+     * Configure mode restarts its loop on a change: the loop exists to show what this control does, and waiting up to twelve seconds for the next
+     * cycle to reach the part where that is visible is not an effect anybody can see.
      */
     public FctMotionStyle MotionStyle
     {
@@ -99,13 +98,7 @@ namespace EQLogParser
         }
 
         _ingest.Style = value;
-
-        if (_demo.Animated && _clock is not null)
-        {
-          _demo.Clear(ReleaseHalo);
-          _demo.Start(_clock.Elapsed.TotalMilliseconds);
-          _dirty = true;
-        }
+        RestartDemo();
       }
     }
 
@@ -198,6 +191,28 @@ namespace EQLogParser
     {
       _demoWanted = false;
       _demo.Clear(ReleaseHalo);
+      _dirty = true;
+    }
+
+    /*
+     * Put the configure-mode loop back to its first cue without taking it away. What a control just changed should be visible now rather than when a
+     * twelve second cycle next reaches the part where it shows, and this loop is the only thing in configure mode a player can look at. Only demo
+     * numbers are cleared: configure mode never touches play, so real numbers finish whatever they were doing.
+     */
+    public void RestartDemo()
+    {
+      if (!_demoWanted && !_demo.Active)
+      {
+        return;
+      }
+
+      _demo.Clear(ReleaseHalo);
+
+      if (_clock is not null)
+      {
+        _demo.Start(_clock.Elapsed.TotalMilliseconds);
+      }
+
       _dirty = true;
     }
 

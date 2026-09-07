@@ -357,13 +357,13 @@ namespace EQLogParser
     }
 
     /*
-     * The player's tempo setting last and on top of everything above, because it is the outermost dial: proc shortening and the
-     * adaptive controller decide a number's tempo, this decides how fast that tempo plays. Lifetime, travel and fade scale
-     * together — scaling only the lifetime leaves a number hanging in mid-air past the end of its animation, which reads as a
-     * stutter and not as a slower overlay.
+     * The player's speed setting last and on top of everything above, because it is the outermost dial: proc shortening and the adaptive controller
+     * decide a number's tempo, this decides how fast that tempo plays. It arrives as FctScale.Time, a duration - the reciprocal of what the slider
+     * measures, converted in one place so that nothing here has to remember which way the dial points. Lifetime, travel and fade scale together:
+     * scaling only the lifetime leaves a number hanging in mid-air past the end of its animation, which reads as a stutter and not as a slower overlay.
      *
-     * The floor matters because the multipliers compound: a proc is already at 0.7 of its lane's life (ApplyProcTempo) under an
-     * adaptive lifetime that shrinks with load, so −30 % on top could otherwise ask for well under a second on screen.
+     * The floor matters because the multipliers compound: a proc is already at 0.7 of its lane's life (ApplyProcTempo) under an adaptive lifetime that
+     * shrinks with load, so the fast end of the dial - two thirds of the time on screen - could otherwise ask for well under a second.
      *
      * Skipped entirely at the default: without that, the floor would quietly lengthen the shortest lifetimes the controller
      * chooses today, and a settings change nobody made would show up in the numbers.

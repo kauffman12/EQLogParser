@@ -57,7 +57,7 @@ namespace EQLogParser
          second variable that nobody set is exactly what a measurement harness has to eliminate. */
       _canvas.MotionStyle = FctOverlaySettings.LoadMotion();
       FctScale.Text = FctOverlaySettings.LoadTextScale();
-      FctScale.Time = FctOverlaySettings.LoadTimeScale();
+      FctScale.Time = FctScale.TimeFromSpeed(FctOverlaySettings.LoadSpeed());
       titleText.Text = $"FCT Render Simulation — 60 seconds, {_events.Count:N0} simulated records (rate ×{RateMultiplier:0.#})";
     }
 

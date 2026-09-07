@@ -815,22 +815,30 @@ other retired key here.
 
 ### Two dials and a short loop: what configuring is for
 
-A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row
-carries two sliders — text size, and how long a number takes to show and finish — each clamped by `FctScale` to ±30 % and stepped at 5 %, so
-the shipped default is a place you can park rather than a value you have to hit by eye.
+A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries
+two dials — **size** and **speed** — each clamped by `FctScale` to ±50 % and stepped at 5 %, so the shipped default is a place you can park rather
+than a value you have to hit by eye. Both sit on one line with the motion picker and Save, in the theme's own font size, with a bold `-` and `+` at
+either end of each dial; the marks are bigger than their labels on purpose, because they are the only part anybody consults while a thumb is moving.
 
-±30 % is measurement, not roundness. Everything about layout — lane columns as fractions of width, the vertical reserve a line of text needs
-(`FctLayout.TextReserve`), the adaptive lifetime under load — was measured at 1.0. Past that, the damage and healing columns start occupying
-each other at ordinary window sizes, and shortening life much further takes a number away before it can be read. The range is "still the thing
-that was measured"; offering more would be offering to break it.
+**The second dial is speed, not time — it used to be called time, and it ran backwards.** A control labelled "time" whose right-hand end makes
+numbers appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So the
+dial says speed (bigger and faster at the right), is stored as `FctOverlaySpeed`, and `FctScale.Time` remains exactly what `FctIngest` has always
+multiplied: how long a number lives. The conversion is a division in one place (`TimeFromSpeed`) rather than an subtraction, because "50 % faster" is
+two thirds of the time on screen, not 50 % less of it. Two consequences worth knowing: ±50 % of *speed* is 0.67×–2× of duration, so the millisecond
+ends are deliberately asymmetric; and `FctScale.Time` must **not** be clamped to the dial's own range, which would silently cut the slow end off.
 
-Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, tempo in `FctIngest.AssignLifetime`.
-That is not tidiness — it is the reason dragging a slider cannot tug at text already in flight. Motion is a pure function of (hit, age), so a
-number whose size or timing changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the bug class layout exists to
-prevent. Two consequences worth stating: changing size leaves everything currently flying at the old size until it fades, and tempo moves
-`LifetimeMs`, `MotionMs` **and** `FadeMs` together, because scaling only the lifetime leaves a number hanging in mid-air at the old animation
-speed, which reads as a stutter rather than as a slower overlay. Floors hold underneath — never below 900 ms of life or 200 ms of fade — so
-±30 % compounded on top of what `FctLifeController` does under raid load makes numbers quick rather than flickering.
+±50 % is still a measured limit rather than a round number. Everything about layout — lane columns as fractions of width, the vertical reserve a
+line of text needs (`FctLayout.TextReserve`), the adaptive lifetime under load — was measured at 1.0, and half again in either direction is where
+that measurement stops describing the thing: past it, damage and healing columns begin to occupy each other at ordinary window sizes, and a number can
+arrive and leave before it is readable. Values saved while the range was ±30 % stay legal, which is why raising a ceiling needs no migration.
+
+Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
+tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
+timing changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the bug class layout exists to prevent. Two consequences
+worth stating: changing size leaves everything currently flying at the old size until it fades, and speed moves `LifetimeMs`, `MotionMs` **and**
+`FadeMs` together, because scaling only the lifetime leaves a number hanging in mid-air at the old animation speed, which reads as a stutter rather
+than as a slower overlay. Floors hold underneath — never below 900 ms of life or 200 ms of fade — so the fast end compounded on top of what
+`FctLifeController` does under raid load makes numbers quick rather than flickering.
 
 **A short scripted loop plays while configure mode is up**, because hovering a slider in a game overlay would otherwise mean waiting for combat
 to produce one of each type on demand:
@@ -857,17 +865,30 @@ Invented vocabulary — an early draft said "Backhand" — teaches a player to e
 script against those files.
 
 Scheduling carries one promise: the last cue lands 7.15 s into a 12 s cycle, so every number has launched, travelled, held and faded before the
-loop restarts. A cycle that cleared live text at the seam would look like the overlay truncates fades, which reads as a bug in the feature rather
-than as a loop. The four quiet seconds at the end are also what makes it legible as a loop instead of as noise.
+loop restarts. A cycle that cleared live text at the seam would look like the overlay truncates fades, which reads as a bug in the feature rather than
+as a loop. The four quiet seconds at the end are also what makes it legible as a loop instead of as noise.
+
+Changing any control **restarts the loop from its first cue** (`FctSkiaCanvas.RestartDemo`), on release rather than while a thumb is still being
+dragged — restarting mid-drag would blank the very thing being watched, and waiting up to twelve seconds for a cycle to come round to the part where
+the change is visible is not an effect anybody can see. Only demo numbers are cleared; a real number that lands while configuring behaves as it always
+has, because configure mode never touches play.
 
 And like the controls, the demo starts with configure mode and stops with it — unlike static exhibits, an un-stopped loop keeps asking for frames,
 which a window you are fighting in should not spend.
 
-The panel is neutral and translucent: `#73000000` (about 45 % black) with a hairline brighter than its own fill (`#8CFFFFFF`) so the frame stays
-findable against a bright zone, plus grey-white labels. It was blue steel (`#5C7A99` on `#0D131A`) over an 80 % black wall: the app's palette has
-no blue in it, so framed in steel blue the overlay read as somebody else's addon pasted on top — and at that opacity the panel hid exactly what the
-numbers are being positioned against. The numbers keep their colours; those are the vocabulary (§Colour answers "what", never "who") and only the
-furniture around them changed.
+The panel is neutral and translucent: `#3A000000` — about 23 % black — with a hairline brighter than its own fill (`#99FFFFFF`) so the frame stays
+findable against snow or other bright ground, plus grey-white labels. It was blue steel (`#5C7A99` on `#0D131A`) over an 80 % black wall, then 45 %:
+the app's palette has no blue in it, so framed in steel blue the overlay read as somebody else's addon pasted on top, and either opacity hid exactly
+what the numbers are being positioned against. Configure mode is spent looking *through* this panel at the game, which is the reference for where a
+column of numbers should sit; the fill exists only to lift the labels off a bright background, so it is now barely there. While locked nothing at all is
+drawn behind the numbers. The numbers keep their colours; those are the vocabulary (§Colour answers "what", never "who") and only the furniture around
+them changed.
+
+Type on the configure row comes from the app's own font setting (`ThemeConfig.CurrentFontSize`, arriving in markup through `EQContentSize`) rather
+than from a size this window chose for itself, which was 12 px throughout — small print sitting over a game whose interface the player had already set
+to 13 pt or larger. Labels sit two steps above the base and the `-`/`+` marks seven, re-applied on each entry into configure mode so changing the font
+size in Settings needs no restart. The numbers themselves are deliberately *not* sized from the theme: they have their own scale (`FctStyle`), because
+combat text has to stay readable at a glance across a whole screen of HUD, and 13 pt of damage is illegible while 13 pt of menu text is correct.
 
 ### Under View, beside the Damage Meter, behaving like it
 
