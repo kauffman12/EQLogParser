@@ -6,7 +6,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser
 {
   /*
-   * The category switches — my damage, damage on me, healing either way (FctIngest.ShowDealt/ShowTaken/ShowHeals).
+   * The category switches — my damage, damage to me, healing either way, procs (FctIngest.ShowDealt/ShowTaken/
+   * ShowHeals/ShowProcs).
    * These answer "what kind of story does this overlay tell", which is a different question from the threshold's
    * "which numbers are too small to matter", and the tests below keep them that way apart: separate counts, gate
    * before folding, labels following their side, and the configure demo obeying whatever the row says. The use case
@@ -158,6 +159,37 @@ namespace EQLogParser
 
       Assert.IsTrue(spawned.Count > 0, "the loop still runs — filtering is not pausing");
       Assert.IsFalse(spawned.Any(h => h.Incoming && !h.Heal), "and it never spawns the category that was switched off");
+    }
+
+    /* Procs asked for their own switch: a proc line can read as double-counting the swing that triggered it, so the
+       player who wants one often does not want the other. It is an extra opt-out on top of categories — every gate
+       still counts what it removes, and turning procs back on never resurrects what was hidden. */
+    [TestMethod]
+    public void ProcsHaveTheirOwnSwitchOnTopOfTheirCategory()
+    {
+      var ingest = Open();
+      var hits = new List<FctHitState>();
+
+      bool Proc(double value, double now) =>
+        ingest.Accept(hits, FctLane.DamageDealt, value, "Flurry", false, false, false, null, Width, Height, now, proc: true) != null;
+
+      Assert.IsTrue(Proc(100, 0), "by default procs are part of the show");
+      Assert.AreEqual(1, hits.Count);
+
+      ingest.ShowProcs = false;
+
+      // Off, they do not render — and they are counted, never silently dropped.
+      Assert.IsFalse(Proc(200, 1));
+      Assert.AreEqual(1, hits.Count, "a proc nobody asked for stays out of the hit list");
+      Assert.AreEqual(1, ingest.FilteredCount, "filtered beside the other kinds somebody switched off");
+
+      // Plain damage is none of this switch's business...
+      Assert.IsNotNull(Take(ingest, hits, FctLane.DamageDealt, 300, now: 2));
+
+      // ...and nothing hidden comes back when procs return.
+      ingest.ShowProcs = true;
+      Assert.IsTrue(Proc(400, 3));
+      Assert.AreEqual(3, hits.Count);
     }
   }
 }

@@ -693,6 +693,15 @@ below); it is typography rather than layout, so the row appears in both modes.
 
 ### Configure mode moved out of the overlay into a settings window of its own
 
+**The panel speaks the app's language, literally.** Its fonts come from the theme
+(`TextElement.FontSize = {DynamicResource EQDescriptionSize}` on the panel root — one inherited attribute, so the whole
+window shrinks and grows with the application's own font scale like every other surface); its category picker is the
+app's checkbox-in-a-dropdown combo (`ComboBoxItemTemplateSelector`, closing the dropdown commits, and the closed face
+counts: "3 categories Selected"); its threshold is the trigger grid's numeric `UpDown` (0…9,999,999, typed or spun, no
+ladder); and it carries no close mark — Cancel and Esc are the exits, because a second "leave" button is a third name
+for one act, and users of windows that have both waste evenings wondering which one is safe. Procs joined the category
+list as the fourth kind while that combo was being born.
+
 Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
 as the numbers they were previewing — in a small window the row wrapped straight into the demo it existed to show. The
 settings are now a second, owned window (`FctSettingsWindow`): fixed width, height hugged to content, a vertical property
