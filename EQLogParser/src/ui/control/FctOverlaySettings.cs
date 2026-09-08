@@ -183,12 +183,24 @@ namespace EQLogParser
 
     public static void SaveIsFountain(bool fountain) => ConfigUtil.SetSetting(ModeKey, fountain ? "fountain" : "split");
 
-    /* split's shape: the stored motion is a full FctMotionStyle elsewhere, but this key only ever carries the two rails. */
+    /* split's shape: parabola | straight | hold (the panel calls the last one "settle" — the drift-stop-fade style
+     * that predates the style axis itself, named for an animation hold). Everything else in settings carries a full
+     * FctMotionStyle elsewhere; this key stays within split's three, and anything unknown lands back on parabola. */
     public static FctMotionStyle LoadShape() =>
-      string.Equals(ConfigUtil.GetSetting(ShapeKey, null), "straight", StringComparison.OrdinalIgnoreCase)
-        ? FctMotionStyle.Straight : FctMotionStyle.Parabola;
+      ConfigUtil.GetSetting(ShapeKey, null) switch
+      {
+        string s when string.Equals(s, "straight", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Straight,
+        string s when string.Equals(s, "hold", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Hold,
+        _ => FctMotionStyle.Parabola,
+      };
 
-    public static void SaveShape(FctMotionStyle shape) => ConfigUtil.SetSetting(ShapeKey, shape is FctMotionStyle.Straight ? "straight" : "parabola");
+    public static void SaveShape(FctMotionStyle shape) =>
+      ConfigUtil.SetSetting(ShapeKey, shape switch
+      {
+        FctMotionStyle.Straight => "straight",
+        FctMotionStyle.Hold => "hold",
+        _ => "parabola",
+      });
 
     /*
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or

@@ -108,7 +108,13 @@ namespace EQLogParser
       var state = new FctConfigState
       {
         Fountain = ComboTag(modeCombo) == "fountain",
-        Shape = ComboTag(shapeCombo) == "straight" ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
+        Shape = ComboTag(shapeCombo) switch
+        {
+          "straight" => FctMotionStyle.Straight,
+          // the panel's word is settle; the engine's old name for the drift-stop-fade style rides in the Tag
+          "hold" => FctMotionStyle.Hold,
+          _ => FctMotionStyle.Parabola,
+        },
         HealLane = FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane),
         HealUp = ComboTag(healDirCombo) == "up",
         TakenLane = FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane),

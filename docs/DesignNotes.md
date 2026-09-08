@@ -745,7 +745,8 @@ not meet the geometry vocabulary to choose between looks. What replaces them:
 and spew out and fall, which is the look every classic FCT draws with; its controls are exactly two direction dials, the
 show switches, size and speed. *Split* is the side columns (internally by type) with each category assigned its own
 **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing a lane —
-plus **shape: parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
+plus **shape: parabola | straight | settle** — the first two one rail machinery, settle the original drift-stop-fade
+behaviour brought back (below). Controls a mode does not obey collapse rather than sit disabled
 (in fountain there is no side to hand out, no shape to pick, and the threshold steps off too — the minimal UI was the
 point), and the legend re-sentences itself from the staged choice either way.
 
@@ -878,7 +879,9 @@ fountain is read as a whole — nothing in it is a scale you measure gaps agains
 
 The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
-be read, fade — the default in bands), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
+be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; its name is
+an animation hold, the still beat after a move, and the shape picker shows it as **settle** because "hold" reads as a
+frozen UI state), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
 (no travel at all — it swells where it appeared), **spray** (a random cone out of the lane slot, then a short fall) and
 **parabola** (a constant-speed scroll arcing out to a vertex at half height and back — the shape the scrolling-text genre ships as its own default,
 and halves' default for the same reason; see below). Where a hit goes, how it moves and how numbers stack are three

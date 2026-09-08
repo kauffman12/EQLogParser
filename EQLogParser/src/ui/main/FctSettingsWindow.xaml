@@ -141,10 +141,11 @@
         </ComboBox>
 
         <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="parabola: each number bends sideways as it travels. straight: rows scroll without the bend" />
+                   ToolTip="parabola: numbers scroll to the far edge, bending sideways as they go. straight: the same train without the bend. settle: numbers drift out, stop, and stay readable until they fade" />
         <ComboBox x:Name="shapeCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="parabola" Tag="parabola" />
           <ComboBoxItem Content="straight" Tag="straight" />
+          <ComboBoxItem Content="settle" Tag="hold" />
         </ComboBox>
 
         <!-- The three categories — the two damage streams first, then healing: lane and direction in one cell each.
