@@ -23,6 +23,16 @@ namespace EQLogParser
 
     /* By type only: which column healing owns (the request this mode exists for: heals left, damage right). */
     public const string HealSideKey = "FctOverlayHealSide";
+
+    /*
+     * Which categories of number the overlay draws at all (the gate in FctIngest): my damage, damage on me, and
+     * healing either direction. Absent or unreadable means ON — these are opt-outs by design ("hide what I don't
+     * want"), so a fresh overlay shows everything without anybody having to switch it on, and a corrupt value fails
+     * toward information rather than toward silence.
+     */
+    public const string ShowDealtKey = "FctOverlayShowDealt";
+    public const string ShowTakenKey = "FctOverlayShowTaken";
+    public const string ShowHealsKey = "FctOverlayShowHeals";
     public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
     public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
@@ -58,6 +68,17 @@ namespace EQLogParser
     }
 
     public static void SaveSpeed(double speed) => ConfigUtil.SetSetting(SpeedKey, FctScale.ClampSpeed(speed));
+
+    /* Absent or junk reads as ON — see the Show* keys above: these controls are opt-outs, so failing toward showing
+     * everything is the direction that never hides somebody's heals by accident. */
+    public static bool LoadShown(string key)
+    {
+      var raw = ConfigUtil.GetSetting(key, null);
+      return !(string.Equals(raw, "0", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(raw, "false", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static void SaveShown(string key, bool shown) => ConfigUtil.SetSetting(key, shown ? "1" : "0");
 
     /*
      * "Hide under": the damage threshold (MSBT's damageThreshold, off by default like theirs) offered as a ladder —

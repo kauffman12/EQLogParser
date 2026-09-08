@@ -675,6 +675,39 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
+### Category switches: what story an overlay tells
+
+A request that layout modes cannot answer — *"outgoing damage left, healing right, and just turn incoming damage off"* —
+is a content question, not a geometry one, and it splits the overlay's output into three switchable categories: **my
+damage**, **damage on me**, **healing (either way)**. The gate lives in `FctIngest.Accept` next to the threshold and reads
+the two bits spawn already computes (`heal`, `incoming`) — three comparisons, zero new routing:
+
+```csharp
+if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt)) { FilteredCount++; return null; }
+```
+
+Three separations keep the two filters honest, and each has a test. **Identity before noise:** a category that is off is
+not even measured against the threshold, so a filtered hit never spends the hidden count's budget — `filtered` and
+`hidden` are different numbers for different choices, surfaced beside `dropped`. **Above the fold:** like the threshold,
+the gate sits before folding, so an invisible tick can never inflate a visible `×N`; a category that was off simply has
+no history when it returns. **Words follow their side:** the label exemptions that protect words from the *threshold* do
+not extend here — "Miss" belongs to whoever missed, and defense words (`Defensive` routes as incoming in
+`FctLayout.IsIncoming`) belong to the story of the spell that came in, so switching off `damage on me` also quiets the
+resists and blocks won against you. Off means **off**, down to zero visible categories if somebody wants that; nothing
+is lost silently while it is.
+
+The configure row was already full, so the three checkboxes live behind a **"shows"** button that names what is ON —
+"everything" in the default state (the common case must not look like a setting), "my hits + heals" otherwise, all
+staged like every other control: Save writes, Cancel/Esc puts back.
+
+**The demo gate was never connected.** `FctDemo` runs a private `FctIngest` — that design is load-bearing, the loop must
+never touch real counters — but the same design meant the dial's threshold only ever reached the *real* feed: the demo
+spawned its script numbers through an ingest that had never been told about it, and the commit that shipped the ladder
+claimed the preview showed it. It did not; nothing pinned it either. `FctDemo.Advance` now takes the real ingest as a
+final `gates` parameter and copies threshold and switches every frame — the same per-frame-copy discipline that style
+and layout arrived at after "selecting pulse played hold" — and `TheConfigureDemoObeysTheSwitches` is the test that
+keeps that claim provable.
+
 ### By type: columns owned by category, directions sharing a rail
 
 The *heals left, damage right, mine up, theirs down* request is nearly MSBT's default geometry, and MSBT cannot actually

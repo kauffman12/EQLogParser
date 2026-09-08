@@ -77,6 +77,22 @@ namespace EQLogParser
      * mistaken for a filter that is losing things silently. */
     public int HiddenCount { get; private set; }
 
+    /*
+     * Which categories of number reach the screen at all: my damage, damage on me, and healing in either direction.
+     * These are identity filters — "what story does this overlay tell" — where Threshold is the noise filter, which is
+     * why they get their own switch and their own count instead of stretching the ladder. All three default on: the
+     * controls are opt-outs, never things somebody has to discover. A category that is off pays nothing — no folding,
+     * no placement, no glyphs — and its labels follow it, because a "Miss" belongs to whose damage story it is. The
+     * log, the meters and exports never see any of this: FCT only ever decides what to draw.
+     */
+    public bool ShowDealt = true;
+    public bool ShowTaken = true;
+    public bool ShowHeals = true;
+
+    /* Counted apart from HiddenCount on purpose: "filtered" is a category the player switched off, "hidden" is a number
+     * under their threshold — two choices, so two numbers, and neither one borrows the other's meaning. */
+    public int FilteredCount { get; private set; }
+
     public int LiveCount(List<FctHitState> hits, FctLane lane)
     {
       var live = 0;
@@ -111,6 +127,14 @@ namespace EQLogParser
       /* Also captured before pooling, for the same reason: a heal crit lands on FctLane.Crit, where its lane no longer says what it was. */
       var heal = lane is FctLane.HealingDealt or FctLane.HealingReceived;
       var pooled = crit ? FctLane.Crit : lane;
+
+      /* The category gate, before even the threshold: whether this kind of number belongs on this overlay at all is a
+         question the player already answered, and a filtered hit should not so much as be measured against the dial. */
+      if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt))
+      {
+        FilteredCount++;
+        return null;
+      }
 
       /*
        * The threshold gate, before folding, eviction and everything else: a number the player asked not to see should

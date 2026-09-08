@@ -177,6 +177,26 @@
             </ComboBox>
           </StackPanel>
 
+          <!-- What kinds of numbers this overlay draws at all: three categories, each counted when off (the stats line),
+               none of it touching the log or the meters. A popup instead of a fourth, fifth and sixth combo on a row
+               that is already full — and the button names what is ON, so the default state says "everything" and reads
+               as nothing special. -->
+          <StackPanel x:Name="shownPanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="shownLabel" Text="shows" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="which kinds of numbers to draw: your damage, damage on you, healing (either way). Hidden kinds are counted; the log, meters and exports never change" />
+            <Button x:Name="shownButton" Width="104" Margin="0,3,0,0" HorizontalAlignment="Left" Content="everything ▾" Click="ShownButtonClick"
+                    ToolTip="choose which categories of numbers reach the screen" />
+            <Popup x:Name="shownPopup" PlacementTarget="{Binding ElementName=shownButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+              <Border Background="#F2101316" BorderBrush="#5A6068" BorderThickness="1" CornerRadius="4" Padding="10,8">
+                <StackPanel>
+                  <CheckBox x:Name="showDealtCheck" Content="my damage" IsChecked="True" Foreground="#EDEFF2" Margin="0,2" Checked="ShownCheckChanged" Unchecked="ShownCheckChanged" />
+                  <CheckBox x:Name="showTakenCheck" Content="damage on me" IsChecked="True" Foreground="#EDEFF2" Margin="0,2" Checked="ShownCheckChanged" Unchecked="ShownCheckChanged" />
+                  <CheckBox x:Name="showHealsCheck" Content="healing (either way)" IsChecked="True" Foreground="#EDEFF2" Margin="0,2" Checked="ShownCheckChanged" Unchecked="ShownCheckChanged" />
+                </StackPanel>
+              </Border>
+            </Popup>
+          </StackPanel>
+
           <!-- Direction is the one thing worth spelling out, and it shares the bottom line with the readouts rather than costing a row: two arrows say
                what the bands mean, where what used to sit here was a sentence about cast bars that nobody read twice. -->
           <!-- Kept in sync with the scheme by code (SetLegend): bands say it with up/down arrows, halves with the sides a

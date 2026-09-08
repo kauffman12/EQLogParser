@@ -141,7 +141,7 @@ namespace EQLogParser
      * changing and a number spawning.
      */
     public bool Advance(double nowMs, double w, double h, FctMotionStyle style, FctLayoutChoice layout, Action<FctHitState> spawned,
-      Action<FctHitState> released)
+      Action<FctHitState> released, FctIngest gates = null)
     {
       if (!Active)
       {
@@ -150,6 +150,19 @@ namespace EQLogParser
 
       _ingest.Style = style;
       _ingest.Layout = layout;
+
+      /* The gate settings ride along from the real ingest for the same reason style and layout do — this loop has its
+       * own ingest, so everything it must agree with arrives fresh every frame. A demo that ignored the category
+       * switches would cheerfully spawn exactly what the player just asked not to see, and a preview that contradicts
+       * its controls is the bug this method's signature exists to prevent; it is optional only so the existing tests
+       * (which are about the script) need not invent a feed to borrow gates from. */
+      if (gates is not null)
+      {
+        _ingest.Threshold = gates.Threshold;
+        _ingest.ShowDealt = gates.ShowDealt;
+        _ingest.ShowTaken = gates.ShowTaken;
+        _ingest.ShowHeals = gates.ShowHeals;
+      }
 
       var changed = false;
       var elapsed = nowMs - _cycleStartMs;

@@ -92,6 +92,9 @@ namespace EQLogParser
     private double _savedTextScale = FctScale.SizeDefault;
     private double _savedSpeed = FctScale.SpeedDefault;
     private double _savedThreshold;
+    private bool _savedShowDealt = true;
+    private bool _savedShowTaken = true;
+    private bool _savedShowHeals = true;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
     private bool _settingsReady;
@@ -156,6 +159,8 @@ namespace EQLogParser
 
       _canvas.Threshold = _savedThreshold;
       SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
+
+      ApplyShownChoices(_savedShowDealt, _savedShowTaken, _savedShowHeals);
 
       ApplyLock(true);
     }
@@ -368,6 +373,13 @@ namespace EQLogParser
       _canvas.Threshold = _savedThreshold;
       SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
 
+      /* The category switches, staged like everything else. Assigned before _settingsReady so ticking the checkboxes
+         here cannot look like an edit — the popup's summary still gets built, because that is a readout. */
+      _savedShowDealt = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDealtKey);
+      _savedShowTaken = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowTakenKey);
+      _savedShowHeals = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowHealsKey);
+      ApplyShownChoices(_savedShowDealt, _savedShowTaken, _savedShowHeals);
+
       _settingsReady = true;
       ShowScaleReadouts();
     }
@@ -551,6 +563,14 @@ namespace EQLogParser
         stats += $" · {hidden} hidden";
       }
 
+      /* A third number for a third reason: "filtered" is a category switched off — the count only ever grows when
+         somebody asked for it, which is what makes seeing it there reassuring rather than alarming. */
+      var filtered = _canvas.FilteredCount;
+      if (filtered > 0)
+      {
+        stats += $" · {filtered} filtered";
+      }
+
       statsText.Text = stats;
     }
 
@@ -586,6 +606,79 @@ namespace EQLogParser
         ? Math.Max(0, value)
         : 0;
       RefreshDemo();
+    }
+
+    /*
+     * The category switches preview like everything else on the row: what gets through the gate changes from the next
+     * number on — the demo restarts so the loop shows it immediately, real feed included — and nothing reaches
+     * settings.ini until Save. Turning a category off is allowed to reach zero visible categories with no complaint;
+     * "nothing" is a legitimate answer, and the stats line counts what that means too.
+     */
+    private void ShownCheckChanged(object sender, RoutedEventArgs e)
+    {
+      if (!_settingsReady)
+      {
+        return;
+      }
+
+      var dealt = showDealtCheck.IsChecked == true;
+      var taken = showTakenCheck.IsChecked == true;
+      var heals = showHealsCheck.IsChecked == true;
+      _canvas.ShowDealt = dealt;
+      _canvas.ShowTaken = taken;
+      _canvas.ShowHeals = heals;
+      RefreshShownSummary(dealt, taken, heals);
+    }
+
+    private void ShownButtonClick(object sender, RoutedEventArgs e) => shownPopup.IsOpen = !shownPopup.IsOpen;
+
+    /* Push one triple of choices to both the canvas and the popup's checkboxes, and make the button say it. */
+    private void ApplyShownChoices(bool dealt, bool taken, bool heals)
+    {
+      _canvas.ShowDealt = dealt;
+      _canvas.ShowTaken = taken;
+      _canvas.ShowHeals = heals;
+      showDealtCheck.IsChecked = dealt;
+      showTakenCheck.IsChecked = taken;
+      showHealsCheck.IsChecked = heals;
+      RefreshShownSummary(dealt, taken, heals);
+    }
+
+    /* The button names what is ON, because the common case should not look like a setting: all three read "everything",
+     * none reads "nothing", and any subset lists itself short. */
+    private void RefreshShownSummary(bool dealt, bool taken, bool heals)
+    {
+      string shown;
+      if (dealt && taken && heals)
+      {
+        shown = "everything";
+      }
+      else if (!dealt && !taken && !heals)
+      {
+        shown = "nothing";
+      }
+      else
+      {
+        var parts = new List<string>();
+        if (dealt)
+        {
+          parts.Add("my hits");
+        }
+
+        if (taken)
+        {
+          parts.Add("on me");
+        }
+
+        if (heals)
+        {
+          parts.Add("heals");
+        }
+
+        shown = string.Join(" + ", parts);
+      }
+
+      shownButton.Content = $"{shown} ▾";
     }
 
     private void SelectMotionOption(FctMotionStyle style) => SelectByTag(motionCombo, FctOverlaySettings.Name(style));
@@ -730,12 +823,18 @@ namespace EQLogParser
       _savedTextScale = FctScale.Text;
       _savedSpeed = FctScale.SpeedFromPercent(speedSlider.Value);
       _savedThreshold = _canvas.Threshold;
+      _savedShowDealt = _canvas.ShowDealt;
+      _savedShowTaken = _canvas.ShowTaken;
+      _savedShowHeals = _canvas.ShowHeals;
 
       FctOverlaySettings.SaveMotion(_savedStyle);
       FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
       FctOverlaySettings.SaveThreshold(_savedThreshold);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDealtKey, _savedShowDealt);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowTakenKey, _savedShowTaken);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowHealsKey, _savedShowHeals);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();
       ApplyLock(true);

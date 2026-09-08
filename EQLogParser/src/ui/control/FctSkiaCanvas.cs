@@ -138,6 +138,61 @@ namespace EQLogParser
      * doing its job and a bug swallowing numbers should never look the same from outside. */
     public int HiddenCount => _ingest.HiddenCount;
 
+    /* How many numbers the category switches have taken off screen — its own count beside "hidden" because "you turned
+     * it off" and "it was under your threshold" are different answers a working overlay should be able to give. */
+    public int FilteredCount => _ingest.FilteredCount;
+
+    /*
+     * The category switches, with Threshold's contract: they change what gets through the gate from the next number on
+     * (demo included — Advance copies the gates every frame), never what is already in flight, and nothing reaches
+     * settings.ini until Save. Restarting the demo on a flip is what makes "heals off" provable on screen instantly
+     * rather than after somebody finishes a fight.
+     */
+    public bool ShowDealt
+    {
+      get => _ingest.ShowDealt;
+      set
+      {
+        if (_ingest.ShowDealt == value)
+        {
+          return;
+        }
+
+        _ingest.ShowDealt = value;
+        RestartDemo();
+      }
+    }
+
+    public bool ShowTaken
+    {
+      get => _ingest.ShowTaken;
+      set
+      {
+        if (_ingest.ShowTaken == value)
+        {
+          return;
+        }
+
+        _ingest.ShowTaken = value;
+        RestartDemo();
+      }
+    }
+
+    public bool ShowHeals
+    {
+      get => _ingest.ShowHeals;
+      set
+      {
+        if (_ingest.ShowHeals == value)
+        {
+          return;
+        }
+
+        _ingest.ShowHeals = value;
+        RestartDemo();
+      }
+    }
+
     /*
      * The display threshold forwarded to ingest with MotionStyle's contract: it changes what gets through the gate,
      * never what is already on screen, and configure mode restarts its demo loop so the effect can be judged on the
@@ -375,7 +430,7 @@ namespace EQLogParser
         _demo.Start(now);
       }
 
-      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo))
+      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo, _ingest))
       {
         _dirty = true;
       }
