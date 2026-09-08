@@ -53,6 +53,7 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="mode" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
@@ -159,6 +160,14 @@
           <TextBlock x:Name="speedValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />
         </Grid>
+
+        <TextBlock Grid.Row="9" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label" />
+        <ComboBox x:Name="labelSideCombo" Grid.Row="9" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+          <ComboBoxItem Content="left" Tag="left" />
+          <ComboBoxItem Content="below" Tag="below" />
+          <ComboBoxItem Content="right" Tag="right" />
+        </ComboBox>
       </Grid>
 
       <!-- The demo switch and the position sentence, under a hairline: both are about what the overlay is showing right

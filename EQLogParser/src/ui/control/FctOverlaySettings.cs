@@ -36,6 +36,9 @@ namespace EQLogParser
     public const string HealSideKey = "FctOverlayHealSide";
     public const string HealDirectionKey = "FctOverlayHealDirection";
     public const string TakenDamageSideKey = "FctOverlayTakenDamageSide";
+
+    /* Where the "(source)" label sits by its amount: left, below (the shipped line), or right. */
+    public const string LabelSideKey = "FctOverlayLabelSide";
     public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
 
     /*
@@ -194,6 +197,19 @@ namespace EQLogParser
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
      * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
      */
+    public static FctLabelSide LoadLabelSide() =>
+      string.Equals(ConfigUtil.GetSetting(LabelSideKey, null), "left", StringComparison.OrdinalIgnoreCase) ? FctLabelSide.Left
+        : string.Equals(ConfigUtil.GetSetting(LabelSideKey, null), "right", StringComparison.OrdinalIgnoreCase) ? FctLabelSide.Right
+        : FctLabelSide.Below;
+
+    public static void SaveLabelSide(FctLabelSide side) =>
+      ConfigUtil.SetSetting(LabelSideKey, side switch
+      {
+        FctLabelSide.Left => "left",
+        FctLabelSide.Right => "right",
+        _ => "below",
+      });
+
     internal static FctRegionSide ParseSide(string raw) =>
       string.Equals(raw, "right", StringComparison.OrdinalIgnoreCase) ? FctRegionSide.Right : FctRegionSide.Left;
 

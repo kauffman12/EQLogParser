@@ -28,6 +28,24 @@ namespace EQLogParser
 
     private const float GlowSigma = 5f;
 
+    /* Where "(source)" sits relative to its amount (FctLabelSide): the shipped Below is where this overlay has always
+       drawn it. Changing it repaints rather than restarts — placement is read by the draw pass, so the next frame of
+       every hit in flight already wears the new arrangement; no number in motion is thrown away by a typography choice. */
+    private FctLabelSide _labelSide = FctLabelSide.Below;
+
+    public FctLabelSide LabelSide
+    {
+      get => _labelSide;
+      set
+      {
+        if (_labelSide != value)
+        {
+          _labelSide = value;
+          _dirty = true;
+        }
+      }
+    }
+
     /* Blur sprites are baked per unique crit label; bounded so a long session cannot grow without end. */
     private const int HaloCacheMax = 64;
 
@@ -492,13 +510,30 @@ namespace EQLogParser
         CountDraw(1);
       }
 
-      // value: black outline pass, then colored fill pass; source line under it
-      DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)(y + (hit.ValueFontSize * 0.82)), hit.ValueFontSize, true, hit.ValueArgb, opacity);
+      // value: black outline pass, then colored fill pass; its x is the value's own center in every label placement,
+      // so amounts keep one spine whether the words hang below them (the shipped line) or inline left/right of them.
+      var valueBase = y + (hit.ValueFontSize * 0.82);
+      DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueArgb, opacity);
 
       if (!string.IsNullOrEmpty(hit.Source))
       {
-        var sourceBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
-        DrawOutlinedText(canvas, $"({hit.Source})", (float)x, (float)sourceBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
+        /* Inline labels share the value's baseline — two font sizes on one line reads as a sentence, which is the whole
+           reason somebody picks it — and lean against the measured edge of the number with a word-space between. */
+        double labelX = x;
+        double labelBase = valueBase;
+
+        if (_labelSide is FctLabelSide.Below)
+        {
+          labelBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
+        }
+        else
+        {
+          var gap = hit.SourceFontSize * 0.5;
+          var half = hit.ValueWidth / 2.0 + gap + hit.SourceWidth / 2.0;
+          labelX = _labelSide is FctLabelSide.Right ? x + half : x - half;
+        }
+
+        DrawOutlinedText(canvas, $"({hit.Source})", (float)labelX, (float)labelBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
       }
 
       if (s != 1.0)
@@ -591,6 +626,7 @@ namespace EQLogParser
        * there is no flicker to guard against now that folded hits stop changing their face value.
        */
       hit.ValueWidth = measured;
+      hit.SourceWidth = string.IsNullOrEmpty(hit.Source) ? 0 : TextWidth($"({hit.Source})", hit.SourceFontSize, bold: false);
       hit.TextDirty = false;
 
       if (hit.Blowout)

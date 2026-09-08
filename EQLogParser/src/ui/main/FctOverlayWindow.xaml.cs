@@ -88,6 +88,7 @@ namespace EQLogParser
     /* The companion window configure mode lives in now, and the session-only demo switch its checkbox drives. */
     private FctSettingsWindow _settings;
     private bool _sampleData = true;
+    private FctLabelSide _savedLabelSide = FctLabelSide.Below;
 
     private FctMotionStyle _savedStyle;
     private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
@@ -156,6 +157,7 @@ namespace EQLogParser
       _canvas.ShowDealt = _savedShowDealt;
       _canvas.ShowTaken = _savedShowTaken;
       _canvas.ShowHeals = _savedShowHeals;
+      _canvas.LabelSide = _savedLabelSide;
 
       /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. */
       _settings?.LoadFrom(StagedState());
@@ -332,6 +334,10 @@ namespace EQLogParser
       _savedShowDealt = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDealtKey);
       _savedShowTaken = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowTakenKey);
       _savedShowHeals = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowHealsKey);
+
+      /* And the label's seat beside its number, staged like the rest of the typography. */
+      _savedLabelSide = FctOverlaySettings.LoadLabelSide();
+      _canvas.LabelSide = _savedLabelSide;
     }
 
     /*
@@ -517,6 +523,7 @@ namespace EQLogParser
       ShowDealt = _savedShowDealt,
       ShowTaken = _savedShowTaken,
       ShowHeals = _savedShowHeals,
+      LabelSide = _savedLabelSide,
       TextScale = _savedTextScale,
       Speed = _savedSpeed,
     };
@@ -534,6 +541,7 @@ namespace EQLogParser
       _canvas.ShowDealt = state.ShowDealt;
       _canvas.ShowTaken = state.ShowTaken;
       _canvas.ShowHeals = state.ShowHeals;
+      _canvas.LabelSide = state.LabelSide;
       FctScale.Text = FctScale.ClampSize(state.TextScale);
       FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
 
@@ -560,6 +568,7 @@ namespace EQLogParser
       _savedShowDealt = state.ShowDealt;
       _savedShowTaken = state.ShowTaken;
       _savedShowHeals = state.ShowHeals;
+      _savedLabelSide = state.LabelSide;
 
       FctOverlaySettings.SaveIsFountain(state.Fountain);
       FctOverlaySettings.SaveShape(state.Shape);
@@ -570,6 +579,7 @@ namespace EQLogParser
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDealtKey, _savedShowDealt);
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowTakenKey, _savedShowTaken);
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowHealsKey, _savedShowHeals);
+      FctOverlaySettings.SaveLabelSide(_savedLabelSide);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();
 

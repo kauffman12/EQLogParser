@@ -58,6 +58,7 @@ namespace EQLogParser
       showTakenCheck.IsChecked = state.ShowTaken;
       showHealsCheck.IsChecked = state.ShowHeals;
       SelectByTag(thresholdCombo, ((int)state.Threshold).ToString(CultureInfo.InvariantCulture));
+      SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
@@ -89,6 +90,12 @@ namespace EQLogParser
         ShowDealt = showDealtCheck.IsChecked == true,
         ShowTaken = showTakenCheck.IsChecked == true,
         ShowHeals = showHealsCheck.IsChecked == true,
+        LabelSide = ComboTag(labelSideCombo) switch
+        {
+          "left" => FctLabelSide.Left,
+          "right" => FctLabelSide.Right,
+          _ => FctLabelSide.Below,
+        },
         TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
@@ -219,6 +226,14 @@ namespace EQLogParser
     }
 
     private static string Signed(int percent) => percent == 0 ? "—" : $"{percent:+0;-0}%";
+
+    private static string LabelName(FctLabelSide side) =>
+      side switch
+      {
+        FctLabelSide.Left => "left",
+        FctLabelSide.Right => "right",
+        _ => "below",
+      };
 
     private static string Side(FctRegionSide side) => side is FctRegionSide.Right ? "right" : "left";
 

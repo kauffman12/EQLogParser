@@ -103,6 +103,11 @@ namespace EQLogParser
     // measured width of DisplayText at ValueFontSize, written by the backend when it rebuilds glyphs
     public double ValueWidth;
 
+    /* Measured width of "(source)" at SourceFontSize, same rebuild. The inline label placements hang the label off the
+       value's edge, which needs both widths in hand at draw time — measuring per frame to save this field would be the
+       worse trade. */
+    public double SourceWidth;
+
     // set when DisplayText changed; the backend rebuilds glyphs + ValueWidth and clears it
     public bool TextDirty;
 

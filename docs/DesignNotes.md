@@ -675,6 +675,22 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
+### The source label can sit left, below (shipped), or right of its amount
+
+`(slash)` — the little name under a number saying what made it — had exactly one seat: below, which is where this overlay
+has always drawn it. A settings row (`label`) now offers **left / below / right**, because Nag-style readers take number
+and name as one token and want them on one line. Two rules keep it from becoming a layout wobble:
+
+**The number never moves for its label.** `hit.X` is the amount's own center in every placement; inline labels hang off
+the measured edge of the value (baseline-shared, word-space gap), so a column of amounts keeps one visual spine whether
+the words live below, left, or right. That is why composition lives entirely in the draw pass: placement is read per
+frame, changing it repaints, and no number in flight is thrown away by a typography choice.
+
+**The measurement that makes it possible rides with the other one.** The label's width is measured when glyphs are
+rebuilt (which already measures the value for the travel clamp), not per frame — folds change the value's face, so both
+widths get recomputed together and stay honest. `FctOverlayLabelSide` persists it ("left"/"below"/"right", absent =
+below); it is typography rather than layout, so the row appears in both modes.
+
 ### Configure mode moved out of the overlay into a settings window of its own
 
 Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
