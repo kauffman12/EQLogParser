@@ -211,6 +211,21 @@ namespace EQLogParser
       }
     }
 
+    public bool ShowProcs
+    {
+      get => _ingest.ShowProcs;
+      set
+      {
+        if (_ingest.ShowProcs == value)
+        {
+          return;
+        }
+
+        _ingest.ShowProcs = value;
+        RestartDemo();
+      }
+    }
+
     /*
      * The display threshold forwarded to ingest with MotionStyle's contract: it changes what gets through the gate,
      * never what is already on screen, and configure mode restarts its demo loop so the effect can be judged on the

@@ -3,6 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:NumberFormat="clr-namespace:System.Globalization;assembly=mscorlib"
+        xmlns:local="clr-namespace:EQLogParser"
         mc:Ignorable="d"
         Title="Combat Text Settings"
         WindowStyle="None"
@@ -21,18 +24,26 @@
        controls, these two resource keys are the same background and border the main window uses), stays owned by the
        overlay so it always sits above the game with it and minimises with it, and gets out of the way when configure
        mode ends. Fixed width, height hugs its content: a property grid is only as tall as the settings it has. -->
+  <Window.Resources>
+    <!-- The same checkbox-in-a-dropdown template the breakdown column pickers and the trigger overlays editor use:
+         closing the dropdown is what commits, which is also when the combo's own title gets rewritten to say how many
+         are on. -->
+    <local:ComboBoxItemTemplateSelector x:Key="CheckSelector" />
+  </Window.Resources>
+  <!-- FontSize comes from the theme like everything else's does (ThemeConfig publishes EQDescriptionSize beside the
+       app's own font scale), so this panel shrinks and grows with the rest of the application. One attribute on the
+       root: font size is an inherited property, and every label, combo, checkbox and button below wants exactly this. -->
   <Border Background="{DynamicResource ContentBackgroundAlt2}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
-          BorderThickness="1" CornerRadius="8" Padding="14,10,14,12">
+          BorderThickness="1" CornerRadius="8" Padding="14,10,14,12"
+          TextElement.FontSize="{DynamicResource EQDescriptionSize}">
     <StackPanel>
 
-      <!-- Title bar: the window has no chrome of Windows' making, so this strip is what grabs to move it. The ✕ means
-           the same thing Cancel does — stop configuring, keep nothing — because a close button that silently saved
-           would be the worst possible surprise on this particular window. -->
+      <!-- Title bar: the window has no chrome of Windows' making, so this strip is what grabs to move it. There is no
+           close mark on purpose — Cancel and Esc are the exits, one gesture each; a second "leave" button would just
+           be a third name for the same act, and windows that have both have users who wonder which is safe. -->
       <Grid x:Name="headerBar" Background="Transparent" Margin="-4,-2,-4,4" MouseLeftButtonDown="HeaderDrag">
         <TextBlock Text="combat text" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
-        <Button x:Name="closeButton" Content="&#8943;" Width="26" Height="22" HorizontalAlignment="Right"
-                Click="CancelClick" ToolTip="stop configuring without saving (Esc)" />
       </Grid>
 
       <!-- The property grid: one setting per row, name on the left, control on the right — which is what the cramped
@@ -86,7 +97,7 @@
           </ComboBox>
         </StackPanel>
 
-        <TextBlock x:Name="takenTitle" Grid.Row="3" Text="damage on me" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <TextBlock x:Name="takenTitle" Grid.Row="3" Text="damage to me" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="which column incoming damage owns, and which way it travels" />
         <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="takenSideCombo" Width="84" SelectionChanged="ControlChanged">
@@ -114,24 +125,21 @@
 
         <!-- Shown as three checkboxes instead of the cramped popup the strip needed: the grid has the room, and what is
              on and off is legible at a glance instead of hiding behind a button that summarised it. -->
-        <TextBlock Grid.Row="5" Text="shows" VerticalAlignment="Top" Margin="0,6,0,0" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which kinds of numbers to draw. Hidden kinds are counted; the log, meters and exports never change" />
-        <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,3">
-          <CheckBox x:Name="showDealtCheck" Content="my damage" IsChecked="True" Margin="0,2" Checked="ControlChanged" Unchecked="ControlChanged" />
-          <CheckBox x:Name="showTakenCheck" Content="damage on me" IsChecked="True" Margin="0,2" Checked="ControlChanged" Unchecked="ControlChanged" />
-          <CheckBox x:Name="showHealsCheck" Content="healing (either way)" IsChecked="True" Margin="0,2" Checked="ControlChanged" Unchecked="ControlChanged" />
-        </StackPanel>
+        <TextBlock Grid.Row="5" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which kinds of numbers to draw — procs get their own switch because a proc line can read as double-counting the swing that triggered it. Hidden kinds are counted; the log, meters and exports never change" />
+        <ComboBox x:Name="showCombo" Grid.Row="5" Grid.Column="1" Margin="0,3"
+                  ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
 
-        <TextBlock x:Name="thresholdTitle" Grid.Row="6" Text="hide under" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="stop showing your damage numbers below this value (heals and words like Miss are never hidden); hidden hits are counted, not lost" />
-        <ComboBox x:Name="thresholdCombo" Grid.Row="6" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-          <ComboBoxItem Content="off" Tag="0" />
-          <ComboBoxItem Content="250" Tag="250" />
-          <ComboBoxItem Content="500" Tag="500" />
-          <ComboBoxItem Content="1k" Tag="1000" />
-          <ComboBoxItem Content="2k" Tag="2000" />
-          <ComboBoxItem Content="5k" Tag="5000" />
-        </ComboBox>
+        <TextBlock x:Name="thresholdTitle" Grid.Row="6" Text="hide below" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="stop showing your damage numbers at or under this value (heals and words like Miss are never hidden); hidden hits are counted, not lost. 0 is off" />
+        <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million. -->
+        <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="6" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
+                           MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="ThresholdChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
 
         <!-- The two dials keep their meanings and lose their furniture: no minus/plus marks needed here, the row's label
              says which is which, and double-click still returns a dial to the shipped value. -->

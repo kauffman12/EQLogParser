@@ -1,5 +1,5 @@
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,8 +16,8 @@ namespace EQLogParser
    *
    * It is deliberately dumb: LoadFrom hands it a snapshot to display, every change raises PreviewChanged with a fresh
    * one for the live demo, Save raises Saved with the final copy for the overlay to write to settings.ini, and Cancel —
-   * button, Esc or the close mark, all three the same gesture — asks the overlay to put everything back. It owns no
-   * canvas and no keys; that is what keeps a second topmost window from becoming a second source of truth.
+   * button or Esc, the same gesture either way — asks the overlay to put everything back. It owns no canvas and no keys;
+   * that is what keeps a second topmost window from becoming a second source of truth.
    */
   public sealed partial class FctSettingsWindow : Window
   {
@@ -30,6 +30,17 @@ namespace EQLogParser
      * in the next second, not whenever the loop happens to come round. */
     internal event Action DialReleased;
 
+    /* The "show" dropdown's four categories, in the app's checkbox-in-a-combo pattern (the same template the breakdown
+       column pickers use). They live here as fields because both directions need them: LoadFrom writes the checks and
+       Snapshot reads them back, and the combo's title is re-summarised whenever the dropdown closes. */
+    private readonly List<ComboBoxItemDetails> _showItems =
+    [
+      new(true, "my damage"),
+      new(true, "damage to me"),
+      new(true, "healing"),
+      new(true, "procs"),
+    ];
+
     private bool _loading;
 
     /* True once somebody drags this window by its title strip. Until then the overlay keeps it parked beside itself —
@@ -40,6 +51,7 @@ namespace EQLogParser
     internal FctSettingsWindow()
     {
       InitializeComponent();
+      showCombo.ItemsSource = _showItems;
     }
 
     internal void LoadFrom(FctConfigState state)
@@ -54,10 +66,12 @@ namespace EQLogParser
       SelectByTag(inDirCombo, Up(state.TakenUp));
       SelectByTag(dealtSideCombo, Side(state.DealtSide));
       SelectByTag(outDirCombo, Up(state.DealtUp));
-      showDealtCheck.IsChecked = state.ShowDealt;
-      showTakenCheck.IsChecked = state.ShowTaken;
-      showHealsCheck.IsChecked = state.ShowHeals;
-      SelectByTag(thresholdCombo, ((int)state.Threshold).ToString(CultureInfo.InvariantCulture));
+      _showItems[0].IsChecked = state.ShowDealt;
+      _showItems[1].IsChecked = state.ShowTaken;
+      _showItems[2].IsChecked = state.ShowHeals;
+      _showItems[3].IsChecked = state.ShowProcs;
+      UpdateShowTitle();
+      thresholdUpDown.Value = state.Threshold;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
@@ -86,10 +100,11 @@ namespace EQLogParser
         TakenUp = ComboTag(inDirCombo) == "up",
         DealtSide = ComboTag(dealtSideCombo) == "right" ? FctRegionSide.Right : FctRegionSide.Left,
         DealtUp = ComboTag(outDirCombo) == "up",
-        Threshold = double.TryParse(ComboTag(thresholdCombo), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value > 0 ? value : 0,
-        ShowDealt = showDealtCheck.IsChecked == true,
-        ShowTaken = showTakenCheck.IsChecked == true,
-        ShowHeals = showHealsCheck.IsChecked == true,
+        Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
+        ShowDealt = _showItems[0].IsChecked,
+        ShowTaken = _showItems[1].IsChecked,
+        ShowHeals = _showItems[2].IsChecked,
+        ShowProcs = _showItems[3].IsChecked,
         LabelSide = ComboTag(labelSideCombo) switch
         {
           "left" => FctLabelSide.Left,
@@ -135,6 +150,34 @@ namespace EQLogParser
       UpdateReadouts();
       PreviewChanged?.Invoke(Snapshot());
     }
+
+    /* The trigger grid's numeric editor: Value follows both typing and the arrows, committing as it goes — which the
+       preview design already assumes, since nothing is real until Save. */
+    private void ThresholdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (_loading || !IsLoaded)
+      {
+        return;
+      }
+
+      PreviewChanged?.Invoke(Snapshot());
+    }
+
+    /* Closing the dropdown is the commit — title re-summarised, snapshot out. Checking a box inside an open dropdown
+       previews nothing on purpose: mid-click states are not decisions. */
+    private void ShowDropDownClosed(object sender, EventArgs e)
+    {
+      if (_loading)
+      {
+        return;
+      }
+
+      UpdateShowTitle();
+      PreviewChanged?.Invoke(Snapshot());
+    }
+
+    /* The combo's closed face counts what is on, in the app's own words — the same summariser the column pickers use. */
+    private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "categories");
 
     /* Double-click returns a dial to the shipped middle; letting go of either restarts the demo cycle up top. */
     private void SliderReleased(object sender, MouseButtonEventArgs e)
@@ -203,7 +246,7 @@ namespace EQLogParser
       healsTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       healsRow.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       takenSideCombo.Visibility = dealtSideCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      thresholdTitle.Visibility = thresholdCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+      thresholdTitle.Visibility = thresholdUpDown.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /* The legend reads straight off the picks: split names each category's column, fountain's columns are fixed so its
@@ -216,7 +259,7 @@ namespace EQLogParser
         return;
       }
 
-      legendText.Text = $"heals {SideArrow(healSideCombo)}   on me {SideArrow(takenSideCombo)}   mine {SideArrow(dealtSideCombo)}";
+      legendText.Text = $"heals {SideArrow(healSideCombo)}   to me {SideArrow(takenSideCombo)}   mine {SideArrow(dealtSideCombo)}";
     }
 
     private void UpdateReadouts()

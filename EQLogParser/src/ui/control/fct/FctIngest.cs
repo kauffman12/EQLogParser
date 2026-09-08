@@ -89,6 +89,12 @@ namespace EQLogParser
     public bool ShowTaken = true;
     public bool ShowHeals = true;
 
+    /* Procs — the 20% weapon abilities that arrive as their own numbers — asked for a switch of their own: a player who
+       wants the swing often reads the proc line as double-counting it, and one who does not wants silence. It is an
+       extra opt-out on top of the categories (a proc is damage too), so hiding "my damage" hides procs with it; this
+       only ever removes more, never restores. */
+    public bool ShowProcs = true;
+
     /* Counted apart from HiddenCount on purpose: "filtered" is a category the player switched off, "hidden" is a number
      * under their threshold — two choices, so two numbers, and neither one borrows the other's meaning. */
     public int FilteredCount { get; private set; }
@@ -130,7 +136,7 @@ namespace EQLogParser
 
       /* The category gate, before even the threshold: whether this kind of number belongs on this overlay at all is a
          question the player already answered, and a filtered hit should not so much as be measured against the dial. */
-      if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt))
+      if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt) || (proc && !ShowProcs))
       {
         FilteredCount++;
         return null;

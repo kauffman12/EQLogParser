@@ -50,6 +50,7 @@ namespace EQLogParser
     public const string ShowDealtKey = "FctOverlayShowDealt";
     public const string ShowTakenKey = "FctOverlayShowTaken";
     public const string ShowHealsKey = "FctOverlayShowHeals";
+    public const string ShowProcsKey = "FctOverlayShowProcs";
     public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
     public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
@@ -98,39 +99,25 @@ namespace EQLogParser
     public static void SaveShown(string key, bool shown) => ConfigUtil.SetSetting(key, shown ? "1" : "0");
 
     /*
-     * "Hide under": the damage threshold (MSBT's damageThreshold, off by default like theirs) offered as a ladder —
-     * off, 250, 500, 1k, 2k, 5k — rather than a continuum, because the dial's whole job is "stop the white noise",
-     * which wants three positions a glance can set, not eighty. Stored as a number; loading snaps to the nearest rung,
-     * so a hand-edited settings.ini of 300 becomes a threshold the combo can actually show rather than a filter that
-     * works while its control lies about it. Junk reads as off, which is the MSBT default and the safe direction.
+     * "Hide below": the damage threshold (MSBT's damageThreshold, off by default like theirs). It used to be a ladder —
+     * off, 250, 500, 1k, 2k, 5k — because a combo cannot offer eighty positions; the panel now carries a numeric
+     * spinner instead, and every whole number between zero and just under ten million is a legitimate opinion, so
+     * loading stopped snapping. A stored 300 means 300. Junk reads as off, which is both the MSBT default and the
+     * safe direction.
      */
     public const string ThresholdKey = "FctOverlayThreshold";
 
-    internal static readonly double[] ThresholdLadder = [0d, 250d, 500d, 1000d, 2000d, 5000d];
+    /* The spinner's ceiling: larger than any hit the parser can log, so the control cannot name a number that filters
+       something real. Stored values above it (hand-edited or ancient) come back down rather than draw a lie. */
+    public const double ThresholdMax = 9_999_999;
 
-    public static double LoadThreshold() => SnapToLadder(ConfigUtil.GetSettingAsDouble(ThresholdKey, 0));
+    public static double LoadThreshold() => ClampThreshold(ConfigUtil.GetSettingAsDouble(ThresholdKey, 0));
 
-    public static void SaveThreshold(double value) => ConfigUtil.SetSetting(ThresholdKey, SnapToLadder(value));
+    public static void SaveThreshold(double value) => ConfigUtil.SetSetting(ThresholdKey, ClampThreshold(value));
 
-    /* Pure for testability: nearest rung wins; nothing and nonsense both land on off. */
-    internal static double SnapToLadder(double value)
-    {
-      if (!double.IsFinite(value) || value <= 0)
-      {
-        return 0;
-      }
-
-      var best = ThresholdLadder[0];
-      for (var i = 1; i < ThresholdLadder.Length; i++)
-      {
-        if (Math.Abs(value - ThresholdLadder[i]) < Math.Abs(value - best))
-        {
-          best = ThresholdLadder[i];
-        }
-      }
-
-      return best;
-    }
+    /* Pure for testability: finite and in range, or off — nonsense both lands on off. */
+    internal static double ClampThreshold(double value) =>
+      !double.IsFinite(value) || value <= 0 ? 0 : Math.Min(value, ThresholdMax);
 
     /*
      * Whether anybody has ever pressed Save on the configure row. The overlay's defaults are defensible but they are opinions, and a first enable that

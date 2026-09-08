@@ -24,6 +24,7 @@ namespace EQLogParser
     public bool ShowDealt = true;
     public bool ShowTaken = true;
     public bool ShowHeals = true;
+    public bool ShowProcs = true;
 
     /* Typography rather than layout, so it lives in both modes: where "(source)" sits by its amount. */
     public FctLabelSide LabelSide = FctLabelSide.Below;

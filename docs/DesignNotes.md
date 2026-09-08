@@ -767,9 +767,11 @@ silently. Bands degrades both rail styles to hold exactly as it degraded the par
 ### Category switches: what story an overlay tells
 
 A request that layout modes cannot answer — *"outgoing damage left, healing right, and just turn incoming damage off"* —
-is a content question, not a geometry one, and it splits the overlay's output into three switchable categories: **my
-damage**, **damage on me**, **healing (either way)**. The gate lives in `FctIngest.Accept` next to the threshold and reads
-the two bits spawn already computes (`heal`, `incoming`) — three comparisons, zero new routing:
+is a content question, not a geometry one, and it splits the overlay's output into switchable categories: **my
+damage**, **damage to me**, **healing** — plus **procs**, whose own switch arrived later because a proc line can read as
+double-counting the swing that triggered it (`ShowProcs` is an extra opt-out on top of category: hiding my damage hides its
+procs too, and this one only ever removes more). The gate lives in `FctIngest.Accept` next to the threshold and reads
+the two bits spawn already computes (`heal`, `incoming`) — three comparisons and a proc test, zero new routing:
 
 ```csharp
 if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt)) { FilteredCount++; return null; }
@@ -1092,16 +1094,17 @@ configure mode: position the overlay over a real fight, where example numbers ar
 can be switched off next to the speed dial. It is a view aid for the session rather than a setting — nothing writes it, and setup opens with them back on,
 because the next time somebody opens this panel they almost certainly want to see what a dial does again.
 
-**"Hide under" is a ladder, not a dial.** The damage threshold (MSBT's `damageThreshold`, off by default like theirs) stops drawing
-*damage numbers* below its rung — off, 250, 500, 1k, 2k, 5k — because the dial's whole job is "stop the white noise of the rotation",
-which wants three glances rather than eighty positions. Heals and the zero-damage words are exempt by design: they are information,
+**"Hide below" is a number you type.** The damage threshold (MSBT's `damageThreshold`, off by default like theirs) stops drawing
+*damage numbers* at or below its value. It began as a six-rung combo — off, 250, 500, 1k, 2k, 5k — because a dropdown cannot offer
+eighty positions; the panel now carries the trigger grid's numeric spinner instead, and every whole number from zero to just under
+ten million is a legitimate opinion, so the ladder is gone and loading no longer snaps: a stored 300 means 300. Heals and the zero-damage words are exempt by design: they are information,
 not volume, and hiding the fact that you are being resisted because the number beside it happened to be small is exactly the surprise
 this control must not produce; crits are not exempt, because a small crit is still small noise. Nothing this hides goes quietly — the
-stats line reads `… · 37 hidden` beside the drop count when nonzero, one number per reason text does not appear: "dropped" is the
+stats read `… · 37 hidden` beside the drop count when nonzero, one number per reason text does not appear: "dropped" is the
 overlay out of room, "hidden" is the player's own filter working. The gate sits at the top of `FctIngest.Accept`, before folding, so a
-hidden tick never inflates an `×N` count that nobody saw anyway. It persists as `FctOverlayThreshold`, and loading **snaps to the
-nearest rung**: a hand-written 300 becomes a threshold the combo can actually show, because a filter that works while its control lies
-about it is two bugs for the price of one.
+hidden tick never inflates an `×N` count that nobody saw anyway. It persists as `FctOverlayThreshold`, and values outside zero…9,999,999
+come back **clamped**: a spinner can only promise the range it draws, because a filter that works while its control lies about it is
+two bugs for the price of one.
 
 Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
 tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
@@ -1353,7 +1356,7 @@ every hover over the overlay and buys nothing observable. Geometry persists thro
 is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
 *Two states*). The presentation switches — motion style (`FctOverlayMotion`), the two dials (`FctOverlayTextScale`, `FctOverlaySpeed`; multipliers
 rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) and
-the hide-under ladder (`FctOverlayThreshold`, stored as the plain number it shows) —
+the hide-below threshold (`FctOverlayThreshold`, stored as the plain number it shows) —
 persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
 actually chosen. The old `FctOverlayTimeScale` is still read once, inverted, when the speed key is absent; it is never written again. They are read by
 the overlay and by the simulation window so a hold run and a spray
