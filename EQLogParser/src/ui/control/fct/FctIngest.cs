@@ -217,6 +217,7 @@ namespace EQLogParser
         Style = style,
         SpawnMs = now,
         Source = source,
+        SourceLabel = string.IsNullOrEmpty(source) ? null : $"({source})", // once here, not once per frame in the draw pass
         FixedText = fixedText,
         Value = value,
       };

@@ -17,8 +17,11 @@ namespace EQLogParser
     private const double FloorMs = 1000;    // below this, numbers stop being readable
     private const double RateAlpha = 0.25;  // EMA weight of the newest inter-arrival interval
 
-    private readonly double[] _ratePerSec = new double[Enum.GetValues(typeof(FctLane)).Length];
-    private readonly double[] _lastSpawnMs = new double[Enum.GetValues(typeof(FctLane)).Length];
+    /* Enum.GetValues allocates an array per call, and this is one lane slot each: counted once, ever. */
+    private static readonly int LaneCount = Enum.GetValues(typeof(FctLane)).Length;
+
+    private readonly double[] _ratePerSec = new double[LaneCount];
+    private readonly double[] _lastSpawnMs = new double[LaneCount];
 
     /* Comfortable concurrent entries per lane; 0 means no adaptation. */
     public static double Capacity(FctLane lane) => lane switch

@@ -410,7 +410,7 @@ namespace EQLogParser
           SetFctOverlayMenu(false, false);
         };
 
-        // Save and Esc change the state while the menu is looking the other way; the menu's Setup item is the same switch seen
+        // Save and Cancel change the state while the menu is looking the other way; the menu's Setup item is the same switch seen
         // from the other side, so it follows the window rather than remembering what it was last asked to do
         _fctOverlay.EventsLockChanged += locked => SetFctOverlayMenu(_fctOverlay?.IsVisible == true, !locked);
       }
@@ -431,7 +431,7 @@ namespace EQLogParser
       {
         _fctOverlay.Show();
 
-        // an unlocked overlay needs focus for Esc to reach it; a locked one must never take it from the game
+        // configuring wants the window foreground so its panel can be typed in; a locked one must never take focus from the game
         if (!_fctOverlay.Locked)
         {
           _fctOverlay.Activate();
@@ -468,7 +468,7 @@ namespace EQLogParser
 
     /*
      * Setup is the only way in. Locked means click-through (WS_EX_TRANSPARENT) with no header and no panel — numbers over EverQuest
-     * and nothing else — and it is where the overlay always opens and what Esc and Save return you to: a state that outlived its
+     * and nothing else — and it is where the overlay always opens and what Cancel and Save return you to: a state that outlived its
      * session would turn an overlay into a click-eating rectangle the next time the game starts, so there is no setting for it.
      * Asking from the menu is deliberate, because while locked the window takes no input at all, and this overlay lives mid-screen,
      * where permanent settings furniture would fight the game.

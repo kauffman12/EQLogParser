@@ -77,6 +77,10 @@ namespace EQLogParser
     /* Paints are reused and reconfigured per draw: allocating 4-6 of them per hit per frame was the hot path. */
     private SKPaint _outlinePaint, _fillPaint, _blitPaint;
 
+    /* Long-lived measuring paint (3.119.2 MeasureText requires one) and the halo bake's blurred black — built with
+       the renderer, not per spawn. See EnsureSkiaResources. */
+    private SKPaint _measurePaint, _haloPaint;
+
     private SKSurface _surface;
     private WriteableBitmap _bitmap;
     private byte[] _pixelCopy;
@@ -530,7 +534,7 @@ namespace EQLogParser
       var valueBase = y + (hit.ValueFontSize * 0.82);
       DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueArgb, opacity);
 
-      if (!string.IsNullOrEmpty(hit.Source))
+      if (hit.SourceLabel is not null)
       {
         /* Inline labels share the value's baseline — two font sizes on one line reads as a sentence, which is the whole
            reason somebody picks it — and lean against the measured edge of the number with a word-space between. */
@@ -548,7 +552,7 @@ namespace EQLogParser
           labelX = _labelSide is FctLabelSide.Right ? x + half : x - half;
         }
 
-        DrawOutlinedText(canvas, $"({hit.Source})", (float)labelX, (float)labelBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
+        DrawOutlinedText(canvas, hit.SourceLabel, (float)labelX, (float)labelBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
       }
 
       if (s != 1.0)
@@ -641,7 +645,7 @@ namespace EQLogParser
        * there is no flicker to guard against now that folded hits stop changing their face value.
        */
       hit.ValueWidth = measured;
-      hit.SourceWidth = string.IsNullOrEmpty(hit.Source) ? 0 : TextWidth($"({hit.Source})", hit.SourceFontSize, bold: false);
+      hit.SourceWidth = hit.SourceLabel is null ? 0 : TextWidth(hit.SourceLabel, hit.SourceFontSize, bold: false);
       hit.TextDirty = false;
 
       if (hit.Blowout)
@@ -671,9 +675,7 @@ namespace EQLogParser
            * a hinted sprite behind unhinted text puts the glow a fraction off the number it is supposed to bloom. */
           font.Hinting = SKFontHinting.None;
 
-          // 3.119.2 MeasureText overloads require a paint argument but only read it for encoding
-          using var measure = new SKPaint();
-          var textWidth = (int)Math.Ceiling(font.MeasureText(hit.DisplayText, measure));
+          var textWidth = (int)Math.Ceiling(font.MeasureText(hit.DisplayText, _measurePaint));
           var textHeight = (int)Math.Ceiling(hit.ValueFontSize * 1.25);
 
           using var surf = SKSurface.Create(new SKImageInfo(textWidth + (pad * 2), textHeight + (pad * 2)));
@@ -682,10 +684,7 @@ namespace EQLogParser
             return;
           }
 
-          using (var paint = new SKPaint { Color = SKColors.Black, IsAntialias = true, MaskFilter = _glowBlur })
-          {
-            surf.Canvas.DrawText(hit.DisplayText, pad, (float)(pad + (hit.ValueFontSize * 0.82)), SKTextAlign.Left, font, paint);
-          }
+          surf.Canvas.DrawText(hit.DisplayText, pad, (float)(pad + (hit.ValueFontSize * 0.82)), SKTextAlign.Left, font, _haloPaint);
 
           entry = new HaloEntry { Image = surf.Snapshot(), Refs = 0, Pad = pad };
           _halos[key] = entry;
@@ -760,6 +759,12 @@ namespace EQLogParser
       _outlinePaint = new SKPaint { IsAntialias = true };
       _fillPaint = new SKPaint { IsAntialias = true };
       _blitPaint = new SKPaint { IsAntialias = true };
+
+      /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding, and halo baking wants one
+         paint with the blur attached: both live as long as the renderer instead of being built per spawn — SKPaint is
+         not a cheap object, and crits arrive in bursts. */
+      _measurePaint = new SKPaint { IsAntialias = true };
+      _haloPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true, MaskFilter = _glowBlur };
     }
 
     /* Fonts are shared per (style, size) — lane sizes are stable, so the cache holds a handful of entries. */
@@ -803,12 +808,7 @@ namespace EQLogParser
 
     private static byte AlphaOf(double opacity, int max = 255) => (byte)Math.Round(Math.Clamp(opacity, 0.0, 1.0) * max);
 
-    /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding. */
-    private float TextWidth(string text, double size, bool bold)
-    {
-      using var measure = new SKPaint();
-      return GetFont(bold, size).MeasureText(text, measure);
-    }
+    private float TextWidth(string text, double size, bool bold) => GetFont(bold, size).MeasureText(text, _measurePaint);
 
     private void RefreshDpi()
     {
@@ -866,6 +866,10 @@ namespace EQLogParser
       _demo.Clear(null); // the halos its numbers referenced were disposed with every other halo above
       ReleaseSurface();
 
+      // the halo paint's MaskFilter is _glowBlur, so it goes first
+      _haloPaint?.Dispose();
+      _measurePaint?.Dispose();
+      _haloPaint = _measurePaint = null;
       _glowBlur?.Dispose();
       _glowBlur = null;
       _outlinePaint?.Dispose();

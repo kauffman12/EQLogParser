@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace EQLogParser
 {
-  /* Shared text formatting for the FCT renderers (SkiaSharp and WPF vector backends). */
+  /* Shared number formatting for FCT: every amount the overlay draws is built here, once at spawn. */
   internal static class FctText
   {
     /*

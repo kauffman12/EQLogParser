@@ -94,6 +94,11 @@ namespace EQLogParser
     // ability/verb drawn under the value; null = no source line. Parentheses are added when drawn.
     public string Source;
 
+    /* The source with its parentheses, built once at spawn. DrawHit paints this and RebuildGlyphs measures it — the
+       old $"({Source})" at draw time allocated a fresh string per hit per frame, which is raid traffic multiplied by
+       display rate for text that never changes. Null exactly when Source is null or empty. */
+    public string SourceLabel;
+
     // literal main line for the zero-damage labels ("Dodge"); null means format the numeric value
     public string FixedText;
 
