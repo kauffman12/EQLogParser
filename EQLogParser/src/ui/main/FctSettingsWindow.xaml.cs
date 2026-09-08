@@ -50,9 +50,21 @@ namespace EQLogParser
 
     internal FctSettingsWindow()
     {
+      /* The same ritual every other window in the app performs (QuickShareWindow, DamageOverlayWindow, the dialogs):
+         SfSkinManager must stamp this window with the active theme before any content exists, or its ComboBoxes and
+         numeric spinner draw as bare WPF instead of the skin everything else wears. */
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       showCombo.ItemsSource = _showItems;
+
+      /* The brushes and EQDescriptionSize come from application resources and swap themselves when the theme changes;
+         what does not follow on its own is this window's own SfSkinManager stamp, so it gets re-stamped. The unsubscribe
+         on Closed matters: the static theme event outlives every window that listens to it. */
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+      Closed += (_, _) => ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
     }
+
+    private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
 
     internal void LoadFrom(FctConfigState state)
     {

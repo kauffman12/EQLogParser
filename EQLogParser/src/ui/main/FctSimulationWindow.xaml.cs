@@ -48,6 +48,8 @@ namespace EQLogParser
 
     public FctSimulationWindow()
     {
+      // The app's window ritual: stamp the active skin before content exists so the harness's controls match the rest of the application.
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       BuildEvents();
 

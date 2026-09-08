@@ -693,7 +693,12 @@ below); it is typography rather than layout, so the row appears in both modes.
 
 ### Configure mode moved out of the overlay into a settings window of its own
 
-**The panel speaks the app's language, literally.** Its fonts come from the theme
+**The panel speaks the app's language, literally.** Like every other window in the application it stamps itself with
+the active skin at construction (`ThemeConfig.SetCurrentTheme(this)` before `InitializeComponent`) — without that stamp
+its ComboBoxes and numeric spinner render as bare WPF instead of wearing the theme — and it re-stamps on
+`ThemeConfig.EventsThemeChanged`, unsubscribing when it closes since that static event outlives every listener. Brushes
+and `EQDescriptionSize` itself need no such care: they are application resources, and DynamicResource swaps them live.
+Its fonts come from the theme
 (`TextElement.FontSize = {DynamicResource EQDescriptionSize}` on the panel root — one inherited attribute, so the whole
 window shrinks and grows with the application's own font scale like every other surface); its category picker is the
 app's checkbox-in-a-dropdown combo (`ComboBoxItemTemplateSelector`, closing the dropdown commits, and the closed face
