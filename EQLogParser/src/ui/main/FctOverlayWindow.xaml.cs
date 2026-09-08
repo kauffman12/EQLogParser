@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -87,6 +85,10 @@ namespace EQLogParser
     /* Settings are staged while configuring and committed by Save: the combos preview live so a style or a layout can be judged
        before it is kept, and leaving configure mode without Save puts back what was on disk. Writing on every change means one
        mis-click silently changes somebody's setup, and there is no Undo next to the control that did it. */
+    /* The companion window configure mode lives in now, and the session-only demo switch its checkbox drives. */
+    private FctSettingsWindow _settings;
+    private bool _sampleData = true;
+
     private FctMotionStyle _savedStyle;
     private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
     private double _savedTextScale = FctScale.SizeDefault;
@@ -97,7 +99,6 @@ namespace EQLogParser
     private bool _savedShowHeals = true;
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
-    private bool _settingsReady;
 
     // lets the View menu untick the overlay when the window is closed with Esc
     public event Action EventsClosed;
@@ -128,6 +129,7 @@ namespace EQLogParser
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
       IsVisibleChanged += OnVisibleChanged;
+      LocationChanged += (_, _) => PositionSettings(); // dragging the overlay carries its settings panel along
       Closed += OnClosed;
     }
 
@@ -147,57 +149,18 @@ namespace EQLogParser
       }
 
       _canvas.MotionStyle = _savedStyle;
-      SelectMotionOption(_savedStyle);
-
       _canvas.Layout = _savedLayout;
-      SelectLayoutOptions(_savedLayout);
-
       FctScale.Text = _savedTextScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
-      sizeSlider.Value = _savedTextScale;
-      speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
-
       _canvas.Threshold = _savedThreshold;
-      SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
+      _canvas.ShowDealt = _savedShowDealt;
+      _canvas.ShowTaken = _savedShowTaken;
+      _canvas.ShowHeals = _savedShowHeals;
 
-      ApplyShownChoices(_savedShowDealt, _savedShowTaken, _savedShowHeals);
+      /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. */
+      _settings?.LoadFrom(StagedState());
 
       ApplyLock(true);
-    }
-
-    /*
-     * The configure row follows the app's own font size (ThemeConfig.CurrentFontSize, which is the user's choice - 12 shipped, 13 and 14 common)
-     * instead of this window deciding for itself. It used to carry a hard-coded 12 px throughout, and on a machine set to 13 pt that is small print
-     * sitting over a game the player has already configured correctly. Two steps up for the words, so they are findable at a glance over a busy HUD;
-     * seven for the minus and plus marks, which are the only part anybody consults while a thumb is moving - "which end is bigger" should not have to
-     * be read. Re-applied on every entry into configure mode, because changing the font size in settings should not need a restart.
-     */
-    private void ApplyTypography()
-    {
-      /* The row's base size arrives through the EQContentSize resource bound in markup, which is what keeps the combo box and the Save button on the
-         theme without any code. What is set here is only the type that has to stand out from the base, measured against it. */
-      var size = ThemeConfig.CurrentFontSize;
-
-      titleLabel.FontSize = size + 2;
-      sizeLabel.FontSize = size + 2;
-      speedLabel.FontSize = size + 2;
-
-      shapeLabel.FontSize = size + 2;
-      healsLabel.FontSize = size + 2;
-      takenLabel.FontSize = size + 2;
-      dealtLabel.FontSize = size + 2;
-      thresholdLabel.FontSize = size + 2;
-
-      sizeMinus.FontSize = size + 7;
-      sizePlus.FontSize = size + 7;
-      speedMinus.FontSize = size + 7;
-      speedPlus.FontSize = size + 7;
-
-      sizeValue.FontSize = size + 1;
-      speedValue.FontSize = size + 1;
-
-      legendText.FontSize = size;
-      statsText.FontSize = size > 2 ? size - 1 : size;
     }
 
     private void OnSourceInitialized(object sender, EventArgs e)
@@ -240,9 +203,12 @@ namespace EQLogParser
       /* A click-through window must not offer anything to click, including its own resize bands. */
       resizeLayer.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
 
-      /* Hidden rather than collapsed: the header keeps its height, so nothing drawn after it moves when you enter or leave
-         configure mode. A settings row that shifts the numbers while you are positioning them would defeat the point. */
-      headerGrid.Visibility = locked ? Visibility.Hidden : Visibility.Visible;
+      /* The settings window is configure mode now: it comes with the controls and goes without them, so the overlay
+         itself is only ever numbers. Hiding rather than closing keeps one instance and its state warm between passes. */
+      if (locked)
+      {
+        _settings?.Hide();
+      }
 
       /* The demo belongs to configure mode: it starts with the controls and stops with them, so a locked overlay over the game shows
          nothing but real numbers. Demo text that outlived setup would be fake damage the player has to learn to ignore — and unlike a
@@ -253,11 +219,17 @@ namespace EQLogParser
       }
       else
       {
-        ApplyTypography();
+        EnsureSettings();
 
-        /* Every entry into setup starts with the examples on, whatever they were left at. They are a view aid for this pass over the controls, not a
-           preference: somebody who switched them off to place the overlay during a fight wants them back next time they want to see what a dial does. */
-        sampleDataCheck.IsChecked = true;
+        /* Every entry into setup starts from the saved values and the examples on — never from an abandoned preview
+           (Cancel put those back already), and sample data is a view aid for this pass, not a preference. */
+        _settings.LoadFrom(StagedState());
+        if (IsVisible)
+        {
+          _settings.Show();
+          PositionSettings();
+        }
+
         RefreshDemo();
       }
 
@@ -279,12 +251,21 @@ namespace EQLogParser
       {
         FctManager.Instance.Enabled = true;
         _canvas.Start();
-        RefreshDemo(); // coming back on screen while configuring: the demo belongs with the controls
+
+        /* Coming back on screen while configuring: the demo belongs with the controls, and so does the panel. */
+        if (!_locked && _settings is not null)
+        {
+          _settings.Show();
+          PositionSettings();
+        }
+
+        RefreshDemo();
       }
       else
       {
         _canvas.Stop();
         FctManager.Instance.Enabled = false;
+        _settings?.Hide(); // an overlay nobody sees takes its settings window out of sight with it
       }
     }
 
@@ -334,89 +315,23 @@ namespace EQLogParser
       _savedLayout = FctOverlaySettings.LoadLayout();
       _savedStyle = _savedLayout.Mode is FctLayoutMode.Bands ? FctMotionStyle.Spray : FctOverlaySettings.LoadShape();
       _canvas.MotionStyle = _savedStyle;
-      SelectMotionOption(_savedStyle);
       _canvas.Layout = _savedLayout;
-      SelectLayoutOptions(_savedLayout);
 
-      /* The two dials. Assigned before _settingsReady so restoring them cannot look like an edit: the sliders' ValueChanged handlers would
-         otherwise rebuild the preview and repaint on a window that is not even shown yet. Size's track is a multiplier and speed's is a percent of the
-         shipped tempo, which is what its readout shows, so one of the two is converted on the way onto the slider. */
+      /* The two dials: size is a multiplier, speed is stored as one and shown as a percent (FctScale). */
       _savedTextScale = FctOverlaySettings.LoadTextScale();
       _savedSpeed = FctOverlaySettings.LoadSpeed();
       FctScale.Text = _savedTextScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
-      sizeSlider.Value = _savedTextScale;
-      speedSlider.Value = FctScale.PercentOfSpeed(_savedSpeed);
 
-      /* The threshold arrives already snapped to its ladder (FctOverlaySettings.LoadThreshold), so the combo and the
-         filter cannot disagree even from a hand-edited file, and SelectByTag below always finds its item. */
+      /* The threshold arrives already snapped to its ladder (FctOverlaySettings.LoadThreshold), so the filter and the
+         settings panel cannot disagree even from a hand-edited file. */
       _savedThreshold = FctOverlaySettings.LoadThreshold();
       _canvas.Threshold = _savedThreshold;
-      SelectByTag(thresholdCombo, ((int)_savedThreshold).ToString(CultureInfo.InvariantCulture));
 
-      /* The category switches, staged like everything else. Assigned before _settingsReady so ticking the checkboxes
-         here cannot look like an edit — the popup's summary still gets built, because that is a readout. */
+      /* The category switches, staged like everything else: Save writes them, Cancel is leaving them unwritten. */
       _savedShowDealt = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDealtKey);
       _savedShowTaken = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowTakenKey);
       _savedShowHeals = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowHealsKey);
-      ApplyShownChoices(_savedShowDealt, _savedShowTaken, _savedShowHeals);
-
-      _settingsReady = true;
-      ShowScaleReadouts();
-    }
-
-    /*
-     * Where each dial landed, centred under its own track with its own percent sign — a bare 50 next to a slider reads like a count. Both are snapped to
-     * 5 % steps, so these are exact rather than drifting decimals, and the middle reads as a dash: "+0%" would claim a change where there is none. The
-     * speed dial's sign is the player's, not the duration's — "+40%" means a number spends forty per cent less time on screen.
-     */
-    private void ShowScaleReadouts()
-    {
-      sizeValue.Text = Signed(FctScale.PercentOfSize(sizeSlider.Value));
-      speedValue.Text = Signed((int)Math.Round(speedSlider.Value));
-    }
-
-    private static string Signed(int percent) => percent == 0 ? "—" : $"{percent:+0;-0}%";
-
-    /*
-     * Both dials take effect the moment they move - on the demo numbers still to come, and on any real number that lands afterwards - and write
-     * nothing. Size is applied at style time (FctStyle.ApplyTo) and speed at spawn (FctIngest, through a duration), so dragging a dial never tugs at
-     * text already in flight; the demo keeps producing events, which is what lets you watch a change arrive instead of imagining it.
-     */
-    private void ScaleChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-      if (!_settingsReady)
-      {
-        return;
-      }
-
-      FctScale.Text = FctScale.ClampSize(sizeSlider.Value);
-      FctScale.Time = FctScale.TimeFromPercent(speedSlider.Value);
-      ShowScaleReadouts();
-      RefreshDemo();
-    }
-
-    /*
-     * Letting go of a dial puts the configure-mode loop back to its first cue, so what was just set is on screen in the next second instead of
-     * whenever the twelve second cycle happens to come round. On release rather than on ValueChanged: restarting under a thumb that is still being
-     * dragged would blank the very thing being watched. A double-click on either dial returns it to the shipped value, which snap-to-tick makes easy
-     * to find but not certain.
-     */
-    private void ScaleReleased(object sender, MouseButtonEventArgs e)
-    {
-      if (e.ClickCount == 2)
-      {
-        if (sender == sizeSlider)
-        {
-          sizeSlider.Value = FctScale.SizeDefault;
-        }
-        else if (sender == speedSlider)
-        {
-          speedSlider.Value = FctScale.SpeedPercentDefault;
-        }
-      }
-
-      _canvas.RestartDemo();
     }
 
     /*
@@ -427,30 +342,9 @@ namespace EQLogParser
      */
     private void RefreshDemo()
     {
-      if (!_locked && IsVisible && sampleDataCheck?.IsChecked == true)
+      if (!_locked && IsVisible && _sampleData)
       {
         _canvas.StartDemo();
-      }
-    }
-
-    /*
-     * Sample data on and off. It is a view aid for this session rather than a setting — nothing writes it, it comes back on when setup opens again, and a
-     * player who turns it off to work over a live fight should get the examples again next time they want to see what a dial does.
-     */
-    private void SampleDataChanged(object sender, RoutedEventArgs e)
-    {
-      if (_canvas is null)
-      {
-        return; // the checkbox arrives before the canvas does, and its initial "checked" state must not reach for it
-      }
-
-      if (sampleDataCheck.IsChecked == true && !_locked && IsVisible)
-      {
-        _canvas.StartDemo();
-      }
-      else
-      {
-        _canvas.StopDemo();
       }
     }
 
@@ -552,241 +446,123 @@ namespace EQLogParser
         stats += $" · {filtered} filtered";
       }
 
-      statsText.Text = stats;
+      _settings?.SetStats(stats);
     }
 
     /*
-     * A presentation switch, not a per-record one: it takes effect on hits from now on, which is what makes "try each
-     * for a minute in a real pull" the way to choose instead of a screenshot.
+     * The settings window is configure mode now: everything that used to share the overlay's pixels lives there, and this
+     * is the whole relationship — build one, hand it the staged snapshot, park it beside the overlay, and react to what it
+     * raises. Owned so the pair stays over the game together; its ✕ behaves like Cancel, and a window closed by any means
+     * at all locks the overlay back down. It never touches settings.ini itself: Save hands over a snapshot, and that is
+     * the only road to the file.
      */
-    private void MotionChanged(object sender, SelectionChangedEventArgs e)
+    private void EnsureSettings()
     {
-      if (!_settingsReady || motionCombo.SelectedItem is not ComboBoxItem item)
+      if (_settings is not null)
       {
         return;
       }
 
-      /* Preview only: the next numbers use it so the style can be judged, and nothing reaches settings.ini until Save. */
-      _canvas.MotionStyle = FctOverlaySettings.ParseMotion(item.Tag as string);
-      RefreshDemo();
+      _settings = new FctSettingsWindow { Owner = this };
+      _settings.PreviewChanged += SettingsPreview;
+      _settings.Saved += SettingsSaved;
+      _settings.Cancelled += () => SetLocked(true);
+      _settings.DialReleased += () => _canvas.RestartDemo();
+      _settings.Closed += (_, _) =>
+      {
+        _settings = null;
+        if (!_locked)
+        {
+          SetLocked(true);
+        }
+      };
     }
 
-    /*
-     * The threshold previews like everything else on the row: what gets through the gate changes from the next number
-     * on — demo and real alike — and nothing reaches settings.ini until Save. An unreadable tag reads as off, which is
-     * also where a fresh overlay starts; the ladder itself lives in FctOverlaySettings.
-     */
-    private void ThresholdChanged(object sender, SelectionChangedEventArgs e)
+    /* Parked to the left of the overlay — watching numbers on the canvas while the panel sits beside it is what the
+       pairing is for — unless the screen's left edge objects, in which case it goes right. A panel somebody dragged
+       keeps its spot until configure mode reopens; only a panel nobody moved follows the overlay across the screen. */
+    private void PositionSettings()
     {
-      if (!_settingsReady || thresholdCombo.SelectedItem is not ComboBoxItem item)
+      if (_settings is null || !_settings.IsVisible || _settings.MovedByUser)
       {
         return;
       }
 
-      _canvas.Threshold = double.TryParse(item.Tag as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-        ? Math.Max(0, value)
-        : 0;
-      RefreshDemo();
-    }
-
-    /*
-     * The category switches preview like everything else on the row: what gets through the gate changes from the next
-     * number on — the demo restarts so the loop shows it immediately, real feed included — and nothing reaches
-     * settings.ini until Save. Turning a category off is allowed to reach zero visible categories with no complaint;
-     * "nothing" is a legitimate answer, and the stats line counts what that means too.
-     */
-    private void ShownCheckChanged(object sender, RoutedEventArgs e)
-    {
-      if (!_settingsReady)
+      const double PanelWidth = 308;
+      var left = Left - PanelWidth - 12;
+      if (left < SystemParameters.WorkArea.Left)
       {
-        return;
+        left = Math.Min(Left + Width + 12, SystemParameters.WorkArea.Right - PanelWidth);
       }
 
-      var dealt = showDealtCheck.IsChecked == true;
-      var taken = showTakenCheck.IsChecked == true;
-      var heals = showHealsCheck.IsChecked == true;
-      _canvas.ShowDealt = dealt;
-      _canvas.ShowTaken = taken;
-      _canvas.ShowHeals = heals;
-      RefreshShownSummary(dealt, taken, heals);
+      _settings.Left = left;
+      _settings.Top = Math.Clamp(Top, SystemParameters.WorkArea.Top,
+        Math.Max(SystemParameters.WorkArea.Top, SystemParameters.WorkArea.Bottom - Math.Max(_settings.ActualHeight, 100)));
     }
 
-    private void ShownButtonClick(object sender, RoutedEventArgs e) => shownPopup.IsOpen = !shownPopup.IsOpen;
-
-    /* Push one triple of choices to both the canvas and the popup's checkboxes, and make the button say it. */
-    private void ApplyShownChoices(bool dealt, bool taken, bool heals)
+    /* What the panel displays when configure mode (re)opens: the saved values, because a Cancelled preview was put back
+       the moment it was cancelled. Staging in one place is also what keeps "leaving without saving" honest — the list of
+       staged fields and the list of restored ones can never drift apart. */
+    private FctConfigState StagedState() => new()
     {
-      _canvas.ShowDealt = dealt;
-      _canvas.ShowTaken = taken;
-      _canvas.ShowHeals = heals;
-      showDealtCheck.IsChecked = dealt;
-      showTakenCheck.IsChecked = taken;
-      showHealsCheck.IsChecked = heals;
-      RefreshShownSummary(dealt, taken, heals);
-    }
+      Fountain = _savedLayout.Mode is FctLayoutMode.Bands,
+      Shape = _savedStyle is FctMotionStyle.Straight ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
+      HealSide = _savedLayout.HealSide,
+      HealUp = _savedLayout.HealUp,
+      TakenSide = _savedLayout.IncomingDamageSide,
+      TakenUp = _savedLayout.IncomingUp,
+      DealtSide = _savedLayout.OutgoingDamageSide,
+      DealtUp = _savedLayout.OutgoingUp,
+      Threshold = _savedThreshold,
+      ShowDealt = _savedShowDealt,
+      ShowTaken = _savedShowTaken,
+      ShowHeals = _savedShowHeals,
+      TextScale = _savedTextScale,
+      Speed = _savedSpeed,
+    };
 
-    /* The button names what is ON, because the common case should not look like a setting: all three read "everything",
-     * none reads "nothing", and any subset lists itself short. */
-    private void RefreshShownSummary(bool dealt, bool taken, bool heals)
+    /* The preview is the whole point of the arrangement: every control change wears the canvas immediately — layout,
+       motion, gates, threshold, both dials — and writes nothing. FctScale keeps its contract too (size applies when the
+       next number is styled, speed when the next spawns), so dragging a dial never tugs at text already in flight. */
+    private void SettingsPreview(FctConfigState state)
     {
-      string shown;
-      if (dealt && taken && heals)
+      _sampleData = state.SampleData;
+
+      _canvas.Layout = state.BuildLayout();
+      _canvas.MotionStyle = state.BuildMotion();
+      _canvas.Threshold = state.Threshold;
+      _canvas.ShowDealt = state.ShowDealt;
+      _canvas.ShowTaken = state.ShowTaken;
+      _canvas.ShowHeals = state.ShowHeals;
+      FctScale.Text = FctScale.ClampSize(state.TextScale);
+      FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
+
+      if (_sampleData)
       {
-        shown = "everything";
-      }
-      else if (!dealt && !taken && !heals)
-      {
-        shown = "nothing";
+        RefreshDemo();
       }
       else
       {
-        var parts = new List<string>();
-        if (dealt)
-        {
-          parts.Add("my hits");
-        }
-
-        if (taken)
-        {
-          parts.Add("on me");
-        }
-
-        if (heals)
-        {
-          parts.Add("heals");
-        }
-
-        shown = string.Join(" + ", parts);
+        _canvas.StopDemo();
       }
-
-      shownButton.Content = $"{shown} ▾";
     }
 
-    private void SelectMotionOption(FctMotionStyle style) => SelectByTag(motionCombo, FctOverlaySettings.Name(style));
-
-    /* A combo's items name themselves with Tag; an unknown stored value lands on the first item rather than an empty box. */
-    private static void SelectByTag(ComboBox combo, string tag)
+    /* Save is the only thing that writes: the snapshot becomes the staged truth, settings.ini gets every key the panel
+       covers (plus the configured flag that ends first-run configure-on-open), and configure ends locked like every exit
+       leaves it. */
+    private void SettingsSaved(FctConfigState state)
     {
-      for (var i = 0; i < combo.Items.Count; i++)
-      {
-        if (combo.Items[i] is ComboBoxItem item && item.Tag as string == tag)
-        {
-          combo.SelectedIndex = i;
-          return;
-        }
-      }
+      _savedStyle = state.BuildMotion();
+      _savedLayout = state.BuildLayout();
+      _savedTextScale = state.TextScale;
+      _savedSpeed = state.Speed;
+      _savedThreshold = state.Threshold;
+      _savedShowDealt = state.ShowDealt;
+      _savedShowTaken = state.ShowTaken;
+      _savedShowHeals = state.ShowHeals;
 
-      combo.SelectedIndex = 0;
-    }
-
-    /*
-     * The mode and the category pickers are one control: together they name a stage and a motion, and any change re-stages
-     * the demo so the next number is judged in its new place. fountain is the engine's bands geometry wearing spray — the
-     * look classic FCT draws with, and the reason bands learned to obey direction dials; split is the side columns (the
-     * engine's by type) riding the chosen rail shape. Engine names stay wherever geometry carries tests; these two words
-     * are what the row offers. Preview only, like everything here: nothing reaches settings.ini until Save.
-     */
-    private void LayoutChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (!_settingsReady || layoutCombo.SelectedItem is not ComboBoxItem mode)
-      {
-        return;
-      }
-
-      var fountain = mode.Tag as string == "fountain";
-      _canvas.Layout = fountain
-        ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, ComboUp(inDirCombo), ComboUp(outDirCombo))
-        : new FctLayoutChoice(
-            FctLayoutMode.ByType, ComboRight(takenSideCombo) ? FctRegionSide.Right : FctRegionSide.Left,
-            ComboUp(inDirCombo), ComboUp(outDirCombo),
-            ComboRight(healSideCombo) ? FctRegionSide.Right : FctRegionSide.Left, ComboUp(healDirCombo),
-            ComboRight(takenSideCombo) ? FctRegionSide.Right : FctRegionSide.Left,
-            ComboRight(dealtSideCombo) ? FctRegionSide.Right : FctRegionSide.Left);
-
-      /* fountain's motion is not a choice — spray is what makes it a fountain. split rides the shape dial. */
-      _canvas.MotionStyle = fountain ? FctMotionStyle.Spray
-        : ComboTag(motionCombo) == "straight" ? FctMotionStyle.Straight : FctMotionStyle.Parabola;
-
-      UpdateModeVisibility(fountain);
-      SetLegend(_canvas.Layout);
-      RefreshDemo();
-    }
-
-    private static string ComboTag(ComboBox combo) => combo.SelectedItem is ComboBoxItem item ? item.Tag as string : null;
-
-    private static bool ComboUp(ComboBox combo) => ComboTag(combo) == "up";
-
-    private static bool ComboRight(ComboBox combo) => ComboTag(combo) == "right";
-
-    /* Restores what the controls say for a staged layout, and shows only the controls that scheme obeys. */
-    private void SelectLayoutOptions(FctLayoutChoice layout)
-    {
-      var fountain = layout.Mode is FctLayoutMode.Bands;
-      SelectByTag(layoutCombo, fountain ? "fountain" : "split");
-      SelectByTag(healSideCombo, layout.HealSide == FctRegionSide.Right ? "right" : "left");
-      SelectByTag(healDirCombo, layout.HealUp ? "up" : "down");
-      SelectByTag(takenSideCombo, layout.IncomingDamageSide == FctRegionSide.Right ? "right" : "left");
-      SelectByTag(dealtSideCombo, layout.OutgoingDamageSide == FctRegionSide.Right ? "right" : "left");
-      SelectByTag(inDirCombo, layout.IncomingUp ? "up" : "down");
-      SelectByTag(outDirCombo, layout.OutgoingUp ? "up" : "down");
-
-      UpdateModeVisibility(fountain);
-      SetLegend(layout);
-    }
-
-    /*
-     * Each mode shows exactly the controls it obeys and collapses the rest, so nothing else on the row jumps. Fountain is
-     * the minimal one — directions, what to show, size, speed — which is why shape, healing's column (bands has none to
-     * hand out) and the threshold step off; split runs the full category grid. A control that changes nothing in the mode
-     * you are in is exactly what configure mode was cleaned up to stop showing.
-     */
-    private void UpdateModeVisibility(bool fountain)
-    {
-      shapePanel.Visibility = healsPanel.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      takenSideCombo.Visibility = dealtSideCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      thresholdPanel.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    /*
-     * The legend is the only position sentence on the row, so it reads straight off the staged choice: split names each
-     * category's column with an arrow, and fountain's columns are fixed, so its story is which way each stream runs.
-     */
-    private void SetLegend(FctLayoutChoice layout)
-    {
-      if (layout.Mode is FctLayoutMode.Bands)
-      {
-        legendText.Text = $"on you {(layout.IncomingUp ? "↑" : "↓")}   mine {(layout.OutgoingUp ? "↑" : "↓")}";
-        return;
-      }
-
-      legendText.Text = $"heals {SideArrow(layout.HealSide)}   on me {SideArrow(layout.IncomingDamageSide)}   mine {SideArrow(layout.OutgoingDamageSide)}";
-    }
-
-    private static string SideArrow(FctRegionSide side) => side is FctRegionSide.Left ? "←" : "→";
-
-    /*
-     * Save is the only thing that writes: the previewed style becomes the setting, the window keeps its place, and configuring
-     * ends. There is no "lock" checkbox here any more because that box was never about locking — it was the way out, labelled with
-     * a side effect, so a player clicking it to finish was surprised by their mouse being taken away.
-     */
-    /*
-     * Save is the only thing that writes. It also marks the feature as configured, which is what stops the first-run behaviour: until somebody has
-     * committed a choice once, switching the overlay on opens it on these controls rather than on numbers nobody picked. Cancel is the same exit
-     * without either of those.
-     */
-    private void SaveClick(object sender, RoutedEventArgs e)
-    {
-      _savedStyle = _canvas.MotionStyle;
-      _savedLayout = _canvas.Layout;
-      _savedTextScale = FctScale.Text;
-      _savedSpeed = FctScale.SpeedFromPercent(speedSlider.Value);
-      _savedThreshold = _canvas.Threshold;
-      _savedShowDealt = _canvas.ShowDealt;
-      _savedShowTaken = _canvas.ShowTaken;
-      _savedShowHeals = _canvas.ShowHeals;
-
-      FctOverlaySettings.SaveIsFountain(_savedLayout.Mode is FctLayoutMode.Bands);
-      FctOverlaySettings.SaveShape(_savedStyle);
+      FctOverlaySettings.SaveIsFountain(state.Fountain);
+      FctOverlaySettings.SaveShape(state.Shape);
       FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
@@ -796,15 +572,9 @@ namespace EQLogParser
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowHealsKey, _savedShowHeals);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();
-      ApplyLock(true);
-    }
 
-    /*
-     * Back out of configure mode with nothing written, the values it was showing put back as they were. This used to be a sentence on the panel about
-     * pressing Esc, which described the normal way to end a look around as the absence of an action; now it is a button next to the one that means the
-     * opposite. Esc still does the same thing for anybody whose hand is already there.
-     */
-    private void CancelClick(object sender, RoutedEventArgs e) => SetLocked(true);
+      SetLocked(true);
+    }
 
     /*
      * Every band does the same three things, so they are wired in one loop rather than with twenty-four XAML attributes. The

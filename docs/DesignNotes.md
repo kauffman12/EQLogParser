@@ -675,6 +675,27 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
+### Configure mode moved out of the overlay into a settings window of its own
+
+Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
+as the numbers they were previewing — in a small window the row wrapped straight into the demo it existed to show. The
+settings are now a second, owned window (`FctSettingsWindow`): fixed width, height hugged to content, a vertical property
+grid with each name beside its control, and the application's own theme rather than the overlay's translucent panel
+chrome. The overlay during configure is nothing but numbers; both windows stay over the game together because it is owned
+by the overlay and Topmost like it.
+
+The split keeps one source of truth by construction. A plain state object (`FctConfigState`) crosses the boundary in both
+directions: `LoadFrom` hands the panel what to display, every control change raises a fresh snapshot for the live preview,
+Save hands the final copy back as the only road to settings.ini, and Cancel — button, Esc or the close mark, one gesture —
+asks the overlay to put everything back. The panel owns no canvas and no keys, which is what stops a second topmost
+window from becoming a second authority: `StagedState()` in the overlay is the single list of staged values, so
+"leaving without saving restores exactly this" cannot drift.
+
+Two small behaviors worth naming. The panel parks itself to the left of the overlay (right if the screen objects) and
+follows the overlay while it is dragged — unless somebody moved the panel on purpose, in which case its place is kept
+until configure reopens; and hiding the overlay takes the panel out of sight with it. The sample-data checkbox came along
+too, still session-only and never written: it rides the state for exactly as long as configure mode lasts.
+
 ### The configure row says fountain and split now: the mode layer over the schemes
 
 The engine commit above made two words honest, and this one puts them on the row. The layout combo (halves/by type/bands)
