@@ -744,8 +744,8 @@ not meet the geometry vocabulary to choose between looks. What replaces them:
 **mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
 and spew out and fall, which is the look every classic FCT draws with; its controls are exactly two direction dials, the
 show switches, size and speed. *Split* is the side columns (internally by type) with each category assigned its own
-**lane and direction** — heals, incoming damage, outgoing damage, six picks over four columns, any of them sharing a
-lane — plus **shape: parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
+**lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing a lane —
+plus **shape: parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
 (in fountain there is no side to hand out, no shape to pick, and the threshold steps off too — the minimal UI was the
 point), and the legend re-sentences itself from the staged choice either way.
 
@@ -862,8 +862,10 @@ in a shared lane means trains passing, which was always placement's puzzle to so
 
 Two things fall out for free. The old side spellings parse to a side's OUTER lane — whose centre is exactly where that
 half used to be centred — so side-only callers, stored configs and the halves tests land visually unchanged; and the
-panel's words finally match everyone's: **incoming damage** and **outgoing damage**, not "damage to me" and "my damage",
-in the rows, in the categories combo, everywhere a human reads them. The shipped spread puts outgoing in left 1, incoming
+panel's words finally match everyone's: **damage in** and **damage out**, not "damage to me" and "my damage", in the
+rows (before heals — the streams come first, the reacting category last), in the categories combo, everywhere a human
+reads them. The two-word versions won over "incoming damage"/"outgoing damage" for the same reason the rest of the row
+is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped spread puts damage out in left 1, damage in
 in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 as the first free lane.
 
 The one promise lanes had to keep is that a lane moves as ONE thing: measured, every row on a rail already shares its

@@ -35,8 +35,8 @@ namespace EQLogParser
        Snapshot reads them back, and the combo's title is re-summarised whenever the dropdown closes. */
     private readonly List<ComboBoxItemDetails> _showItems =
     [
-      new(true, "outgoing damage"),
-      new(true, "incoming damage"),
+      new(true, "damage in"),
+      new(true, "damage out"),
       new(true, "healing"),
       new(true, "procs"),
     ];
@@ -81,8 +81,8 @@ namespace EQLogParser
       SelectByTag(inDirCombo, Up(state.TakenUp));
       SelectByTag(dealtLaneCombo, FctRailLanes.Token(state.DealtLane));
       SelectByTag(outDirCombo, Up(state.DealtUp));
-      _showItems[0].IsChecked = state.ShowDealt;
-      _showItems[1].IsChecked = state.ShowTaken;
+      _showItems[0].IsChecked = state.ShowTaken;
+      _showItems[1].IsChecked = state.ShowDealt;
       _showItems[2].IsChecked = state.ShowHeals;
       _showItems[3].IsChecked = state.ShowProcs;
       UpdateShowTitle();
@@ -116,8 +116,8 @@ namespace EQLogParser
         DealtLane = FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane),
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
-        ShowDealt = _showItems[0].IsChecked,
-        ShowTaken = _showItems[1].IsChecked,
+        ShowTaken = _showItems[0].IsChecked,
+        ShowDealt = _showItems[1].IsChecked,
         ShowHeals = _showItems[2].IsChecked,
         ShowProcs = _showItems[3].IsChecked,
         LabelSide = ComboTag(labelSideCombo) switch
