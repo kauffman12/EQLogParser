@@ -167,7 +167,7 @@ namespace EQLogParser
         ? region.X + (region.Width / 2)        // text wider than its territory: nothing to place, so centre it there
         : Math.Clamp(hit.X0, xLo, xHi);
 
-      var up = stage.UpFor(hit.Incoming);
+      var up = stage.UpFor(hit);
       Refit(hit, stage);
 
       /* The spawn edge is whichever end the side starts from: down-travelling numbers start at the top of their band and
@@ -200,7 +200,7 @@ namespace EQLogParser
        * no two numbers the same, which is what stops hold-style rows parking in one another. The parabola takes no
        * slack: its rail is defined by shared endpoints, one per region and direction, so every value stops where the
        * one before it stopped and the chain reads as a train rather than as N separate journeys. */
-      var far = hit.Style is FctMotionStyle.Parabola
+      var far = FctMotionStyles.IsRail(hit.Style)
         ? (up > 0 ? hit.BandMinY : hit.BandMaxY)
         : up > 0
           ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
@@ -300,15 +300,16 @@ namespace EQLogParser
         return;
       }
 
-      if (hit.Style is FctMotionStyle.Parabola)
+      if (FctMotionStyles.IsRail(hit.Style))
       {
         /* The shape: a straight vertical scroll at one constant rate with a symmetric arc — out to the vertex at half
          * height and back to the column — whose size is a share of the region, so resize and the speed dial keep working
          * on it untouched. No jitter anywhere in this branch, and none in the far end that produced `usable`: two values
-         * a beat apart are meant to trace the same line at the same speed, one behind the other (FctStream). */
+         * a beat apart are meant to trace the same line at the same speed, one behind the other (FctStream). Straight
+         * runs every word of that with the bow taken out — the train needs no arc to exist. */
         hit.Rise = up * usable;
         hit.Arc = 0;
-        hit.Bow = bowDir * territory * ParabolaBowFrac;
+        hit.Bow = hit.Style is FctMotionStyle.Parabola ? bowDir * territory * ParabolaBowFrac : 0.0;
         return;
       }
 

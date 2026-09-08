@@ -335,8 +335,11 @@ namespace EQLogParser
     /* The grid lives in a side's region; the pool that shares it is whichever half of ownership the scheme draws — by
      * direction in halves and bands, by category in by type, where healing's column holds its own grid whatever the
      * direction its numbers travel (FctStage). */
+    /* By type has three categories choosing two columns, so the pool is the resolved column itself, not whichever bit
+     * picked it: healing and a damage stream assigned to the same side share that side's grid, like any two numbers
+     * sharing territory. */
     private static bool PoolKey(FctStage stage, FctHitState hit) =>
-      stage.Mode is FctLayoutMode.ByType ? hit.Heal : hit.Incoming;
+      stage.Mode is FctLayoutMode.ByType ? stage.RegionFor(hit).X > 0 : hit.Incoming;
 
     private static FctHitState OldestOf(List<FctHitState> hits, bool incoming, bool proc, bool newcomerIsCrit)
     {

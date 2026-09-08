@@ -156,7 +156,7 @@ namespace EQLogParser
        * is the canvas — strip included. The configure row cannot select it there, but settings.ini can be hand-written,
        * which is why the degradation lives here rather than only in the UI (see FctMotionStyle.Parabola).
        */
-      var style = stage.Mode is FctLayoutMode.Bands && Style is FctMotionStyle.Parabola
+      var style = stage.Mode is FctLayoutMode.Bands && FctMotionStyles.IsRail(Style)
         ? FctMotionStyle.Hold
         : Style;
 
@@ -246,7 +246,7 @@ namespace EQLogParser
           }
         }
       }
-      else if (style is FctMotionStyle.Parabola && stage.Mode is not FctLayoutMode.Bands)
+      else if (FctMotionStyles.IsRail(style) && stage.Mode is not FctLayoutMode.Bands)
       {
         /*
          * The parabola in a side scheme is the stream, not a scatter: one centre column at the spawn edge with braided
@@ -431,7 +431,7 @@ namespace EQLogParser
        * so this hit's Rise is still provisional at this point in Accept — and a duration computed from a distance
        * that changes afterwards is how three rows on one rail each ended up with their own private tempo, phase drift
        * shearing apart exactly the chain this style exists to make. See ApplyRailTempo. */
-      if (hit.Style is FctMotionStyle.Parabola)
+      if (FctMotionStyles.IsRail(hit.Style))
       {
         return;
       }

@@ -675,6 +675,32 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
+### Two simple modes need three engine facts: category columns, steerable bands, and a bow-less rail
+
+The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;
+two direction dials, the show switches, size, speed; nothing else) and **split** (the side columns, with each category —
+healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **parabola** and
+**straight**). The modes are a settings slice; three engine facts had to exist first, and each says goodbye to an old
+shortcut:
+
+**Directions became per-category.** `FctLayoutChoice` gained `HealUp`, `IncomingDamageSide`, and `OutgoingDamageSide`:
+the side and the way a number travels now follow *what it is*, so healing can rise on the right while damage on the same
+column sinks. The cell-grid pool followed the resolved column rather than the bit that chose it — with three categories
+picking two columns, only the column itself identifies the territory a grid belongs to.
+
+**Bands reads its directions now.** Its outward scroll was hard-coded in `UpFor` — the strip invariant as an if-statement
+nobody could dial — which the fountain mode's two dials made wrong. The choice constructor distinguishes *omitted* from
+*stated* (`bool?`): omitted directions on bands still ARE in-sinks/out-rises, so every pre-existing behaviour and test is
+untouched, while a stated direction wins. "Direction is the who-carrier in bands" turned out to be a convention this
+project inherited from itself, not a law — the protected strip stays protected because travel and fall are measured from
+the band's own edges whatever sign they run at.
+
+**`Straight` is a rail style, not new choreography.** MSBT ships Straight next to Parabola, and it is exactly what it
+looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one beat per region, stream columns
+and braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is
+now the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
+silently. Bands degrades both rail styles to hold exactly as it degraded the parabola.
+
 ### Category switches: what story an overlay tells
 
 A request that layout modes cannot answer — *"outgoing damage left, healing right, and just turn incoming damage off"* —

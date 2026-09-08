@@ -37,5 +37,21 @@ namespace EQLogParser
      * so ingest degrades it to hold there.
      */
     Parabola,
+
+    /*
+     * The split shape with the arc taken out: the same rail as the parabola — constant scroll, shared endpoints, one
+     * beat per region, stream columns and all — running with bow zero, so each number climbs or sinks its column in a
+     * straight line. MSBT calls it Straight and ships it as the no-nonsense alternative to Parabola; the reason it is
+     * a sibling style rather than a knob is that everything rail-related keys off the style once, and forgetting one of
+     * those places would make the two shapes drift apart silently. FctMotionStyles.IsRail is the only correct test.
+     */
+    Straight,
+  }
+
+  /* The two styles that ride a rail: shared entrance, shared beat, no jitter, stream placement. Anything asking
+   * "does this travel a rail?" must ask here, not name one style (see Straight's comment). */
+  internal static class FctMotionStyles
+  {
+    internal static bool IsRail(FctMotionStyle style) => style is FctMotionStyle.Parabola or FctMotionStyle.Straight;
   }
 }

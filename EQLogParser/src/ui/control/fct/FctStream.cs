@@ -38,7 +38,7 @@ namespace EQLogParser
 
       var region = stage.RegionFor(hit);
       var cx = region.X + (region.Width / 2);
-      var edgeY = stage.UpFor(hit.Incoming) > 0 ? hit.BandMaxY : hit.BandMinY;
+      var edgeY = stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY;
 
       var price = DrawnHalf(hit);
       for (var i = 0; i < hits.Count; i++)

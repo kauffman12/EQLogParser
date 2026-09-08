@@ -57,24 +57,32 @@ namespace EQLogParser
       }
     }
 
-    /* Travel stays each direction's own setting inside a shared column — the second half of the request, and the half
-     * MSBT's one-direction-per-area cannot give at all. */
+    /* Travel is each CATEGORY's own setting: healing answers to its dial whatever shares its column, and the two damage
+     * streams answer to theirs wherever they were sent. This is what "pick a side AND a direction for each" means —
+     * MSBT cannot split these axes at all, since one area carries one direction for everything routed into it. */
     [TestMethod]
-    public void EachDirectionTravelsItsOwnWayInsideTheSameColumn()
+    public void EachCategoryTravelsItsOwnWayWhereverItWasSent()
     {
-      var ingest = Streaming(Choice(FctRegionSide.Left, incomingUp: false, outgoingUp: true));
+      var choice = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        incomingUp: false, outgoingUp: true, healSide: FctRegionSide.Left, healUp: true,
+        incomingDamageSide: FctRegionSide.Left, outgoingDamageSide: FctRegionSide.Left);
       var hits = new List<FctHitState>();
 
-      var mine = ingest.Accept(hits, FctLane.HealingDealt, 3000, "Greater Heal", false, false, false, null, Width, Height, 0);
-      Assert.IsNotNull(mine);
-      Assert.IsTrue(mine.Rise > 0, "outgoing healing rises when the dial says up — even in the heals column");
+      var ingest = Streaming(choice);
+      var healed = ingest.Accept(hits, FctLane.HealingReceived, 800, "Word of Healing", false, false, false, null, Width, Height, 0);
+      var bitten = ingest.Accept(hits, FctLane.DamageTaken, 500, "Bite", false, false, false, null, Width, Height, 300);
+      var swung = ingest.Accept(hits, FctLane.DamageDealt, 700, "Flurry", false, false, false, null, Width, Height, 600);
 
-      var theirs = ingest.Accept(hits, FctLane.HealingReceived, 800, "Word of Healing", false, false, false, null, Width, Height, 400);
-      Assert.IsNotNull(theirs);
-      Assert.IsTrue(theirs.Rise < 0, "incoming healing sinks when the dial says down — a column is not a direction");
+      Assert.IsNotNull(healed);
+      Assert.IsTrue(healed.Rise > 0, "healing rises on the heals dial while damage on the same column sinks on its own");
+      Assert.IsNotNull(bitten);
+      Assert.IsTrue(bitten.Rise < 0, "the incoming stream obeys its dial, not its neighbour's");
+      Assert.IsNotNull(swung);
+      Assert.IsTrue(swung.Rise > 0, "and the outgoing stream obeys its");
 
       var mid = Width / 2;
-      Assert.IsTrue(mine.X0 < mid && theirs.X0 < mid, "both directions of healing still share the heals column, not one each");
+      Assert.IsTrue(healed.X0 < mid && bitten.X0 < mid && swung.X0 < mid, "all three share one column by request — three trains, one rail space");
+      Assert.AreEqual(0, ingest.DroppedCount, "which is a placement problem, never a reason to lose a number");
     }
 
     /*

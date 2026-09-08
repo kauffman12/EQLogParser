@@ -103,7 +103,7 @@ namespace EQLogParser
       {
         /* The parabola scrolls at constant vertical speed — that is the shape: with y linear in t and x quadratic in t,
            x is a function of y², which is what makes it a parabola rather than an arc. Everything else eases. */
-        var v = hit.Style is FctMotionStyle.Parabola ? t : Ease(t);
+        var v = FctMotionStyles.IsRail(hit.Style) ? t : Ease(t);
         return hit.Y0 - (hit.Rise * v);
       }
 
@@ -145,7 +145,7 @@ namespace EQLogParser
          that is the semicircle chain in Mik's demos, and it is also why stream columns keep their spacing for the whole
          flight — a shared bow cancels in every difference. (The old t² drift here was a curve with its vertex at the
          spawn: outward forever, never back, and it read as nothing in the genre.) */
-      var lateral = hit.Style is FctMotionStyle.Parabola ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
+      var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
 
       return Math.Clamp(hit.X0 + lateral, lo, hi);
     }

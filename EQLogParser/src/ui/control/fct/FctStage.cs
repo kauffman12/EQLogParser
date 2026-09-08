@@ -63,14 +63,34 @@ namespace EQLogParser
     public readonly bool IncomingUp;
     public readonly bool OutgoingUp;
 
-    public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool incomingUp, bool outgoingUp,
-      FctRegionSide healSide = FctRegionSide.Left)
+    /* By type per category: which column the two damage streams own. By type defaults them to the side opposite the
+     * healing — the classic heals | damage split — and either can be sent to join the other, or both anywhere else;
+     * other schemes do not read them. */
+    public readonly FctRegionSide IncomingDamageSide;
+    public readonly FctRegionSide OutgoingDamageSide;
+
+    /* By type per category: which way healing travels, whatever direction its damage shares a column with. */
+    public readonly bool HealUp;
+
+    /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
+     * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while
+     * halves and by type ship both-down. Tests that built a bands choice with bare positional bools keep the old
+     * answers explicitly; only omission changes meaning. */
+    public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
+      FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
+      FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
     {
+      var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
+
       Mode = mode;
       IncomingSide = incomingSide;
       HealSide = healSide;
-      IncomingUp = incomingUp;
-      OutgoingUp = outgoingUp;
+      IncomingUp = incomingUp ?? false;
+      OutgoingUp = outgoingUp ?? mode is FctLayoutMode.Bands;
+      HealUp = healUp ?? false;
+      IncomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
+      OutgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
+        : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
     }
 
     /*
@@ -80,12 +100,13 @@ namespace EQLogParser
     public static readonly FctLayoutChoice Shipped = new(FctLayoutMode.Halves, FctRegionSide.Left, false, false);
 
     /* The original top/bottom scheme: its directions are the strip invariant, so only the mode of this choice carries meaning here. */
-    public static readonly FctLayoutChoice Bands = new(FctLayoutMode.Bands, FctRegionSide.Left, false, false);
+    /* Directions omitted on purpose: bands' own defaults ARE the strip invariant (in sinks, out rises). */
+    public static readonly FctLayoutChoice Bands = new(FctLayoutMode.Bands, FctRegionSide.Left);
 
     public FctStage Stage(double w, double h) => Mode switch
     {
-      FctLayoutMode.Bands => FctStage.Bands(w, h),
-      FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h),
+      FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp),
+      FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide),
       _ => FctStage.Halves(IncomingSide, IncomingUp, OutgoingUp, w, h),
     };
   }
@@ -98,29 +119,43 @@ namespace EQLogParser
     private readonly FctRegionSide _healSide;
     private readonly bool _incomingUp;
     private readonly bool _outgoingUp;
+    private readonly bool _healUp;
+    private readonly FctRegionSide _incomingDamageSide;
+    private readonly FctRegionSide _outgoingDamageSide;
 
     public FctLayoutMode Mode => _mode;
     public double W { get; }
     public double H { get; }
 
-    private FctStage(FctLayoutMode mode, FctRegionSide incomingSide, FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h)
+    private FctStage(FctLayoutMode mode, FctRegionSide incomingSide, FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
     {
       _mode = mode;
       _incomingSide = incomingSide;
       _healSide = healSide;
       _incomingUp = incomingUp;
       _outgoingUp = outgoingUp;
+      _healUp = healUp;
+      var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
+      _incomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
+      _outgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
+        : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
       W = w;
       H = h;
     }
 
-    internal static FctStage Bands(double w, double h) => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, false, false, w, h);
+    /* Bands now carries directions like every other scheme — the fountain preset hands its two dials straight through.
+     * The defaults stay the old strip invariant (in sinks, out rises), so every caller that never mentions a direction
+     * draws exactly what bands has always drawn. */
+    internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true)
+      => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
 
     internal static FctStage Halves(FctRegionSide incomingSide, bool incomingUp, bool outgoingUp, double w, double h)
       => new(FctLayoutMode.Halves, incomingSide, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
 
-    internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h)
-      => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h);
+    internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
+      => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h, healUp, incomingDamageSide, outgoingDamageSide);
 
     /*
      * The rect that owns a side's numbers. Bands: the whole canvas (the bands inside it are FctLayout's business).
@@ -150,10 +185,15 @@ namespace EQLogParser
      * the territory (FctStream's rows count neighbours by range, not by direction).
      */
     public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit) => _mode is FctLayoutMode.ByType
-      ? hit.Heal == (_healSide == FctRegionSide.Left)
-        ? (0, 0, W / 2, H)
-        : (W / 2, 0, W / 2, H)
+      ? SideOf(CategorySide(hit)) == FctRegionSide.Left ? (0, 0, W / 2, H) : (W / 2, 0, W / 2, H)
       : RegionFor(hit.Incoming);
+
+    /* Which side a number's category was assigned: healing one side, each damage stream its own — three answers, and
+     * any of them may name the same column; sharing is what flight-scored placement is for. */
+    private FctRegionSide CategorySide(FctHitState hit) =>
+      hit.Heal ? _healSide : hit.Incoming ? _incomingDamageSide : _outgoingDamageSide;
+
+    private static FctRegionSide SideOf(FctRegionSide side) => side;
 
     /* Territory for a number: see RegionFor(hit). Bands measures amplitude against the whole canvas either way. */
     public double TerritoryFor(FctHitState hit) => _mode is FctLayoutMode.Bands ? W : RegionFor(hit).Width;
@@ -164,9 +204,13 @@ namespace EQLogParser
      * its whole height. By type always reads both settings: its columns carry whatever directions were chosen.
      */
     public double UpFor(bool incoming) =>
-      Mode is FctLayoutMode.Bands
-        ? incoming ? -1 : 1
-        : incoming ? (_incomingUp ? 1 : -1) : (_outgoingUp ? 1 : -1);
+      incoming ? (_incomingUp ? 1 : -1) : (_outgoingUp ? 1 : -1);
+
+    /* The hit-aware answer: by type gives healing its own direction even when a damage stream shares its column, so the
+     * question has to know what the number IS, not only who it belongs to. Every rail path asks this one. */
+    public double UpFor(FctHitState hit) => _mode is FctLayoutMode.ByType && hit.Heal
+      ? _healUp ? 1 : -1
+      : UpFor(hit.Incoming);
 
     /*
      * What the style amplitudes — spawn jitter, hold's arc, spray's cone cap — measure against: the whole canvas in

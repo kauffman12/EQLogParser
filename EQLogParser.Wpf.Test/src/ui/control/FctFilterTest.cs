@@ -21,7 +21,7 @@ namespace EQLogParser
     private static FctIngest Open() => new(new Random(11));
 
     private static FctHitState Take(FctIngest ingest, List<FctHitState> hits, FctLane lane, double value, string source = "Bite",
-      bool crit = false, string text = null, double now = 0) =>
+      bool crit = false, string? text = null, double now = 0) =>
       ingest.Accept(hits, lane, value, source, crit, false, false, text, Width, Height, now);
 
     [TestMethod]
