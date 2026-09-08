@@ -17,8 +17,7 @@
         SizeToContent="Height"
         Width="308"
         UseLayoutRounding="True"
-        TextOptions.TextFormattingMode="Display"
-        KeyDown="WindowKeyDown">
+        TextOptions.TextFormattingMode="Display">
   <!-- The companion to the FCT overlay: every control lives here so the overlay itself is nothing but numbers while
        somebody decides what they should look like. It borrows the application's own theme (the merged skin restyles the
        controls, these two resource keys are the same background and border the main window uses), stays owned by the
@@ -39,8 +38,9 @@
     <StackPanel>
 
       <!-- Title bar: the window has no chrome of Windows' making, so this strip is what grabs to move it. There is no
-           close mark on purpose — Cancel and Esc are the exits, one gesture each; a second "leave" button would just
-           be a third name for the same act, and windows that have both have users who wonder which is safe. -->
+           close mark on purpose, and Esc deliberately does nothing: Save and Cancel are labeled buttons at the bottom,
+           and they are the entire exit vocabulary. Leaving this panel is a decision with two visible names — not a key
+           somebody hits while reaching for the mouse. -->
       <Grid x:Name="headerBar" Background="Transparent" Margin="-4,-2,-4,4" MouseLeftButtonDown="HeaderDrag">
         <TextBlock Text="combat text" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
                    Foreground="{DynamicResource ContentForegroundAlt}" />

@@ -27,12 +27,12 @@ namespace EQLogParser
    * no panel, nothing drawn but the numbers, click-through and non-activating (WS_EX_TRANSPARENT + WS_EX_NOACTIVATE — the same recipe
    * TextOverlayWindow/TimerOverlayWindow use). **Configuring** is entered deliberately from the app menu and not from the overlay,
    * because this window sits in the middle of the screen where a permanent settings row would be fighting the player's view of the
-   * game; the Damage Meter can carry a toolbar because you park it in a corner. Save finishes configuring and keeps the settings;
-   * Esc finishes without keeping them.
+   * game; the Damage Meter can carry a toolbar because you park it in a corner. Save finishes configuring and keeps the
+   * settings; Cancel finishes without keeping them — the panel's two buttons, clicked like everybody else.
    *
    * Configure mode is deliberately not a stored setting: nothing good comes from a window that reopens having grabbed the mouse, and
    * a state that outlives the session it was meant for turns an overlay into a click-eating rectangle the next time the game starts.
-   * Settings are staged while configuring and written only by the Save button; Esc ends configuring with the previous ones back.
+   * Settings are staged while configuring and written only by the Save button; Cancel ends configuring with the previous ones back.
    * Placement is the exception, saved as soon as a drag or resize is released — where you left it is never ambiguous.
    *
    * There are two region schemes (FctStage): halves — one stream per side, the genre standard — and bands — top and bottom
@@ -101,7 +101,7 @@ namespace EQLogParser
 
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
 
-    // lets the View menu untick the overlay when the window is closed with Esc
+    // lets the View menu untick the overlay when the window closes
     public event Action EventsClosed;
 
     // keeps the View menu's Setup item and the window telling the same story
@@ -138,7 +138,8 @@ namespace EQLogParser
      * Configure mode driven from the View menu (and by the first enable of the feature, which comes in unlocked so the options are seen once) — the only
      * way in while clicks pass through. Entering it activates the window: a player who just asked to move it should get the keyboard and dragging
      * immediately. Leaving it any way other than Save puts the settings back, because abandoning a configuration session is not the same gesture as
-     * approving one — Cancel is that exit made visible, and Esc is its keyboard. (Save ends configuring from inside, via ApplyLock.)
+     * approving one — Cancel is that exit made visible, and it is the only one: no key closes a configuration session,
+     * because a keystroke should not silently discard what a click was willing to name. (Save ends configuring from inside, via ApplyLock.)
      */
     public void SetLocked(bool locked)
     {
@@ -174,7 +175,7 @@ namespace EQLogParser
     /*
      * Extended styles for the current lock state, driven through the same NativeMethods constants as the timer,
      * text and toolbar overlays. Layered is what lets a transparent WPF window be hit-tested at all; toolwindow
-     * keeps it out of the taskbar and Alt+Tab in both states (it is draggable while configuring and Esc ends that, so positioning an
+     * keeps it out of the taskbar and Alt+Tab in both states (it is draggable while configuring, so positioning an
      * overlay never needs an Alt+Tab entry to be reachable). Locked adds transparent — clicks
      * fall through to EverQuest — and no-activate, so showing or moving it never takes focus mid-fight.
      */
@@ -737,23 +738,6 @@ namespace EQLogParser
 
       DragMove();
       SaveSettings();
-    }
-
-    /*
-     * Esc is the keyboard for the Cancel button: it ends configure mode without saving, the same thing the menu does when unticked, so one key cannot
-     * quietly commit what the preview was only showing off — and unlike that button's tooltip, it is not something the panel has to explain. It does
-     * not close the overlay: losing a carefully positioned window to a stray key is the worse failure, and hiding it is a menu action anyway. A locked
-     * window is click-through and WS_EX_NOACTIVATE, so in practice it gets no keyboard input at all — which is fine, because locked is where it starts
-     * and where Cancel leaves you.
-     */
-    private void WindowKeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key != Key.Escape || _locked)
-      {
-        return;
-      }
-
-      SetLocked(true);
     }
 
     private void OnClosed(object sender, EventArgs e)

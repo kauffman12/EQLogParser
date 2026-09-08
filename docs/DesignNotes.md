@@ -698,9 +698,10 @@ below); it is typography rather than layout, so the row appears in both modes.
 window shrinks and grows with the application's own font scale like every other surface); its category picker is the
 app's checkbox-in-a-dropdown combo (`ComboBoxItemTemplateSelector`, closing the dropdown commits, and the closed face
 counts: "3 categories Selected"); its threshold is the trigger grid's numeric `UpDown` (0…9,999,999, typed or spun, no
-ladder); and it carries no close mark — Cancel and Esc are the exits, because a second "leave" button is a third name
-for one act, and users of windows that have both waste evenings wondering which one is safe. Procs joined the category
-list as the fourth kind while that combo was being born.
+ladder); and it has no close mark and no Esc — **Save and Cancel are labeled buttons, and clicking one of them is the
+only way in or out**, keyboard included. Leaving a configuration session is a decision with two visible names; a
+keystroke should not silently discard what a click was willing to name. Procs joined the category list as the fourth
+kind while that combo was being born.
 
 Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
 as the numbers they were previewing — in a small window the row wrapped straight into the demo it existed to show. The
@@ -711,8 +712,7 @@ by the overlay and Topmost like it.
 
 The split keeps one source of truth by construction. A plain state object (`FctConfigState`) crosses the boundary in both
 directions: `LoadFrom` hands the panel what to display, every control change raises a fresh snapshot for the live preview,
-Save hands the final copy back as the only road to settings.ini, and Cancel — button, Esc or the close mark, one gesture —
-asks the overlay to put everything back. The panel owns no canvas and no keys, which is what stops a second topmost
+Save hands the final copy back as the only road to settings.ini, and Cancel asks the overlay to put everything back. The panel owns no canvas and no keys, which is what stops a second topmost
 window from becoming a second authority: `StagedState()` in the overlay is the single list of staged values, so
 "leaving without saving restores exactly this" cannot drift.
 
@@ -1049,8 +1049,9 @@ positioning them is precisely when the layout must not shift.
 **Save is what writes**, and **Cancel is the way out without writing**. Both sit at the right end of the configure row, stacked because there is no
 width to spare. Leaving without saving is a normal way to finish a look around — you came to see what the dials do, not to change them — and for a while
 the only way to do that was a sentence printed on the panel explaining the Esc key, which described the ordinary exit as the absence of an action. A
-button that says "Cancel" beside one that says "Save" removes the sentence and the reading. Esc still does the same thing for a hand already on it; it
-just no longer has to be documented mid-screen. Setup clicked again from the menu also backs out, and every one of those paths puts back whatever was
+button that says "Cancel" beside one that says "Save" removes the sentence and the reading — and then **Esc left too**: if the buttons are labeled,
+a key with no label on screen should not be a third exit, silent about whether it saved or discarded whatever was staged. Setup clicked again from the
+menu still backs out, and every one of those paths puts back whatever was
 saved before, because abandoning a configuration session is not the same gesture as approving one. The motion combo previews live (the next numbers use
 the new style) and writes nothing, so trying a style costs a click and un-trying it costs nothing.
 
@@ -1376,7 +1377,7 @@ is built. `FctOverlayMotion` also reads the old
 chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.
 
-`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so Esc and dragging are live
+`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so dragging is live
 immediately, and asking to configure while the overlay is hidden shows it first rather than doing nothing silently. The menu item unticking ends
 configure mode the same way Cancel does — settings back the way they were, overlay still open.
 

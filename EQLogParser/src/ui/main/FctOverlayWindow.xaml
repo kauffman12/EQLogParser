@@ -19,8 +19,7 @@
         MinWidth="420"
         MinHeight="300"
         UseLayoutRounding="True"
-        WindowStyle="None"
-        KeyDown="WindowKeyDown">
+        WindowStyle="None">
   <!-- while configuring, any press that no control or resize band took moves the window; while locked rootBorder is not
        hit-test visible, so there is nothing to press and clicks reach EverQuest -->
   <Grid MouseLeftButtonDown="OverlayDrag">

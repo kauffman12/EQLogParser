@@ -15,8 +15,8 @@ namespace EQLogParser
    * be nothing but numbers while somebody decides.
    *
    * It is deliberately dumb: LoadFrom hands it a snapshot to display, every change raises PreviewChanged with a fresh
-   * one for the live demo, Save raises Saved with the final copy for the overlay to write to settings.ini, and Cancel —
-   * button or Esc, the same gesture either way — asks the overlay to put everything back. It owns no canvas and no keys;
+   * one for the live demo, Save raises Saved with the final copy for the overlay to write to settings.ini, and Cancel
+   * asks the overlay to put everything back — the two labeled buttons are the only exits, keyboard included. It owns no canvas and no keys;
    * that is what keeps a second topmost window from becoming a second source of truth.
    */
   public sealed partial class FctSettingsWindow : Window
@@ -203,14 +203,6 @@ namespace EQLogParser
     private void SaveClick(object sender, RoutedEventArgs e) => Saved?.Invoke(Snapshot());
 
     private void CancelClick(object sender, RoutedEventArgs e) => Cancelled?.Invoke();
-
-    private void WindowKeyDown(object sender, KeyEventArgs e)
-    {
-      if (e.Key == Key.Escape)
-      {
-        Cancelled?.Invoke();
-      }
-    }
 
     private void HeaderDrag(object sender, MouseButtonEventArgs e)
     {
