@@ -116,6 +116,6 @@ namespace EQLogParser
      * read-only from here on, so a copy that shares the strings is enough to test a different launch position. Nothing that
      * owns a substrate resource is cloned — a trial never reaches a canvas, and only canvases cache per-hit resources.
      */
-    public FctHitState Clone() => (FctHitState) MemberwiseClone();
+    public FctHitState Clone() => (FctHitState)MemberwiseClone();
   }
 }
