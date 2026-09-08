@@ -14,6 +14,16 @@ namespace EQLogParser
     public const string MotionKey = "FctOverlayMotion";
 
     /*
+     * The two modes the configure row offers, over the engine's three schemes: fountain is bands geometry wearing spray
+     * motion (numbers spew out of a clear middle; its only settings are the two direction dials), and split is the side
+     * columns with a shape — parabola or straight. Engine names stay where the geometry is tested; ini speaks the words
+     * the player chose. The retired FctOverlayLayout key ("halves"/"bytype"/"bands") belonged to the layout+motion combos
+     * this replaced and is no longer read — nothing shipped, so nothing migrates.
+     */
+    public const string ModeKey = "FctOverlayMode";
+    public const string ShapeKey = "FctOverlayShape";
+
+    /*
      * The region scheme and how it is oriented (see FctStage): which side incoming owns in halves, which side healing owns
      * in by type, and which way each side travels. halves is the shipped default — with its failure mode fixed — and these
      * keys are read on every start; missing values land on that choice, junk on bands (ParseMode explains the split).
@@ -21,8 +31,12 @@ namespace EQLogParser
     public const string LayoutKey = "FctOverlayLayout";
     public const string IncomingSideKey = "FctOverlayIncomingSide";
 
-    /* By type only: which column healing owns (the request this mode exists for: heals left, damage right). */
+    /* Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
+       the two damage streams learned to answer separately in the same engine pass that made bands steerable. */
     public const string HealSideKey = "FctOverlayHealSide";
+    public const string HealDirectionKey = "FctOverlayHealDirection";
+    public const string TakenDamageSideKey = "FctOverlayTakenDamageSide";
+    public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
 
     /*
      * Which categories of number the overlay draws at all (the gate in FctIngest): my damage, damage on me, and
@@ -128,51 +142,66 @@ namespace EQLogParser
     public static void SaveConfigured() => ConfigUtil.SetSetting(ConfiguredKey, true);
 
     /*
-     * Halves came back (FctStage), and with it this key: the pre-release build that had a layout checkbox wrote enum names,
-     * so a settings.ini that carries "halves" or "bands" means exactly what it says and needs no migration. The side and
-     * direction keys are new; LoadLayout parses all four through the pure helpers below, which is where junk gets the shipped
-     * default instead of reaching the geometry as garbage.
+     * A stored choice is read back through the same pure helpers that guard every other key, so junk lands on a shipped
+     * default instead of reaching geometry as garbage. Omitted directions are passed through as null on purpose: bands'
+     * outward invariant (in sinks, out rises) is what "never set" must mean there, and the constructor keeps it that way —
+     * a fountain that defaults to its own shape needs nobody to have chosen it first.
      */
+    public static FctLayoutChoice LoadLayout()
+    {
+      if (LoadIsFountain())
+      {
+        return new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left,
+          ParseUpOrNull(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
+          ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)));
+      }
 
-    public static FctLayoutChoice LoadLayout() => new(
-      ParseMode(ConfigUtil.GetSetting(LayoutKey, null)),
-      ParseSide(ConfigUtil.GetSetting(IncomingSideKey, null)),
-      ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
-      ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)),
-      ParseSide(ConfigUtil.GetSetting(HealSideKey, null)));
+      var takenSide = ParseSide(ConfigUtil.GetSetting(TakenDamageSideKey, null));
+      return new FctLayoutChoice(FctLayoutMode.ByType, takenSide,
+        ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
+        ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)),
+        ParseSide(ConfigUtil.GetSetting(HealSideKey, null)),
+        ParseUp(ConfigUtil.GetSetting(HealDirectionKey, null)),
+        takenSide,
+        ParseSide(ConfigUtil.GetSetting(DealtDamageSideKey, null)));
+    }
 
     public static void SaveLayout(FctLayoutChoice layout)
     {
-      ConfigUtil.SetSetting(LayoutKey, layout.Mode switch
-      {
-        FctLayoutMode.Halves => "halves",
-        FctLayoutMode.ByType => "bytype",
-        _ => "bands",
-      });
       ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
       ConfigUtil.SetSetting(HealSideKey, layout.HealSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(HealDirectionKey, layout.HealUp ? "up" : "down");
+      ConfigUtil.SetSetting(TakenDamageSideKey, layout.IncomingDamageSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(DealtDamageSideKey, layout.OutgoingDamageSide == FctRegionSide.Right ? "right" : "left");
       ConfigUtil.SetSetting(IncomingDirectionKey, layout.IncomingUp ? "up" : "down");
       ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
     }
+
+    /* The mode itself, in the player's words; absent is split — the MSBT-shaped default. */
+    public static bool LoadIsFountain() =>
+      string.Equals(ConfigUtil.GetSetting(ModeKey, null), "fountain", StringComparison.OrdinalIgnoreCase);
+
+    public static void SaveIsFountain(bool fountain) => ConfigUtil.SetSetting(ModeKey, fountain ? "fountain" : "split");
+
+    /* split's shape: the stored motion is a full FctMotionStyle elsewhere, but this key only ever carries the two rails. */
+    public static FctMotionStyle LoadShape() =>
+      string.Equals(ConfigUtil.GetSetting(ShapeKey, null), "straight", StringComparison.OrdinalIgnoreCase)
+        ? FctMotionStyle.Straight : FctMotionStyle.Parabola;
+
+    public static void SaveShape(FctMotionStyle shape) => ConfigUtil.SetSetting(ShapeKey, shape is FctMotionStyle.Straight ? "straight" : "parabola");
 
     /*
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
      * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
      */
-    /* Two fallbacks with two jobs. No setting at all is the first run and gets the shipped opinion — halves, like
-     * FctLayoutChoice.Shipped and every document that names a default; falling to bands there made the never-saved
-     * overlay disagree with its own documentation. A setting that exists but names something unknown is junk somebody
-     * typed or an abandoned plan's value ("center" was one), and bands is the scheme every build can draw. */
-    internal static FctLayoutMode ParseMode(string raw) =>
-      raw is null || string.Equals(raw, "halves", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.Halves
-        : string.Equals(raw, "bytype", StringComparison.OrdinalIgnoreCase) ? FctLayoutMode.ByType
-          : FctLayoutMode.Bands;
-
     internal static FctRegionSide ParseSide(string raw) =>
       string.Equals(raw, "right", StringComparison.OrdinalIgnoreCase) ? FctRegionSide.Right : FctRegionSide.Left;
 
     internal static bool ParseUp(string raw) =>
       string.Equals(raw, "up", StringComparison.OrdinalIgnoreCase);
+
+    private static bool? ParseUpOrNull(string raw) =>
+      string.IsNullOrEmpty(raw) ? null : ParseUp(raw);
 
     /* The pre-motion-style boolean: still read so an upgrade keeps the choreography somebody had already chosen. */
     private const string LegacyFountainKey = "FctOverlayFountain";
@@ -187,8 +216,6 @@ namespace EQLogParser
         : ConfigUtil.IfSet(LegacyFountainKey) ? FctMotionStyle.Fountain
         : FctMotionStyle.Hold;
 
-    public static void SaveMotion(FctMotionStyle style) => ConfigUtil.SetSetting(MotionKey, Name(style));
-
     /* An unrecognised value falls back to the default, never to an error dialog over a cosmetic setting that a hand-edit
      * in settings.ini can produce by accident. */
     public static FctMotionStyle ParseMotion(string name) =>
@@ -198,6 +225,7 @@ namespace EQLogParser
         "pulse" => FctMotionStyle.Pulse,
         "spray" => FctMotionStyle.Spray,
         "parabola" => FctMotionStyle.Parabola,
+        "straight" => FctMotionStyle.Straight,
         _ => FctMotionStyle.Hold,
       };
 
@@ -208,14 +236,10 @@ namespace EQLogParser
         FctMotionStyle.Pulse => "pulse",
         FctMotionStyle.Spray => "spray",
         FctMotionStyle.Parabola => "parabola",
+        FctMotionStyle.Straight => "straight",
         _ => "hold",
       };
 
-    /*
-     * Whether the player ever chose a motion at all, as opposed to ParseMotion's hold default. A first-time halves user
-     * gets the genre's shape (the parabola) instead of that default — but somebody who picked hold on purpose keeps it.
-     */
-    public static bool HasStoredMotion()
-      => ConfigUtil.GetSetting(MotionKey, null) is { Length: > 0 } || ConfigUtil.IfSet(LegacyFountainKey);
+
   }
 }

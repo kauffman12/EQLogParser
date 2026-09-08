@@ -675,6 +675,32 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
+### The configure row says fountain and split now: the mode layer over the schemes
+
+The engine commit above made two words honest, and this one puts them on the row. The layout combo (halves/by type/bands)
+and the motion combo (hold/fountain/pulse/spray/parabola) are gone — retired rather than hidden, because a player should
+not meet the geometry vocabulary to choose between looks. What replaces them:
+
+**mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
+and spew out and fall, which is the look every classic FCT draws with; its controls are exactly two direction dials, the
+show switches, size and speed. *Split* is the side columns (internally by type) with each category assigned its own
+**side and direction** — heals, damage on me, my damage, six picks, any of them sharing a column — plus **shape:
+parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
+(in fountain there is no side to hand out, no shape to pick, and the threshold steps off too — the minimal UI was the
+point), and the legend re-sentences itself from the staged choice either way.
+
+**settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = split) and
+`FctOverlayShape` ("parabola"/"straight") name the mode; per-category keys carry the rest (`FctOverlayHealDirection`,
+`FctOverlayTakenDamageSide`, `FctOverlayDealtDamageSide` beside the existing side/direction keys). The combos-era
+`FctOverlayLayout` key stops being read — nothing of this shipped, so nothing migrates — and an omitted direction still
+reaches the constructor as *null* so bands keeps its outward invariant without anybody having chosen it. Because the mode
+layer cannot express an illegal combination (fountain cannot store parabola), the load-time legality repair the combos era
+needed is gone too: there is nothing left to fix up.
+
+Engine names stay where geometry carries tests: `FctLayoutMode.Bands`/`ByType`, `FctMotionStyle.Spray`/`Parabola`/
+`Straight`, hold and pulse included for whoever asks next. The words "halves" and "bands" are now implementation detail
+and a documentation sentence, not a UI state.
+
 ### Two simple modes need three engine facts: category columns, steerable bands, and a bow-less rail
 
 The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;

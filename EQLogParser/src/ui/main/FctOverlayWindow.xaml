@@ -51,67 +51,77 @@
         </Grid.ColumnDefinitions>
 
         <WrapPanel Orientation="Horizontal" VerticalAlignment="Top">
+          <!-- The two modes, in the player's words. What the engine calls bands and by-type is a geometry detail the
+               tests argue about; a player picks "fountain" (numbers spew out of a clear middle) or "split" (scrolling
+               columns, one side per category) and only split's remaining choices ever show on the row. -->
           <StackPanel Orientation="Vertical">
-            <TextBlock x:Name="titleLabel" Text="FCT" FontWeight="Bold" Foreground="#EDEFF2" />
-            <ComboBox x:Name="motionCombo" Width="112" Margin="0,3,0,0" HorizontalAlignment="Left"
-                      SelectionChanged="MotionChanged" ToolTip="how the numbers move; applies to the ones after this. Parabola is halves-only — it scrolls across a whole region">
-              <ComboBoxItem Content="hold" Tag="hold" />
-              <ComboBoxItem Content="fountain" Tag="fountain" />
-              <ComboBoxItem Content="pulse" Tag="pulse" />
-              <ComboBoxItem Content="spray" Tag="spray" />
-              <ComboBoxItem x:Name="parabolaItem" Content="parabola" Tag="parabola" />
-            </ComboBox>
-          </StackPanel>
-
-          <!-- The region scheme, and how it is oriented. The controls after it belong to particular schemes only — which side
-               incoming owns is halves' question, which side healing owns is by type's, and bands obeys neither: its protected
-               strip owns each side's direction of travel. They collapse with the scheme rather than sit disabled, and nothing
-               on the row jumps when they go. -->
-          <StackPanel Orientation="Vertical" Margin="18,0,0,0">
-            <TextBlock x:Name="layoutLabel" Text="layout" FontWeight="Bold" Foreground="#EDEFF2"
-                       ToolTip="where the numbers sit; applies to the ones after this" />
+            <TextBlock x:Name="titleLabel" Text="mode" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="fountain: numbers pop near the middle and spew out and fall, like classic FCT. split: scrolling side columns, with each category assigned its own side and direction" />
             <ComboBox x:Name="layoutCombo" Width="104" Margin="0,3,0,0" HorizontalAlignment="Left"
-                      SelectionChanged="LayoutChanged" ToolTip="halves: one stream per side, how most scrolling combat text ships. by type: healing gets its own column, everything else the other. bands: top and bottom around a clear middle">
-              <ComboBoxItem Content="halves" Tag="halves" />
-              <ComboBoxItem Content="by type" Tag="bytype" />
-              <ComboBoxItem Content="bands" Tag="bands" />
+                      SelectionChanged="LayoutChanged">
+              <ComboBoxItem Content="fountain" Tag="fountain" />
+              <ComboBoxItem Content="split" Tag="split" />
             </ComboBox>
           </StackPanel>
 
-          <StackPanel x:Name="sidePanel" Orientation="Vertical" Margin="18,0,0,0">
-            <TextBlock x:Name="sideLabel" Text="incoming" FontWeight="Bold" Foreground="#EDEFF2"
-                       ToolTip="which half of the overlay incoming numbers sit in (halves only)" />
-            <ComboBox x:Name="sideCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
-              <ComboBoxItem Content="left" Tag="left" />
-              <ComboBoxItem Content="right" Tag="right" />
+          <!-- split's shape. Parabola bends each number sideways and back — the genre's own curve; straight runs rows
+               like Nag's scroll. Same stream machinery under both: one entrance, one pace per column. -->
+          <StackPanel x:Name="shapePanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="shapeLabel" Text="shape" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="parabola: each number bends sideways as it travels. straight: rows scroll without the bend" />
+            <ComboBox x:Name="motionCombo" Width="104" Margin="0,3,0,0" HorizontalAlignment="Left"
+                      SelectionChanged="MotionChanged">
+              <ComboBoxItem Content="parabola" Tag="parabola" />
+              <ComboBoxItem Content="straight" Tag="straight" />
             </ComboBox>
           </StackPanel>
 
-          <StackPanel x:Name="healPanel" Orientation="Vertical" Margin="18,0,0,0" Visibility="Collapsed">
-            <TextBlock x:Name="healLabel" Text="heals" FontWeight="Bold" Foreground="#EDEFF2"
-                       ToolTip="which column healing sits in (by type only)" />
-            <ComboBox x:Name="healSideCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
-              <ComboBoxItem Content="left" Tag="left" />
-              <ComboBoxItem Content="right" Tag="right" />
-            </ComboBox>
+          <!-- split's three categories, each with its side and its direction. They may all name the same column if
+               that is what somebody wants; the engine stopped assuming otherwise. In fountain these collapse — bands
+               has no sides to hand out, only the two travel directions further along. -->
+          <StackPanel x:Name="healsPanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="healsLabel" Text="heals" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="which column healing owns, and which way it travels" />
+            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+              <ComboBox x:Name="healSideCombo" Width="64" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="left" Tag="left" />
+                <ComboBoxItem Content="right" Tag="right" />
+              </ComboBox>
+              <ComboBox x:Name="healDirCombo" Width="56" Margin="4,0,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="up" Tag="up" />
+                <ComboBoxItem Content="down" Tag="down" />
+              </ComboBox>
+            </StackPanel>
           </StackPanel>
 
-          <StackPanel x:Name="outDirPanel" Orientation="Vertical" Margin="18,0,0,0">
-            <TextBlock x:Name="outDirLabel" Text="yours" FontWeight="Bold" Foreground="#EDEFF2"
-                       ToolTip="which way your numbers travel (halves only)" />
-            <ComboBox x:Name="outDirCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
-              <ComboBoxItem Content="up" Tag="up" />
-              <ComboBoxItem Content="down" Tag="down" />
-            </ComboBox>
+          <StackPanel x:Name="takenPanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="takenLabel" Text="damage on me" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="which column incoming damage owns, and which way it travels" />
+            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+              <ComboBox x:Name="takenSideCombo" Width="64" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="left" Tag="left" />
+                <ComboBoxItem Content="right" Tag="right" />
+              </ComboBox>
+              <ComboBox x:Name="inDirCombo" Width="56" Margin="4,0,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="up" Tag="up" />
+                <ComboBoxItem Content="down" Tag="down" />
+              </ComboBox>
+            </StackPanel>
           </StackPanel>
 
-          <StackPanel x:Name="inDirPanel" Orientation="Vertical" Margin="18,0,0,0">
-            <TextBlock x:Name="inDirLabel" Text="on you" FontWeight="Bold" Foreground="#EDEFF2"
-                       ToolTip="which way incoming numbers travel (halves only)" />
-            <ComboBox x:Name="inDirCombo" Width="76" Margin="0,3,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
-              <ComboBoxItem Content="up" Tag="up" />
-              <ComboBoxItem Content="down" Tag="down" />
-            </ComboBox>
+          <StackPanel x:Name="dealtPanel" Orientation="Vertical" Margin="18,0,0,0">
+            <TextBlock x:Name="dealtLabel" Text="my damage" FontWeight="Bold" Foreground="#EDEFF2"
+                       ToolTip="which column your damage owns, and which way it travels" />
+            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+              <ComboBox x:Name="dealtSideCombo" Width="64" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="left" Tag="left" />
+                <ComboBoxItem Content="right" Tag="right" />
+              </ComboBox>
+              <ComboBox x:Name="outDirCombo" Width="56" Margin="4,0,0,0" HorizontalAlignment="Left" SelectionChanged="LayoutChanged">
+                <ComboBoxItem Content="up" Tag="up" />
+                <ComboBoxItem Content="down" Tag="down" />
+              </ComboBox>
+            </StackPanel>
           </StackPanel>
 
           <!-- Both tracks read the same way: bold mark at each end, and the number underneath saying where you landed, with its own percent sign so it is

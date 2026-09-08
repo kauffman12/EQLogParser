@@ -182,10 +182,10 @@ namespace EQLogParser
       sizeLabel.FontSize = size + 2;
       speedLabel.FontSize = size + 2;
 
-      layoutLabel.FontSize = size + 2;
-      sideLabel.FontSize = size + 2;
-      outDirLabel.FontSize = size + 2;
-      inDirLabel.FontSize = size + 2;
+      shapeLabel.FontSize = size + 2;
+      healsLabel.FontSize = size + 2;
+      takenLabel.FontSize = size + 2;
+      dealtLabel.FontSize = size + 2;
       thresholdLabel.FontSize = size + 2;
 
       sizeMinus.FontSize = size + 7;
@@ -327,31 +327,12 @@ namespace EQLogParser
          a stale entry in someone's settings.ini is inert, as retired keys should be. */
       _locked = true;
 
-      _savedStyle = FctOverlaySettings.LoadMotion();
-
-      /* The region scheme and, in halves, which side incoming sits on and which way each half travels. Same preview contract as the
-         style: the canvas draws with it now, Save is what writes it, and leaving without Save puts it back. */
+      /* The mode and its controls. fountain's motion is not stored as a preference — the mode names it (spray); split
+         reads its rail shape, defaulting to the genre's curve. What used to live here — a layout key, motion defaults, a
+         legality fix-up for bands-plus-parabola — belonged to the combos era: the mode layer cannot store an illegal
+         combination in the first place, so there is nothing left to repair on load. */
       _savedLayout = FctOverlaySettings.LoadLayout();
-
-      /*
-       * The one default that is not somebody's stored choice: ParseMotion's hold is the fallback for junk data, not a first-run opinion.
-       * A fresh halves overlay gets the genre's own shape (the parabola) — but a player who deliberately picked hold keeps it, which is
-       * what HasStoredMotion is there to tell apart.
-       */
-      if (_savedLayout.Mode is not FctLayoutMode.Bands && !FctOverlaySettings.HasStoredMotion())
-      {
-        _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
-      }
-
-      /* A hand-written settings.ini can name a motion the scheme cannot run — bands plus parabola is exactly that pairing, and
-         it gets stored whether by edited file or by an older build. Configure mode must not show it selected (a disabled combo
-         item with a number stream that quietly ISN'T it) while ingest draws something else, so the stored combination is legalised
-         here, before anything reads it: same rule LayoutChanged enforces at selection time, applied to what was loaded. */
-      if (_savedLayout.Mode is FctLayoutMode.Bands && _savedStyle is FctMotionStyle.Parabola)
-      {
-        _savedStyle = FctStage.DefaultMotion(_savedLayout.Mode);
-      }
-
+      _savedStyle = _savedLayout.Mode is FctLayoutMode.Bands ? FctMotionStyle.Spray : FctOverlaySettings.LoadShape();
       _canvas.MotionStyle = _savedStyle;
       SelectMotionOption(_savedStyle);
       _canvas.Layout = _savedLayout;
@@ -699,112 +680,89 @@ namespace EQLogParser
     }
 
     /*
-     * The four region controls act as one: together they name a stage (FctStage), and changing any of them re-stages the demo so
-     * the next number is judged in its new place instead of twelve seconds into the cycle. Preview only, like the style — nothing
-     * reaches settings.ini until Save.
+     * The mode and the category pickers are one control: together they name a stage and a motion, and any change re-stages
+     * the demo so the next number is judged in its new place. fountain is the engine's bands geometry wearing spray — the
+     * look classic FCT draws with, and the reason bands learned to obey direction dials; split is the side columns (the
+     * engine's by type) riding the chosen rail shape. Engine names stay wherever geometry carries tests; these two words
+     * are what the row offers. Preview only, like everything here: nothing reaches settings.ini until Save.
      */
     private void LayoutChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (!_settingsReady || layoutCombo.SelectedItem is not ComboBoxItem layout
-        || sideCombo.SelectedItem is not ComboBoxItem side
-        || healSideCombo.SelectedItem is not ComboBoxItem healSide
-        || outDirCombo.SelectedItem is not ComboBoxItem outDir
-        || inDirCombo.SelectedItem is not ComboBoxItem inDir)
+      if (!_settingsReady || layoutCombo.SelectedItem is not ComboBoxItem mode)
       {
         return;
       }
 
-      var choice = new FctLayoutChoice(
-        (layout.Tag as string) switch { "halves" => FctLayoutMode.Halves, "bytype" => FctLayoutMode.ByType, _ => FctLayoutMode.Bands },
-        side.Tag as string == "right" ? FctRegionSide.Right : FctRegionSide.Left,
-        inDir.Tag as string == "up",
-        outDir.Tag as string == "up",
-        healSide.Tag as string == "right" ? FctRegionSide.Right : FctRegionSide.Left);
+      var fountain = mode.Tag as string == "fountain";
+      _canvas.Layout = fountain
+        ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, ComboUp(inDirCombo), ComboUp(outDirCombo))
+        : new FctLayoutChoice(
+            FctLayoutMode.ByType, ComboRight(takenSideCombo) ? FctRegionSide.Right : FctRegionSide.Left,
+            ComboUp(inDirCombo), ComboUp(outDirCombo),
+            ComboRight(healSideCombo) ? FctRegionSide.Right : FctRegionSide.Left, ComboUp(healDirCombo),
+            ComboRight(takenSideCombo) ? FctRegionSide.Right : FctRegionSide.Left,
+            ComboRight(dealtSideCombo) ? FctRegionSide.Right : FctRegionSide.Left);
 
-      /*
-       * A style can be legal in one scheme and not the other: the parabola scrolls across the whole region it owns, which in bands is
-       * the protected strip itself. If the scheme just chosen would run it there, swap the preview to that scheme's own default rather
-       * than leave it showing a motion ingest is about to degrade on its half of the same contract (FctIngest.Accept).
-       */
-      if (choice.Mode is FctLayoutMode.Bands && _canvas.MotionStyle is FctMotionStyle.Parabola)
-      {
-        _canvas.MotionStyle = FctStage.DefaultMotion(choice.Mode);
-        SelectMotionOption(_canvas.MotionStyle);
-      }
+      /* fountain's motion is not a choice — spray is what makes it a fountain. split rides the shape dial. */
+      _canvas.MotionStyle = fountain ? FctMotionStyle.Spray
+        : ComboTag(motionCombo) == "straight" ? FctMotionStyle.Straight : FctMotionStyle.Parabola;
 
-      _canvas.Layout = choice;
-      SelectLayoutOptions(choice);
+      UpdateModeVisibility(fountain);
+      SetLegend(_canvas.Layout);
       RefreshDemo();
     }
 
-    /* Restores what the controls say for a staged layout: the scheme, and the halves orientation behind it. */
+    private static string ComboTag(ComboBox combo) => combo.SelectedItem is ComboBoxItem item ? item.Tag as string : null;
+
+    private static bool ComboUp(ComboBox combo) => ComboTag(combo) == "up";
+
+    private static bool ComboRight(ComboBox combo) => ComboTag(combo) == "right";
+
+    /* Restores what the controls say for a staged layout, and shows only the controls that scheme obeys. */
     private void SelectLayoutOptions(FctLayoutChoice layout)
     {
-      SelectByTag(layoutCombo, layout.Mode switch
-      {
-        FctLayoutMode.Halves => "halves",
-        FctLayoutMode.ByType => "bytype",
-        _ => "bands",
-      });
-      SelectByTag(sideCombo, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
+      var fountain = layout.Mode is FctLayoutMode.Bands;
+      SelectByTag(layoutCombo, fountain ? "fountain" : "split");
       SelectByTag(healSideCombo, layout.HealSide == FctRegionSide.Right ? "right" : "left");
-      SelectByTag(outDirCombo, layout.OutgoingUp ? "up" : "down");
+      SelectByTag(healDirCombo, layout.HealUp ? "up" : "down");
+      SelectByTag(takenSideCombo, layout.IncomingDamageSide == FctRegionSide.Right ? "right" : "left");
+      SelectByTag(dealtSideCombo, layout.OutgoingDamageSide == FctRegionSide.Right ? "right" : "left");
       SelectByTag(inDirCombo, layout.IncomingUp ? "up" : "down");
+      SelectByTag(outDirCombo, layout.OutgoingUp ? "up" : "down");
 
-      SetLayoutPanelVisible(layout.Mode);
-      SetParabolaLegal(layout.Mode is not FctLayoutMode.Bands);
+      UpdateModeVisibility(fountain);
       SetLegend(layout);
     }
 
     /*
-     * The parabola scrolls across the whole region it owns, and in bands that is the strip included — so the item is disabled in bands
-     * rather than hidden: hiding it would change the row's geometry and make a player hunt for where it went, while a greyed item with
-     * a tooltip is the setting telling you why.
+     * Each mode shows exactly the controls it obeys and collapses the rest, so nothing else on the row jumps. Fountain is
+     * the minimal one — directions, what to show, size, speed — which is why shape, healing's column (bands has none to
+     * hand out) and the threshold step off; split runs the full category grid. A control that changes nothing in the mode
+     * you are in is exactly what configure mode was cleaned up to stop showing.
      */
-    private void SetParabolaLegal(bool legal)
+    private void UpdateModeVisibility(bool fountain)
     {
-      parabolaItem.IsEnabled = legal;
-      parabolaItem.ToolTip = legal ? null : "the parabola scrolls across a side — halves and by type only";
+      shapePanel.Visibility = healsPanel.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+      takenSideCombo.Visibility = dealtSideCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+      thresholdPanel.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /*
-     * Each scheme shows exactly the controls it obeys. Halves: which side incoming owns, and both directions. By type:
-     * which side healing owns, and both directions — the side question is a different word for a different owner, not a
-     * second copy of the same one. Bands: neither; the protected strip owns each side's direction of travel (FctStage),
-     * so a control for it there would be a setting with no effect — the kind of thing configure mode was cleaned up to
-     * stop showing. Collapsed rather than hidden so nothing else on the row jumps when the scheme changes.
-     */
-    private void SetLayoutPanelVisible(FctLayoutMode mode)
-    {
-      sidePanel.Visibility = mode is FctLayoutMode.Halves ? Visibility.Visible : Visibility.Collapsed;
-      healPanel.Visibility = mode is FctLayoutMode.ByType ? Visibility.Visible : Visibility.Collapsed;
-
-      var directions = mode is not FctLayoutMode.Bands ? Visibility.Visible : Visibility.Collapsed;
-      outDirPanel.Visibility = directions;
-      inDirPanel.Visibility = directions;
-    }
-
-    /*
-     * The legend is the only position explanation on the row, so it has to be true for the scheme on screen: bands say it with
-     * the up/down arrows, halves with the side a number sits on. Mirroring the incoming side mirrors the sentence.
+     * The legend is the only position sentence on the row, so it reads straight off the staged choice: split names each
+     * category's column with an arrow, and fountain's columns are fixed, so its story is which way each stream runs.
      */
     private void SetLegend(FctLayoutChoice layout)
     {
       if (layout.Mode is FctLayoutMode.Bands)
       {
-        legendText.Text = "↑ yours   ↓ on you";
+        legendText.Text = $"on you {(layout.IncomingUp ? "↑" : "↓")}   mine {(layout.OutgoingUp ? "↑" : "↓")}";
         return;
       }
 
-      if (layout.Mode is FctLayoutMode.ByType)
-      {
-        legendText.Text = layout.HealSide == FctRegionSide.Left ? "← heals   damage →" : "← damage   heals →";
-        return;
-      }
-
-      var incomingLeft = layout.IncomingSide == FctRegionSide.Left;
-      legendText.Text = incomingLeft ? "← on you   yours →" : "← yours   on you →";
+      legendText.Text = $"heals {SideArrow(layout.HealSide)}   on me {SideArrow(layout.IncomingDamageSide)}   mine {SideArrow(layout.OutgoingDamageSide)}";
     }
+
+    private static string SideArrow(FctRegionSide side) => side is FctRegionSide.Left ? "←" : "→";
 
     /*
      * Save is the only thing that writes: the previewed style becomes the setting, the window keeps its place, and configuring
@@ -827,7 +785,8 @@ namespace EQLogParser
       _savedShowTaken = _canvas.ShowTaken;
       _savedShowHeals = _canvas.ShowHeals;
 
-      FctOverlaySettings.SaveMotion(_savedStyle);
+      FctOverlaySettings.SaveIsFountain(_savedLayout.Mode is FctLayoutMode.Bands);
+      FctOverlaySettings.SaveShape(_savedStyle);
       FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
