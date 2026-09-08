@@ -35,11 +35,14 @@ namespace EQLogParser
        Snapshot reads them back, and the combo's title is re-summarised whenever the dropdown closes. */
     private readonly List<ComboBoxItemDetails> _showItems =
     [
-      new(true, "my damage"),
-      new(true, "damage to me"),
+      new(true, "outgoing damage"),
+      new(true, "incoming damage"),
       new(true, "healing"),
       new(true, "procs"),
     ];
+
+    // The shipped picks, used only as the parse fallback when a combo somehow has nothing selected.
+    private static readonly FctConfigState Defaults = new();
 
     private bool _loading;
 
@@ -72,11 +75,11 @@ namespace EQLogParser
 
       SelectByTag(modeCombo, state.Fountain ? "fountain" : "split");
       SelectByTag(shapeCombo, FctOverlaySettings.Name(state.Shape));
-      SelectByTag(healSideCombo, Side(state.HealSide));
+      SelectByTag(healLaneCombo, FctRailLanes.Token(state.HealLane));
       SelectByTag(healDirCombo, Up(state.HealUp));
-      SelectByTag(takenSideCombo, Side(state.TakenSide));
+      SelectByTag(takenLaneCombo, FctRailLanes.Token(state.TakenLane));
       SelectByTag(inDirCombo, Up(state.TakenUp));
-      SelectByTag(dealtSideCombo, Side(state.DealtSide));
+      SelectByTag(dealtLaneCombo, FctRailLanes.Token(state.DealtLane));
       SelectByTag(outDirCombo, Up(state.DealtUp));
       _showItems[0].IsChecked = state.ShowDealt;
       _showItems[1].IsChecked = state.ShowTaken;
@@ -106,11 +109,11 @@ namespace EQLogParser
       {
         Fountain = ComboTag(modeCombo) == "fountain",
         Shape = ComboTag(shapeCombo) == "straight" ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
-        HealSide = ComboTag(healSideCombo) == "right" ? FctRegionSide.Right : FctRegionSide.Left,
+        HealLane = FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane),
         HealUp = ComboTag(healDirCombo) == "up",
-        TakenSide = ComboTag(takenSideCombo) == "right" ? FctRegionSide.Right : FctRegionSide.Left,
+        TakenLane = FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane),
         TakenUp = ComboTag(inDirCombo) == "up",
-        DealtSide = ComboTag(dealtSideCombo) == "right" ? FctRegionSide.Right : FctRegionSide.Left,
+        DealtLane = FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane),
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
         ShowDealt = _showItems[0].IsChecked,
@@ -248,7 +251,7 @@ namespace EQLogParser
       shapeCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       healsTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       healsRow.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      takenSideCombo.Visibility = dealtSideCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+      takenLaneCombo.Visibility = dealtLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void UpdateReadouts()
@@ -266,8 +269,6 @@ namespace EQLogParser
         FctLabelSide.Right => "right",
         _ => "below",
       };
-
-    private static string Side(FctRegionSide side) => side is FctRegionSide.Right ? "right" : "left";
 
     private static string Up(bool up) => up ? "up" : "down";
 

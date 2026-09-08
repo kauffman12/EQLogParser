@@ -34,12 +34,15 @@ namespace EQLogParser
     /* Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
        the two damage streams learned to answer separately in the same engine pass that made bands steerable. */
     public const string HealSideKey = "FctOverlayHealSide";
+    public const string HealLaneKey = "FctOverlayHealLane";
     public const string HealDirectionKey = "FctOverlayHealDirection";
     public const string TakenDamageSideKey = "FctOverlayTakenDamageSide";
+    public const string TakenDamageLaneKey = "FctOverlayTakenDamageLane";
 
     /* Where the "(source)" label sits by its amount: left, below (the shipped line), or right. */
     public const string LabelSideKey = "FctOverlayLabelSide";
     public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
+    public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
 
     /*
      * Which categories of number the overlay draws at all (the gate in FctIngest): my damage, damage on me, and
@@ -146,23 +149,30 @@ namespace EQLogParser
           ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)));
       }
 
-      var takenSide = ParseSide(ConfigUtil.GetSetting(TakenDamageSideKey, null));
-      return new FctLayoutChoice(FctLayoutMode.ByType, takenSide,
+      /* Lanes are the question now; the old side keys parse through them too ("left" means that side's outer lane), so
+       * an older config lands where it looked. The shipped spread gives each category its own column - outgoing on the
+       * left, what happens to the player on the right, heals just inside that - and leaves left 2 as the first free
+       * lane for anyone who wants five streams. */
+      var healLane = FctRailLanes.Parse(ConfigUtil.GetSetting(HealLaneKey, null) ?? ConfigUtil.GetSetting(HealSideKey, null), FctRailLane.Right1);
+      var takenLane = FctRailLanes.Parse(ConfigUtil.GetSetting(TakenDamageLaneKey, null) ?? ConfigUtil.GetSetting(TakenDamageSideKey, null), FctRailLane.Right2);
+      var dealtLane = FctRailLanes.Parse(ConfigUtil.GetSetting(DealtDamageLaneKey, null) ?? ConfigUtil.GetSetting(DealtDamageSideKey, null), FctRailLane.Left1);
+      return new FctLayoutChoice(FctLayoutMode.ByType, FctRailLanes.SideOf(takenLane),
         ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
         ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)),
-        ParseSide(ConfigUtil.GetSetting(HealSideKey, null)),
+        FctRailLanes.SideOf(healLane),
         ParseUp(ConfigUtil.GetSetting(HealDirectionKey, null)),
-        takenSide,
-        ParseSide(ConfigUtil.GetSetting(DealtDamageSideKey, null)));
+        FctRailLanes.SideOf(takenLane),
+        FctRailLanes.SideOf(dealtLane),
+        healLane, takenLane, dealtLane);
     }
 
     public static void SaveLayout(FctLayoutChoice layout)
     {
       ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
-      ConfigUtil.SetSetting(HealSideKey, layout.HealSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(HealLaneKey, FctRailLanes.Token(layout.HealLane));
       ConfigUtil.SetSetting(HealDirectionKey, layout.HealUp ? "up" : "down");
-      ConfigUtil.SetSetting(TakenDamageSideKey, layout.IncomingDamageSide == FctRegionSide.Right ? "right" : "left");
-      ConfigUtil.SetSetting(DealtDamageSideKey, layout.OutgoingDamageSide == FctRegionSide.Right ? "right" : "left");
+      ConfigUtil.SetSetting(TakenDamageLaneKey, FctRailLanes.Token(layout.IncomingDamageLane));
+      ConfigUtil.SetSetting(DealtDamageLaneKey, FctRailLanes.Token(layout.OutgoingDamageLane));
       ConfigUtil.SetSetting(IncomingDirectionKey, layout.IncomingUp ? "up" : "down");
       ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
     }

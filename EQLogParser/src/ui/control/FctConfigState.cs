@@ -12,12 +12,12 @@ namespace EQLogParser
     public bool Fountain;
     public FctMotionStyle Shape = FctMotionStyle.Parabola;
 
-    /* Split's three categories: which column each owns and which way it travels. */
-    public FctRegionSide HealSide = FctRegionSide.Left;
+    /* Split's three categories: which of the four columns each streams down (FctRailLane) and which way it travels. */
+    public FctRailLane HealLane = FctRailLane.Right1;
     public bool HealUp;
-    public FctRegionSide TakenSide = FctRegionSide.Left;
+    public FctRailLane TakenLane = FctRailLane.Right2;
     public bool TakenUp;
-    public FctRegionSide DealtSide = FctRegionSide.Right;
+    public FctRailLane DealtLane = FctRailLane.Left1;
     public bool DealtUp;
 
     public double Threshold;
@@ -41,7 +41,10 @@ namespace EQLogParser
     internal FctLayoutChoice BuildLayout() => Fountain
       ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp)
       : new FctLayoutChoice(
-          FctLayoutMode.ByType, TakenSide, TakenUp, DealtUp, HealSide, HealUp, TakenSide, DealtSide);
+          FctLayoutMode.ByType, FctRailLanes.SideOf(TakenLane), TakenUp, DealtUp,
+          FctRailLanes.SideOf(HealLane), HealUp,
+          FctRailLanes.SideOf(TakenLane), FctRailLanes.SideOf(DealtLane),
+          HealLane, TakenLane, DealtLane);
 
     internal FctMotionStyle BuildMotion() => Fountain ? FctMotionStyle.Spray : Shape;
 

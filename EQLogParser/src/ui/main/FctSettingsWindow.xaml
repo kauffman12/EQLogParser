@@ -147,28 +147,19 @@
           <ComboBoxItem Content="straight" Tag="straight" />
         </ComboBox>
 
-        <!-- The three categories, alphabetical: side and direction in one cell each. They may all name the same column
-             if that is what somebody wants; fountain has no columns to hand out, so these rows shed their side picks
-             and the heals row steps off entirely. -->
-        <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage to me" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which column incoming damage owns, and which way it travels" />
-        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
-          <ComboBox x:Name="takenSideCombo" Width="84" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="left" Tag="left" />
-            <ComboBoxItem Content="right" Tag="right" />
-          </ComboBox>
-          <ComboBox x:Name="inDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="up" Tag="up" />
-            <ComboBoxItem Content="down" Tag="down" />
-          </ComboBox>
-        </StackPanel>
-
-        <TextBlock x:Name="healsTitle" Grid.Row="3" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which column healing owns, and which way it travels" />
-        <StackPanel x:Name="healsRow" Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
-          <ComboBox x:Name="healSideCombo" Width="84" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="left" Tag="left" />
-            <ComboBoxItem Content="right" Tag="right" />
+        <!-- The three categories, alphabetical: lane and direction in one cell each. Split has four columns — left 1,
+             left 2, right 1, right 2 — and every category names the one it streams down; two categories naming one lane
+             share it as a single stream. The names are exactly what is on screen: placement can no longer invent a
+             column that the settings did not offer. Fountain has no columns to hand out, so these rows shed their lane
+             picks and the heals row steps off entirely. -->
+        <TextBlock x:Name="healsTitle" Grid.Row="2" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which lane healing streams down, and which way it travels" />
+        <StackPanel x:Name="healsRow" Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+          <ComboBox x:Name="healLaneCombo" Width="84" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="left 1" Tag="left1" />
+            <ComboBoxItem Content="left 2" Tag="left2" />
+            <ComboBoxItem Content="right 1" Tag="right1" />
+            <ComboBoxItem Content="right 2" Tag="right2" />
           </ComboBox>
           <ComboBox x:Name="healDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />
@@ -176,12 +167,29 @@
           </ComboBox>
         </StackPanel>
 
-        <TextBlock x:Name="dealtTitle" Grid.Row="4" Text="my damage" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which column your damage owns, and which way it travels" />
+        <TextBlock x:Name="takenTitle" Grid.Row="3" Text="incoming damage" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which lane incoming damage streams down, and which way it travels" />
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+          <ComboBox x:Name="takenLaneCombo" Width="84" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="left 1" Tag="left1" />
+            <ComboBoxItem Content="left 2" Tag="left2" />
+            <ComboBoxItem Content="right 1" Tag="right1" />
+            <ComboBoxItem Content="right 2" Tag="right2" />
+          </ComboBox>
+          <ComboBox x:Name="inDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="up" Tag="up" />
+            <ComboBoxItem Content="down" Tag="down" />
+          </ComboBox>
+        </StackPanel>
+
+        <TextBlock x:Name="dealtTitle" Grid.Row="4" Text="outgoing damage" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which lane outgoing damage streams down, and which way it travels" />
         <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
-          <ComboBox x:Name="dealtSideCombo" Width="84" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="left" Tag="left" />
-            <ComboBoxItem Content="right" Tag="right" />
+          <ComboBox x:Name="dealtLaneCombo" Width="84" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="left 1" Tag="left1" />
+            <ComboBoxItem Content="left 2" Tag="left2" />
+            <ComboBoxItem Content="right 1" Tag="right1" />
+            <ComboBoxItem Content="right 2" Tag="right2" />
           </ComboBox>
           <ComboBox x:Name="outDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />

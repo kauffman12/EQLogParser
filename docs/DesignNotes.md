@@ -744,14 +744,15 @@ not meet the geometry vocabulary to choose between looks. What replaces them:
 **mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
 and spew out and fall, which is the look every classic FCT draws with; its controls are exactly two direction dials, the
 show switches, size and speed. *Split* is the side columns (internally by type) with each category assigned its own
-**side and direction** — heals, damage on me, my damage, six picks, any of them sharing a column — plus **shape:
-parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
+**lane and direction** — heals, incoming damage, outgoing damage, six picks over four columns, any of them sharing a
+lane — plus **shape: parabola | straight**, one rail machinery under both. Controls a mode does not obey collapse rather than sit disabled
 (in fountain there is no side to hand out, no shape to pick, and the threshold steps off too — the minimal UI was the
 point), and the legend re-sentences itself from the staged choice either way.
 
 **settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = split) and
 `FctOverlayShape` ("parabola"/"straight") name the mode; per-category keys carry the rest (`FctOverlayHealDirection`,
-`FctOverlayTakenDamageSide`, `FctOverlayDealtDamageSide` beside the existing side/direction keys). The combos-era
+`FctOverlayTakenDamageLane`, `FctOverlayDealtDamageLane` beside the existing direction keys; the older `…Side` spellings
+still parse, to the side's outer lane). The combos-era
 `FctOverlayLayout` key stops being read — nothing of this shipped, so nothing migrates — and an omitted direction still
 reaches the constructor as *null* so bands keeps its outward invariant without anybody having chosen it. Because the mode
 layer cannot express an illegal combination (fountain cannot store parabola), the load-time legality repair the combos era
@@ -845,6 +846,30 @@ it shares a rail with. Configure mode shows exactly one side-picker per scheme (
 the legend reads `← heals   damage →`, and the parabola is by type's default as it is halves'. `FctByTypeTest` pins the
 ownership both ways, the shared-column traffic (no losses, no seam crossings, alternating head-on), the inertness of the
 heal bit on a halves stage, and the rail running here exactly as in halves.
+
+### Split counts its lanes: left 1, left 2, right 1, right 2
+
+Sides turned out to be half-lies. What a player sees on a split are COLUMNS, and what they ask for is "incoming in that
+column, heals in that one" — but with only halves to configure, placement kept inventing columns on its own: two categories
+sharing a side got woven into neighbouring sub-columns by the burst scorer (measured x = 200, 271, 343 inside one half),
+so the settings said *side* and the screen showed something else, and nobody could predict which column a number would
+use or why two streams refused to share one. `FctRailLane` makes the visible thing the configurable thing: four named
+columns, each owning its quarter of the width outright, and every category names the one it streams down. Categories that
+name the **same** lane genuinely share it — identical region, identical rail beat, chained by the stream like any two hits
+of one category; categories that name different lanes can never touch each other's pixels, because stream neighbours are
+counted by territory overlap and the quarters are disjoint by construction. Directions stay per category: opposite ways
+in a shared lane means trains passing, which was always placement's puzzle to solve.
+
+Two things fall out for free. The old side spellings parse to a side's OUTER lane — whose centre is exactly where that
+half used to be centred — so side-only callers, stored configs and the halves tests land visually unchanged; and the
+panel's words finally match everyone's: **incoming damage** and **outgoing damage**, not "damage to me" and "my damage",
+in the rows, in the categories combo, everywhere a human reads them. The shipped spread puts outgoing in left 1, incoming
+in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 as the first free lane.
+
+The one promise lanes had to keep is that a lane moves as ONE thing: measured, every row on a rail already shares its
+side's beat — procs, words, crits alike (`ApplyRailTempo` knows nothing of categories, which is why it held). Fountain is
+the deliberate exception: there procs stay small and quick (below), because "subordinate" and "same speed as the lane"
+can coexist when the lanes are not the reading instrument.
 
 ### Five motion styles, and the one thing none of them may change
 
@@ -1319,7 +1344,11 @@ procs their own block of cells outright (`FctCellGrid`), which is a stronger ver
 `FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
 together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
 A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
-in slow motion.
+in slow motion. Where the style IS a shared rail though, the discount stops: on parabola and straight a proc crosses at
+exactly its lane's beat, because there the common rate is the whole reading instrument and "same speed as the stream"
+outweighs "gone sooner" - split mode treats a proc as an ordinary value that happens to be small (measured: one beat,
+2 456 ms, for hits, procs and words alike). Fountain keeps the full discount, which is where quick-and-small reads as
+spam exactly the way the log's own noise should.
 
 Neither reduction touches a crit proc, which is the one place where two independent "make it smaller" rules would have
 stacked into a bug. A proc crit is the biggest single number in the log, and reducing both its size and its life would

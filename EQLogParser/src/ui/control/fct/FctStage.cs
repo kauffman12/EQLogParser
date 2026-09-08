@@ -72,13 +72,21 @@ namespace EQLogParser
     /* By type per category: which way healing travels, whatever direction its damage shares a column with. */
     public readonly bool HealUp;
 
+    /* By type per category: which of the four columns each category streams down (FctRailLane). Resolved at construction
+     * — when only a side was given, the side's OUTER lane sits where that half used to be centred — so the stage never
+     * asks which form the settings arrived in. */
+    public readonly FctRailLane HealLane;
+    public readonly FctRailLane IncomingDamageLane;
+    public readonly FctRailLane OutgoingDamageLane;
+
     /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
      * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while
      * halves and by type ship both-down. Tests that built a bands choice with bare positional bools keep the old
      * answers explicitly; only omission changes meaning. */
     public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
       FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
-      FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
+      FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
     {
       var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
 
@@ -91,6 +99,9 @@ namespace EQLogParser
       IncomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
       OutgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
         : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
+      HealLane = healLane ?? FctRailLanes.OfSide(HealSide);
+      IncomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(IncomingDamageSide);
+      OutgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(OutgoingDamageSide);
     }
 
     /*
@@ -106,7 +117,8 @@ namespace EQLogParser
     public FctStage Stage(double w, double h) => Mode switch
     {
       FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp),
-      FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide),
+      FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
+        HealLane, IncomingDamageLane, OutgoingDamageLane),
       _ => FctStage.Halves(IncomingSide, IncomingUp, OutgoingUp, w, h),
     };
   }
@@ -123,12 +135,18 @@ namespace EQLogParser
     private readonly FctRegionSide _incomingDamageSide;
     private readonly FctRegionSide _outgoingDamageSide;
 
+    // By type: the same question one level finer — which of the four columns each category streams down (FctRailLane).
+    private readonly FctRailLane _healLane;
+    private readonly FctRailLane _incomingDamageLane;
+    private readonly FctRailLane _outgoingDamageLane;
+
     public FctLayoutMode Mode => _mode;
     public double W { get; }
     public double H { get; }
 
     private FctStage(FctLayoutMode mode, FctRegionSide incomingSide, FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
-      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
     {
       _mode = mode;
       _incomingSide = incomingSide;
@@ -140,6 +158,9 @@ namespace EQLogParser
       _incomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
       _outgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
         : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
+      _healLane = healLane ?? FctRailLanes.OfSide(_healSide);
+      _incomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(_incomingDamageSide);
+      _outgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(_outgoingDamageSide);
       W = w;
       H = h;
     }
@@ -153,9 +174,13 @@ namespace EQLogParser
     internal static FctStage Halves(FctRegionSide incomingSide, bool incomingUp, bool outgoingUp, double w, double h)
       => new(FctLayoutMode.Halves, incomingSide, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
 
+    /* Lanes are the same ownership question one level finer; callers that pass only sides get each side's outer lane,
+     * which is centred where that half always has been. */
     internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
-      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null)
-      => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h, healUp, incomingDamageSide, outgoingDamageSide);
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+      => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h, healUp, incomingDamageSide, outgoingDamageSide,
+        healLane, incomingDamageLane, outgoingDamageLane);
 
     /*
      * The rect that owns a side's numbers. Bands: the whole canvas (the bands inside it are FctLayout's business).
@@ -185,15 +210,21 @@ namespace EQLogParser
      * the territory (FctStream's rows count neighbours by range, not by direction).
      */
     public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit) => _mode is FctLayoutMode.ByType
-      ? SideOf(CategorySide(hit)) == FctRegionSide.Left ? (0, 0, W / 2, H) : (W / 2, 0, W / 2, H)
+      ? LaneRect(CategoryLane(hit))
       : RegionFor(hit.Incoming);
 
-    /* Which side a number's category was assigned: healing one side, each damage stream its own — three answers, and
-     * any of them may name the same column; sharing is what flight-scored placement is for. */
-    private FctRegionSide CategorySide(FctHitState hit) =>
-      hit.Heal ? _healSide : hit.Incoming ? _incomingDamageSide : _outgoingDamageSide;
+    /* Which column a number's category owns: four named lanes, each holding its quarter of the width outright.
+     * Categories that choose the SAME lane share it as one stream — which is the point; categories that choose
+     * different lanes can never be woven into each other's pixels. (Before lanes existed by type answered this with
+     * halves and placement quietly invented sub-columns; see FctRailLane.) */
+    private FctRailLane CategoryLane(FctHitState hit) =>
+      hit.Heal ? _healLane : hit.Incoming ? _incomingDamageLane : _outgoingDamageLane;
 
-    private static FctRegionSide SideOf(FctRegionSide side) => side;
+    private (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
+    {
+      var quarter = W / 4;
+      return (FctRailLanes.Index(lane) * quarter, 0, quarter, H);
+    }
 
     /* Territory for a number: see RegionFor(hit). Bands measures amplitude against the whole canvas either way. */
     public double TerritoryFor(FctHitState hit) => _mode is FctLayoutMode.Bands ? W : RegionFor(hit).Width;

@@ -163,8 +163,42 @@ namespace EQLogParser
       Assert.AreEqual(halves.RegionFor(false).X, halves.RegionFor(outgoingHeal).X, "halves again, from the other direction");
 
       Assert.AreEqual(stage.RegionFor(true, true).X, stage.RegionFor(false, true).X, "by type ignores direction entirely");
-      Assert.AreEqual(stage.RegionFor(false, true).X, stage.RegionFor(incomingHeal).X, "every healing number gets the category column whatever its direction");
-      Assert.AreEqual(stage.RegionFor(false, true).X, stage.RegionFor(outgoingHeal).X, "including the one the other train belongs to");
+
+      /* Per-hit regions now answer in lanes (FctRailLane); the bool overload still answers in halves because the
+       * cell grid — its only other caller — does not know categories. Both questions describe the same column, so
+       * the healing lane must sit inside the healing half, and every healing number must land in it. */
+      var healColumn = stage.RegionFor(incomingHeal);
+      Assert.AreEqual(healColumn.X, stage.RegionFor(outgoingHeal).X, "every healing number gets the category column whatever its direction");
+      Assert.AreEqual(Width - Width / 4, healColumn.X, "a lane-less choice falls back to its side's outer column");
+      Assert.IsTrue(healColumn.Width <= Width / 2 && healColumn.X >= Width / 2, "the healing lane sits inside the healing half");
+    }
+
+    /* The four lanes are what the panel offers, so they are what the geometry answers: four quarters, disjoint by
+     * construction — two categories in different lanes can never be woven into each other's pixels. */
+    [TestMethod]
+    public void TheFourLanesAreDisjointQuarters()
+    {
+      var stage = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Right1, incomingDamageLane: FctRailLane.Right2, outgoingDamageLane: FctRailLane.Left1)
+        .Stage(800, 560);
+
+      var dealt = stage.RegionFor(new FctHitState { Lane = FctLane.DamageDealt });
+      var taken = stage.RegionFor(new FctHitState { Lane = FctLane.DamageTaken, Incoming = true });
+      var heal = stage.RegionFor(new FctHitState { Lane = FctLane.HealingReceived, Incoming = true, Heal = true });
+
+      Assert.AreEqual(0, (int)dealt.X, "left 1 is the far-left quarter");
+      Assert.AreEqual(400, (int)heal.X, "right 1 is the inner-right quarter");
+      Assert.AreEqual(600, (int)taken.X, "right 2 is the far-right quarter");
+      Assert.IsTrue(dealt.X + dealt.Width <= taken.X && heal.X + heal.Width <= taken.X,
+        "different lanes can never share pixels — that was the whole point");
+
+      /* Same lane means one stream: two categories naming one column get identical regions. */
+      var shared = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Left2, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Left2)
+        .Stage(800, 560);
+      Assert.AreEqual(shared.RegionFor(new FctHitState { Lane = FctLane.DamageDealt }).X,
+        shared.RegionFor(new FctHitState { Lane = FctLane.HealingReceived, Incoming = true, Heal = true }).X,
+        "categories that name one lane share it as one stream");
     }
   }
 }
