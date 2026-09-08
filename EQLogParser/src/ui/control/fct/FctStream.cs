@@ -40,6 +40,18 @@ namespace EQLogParser
       var cx = region.X + (region.Width / 2);
       var edgeY = stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY;
 
+      /* The line is a line, and lines do not braid sideways: crowding a straight row into an emergency column parks it
+       * tens of pixels beside the stream forever — which is exactly why misses and parries drifted in their own offset
+       * mini-column while resists, rare enough to always find the mouth clear, sat on the centre. A crowded line row
+       * steps INTO its travel instead: entering one text line further along the same column. The shared scroll rate
+       * locks whatever gap existed at spawn for the whole flight, so a same-frame pair passes as two cleanly separated
+       * rows one line ahead of the other, and the sideways columns drop to what they should be: a valve for bursts
+       * past the line's throughput, not where an ordinary fight parks its words (PlaceLine). */
+      if (hit.Style is FctMotionStyle.Straight)
+      {
+        return PlaceLine(hit, hits, stage, rand, cx, edgeY);
+      }
+
       var price = DrawnHalf(hit);
       for (var i = 0; i < hits.Count; i++)
       {
@@ -106,5 +118,59 @@ namespace EQLogParser
      * way an ordinary number gets wide (pulse never runs here; blowout is the crit pop, priced the same way
      * FctLayout.Spawn prices its own side clamp). */
     private static double DrawnHalf(FctHitState h) => (h.ValueWidth * (h.Blowout ? FctMotion.CritPeakScale : 1.0)) / 2.0;
+
+    /* The same price vertically: a line step has to clear the tallest row this stream can draw, not just this one's. */
+    private static double DrawnHeight(FctHitState h) => FctLayout.TextHeight(h) * (h.Blowout ? FctMotion.CritPeakScale : 1.0);
+
+    /*
+     * Straight's candidates, cheapest-first: the mouth, then one text line deeper along the column up to five deep,
+     * and only after those the sideways emergency columns the parabola uses. The scorer is time-aware (shared-life
+     * sampling, FctPlacement.Cost), so a depth step is scored as what it is — the same flight starting further along,
+     * colliding only with rows actually there — and at any traffic a line can carry the vertical slots are free or
+     * nearly so, which keeps whole categories from being pushed permanently beside their stream. Sideways stays as
+     * overflow because past throughput there is no room anywhere on the line: rows spawning faster than they scroll
+     * must overlap somewhere, and a clean second column reads better than two numbers printed on each other. Real
+     * fights sit far below that (a swing every second against ~5 rows/s of lane throughput); the columns are the
+     * burst valve, not the commute. Nothing is ever dropped for want of room.
+     */
+    private static FctHitState PlaceLine(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand, double cx, double edgeY)
+    {
+      var vPrice = DrawnHeight(hit);
+      var price = DrawnHalf(hit);
+      for (var i = 0; i < hits.Count; i++)
+      {
+        if (hits[i].SideMax < hit.SideMin || hits[i].SideMin > hit.SideMax)
+        {
+          continue;
+        }
+
+        vPrice = Math.Max(vPrice, DrawnHeight(hits[i]));
+        price = Math.Max(price, DrawnHalf(hits[i]));
+      }
+
+      // deeper along the travel = further from the spawn edge, toward the end the row scrolls out of
+      var into = stage.UpFor(hit) > 0 ? -1.0 : 1.0;
+      var stepY = (2.0 * vPrice) + MinRowGap;
+
+      const int DepthSteps = 5;
+      var step = (price * 2) + ColumnGap;
+      var span = cx - (hit.SideMin + price);
+      if (span < 2 * step)
+      {
+        step = Math.Max(0, span) / 2;
+      }
+
+      var origins = new (double X, double Y)[DepthSteps + 2];
+      for (var s = 0; s < DepthSteps; s++)
+      {
+        origins[s] = (cx, edgeY + (into * s * stepY));
+      }
+
+      // the burst valve: one step to each side at the mouth, priced like the parabola's emergency columns
+      origins[DepthSteps] = (cx - step, edgeY);
+      origins[DepthSteps + 1] = (cx + step, edgeY);
+
+      return FctPlacement.PlaceOrigins(hit, hits, stage, rand, origins, cx, edgeY, MinRowGap);
+    }
   }
 }

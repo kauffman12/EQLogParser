@@ -180,12 +180,22 @@ namespace EQLogParser
     }
 
     /* One scored candidate: the layout's own spawn at a requested origin, with its fall recomputed because the
-     * fall belongs to the travel and a new origin is new travel. */
+     * fall belongs to the travel and a new origin is new travel — and with a rail's tempo restamped for the same
+     * reason. A rail trial asked to enter deep has a shorter flight; scoring it on the duration stamped for the
+     * mouth would make it crawl, and every row behind it would overtake it in the sample — which is precisely how
+     * depth entries were priced into certain collisions (cost 1.0) and pushed sideways. */
     private static FctHitState Trial(FctHitState hit, FctStage stage, Random rand, double x, double y)
     {
       var trial = hit.Clone();
       FctLayout.Spawn(trial, stage, rand, origin: (x, y));
       FctLayout.ApplyFall(trial, stage);
+      if (FctMotionStyles.IsRail(trial.Style))
+      {
+        // the same stamp a finished row gets — live neighbours carry their final tempo, and scoring a trial on the
+        // raw estimate would rate it against the traffic as if it moved at some other speed than it really will
+        FctIngest.FinalizeRailTempo(trial);
+      }
+
       return trial;
     }
 

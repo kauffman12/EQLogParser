@@ -46,7 +46,10 @@ namespace EQLogParser
           FctRailLanes.SideOf(TakenLane), FctRailLanes.SideOf(DealtLane),
           HealLane, TakenLane, DealtLane);
 
-    internal FctMotionStyle BuildMotion() => Fountain ? FctMotionStyle.Spray : Shape;
+    /* The mode clamps the shape, not a branch that ignores it: fountain sprays or settles, the columns scroll. A state
+     * assembled from stale settings resolves to its mode's own motion instead of shipping one the engine would degrade. */
+    internal FctMotionStyle BuildMotion() =>
+      FctOverlaySettings.ClampShape(Fountain ? FctLayoutMode.Bands : FctLayoutMode.ByType, Shape);
 
     internal FctConfigState Clone() => (FctConfigState)MemberwiseClone();
   }

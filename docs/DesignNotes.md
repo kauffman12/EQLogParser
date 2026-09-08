@@ -742,22 +742,32 @@ and the motion combo (hold/fountain/pulse/spray/parabola) are gone — retired r
 not meet the geometry vocabulary to choose between looks. What replaces them:
 
 **mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
-and spew out and fall, which is the look every classic FCT draws with; its controls are exactly two direction dials, the
-show switches, size and speed. *Split* is the side columns (internally by type) with each category assigned its own
-**lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing a lane —
-plus **shape: parabola | straight | settle** — the first two one rail machinery, settle the original drift-stop-fade
-behaviour brought back (below). Controls a mode does not obey collapse rather than sit disabled
-(in fountain there is no side to hand out, no shape to pick, and the threshold steps off too — the minimal UI was the
-point), and the legend re-sentences itself from the staged choice either way.
+and spew out and fall, which is the look every classic FCT draws with; its controls are a shape pick of **spray | settle**
+— spray being what makes it a fountain, settle the same bands drifting their numbers out to rest instead — plus two
+direction dials, the show switches, size and speed. *Split* is the side columns (internally by type) with each category
+assigned its own **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing
+a lane — plus **shape: parabola | line | settle**, the first two one rail machinery and settle the original
+drift-stop-fade behaviour brought back (below). Controls a mode does not obey collapse rather than sit disabled
+(in fountain there is no side to hand out and the threshold steps off too — the minimal UI was the point), and the
+legend re-sentences itself from the staged choice either way. The shape row serves both modes with **two combos in one
+cell** rather than one list of illegal promises: WPF items cannot live in two lists, and a scheme should never show a
+motion it would only degrade, so each mode owns its list and the mode swap shows one.
 
 **settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = split) and
-`FctOverlayShape` ("parabola"/"straight") name the mode; per-category keys carry the rest (`FctOverlayHealDirection`,
+`FctOverlayShape` ("parabola"/"line"/"spray"/"hold"; the retired "straight" spelling still reads) name the mode;
+per-category keys carry the rest (`FctOverlayHealDirection`,
 `FctOverlayTakenDamageLane`, `FctOverlayDealtDamageLane` beside the existing direction keys; the older `…Side` spellings
 still parse, to the side's outer lane). The combos-era
 `FctOverlayLayout` key stops being read — nothing of this shipped, so nothing migrates — and an omitted direction still
 reaches the constructor as *null* so bands keeps its outward invariant without anybody having chosen it. Because the mode
 layer cannot express an illegal combination (fountain cannot store parabola), the load-time legality repair the combos era
-needed is gone too: there is nothing left to fix up.
+needed is gone too: there is nothing left to fix up. `FctOverlaySettings.ClampShape` is where that promise lives, so a
+stale key, a hand-edited ini or a half-built state resolves to the mode's own motion — fountain cannot even accidentally
+run a rail.
+
+**Two words the players own.** The rail without the bend is **line**; the drift-stop-fade style is **settle**. The panel,
+the ini ("line") and the tooltips say those words; the engine keeps `Straight` (MSBT's name, and what the geometry tests
+assert) and `Hold` (its own, from the animation hold). Same layering as fountain/split over bands/by type.
 
 Engine names stay where geometry carries tests: `FctLayoutMode.Bands`/`ByType`, `FctMotionStyle.Spray`/`Parabola`/
 `Straight`, hold and pulse included for whoever asks next. The words "halves" and "bands" are now implementation detail
@@ -768,8 +778,8 @@ and a documentation sentence, not a UI state.
 The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;
 two direction dials, the show switches, size, speed; nothing else) and **split** (the side columns, with each category —
 healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **parabola** and
-**straight**). The modes are a settings slice; three engine facts had to exist first, and each says goodbye to an old
-shortcut:
+**straight** — since grown into parabola | line | settle). The modes are a settings slice; three engine facts had to
+exist first, and each says goodbye to an old shortcut:
 
 **Directions became per-category.** `FctLayoutChoice` gained `HealUp`, `IncomingDamageSide`, and `OutgoingDamageSide`:
 the side and the way a number travels now follow *what it is*, so healing can rise on the right while damage on the same
@@ -784,10 +794,18 @@ project inherited from itself, not a law — the protected strip stays protected
 the band's own edges whatever sign they run at.
 
 **`Straight` is a rail style, not new choreography.** MSBT ships Straight next to Parabola, and it is exactly what it
-looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one rate per rail, stream columns
-and braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is
-now the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
-silently. Bands degrades both rail styles to hold exactly as it degraded the parabola.
+looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one rate per rail, stream columns and
+braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is now
+the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
+silently. Braiding itself splits by shape though, because sideways means something different on each: a parabola crowds
+into emergency columns beside its stream (bows sweep across them, so they read as part of the dance), while **a line
+steps INTO its travel** — a row denied the mouth enters one text line further along the same column. Sideways offsets on
+straight parked whole categories beside the stream permanently, which is exactly how misses and parries ended up in their
+own little column every fight (frequent enough to always be crowded) while resists sat centre (rare enough never to be).
+With a shared scroll rate the spawn-time gap locks for the whole flight, so crowded line rows read as one queue that
+entered slightly staggered. Sideways columns stay underneath as the valve for past-throughput storms — a clean second
+ column during a burst beats two numbers printed on each other, and no number is ever dropped — but they are no longer
+ where an ordinary fight parks its words (`FctStream.PlaceLine`). Bands degrades both rail styles to hold exactly as it degraded the parabola.
 
 ### Category switches: what story an overlay tells
 

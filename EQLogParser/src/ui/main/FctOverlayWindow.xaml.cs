@@ -318,7 +318,7 @@ namespace EQLogParser
          legality fix-up for bands-plus-parabola — belonged to the combos era: the mode layer cannot store an illegal
          combination in the first place, so there is nothing left to repair on load. */
       _savedLayout = FctOverlaySettings.LoadLayout();
-      _savedStyle = _savedLayout.Mode is FctLayoutMode.Bands ? FctMotionStyle.Spray : FctOverlaySettings.LoadShape();
+      _savedStyle = FctOverlaySettings.LoadShapeFor(_savedLayout.Mode);
       _canvas.MotionStyle = _savedStyle;
       _canvas.Layout = _savedLayout;
 
@@ -516,7 +516,7 @@ namespace EQLogParser
     private FctConfigState StagedState() => new()
     {
       Fountain = _savedLayout.Mode is FctLayoutMode.Bands,
-      Shape = _savedStyle is FctMotionStyle.Straight ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
+      Shape = FctOverlaySettings.ClampShape(_savedLayout.Mode, _savedStyle),
       HealLane = _savedLayout.HealLane,
       HealUp = _savedLayout.HealUp,
       TakenLane = _savedLayout.IncomingDamageLane,

@@ -74,7 +74,12 @@ namespace EQLogParser
       _loading = true;
 
       SelectByTag(modeCombo, state.Fountain ? "fountain" : "split");
-      SelectByTag(shapeCombo, FctOverlaySettings.Name(state.Shape));
+
+      /* Each mode reads its shape from its own combo, so both get selected — the hidden one to its mode's default,
+       * which is also what a mode switch mid-configure will offer first. */
+      SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight or FctMotionStyle.Hold
+        ? FctOverlaySettings.Name(state.Shape) : "parabola");
+      SelectByTag(sprayCombo, state.Fountain && state.Shape is FctMotionStyle.Hold ? "hold" : "spray");
       SelectByTag(healLaneCombo, FctRailLanes.Token(state.HealLane));
       SelectByTag(healDirCombo, Up(state.HealUp));
       SelectByTag(takenLaneCombo, FctRailLanes.Token(state.TakenLane));
@@ -105,16 +110,19 @@ namespace EQLogParser
 
     private FctConfigState Snapshot()
     {
+      var fountain = ComboTag(modeCombo) == "fountain";
       var state = new FctConfigState
       {
-        Fountain = ComboTag(modeCombo) == "fountain",
-        Shape = ComboTag(shapeCombo) switch
-        {
-          "straight" => FctMotionStyle.Straight,
-          // the panel's word is settle; the engine's old name for the drift-stop-fade style rides in the Tag
-          "hold" => FctMotionStyle.Hold,
-          _ => FctMotionStyle.Parabola,
-        },
+        Fountain = fountain,
+        // the panels' words are line and settle; the engine's older names (Straight, Hold) ride in the Tags
+        Shape = fountain
+          ? ComboTag(sprayCombo) == "hold" ? FctMotionStyle.Hold : FctMotionStyle.Spray
+          : ComboTag(shapeCombo) switch
+          {
+            "line" => FctMotionStyle.Straight,
+            "hold" => FctMotionStyle.Hold,
+            _ => FctMotionStyle.Parabola,
+          },
         HealLane = FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane),
         HealUp = ComboTag(healDirCombo) == "up",
         TakenLane = FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane),
@@ -245,16 +253,17 @@ namespace EQLogParser
     /*
      * Fountain keeps the always-applies block untouched — shows, label, threshold and dials are statements about
      * numbers, not layout, and the engine never treated them otherwise — and thins the layout block to what it can
-     * actually obey: shape (spray is not a choice), healing's column (bands has none to hand out) and both side picks
-     * step off; the two travel directions stay. Collapsed, never disabled: a control that changes nothing in the mode
-     * you are in is what configure mode was cleaned up to stop showing at all.
+     * actually obey: healing's column (bands has none to hand out) and both side picks step off, and the shape picker
+     * swaps lists instead of disappearing — fountain shapes are spray and settle, never a rail it would only degrade.
+     * Collapsed, never disabled: a control that changes nothing in the mode you are in is what configure mode was
+     * cleaned up to stop showing at all.
      */
     private void ApplyModeVisibility()
     {
       var fountain = ComboTag(modeCombo) == "fountain";
 
-      shapeTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       shapeCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+      sprayCombo.Visibility = fountain ? Visibility.Visible : Visibility.Collapsed;
       healsTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       healsRow.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       takenLaneCombo.Visibility = dealtLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;

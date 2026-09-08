@@ -140,11 +140,18 @@
           <ComboBoxItem Content="split" Tag="split" />
         </ComboBox>
 
+        <!-- One shape row serves both modes, but the two modes pick from different lists: WPF items cannot live in two
+             combos at once, so there are two combos sharing this cell and the mode swap shows one. The illegal shapes
+             for a mode are never even choices in it - a scheme cannot store a motion it would only degrade. -->
         <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="parabola: numbers scroll to the far edge, bending sideways as they go. straight: the same train without the bend. settle: numbers drift out, stop, and stay readable until they fade" />
+                   ToolTip="how numbers move: parabola and line scroll to the far edge (with or without the bend); spray fans out and falls; settle drifts out, stops, and stays readable until it fades" />
         <ComboBox x:Name="shapeCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="parabola" Tag="parabola" />
-          <ComboBoxItem Content="straight" Tag="straight" />
+          <ComboBoxItem Content="line" Tag="line" />
+          <ComboBoxItem Content="settle" Tag="hold" />
+        </ComboBox>
+        <ComboBox x:Name="sprayCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" Visibility="Collapsed" SelectionChanged="ControlChanged">
+          <ComboBoxItem Content="spray" Tag="spray" />
           <ComboBoxItem Content="settle" Tag="hold" />
         </ComboBox>
 

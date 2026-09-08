@@ -122,7 +122,7 @@ namespace EQLogParser
 
       var hits = new List<FctHitState>();
       double now = 0, rate = 0;
-      var rows = new (FctLane Lane, double Value, bool Proc, string Text)[]
+      var rows = new (FctLane Lane, double Value, bool Proc, string? Text)[]
       {
         (FctLane.DamageDealt, 1500, false, null),
         (FctLane.DamageDealt, 350, true, null),          // proc: smaller, same rate
@@ -145,6 +145,56 @@ namespace EQLogParser
         }
 
         Assert.AreEqual(rate, pxPerSecond, 1e-9, $"{lane} crosses at the stream's one rate, not its own");
+      }
+    }
+
+    /* A line never parks a whole category beside itself. The old sideways braid pushed the steady stream of misses and
+     * parries into permanent offset mini-columns every fight, while resists -- rare enough to always find the mouth
+     * clear -- sat centre, which is exactly what players read as miss/parry being "offset". Crowding now steps INTO
+     * the travel first, so at any rate a real fight sustains every value holds its lane's centre X, words included,
+     * and a same-frame burst still never prints two rows into one entrance. Overflow columns survive underneath for
+     * past-throughput storms (no number is ever dropped): that valve belongs to bursts, not to the commute. */
+    [TestMethod]
+    public void CrowdedLinesStepAlongThemselvesBeforeSideways()
+    {
+      var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Straight };
+      var hits = new List<FctHitState>();
+
+      for (var round = 0; round < 12; round++)
+      {
+        // fighting pace: a swing a second, each answered by damage or a word, sometimes on the same frame
+        var now = round * 1000;
+        Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 300 + round, "Flurry", false, false, false, null, Width, Height, now));
+        Assert.IsNotNull(ingest.Accept(hits, FctLane.Missed, 0, "Flurry", false, false, false,
+          round % 2 == 0 ? Labels.Miss : Labels.Parry, Width, Height, now + 30));
+      }
+
+      var centre = hits[0].X0;
+      foreach (var hit in hits)
+      {
+        Assert.AreEqual(centre, hit.X0, 1e-9, "at fighting speed every row holds the line: crowding steps along travel, not sideways");
+      }
+
+      // and a same-frame triple on top of it all still finds three separate entrances
+      var before = hits.Count;
+      // crits for the burst: they neither absorb nor fold (their policy is pinned elsewhere), so all three really do
+      // demand entrances in one instant — which is exactly the placement question this asserts
+      Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 999, "Flurry", true, false, false, null, Width, Height, 12000));
+      Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 888, "Flurry", true, false, false, null, Width, Height, 12000));
+      Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 777, "Flurry", true, false, false, null, Width, Height, 12000));
+
+      var burst = hits.Skip(before).ToList();
+      foreach (var a in burst)
+      {
+        foreach (var b in burst)
+        {
+          if (ReferenceEquals(a, b))
+          {
+            continue;
+          }
+
+          Assert.IsTrue(Math.Abs(a.Y0 - b.Y0) > 1.0 || Math.Abs(a.X0 - b.X0) > 1.0, "two numbers never share an entrance");
+        }
       }
     }
   }

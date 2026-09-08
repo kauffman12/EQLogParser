@@ -15,8 +15,8 @@ namespace EQLogParser
 
     /*
      * The two modes the configure row offers, over the engine's three schemes: fountain is bands geometry wearing spray
-     * motion (numbers spew out of a clear middle; its only settings are the two direction dials), and split is the side
-     * columns with a shape — parabola or straight. Engine names stay where the geometry is tested; ini speaks the words
+     * motion (numbers spew out of a clear middle — spray or settle, plus the two direction dials), and split is the side
+     * columns with a shape — parabola, line or settle. Engine names stay where the geometry is tested; ini speaks the words
      * the player chose. The retired FctOverlayLayout key ("halves"/"bytype"/"bands") belonged to the layout+motion combos
      * this replaced and is no longer read — nothing shipped, so nothing migrates.
      */
@@ -183,24 +183,38 @@ namespace EQLogParser
 
     public static void SaveIsFountain(bool fountain) => ConfigUtil.SetSetting(ModeKey, fountain ? "fountain" : "split");
 
-    /* split's shape: parabola | straight | hold (the panel calls the last one "settle" — the drift-stop-fade style
-     * that predates the style axis itself, named for an animation hold). Everything else in settings carries a full
-     * FctMotionStyle elsewhere; this key stays within split's three, and anything unknown lands back on parabola. */
+    /* The shape both modes pick from, one key: split chooses parabola | line | hold, fountain chooses spray | hold
+     * (the panel calls Hold "settle" — the drift-stop-fade style that predates the style axis itself, named for an
+     * animation hold; and "line" is what players call the unbent rail, though the engine still says Straight).
+     * Anything unknown lands back on parabola. The retired "straight" spelling still reads: it is the same rail. */
     public static FctMotionStyle LoadShape() =>
       ConfigUtil.GetSetting(ShapeKey, null) switch
       {
+        string s when string.Equals(s, "line", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Straight,
         string s when string.Equals(s, "straight", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Straight,
         string s when string.Equals(s, "hold", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Hold,
+        string s when string.Equals(s, "spray", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Spray,
         _ => FctMotionStyle.Parabola,
       };
 
     public static void SaveShape(FctMotionStyle shape) =>
       ConfigUtil.SetSetting(ShapeKey, shape switch
       {
-        FctMotionStyle.Straight => "straight",
+        FctMotionStyle.Straight => "line",
         FctMotionStyle.Hold => "hold",
+        FctMotionStyle.Spray => "spray",
         _ => "parabola",
       });
+
+    /* A mode cannot store a shape it would only degrade, and this is where that promise is kept: bands (fountain) knows
+     * spray and settle; the column schemes know parabola, line and settle. Stale keys, half-finished states and any
+     * other mismatch resolve to the mode's own default instead of riding in as an illegal combination. */
+    internal static FctMotionStyle ClampShape(FctLayoutMode mode, FctMotionStyle shape) =>
+      mode is FctLayoutMode.Bands
+        ? shape is FctMotionStyle.Hold ? FctMotionStyle.Hold : FctMotionStyle.Spray
+        : shape is FctMotionStyle.Straight or FctMotionStyle.Hold ? shape : FctMotionStyle.Parabola;
+
+    internal static FctMotionStyle LoadShapeFor(FctLayoutMode mode) => ClampShape(mode, LoadShape());
 
     /*
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
@@ -261,7 +275,7 @@ namespace EQLogParser
         FctMotionStyle.Pulse => "pulse",
         FctMotionStyle.Spray => "spray",
         FctMotionStyle.Parabola => "parabola",
-        FctMotionStyle.Straight => "straight",
+        FctMotionStyle.Straight => "line",
         _ => "hold",
       };
 
