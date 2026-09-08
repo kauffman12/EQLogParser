@@ -112,7 +112,7 @@ namespace EQLogParser
 
       // value, crit, proc: the rail does not care, and neither do these asserts
       var spawns = new[] { (value: 1001.0, crit: false, proc: false), (value: 9001.0, crit: true, proc: false), (value: 604.0, crit: false, proc: true) };
-      double entry = 0, endpoint = 0, beat = 0, size = 0;
+      double entry = 0, endpoint = 0, rate = 0, size = 0;
 
       for (var i = 0; i < spawns.Length; i++)
       {
@@ -127,12 +127,17 @@ namespace EQLogParser
         {
           entry = hit.Y0;
           endpoint = FctMotion.RaisedY(hit, 1.0);
-          beat = hit.MotionMs;
+          rate = Math.Abs(hit.Rise) / hit.MotionMs;
           size = hit.ValueFontSize;
         }
 
         Assert.AreEqual(entry, hit.Y0, 1e-9, $"one entrance: value {value} starts where the first one started");
-        Assert.AreEqual(beat, hit.MotionMs, 1e-9, $"one beat: value {value} cannot run to a private tempo");
+
+        /* One SCROLL RATE, not one duration: each row's time is its own travel over the shared px-per-second, so a
+         * crit (bigger text, less road left between the reserves) crosses at exactly the speed a miss word does.
+         * A shared DURATION across different travels was the per-category speed difference players saw. */
+        Assert.AreEqual(rate, Math.Abs(hit.Rise) / hit.MotionMs, 1e-9,
+          $"one rate: value {value} cannot run to a private tempo");
 
         if (hit.ValueFontSize == size)
         {

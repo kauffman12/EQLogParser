@@ -107,5 +107,45 @@ namespace EQLogParser
         Assert.IsTrue(hit.X0 > Width / 2, "every category was assigned the right column");
       }
     }
+
+    /* The promise split makes to the eye: ONE scroll rate for every kind of number, whatever its size, direction or
+     * text. Damage, a proc, a miss word, a resist word, damage taken and healing — the sizes differ (procs and words
+     * are drawn smaller, each reserving less road) and the directions differ, and none of that may show as speed. */
+    [TestMethod]
+    public void SplitMovesEveryCategoryAtOneRate()
+    {
+      var ingest = new FctIngest(new Random(11))
+      {
+        Style = FctMotionStyle.Parabola,
+        Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp: true, outgoingUp: false, healUp: true),
+      };
+
+      var hits = new List<FctHitState>();
+      double now = 0, rate = 0;
+      var rows = new (FctLane Lane, double Value, bool Proc, string Text)[]
+      {
+        (FctLane.DamageDealt, 1500, false, null),
+        (FctLane.DamageDealt, 350, true, null),          // proc: smaller, same rate
+        (FctLane.Missed, 0, false, Labels.Miss),         // words: smallest, same rate
+        (FctLane.Defensive, 0, false, Labels.Resist),
+        (FctLane.DamageTaken, 800, false, null),         // the other direction, same rate
+        (FctLane.HealingReceived, 900, false, null),
+      };
+
+      foreach (var (lane, value, proc, text) in rows)
+      {
+        var hit = ingest.Accept(hits, lane, value, "Test", false, false, false, text, Width, Height, now += 500, proc);
+        Assert.IsNotNull(hit, $"{lane} belongs on the screen");
+
+        var pxPerSecond = Math.Abs(hit.Rise) / hit.MotionMs;
+        if (rate == 0)
+        {
+          rate = pxPerSecond;
+          continue;
+        }
+
+        Assert.AreEqual(rate, pxPerSecond, 1e-9, $"{lane} crosses at the stream's one rate, not its own");
+      }
+    }
   }
 }

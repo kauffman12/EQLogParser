@@ -262,6 +262,9 @@ namespace EQLogParser
          * keeps opposing trains from wearing the same pixels.
          */
         hit = FctStream.Place(hit, hits, stage, _rand);
+
+        /* The row now knows how far it actually travels; the stream's one rate is only true of final flights. */
+        FinalizeRailTempo(hit);
       }
       else
       {
@@ -452,18 +455,46 @@ namespace EQLogParser
     }
 
     /*
-     * The rail's tempo: how long a stream row takes to cross its half. Computed from the region's height rather than any
-     * one row's Rise — rows of different font sizes travel slightly different distances (each reserves room for its own
-     * height at both ends) and a SHARED beat keeps their bows, and so their column spacing, identical for the whole
-     * flight; the few percent of speed difference between the biggest and smallest text is the part MSBT never lets you
-     * notice either. Rows that parked at end of travel would all park in one place and the centre column would become a
-     * queue for a parking space (FctStream): motion spans the life, so nothing parks. The stream applies it BEFORE
-     * scoring candidate columns, because the candidates are whole flights and a trial cloned without a lifetime is
-     * a flight that already ended — every column would read as empty (which is exactly how this was first missed).
+     * The rail's tempo: ONE SCROLL RATE for everything in split — damage, procs, crits, words, both directions.
+     * It is a rate, not a duration: each row's time is its own travel (edge to edge minus the room it reserves for
+     * its own height — a crit gives up more road than a miss word does) over the shared px-per-second. The first
+     * version shared a DURATION computed from the region instead, which is precisely a per-category speed difference:
+     * measured 195.6 px/s for damage against 201.8 for words and slower still for crits, and players read it —
+     * correctly — as the streams not agreeing. A shared rate costs almost nothing and keeps every chain property the
+     * stream relies on: two rows a beat apart keep that gap of road forever BECAUSE they move at one rate; bows run
+     * their own parabolas, and flight-scored placement measures real flights rather than assuming identical phases.
+     * Rows that parked at end of travel would all park in one place and the centre column would become a queue for a
+     * parking space (FctStream): motion spans the life, so nothing parks. The stream applies it BEFORE scoring
+     * candidate columns, because the candidates are whole flights and a trial cloned without a lifetime is a flight
+     * that already ended — every column would read as empty (which is exactly how this was first missed).
      */
     internal static void ApplyRailTempo(FctHitState hit, FctStage stage)
     {
-      hit.LifetimeMs = stage.RegionFor(hit).Height * FctMotion.ParabolaScrollMsPerPx;
+      var travel = Math.Abs(hit.Rise);
+      hit.LifetimeMs = (travel > 1.0 ? travel : stage.RegionFor(hit).Height) * FctMotion.ParabolaScrollMsPerPx;
+      hit.MotionMs = hit.LifetimeMs;
+      hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
+
+      /* No player tempo here: placement is about to decide this row's real travel, and FinalizeRailTempo restamps
+       * everything once and exactly one time with it. Scaling the estimate here would compound with that. */
+    }
+
+    /*
+     * The rail's EXACT tempo, stamped after placement has pinned the row on its edge. The tempo that candidate
+     * columns were scored with ran on a provisional Rise — respawning the row at its edge happens inside placement —
+     * and "every number in split crosses at one speed" is a statement about the real flight, not the estimate: with
+     * the shared estimate left in place, rows measured 229-257 px/s against each other. Recomputed from the final
+     * travel over the shared scroll rate, then scaled once by the player's speed dial; an assignment rather than a
+     * multiplier, so nothing compounds however often placement passes through.
+     */
+    internal static void FinalizeRailTempo(FctHitState hit)
+    {
+      if (!FctMotionStyles.IsRail(hit.Style) || Math.Abs(hit.Rise) <= 1.0)
+      {
+        return;
+      }
+
+      hit.LifetimeMs = Math.Abs(hit.Rise) * FctMotion.ParabolaScrollMsPerPx;
       hit.MotionMs = hit.LifetimeMs;
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
       ApplyPlayerTempo(hit);

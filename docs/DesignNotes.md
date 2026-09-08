@@ -783,7 +783,7 @@ project inherited from itself, not a law — the protected strip stays protected
 the band's own edges whatever sign they run at.
 
 **`Straight` is a rail style, not new choreography.** MSBT ships Straight next to Parabola, and it is exactly what it
-looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one beat per region, stream columns
+looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one rate per rail, stream columns
 and braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is
 now the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
 silently. Bands degrades both rail styles to hold exactly as it degraded the parabola.
@@ -868,10 +868,11 @@ reads them. The two-word versions won over "incoming damage"/"outgoing damage" f
 is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped spread puts damage out in left 1, damage in
 in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 as the first free lane.
 
-The one promise lanes had to keep is that a lane moves as ONE thing: measured, every row on a rail already shares its
-side's beat — procs, words, crits alike (`ApplyRailTempo` knows nothing of categories, which is why it held). Fountain is
-the deliberate exception: there procs stay small and quick (below), because "subordinate" and "same speed as the lane"
-can coexist when the lanes are not the reading instrument.
+The one promise lanes had to keep is that a lane moves as ONE thing. The first attempt shared a duration per side and
+still showed per-category speeds — bigger text reserves more road, so equal times meant unequal px/s (see the stream
+notes on `FinalizeRailTempo`); the rail runs to one scroll RATE now, measured identical for damage, procs, crits and
+words in both directions. Fountain stays the deliberate exception: there procs are small and quick (below), because a
+fountain is read as a whole — nothing in it is a scale you measure gaps against.
 
 ### Five motion styles, and the one thing none of them may change
 
@@ -1039,8 +1040,8 @@ In halves the parabola is not thrown — it *queues* (`FctStream`). Every row la
 edge itself and reuses that column until a drawn number genuinely blocks it. This is what MSBT's display areas actually are — rows,
 with 8 px of minimum spacing between them (`MIN_VERTICAL_SPACING`; its columns keep `MIN_HORIZONTAL_SPACING` = 10) — and it is the
 part people mean when they say the genre "feels tidy" where free-float FCT sprays. Most of the discipline costs no computation at
-all: every row shares the rail and the half's one beat (below), so two rows born half a second apart stay half a second of
-travel apart, on the same curve, for their whole lives — the scroll *is* the queue. Only bursts need room made for them.
+all: every row shares the rail and its one scroll rate (below), so two rows born half a second apart stay half a second
+of travel apart, on the same curve, for their whole lives — the scroll *is* the queue. Only bursts need room made for them.
 
 There is no second placement engine. The same flight-scored search (`FctPlacement`) scores three origins instead of a lattice of
 eighteen — centre first, then two emergency columns — through `FctLayout.Spawn` asked for an origin like any other candidate, with
@@ -1057,15 +1058,22 @@ rather than pinning to walls: adjacent lines graze by as much as the geometry al
 dropped damage because the layout was busy is a trade the addon genre never had to make (its text was throttled upstream, so its
 layout always had room); it is not one this overlay makes either.
 
-**The rail runs to one beat per half, and the beat precedes placement.** The hold-style life was *travel, then rest at the end
+**The rail runs to one scroll rate, and it is stamped twice.** The hold-style life was *travel, then rest at the end
 of the travel, then fade in place* — harmless where numbers rest wherever they landed, fatal for rows that move in single file,
 because every row ends at the same terminus: with a park phase the bottom of the centre column belongs to whichever number is dying
-there, and every later reuse must dodge a corpse. A stream life is therefore one beat for the whole half — region height × scroll
-rate (`ParabolaScrollMsPerPx`) — whatever the load, crit or proc: no adaptive lifetime, no fixed crit window, motion spanning the
-life so nothing ever parks and the fade arrives while the row is still moving, exactly how MSBT's text leaves. One beat rather than
-a speed per row is what makes the chain: rows of different font sizes travel slightly different distances inside it (each reserves
-room for its own height at both ends), a few percent apart in rate and invisible, while their arcs — and with them the column
-spacing that keeps bursts apart — stay identical. And the beat is applied **before** placement scores candidates, because candidates
+there, and every later reuse must dodge a corpse. A stream life is therefore pure travel — distance × `ParabolaScrollMsPerPx` —
+whatever the load, crit or proc: no adaptive lifetime, no fixed crit window, motion spanning the life so nothing ever parks and the
+fade arrives while the row is still moving, exactly how MSBT's text leaves.
+
+What took a player's correction to get right: the first version shared one *duration* per region, on the theory that rows of
+different font sizes travel only a few percent apart (each reserves its own height at both ends) and would never show it. They
+showed it — sharing a duration across different travels **is** a speed difference: 195.6 px/s for damage against 201.8 for words,
+more against crits, side by side in columns right next to each other. The rail therefore shares a RATE, not a duration: each row's
+time is its own travel over the shared px-per-second (`FinalizeRailTempo`), which keeps every chain property (a common rate is
+exactly what makes birth-time gaps permanent) and makes "they all move at the same speed" literally true. Because the row's real
+travel is decided *by* placement — respawning at the pinned edge happens inside it — the tempo is stamped as an estimate before
+candidates are scored (a trial cloned without a lifetime is a flight that already ended) and restamped exactly once from the final
+flight afterwards, including on resize: stretching the window buys a row more time, not more speed.
 are whole flights: a trial cloned without a lifetime has already ended, every column reads as empty, and a same-frame burst files
 itself into one centre column — which is precisely how the first cut of this failed. Reuse of the centre column is then decided by
 drawn spacing alone: spaced-or-blocked, nothing in between.
@@ -1348,9 +1356,9 @@ together - so a proc is gone shortly after the hit that provoked it instead of h
 A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
 in slow motion. Where the style IS a shared rail though, the discount stops: on parabola and straight a proc crosses at
 exactly its lane's beat, because there the common rate is the whole reading instrument and "same speed as the stream"
-outweighs "gone sooner" - split mode treats a proc as an ordinary value that happens to be small (measured: one beat,
-2 456 ms, for hits, procs and words alike). Fountain keeps the full discount, which is where quick-and-small reads as
-spam exactly the way the log's own noise should.
+outweighs "gone sooner" - split mode treats a proc as an ordinary value that happens to be small (measured: one scroll
+rate for hits, procs and words alike, whatever the font). Fountain keeps the full discount, which is where quick-and-small
+reads as spam exactly the way the log's own noise should.
 
 Neither reduction touches a crit proc, which is the one place where two independent "make it smaller" rules would have
 stacked into a bug. A proc crit is the biggest single number in the log, and reducing both its size and its life would
