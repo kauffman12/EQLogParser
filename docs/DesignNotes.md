@@ -703,6 +703,15 @@ only way in or out**, keyboard included. Leaving a configuration session is a de
 keystroke should not silently discard what a click was willing to name. Procs joined the category list as the fourth
 kind while that combo was being born.
 
+**The panel is ordered by how permanent things are, not by the order features were born.** Above the first hairline sit
+the always-applies — sliders first, then dropdowns, then number boxes, alphabetical inside each kind (speed, text size,
+label, show, hide below); below the second hairline sit the layout decisions the mode actually obeys (mode, shape, and
+the three categories alphabetical: damage to me, heals, my damage). The threshold crossed into the permanent block on
+purpose: a threshold is a statement about numbers, not layout, and fountain filters with it too — hiding it there had
+been a UI politeness the engine never shared. The footer under the last hairline lost its legend arrows ("heals ← to me
+→") in favor of the live frame counter beside the sample-data checkbox: explaining columns with arrows in a panel whose
+overlay shows the columns moving live two inches away was explaining the weather through a diagram.
+
 Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
 as the numbers they were previewing — in a small window the row wrapped straight into the demo it existed to show. The
 settings are now a second, owned window (`FctSettingsWindow`): fixed width, height hugged to content, a vertical property

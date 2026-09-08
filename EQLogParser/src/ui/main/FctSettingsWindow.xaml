@@ -42,13 +42,13 @@
            and they are the entire exit vocabulary. Leaving this panel is a decision with two visible names — not a key
            somebody hits while reaching for the mouse. -->
       <Grid x:Name="headerBar" Background="Transparent" Margin="-4,-2,-4,4" MouseLeftButtonDown="HeaderDrag">
-        <TextBlock Text="combat text" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
+        <TextBlock Text="FCT Setup" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
-      <!-- The property grid: one setting per row, name on the left, control on the right — which is what the cramped
-           strip over the numbers never got to be. Rows that a mode does not obey collapse rather than sit disabled, so
-           switching modes visibly empties the panel instead of grey-ing it. -->
+      <!-- The settings in the order they are actually decided: first the things that always apply — dials first, then
+           dropdowns, then number boxes, alphabetical inside each kind — under a hairline the mode-dependent picks,
+           which is also where rows visibly empty when a mode does not obey them. Collapsed, never disabled. -->
       <Grid Margin="0,4,0,0">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="106" />
@@ -60,6 +60,72 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The two dials keep their meanings and lose their furniture: the row's label says which is which, and
+             double-click still returns a dial to the shipped value. -->
+        <TextBlock Grid.Row="0" Text="speed" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="how quickly a number shows and clears; applies to the ones after this (double-click resets)" />
+        <Grid Grid.Row="0" Grid.Column="1" Margin="0,5">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="46" />
+          </Grid.ColumnDefinitions>
+          <Slider x:Name="speedSlider" Minimum="-50" Maximum="50" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
+                  SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
+          <TextBlock x:Name="speedValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
+                     Foreground="{DynamicResource ContentForegroundAlt}" />
+        </Grid>
+
+        <TextBlock Grid.Row="1" Text="text size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="how big the numbers are; applies to the ones after this (double-click resets)" />
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,5">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="46" />
+          </Grid.ColumnDefinitions>
+          <Slider x:Name="sizeSlider" Minimum="-50" Maximum="50" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
+                  SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
+          <TextBlock x:Name="sizeValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
+                     Foreground="{DynamicResource ContentForegroundAlt}" />
+        </Grid>
+
+        <TextBlock Grid.Row="2" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label" />
+        <ComboBox x:Name="labelSideCombo" Grid.Row="2" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+          <ComboBoxItem Content="left" Tag="left" />
+          <ComboBoxItem Content="below" Tag="below" />
+          <ComboBoxItem Content="right" Tag="right" />
+        </ComboBox>
+
+        <TextBlock Grid.Row="3" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which kinds of numbers to draw — procs get their own switch because a proc line can read as double-counting the swing that triggered it. Hidden kinds are counted; the log, meters and exports never change" />
+        <ComboBox x:Name="showCombo" Grid.Row="3" Grid.Column="1" Margin="0,3"
+                  ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
+
+        <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million.
+             It lives among the always-applies now because the engine never treated it otherwise — a threshold is a
+             statement about numbers, not about layout, and fountain filters with it too. -->
+        <TextBlock Text="hide below" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="stop showing your damage numbers at or under this value (heals and words like Miss are never hidden); hidden hits are counted, not lost. 0 is off" />
+        <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="4" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
+                           MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="ThresholdChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
+      </Grid>
+
+      <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,2" />
+
+      <!-- Everything below the hairline is a layout decision, and fountain keeps only a few of them. -->
+      <Grid Margin="0,2,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="106" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
@@ -81,30 +147,30 @@
           <ComboBoxItem Content="straight" Tag="straight" />
         </ComboBox>
 
-        <!-- The three categories: side and direction in one cell each. They may all name the same column if that is what
-             somebody wants; bands (fountain) has no columns to hand out, so these rows shed their side picks and the
-             heals row steps off entirely. -->
-        <TextBlock x:Name="healsTitle" Grid.Row="2" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which column healing owns, and which way it travels" />
-        <StackPanel x:Name="healsRow" Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
-          <ComboBox x:Name="healSideCombo" Width="84" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="left" Tag="left" />
-            <ComboBoxItem Content="right" Tag="right" />
-          </ComboBox>
-          <ComboBox x:Name="healDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
-            <ComboBoxItem Content="up" Tag="up" />
-            <ComboBoxItem Content="down" Tag="down" />
-          </ComboBox>
-        </StackPanel>
-
-        <TextBlock x:Name="takenTitle" Grid.Row="3" Text="damage to me" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <!-- The three categories, alphabetical: side and direction in one cell each. They may all name the same column
+             if that is what somebody wants; fountain has no columns to hand out, so these rows shed their side picks
+             and the heals row steps off entirely. -->
+        <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage to me" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="which column incoming damage owns, and which way it travels" />
-        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="takenSideCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left" Tag="left" />
             <ComboBoxItem Content="right" Tag="right" />
           </ComboBox>
           <ComboBox x:Name="inDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="up" Tag="up" />
+            <ComboBoxItem Content="down" Tag="down" />
+          </ComboBox>
+        </StackPanel>
+
+        <TextBlock x:Name="healsTitle" Grid.Row="3" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="which column healing owns, and which way it travels" />
+        <StackPanel x:Name="healsRow" Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+          <ComboBox x:Name="healSideCombo" Width="84" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="left" Tag="left" />
+            <ComboBoxItem Content="right" Tag="right" />
+          </ComboBox>
+          <ComboBox x:Name="healDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />
             <ComboBoxItem Content="down" Tag="down" />
           </ComboBox>
@@ -122,73 +188,19 @@
             <ComboBoxItem Content="down" Tag="down" />
           </ComboBox>
         </StackPanel>
-
-        <!-- Shown as three checkboxes instead of the cramped popup the strip needed: the grid has the room, and what is
-             on and off is legible at a glance instead of hiding behind a button that summarised it. -->
-        <TextBlock Grid.Row="5" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which kinds of numbers to draw — procs get their own switch because a proc line can read as double-counting the swing that triggered it. Hidden kinds are counted; the log, meters and exports never change" />
-        <ComboBox x:Name="showCombo" Grid.Row="5" Grid.Column="1" Margin="0,3"
-                  ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
-
-        <TextBlock x:Name="thresholdTitle" Grid.Row="6" Text="hide below" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="stop showing your damage numbers at or under this value (heals and words like Miss are never hidden); hidden hits are counted, not lost. 0 is off" />
-        <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million. -->
-        <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="6" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
-                           MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"
-                           ValueChanged="ThresholdChanged">
-          <syncfusion:UpDown.NumberFormatInfo>
-            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
-          </syncfusion:UpDown.NumberFormatInfo>
-        </syncfusion:UpDown>
-
-        <!-- The two dials keep their meanings and lose their furniture: no minus/plus marks needed here, the row's label
-             says which is which, and double-click still returns a dial to the shipped value. -->
-        <TextBlock Grid.Row="7" Text="text size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big the numbers are; applies to the ones after this (double-click resets)" />
-        <Grid Grid.Row="7" Grid.Column="1" Margin="0,5">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="46" />
-          </Grid.ColumnDefinitions>
-          <Slider x:Name="sizeSlider" Minimum="-50" Maximum="50" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
-                  SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
-          <TextBlock x:Name="sizeValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
-                     Foreground="{DynamicResource ContentForegroundAlt}" />
-        </Grid>
-
-        <TextBlock Grid.Row="8" Text="speed" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how quickly a number shows and clears; applies to the ones after this (double-click resets)" />
-        <Grid Grid.Row="8" Grid.Column="1" Margin="0,5">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="46" />
-          </Grid.ColumnDefinitions>
-          <Slider x:Name="speedSlider" Minimum="-50" Maximum="50" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
-                  SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
-          <TextBlock x:Name="speedValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
-                     Foreground="{DynamicResource ContentForegroundAlt}" />
-        </Grid>
-
-        <TextBlock Grid.Row="9" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label" />
-        <ComboBox x:Name="labelSideCombo" Grid.Row="9" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-          <ComboBoxItem Content="left" Tag="left" />
-          <ComboBoxItem Content="below" Tag="below" />
-          <ComboBoxItem Content="right" Tag="right" />
-        </ComboBox>
       </Grid>
 
-      <!-- The demo switch and the position sentence, under a hairline: both are about what the overlay is showing right
-           now rather than what it will save, and the footer buttons are where committing happens. -->
-      <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,10,0,6" />
-      <StackPanel Orientation="Horizontal">
-        <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center" Checked="ControlChanged" Unchecked="ControlChanged"
+      <!-- Under the last hairline: what the overlay is showing right now, never what it saves. The arrows that used to
+           sit here — a sentence of the form "heals ← to me →" — are gone; they explained columns in a panel that shows
+           the columns moving live two inches away. What replaced them is the frame counter, on the same line as the
+           demo switch rather than on a line of its own. -->
+      <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,6" />
+      <Grid>
+        <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left" Checked="ControlChanged" Unchecked="ControlChanged"
                   ToolTip="the demo numbers that play while configuring; turn off to set this up over a real fight" />
-        <TextBlock x:Name="legendText" Margin="14,0,0,0" VerticalAlignment="Center" Opacity="0.75"
+        <TextBlock x:Name="statsText" VerticalAlignment="Center" HorizontalAlignment="Right" TextAlignment="Right" Opacity="0.65" TextWrapping="Wrap"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
-      </StackPanel>
-      <TextBlock x:Name="statsText" Margin="0,4,0,0" Opacity="0.65" TextWrapping="Wrap"
-                 Foreground="{DynamicResource ContentForegroundAlt}" />
+      </Grid>
 
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
         <Button x:Name="saveButton" Content="Save" MinWidth="84" Padding="10,3" Click="SaveClick"

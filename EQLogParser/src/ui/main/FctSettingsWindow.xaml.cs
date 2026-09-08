@@ -136,7 +136,6 @@ namespace EQLogParser
         ApplyModeVisibility();
       }
 
-      UpdateLegend();
       PreviewChanged?.Invoke(Snapshot());
     }
 
@@ -223,11 +222,11 @@ namespace EQLogParser
     }
 
     /*
-     * Fountain shows exactly three things — two travel directions among these controls, plus shows and the dials lower
-     * down — because "the UI isn't complex" was the whole point of the mode. Shape (spray is not a choice), healing's
-     * column (bands has none to hand out) and the threshold step off; the damage rows stay but shed their side picks.
-     * Collapsed, never disabled: a control that changes nothing in the mode you are in is what configure mode was
-     * cleaned up to stop showing at all.
+     * Fountain keeps the always-applies block untouched — shows, label, threshold and dials are statements about
+     * numbers, not layout, and the engine never treated them otherwise — and thins the layout block to what it can
+     * actually obey: shape (spray is not a choice), healing's column (bands has none to hand out) and both side picks
+     * step off; the two travel directions stay. Collapsed, never disabled: a control that changes nothing in the mode
+     * you are in is what configure mode was cleaned up to stop showing at all.
      */
     private void ApplyModeVisibility()
     {
@@ -238,20 +237,6 @@ namespace EQLogParser
       healsTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       healsRow.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       takenSideCombo.Visibility = dealtSideCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      thresholdTitle.Visibility = thresholdUpDown.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    /* The legend reads straight off the picks: split names each category's column, fountain's columns are fixed so its
-     * story is which way each stream runs. */
-    private void UpdateLegend()
-    {
-      if (ComboTag(modeCombo) == "fountain")
-      {
-        legendText.Text = $"on you {(ComboTag(inDirCombo) == "up" ? "↑" : "↓")}   mine {(ComboTag(outDirCombo) == "up" ? "↑" : "↓")}";
-        return;
-      }
-
-      legendText.Text = $"heals {SideArrow(healSideCombo)}   to me {SideArrow(takenSideCombo)}   mine {SideArrow(dealtSideCombo)}";
     }
 
     private void UpdateReadouts()
@@ -273,8 +258,6 @@ namespace EQLogParser
     private static string Side(FctRegionSide side) => side is FctRegionSide.Right ? "right" : "left";
 
     private static string Up(bool up) => up ? "up" : "down";
-
-    private static string SideArrow(ComboBox combo) => ComboTag(combo) == "right" ? "→" : "←";
 
     private static string ComboTag(ComboBox combo) => combo.SelectedItem is ComboBoxItem item ? item.Tag as string : null;
 
