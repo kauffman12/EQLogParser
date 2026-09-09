@@ -1610,9 +1610,15 @@ and the silhouette says which.
 - The arrow glyph is a **weapon, not a direction sign** — which took three render sessions to earn. The first headshot
   was a triangle on a stick flying to the corner and read as UI furniture; players say *bow and arrow*, so a whole longbow
   stood behind the shot next, and at the 16–18 px marks actually ship at, bow, string and arrow merged into one blob.
-  The diagonal quiver-flight icon collapsed into a checkmark. What survives: barbed broadhead, bare shaft, a wide
-  two-vane fletch — every part chunky enough to hold its shape in peripheral vision, because at mark size an icon is
-  a silhouette and nothing else (the bake-off rig rendered all of them beside real `9,214`s to prove it).
+  The diagonal quiver-flight icon collapsed into a checkmark, and so did the bow's second cameo: stood VERTICAL beside
+  a standing arrow it failed from a different angle for the same arithmetic — two objects side by side each get half a
+  silhouette, and half of 17 px is outlines eating the gap (the classical split-bow-around-the-shaft icon drew
+  beautifully at 150 px and collapsed into a wreath at 18). What survives: a rounded leaf-blade broadhead on a bare
+  shaft with two vanes swept back like real feathering — every part chunky enough to hold its shape in peripheral
+  vision, because at mark size an icon is a silhouette and nothing else (the bake-off rig rendered all of them beside
+  real `9,214`s to prove it). The first survivor flared its fletch to square shoulders wider than the head and read as
+  a trophy stand on a podium; the swept-vane redraw fixed the posture, and a slimmer redraw than that lost its strokes
+  at 16 px — "nicer" is allowed to mean thinner only down to the weight budget.
 - The burns' glyphs earned their shapes the same way, in the same rig. The **wizard hat** survives on a thick
   brim and a bent tip — the straight triangle read as an arrowhead, then as party furniture — and its dark band
   rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette into a horn on a pill. The **skeleton**

@@ -71,39 +71,44 @@ namespace EQLogParser
 
     /*
      * Headshot is an ARROW the way an archer holds one — not a direction sign, which is what the first cut (a plain
-     * triangle on a stick flying to the corner) read as. The weapon tells on itself with three parts and all three are
-     * kept visible at the 16-18 px the mark actually ships at: a barbed broadhead (concave base, so the barbs kick),
-     * bare shaft between them, and a fletch of two vanes wide enough to never be mistaken for a crossguard.
+     * triangle on a stick flying to the corner) read as. Three parts, all visible at the 16-18 px the mark ships at:
+     * a leaf-bladed broadhead with a concave base, bare shaft between them, and two vanes swept back like real
+     * feathering. Every part keeps enough mass to hold its shape: a slimmer redraw than this one lost most of its
+     * strokes at 16 px, which is the same size war the glyph has been losing and re-earning since the start.
      *
      * A whole bow stood behind this shot in one attempt — players say "bow and arrow", so the phrase deserved a try —
-     * and rendered as soup: at mark size the belly, string and loosed arrow merged into one blob no bigger than the
-     * numbers' own outline. Diagonal flights were tried too (the classic quiver icon) and collapsed into a checkmark.
-     * What survives the size war is upright, chunky, and unmistakable: arrow, point first.
+     * and rendered as soup; a later variant stood the bow VERTICAL beside the arrow and failed the same way from a
+     * different angle: two objects side by side each get half a silhouette, and half of 17 px is outlines eating the
+     * gap. The classical split-bow-around-the-shaft icon drew beautifully at 150 px and collapsed into a wreath at
+     * 18. Diagonal flights (the classic quiver icon) collapsed into a checkmark. What survives the size war is
+     * upright, one object, and unmistakable: arrow, point first.
      */
     private static Mark Arrow()
     {
       var body = new SKPath();
 
-      // broadhead, point up: barbs kick outward off a concave base
-      body.MoveTo(12, 0.6f);
-      body.LineTo(7.6f, 8.2f);
-      body.QuadTo(12, 5.8f, 16.4f, 8.2f);
+      // broadhead, point up: a rounded leaf blade — barbs read off the wide concave base without needing sharp corners
+      body.MoveTo(12, 0.5f);
+      body.QuadTo(7.9f, 5.6f, 8.2f, 10.0f);
+      body.QuadTo(12, 7.4f, 15.8f, 10.0f);
+      body.QuadTo(16.1f, 5.6f, 12, 0.5f);
       body.Close();
 
       // bare shaft — the gap between head and fletch is what keeps them separate at small sizes
-      body.AddRect(new SKRect(10.7f, 6.6f, 13.3f, 21.4f));
+      body.AddRect(new SKRect(10.65f, 9.0f, 13.35f, 21.2f));
 
-      /* Two vanes as one flared fletch across the nock: wide, low and square shouldered — each vane a foot on the
-         shaft sweeping out to a flat top, so the pair reads as feathering, not wings or a crossguard. */
-      body.MoveTo(10.7f, 21.2f);
-      body.LineTo(4.4f, 22.8f);
-      body.LineTo(4.4f, 17.8f);
-      body.LineTo(10.7f, 15.4f);
+      /* Two vanes swept back ~45 degrees from the shaft: feathering, not a podium. The first survivor of the size war
+         flared out to square shoulders wider than the head and read as a trophy stand under the point; the sweep
+         gives the same silhouette mass with an arrow's posture — head heaviest, tail feathering away. */
+      body.MoveTo(10.65f, 14.6f);
+      body.LineTo(6.2f, 22.2f);
+      body.LineTo(6.2f, 17.6f);
+      body.LineTo(10.65f, 11.4f);
       body.Close();
-      body.MoveTo(13.3f, 21.2f);
-      body.LineTo(19.6f, 22.8f);
-      body.LineTo(19.6f, 17.8f);
-      body.LineTo(13.3f, 15.4f);
+      body.MoveTo(13.35f, 14.6f);
+      body.LineTo(17.8f, 22.2f);
+      body.LineTo(17.8f, 17.6f);
+      body.LineTo(13.35f, 11.4f);
       body.Close();
 
       return new Mark(body, null);
