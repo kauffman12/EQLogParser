@@ -160,9 +160,13 @@ namespace EQLogParser
        * numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
        * there" comes from. In halves the walls are the half's own edges, which is what keeps a stream inside its territory.
        */
-      var sideMargin = (hit.ValueWidth * PeakScaleOf(hit)) / 2;
-      var xLo = region.X + EdgePad + sideMargin;
-      var xHi = region.X + region.Width - EdgePad - sideMargin;
+      /* X0 is the right-align RAIL (FctMotion.ArcedX), so on a travelling row the reserved margin sits entirely on the
+         left: the whole drawn box — at its widest, a crit's peak — hangs left of the rail, and the rail itself only has
+         to stay inside the territory. Pulse centres in its cell, so it keeps half on each side. */
+      var peakWidth = hit.ValueWidth * PeakScaleOf(hit);
+      var travelling = hit.Style is not FctMotionStyle.Pulse;
+      var xLo = region.X + EdgePad + (travelling ? peakWidth : peakWidth / 2);
+      var xHi = region.X + region.Width - EdgePad - (travelling ? 0 : peakWidth / 2);
       hit.X0 = xHi <= xLo
         ? region.X + (region.Width / 2)        // text wider than its territory: nothing to place, so centre it there
         : Math.Clamp(hit.X0, xLo, xHi);
@@ -310,6 +314,17 @@ namespace EQLogParser
         hit.Rise = up * usable;
         hit.Arc = 0;
         hit.Bow = hit.Style is FctMotionStyle.Parabola ? bowDir * territory * ParabolaBowFrac : 0.0;
+
+        /* The value hangs its FULL drawn width left of the rail (right-alignment, FctMotion.ArcedX), so a bow toward
+         * the inward wall needs that much room or the vertex clips — and a clipped vertex is a flight whose scored
+         * shape is not the shape. Cap the formula to what the territory offers (outward: full width + rail room;
+         * inward: the rail only has to stay inside). ArcedX still clamps as the resize safety net. */
+        if (hit.SideMax > hit.SideMin && hit.X0 > 0)
+        {
+          hit.Bow = hit.Bow < 0
+            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - (hit.ValueWidth * PeakScaleOf(hit))))
+            : Math.Min(hit.Bow, hit.SideMax - hit.X0);
+        }
         return;
       }
 

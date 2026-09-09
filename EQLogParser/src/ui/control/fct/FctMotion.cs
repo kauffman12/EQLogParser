@@ -123,21 +123,25 @@ namespace EQLogParser
       hit.BandMaxY > hit.BandMinY ? Math.Clamp(y, hit.BandMinY, hit.BandMaxY) : y;
 
     /*
-     * Arc settles with the rise, clamped to the hit's clamp band (the half it was given in halves mode, the window
-     * edges in bands mode). The clamp reserves half the drawn width — scaled, so a crit at full blowout still cannot
-     * cross into the protected middle — and degrades to the band's middle instead of throwing when a label is wider
-     * than the space it has.
+     * Where the value's CENTRE is at time t. Two rules, one shared spine:
+     *
+     * Right-aligned (everything but pulse): values are an odometer. The spine X0+lateral carries the value's RIGHT
+     * edge, so a 950 and a 12,040 in the same column line their ones digit up under each other instead of their
+     * middles — Mik's "right-justify" text alignment, the one every parse-heavy player turns on. It ships as the
+     * hidden default with no knob: centre-aligning a number column is never what anyone wants. The clamp keeps the
+     * WHOLE drawn box (at its peak scale) left of SideMax and right of SideMin — the box grows LEFTWARDS out of the
+     * rail, which is also how a crit blowout pops: the rail holds, the number punches wider. `scale` is the frame's
+     * blowout so the returned centre tracks the box that is actually being drawn; placement scoring passes the same
+     * value it scores with, so the odometer the renderer draws and the one the collision cost sees are one number.
+     *
+     * Centre-aligned (pulse only): a cell is a box the value sits IN; hanging it off the cell's left edge would put
+     * neighbours' values inside each other. The pulse grid keeps the old half-width clamp at the cell centre.
+     *
+     * Degenerate either way — a label wider than its territory degrades to the territory's middle instead of throwing.
      */
-    public static double ArcedX(FctHitState hit, double t)
+    public static double ArcedX(FctHitState hit, double t, double scale = 1.0)
     {
-      var half = hit.ValueWidth * ScaleAllowance(hit) / 2.0;
-      var lo = hit.SideMin + half;
-      var hi = hit.SideMax - half;
-
-      if (lo > hi)
-      {
-        return (hit.SideMin + hit.SideMax) / 2.0;
-      }
+      var peak = hit.ValueWidth * ScaleAllowance(hit);
 
       /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
@@ -147,7 +151,23 @@ namespace EQLogParser
          spawn: outward forever, never back, and it read as nothing in the genre.) */
       var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
 
-      return Math.Clamp(hit.X0 + lateral, lo, hi);
+      if (hit.Style is FctMotionStyle.Pulse)
+      {
+        var loC = hit.SideMin + peak / 2.0;
+        var hiC = hit.SideMax - peak / 2.0;
+        return loC > hiC
+          ? (hit.SideMin + hit.SideMax) / 2.0
+          : Math.Clamp(hit.X0 + lateral, loC, hiC);
+      }
+
+      var loR = hit.SideMin + peak; // the whole box fits, growing leftwards from the rail
+      if (loR > hit.SideMax)
+      {
+        return (hit.SideMin + hit.SideMax) / 2.0;
+      }
+
+      var rail = Math.Clamp(hit.X0 + lateral, loR, hit.SideMax);
+      return rail - (hit.ValueWidth * scale) / 2.0;
     }
 
     /*

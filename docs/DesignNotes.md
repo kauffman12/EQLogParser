@@ -939,7 +939,9 @@ one's coordinates — and with y linear the mid-point formula comes out as `x = 
 territory (`ParabolaBowFrac`, 34%): MSBT's own curve swings a full area width, text running off its area while still
 fading, and 34% is as far an arc as this overlay can keep inside the half — far enough to read as a sweeping curve,
 near enough that the widest crit draw still clears both walls at the vertex (`FctParabolaTest` pins containment for
-life, both sides, both directions).
+life, both sides, both directions). With right-aligned values (§ *The odometer*) the vertex needs the **whole** drawn
+width on the inward side, not half, and `AssignTravel` trims the formula to whatever the territory actually offers
+before the flight is scored — a clipped vertex would score one shape and draw another.
 
 Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
 and nothing about where the number ends, so a slower parabola is the same curve drawn more slowly, which is what a tempo
@@ -1098,9 +1100,27 @@ exactly what makes birth-time gaps permanent) and makes "they all move at the sa
 travel is decided *by* placement — respawning at the pinned edge happens inside it — the tempo is stamped as an estimate before
 candidates are scored (a trial cloned without a lifetime is a flight that already ended) and restamped exactly once from the final
 flight afterwards, including on resize: stretching the window buys a row more time, not more speed.
-are whole flights: a trial cloned without a lifetime has already ended, every column reads as empty, and a same-frame burst files
-itself into one centre column — which is precisely how the first cut of this failed. Reuse of the centre column is then decided by
-drawn spacing alone: spaced-or-blocked, nothing in between.
+
+### The odometer: values hang their right edge on the rail
+
+A column of centre-anchored numbers is a column whose ones digits jog: 950 centres its three glyphs where 12,040
+centres six, and spam reads as ragged confetti. Mik ships the answer as an option — per-area text alignment, and
+right-justify is what damage columns actually use — and this overlay ships it the same way everyone who uses MSBT
+ends up configuring it: **on, permanently, with no knob**. `FctMotion.ArcedX` interprets a travelling row's spine
+(`X0 + lateral`) as the value's **right edge**: every row in a lane keeps the same right edge at every t, centres sit
+wherever their own widths put them, and the crit blowout grows the box leftwards out of the rail instead of around a
+centre — which reads correctly for a parse stream: new digits extend the number, they do not shift it.
+
+Pulse is exempt and centres in its cell; a grid of values each hanging half a cell to the left would put neighbours'
+numbers through each other, and a cell is a box a value sits *in*.
+
+The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
+same right-anchored box (`ArcedX(hit, t, scale)` takes the frame's blowout so scoring and drawing agree to the bit),
+the spawn clamp reserves its margin on the left, and the parabola's bow budget measures the full hang (above). Two
+small costs were accepted with measurement: an artificially-over-capacity half grazes to ~30% of a block instead of
+25% (`FctStreamTest` pins the new ceiling — right-alignment is worth half a column of squeeze), and deep-entry line
+rows price their sideways valve off full widths too. Words align like numbers ("miss", "resist"), so a lane reads as
+one flush ledger, labels included.
 
 ### Two states: numbers only, or configuring
 

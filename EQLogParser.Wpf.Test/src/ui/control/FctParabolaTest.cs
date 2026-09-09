@@ -72,7 +72,9 @@ namespace EQLogParser
     {
       foreach (var side in new[] { FctRegionSide.Left, FctRegionSide.Right })
       {
-        var stage = Halves(side, false, false);
+        // 1400 wide so the formula's vertex never meets the right-align room cap (FctLayout.AssignTravel):
+        // this test pins MSBT's pure geometry; the cap's honesty has its own containment tests.
+        var stage = Halves(side, false, false, w: 1400);
         var hit = Spawn(stage, incoming: true, new Random(21));
         var region = stage.RegionFor(true);
         var away = side is FctRegionSide.Left ? -1.0 : 1.0;
@@ -93,6 +95,27 @@ namespace EQLogParser
           Assert.IsTrue(x >= region.X && x <= region.X + region.Width,
             $"t={t:0.0}: x {x:0.#} left its half [{region.X:0.#}..{region.X + region.Width:0.#}]");
         }
+      }
+    }
+
+    /* Right-align and a narrow half: the drawn box hangs its whole width left of the rail, so a full-formula bow
+     * toward the inward wall would clip — and a clipped vertex scores one flight while drawing another. The layout
+     * trims the bow instead; this pins that the WHOLE box never leaves the territory at any t. */
+    [TestMethod]
+    public void ANarrowHalfTrimsTheBowToKeepTheWholeBoxIn()
+    {
+      var stage = Halves(FctRegionSide.Left, false, false, w: 700);
+      var hit = Spawn(stage, incoming: true, new Random(21));
+      var region = stage.RegionFor(true);
+
+      Assert.IsTrue(Math.Abs(hit.Bow) <= (FctLayout.ParabolaBowFrac * stage.TerritoryFor(true)) + 1e-9,
+        "the cap only ever trims the formula, never widens it");
+
+      for (var t = 0.0; t <= 1.0001; t += 0.05)
+      {
+        var x = FctMotion.ArcedX(hit, t);
+        Assert.IsTrue((x - (hit.ValueWidth / 2.0)) >= region.X && ((x + (hit.ValueWidth / 2.0)) <= (region.X + region.Width)),
+          $"t={t:0.##}: the drawn box left its half");
       }
     }
 

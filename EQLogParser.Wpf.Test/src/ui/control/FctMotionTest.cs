@@ -270,7 +270,10 @@ namespace EQLogParser
       return Math.Abs((wx * vy) - (wy * vx)) / len;
     }
 
-    private static (double X, double Y) At(FctHitState hit, double t) => (FctMotion.ArcedX(hit, t), FctMotion.RaisedY(hit, t));
+    /* Rail coordinates: a right-aligned value draws in a box hanging ValueWidth/2 LEFT of the rail, and X0 *is* the
+       rail (FctMotion.ArcedX). Putting the half-width back lets these asserts measure choreography against the spawn
+       point instead of against the alignment. */
+    private static (double X, double Y) At(FctHitState hit, double t) => (FctMotion.ArcedX(hit, t) + (hit.ValueWidth / 2.0), FctMotion.RaisedY(hit, t));
 
     /* A wide cone draw: well to one side as it climbs. Hold gets no fall so its line stays a line. */
     private static FctHitState ArcHit(FctMotionStyle style)

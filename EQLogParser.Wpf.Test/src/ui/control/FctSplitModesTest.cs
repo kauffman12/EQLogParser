@@ -19,6 +19,34 @@ namespace EQLogParser
     private const double Width = 1600;
     private const double Height = 900;
 
+    /* Values are an odometer (right-aligned, the hidden default): two rows of different widths sharing a column keep
+     * the SAME right edge for the whole flight — ones digits line up under each other — while their centres sit
+     * wherever their own widths put them. A centre-anchored column jogs 950 out from under 12,040; the rail carries
+     * right edges. Real text widths here, because zero-ish synthetic ones hide exactly this. */
+    [TestMethod]
+    public void ValuesInAColumnShareTheirRightEdge()
+    {
+      var ingest = new FctIngest(new Random(31)) { Style = FctMotionStyle.Straight };
+      var hits = new List<FctHitState>();
+
+      // values whose ABBREVIATED text differs by three glyphs ("900" vs "987.7m"; the format abbreviates hard)
+      var narrow = ingest.Accept(hits, FctLane.DamageDealt, 900.0, null, false, false, false, null, Width, Height, 0);
+      var wide = ingest.Accept(hits, FctLane.DamageDealt, 987_654_321.0, null, false, false, false, null, Width, Height, 0);
+      Assert.IsNotNull(narrow);
+      Assert.IsNotNull(wide);
+      Assert.IsTrue(wide.ValueWidth > narrow.ValueWidth + 5.0,
+        $"the widths need to differ for this to mean anything ({narrow.ValueWidth:0.#} vs {wide.ValueWidth:0.#})");
+
+      for (var t = 0.0; t <= 1.0001; t += 0.05)
+      {
+        var rightNarrow = FctMotion.ArcedX(narrow, t) + (narrow.ValueWidth / 2.0);
+        var rightWide = FctMotion.ArcedX(wide, t) + (wide.ValueWidth / 2.0);
+        Assert.AreEqual(rightNarrow, rightWide, 1e-9, $"the ones digit slipped out of line at t={t:F2}");
+      }
+
+      Assert.AreEqual(0.0, narrow.X0 - wide.X0, 1e-9, "one rail; only the drawn boxes hang differently");
+    }
+
     /* Straight runs the train: shared entrance, one beat, and zero lateral travel — ArcedX must pin every value to its
      * column for the whole flight, or "straight" is secretly a scatter. */
     [TestMethod]
@@ -40,7 +68,9 @@ namespace EQLogParser
         Assert.AreEqual(0.0, hit.Bow, 1e-9, "straight is bow zero, not a separate choreography");
         for (var t = 0.0; t <= 1.0; t += 0.05)
         {
-          Assert.AreEqual(hit.X0, FctMotion.ArcedX(hit, t), 1e-9, $"a straight row drifted sideways at t={t:F2}");
+          // the RAIL (right edge of the drawn value) is what must not move; the centre hangs half a width off it
+          Assert.AreEqual(hit.X0, FctMotion.ArcedX(hit, t) + (hit.ValueWidth / 2.0), 1e-9,
+            $"a straight row drifted sideways at t={t:F2}");
         }
       }
     }

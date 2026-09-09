@@ -96,7 +96,9 @@ namespace EQLogParser
        * adjacent rows graze a little and the scorer still separates them as far as geometry allows. Compression is
        * visible; pinning every emergency column onto the same wall clamp is worse, and dropping numbers is not on the table.
        */
-      var span = braid < 0 ? cx - (hit.SideMin + price) : (hit.SideMax - price) - cx;
+      /* Right-aligned: the box hangs left of the rail, so the sideways room a braided column needs is the FULL drawn
+         width going left and nothing at all going right (the rail itself only has to stay inside the territory). */
+      var span = braid < 0 ? cx - (hit.SideMin + (price * 2)) : hit.SideMax - cx;
       if (span < 2 * step)
       {
         step = Math.Max(0, span) / 2;
@@ -154,7 +156,9 @@ namespace EQLogParser
 
       const int DepthSteps = 5;
       var step = (price * 2) + ColumnGap;
-      var span = cx - (hit.SideMin + price);
+
+      // right-aligned: the whole box hangs LEFT of the rail, so sideways room is measured from the full drawn width
+      var span = cx - (hit.SideMin + (price * 2));
       if (span < 2 * step)
       {
         step = Math.Max(0, span) / 2;
