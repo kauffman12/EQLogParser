@@ -176,6 +176,16 @@ namespace EQLogParser
     {
       Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decapitation XVIII"));
       Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Decapitation XVIII"));
+
+      // the burns follow the same rule: ordinary damage records, class spells, resolved by name
+      Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Mana Burn"));
+      Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Mana Burn AB"));
+      Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Life Burn"));
+      Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Life Burn AB"));
+
+      // prefixes of the right word: a name merely CONTAINING the spell is not the spell
+      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Greater Mana Burn Potion"));
+      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Burn Mana"));
       Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Crown of Stars"));
       Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decrees of Kurn"));
 

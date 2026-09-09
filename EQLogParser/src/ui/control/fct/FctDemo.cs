@@ -102,7 +102,8 @@ namespace EQLogParser
 
       // the loud pair: wasted-cast warnings carry their own font size, so the cycle has to show them next to quiet words
       new Cue(4900, FctLane.Defensive, valueText: Labels.Absorb),
-      new Cue(5080, FctLane.HealingReceived, 1450, "Complete Heal"),
+      // the wizard's burn: the mark rides its own size and purple whatever the log called this hit
+      new Cue(5080, FctLane.DamageDealt, 9340, "Mana Burn XX", special: FctSpecial.ManaBurn),
       new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
       new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
       new Cue(5700, FctLane.DamageDealt, 12470, "Slash", crit: true, special: FctSpecial.FinishingBlow),
@@ -114,7 +115,8 @@ namespace EQLogParser
       new Cue(6560, FctLane.Defensive, valueText: Labels.Invulnerable),
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
       new Cue(6850, FctLane.HealingReceived, 24800, "Complete Heal", crit: true),
-      new Cue(7150, FctLane.DamageDealt, 4126, "Slash", crit: true),
+      // the necromancer's burn
+      new Cue(7150, FctLane.DamageDealt, 21650, "Life Burn X", special: FctSpecial.LifeBurn),
 
       // the m band: what a big nuke looks like after the server rates did their thing
       new Cue(7300, FctLane.DamageDealt, 1240000, "Flare", crit: true),

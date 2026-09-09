@@ -1577,12 +1577,12 @@ constant deliberately rather than assume it is there.
 
 ### The purple family: special attacks wear a glyph, not a bigger number
 
-Assassinate, headshot, slay undead, finishing blow and decapitation are the five moments in a fight
-where the log says *something happened beyond the number*. All five are already in `HitRecord`'s
-modifier mask — except decapitation, which arrives as a spell name. Rather than the genre default of
+Assassinate, headshot, slay undead, finishing blow, decapitation, mana burn and life burn are the seven
+moments in a fight where the log says *something happened beyond the number*. All of them are already in
+`HitRecord`'s modifier mask — except decapitation and the two burns, which arrive as spell names. Rather than the genre default of
 a bigger, brighter, differently-coloured number (which fights the odometer: a special that changes
 the width of a value is a special that breaks the column), each wears a small glyph hanging **outside**
-the value's right edge, and all five share one colour. A family of five colours would have turned the
+the value's right edge, and all seven share one colour. A family of seven colours would have turned the
 overlay into a rainbow and made the marks impossible to learn; one purple says "special" on its own,
 and the silhouette says which.
 
@@ -1590,6 +1590,11 @@ and the silhouette says which.
   the only place that knows what assassinate looks like in a log line. Decapitation matches on the
   spell name and can only be reached through the parser path — `FctManager`'s direct-damage build (a
   resist with no underlying record) has a mask but no name, so it cannot produce one.
+- **The burns ride the name rule too**: *Mana Burn* (wizard) and *Life Burn* (necromancer) are logged as
+  ordinary spell damage, so a leading-name match beside Decapitation promotes them — every ranked variant
+  ("Mana Burn XX") rides the prefix, containment is not the match, and a name that merely contains the
+  spell stays plain. The demo cues wear their ranks for the same reason the rule does: it is what the log
+  line carries.
 - The glyph is **priced into the geometry, then excluded from alignment**: `FctHitState.IconAllowance`
   is added wherever a row's sideways appetite is measured — the pop peak, the bow cap, the drawn half —
   and is not part of `ArcedX`. That asymmetry is the whole trick: the number's right edge still lands on
@@ -1608,6 +1613,13 @@ and the silhouette says which.
   The diagonal quiver-flight icon collapsed into a checkmark. What survives: barbed broadhead, bare shaft, a wide
   two-vane fletch — every part chunky enough to hold its shape in peripheral vision, because at mark size an icon is
   a silhouette and nothing else (the bake-off rig rendered all of them beside real `9,214`s to prove it).
+- The burns' glyphs earned their shapes the same way, in the same rig. The **wizard hat** survives on a thick
+  brim and a bent tip — the straight triangle read as an arrowhead, then as party furniture — and its dark band
+  rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette into a horn on a pill. The **skeleton**
+  is what survived of "just draw a skeleton": anatomy at 16 px rendered as a lightbulb, so the bone figure keeps
+  three facts and nothing more — skull mass, two eyes, ribs as dark bands across one torso. Reusing the finishing
+  blow's plain skull was on the table and got refused for a structural reason, not taste: two events sharing one
+  silhouette means the mark stops saying which, and saying *which* is a mark's only job.
 - Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
   a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
   same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks

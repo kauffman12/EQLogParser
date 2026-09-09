@@ -49,6 +49,8 @@ namespace EQLogParser
       IsSlayUndead(mask) ? FctSpecial.SlayUndead :
       IsFinishingBlow(mask) ? FctSpecial.FinishingBlow :
       source is not null && source.StartsWith("Decapitation", StringComparison.Ordinal) ? FctSpecial.Decapitation :
+      source is not null && source.StartsWith("Mana Burn", StringComparison.Ordinal) ? FctSpecial.ManaBurn :
+      source is not null && source.StartsWith("Life Burn", StringComparison.Ordinal) ? FctSpecial.LifeBurn :
       FctSpecial.None;
 
     internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)

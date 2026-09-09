@@ -4,14 +4,18 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * The marks for the special events (FctSpecial): five chunky glyphs drawn as Skia paths in code — no image assets,
+   * The marks for the special events (FctSpecial): seven chunky glyphs drawn as Skia paths in code — no image assets,
    * no new dependency, crisp at any text size and tinted by the same brush logic as the numbers. Each glyph is built
    * once, on a 24x24 unit grid, and scaled by the caller to sit beside its number; bodies cache so a frame allocates
    * nothing.
    *
    * The set: a dagger (assassinate), a fletched war arrow, point first (headshot), a ghost (slay undead), a skull (finishing blow — the
    * universal kill mark, and deliberately a skull while the undead mark is a ghost) and a double-bit battle axe
-   * (decapitation, the Berserker two-hander). Shapes are chosen for one job: read at roughly thirty pixels in
+   * (decapitation, the Berserker two-hander), a pointed wizard hat with a dark band
+     * (mana burn) and a bone figure — skull, eyes, black rib stripes, pelvis (life burn). The two burns are bake-off
+     * survivors like the arrow was: an anatomical skeleton rendered as a lightbulb at mark size, so the figure is one
+     * mass with dark ribs; and life burn deliberately does not reuse the finishing blow's skull — two events, two
+     * silhouettes, or the mark stops saying which. Shapes are chosen for one job: read at roughly thirty pixels in
    * peripheral vision over a moving game view. Nothing thin, nothing with more than a silhouette.
    */
   internal static class FctMarks
@@ -43,6 +47,8 @@ namespace EQLogParser
       FctSpecial.SlayUndead => Ghost(),
       FctSpecial.FinishingBlow => Skull(),
       FctSpecial.Decapitation => BattleAxe(),
+      FctSpecial.ManaBurn => WizardHat(),
+      FctSpecial.LifeBurn => Skeleton(),
       _ => new Mark(new SKPath(), null),
     };
 
@@ -171,6 +177,55 @@ namespace EQLogParser
       right.Close();
       body.AddPath(right);
       return new Mark(body, null);
+    }
+
+    /*
+     * Mana Burn is the wizard's, so it wears the wizard hat: a broad, THICK brim and a cone that bends over at the end
+     * — the bent tip is what separates "wizard hat" from "party furniture" and from an arrowhead, both of which the
+     * straight triangle turned out to read as. The dark band sits where cone meets brim: at mark size it does the job
+     * eyes do on the skull — a horizontal feature the eye finds first, which is what makes the blob read as HAT.
+     */
+    private static Mark WizardHat()
+    {
+      var body = new SKPath();
+      body.MoveTo(7.0f, 16.8f);                          // cone: rises from the brim, bending right
+      body.QuadTo(9.4f, 5.8f, 18.6f, 2.6f);
+      body.LineTo(20.6f, 6.2f);                          // a thick corner for the drooped tip, never a needle
+      body.QuadTo(14.4f, 9.6f, 16.6f, 16.8f);            // right edge back down with a shallow S
+      body.Close();
+      body.AddRoundRect(new SKRect(1.2f, 15.4f, 22.8f, 21.0f), 2.8f, 2.8f); // brim, tall enough to survive 16 px
+
+      /* The band rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette in two and rendered as a
+         horn on a pill, so it stays strictly inside the cone with purple bridging to the brim below it. */
+      var dark = new SKPath();
+      dark.AddRoundRect(new SKRect(9.3f, 9.4f, 15.4f, 11.6f), 0.8f, 0.8f); // hatband
+      return new Mark(body, dark);
+    }
+
+    /*
+     * Life Burn is the necromancer's, and the request was a skeleton — which the bake-off rendered as a lightbulb:
+     * anatomy at 16 px is a rumour. What survives is the figure REDUCED to its three facts: a skull mass with eyes, a
+     * torso whose ribs are told by dark stripes rather than drawn bones, and a pelvis. Deliberately NOT the finishing
+     * blow's skull (which the fallback offer allowed): two events sharing one silhouette means the mark stops saying
+     * which thing happened, and saying which is the only job a mark has.
+     */
+    private static Mark Skeleton()
+    {
+      var body = new SKPath();
+      body.AddRoundRect(new SKRect(5.6f, 0.6f, 18.4f, 10.6f), 4.4f, 4.4f); // skull mass
+      body.MoveTo(8.4f, 9.8f);                                              // torso, one slab
+      body.LineTo(15.6f, 9.8f);
+      body.LineTo(14.0f, 17.2f);
+      body.LineTo(10.0f, 17.2f);
+      body.Close();
+      body.AddRoundRect(new SKRect(8.2f, 16.6f, 15.8f, 22.6f), 2.2f, 2.2f); // pelvis
+
+      var dark = new SKPath();
+      dark.AddCircle(9.4f, 5.4f, 1.7f);   // eyes: shared language with the skull and ghost
+      dark.AddCircle(14.6f, 5.4f, 1.7f);
+      dark.AddRoundRect(new SKRect(7.8f, 11.2f, 16.0f, 12.9f), 0.8f, 0.8f); // ribs as two black bands across the torso
+      dark.AddRoundRect(new SKRect(9.4f, 14.0f, 14.6f, 15.7f), 0.8f, 0.8f);
+      return new Mark(body, dark);
     }
   }
 }

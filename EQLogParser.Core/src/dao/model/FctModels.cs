@@ -33,6 +33,11 @@ namespace EQLogParser
     SlayUndead,
     FinishingBlow,
     Decapitation,
+
+    /* The burns: class abilities logged as ordinary spell damage — "Mana Burn" is the wizard's, "Life Burn" the
+     * necromancer's. Resolved by spell name like Decapitation (LineModifiersParser.SpecialFor). */
+    ManaBurn,
+    LifeBurn,
   }
 
   /* One floating text handed to the renderer. Kept UI-agnostic so Core owns the feed, and kept free
