@@ -746,8 +746,10 @@ and spew out and fall, which is the look every classic FCT draws with; its contr
 — spray being what makes it a fountain, settle the same bands drifting their numbers out to rest instead — plus two
 direction dials, the show switches, size and speed. *Split* is the side columns (internally by type) with each category
 assigned its own **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing
-a lane — plus **shape: parabola | line | settle**, the first two one rail machinery and settle the original
-drift-stop-fade behaviour brought back (below). Controls a mode does not obey collapse rather than sit disabled
+a lane — plus **shape: parabola | line**, one rail machinery under both, with or without the bend. Split offers no
+rest state on purpose: a row parked part-way down a column is not a calmer stream, it is a broken chain, which is the
+one thing the column exists to prevent — so settle belongs to fountain and nowhere else. Controls a mode does not
+obey collapse rather than sit disabled
 (in fountain there is no side to hand out and the threshold steps off too — the minimal UI was the point), and the
 legend re-sentences itself from the staged choice either way. The shape row serves both modes with **two combos in one
 cell** rather than one list of illegal promises: WPF items cannot live in two lists, and a scheme should never show a
@@ -778,7 +780,7 @@ and a documentation sentence, not a UI state.
 The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;
 two direction dials, the show switches, size, speed; nothing else) and **split** (the side columns, with each category —
 healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **parabola** and
-**straight** — since grown into parabola | line | settle). The modes are a settings slice; three engine facts had to
+**straight** — since grown into parabola | line). The modes are a settings slice; three engine facts had to
 exist first, and each says goodbye to an old shortcut:
 
 **Directions became per-category.** `FctLayoutChoice` gained `HealUp`, `IncomingDamageSide`, and `OutgoingDamageSide`:
@@ -898,8 +900,9 @@ fountain is read as a whole — nothing in it is a scale you measure gaps agains
 The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
 be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; its name is
-an animation hold, the still beat after a move, and the shape picker shows it as **settle** because "hold" reads as a
-frozen UI state), **fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
+an animation hold, the still beat after a move, and fountain's shape picker shows it as **settle** because "hold" reads
+as a frozen UI state — split does not offer it at all, since parking mid-scroll breaks the chain a column is made of),
+**fountain** (overshoot, then fall; mirrored upward on the lower band), **pulse**
 (no travel at all — it swells where it appeared), **spray** (a random cone out of the lane slot, then a short fall) and
 **parabola** (a constant-speed scroll arcing out to a vertex at half height and back — the shape the scrolling-text genre ships as its own default,
 and halves' default for the same reason; see below). Where a hit goes, how it moves and how numbers stack are three

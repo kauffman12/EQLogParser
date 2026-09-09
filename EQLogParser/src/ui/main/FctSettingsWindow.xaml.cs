@@ -77,8 +77,7 @@ namespace EQLogParser
 
       /* Each mode reads its shape from its own combo, so both get selected — the hidden one to its mode's default,
        * which is also what a mode switch mid-configure will offer first. */
-      SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight or FctMotionStyle.Hold
-        ? FctOverlaySettings.Name(state.Shape) : "parabola");
+      SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight ? "line" : "parabola");
       SelectByTag(sprayCombo, state.Fountain && state.Shape is FctMotionStyle.Hold ? "hold" : "spray");
       SelectByTag(healLaneCombo, FctRailLanes.Token(state.HealLane));
       SelectByTag(healDirCombo, Up(state.HealUp));
@@ -114,15 +113,11 @@ namespace EQLogParser
       var state = new FctConfigState
       {
         Fountain = fountain,
-        // the panels' words are line and settle; the engine's older names (Straight, Hold) ride in the Tags
+        // the panels' words are line and settle; the engine's older names (Straight, Hold) ride in the Tags —
+        // and settle is fountain's alone: a scroll that parks mid-column breaks the chain a column exists to be
         Shape = fountain
           ? ComboTag(sprayCombo) == "hold" ? FctMotionStyle.Hold : FctMotionStyle.Spray
-          : ComboTag(shapeCombo) switch
-          {
-            "line" => FctMotionStyle.Straight,
-            "hold" => FctMotionStyle.Hold,
-            _ => FctMotionStyle.Parabola,
-          },
+          : ComboTag(shapeCombo) == "line" ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
         HealLane = FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane),
         HealUp = ComboTag(healDirCombo) == "up",
         TakenLane = FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane),
