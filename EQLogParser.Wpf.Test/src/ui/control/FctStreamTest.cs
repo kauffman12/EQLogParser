@@ -175,30 +175,84 @@ namespace EQLogParser
         {
           var overlap = WorstPairOverlap(hits[i], hits[j]);
 
-          // 0.34, not the old 0.25: right-aligned boxes hang their whole width left of the rail, so a lane this
-          // deliberately over capacity shoves the emergency valve that much closer — grazing honestly got worse by
-          // about half a column before anything would drop.
+          // 0.34: the ceiling for tolerated compression, pinned just under FctStream.ValveOverlap (0.35). Kissing edges
+          // read as a tight column; this test's job is to prove even a deliberately over-capacity squeeze never reaches
+          // the smear radius where the congestion valve would start trading numbers.
           Assert.IsTrue(overlap < 0.34, $"compressed rows may graze, not cover: {overlap:0.##} of a block");
         }
       }
     }
 
     /*
-     * The genre's overlays get away with dropping rows because their input was throttled upstream; a parser overlay
-     * may not. Past the three columns the least-bad spot wins — crowded, contained, and counted where counting happens.
+     * Up to what the columns separate cleanly, a crowded stream loses nothing — every row lands, grazing tolerantly, and the
+     * drop counter sleeps. Past that door the congestion valve takes over in the open: an arriving ordinary number trades with
+     * the weakest ordinary neighbour (counted, never silent), because the alternative was two numbers painted over each other.
+     * The genre's overlays get away with silently overwriting rows; this one trades by value and says so in DroppedCount.
      */
     [TestMethod]
-    public void MoreRowsThanColumnsStillNeverDropANumber()
+    public void CrowdedStreamTradesByValueAndCountsIt()
     {
       var ingest = Streaming();
       var hits = new List<FctHitState>();
 
-      for (var i = 0; i < 6; i++)
+      for (var i = 0; i < 3; i++)
       {
-        Assert.IsNotNull(Accept(ingest, hits, incoming: false, 1001 + i, 0), $"row {i} was dropped by the stream");
+        Assert.IsNotNull(Accept(ingest, hits, incoming: false, 1001 + i, 0), $"row {i} was dropped inside capacity");
       }
 
-      Assert.AreEqual(0, ingest.DroppedCount, "a crowded stream is not a full overlay");
+      Assert.AreEqual(0, ingest.DroppedCount, "inside the columns' room nothing is ever dropped");
+
+      // past the three columns the smear is real, so the weakest ordinary value in the region gives way to the arrival
+      Assert.IsNotNull(Accept(ingest, hits, incoming: false, 1042, 0), "the arrival itself must not be the loser");
+      Assert.AreEqual(1, ingest.DroppedCount, "the trade is counted where counting happens");
+      CollectionAssert.DoesNotContain(hits.ConvertAll(h => h.Value), 1001.0,
+        "smallest-first: the weakest neighbour (1001) is the one that left");
+
+      // and a protected arrival never trades at all — a crit arriving at a full door keeps every neighbour it displaced nobody
+      var before = ingest.DroppedCount;
+      Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 5000, Sources[0], true, false, false, null, Width, Height, 0));
+      Assert.AreEqual(before, ingest.DroppedCount, "crits are beyond the valve: they never evict, they never go");
+    }
+
+    /*
+     * The speed rung, pinned end to end: a flood faster than the rail's dial tempo makes its OWN newborn rows travel faster
+     * (RailPress under 1.0), never the steady traffic ahead of them; the override is floored so even a full emergency stays
+     * readable and short enough that an overlay never keeps typing more than about a second and a half after the last swing;
+     * and a lone row on an empty rail still crosses at exactly the configured tempo, pressure untouched.
+     */
+    [TestMethod]
+    public void AFloodSpeedsUpItsOwnNewbornRowsAndDrainsFast()
+    {
+      var ingest = new FctIngest(new Random(4))
+      {
+        Style = FctMotionStyle.Straight,
+        Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, false, false),
+      };
+
+      var hits = new List<FctHitState>();
+      FctHitState first = null, lastPlaced = null;
+      for (var i = 0; i < 24; i++)
+      {
+        // raid pace: a swing every 60 ms, well past what one rail separates at the dial's tempo
+        var placed = Accept(ingest, hits, incoming: false, 500 + i, i * 60.0);
+        first ??= placed;
+        lastPlaced ??= placed;
+        if (placed is not null && i > 12)
+        {
+          lastPlaced = placed;
+        }
+      }
+
+      Assert.AreEqual(1.0, first.RailPress, "the first row on an empty rail runs at exactly the configured tempo");
+      Assert.IsTrue(lastPlaced.RailPress < 1.0, "a flood must speed its newborn rows up");
+
+      foreach (var hit in hits)
+      {
+        Assert.IsTrue(hit.RailPress >= FctStream.PressFloor && hit.RailPress <= 1.0,
+          $"the override lives between the floor and the dial: {hit.RailPress:0.###}");
+        Assert.IsTrue(hit.LifetimeMs < 3000.0,
+          "nothing on screen outlives the fight by more than about three seconds — congestion drains, it does not queue");
+      }
     }
 
     /* Each half streams down its own centre column; what fills one says nothing about the other. */

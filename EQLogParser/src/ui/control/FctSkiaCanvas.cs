@@ -41,6 +41,10 @@ namespace EQLogParser
         if (_labelSide != value)
         {
           _labelSide = value;
+
+          // the engine protects what the player will see: with words beside the numbers, no band exists to defend and
+          // the rails pack looser-by-value only; below (the shipped default) a number biting a word is a collision
+          FctStream.LabelBelow = value is FctLabelSide.Below;
           _dirty = true;
         }
       }

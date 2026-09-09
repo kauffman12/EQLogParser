@@ -266,6 +266,67 @@ namespace EQLogParser
 
         /* The row now knows how far it actually travels; the stream's one rate is only true of final flights. */
         FinalizeRailTempo(hit);
+
+        /*
+         * The congestion rungs past birth speed (FctStream.Pressure stamped the first). An ordinary number that still covers a
+         * neighbour after normal placement:
+         *
+         *   1. floors its OWN accelerator and re-threads — a moving row slips gaps a standing one cannot, and a shorter life
+         *      is a read this row can afford to pay itself;
+         *   2. still covered: the weakest ordinary neighbour (equal counts, ties evicting the older) gives up its pixels;
+         *   3. no weaker neighbour exists, so this arrival is the weakest at the door: it turns around.
+         *
+         * Every loss — eviction or refusal — counts in DroppedCount, and protected rows (crits, marks, heals, words) skip the
+         * valve entirely: they keep their pixels and take the marginal overlap rather than let congestion delete important
+         * news. No retry loop past step 2: accelerated rail plus one sacrifice settles what a flood can present, whatever
+         * survives is open least-bad grazing under ValveOverlap, and a fight that stops stops typing inside a second and a half.
+         */
+        if ((FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits)) && FctStream.Sacrificable(hit))
+        {
+          /* Escalation's middle rung, spent before anyone else's number is touched: this row floors its own accelerator and
+           * re-threads. A moving row can slip through a gap a standing one cannot — deeper entries, earlier exits — and the
+           * read it costs itself (a shorter, faster life) is cheaper than the read it costs a neighbour (deletion). */
+          hit.RailPress = FctStream.PressFloor;
+          hit = FctStream.Place(hit, hits, stage, _rand, keepPress: true);
+          FinalizeRailTempo(hit);
+
+          if (FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits))
+          {
+            var weakest = FctStream.WeakestNeighbour(hit, hits, stage);
+            if (weakest is null)
+            {
+              DroppedCount++; // the weakest arrival at a full door turns around
+              return null;
+            }
+
+            hits.Remove(weakest);
+            DroppedCount++;
+            evicting?.Invoke(weakest);
+            hit = FctStream.Place(hit, hits, stage, _rand, keepPress: true);
+            FinalizeRailTempo(hit);
+
+            if (FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits))
+            {
+              // even the freed room only offered smears and bites: this arrival leaves too, counted. Two losses buy the
+              // one guarantee the player asked for — no ordinary number is ever painted over another's words.
+              DroppedCount++;
+              return null;
+            }
+          }
+        }
+        else if (FctStream.LabelBitten(hit, hits))
+        {
+          /* A protected row biting a word: never traded, but it can try its own tempo — one lossless re-thread shot.
+           * A faster row sweeps more lane, so the retry is adopted only when it lands genuinely clean; every lane
+           * biting means the crit keeps its birth placement and its bite, because important news briefly crowded beats
+           * important news missing. */
+          var threaded = FctStream.Place(hit, hits, stage, _rand, forcePress: FctStream.PressFloor);
+          FinalizeRailTempo(threaded);
+          if (!FctStream.LabelBitten(threaded, hits))
+          {
+            hit = threaded;
+          }
+        }
       }
       else
       {
@@ -498,7 +559,11 @@ namespace EQLogParser
         return;
       }
 
-      hit.LifetimeMs = Math.Abs(hit.Rise) * FctMotion.ParabolaScrollMsPerPx;
+      /* RailPress rides in here rather than in the scroll-rate constant: the constant is the rhythm a rail keeps when it
+         can keep it, the press is how much of that rhythm congestion takes away, and one row's acceleration must never
+         change its neighbours' (rows that share a rail share their BIRTH tempo, not a live one - a row that sped up
+         mid-flight would be an odometer lying about where it is going). */
+      hit.LifetimeMs = Math.Abs(hit.Rise) * FctMotion.ParabolaScrollMsPerPx * hit.RailPress;
       hit.MotionMs = hit.LifetimeMs;
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
       ApplyPlayerTempo(hit);

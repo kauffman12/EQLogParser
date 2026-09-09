@@ -86,8 +86,20 @@ namespace EQLogParser
     // 0xAARRGGBB, converted per substrate; keeps the style table free of WPF/Skia types
     public int ValueArgb, SourceArgb;
 
-    // crit scale pop on top of the float curve
+    /* The size-INDEPENDENT crit effects: swell in from below, halo, wider spray, top draw pass (see FctMotion.BlowoutScale and
+       FctStyle.ApplyTo). Size itself is not part of this flag - the big class carries its dial in ValueFontSize - so nothing that
+       prices a row's extent multiplies what the crit dial already set. */
     public bool Blowout;
+
+    /*
+     * The congestion accelerator, 0.45..1.0, stamped at birth by the stream (FctStream.Pressure) and multiplied into this row's rail
+     * tempo exactly once (FctIngest.FinalizeRailTempo). A rail at its configured speed has room for a certain number of rows in flight;
+     * text arriving faster than that cannot be separated at the dial's pace no matter where it enters, so a row born into a crowded rail
+     * simply travels faster - the backlog speeds up while the flood lasts and relaxes back to the player's setting as the rail empties.
+     * Bounded below because even fully accelerated a number must stay readable, and bounded in effect: the floor still clears the region
+     * inside about a second and a half, so a fight that stops never keeps typing for seconds after. Ordinary rows are 1.0.
+     */
+    public double RailPress = 1.0;
 
     public double SpawnMs;
 

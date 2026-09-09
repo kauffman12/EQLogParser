@@ -224,7 +224,9 @@ namespace EQLogParser
       return cost;
     }
 
-    private static double WorstOverlap(FctHitState candidate, FctHitState other, double pad)
+    /* Visible beyond this file for the stream's congestion valve (FctIngest): a row that still covers a neighbour after
+     * every accelerator has fired is the signal that only a sacrifice can settle it. */
+    internal static double WorstOverlap(FctHitState candidate, FctHitState other, double pad)
     {
       /* A drawn block never leaves its own [SideMin, SideMax]: ArcedX clamps the centre to that range with the half-width
        * priced at peak scale, and the block is never wider than it was priced. Two numbers whose side ranges do not overlap

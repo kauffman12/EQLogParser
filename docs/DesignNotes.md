@@ -1080,9 +1080,8 @@ vertex at half height, so a column placed downstream swings through the space th
 clamp wall beside it — same arc, same beat, so they *stay* pinned for the whole flight: 28% of a block, caught by the burst test on
 the first run. Against the arc the extra columns swing inside ground the stream already covers and touch nothing. And where
 the half cannot fit two full text widths of step — an ordinary font on somebody's 420 px overlay — the columns **compress evenly**
-rather than pinning to walls: adjacent lines graze by as much as the geometry allows and no row is ever lost. A parser overlay that
-dropped damage because the layout was busy is a trade the addon genre never had to make (its text was throttled upstream, so its
-layout always had room); it is not one this overlay makes either.
+rather than pinning to walls: adjacent lines graze by as much as the geometry allows. Grazing is a tight column and survives;
+past real smearing, congestion control takes over, and that is its own story below.
 
 **The rail runs to one scroll rate, and it is stamped twice.** The hold-style life was *travel, then rest at the end
 of the travel, then fade in place* — harmless where numbers rest wherever they landed, fatal for rows that move in single file,
@@ -1100,6 +1099,42 @@ exactly what makes birth-time gaps permanent) and makes "they all move at the sa
 travel is decided *by* placement — respawning at the pinned edge happens inside it — the tempo is stamped as an estimate before
 candidates are scored (a trial cloned without a lifetime is a flight that already ended) and restamped exactly once from the final
 flight afterwards, including on resize: stretching the window buys a row more time, not more speed.
+
+### Congestion: speed up, then let the small ones go — and a fence around the words
+
+The complaint arrived as typography, not arithmetic: in split with labels below, at raid density a number lands on the *word* under
+the number above it. The reserve was never missing — `TextHeight` has always charged a source line under every labelled row — the
+problem was throughput: past the rail's capacity the scorer knowingly accepts the least-bad overlap, and "least-bad" said 17 px of
+value box through somebody's label band. A reserve cannot conjure room; only speed or subtraction can. (The genre always knew:
+MSBT's areas *drop* text when they overflow — its throttle was upstream, but the loss was always there.)
+
+The shipped answer is a ladder, and every rung is counted (`FctIngest`'s rail branch, `FctStream`'s congestion block):
+
+1. **Birth speed.** A rail at the configured tempo can keep about eight rows legibly apart — mouth, depth stack, braid columns. A
+   row born into more crowd than that gets a shorter flight (`FctHitState.RailPress`, Little's law spent on purpose: live count *is*
+   arrival rate over service rate), floored at 0.45 so even a full emergency stays readable and clears the region inside about a
+   second and a half — congestion can never leave the overlay still typing long after the fight stopped. Steady fights sit under
+   comfort and never feel an override; the tempo stamp is a birth certificate, not a steering wheel, so no number ever changes
+   speed mid-flight and the odometer's promises survive untouched.
+2. **A self-rethread.** An ordinary row that still covers a neighbour floors its own accelerator and re-threads once: a moving row
+   slips gaps a standing one cannot, and a shorter life is a price a row can pay itself before it bills a neighbour.
+3. **The sacrifice, aimed at the obstruction.** Still covered, the *weakest ordinary* row this one actually smears or bites gives
+   up its pixels — equal values count as weakest, ties evicting the older neighbour, which was nearer leaving anyway. Crits,
+   marked specials, heals and words are beyond the valve in both directions: they never evict, and they are never the ones who go.
+4. **Turning around.** No weaker conflict exists, or even the freed room only offered smears: the arrival itself leaves. Every
+   eviction and every refusal increments `DroppedCount` — the loss is the design, so the loss is visible.
+
+The **label fence** is deliberately separate from the overlap maths. Area-based cost treats a side-kiss between columns and a
+number plunged through a word band as the same crime, and they are not: kisses read as tight, plunges weld two rows into one blob.
+So `FctStream.LabelBitten` is depth-based — a value box at least 8 px into the word band, sharing real width, sampled along both
+flights in drawn coordinates (the pop carries band and intruder together). It protects what the player will actually see: the
+canvas stamps `LabelBelow` when settings load, and players who put words beside numbers get the looser packing that choice implies,
+because nothing under the number needs fencing then.
+
+Measured on a 200-event raid burst (by-type lines, mixed values and labels): at 150–300 ms swing pace — already frantic — label
+bites went 7 → 0 and value smears 193 → 1, with the difference paid in counted drops. At superhuman 60–100 ms spam the only bites
+left are protected rows choosing crowding over absence, which is exactly the opinion the ladder is supposed to have: *no ordinary
+number is ever painted over another's words.*
 
 ### The odometer: values hang their right edge on the rail
 

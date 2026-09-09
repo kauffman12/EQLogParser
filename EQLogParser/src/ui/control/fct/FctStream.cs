@@ -14,11 +14,11 @@ namespace EQLogParser
    * .Spawn gives the style a slack-free far end), one scroll rate for crits and procs alike (FctIngest.AssignLifetime),
    * and no park — rows that rested at end of travel would all rest at the same place, and a queue that shares a parking
    * space is not a stream. Two rows born half a second apart therefore stay half a second of travel apart, on the same
-   * curve, for their whole lives: MSBT's chain, exactly. Only bursts need room made for them, and the way room is made here
-   * is the way MSBT's areas look when text arrives faster than it scrolls: the centre column, two emergency columns
-   * braided upstream of the drift, then — past three simultaneous rows — accept the least-bad overlap rather than
-   * drop a number. A parser overlay losing your damage because the layout is busy is not a trade the genre ever had
-   * to make (its text was already throttled upstream); here it never gets made.
+   * curve, for their whole lives: MSBT's chain, exactly. Only bursts need room made for them, and room is made in two escalating
+   * steps (see ComfortableRows): the crowded rail speeds its newborn rows up, and only when even an accelerated rail can land a row
+   * on top of another does a number go — the smallest plain value in the crowd first, every loss counted. What never happens is
+   * silent overlap by default or silent loss: the flood reads fast but legible, protected rows (crits, marks, heals, words) keep
+   * their pixels even at the margin, and DroppedCount says exactly what congestion cost.
    */
   internal static class FctStream
   {
@@ -27,14 +27,139 @@ namespace EQLogParser
     public const double MinRowGap = 8;
     public const double ColumnGap = 10;
 
+    /*
+     * Congestion control, two escalating steps (the pulse grid never reaches either; it has its own cells).
+     *
+     * 1. SPEED. A rail at the player's configured tempo can keep `ComfortableRows` rows legibly apart — the mouth, the depth stack,
+     *    and the two braid columns. Text arriving faster than that cannot be separated at the dial's pace no matter where each row
+     *    enters, so a row born
+     *    into a crowded rail travels proportionally faster (FctHitState.RailPress), down to PressFloor: the backlog flushes while the
+     *    flood lasts, and the moment the rail empties newborn rows are back at exactly the configured speed. The floor keeps
+     *    accelerated numbers readable and guarantees a fight that stops stops typing inside about a second and a half — congestion
+     *    must never leave the overlay still spamming seconds after the last swing.
+     *
+     * 2. VALUES. If even an accelerated rail can only land this row on top of another, something goes: the weakest ordinary damage
+     *    number in the crowded region (weaker, or equal and older — the fresher news wins ties) leaves to make room, or this row
+     *    refuses itself if it is the weakest arrival there. Never the protected — crits, marked specials, heals, and words outrank
+     *    tidiness and take their marginal overlap instead. Every loss, eviction or refusal, counts in FctIngest.DroppedCount;
+     *    nothing goes missing quietly.
+     */
+    internal const int ComfortableRows = 8;
+    internal const double PressFloor = 0.45;
+
+    /* What counts as "landed on top of" for the values valve: a fraction of the smaller block. The scorer already separates
+     * everything it can and lets the residue graze — a tight column with kissing edges reads fine, and the compression tests
+     * pin that even a deliberately over-capacity squeeze stays under a third of a block. The valve sits above that ceiling on
+     * purpose: if it fired anywhere inside the tolerated graze, every busy-but-legal fight would start paying losses the
+     * geometry never actually required. Only real smearing — a third or more of one number painted over another — is worth
+     * losing a number to prevent. */
+    internal const double ValveOverlap = 0.35;
+
+
+    /* True when this freshly-placed row still covers part of a live neighbour at some shared moment — the accelerated
+     * rail found no clean landing, and only the sacrifice rule can settle it now (FctIngest's rail branch). */
+    internal static bool OverlapsAny(FctHitState hit, List<FctHitState> hits)
+    {
+      for (var i = 0; i < hits.Count; i++)
+      {
+        if (FctPlacement.WorstOverlap(hit, hits[i], 0) > ValveOverlap)
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    /* Whether labels are drawn under the value. The canvas owns the choice and stamps this when settings load, so the
+     * engine prices the shape the player will actually see: with labels below, a following number that lands on the word
+     * band is a collision even when the two VALUES clear each other — which is exactly what "labels underneath" asks for.
+     * Shipped default is Below, so that protection is on unless the player moved the words beside the number. */
+    internal static bool LabelBelow = true;
+
+    /* A band bite is vertical, and vertical is what reads: a side-kiss between two crowded columns is geometry a player
+     * accepts, while a number plunging through the word under the one above it welds two rows into one unusable blob.
+     * So the tripwire is depth-based — how far the value box dips into the band — not an overlap fraction, and it needs
+     * enough shared width to matter before counting at all. */
+    internal const double LabelBitePx = 8;
+    internal const double LabelBiteWide = 16;
+
+    /* True when this row's label band is bitten by a neighbour's value box, or its own value would bite a neighbour's. */
+    internal static bool LabelBitten(FctHitState hit, List<FctHitState> hits)
+    {
+      if (!LabelBelow)
+      {
+        return false;
+      }
+
+      for (var i = 0; i < hits.Count; i++)
+      {
+        if (BandBite(hit, hits[i]) || BandBite(hits[i], hit))
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+
+    /* Sacrifice rule. Protected rows — crits and marks (the big class), heals, words — are never sacrificed and never
+     * refused: they outrank tidiness. For an ordinary number: the weakest strictly-weaker ordinary damage row still live
+     * in this region gives up its pixels; if this row is itself the weakest there, it goes instead. Ties on value evict
+     * the older neighbour, which is closer to leaving on its own anyway. */
+    internal static bool Sacrificable(FctHitState hit) =>
+      hit.FixedText is null && !hit.Blowout && !hit.Heal;
+
+    /* The sacrifice is chosen among the rows THIS one actually conflicts with — smearing or biting — not the whole region:
+     * evicting a bystander to make room that the scorer then used somewhere else entirely was collateral nonsense, and it
+     * kept ordinary bites alive behind unrelated funerals. Same weakest-first rule (equal counts, ties evicting the older,
+     * which is nearer leaving anyway), now aimed at the actual obstruction. */
+    internal static FctHitState WeakestNeighbour(FctHitState hit, List<FctHitState> hits, FctStage stage)
+    {
+      var region = stage.RegionFor(hit);
+      FctHitState weakest = null;
+      for (var i = 0; i < hits.Count; i++)
+      {
+        var other = hits[i];
+        if (!Sacrificable(other) ||
+            other.SideMax <= region.X || (region.X + region.Width) <= other.SideMin ||
+            other.SpawnMs + other.LifetimeMs <= hit.SpawnMs ||
+            other.Value > hit.Value ||
+            !(FctPlacement.WorstOverlap(hit, other, 0) > ValveOverlap || BandBite(hit, other) || BandBite(other, hit)))
+        {
+          continue;
+        }
+
+        if (weakest is null || other.Value < weakest.Value ||
+            (other.Value == weakest.Value && other.SpawnMs < weakest.SpawnMs))
+        {
+          weakest = other;
+        }
+      }
+
+      return weakest;
+    }
+
     /* Place one row of the stream: score this side's three columns at its spawn edge and return whichever reads
-     * cleanest, always one of them — a parabola number never arrives off its column. */
-    internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand)
+     * cleanest, always one of them — a parabola number never arrives off its column. keepPress exists for the congestion
+     * valve's escalation retry (FctIngest): the caller has already floored this row's accelerator on purpose, and the
+     * crowd-average stamp must not undo a decision that was made about this row specifically. */
+    internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand,
+      bool keepPress = false, double? forcePress = null)
     {
       /* One beat for the whole rail, set before any candidate is tried: the scoring below measures whole flights, and a
        * trial cloned without a lifetime has already ended. The beat depends only on the region, so applying it here
        * costs nothing per column and cannot disagree with itself (FctIngest.ApplyRailTempo). */
       FctIngest.ApplyRailTempo(hit, stage);
+      if (forcePress is double forced)
+      {
+        hit.RailPress = forced;
+      }
+      else if (!keepPress)
+      {
+        hit.RailPress = Pressure(hit, hits, stage);
+      }
 
       var region = stage.RegionFor(hit);
       var cx = region.X + (region.Width / 2);
@@ -94,7 +219,7 @@ namespace EQLogParser
        * drawn (crits blow out; a column parked half off-screen is not a column). Where the territory is narrower than
        * the text demands — ordinary fight, ordinary font, somebody's 420 px overlay — the columns compress evenly:
        * adjacent rows graze a little and the scorer still separates them as far as geometry allows. Compression is
-       * visible; pinning every emergency column onto the same wall clamp is worse, and dropping numbers is not on the table.
+       * visible; pinning every emergency column onto the same wall clamp is worse.
        */
       /* Right-aligned: the box hangs left of the rail, so the sideways room a braided column needs is the FULL drawn
          width going left and nothing at all going right (the rail itself only has to stay inside the territory). */
@@ -116,6 +241,83 @@ namespace EQLogParser
       return FctPlacement.PlaceOrigins(hit, hits, stage, rand, origins, cx, edgeY, MinRowGap);
     }
 
+    /* Worst plunge of b's value box into a's label band across their shared life, sampled in drawn coordinates so the
+     * pop carries band and intruder together. Band geometry mirrors the canvas: top 1.25 value-fonts under the row's own
+     * top, one source-font deep — which is the same real estate FctLayout.TextHeight already charges for; this is the
+     * fence around it. */
+    private static bool BandBite(FctHitState a, FctHitState b)
+    {
+      if (a.SourceLabel is null || a.SpawnMs + a.LifetimeMs <= b.SpawnMs || b.SpawnMs + b.LifetimeMs <= a.SpawnMs)
+      {
+        return false;
+      }
+
+      var first = Math.Max(a.SpawnMs, b.SpawnMs);
+      var last = Math.Min(a.SpawnMs + a.LifetimeMs, b.SpawnMs + b.LifetimeMs);
+      for (var s = 0; s <= 12; s++)
+      {
+        var now = first + ((last - first) * s / 12.0);
+        var ta = FctMotion.Progress(a, now - a.SpawnMs);
+        var tb = FctMotion.Progress(b, now - b.SpawnMs);
+        var sa = FctMotion.ScaleOf(a, now - a.SpawnMs);
+        var sb = FctMotion.ScaleOf(b, now - b.SpawnMs);
+
+        var bandTop = FctMotion.RaisedY(a, ta) + (a.ValueFontSize * 1.25 * sa);
+        var bandBottom = bandTop + (a.SourceFontSize * sa);
+        var valueTop = FctMotion.RaisedY(b, tb);
+        var valueBottom = valueTop + (b.ValueFontSize * 1.35 * sb);
+        var bite = Math.Min(bandBottom, valueBottom) - Math.Max(bandTop, valueTop);
+        if (bite < LabelBitePx)
+        {
+          continue;
+        }
+
+        /* The band is as wide as the WORD, not the number — "Kromdek's Favor" reaches far past "412", and a value
+         * landing on the word's tail is exactly the complaint even though it misses the value's column. Live rows carry
+         * their measured SourceWidth (the canvas stamped it at birth); before any canvas exists an estimate from the
+         * label's own length keeps the guard honest in tests and headless replay. */
+        var bandHalf = Math.Max(a.ValueWidth, a.SourceWidth > 0 ? a.SourceWidth : a.SourceLabel.Length * a.SourceFontSize * 0.52) * sa / 2.0;
+        var ax = FctMotion.ArcedX(a, ta);
+        var bx = FctMotion.ArcedX(b, tb, sb);
+        var wide = Math.Min(ax + bandHalf, bx + (b.ValueWidth * sb / 2.0)) - Math.Max(ax - bandHalf, bx - (b.ValueWidth * sb / 2.0));
+        if (wide >= LabelBiteWide)
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    /* How much this row's rail is overdriven at its birth: 1.0 while the region holds ComfortableRows or fewer live rows,
+     * shrinking with the crowd beyond that, floored at PressFloor so an emergency still clears the region inside about a
+     * second and a half.
+     *
+     * Counting everything alive — not just what sits near the entry — is the point: this is Little's law spent on purpose.
+     * A rail's throughput at the dial's tempo is its capacity divided by a row's flight time, so the live count IS the ratio
+     * of arrival rate to service rate. Steady fights sit at or under ComfortableRows and never feel an override; floods push
+     * it over, the override shortens each flight, shorter flights drain the live count back to comfort, and the rail settles
+     * exactly as fast as the traffic needs and no faster. Rows in the emergency columns count too, and so do opposing
+     * trains, because those share these pixels either way. */
+    private static double Pressure(FctHitState hit, List<FctHitState> hits, FctStage stage)
+    {
+      var region = stage.RegionFor(hit);
+      var live = 0;
+      for (var i = 0; i < hits.Count; i++)
+      {
+        var other = hits[i];
+        if (other.SideMax <= region.X || (region.X + region.Width) <= other.SideMin ||
+            other.SpawnMs + other.LifetimeMs <= hit.SpawnMs)
+        {
+          continue;
+        }
+
+        live++;
+      }
+
+      var room = ComfortableRows / (live + 1.0);
+      return room >= 1.0 ? 1.0 : Math.Max(room, PressFloor);
+    }
     /* Half-width a row can occupy at its widest draw. Nothing is multiplied on here any more: stream styles never scale a number past the
      * font it was measured at (the big class carries its size in that font, and its pop swells up from below), so the measured width plus
      * the reserved glyph IS the widest this row ever gets — which is also what makes the odometer's right edge exact.
