@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using SkiaSharp;
+using System.Collections.Generic;
 
 namespace EQLogParser
 {
@@ -9,7 +9,7 @@ namespace EQLogParser
    * once, on a 24x24 unit grid, and scaled by the caller to sit beside its number; bodies cache so a frame allocates
    * nothing.
    *
-   * The set: a dagger (assassinate), an arrow (headshot), a ghost (slay undead), a skull (finishing blow — the
+   * The set: a dagger (assassinate), a fletched war arrow, point first (headshot), a ghost (slay undead), a skull (finishing blow — the
    * universal kill mark, and deliberately a skull while the undead mark is a ghost) and a double-bit battle axe
    * (decapitation, the Berserker two-hander). Shapes are chosen for one job: read at roughly thirty pixels in
    * peripheral vision over a moving game view. Nothing thin, nothing with more than a silhouette.
@@ -61,34 +61,43 @@ namespace EQLogParser
       return new Mark(body, null);
     }
 
-    /* Arrow flying to the upper right: a solid triangle head on a thick shaft — two shapes, no thin lines. */
+    /*
+     * Headshot is an ARROW the way an archer holds one — not a direction sign, which is what the first cut (a plain
+     * triangle on a stick flying to the corner) read as. The weapon tells on itself with three parts and all three are
+     * kept visible at the 16-18 px the mark actually ships at: a barbed broadhead (concave base, so the barbs kick),
+     * bare shaft between them, and a fletch of two vanes wide enough to never be mistaken for a crossguard.
+     *
+     * A whole bow stood behind this shot in one attempt — players say "bow and arrow", so the phrase deserved a try —
+     * and rendered as soup: at mark size the belly, string and loosed arrow merged into one blob no bigger than the
+     * numbers' own outline. Diagonal flights were tried too (the classic quiver icon) and collapsed into a checkmark.
+     * What survives the size war is upright, chunky, and unmistakable: arrow, point first.
+     */
     private static Mark Arrow()
     {
-      /*
-       * One connected silhouette: a swept head hugging the corner, a shaft running out of the head's notch down to
-       * the nock, fletting flaring off the nock end. The first cut floated the fletting off the shaft and rendered as
-       * a diamond on a stick — every point here is shared with its neighbour so the glyph stays ONE object.
-       */
       var body = new SKPath();
-      body.MoveTo(23, 1); // head: corner triangle with a notch cut at the bisector
-      body.LineTo(23, 11.4f);
-      body.LineTo(18.4f, 7.6f);
-      body.LineTo(12.6f, 1);
+
+      // broadhead, point up: barbs kick outward off a concave base
+      body.MoveTo(12, 0.6f);
+      body.LineTo(7.6f, 8.2f);
+      body.QuadTo(12, 5.8f, 16.4f, 8.2f);
       body.Close();
 
-      // shaft: from just inside the notch corners down to the nock
-      body.MoveTo(19.9f, 8.5f);
-      body.LineTo(7.4f, 21.0f);
-      body.LineTo(4.6f, 18.2f);
-      body.LineTo(17.1f, 5.7f);
+      // bare shaft — the gap between head and fletch is what keeps them separate at small sizes
+      body.AddRect(new SKRect(10.7f, 6.6f, 13.3f, 21.4f));
+
+      /* Two vanes as one flared fletch across the nock: wide, low and square shouldered — each vane a foot on the
+         shaft sweeping out to a flat top, so the pair reads as feathering, not wings or a crossguard. */
+      body.MoveTo(10.7f, 21.2f);
+      body.LineTo(4.4f, 22.8f);
+      body.LineTo(4.4f, 17.8f);
+      body.LineTo(10.7f, 15.4f);
+      body.Close();
+      body.MoveTo(13.3f, 21.2f);
+      body.LineTo(19.6f, 22.8f);
+      body.LineTo(19.6f, 17.8f);
+      body.LineTo(13.3f, 15.4f);
       body.Close();
 
-      // fletting: a chevron whose inner points sit ON the shaft's own end corners
-      body.MoveTo(4.6f, 18.2f);
-      body.LineTo(1.8f, 18.9f);
-      body.LineTo(5.5f, 22.6f);
-      body.LineTo(7.4f, 21.0f);
-      body.Close();
       return new Mark(body, null);
     }
 

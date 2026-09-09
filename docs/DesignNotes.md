@@ -1578,6 +1578,12 @@ and the silhouette says which.
 - The glyph itself is **punctuation, deliberately**: 48 % of the digit height with a two-pixel gap, because at the
   first try it stood nearly as tall as the number with a six-pixel gutter and read as a caption beside the sentence
   rather than an accent on it. Both are single constants in `FctStyle`; the geometry charges for them either way.
+- The arrow glyph is a **weapon, not a direction sign** — which took three render sessions to earn. The first headshot
+  was a triangle on a stick flying to the corner and read as UI furniture; players say *bow and arrow*, so a whole longbow
+  stood behind the shot next, and at the 16–18 px marks actually ship at, bow, string and arrow merged into one blob.
+  The diagonal quiver-flight icon collapsed into a checkmark. What survives: barbed broadhead, bare shaft, a wide
+  two-vane fletch — every part chunky enough to hold its shape in peripheral vision, because at mark size an icon is
+  a silhouette and nothing else (the bake-off rig rendered all of them beside real `9,214`s to prove it).
 - Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
   a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
   same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks
