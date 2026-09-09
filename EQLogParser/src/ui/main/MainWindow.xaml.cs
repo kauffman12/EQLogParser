@@ -419,6 +419,19 @@ namespace EQLogParser
          this build's opinions, and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion exist
          to be set — the demo loop shows all three inside a few seconds. Once anybody has pressed Save (FctOverlaySettings.IsConfigured) it opens as
          usual; Cancel does not count, so the offer comes back next time rather than being forced on somebody who looked and decided. */
+      /* The overlay goes on screen BEFORE anything may unlock it — WPF refuses to make a window that has never been
+         shown anybody's Owner, and unlocking builds the settings window immediately. A setting-less first run drove
+         straight through here (configure offer → SetLocked(false) → EnsureSettings → Owner = this) with the overlay
+         still hidden, and the dispatcher ate an exception; showing a frame locked is nothing next to that. */
+      if (show)
+      {
+        _fctOverlay.Show();
+      }
+      else
+      {
+        _fctOverlay.Hide();
+      }
+
       if (show && !FctOverlaySettings.IsConfigured())
       {
         _fctOverlay.SetLocked(false);
@@ -427,19 +440,10 @@ namespace EQLogParser
       SetFctOverlayMenu(show, !_fctOverlay.Locked);
       ConfigUtil.SetSetting("FctOverlayEnabled", show);
 
-      if (show)
+      // configuring wants the window foreground so its panel can be typed in; a locked one must never take focus from the game
+      if (show && !_fctOverlay.Locked)
       {
-        _fctOverlay.Show();
-
-        // configuring wants the window foreground so its panel can be typed in; a locked one must never take focus from the game
-        if (!_fctOverlay.Locked)
-        {
-          _fctOverlay.Activate();
-        }
-      }
-      else
-      {
-        _fctOverlay.Hide();
+        _fctOverlay.Activate();
       }
     }
 

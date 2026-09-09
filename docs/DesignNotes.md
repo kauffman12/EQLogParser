@@ -1352,7 +1352,11 @@ combat text has to stay readable at a glance across a whole screen of HUD, and 1
 and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion are theirs to set. The demo loop shows
 all three within a couple of seconds, so enabling enters configure mode until somebody has pressed Save once — recorded as `FctOverlayConfigured`,
 written by Save alone. Cancel deliberately does *not* set it: backing out means "not today", and the offer comes back next time rather than a choice
-being forced on somebody who looked and decided.
+being forced on somebody who looked and decided. One trap lived exactly here, and deleting the `FctOverlay*` keys to re-test the first run walked
+straight into it: WPF refuses to make a window that has **never been shown** anybody's Owner, and unlock builds the settings window immediately —
+the offer used to fire before `Show()`, so a setting-less first enable died inside `EnsureSettings`. The ordering rule is now stated where it bites:
+show first, then unlock; and ownership of the panel is claimed at show-time via `PresentationSource.FromVisual` (WPF has no "has ever been shown" —
+`Hide` is as loadable as `Show` — and `ContentRendered` can lag `Show()`), so no entry path can repeat the crash.
 
 `View → Floating Combat Text` offers **Enable Floating Combat Text** (reading **Disable FCT** once running — the menu is already spelled out above, and an
 item that repeats it is a sentence), **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows

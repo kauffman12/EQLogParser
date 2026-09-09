@@ -251,6 +251,7 @@ namespace EQLogParser
         _settings.LoadFrom(StagedState());
         if (IsVisible)
         {
+          AttachSettingsOwner();
           _settings.Show();
           PositionSettings();
         }
@@ -280,6 +281,7 @@ namespace EQLogParser
         /* Coming back on screen while configuring: the demo belongs with the controls, and so does the panel. */
         if (!_locked && _settings is not null)
         {
+          AttachSettingsOwner();
           _settings.Show();
           PositionSettings();
         }
@@ -504,7 +506,12 @@ namespace EQLogParser
         return;
       }
 
-      _settings = new FctSettingsWindow { Owner = this };
+      /* The owner rule again: WPF wants an owner shown at least once, and configure can legitimately be entered
+         while the overlay is still on its way on screen — the panel goes up with it either way (ApplyLock and
+         OnVisibleChanged both attach what they show). So creation never touches Owner; whoever shows the panel
+         owns it, and the first of those moments that arrives is by definition one where this window has shown. */
+      _settings = new FctSettingsWindow();
+      AttachSettingsOwner();
       _settings.PreviewChanged += SettingsPreview;
       _settings.Saved += SettingsSaved;
       _settings.Cancelled += () => SetLocked(true);
@@ -517,6 +524,19 @@ namespace EQLogParser
           SetLocked(true);
         }
       };
+    }
+
+    /* Ownership of the panel, claimed only once this window can legally own one: see EnsureSettings. The test is the
+       HWND source, not a shown-flag — WPF has no public "has ever been shown" (Hide leaves a window as loadable as
+       Show did), and ContentRendered can arrive after Show() returns, which would race an immediate unlock. The
+       source exists from SourceInitialized (inside Show) until close, surviving Hide, which is exactly the interval
+       WPF's owner rule accepts. Idempotent: every path that raises the panel calls it without asking which one it is. */
+    private void AttachSettingsOwner()
+    {
+      if (_settings is not null && _settings.Owner is null && PresentationSource.FromVisual(this) is not null)
+      {
+        _settings.Owner = this;
+      }
     }
 
     /* Parked to the left of the overlay — watching numbers on the canvas while the panel sits beside it is what the
