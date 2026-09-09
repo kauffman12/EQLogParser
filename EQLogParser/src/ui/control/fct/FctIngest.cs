@@ -95,9 +95,63 @@ namespace EQLogParser
        only ever removes more, never restores. */
     public bool ShowProcs = true;
 
+    /*
+     * The words, one switch each. Categories and the threshold both work on numbers; the eight texts here are what the
+     * parser writes into ValueText when a fight event has no number at all — the complete set is FctManager's
+     * IsDefensiveLabel plus Resist — and a player's complaint about them is always specific: not "fewer words" but
+     * ""miss" is drowning everything". So each stands alone; there is no master word switch, because the master answer
+     * to "too many words" would be the side switches above, which already quiet whole stories at once. Words belong to
+     * no gate but their own and the categories: the threshold never touches them (information, not volume), and a word
+     * whose side is switched off was never going to draw anyway — these only ever remove more.
+     */
+    public bool ShowMiss = true;
+    public bool ShowParry = true;
+    public bool ShowDodge = true;
+    public bool ShowBlock = true;
+    public bool ShowRiposte = true;
+    public bool ShowResist = true;
+    public bool ShowAbsorb = true;
+    public bool ShowInvulnerable = true;
+
     /* Counted apart from HiddenCount on purpose: "filtered" is a category the player switched off, "hidden" is a number
      * under their threshold — two choices, so two numbers, and neither one borrows the other's meaning. */
     public int FilteredCount { get; private set; }
+
+    /* Word to its switch. The words arrive as Labels constants (FctManager stamps record.Type or Labels.Resist into the
+     * command's ValueText), so this matches compile-time strings, not runtime text — and anything unknown draws: a word
+     * these switches have never heard of is not silently somebody's opt-out side effect. */
+    public bool WordShown(string word) => word switch
+    {
+      Labels.Miss => ShowMiss,
+      Labels.Parry => ShowParry,
+      Labels.Dodge => ShowDodge,
+      Labels.Block => ShowBlock,
+      Labels.Riposte => ShowRiposte,
+      Labels.Resist => ShowResist,
+      Labels.Absorb => ShowAbsorb,
+      Labels.Invulnerable => ShowInvulnerable,
+      _ => true,
+    };
+
+    /* Assignment through the same map; answers whether the word was one of these switches at all, which is how the
+     * canvas knows its demo restart is warranted. */
+    public bool SetWordShown(string word, bool shown)
+    {
+      switch (word)
+      {
+        case Labels.Miss: ShowMiss = shown; break;
+        case Labels.Parry: ShowParry = shown; break;
+        case Labels.Dodge: ShowDodge = shown; break;
+        case Labels.Block: ShowBlock = shown; break;
+        case Labels.Riposte: ShowRiposte = shown; break;
+        case Labels.Resist: ShowResist = shown; break;
+        case Labels.Absorb: ShowAbsorb = shown; break;
+        case Labels.Invulnerable: ShowInvulnerable = shown; break;
+        default: return false;
+      }
+
+      return true;
+    }
 
     public int LiveCount(List<FctHitState> hits, FctLane lane)
     {
@@ -137,6 +191,15 @@ namespace EQLogParser
       /* The category gate, before even the threshold: whether this kind of number belongs on this overlay at all is a
          question the player already answered, and a filtered hit should not so much as be measured against the dial. */
       if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt) || (proc && !ShowProcs))
+      {
+        FilteredCount++;
+        return null;
+      }
+
+      /* The word gate, right behind the categories and for the same accounting: a switched-off word spends nothing —
+         no folding, no placement, no glyph work — and joins the `filtered` count, because a player who mutes "miss"
+         deserves to be told the overlay stopped drawing things, not to wonder where the fight went. */
+      if (fixedText is not null && !WordShown(fixedText))
       {
         FilteredCount++;
         return null;

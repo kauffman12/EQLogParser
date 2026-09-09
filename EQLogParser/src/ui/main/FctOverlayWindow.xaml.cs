@@ -101,6 +101,16 @@ namespace EQLogParser
     private bool _savedShowHeals = true;
     private bool _savedShowProcs = true;
 
+    /* The eight word switches (FctIngest), staged and persisted exactly like the categories. */
+    private bool _savedShowMiss = true;
+    private bool _savedShowParry = true;
+    private bool _savedShowDodge = true;
+    private bool _savedShowBlock = true;
+    private bool _savedShowRiposte = true;
+    private bool _savedShowResist = true;
+    private bool _savedShowAbsorb = true;
+    private bool _savedShowInvulnerable = true;
+
     /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
 
     // lets the View menu untick the overlay when the window closes
@@ -162,6 +172,14 @@ namespace EQLogParser
       _canvas.ShowTaken = _savedShowTaken;
       _canvas.ShowHeals = _savedShowHeals;
       _canvas.ShowProcs = _savedShowProcs;
+      _canvas.SetWordShown(Labels.Miss, _savedShowMiss);
+      _canvas.SetWordShown(Labels.Parry, _savedShowParry);
+      _canvas.SetWordShown(Labels.Dodge, _savedShowDodge);
+      _canvas.SetWordShown(Labels.Block, _savedShowBlock);
+      _canvas.SetWordShown(Labels.Riposte, _savedShowRiposte);
+      _canvas.SetWordShown(Labels.Resist, _savedShowResist);
+      _canvas.SetWordShown(Labels.Absorb, _savedShowAbsorb);
+      _canvas.SetWordShown(Labels.Invulnerable, _savedShowInvulnerable);
       _canvas.LabelSide = _savedLabelSide;
 
       /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. */
@@ -342,6 +360,14 @@ namespace EQLogParser
       _savedShowTaken = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowTakenKey);
       _savedShowHeals = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowHealsKey);
       _savedShowProcs = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowProcsKey);
+      _savedShowMiss = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowMissKey);
+      _savedShowParry = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowParryKey);
+      _savedShowDodge = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDodgeKey);
+      _savedShowBlock = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowBlockKey);
+      _savedShowRiposte = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowRiposteKey);
+      _savedShowResist = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowResistKey);
+      _savedShowAbsorb = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowAbsorbKey);
+      _savedShowInvulnerable = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowInvulnerableKey);
 
       /* And the label's seat beside its number, staged like the rest of the typography. */
       _savedLabelSide = FctOverlaySettings.LoadLabelSide();
@@ -533,6 +559,14 @@ namespace EQLogParser
       ShowTaken = _savedShowTaken,
       ShowHeals = _savedShowHeals,
       ShowProcs = _savedShowProcs,
+      ShowMiss = _savedShowMiss,
+      ShowParry = _savedShowParry,
+      ShowDodge = _savedShowDodge,
+      ShowBlock = _savedShowBlock,
+      ShowRiposte = _savedShowRiposte,
+      ShowResist = _savedShowResist,
+      ShowAbsorb = _savedShowAbsorb,
+      ShowInvulnerable = _savedShowInvulnerable,
       LabelSide = _savedLabelSide,
       TextScale = _savedTextScale,
       CritScale = _savedCritScale,
@@ -553,6 +587,14 @@ namespace EQLogParser
       _canvas.ShowTaken = state.ShowTaken;
       _canvas.ShowHeals = state.ShowHeals;
       _canvas.ShowProcs = state.ShowProcs;
+      _canvas.SetWordShown(Labels.Miss, state.ShowMiss);
+      _canvas.SetWordShown(Labels.Parry, state.ShowParry);
+      _canvas.SetWordShown(Labels.Dodge, state.ShowDodge);
+      _canvas.SetWordShown(Labels.Block, state.ShowBlock);
+      _canvas.SetWordShown(Labels.Riposte, state.ShowRiposte);
+      _canvas.SetWordShown(Labels.Resist, state.ShowResist);
+      _canvas.SetWordShown(Labels.Absorb, state.ShowAbsorb);
+      _canvas.SetWordShown(Labels.Invulnerable, state.ShowInvulnerable);
       _canvas.LabelSide = state.LabelSide;
       FctScale.Text = FctScale.ClampSize(state.TextScale);
       FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
@@ -583,6 +625,14 @@ namespace EQLogParser
       _savedShowTaken = state.ShowTaken;
       _savedShowHeals = state.ShowHeals;
       _savedShowProcs = state.ShowProcs;
+      _savedShowMiss = state.ShowMiss;
+      _savedShowParry = state.ShowParry;
+      _savedShowDodge = state.ShowDodge;
+      _savedShowBlock = state.ShowBlock;
+      _savedShowRiposte = state.ShowRiposte;
+      _savedShowResist = state.ShowResist;
+      _savedShowAbsorb = state.ShowAbsorb;
+      _savedShowInvulnerable = state.ShowInvulnerable;
       _savedLabelSide = state.LabelSide;
 
       FctOverlaySettings.SaveIsFountain(state.Fountain);
@@ -596,6 +646,14 @@ namespace EQLogParser
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowTakenKey, _savedShowTaken);
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowHealsKey, _savedShowHeals);
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowProcsKey, _savedShowProcs);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowMissKey, _savedShowMiss);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowParryKey, _savedShowParry);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDodgeKey, _savedShowDodge);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowBlockKey, _savedShowBlock);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowRiposteKey, _savedShowRiposte);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowResistKey, _savedShowResist);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowAbsorbKey, _savedShowAbsorb);
+      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowInvulnerableKey, _savedShowInvulnerable);
       FctOverlaySettings.SaveLabelSide(_savedLabelSide);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();

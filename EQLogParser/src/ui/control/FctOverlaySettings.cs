@@ -55,6 +55,17 @@ namespace EQLogParser
     public const string ShowTakenKey = "FctOverlayShowTaken";
     public const string ShowHealsKey = "FctOverlayShowHeals";
     public const string ShowProcsKey = "FctOverlayShowProcs";
+
+    /* One key per event word, same LoadShown opt-out semantics as the categories: absent is shown, and only an
+     * explicit 0 quiets a word — a junk value must never eat somebody's "resist". */
+    public const string ShowMissKey = "FctOverlayShowMiss";
+    public const string ShowParryKey = "FctOverlayShowParry";
+    public const string ShowDodgeKey = "FctOverlayShowDodge";
+    public const string ShowBlockKey = "FctOverlayShowBlock";
+    public const string ShowRiposteKey = "FctOverlayShowRiposte";
+    public const string ShowResistKey = "FctOverlayShowResist";
+    public const string ShowAbsorbKey = "FctOverlayShowAbsorb";
+    public const string ShowInvulnerableKey = "FctOverlayShowInvulnerable";
     public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
     public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 

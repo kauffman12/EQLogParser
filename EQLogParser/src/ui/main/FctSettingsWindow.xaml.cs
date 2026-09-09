@@ -41,6 +41,21 @@ namespace EQLogParser
       new(true, "procs"),
     ];
 
+    /* The event words, same checkbox-in-a-combo pattern and the same reasons for living here as _showItems. The order
+     * is the fight's, not alphabetical: the quiet defensive words first, then the spell failures, then the loud pair —
+     * which is roughly how often a player reaches for each. */
+    private readonly List<ComboBoxItemDetails> _wordItems =
+    [
+      new(true, "miss"),
+      new(true, "parry"),
+      new(true, "dodge"),
+      new(true, "block"),
+      new(true, "riposte"),
+      new(true, "resist"),
+      new(true, "absorb"),
+      new(true, "invulnerable"),
+    ];
+
     // The shipped picks, used only as the parse fallback when a combo somehow has nothing selected.
     private static readonly FctConfigState Defaults = new();
 
@@ -59,6 +74,7 @@ namespace EQLogParser
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       showCombo.ItemsSource = _showItems;
+      wordCombo.ItemsSource = _wordItems;
 
       /* The brushes and EQDescriptionSize come from application resources and swap themselves when the theme changes;
          what does not follow on its own is this window's own SfSkinManager stamp, so it gets re-stamped. The unsubscribe
@@ -90,6 +106,15 @@ namespace EQLogParser
       _showItems[2].IsChecked = state.ShowHeals;
       _showItems[3].IsChecked = state.ShowProcs;
       UpdateShowTitle();
+      _wordItems[0].IsChecked = state.ShowMiss;
+      _wordItems[1].IsChecked = state.ShowParry;
+      _wordItems[2].IsChecked = state.ShowDodge;
+      _wordItems[3].IsChecked = state.ShowBlock;
+      _wordItems[4].IsChecked = state.ShowRiposte;
+      _wordItems[5].IsChecked = state.ShowResist;
+      _wordItems[6].IsChecked = state.ShowAbsorb;
+      _wordItems[7].IsChecked = state.ShowInvulnerable;
+      UpdateWordsTitle();
       thresholdUpDown.Value = state.Threshold;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
@@ -130,6 +155,14 @@ namespace EQLogParser
         ShowDealt = _showItems[1].IsChecked,
         ShowHeals = _showItems[2].IsChecked,
         ShowProcs = _showItems[3].IsChecked,
+        ShowMiss = _wordItems[0].IsChecked,
+        ShowParry = _wordItems[1].IsChecked,
+        ShowDodge = _wordItems[2].IsChecked,
+        ShowBlock = _wordItems[3].IsChecked,
+        ShowRiposte = _wordItems[4].IsChecked,
+        ShowResist = _wordItems[5].IsChecked,
+        ShowAbsorb = _wordItems[6].IsChecked,
+        ShowInvulnerable = _wordItems[7].IsChecked,
         LabelSide = ComboTag(labelSideCombo) switch
         {
           "left" => FctLabelSide.Left,
@@ -203,6 +236,21 @@ namespace EQLogParser
 
     /* The combo's closed face counts what is on, in the app's own words — the same summariser the column pickers use. */
     private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "categories");
+
+    private void UpdateWordsTitle() => UiElementUtil.SetComboBoxTitle(wordCombo, "words");
+
+    /* Words are a second content combo beside the categories, with its own closed-face summary; nothing else about
+     * the interaction differs. */
+    private void WordDropDownClosed(object sender, EventArgs e)
+    {
+      if (_loading)
+      {
+        return;
+      }
+
+      UpdateWordsTitle();
+      PreviewChanged?.Invoke(Snapshot());
+    }
 
     /* Double-click returns a dial to the shipped middle; letting go of either restarts the demo cycle up top. */
     private void SliderReleased(object sender, MouseButtonEventArgs e)

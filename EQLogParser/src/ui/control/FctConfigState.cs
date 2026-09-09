@@ -26,6 +26,18 @@ namespace EQLogParser
     public bool ShowHeals = true;
     public bool ShowProcs = true;
 
+    /* The words, one switch each (FctIngest): miss, parry, dodge, block, riposte, resist, absorb, invulnerable. They
+     * ride beside the categories because that is where they are gated and where the panel puts them — the "words"
+     * combo — not because a word is a category: the threshold never hides one, only these can. */
+    public bool ShowMiss = true;
+    public bool ShowParry = true;
+    public bool ShowDodge = true;
+    public bool ShowBlock = true;
+    public bool ShowRiposte = true;
+    public bool ShowResist = true;
+    public bool ShowAbsorb = true;
+    public bool ShowInvulnerable = true;
+
     /* Typography rather than layout, so it lives in both modes: where "(source)" sits by its amount. */
     public FctLabelSide LabelSide = FctLabelSide.Below;
 

@@ -79,8 +79,9 @@ namespace EQLogParser
       new Cue(1280, FctLane.DamageDealt, 412, "Venin", periodic: true),
       new Cue(1640, FctLane.DamageDealt, 412, "Venin", periodic: true),
 
-      new Cue(1900, FctLane.DamageTaken, 830, "Claw"),
-      new Cue(2200, FctLane.DamageDealt, 2170, "Flare"),
+
+      // every word the switches can reach appears once per cycle (FctIngest's eight): mute one and the loop proves it
+      new Cue(2060, FctLane.Defensive, valueText: Labels.Block),
       new Cue(2520, FctLane.Missed, valueText: Labels.Miss),
       new Cue(2840, FctLane.DamageDealt, 412, "Venin", periodic: true),
 
@@ -98,7 +99,9 @@ namespace EQLogParser
       // the odometer's narrow extreme next to the decapitation's 896.8k: a graze that abbreviates to nothing
       new Cue(4560, FctLane.DamageDealt, 47, "Punch"),
 
-      new Cue(4720, FctLane.DamageDealt, 968, "Punch"),
+
+      // the loud pair: wasted-cast warnings carry their own font size, so the cycle has to show them next to quiet words
+      new Cue(4900, FctLane.Defensive, valueText: Labels.Absorb),
       new Cue(5080, FctLane.HealingReceived, 1450, "Complete Heal"),
       new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
       new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
@@ -108,6 +111,7 @@ namespace EQLogParser
       // deliberately NOT a crit: the mark carries a crit's size on its own, and this cue is the proof of it
       new Cue(6100, FctLane.DamageDealt, 10460, "Pierce", special: FctSpecial.Headshot),
       new Cue(6450, FctLane.DamageDealt, 7310, "Crush", special: FctSpecial.SlayUndead),
+      new Cue(6560, FctLane.Defensive, valueText: Labels.Invulnerable),
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
       new Cue(6850, FctLane.HealingReceived, 24800, "Complete Heal", crit: true),
       new Cue(7150, FctLane.DamageDealt, 4126, "Slash", crit: true),
@@ -182,6 +186,15 @@ namespace EQLogParser
         _ingest.ShowDealt = gates.ShowDealt;
         _ingest.ShowTaken = gates.ShowTaken;
         _ingest.ShowHeals = gates.ShowHeals;
+        _ingest.ShowProcs = gates.ShowProcs;
+        _ingest.ShowMiss = gates.ShowMiss;
+        _ingest.ShowParry = gates.ShowParry;
+        _ingest.ShowDodge = gates.ShowDodge;
+        _ingest.ShowBlock = gates.ShowBlock;
+        _ingest.ShowRiposte = gates.ShowRiposte;
+        _ingest.ShowResist = gates.ShowResist;
+        _ingest.ShowAbsorb = gates.ShowAbsorb;
+        _ingest.ShowInvulnerable = gates.ShowInvulnerable;
       }
 
       var changed = false;

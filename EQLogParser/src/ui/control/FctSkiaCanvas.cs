@@ -235,6 +235,22 @@ namespace EQLogParser
     }
 
     /*
+     * The word switches as one entry instead of eight properties: a word IS its Labels constant, so the map from name
+     * to switch lives with the switches (FctIngest.WordShown) and the canvas just forwards. Same contract as every
+     * other gate here — it changes what gets through from the next number on, never what is already drawn — and an
+     * unknown word changes nothing at all, so the demo does not restart for a switch that moved.
+     */
+    public void SetWordShown(string word, bool shown)
+    {
+      if (!_ingest.SetWordShown(word, shown))
+      {
+        return;
+      }
+
+      RestartDemo();
+    }
+
+    /*
      * The display threshold forwarded to ingest with MotionStyle's contract: it changes what gets through the gate,
      * never what is already on screen, and configure mode restarts its demo loop so the effect can be judged on the
      * next number rather than after a Save. The demo runs small heals and big crits precisely so this dial has

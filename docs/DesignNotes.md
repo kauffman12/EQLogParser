@@ -832,9 +832,25 @@ not extend here — "Miss" belongs to whoever missed, and defense words (`Defens
 resists and blocks won against you. Off means **off**, down to zero visible categories if somebody wants that; nothing
 is lost silently while it is.
 
-The configure row was already full, so the three checkboxes live behind a **"shows"** button that names what is ON —
-"everything" in the default state (the common case must not look like a setting), "my hits + heals" otherwise, all
-staged like every other control: Save writes, Cancel/Esc puts back.
+**Each word stands alone.** The words with no number — miss, parry, dodge, block, riposte, resist, absorb,
+invulnerable: `FctManager`'s `IsDefensiveLabel` set plus Resist, which is everything the parser can write — collect a
+different complaint from the category one. It is never "fewer words"; it is *that* word: misses during a whiff storm,
+resists against the one spell that keeps failing its check. So below **show** sits **words**, one checkbox per word,
+the same opt-out semantics (absent is shown; only an explicit 0 mutes, because a junk value must never eat somebody's
+"resist") and the same `filtered` accounting — a muted word visits `hidden` never, since the threshold's count is
+about numbers and these are not numbers. Three rules keep the layer small: words stay exempt from the threshold; the
+switches stack *under* the categories (defense words belong to "damage on me" still, and a word switch only ever
+removes more); and unknown text always draws — `WordShown` answers true for anything outside the eight, because a
+word these switches have never heard of is nobody's implicit opt-out. A word *is* its Labels constant, so the name-to-
+switch map lives with the switches (`FctIngest.WordShown`/`SetWordShown`) and the canvas forwards one method instead
+of wearing eight properties. The demo cycle shows all eight words once — a switch nobody can preview is a switch
+nobody finds — and that copy path also caught a stale promise: `FctDemo.Advance` had been copying threshold and three
+categories for pages of notes about "copies the switches", missing procs since the day they shipped. The word tests
+pin the copy now, procs included.
+
+The configure row was already full, so the checkboxes live behind dropdowns that name what is ON — "categories" and
+"words", the closed face counting what stays ("everything" in the default state; the common case must not look like a
+setting), all staged like every other control: Save writes, Cancel puts back.
 
 **The demo gate was never connected.** `FctDemo` runs a private `FctIngest` — that design is load-bearing, the loop must
 never touch real counters — but the same design meant the dial's threshold only ever reached the *real* feed: the demo

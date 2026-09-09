@@ -191,5 +191,107 @@ namespace EQLogParser
       Assert.IsTrue(Proc(400, 3));
       Assert.AreEqual(3, hits.Count);
     }
+
+    /*
+     * The word switches: every event word the parser can produce (FctManager's IsDefensiveLabel set plus Resist) stands
+     * on its own, mutes only itself, lands in `filtered` and never in `hidden` — the threshold's count is about numbers,
+     * and these are not numbers. Each case uses the word's natural lane: outgoing failures (Miss, Resist) travel the
+     * Missed lane, defended events travel Defensive.
+     */
+    [TestMethod]
+    public void EveryWordHasItsOwnSwitchAndNobodyElses()
+    {
+      var words = new (FctLane Lane, string Word, Action<FctIngest> Mute)[]
+      {
+        (FctLane.Missed, Labels.Miss, i => i.ShowMiss = false),
+        (FctLane.Defensive, Labels.Parry, i => i.ShowParry = false),
+        (FctLane.Defensive, Labels.Dodge, i => i.ShowDodge = false),
+        (FctLane.Defensive, Labels.Block, i => i.ShowBlock = false),
+        (FctLane.Defensive, Labels.Riposte, i => i.ShowRiposte = false),
+        (FctLane.Missed, Labels.Resist, i => i.ShowResist = false),
+        (FctLane.Defensive, Labels.Absorb, i => i.ShowAbsorb = false),
+        (FctLane.Defensive, Labels.Invulnerable, i => i.ShowInvulnerable = false),
+      };
+
+      foreach (var (lane, word, mute) in words)
+      {
+        // default: every word shows and nothing is counted
+        var open = Open();
+        Assert.IsNotNull(Take(open, new List<FctHitState>(), lane, 0, text: word), $"{word} shows by default");
+        Assert.AreEqual(0, open.FilteredCount);
+
+        // muted: it never spawns, it is counted, and its neighbours are untouched
+        var ingest = Open();
+        mute(ingest);
+        var hits = new List<FctHitState>();
+        Assert.IsNull(Take(ingest, hits, lane, 0, text: word), $"{word} is switched off");
+        Assert.AreEqual(1, ingest.FilteredCount, $"{word} lands in the filtered count");
+        Assert.AreEqual(0, ingest.HiddenCount, "words are not numbers — they never visit the threshold's count");
+
+        foreach (var (_, other, _) in words)
+        {
+          if (other != word)
+          {
+            Assert.IsNotNull(Take(ingest, hits, lane, 0, text: other), $"{other} survived {word}'s switch");
+          }
+        }
+      }
+    }
+
+    /* Words these switches have never heard of draw: an unknown text is not silently somebody's opt-out side effect,
+     * and a future parser word cannot arrive already muted. */
+    [TestMethod]
+    public void UnknownWordsAreNobodyToSwitchOff()
+    {
+      var ingest = Open();
+      ingest.ShowMiss = false;
+      ingest.ShowParry = false;
+      ingest.ShowDodge = false;
+      ingest.ShowBlock = false;
+      ingest.ShowRiposte = false;
+      ingest.ShowResist = false;
+      ingest.ShowAbsorb = false;
+      ingest.ShowInvulnerable = false;
+
+      var hits = new List<FctHitState>();
+      Assert.IsNotNull(Take(ingest, hits, FctLane.Missed, 0, text: "Flub"));
+      Assert.AreEqual(0, ingest.FilteredCount, "a word outside the set passes every switch clean");
+    }
+
+    /* The demo has to carry the vocabulary it teaches: all eight words appear in one cycle, and switches — procs'
+     * included, which once silently failed to reach the demo's own ingest — mute them there exactly as live. */
+    [TestMethod]
+    public void TheConfigureDemoCarriesAndObeysTheWords()
+    {
+      var all = new[] { Labels.Miss, Labels.Parry, Labels.Dodge, Labels.Block, Labels.Riposte, Labels.Resist, Labels.Absorb, Labels.Invulnerable };
+
+      var demo = new FctDemo();
+      var spawned = new List<FctHitState>();
+      demo.Start(0);
+      for (var now = 0.0; now <= FctDemo.CycleMs + 100; now += 50)
+      {
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, spawned.Add, null);
+      }
+
+      foreach (var word in all)
+      {
+        Assert.IsTrue(spawned.Any(h => h.FixedText == word), $"the cycle shows {word} once — a switch nobody can preview is a switch nobody finds");
+      }
+
+      var gates = Open();
+      gates.ShowDodge = false;
+      gates.ShowProcs = false;
+      var muted = new List<FctHitState>();
+      var demo2 = new FctDemo();
+      demo2.Start(0);
+      for (var now = 0.0; now <= FctDemo.CycleMs + 100; now += 50)
+      {
+        demo2.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, muted.Add, null, gates);
+      }
+
+      Assert.IsFalse(muted.Any(h => h.FixedText == Labels.Dodge), "dodge obeys its switch inside the demo");
+      Assert.IsTrue(muted.Any(h => h.FixedText == Labels.Miss), "and only that word goes quiet");
+      Assert.IsFalse(muted.Any(h => h.Proc), "the proc switch reaches the demo's ingest too");
+    }
   }
 }
