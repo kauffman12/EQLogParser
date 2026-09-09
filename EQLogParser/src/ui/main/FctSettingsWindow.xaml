@@ -61,7 +61,6 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- The dials keep their meanings and lose their furniture: the row's label says which is which, and
@@ -116,21 +115,16 @@
         </ComboBox>
 
         <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which kinds of numbers to draw — procs get their own switch because a proc line can read as double-counting the swing that triggered it. Hidden kinds are counted; the log, meters and exports never change" />
+                   ToolTip="what to draw: number categories first, then the event words — miss, parry, dodge, block, riposte, resist, absorb, invulnerable — each with its own switch. Hidden kinds are counted; the log, meters and exports never change" />
         <ComboBox x:Name="showCombo" Grid.Row="4" Grid.Column="1" Margin="0,3"
                   ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
-
-        <TextBlock Grid.Row="5" Text="words" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="each event word has its own switch, so the one that is spamming can go quiet while the others stay — words are never hidden by the threshold, only here; muted words are counted like every other filter" />
-        <ComboBox x:Name="wordCombo" Grid.Row="5" Grid.Column="1" Margin="0,3"
-                  ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="WordDropDownClosed" />
 
         <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million.
              It lives among the always-applies now because the engine never treated it otherwise — a threshold is a
              statement about numbers, not about layout, and fountain filters with it too. -->
-        <TextBlock Grid.Row="6" Text="threshold" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <TextBlock Grid.Row="5" Text="threshold" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="stop showing your damage numbers at or under this value (heals and words like Miss are never hidden); hidden hits are counted, not lost. 0 is off" />
-        <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="6" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
+        <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="5" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
                            MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="ThresholdChanged">
           <syncfusion:UpDown.NumberFormatInfo>

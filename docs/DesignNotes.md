@@ -835,8 +835,10 @@ is lost silently while it is.
 **Each word stands alone.** The words with no number — miss, parry, dodge, block, riposte, resist, absorb,
 invulnerable: `FctManager`'s `IsDefensiveLabel` set plus Resist, which is everything the parser can write — collect a
 different complaint from the category one. It is never "fewer words"; it is *that* word: misses during a whiff storm,
-resists against the one spell that keeps failing its check. So below **show** sits **words**, one checkbox per word,
-the same opt-out semantics (absent is shown; only an explicit 0 mutes, because a junk value must never eat somebody's
+resists against the one spell that keeps failing its check. So the **show** combo grew to twelve checkboxes — the four
+categories, then every word as its own — rather than gaining a second dropdown: words answer the same question the
+categories do ("what may draw"), and two dropdowns asking half of one question each is panel furniture with an opinion.
+Same opt-out semantics (absent is shown; only an explicit 0 mutes, because a junk value must never eat somebody's
 "resist") and the same `filtered` accounting — a muted word visits `hidden` never, since the threshold's count is
 about numbers and these are not numbers. Three rules keep the layer small: words stay exempt from the threshold; the
 switches stack *under* the categories (defense words belong to "damage on me" still, and a word switch only ever
@@ -848,9 +850,9 @@ nobody finds — and that copy path also caught a stale promise: `FctDemo.Advanc
 categories for pages of notes about "copies the switches", missing procs since the day they shipped. The word tests
 pin the copy now, procs included.
 
-The configure row was already full, so the checkboxes live behind dropdowns that name what is ON — "categories" and
-"words", the closed face counting what stays ("everything" in the default state; the common case must not look like a
-setting), all staged like every other control: Save writes, Cancel puts back.
+The configure row was already full, so the checkboxes live behind one dropdown that names what is ON — "categories" on
+the closed face, counting what stays ("everything" in the default state; the common case must not look like a setting),
+all staged like every other control: Save writes, Cancel puts back.
 
 **The demo gate was never connected.** `FctDemo` runs a private `FctIngest` — that design is load-bearing, the loop must
 never touch real counters — but the same design meant the dial's threshold only ever reached the *real* feed: the demo
