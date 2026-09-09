@@ -612,8 +612,8 @@ one geometry path: `FctStage` resolves (choice, canvas size) into the three ques
 is this, which way does it travel, and what do the style amplitudes measure against. Bands answers "the whole canvas, out up
 and in down"; halves answers "one of two side-by-side halves, whichever way that side was told".
 
-**Halves** is the shipped default because it is the genre standard: Mik's Scrolling Battle Text ships two side-by-side
-scroll areas — incoming left, outgoing right, both scrolling down with a parabola bow (fork `Placidina/MikScrollingBattleText`,
+**Halves** is the genre-standard shape — the scheme the preset layer later wrapped rather than a pick anyone makes
+directly today. Mik's Scrolling Battle Text ships two side-by-side scroll areas — incoming left, outgoing right, both scrolling down with a parabola bow (fork `Placidina/MikScrollingBattleText`,
 `MSBTProfiles.lua`: classic master profile L175–196, retail L1640–1668, both `animationStyle = "Parabola"`,
 `direction = "Down"`). What halves gives that bands cannot: position carries *who* (which half a number is in), which frees
 the direction of travel to be a per-side setting — each half owns its whole height, so a number rising on one side cannot
@@ -755,7 +755,7 @@ legend re-sentences itself from the staged choice either way. The shape row serv
 cell** rather than one list of illegal promises: WPF items cannot live in two lists, and a scheme should never show a
 motion it would only degrade, so each mode owns its list and the mode swap shows one.
 
-**settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = split) and
+**settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = fountain — the mode that needs no explanation opens the first run) and
 `FctOverlayShape` ("parabola"/"line"/"spray"/"hold"; the retired "straight" spelling still reads) name the mode;
 per-category keys carry the rest (`FctOverlayHealDirection`,
 `FctOverlayTakenDamageLane`, `FctOverlayDealtDamageLane` beside the existing direction keys; the older `…Side` spellings

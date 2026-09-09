@@ -186,9 +186,12 @@ namespace EQLogParser
       ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
     }
 
-    /* The mode itself, in the player's words; absent is split — the MSBT-shaped default. */
+    /* The mode itself, in the player's words; absent is FOUNTAIN. The plume is what makes someone look twice at the
+     * first crit of the first fight, and split asks for a few decisions (lanes, directions) before it looks like its
+     * own idea — so the untouched settings.ini opens with the mode that needs no explanation. Only the explicit word
+     * "split" splits; junk reads as the default, as it does for every key here. */
     public static bool LoadIsFountain() =>
-      string.Equals(ConfigUtil.GetSetting(ModeKey, null), "fountain", StringComparison.OrdinalIgnoreCase);
+      !string.Equals(ConfigUtil.GetSetting(ModeKey, null), "split", StringComparison.OrdinalIgnoreCase);
 
     public static void SaveIsFountain(bool fountain) => ConfigUtil.SetSetting(ModeKey, fountain ? "fountain" : "split");
 
