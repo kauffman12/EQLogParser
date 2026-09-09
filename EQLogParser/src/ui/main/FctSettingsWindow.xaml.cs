@@ -137,7 +137,7 @@ namespace EQLogParser
           _ => FctLabelSide.Below,
         },
         TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
-        CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)), // same percent rule as the normal dial; only its middle differs
+        CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
       };
@@ -211,7 +211,7 @@ namespace EQLogParser
       {
         if (sender == sizeSlider)
         {
-          sizeSlider.Value = 0;                                  // the normal dial's middle is nothing
+          sizeSlider.Value = 0;                                  // the text dial's middle is nothing
         }
         else if (sender == critSlider)
         {

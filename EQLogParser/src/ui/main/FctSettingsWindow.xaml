@@ -80,8 +80,8 @@
                      Foreground="{DynamicResource ContentForegroundAlt}" />
         </Grid>
 
-        <TextBlock Grid.Row="1" Text="normal size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big ordinary numbers are; applies to the ones after this (double-click resets)" />
+        <TextBlock Grid.Row="1" Text="text size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="how big ordinary numbers are - crits and special attacks have their own dial below; applies to the ones after this (double-click resets)" />
         <Grid Grid.Row="1" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -94,7 +94,7 @@
         </Grid>
 
         <TextBlock Grid.Row="2" Text="crit size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big crits and special attacks (assassinate, headshot, slay undead, finishing blow, decapitation) are written, on the same scale as normal size; they are one class with one size of their own, so this dial moves them whether or not normal size moves. 0 % is exactly baseline size - still haloed, still pops in, still on top. Applies to the ones after this (double-click resets)" />
+                   ToolTip="how big crits and special attacks (assassinate, headshot, slay undead, finishing blow, decapitation) are written, on the same scale as text size; they are one class with a size of their own, so this dial moves them whether or not text size does. 0 % is exactly baseline size - still haloed, still pops in, still on top. Applies to the ones after this (double-click resets)" />
         <Grid Grid.Row="2" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />

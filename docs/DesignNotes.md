@@ -709,7 +709,7 @@ keystroke should not silently discard what a click was willing to name. Procs jo
 kind while that combo was being born.
 
 **The panel is ordered by how permanent things are, not by the order features were born.** Above the first hairline sit
-the always-applies — sliders first, then dropdowns, then number boxes (speed, normal size, crit size, label, show, hide
+the always-applies — sliders first, then dropdowns, then number boxes (speed, text size, crit size, label, show, hide
 below); below the second hairline sit the layout decisions the mode actually obeys (mode, shape, and
 the three categories alphabetical: damage to me, heals, my damage). The threshold crossed into the permanent block on
 purpose: a threshold is a statement about numbers, not layout, and fountain filters with it too — hiding it there had
@@ -1192,11 +1192,11 @@ lane columns as fractions of width, the vertical reserve a line of text needs `F
 either direction is where that stops describing the feature: past it, damage and healing columns begin to occupy each other at ordinary window sizes.
 Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
 
-**Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Normal size* sizes every ordinary number; *crit size* sizes the big
+**Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Text size* sizes every ordinary number; *crit size* sizes the big
 class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both are percent of the measured
 baseline over the same ±50 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
 why it has no hidden parts. Version one kept a fixed 40 px crit tier above every lane: parked both dials mid and crits stood clearly bigger than normal hits, so
-the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the normal dial* — honest parity at 0 %, but stacked:
+the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the text dial* — honest parity at 0 %, but stacked:
 font × dial × the pop's 1.3 hold, and setting the crit slider to its floor still produced numbers thirty percent over the neighbors, because the multiplication was
 hiding in choreography no label mentioned. Both failures are the same failure — **a size that more than one control can reach is not a size you can set** — and the
 class rule closes it from both ends: each class has exactly one dial, and `FctStyle.ApplyTo` is where that dial meets the font, once, at birth. In particular the
@@ -1402,7 +1402,7 @@ information*, which is true of a DoT tick and false of a proc: the proc did real
 separates the two streams is **when and where**, not how big — so procs wear their lane's full size, and subordination is left
 to the two rules that read as urgency rather than as rank: a shorter tempo, and a different row.
 
-The size dial's rename is what made the reduction visible for what it was. Once the panel asked for *normal size* beside a new
+The split of size into two dials is what made the reduction visible for what it was. Once the panel asked for *text size* beside a new
 *crit size*, "0.78 × normal" became an answer to a question the player never asked — there is no proc dial, and could not be, so
 a hidden per-kind multiplier was a fourth dial in nobody's settings.
 

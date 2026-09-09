@@ -84,7 +84,7 @@ namespace EQLogParser
       /* The big CLASS — crits and marked special attacks — has its own dial and is written UNIFORM by it: they already share a lane, a
          colour and a draw pass, so they share a font too, based on dealt-damage size because that is what a crit most often is. The dial
          is absolute for the class — 0 % draws a crit exactly as big as a baseline normal hit, +50 % half again, and it can go to half-size
-         for someone who wants crits quiet — and the normal dial deliberately does not reach into it: two classes sized independently is
+         for someone who wants crits quiet — and the text dial deliberately does not reach into it: two classes sized independently is
          the one promise a two-dial UI can keep, and neither number hides a multiplication of the other. What separates a 0 % crit from an
          ordinary number then is everything that is not size: the swell-in, the halo, the orange, the top draw pass. Sizes are applied
          here and nowhere else, at birth rather than at draw: hit.ValueFontSize is the real drawn size from this point on — line height,

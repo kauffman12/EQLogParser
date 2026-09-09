@@ -70,7 +70,7 @@ namespace EQLogParser
 
     public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.ClampSize(scale));
 
-    /* The crit dial rides the same band as the normal one and ships at +10 % — see FctScale.CritSizeDefault. */
+    /* The crit dial rides the same band as the text dial and ships at +10 % — see FctScale.CritSizeDefault. */
     public static double LoadCritScale() => FctScale.ClampCritSize(ConfigUtil.GetSettingAsDouble(CritScaleKey, FctScale.CritSizeDefault));
 
     public static void SaveCritScale(double scale) => ConfigUtil.SetSetting(CritScaleKey, FctScale.ClampCritSize(scale));

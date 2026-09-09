@@ -33,14 +33,14 @@ namespace EQLogParser
 
     /*
      * Two size dials for two classes of number, sized independently under the SAME rule: each is "percent of the measured baseline,
-     * -50 % to +50 %", it just answers for different rows. NORMAL sizes every ordinary number (each in its lane's tier); CRIT sizes the
+     * -50 % to +50 %", it just answers for different rows. TEXT SIZE covers every ordinary number (each in its lane's tier); CRIT SIZE covers the
      * big class - crits and the marked special attacks - which share one size because they share one lane, one colour and one draw pass.
      *
      * Independent rather than one scaling the other, after two failed couplings. A fixed crit tier above every lane meant "0 %" still drew
-     * clearly bigger than a normal hit - the dial could not reach its own promise. Making it a multiplier over the normal dial fixed the
+     * clearly bigger than a normal hit - the dial could not reach its own promise. Making it a multiplier over the text dial fixed the
      * parity but stacked: font x dial x pop held two hidden multiplications deep, and parking both sliders mid put crits forty-odd percent
      * over hits with nothing on screen to say so. Under this rule a sentence fits on the slider: "crit size 0 % draws a crit exactly as
-     * big as a normal hit at its own setting's baseline; every percent adds that much." The normal dial deliberately does NOT reach into
+     * big as a normal hit at its own setting's baseline; every percent adds that much." The text dial deliberately does NOT reach into
      * the crit class: a player making ordinary numbers readable should not have their exceptions swell unasked, and one dial per class is
      * the only promise a two-dial UI can actually keep.
      *
@@ -80,7 +80,7 @@ namespace EQLogParser
     public static double Text = SizeDefault;
 
     /* The crit class's own size multiplier: same band as Text (both dials are percent of the measured baseline, ±50 %), its own shipped
-       middle (+10 %) and its own rescue target - junk lands on THIS dial's default, never the normal one. */
+       middle (+10 %) and its own rescue target - junk lands on THIS dial's default, never the text dial's. */
     public static double Crit = CritSizeDefault;
 
     public static double ClampCritSize(double value) =>
