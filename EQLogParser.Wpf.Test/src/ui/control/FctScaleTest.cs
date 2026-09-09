@@ -46,20 +46,22 @@ namespace EQLogParser
      * the punctuation the player was reaching for.
      */
     [TestMethod]
-    public void CritSizeDial_SharesTheBandAndShipsAtPlusTen()
+    public void CritSizeDial_MeasuresADeltaAndShipsAtPlusTen()
     {
-      // the shipped middle is a position on that same band: +10 %, stated once where the player would read it
-      Assert.AreEqual(10, FctScale.PercentOfSize(FctScale.CritSizeDefault), "+10 % is what the dial shows at its default");
-      var bottom = FctScale.SizeFromPercent(-50);
-      var top = FctScale.SizeFromPercent(50);
-      Assert.AreEqual(FctScale.SizeMin, bottom, 0.0001, "same band as the normal dial");
-      Assert.AreEqual(FctScale.SizeMax, top, 0.0001);
+      // the shipped middle is +10 %, stated once where the player would read it
+      Assert.AreEqual(FctScale.CritSizePercentDefault, FctScale.PercentOfSize(FctScale.CritSizeDefault), "+10 % is what the dial shows at its default");
 
-      var shipped = FctScale.SizeFromPercent(10);
+      // the band runs 0 % to +40 %: a delta dial has no negative half, because below "the same size as the hit would have
+      // been" there is nothing for the slider to express - a crit cannot be quieter than unremarkable by having less font
+      Assert.AreEqual(1.0, FctScale.CritSizeFromPercent(0), 0.0001, "0 % means parity: the crit dial adds nothing at its floor");
+      Assert.AreEqual(FctScale.CritSizeMax, FctScale.CritSizeFromPercent(40), 0.0001, "+40 % is the ceiling");
+      Assert.AreEqual(1.0, FctScale.CritSizeFromPercent(-30), 0.0001, "a negative position clamps UP to parity, not down to small");
+
+      var shipped = FctScale.CritSizeFromPercent(FctScale.CritSizePercentDefault);
       Assert.AreEqual(FctScale.CritSizeDefault, shipped, 0.0001, "the dial's +10 % and the shipped default are the same number");
 
-      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampCritSize(0));
-      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampCritSize(9000));
+      Assert.AreEqual(1.0, FctScale.ClampCritSize(0));
+      Assert.AreEqual(FctScale.CritSizeMax, FctScale.ClampCritSize(9000));
       Assert.AreEqual(FctScale.CritSizeDefault, FctScale.ClampCritSize(double.NaN), "junk lands on the crit dial's own middle, not the normal one");
     }
 
@@ -77,7 +79,7 @@ namespace EQLogParser
         FctScale.Text = FctScale.SizeFromPercent(-40);
         Assert.AreNotEqual(FctScale.Text, FctScale.Crit, 0.0001, "moving the normal dial moved the crits with it");
 
-        FctScale.Crit = FctScale.SizeFromPercent(50);
+        FctScale.Crit = FctScale.CritSizeFromPercent(40);
         Assert.AreEqual(0.6, FctScale.Text, 0.0001, "moving the crit dial moved the ordinary numbers with it");
       }
       finally

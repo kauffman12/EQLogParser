@@ -137,7 +137,7 @@ namespace EQLogParser
           _ => FctLabelSide.Below,
         },
         TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
-        CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)),
+        CritScale = FctScale.CritSizeFromPercent((int)Math.Round(critSlider.Value)),
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
       };
@@ -215,7 +215,7 @@ namespace EQLogParser
         }
         else if (sender == critSlider)
         {
-          critSlider.Value = (FctScale.CritSizeDefault - 1) * 100; // and the crit dial's is its shipped +10 %
+          critSlider.Value = FctScale.CritSizePercentDefault;       // and the crit dial's is its shipped +10 %
         }
         else if (sender == speedSlider)
         {

@@ -8,7 +8,8 @@ namespace EQLogParser
    * That is also why these live here rather than being read at draw time: motion is a pure function of (hit, age), and a number whose size or timing
    * changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the class of bug that layout was built to avoid.
    *
-   * **Both dials are ±50 % and both can be parked by feel on their default**, which they were not for a while. Speed used to be a tempo multiplier
+   * **The normal-size and speed dials are ±50 % and both can be parked by feel on their default**, which they were not for a while (the crit
+     dial keeps its own 0 … +40 % band — see CritSizeMin). Speed used to be a tempo multiplier
    * running -30 % to +90 %, because playing with the feature said the usable band sat faster than the measured baseline and did not extend nearly as far
    * toward slow as a symmetric dial implies. That is all still true; what changed is where the arithmetic happens. The middle is now the midpoint of
    * that band's two results - see TimeDefault - so the dial is centred, symmetric and reads the way a slider should, and the shape of the usable range
@@ -32,16 +33,24 @@ namespace EQLogParser
     public const double SizeDefault = 1.0;
 
     /*
-     * Two size dials, one band. NORMAL scales everything that is not a big event; CRIT scales the numbers that are - crits and the
-     * marked special attacks, which borrow a crit's size emphasis - and both dials span the same -50 % to +50 %. Only their middles
-     * differ: normal sits at 1.0 because that is what the layout was measured at, while crit ships at +10 % because the pop, the halo
-     * and the draw order already announce a big number and a crit born at parity with its neighbours would be the overlay's loudest
-     * event arriving quietly.
+     * Two size dials, one readout, different bands - because they answer different questions. NORMAL is legibility: how much of the
+     * screen the stream of ordinary combat may take, and it spans -50 % to +50 % around the 1.0 everything was measured at. CRIT is
+     * punctuation: how much louder the exceptions get once that stream is sized - crits and the marked special attacks, which borrow a
+     * crit's emphasis.
      *
-     * Two dials rather than one because they answer different questions. Normal is legibility: how much of the screen the stream of
-     * ordinary combat is allowed to take. Crit is punctuation: how much louder the exceptions get once that stream is sized. On their own
-     * each is a one-decision control; combined they would be one dial that can only ever express one ratio between the two.
+     * The crit band runs from NOTHING UPWARD - 0 % to +40 %, not symmetric - because a dial about emphasis has no sensible negative half.
+     * At its floor a crit is still bigger than ordinary text (the crit tier itself, and the pop it always carried), which is as quiet as
+     * "louder" gets; a slider end that could shrink a crit BELOW its neighbours would only ever be reached by accident, dragged past parity
+     * by someone looking for the low end of a symmetric dial. The ceiling is +40 % because at the top of the normal dial (+50 %) that
+     * already puts a crit at a third again of an already-large screenful of numbers.
+     *
+     * Two dials rather than one because they answer different questions: combined they could only ever express one fixed ratio, and
+     * shipped apart they let the stream shrink while the exceptions stay loud. Crit ships at +10 %: the pop, halo and draw order already
+     * announce a big number, so the static gap starts modest.
      */
+    public const double CritSizeMin = 1.0;   // 0 % on its dial: the crit tier alone, no extra size
+    public const double CritSizeMax = 1.40;  // +40 %: generous, given it multiplies a tier already above dealt
+    public const int CritSizePercentDefault = 10;
     public const double CritSizeDefault = 1.10;
 
     /* Both ends of the speed dial, in percent of the time a number spends on screen. + is less time, which is faster. */
@@ -73,11 +82,15 @@ namespace EQLogParser
      */
     public static double Text = SizeDefault;
 
-    /* The crit dial's multiplier, and the same two rules as ClampSize with the shipped +10 % as the fallback instead of 1.0. */
+    /* The crit dial's multiplier, and the same two rescue rules as ClampSize - junk lands on this dial's own +10 % middle. */
     public static double Crit = CritSizeDefault;
 
     public static double ClampCritSize(double value) =>
-      !double.IsFinite(value) ? CritSizeDefault : Math.Clamp(value, SizeMin, SizeMax);
+      !double.IsFinite(value) ? CritSizeDefault : Math.Clamp(value, CritSizeMin, CritSizeMax);
+
+    /* A slider position on the CRIT band (0 ... +40) to a multiplier. Both ends are honest: below 0 % there is nothing to clamp toward,
+       because "less than its neighbours" is not a size a crit can have. */
+    public static double CritSizeFromPercent(int percent) => ClampCritSize(1.0 + (percent / 100.0));
 
     /*
      * A multiplier on how long a number lives, its travel and its fade together, in the range TimeMin .. TimeMax. Scaling only the lifetime would leave a

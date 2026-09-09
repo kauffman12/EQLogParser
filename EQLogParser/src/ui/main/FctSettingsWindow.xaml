@@ -64,8 +64,9 @@
         </Grid.RowDefinitions>
 
         <!-- The dials keep their meanings and lose their furniture: the row's label says which is which, and
-             double-click still returns a dial to the shipped value. The two size dials share the ±50 % band; only their
-             middles differ (crit ships at +10 %), and double-click finds each one's own middle. -->
+             double-click still returns a dial to the shipped value. The two size dials share the percent readout but not
+             the band: normal spans ±50 % around what everything was measured at, while crit runs 0 % to +40 % — a dial
+             about emphasis has no sensible negative half, and double-click finds each one's own middle. -->
         <TextBlock Grid.Row="0" Text="speed" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="how quickly a number shows and clears; applies to the ones after this (double-click resets)" />
         <Grid Grid.Row="0" Grid.Column="1" Margin="0,5">
@@ -93,13 +94,13 @@
         </Grid>
 
         <TextBlock Grid.Row="2" Text="crit size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big crits and special attacks (assassinate, headshot, slay undead, finishing blow, decapitation) are, beside the normal ones; applies to the ones after this (double-click resets)" />
+                   ToolTip="how much bigger than normal crits and special attacks (assassinate, headshot, slay undead, finishing blow, decapitation) get written; 0 % is the crit baseline - still bigger, still pops. Applies to the ones after this (double-click resets)" />
         <Grid Grid.Row="2" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="46" />
           </Grid.ColumnDefinitions>
-          <Slider x:Name="critSlider" Minimum="-50" Maximum="50" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
+          <Slider x:Name="critSlider" Minimum="0" Maximum="40" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
                   SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
           <TextBlock x:Name="critValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />

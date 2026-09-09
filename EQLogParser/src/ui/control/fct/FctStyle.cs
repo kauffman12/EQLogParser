@@ -9,9 +9,10 @@ namespace EQLogParser
    * answers. In particular nothing here is blue — blue reads as mana, arcane damage or a friendly nameplate to
    * anyone coming from another MMO, so it was the wrong sign for "a defence that worked".
    *
-   * Crits are common in EQ (roughly every third number), so their emphasis stays a size step up from normal damage
-   * plus the pop, not a spectacle; their hue is pushed deeper than dealt damage rather than brighter, because at
-   * 1.3x scale a light orange and the yellow it must stand apart from converge. Periodic ticks (DoT/HoT) are
+   * Crits are common in EQ (roughly every third number), so their emphasis is the pop and the halo with a SIZE DELTA on top of
+   * whatever the same hit would have been — the crit dial, defaulting to +10 % — rather than a fixed tier standing above every
+   * lane no matter what that lane's size was set to. Their hue is pushed deeper than dealt damage rather than brighter, because
+   * at 1.3x scale a light orange and the yellow it must stand apart from converge. Periodic ticks (DoT/HoT) are
    * deliberately the smallest numeric tier: they are the noisiest stream in the game and the first thing grouping
    * and filtering will target — see docs/combat-text-overlay-design.md §4, docs/DesignNotes.md.
    */
@@ -25,7 +26,6 @@ namespace EQLogParser
     public const double DamageDealtFontSize = 34;
     public const double DamageTakenFontSize = 32;
     public const double HealingFontSize = 28;
-    public const double CritFontSize = 40;
 
     /* Evade words are informational, but they are the only text on screen that carries a sentence's worth of
      * meaning, so they get a tier of their own rather than being treated as tiny damage. */
@@ -69,23 +69,32 @@ namespace EQLogParser
     public const double IconSizeFrac = 0.48;
     public const double IconGapPx = 2;
 
+    /*
+     * How much room the row's whole sideways appetite needs: the glyph, sized off the value it belongs to (so it includes that event's
+     * crit delta), plus the hairline gap - a couple of pixels, scaled with the normal dial like every other pixel constant, so the mark
+     * neither drifts off its number when text grows nor overlaps it when text shrinks. Reservation and drawing compute this identically;
+     * the odometer charges itself to exactly one IconSpan of drift.
+     */
     public static double IconSpan(double valueFontSize) => (valueFontSize * IconSizeFrac) + (IconGapPx * FctScale.Text);
 
     public static void ApplyTo(FctHitState hit, FctLane lane, bool minor)
     {
       var loud = IsLoudLabel(hit.FixedText);
 
-      /* The player's own size preference (FctScale.Text, +/-50 % of measured) goes in here, once, so hit.ValueFontSize is the real drawn
-         size from this point on: line height, vertical reserve, clamp bands, the pulse grid and glyph measurement all read it
-         and follow without a second place that has to remember to scale. A hit keeps the size it was born with, so moving the
-         slider changes what comes next rather than resizing text already in flight. */
-      /* A big event — a crit, or a marked special attack borrowing a crit's emphasis — rides the CRIT dial; everything else rides
-         the normal one. Both multipliers are applied here and nowhere else, scaled here rather than at draw time so the vertical
-         reserve and the width estimate see the real size: hit.ValueFontSize is the drawn size from this point on and line height,
-         clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to scale. A hit
-         keeps the size it was born with, so moving either dial changes what comes next rather than tugging at text in flight. */
+      /* A big event — a crit, or a marked special attack borrowing a crit's emphasis — is written at ITS OWN KIND'S size times the
+         CRIT dial, and nothing else: at 0 % a crit is exactly the size the hit would have been (bigger only by its pop), because the
+         dial measures the delta, not an absolute. That is why there is no crit tier any more — a fixed "crit font" above every lane
+         made "0 %" a lie and put a floor under the emphasis the player is holding a slider for. The kind comes from the flags Accept
+         captured before pooling (a crit's pooled lane no longer says heal or taken), so a heal crit rides the healing size, a taken
+         crit the damage-taken size, and the normal dial still moves the whole screen underneath: both multipliers are applied here
+         and nowhere else, at birth rather than at draw, so hit.ValueFontSize is the real drawn size from this point on — line height,
+         vertical reserve, clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to
+         scale, and a number never resizes mid-flight. */
       var big = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
-      var size = ValueSize(lane, minor, loud) * FctScale.Text * (big ? FctScale.Crit : 1.0);
+      var kind = big
+        ? hit.Heal ? FctLane.HealingReceived : hit.Incoming ? FctLane.DamageTaken : FctLane.DamageDealt
+        : lane;
+      var size = ValueSize(kind, minor && !big, loud) * FctScale.Text * (big ? FctScale.Crit : 1.0);
 
       hit.ValueFontSize = size;
       hit.ValueArgb = ValueArgb(lane, loud);
@@ -125,14 +134,15 @@ namespace EQLogParser
         return DefensiveFontSize; // a wasted-cast warning is not a footnote, whatever made it
       }
 
-      if (minor && lane is not (FctLane.Crit or FctLane.Defensive))
+      if (minor && lane is not FctLane.Defensive)
       {
-        return MinorFontSize; // periodic tick or own-miss: the smallest numeric tier
+        return MinorFontSize; // periodic tick or own-miss: the smallest numeric tier (big events pass minor=false; see ApplyTo)
       }
 
+      /* Kind lanes only — a big event asks for its KIND's size and wears the crit dial on top (see ApplyTo); the pooled
+         crit lane is a colour and a draw order, not a tier, so it deliberately has no case here. */
       return lane switch
       {
-        FctLane.Crit => CritFontSize,
         FctLane.HealingDealt or FctLane.HealingReceived => HealingFontSize,
         FctLane.DamageDealt => DamageDealtFontSize,
         FctLane.Defensive => DefensiveFontSize,

@@ -68,6 +68,46 @@ namespace EQLogParser
       Assert.IsTrue(taken.Blowout && dealt.Blowout);
     }
 
+    /*
+     * Size is the ONE lever the crit lane does not own outright: a big event is written at its OWN KIND's font times the crit dial, where that kind is
+     * recovered from the side flags (the pooled lane has stopped saying heal or taken). That relativity is what makes the dial's floor honest - at 0 % a
+     * crit is exactly the size the same hit would have been and stands out only by its pop, halo and draw order - and it means a taken crit, a heal crit and
+     * a dealt crit each stay near their own lane's scale instead of all being dragged to one "crit font" above everything. Both are pinned here, since nothing
+     * else in the file cares about the number's magnitude.
+     */
+    [TestMethod]
+    public void ABigEventTakesItsKindsSizeTimesTheCritDial()
+    {
+      var ingest = NewIngest();
+      var crit = FctScale.Crit;
+      try
+      {
+        FctScale.Crit = FctScale.CritSizeDefault; // start from the shipped position, not whatever another test parked
+        var plainTaken = ingest.Accept(_hits, FctLane.DamageTaken, 900, "Bites", false, false, false, null, Width, Height, 0);
+        var takenCrit = ingest.Accept(_hits, FctLane.DamageTaken, 901, "Bites", true, false, false, null, Width, Height, 10);
+        FctScale.Crit = 1.0; // the dial's floor: emphasis dialed all the way off
+        var parityCrit = ingest.Accept(_hits, FctLane.DamageTaken, 902, "Bites", true, false, false, null, Width, Height, 20);
+
+        Assert.IsTrue(takenCrit.Blowout, "still a big event, whatever its font says");
+        Assert.AreEqual(plainTaken.ValueFontSize, parityCrit.ValueFontSize, 0.0001,
+          "at 0 % the crit is the size the hit would have been - that is what the dial's floor promises");
+
+        FctScale.Crit = FctScale.CritSizeDefault;
+        Assert.AreEqual(takenCrit.ValueFontSize, plainTaken.ValueFontSize * FctScale.CritSizeDefault, 0.0001,
+          "the shipped +10 % is ten percent over the hit's own size, not over some tier");
+
+        var healCrit = ingest.Accept(_hits, FctLane.HealingReceived, 4_000, "Complete Heal", true, false, false, null, Width, Height, 30);
+        Assert.AreEqual(FctStyle.DamageTakenFontSize * FctScale.CritSizeDefault, takenCrit.ValueFontSize, 0.0001,
+          "the kind is damage-taken, so it rides the damage-taken tier - the pooled crit lane contributes colour and draw order, not a font");
+        Assert.AreEqual(FctStyle.HealingFontSize * FctScale.CritSizeDefault, healCrit.ValueFontSize, 0.0001,
+          "and a heal crit rides the healing tier, smaller than the taken crit beside it - each near its own stream's scale");
+      }
+      finally
+      {
+        FctScale.Crit = crit;
+      }
+    }
+
     [TestMethod]
     public void LabelsSpawnAsTheirOwnText()
     {
