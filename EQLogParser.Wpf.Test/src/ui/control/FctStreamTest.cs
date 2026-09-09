@@ -230,7 +230,7 @@ namespace EQLogParser
       };
 
       var hits = new List<FctHitState>();
-      FctHitState first = null, lastPlaced = null;
+      FctHitState? first = null, lastPlaced = null;
       for (var i = 0; i < 24; i++)
       {
         // raid pace: a swing every 60 ms, well past what one rail separates at the dial's tempo
@@ -243,6 +243,9 @@ namespace EQLogParser
         }
       }
 
+      // the flood is counted for what it placed; if even these two were evicted the test has nothing left to pin
+      Assert.IsNotNull(first);
+      Assert.IsNotNull(lastPlaced);
       Assert.AreEqual(1.0, first.RailPress, "the first row on an empty rail runs at exactly the configured tempo");
       Assert.IsTrue(lastPlaced.RailPress < 1.0, "a flood must speed its newborn rows up");
 
