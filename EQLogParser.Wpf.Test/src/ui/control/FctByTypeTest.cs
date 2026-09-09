@@ -109,7 +109,7 @@ namespace EQLogParser
 
         foreach (var hit in hits)
         {
-          var half = hit.ValueWidth * (hit.Blowout ? FctMotion.CritPeakScale : 1.0) / 2.0;
+          var half = hit.ValueWidth / 2.0; // stream rows never draw wider than their measured font any more - size lives in it, dials and all
           for (var t = 0.0; t <= 1.0; t += 0.1)
           {
             var x = FctMotion.ArcedX(hit, t);

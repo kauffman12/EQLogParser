@@ -41,8 +41,17 @@ namespace EQLogParser
      */
     public const double IncomingFallsBackFrac = 0.5;
 
-    /* Crit blowout: quick ramp to CritPeakScale, hold, then collapse over the last CritScaleOutMs. */
-    public const double CritPeakScale = 1.30;
+    /*
+     * Crit blowout, restyled once crit SIZE became a dial: the number swells IN from just under full size over CritScaleInMs, rests at
+     * exactly the size its font says, then collapses away over the last CritScaleOutMs so it shrinks out instead of blinking off.
+     *
+     * The envelope never exceeds 1.0, and that is the whole point. Size belongs to FctStyle.ApplyTo and to nothing else: the big class is
+     * written at its own font, so a pop that also scaled the number above 1 would be a second multiplication stacked on the player's dial -
+     * which is exactly how this used to work, and how "crit size at its minimum" still produced numbers far bigger than ordinary hits.
+     * Emphasis without arithmetic: growth from below reads as ARRIVAL (the pulse swell makes the same move), while the halo, the hue and the
+     * top draw pass were never size in the first place.
+     */
+    public const double CritScaleInStart = 0.72;
     public const double CritScaleInMs = 90;
     public const double CritScaleOutMs = 700;
     public const double CritScaleEnd = 0.06;
@@ -196,6 +205,7 @@ namespace EQLogParser
         return BlowoutScale(ageMs, hit.LifetimeMs);
       }
 
+
       if (hit.Style is FctMotionStyle.Pulse)
       {
         return PulseScale(ageMs);
@@ -254,10 +264,11 @@ namespace EQLogParser
       hit.TextDirty = true;
     }
 
-    /* Widest the drawn text ever gets, so a one-time clamp still protects the center over its life — and it agrees with
-     * FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. */
+    /* Widest the drawn text ever gets beyond its measured font, so a one-time clamp still protects the center over its life — and it
+     * agrees with FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. Blowout is not
+     * in here any more: the big class swells in from BELOW full size, so it never draws wider than the font that was already measured. */
     private static double ScaleAllowance(FctHitState hit) =>
-      hit.Blowout ? CritPeakScale : hit.Style is FctMotionStyle.Pulse ? PulsePeakScale : 1.0;
+      hit.Style is FctMotionStyle.Pulse ? PulsePeakScale : 1.0;
 
     /*
      * The pulse swell: in over PulseInMs, back down to full size by PulseSettleMs, then nothing — the eased ends keep it
@@ -279,20 +290,22 @@ namespace EQLogParser
       return 1.0;
     }
 
+    /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out. The rest is 1.0 rather than a hold
+       above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)
     {
       if (ageMs < CritScaleInMs)
       {
-        return 1 + ((CritPeakScale - 1) * (ageMs / CritScaleInMs));
+        return CritScaleInStart + ((1.0 - CritScaleInStart) * (ageMs / CritScaleInMs));
       }
 
       if (ageMs < lifetimeMs - CritScaleOutMs)
       {
-        return CritPeakScale;
+        return 1.0;
       }
 
       var p = Math.Clamp((ageMs - (lifetimeMs - CritScaleOutMs)) / CritScaleOutMs, 0.0, 1.0);
-      return CritPeakScale - ((CritPeakScale - CritScaleEnd) * p * p);
+      return 1.0 - ((1.0 - CritScaleEnd) * p * p);
     }
 
     /*

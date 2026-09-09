@@ -107,9 +107,10 @@ namespace EQLogParser
       _ => w * 0.42, // DamageDealt, DamageTaken
     };
 
-    /* The largest a hit's block ever gets — the crit blowout outranks the style's swell, as it does in FctMotion.ScaleOf. */
+    /* The largest a hit's block ever gets beyond its measured font. Only the pulse overshoots: the big class carries its size in the
+       font itself (its dial, applied once at birth) and its pop swells in from below, so there is nothing left to price above 1.0. */
     private static double PeakScaleOf(FctHitState hit) =>
-      hit.Blowout ? FctMotion.CritPeakScale : hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
+      hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
 
     /*
      * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest

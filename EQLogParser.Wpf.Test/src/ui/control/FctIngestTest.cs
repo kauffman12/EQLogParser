@@ -22,6 +22,7 @@ namespace EQLogParser
     public void ResetPlayerScale()
     {
       FctScale.Text = FctScale.SizeDefault;
+      FctScale.Crit = FctScale.CritSizeDefault;
       FctScale.Time = 1;
     }
 
@@ -69,41 +70,43 @@ namespace EQLogParser
     }
 
     /*
-     * Size is the ONE lever the crit lane does not own outright: a big event is written at its OWN KIND's font times the crit dial, where that kind is
-     * recovered from the side flags (the pooled lane has stopped saying heal or taken). That relativity is what makes the dial's floor honest - at 0 % a
-     * crit is exactly the size the same hit would have been and stands out only by its pop, halo and draw order - and it means a taken crit, a heal crit and
-     * a dealt crit each stay near their own lane's scale instead of all being dragged to one "crit font" above everything. Both are pinned here, since nothing
-     * else in the file cares about the number's magnitude.
+     * The big CLASS is sized by its own dial and by nothing else: one font for the whole pool - dealt-damage base times the crit dial - because
+     * crits already share a lane, a colour and a draw pass, so they share a size too. Both directions of INDEPENDENCE are pinned here, because both
+     * couplings were tried and both lied: a fixed crit tier put invisible floor under the dial ("0 %" still drew big), and multiplying the normal
+     * dial into crits stacked two sliders into one number nobody could read off either knob. What each dial can say is exactly what it changes.
      */
     [TestMethod]
-    public void ABigEventTakesItsKindsSizeTimesTheCritDial()
+    public void TheBigClassIsSizedByItsOwnDialAlone()
     {
       var ingest = NewIngest();
+      var text = FctScale.Text;
       var crit = FctScale.Crit;
       try
       {
-        FctScale.Crit = FctScale.CritSizeDefault; // start from the shipped position, not whatever another test parked
-        var plainTaken = ingest.Accept(_hits, FctLane.DamageTaken, 900, "Bites", false, false, false, null, Width, Height, 0);
-        var takenCrit = ingest.Accept(_hits, FctLane.DamageTaken, 901, "Bites", true, false, false, null, Width, Height, 10);
-        FctScale.Crit = 1.0; // the dial's floor: emphasis dialed all the way off
-        var parityCrit = ingest.Accept(_hits, FctLane.DamageTaken, 902, "Bites", true, false, false, null, Width, Height, 20);
-
-        Assert.IsTrue(takenCrit.Blowout, "still a big event, whatever its font says");
-        Assert.AreEqual(plainTaken.ValueFontSize, parityCrit.ValueFontSize, 0.0001,
-          "at 0 % the crit is the size the hit would have been - that is what the dial's floor promises");
-
+        FctScale.Text = FctScale.SizeDefault;
         FctScale.Crit = FctScale.CritSizeDefault;
-        Assert.AreEqual(takenCrit.ValueFontSize, plainTaken.ValueFontSize * FctScale.CritSizeDefault, 0.0001,
-          "the shipped +10 % is ten percent over the hit's own size, not over some tier");
 
-        var healCrit = ingest.Accept(_hits, FctLane.HealingReceived, 4_000, "Complete Heal", true, false, false, null, Width, Height, 30);
-        Assert.AreEqual(FctStyle.DamageTakenFontSize * FctScale.CritSizeDefault, takenCrit.ValueFontSize, 0.0001,
-          "the kind is damage-taken, so it rides the damage-taken tier - the pooled crit lane contributes colour and draw order, not a font");
-        Assert.AreEqual(FctStyle.HealingFontSize * FctScale.CritSizeDefault, healCrit.ValueFontSize, 0.0001,
-          "and a heal crit rides the healing tier, smaller than the taken crit beside it - each near its own stream's scale");
+        var plain = ingest.Accept(_hits, FctLane.DamageDealt, 500, "Flurry", false, false, false, null, Width, Height, 0);
+        var critDealt = ingest.Accept(_hits, FctLane.DamageDealt, 501, "Flurry", true, false, false, null, Width, Height, 10);
+        var critHeal = ingest.Accept(_hits, FctLane.HealingReceived, 4_000, "Complete Heal", true, false, false, null, Width, Height, 20);
+
+        Assert.AreEqual(FctStyle.DamageDealtFontSize * FctScale.CritSizeDefault, critDealt.ValueFontSize, 0.0001,
+          "+10 % means ten percent over a baseline normal number - size you can verify from the dial alone");
+        Assert.AreEqual(critDealt.ValueFontSize, critHeal.ValueFontSize, 0.0001,
+          "one class, one size: a heal crit shares the dealt crit's font as it shares its lane, halo and draw pass");
+        Assert.IsTrue(critDealt.Blowout && !plain.Blowout, "and the effects that are NOT size still separate the classes");
+
+        FctScale.Text = FctScale.SizeFromPercent(40);
+        var plainBig = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 30);
+        var critStill = ingest.Accept(_hits, FctLane.DamageDealt, 901, "Flurry", true, false, false, null, Width, Height, 40);
+
+        Assert.AreEqual(FctStyle.DamageDealtFontSize * 1.4, plainBig.ValueFontSize, 0.0001, "the normal dial moved the normal numbers");
+        Assert.AreEqual(critDealt.ValueFontSize, critStill.ValueFontSize, 0.0001,
+          "and did not touch the crits: two classes, two dials, no hidden multiplication anywhere");
       }
       finally
       {
+        FctScale.Text = text;
         FctScale.Crit = crit;
       }
     }

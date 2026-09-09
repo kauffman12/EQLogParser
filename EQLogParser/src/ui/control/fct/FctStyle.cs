@@ -9,10 +9,10 @@ namespace EQLogParser
    * answers. In particular nothing here is blue — blue reads as mana, arcane damage or a friendly nameplate to
    * anyone coming from another MMO, so it was the wrong sign for "a defence that worked".
    *
-   * Crits are common in EQ (roughly every third number), so their emphasis is the pop and the halo with a SIZE DELTA on top of
-   * whatever the same hit would have been — the crit dial, defaulting to +10 % — rather than a fixed tier standing above every
-   * lane no matter what that lane's size was set to. Their hue is pushed deeper than dealt damage rather than brighter, because
-   * at 1.3x scale a light orange and the yellow it must stand apart from converge. Periodic ticks (DoT/HoT) are
+   * Crits are common in EQ (roughly every third number), so they are a CLASS, not a spectacle: one size for the whole pool, set by their
+   * own dial at a modest +10 % over the dealt-damage baseline — plus the effects that are not size: swell-in, halo, top draw pass. No fixed
+   * crit tier sits above every lane any more; that made the dial's zero point at something the player could not see. Their hue is pushed
+   * deeper than dealt damage rather than brighter, because a light orange and the yellow it must stand apart from converge at scale. Periodic ticks (DoT/HoT) are
    * deliberately the smallest numeric tier: they are the noisiest stream in the game and the first thing grouping
    * and filtering will target — see docs/combat-text-overlay-design.md §4, docs/DesignNotes.md.
    */
@@ -20,7 +20,7 @@ namespace EQLogParser
   {
     /* Sizes are what the overlay is read at: across a game window, in peripheral vision, while moving. The first
      * pass borrowed web-scale sizes and every tier went up by at least two points once it was looked at in game —
-     * the ratios below (crit well above dealt, labels above the smallest numeric tier) survived, the absolute
+     * the ratios below (labels above the smallest numeric tier, the big class clearly its own) survived, the absolute
      * numbers did not. Raising them also forces the vertical reserve in FctLayout.TextReserve to keep up.
      */
     public const double DamageDealtFontSize = 34;
@@ -63,48 +63,46 @@ namespace EQLogParser
     public const int SpecialArgb = unchecked(0xFF << 24 | 0xC1 << 16 | 0x6B << 8 | 0xFF);
 
     /* The reserved glyph: a square at most this fraction of the value's own font, hanging outside the number's left edge
-       with this gap — both scale with the text dial because they are born from the font size. Half-height and nearly
+       with a hairline gap expressed the same way - both fractions of the FONT rather than pixels against a dial, so the mark
+       scales with whichever class its number belongs to and never needs to know how many dials exist. Half-height and nearly
        touching were chosen by looking at it: the mark is punctuation on the number, and a glyph the height of the digits
        turned every special event into a picture with a caption. */
     public const double IconSizeFrac = 0.48;
-    public const double IconGapPx = 2;
+    public const double IconGapFrac = 0.06; // ~2 px at dealt-damage size, and the same fraction on a crit-class row
 
     /*
-     * How much room the row's whole sideways appetite needs: the glyph, sized off the value it belongs to (so it includes that event's
-     * crit delta), plus the hairline gap - a couple of pixels, scaled with the normal dial like every other pixel constant, so the mark
-     * neither drifts off its number when text grows nor overlaps it when text shrinks. Reservation and drawing compute this identically;
-     * the odometer charges itself to exactly one IconSpan of drift.
+     * How much room the row's whole sideways appetite needs: glyph plus gap, both fractions of the value's drawn size - which for
+     * the big class already carries its dial. Reservation and drawing compute this identically; the odometer charges itself to
+     * exactly one IconSpan of drift.
      */
-    public static double IconSpan(double valueFontSize) => (valueFontSize * IconSizeFrac) + (IconGapPx * FctScale.Text);
+    public static double IconSpan(double valueFontSize) => valueFontSize * (IconSizeFrac + IconGapFrac);
 
     public static void ApplyTo(FctHitState hit, FctLane lane, bool minor)
     {
       var loud = IsLoudLabel(hit.FixedText);
 
-      /* A big event — a crit, or a marked special attack borrowing a crit's emphasis — is written at ITS OWN KIND'S size times the
-         CRIT dial, and nothing else: at 0 % a crit is exactly the size the hit would have been (bigger only by its pop), because the
-         dial measures the delta, not an absolute. That is why there is no crit tier any more — a fixed "crit font" above every lane
-         made "0 %" a lie and put a floor under the emphasis the player is holding a slider for. The kind comes from the flags Accept
-         captured before pooling (a crit's pooled lane no longer says heal or taken), so a heal crit rides the healing size, a taken
-         crit the damage-taken size, and the normal dial still moves the whole screen underneath: both multipliers are applied here
-         and nowhere else, at birth rather than at draw, so hit.ValueFontSize is the real drawn size from this point on — line height,
+      /* The big CLASS — crits and marked special attacks — has its own dial and is written UNIFORM by it: they already share a lane, a
+         colour and a draw pass, so they share a font too, based on dealt-damage size because that is what a crit most often is. The dial
+         is absolute for the class — 0 % draws a crit exactly as big as a baseline normal hit, +50 % half again, and it can go to half-size
+         for someone who wants crits quiet — and the normal dial deliberately does not reach into it: two classes sized independently is
+         the one promise a two-dial UI can keep, and neither number hides a multiplication of the other. What separates a 0 % crit from an
+         ordinary number then is everything that is not size: the swell-in, the halo, the orange, the top draw pass. Sizes are applied
+         here and nowhere else, at birth rather than at draw: hit.ValueFontSize is the real drawn size from this point on — line height,
          vertical reserve, clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to
          scale, and a number never resizes mid-flight. */
       var big = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
-      var kind = big
-        ? hit.Heal ? FctLane.HealingReceived : hit.Incoming ? FctLane.DamageTaken : FctLane.DamageDealt
-        : lane;
-      var size = ValueSize(kind, minor && !big, loud) * FctScale.Text * (big ? FctScale.Crit : 1.0);
+      var size = big ? DamageDealtFontSize * FctScale.Crit : ValueSize(lane, minor, loud) * FctScale.Text;
 
       hit.ValueFontSize = size;
       hit.ValueArgb = ValueArgb(lane, loud);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = SourceArgb;
-      /* Blowout is the engine's whole idea of "this number is a big deal": the pop curve to CritPeakScale and the hold
-         at it, the widest extent every clamp and braid measures against, the top draw pass, the halo, the wider spray
-         spread. A special attack runs through that SAME lever — assassinate and friends are crit-sized events whether or
-         not the log also called them crits — while keeping their lane's column and direction: the pool stays where it
-         was born, so a marked backstab still scrolls in the damage-out column, just huge, on top, and purple. */
+      /* Blowout is the size-INDEPENDENT half of "this number is a big deal": the swell-in from below full size and the
+         collapse out, the halo, the wider spray spread, the top draw pass, immunity to folding. Size itself lives in the
+         font above, so no envelope multiplies what the dial set — the two ever stacked (font x pop hold) were the bug that
+         made every slider lie at once. A special attack runs through this SAME lever, whether or not the log also called it
+         a crit, while keeping its lane's column and direction: the pool stays where it was born, so a marked backstab still
+         scrolls in the damage-out column — big, on top, and purple. */
       hit.Blowout = big;
 
       /* The mark overrides the lane colour (the event outranks the stream) and reserves its room before any geometry
@@ -136,11 +134,11 @@ namespace EQLogParser
 
       if (minor && lane is not FctLane.Defensive)
       {
-        return MinorFontSize; // periodic tick or own-miss: the smallest numeric tier (big events pass minor=false; see ApplyTo)
+        return MinorFontSize; // periodic tick or own-miss: the smallest numeric tier (the big class never reaches this table)
       }
 
-      /* Kind lanes only — a big event asks for its KIND's size and wears the crit dial on top (see ApplyTo); the pooled
-         crit lane is a colour and a draw order, not a tier, so it deliberately has no case here. */
+      /* Only kind lanes come through: the big class never consults the tier table - it takes dealt size times its own dial
+         (see ApplyTo) - so the pooled crit lane deliberately has no case here, which is how "no fixed crit font" stays true. */
       return lane switch
       {
         FctLane.HealingDealt or FctLane.HealingReceived => HealingFontSize,

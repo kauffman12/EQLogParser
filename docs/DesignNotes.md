@@ -1192,16 +1192,17 @@ lane columns as fractions of width, the vertical reserve a line of text needs `F
 either direction is where that stops describing the feature: past it, damage and healing columns begin to occupy each other at ordinary window sizes.
 Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
 
-**The third dial measures a delta, so its band starts at zero.** *Crit size* says how much bigger than normal the big events get — crits and the marked special
-attacks — and it runs 0 % to +40 %, defaulting to +10 %. It began life symmetric at ±50 % copied from the normal dial, which was wrong twice over. As a band,
-a symmetric one lets a slider that exists to add emphasis subtract it: at −50 % a crit is drawn smaller than an ordinary hit of its own lane, and nobody drags
-there on purpose — they are looking for the quiet end and pass through parity to find it. As a meaning, worse: the engine still had a fixed 40 px crit tier
-above every lane, so with both dials parked in the middle crits were clearly bigger than normal numbers and the dial's own zero was not describing anything the
-player could see. Dropping the tier fixed both. A big event is now written at **its own kind's size times this dial** — a heal crit rides the healing size, a
-taken crit the damage-taken size — so 0 % means exactly the size the hit would have been, and that is the floor, because below "unremarkable" a dial about
-emphasis has nothing left to express. The ceiling is +40 % rather than +50 %: it multiplies a number that already pops to `CritPeakScale`, holds there, wears a
-halo, sprays wider and draws above the rest, so at the top of the normal dial another half again would put a single crit outside the type scale the layout was
-budgeted for. What parity does *not* remove is everything else on that lever: a 0 % crit is ordinary-sized and still the loudest thing on screen.
+**Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Normal size* sizes every ordinary number; *crit size* sizes the big
+class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both are percent of the measured
+baseline over the same ±50 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
+why it has no hidden parts. Version one kept a fixed 40 px crit tier above every lane: parked both dials mid and crits stood clearly bigger than normal hits, so
+the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the normal dial* — honest parity at 0 %, but stacked:
+font × dial × the pop's 1.3 hold, and setting the crit slider to its floor still produced numbers thirty percent over the neighbors, because the multiplication was
+hiding in choreography no label mentioned. Both failures are the same failure — **a size that more than one control can reach is not a size you can set** — and the
+class rule closes it from both ends: each class has exactly one dial, and `FctStyle.ApplyTo` is where that dial meets the font, once, at birth. In particular the
+blowout no longer scales anything: it swells *in from below* full size (arrival reads as growth, the same move the pulse swell makes), rests at exactly 1.0, and
+collapses out through the tail — emphasis that cannot lie because it cannot multiply. What a 0 % crit keeps is everything that was never size: the halo, the orange,
+the top draw pass, the fold immunity; and pulled to −50 % it is a small, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
 
 **Sample data has a checkbox, on by default.** The scripted loop is the reason configure mode teaches anything, but there is a second thing people do in
 configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples
@@ -1387,8 +1388,8 @@ Bigger type also made an existing bug impossible to miss: `FctHitState.Y0` is th
 that reserved one em ran descenders and the entire source line off the bottom of the overlay — permanently, because
 incoming hits travel downwards and spend their last seconds against the bottom edge. Every vertical bound now reserves
 `FctLayout.TextReserve(hit)`: value height (`TextHeightFactor`), plus the source line's height when the hit carries one,
-times `CritPeakScale` for a crit (the draw scales about a pivot partway down the value, so scaling the whole block
-over-reserves slightly and never clips). It is a factor rather than measured glyph metrics for the same reason
+times the *pulse's* swell — the only curve that still draws above its own font, since the big class carries its size in the font
+and its pop swells from below. It is a factor rather than measured glyph metrics for the same reason
 `EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`
 pins it in both region schemes, with a source line present and at crit scale.
 
@@ -1535,11 +1536,10 @@ and the silhouette says which.
   and is not part of `ArcedX`. That asymmetry is the whole trick: the number's right edge still lands on
   the rail whether or not there is an axe beside it. A mark that nudged the digits sideways would have
   been cheaper to implement and worse to read.
-- A mark rides the **blowout** lever — the engine's whole idea of crit emphasis: the pop curve to `CritPeakScale`
-  and the hold at it, the widest extent every clamp and braid measures against, the top draw pass, the halo, the
-  wider spray spread — **and the crit size delta**, so an assassinate is written at its kind's size × that dial
-  **whether or not the log also called it a crit**, while keeping its lane's column and direction: bigger, on top,
-  purple — but still in the damage-out stream.
+- A mark is a member of the **big class** as far as presentation goes: written at the crit size dial's font **whether or not the log
+  also called it a crit**, and riding the blowout's size-independent effects — swell-in, halo, wider spray spread, top draw pass.
+  What it keeps from its birth lane is column and direction: an assassinate still scrolls in the damage-out stream — big, on top,
+  purple.
 - The glyph itself is **punctuation, deliberately**: 48 % of the digit height with a two-pixel gap, because at the
   first try it stood nearly as tall as the number with a six-pixel gutter and read as a caption beside the sentence
   rather than an accent on it. Both are single constants in `FctStyle`; the geometry charges for them either way.

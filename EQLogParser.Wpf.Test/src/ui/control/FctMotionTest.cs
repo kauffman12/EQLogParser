@@ -178,8 +178,13 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The blowout envelope: in from below full size, rest AT it, collapse out. Resting at exactly 1.0 is load-bearing - the big class
+     * carries its size in the font and the crit dial, so any scale above 1 here would multiply what the player set and quietly re-stack
+     * the bug this curve used to be.
+     */
     [TestMethod]
-    public void ScalePopsForCritsOnly()
+    public void ScaleSwellsForCritsOnly()
     {
       var normal = NewHit();
       Assert.AreEqual(1.0, FctMotion.ScaleOf(normal, 0), 0.001);
@@ -189,9 +194,9 @@ namespace EQLogParser
       crit.Lane = FctLane.Crit;
       crit.Blowout = true;
 
-      Assert.AreEqual(1.0, FctMotion.ScaleOf(crit, 0), 0.001);
-      Assert.AreEqual(FctMotion.CritPeakScale, FctMotion.ScaleOf(crit, FctMotion.CritScaleInMs), 0.001);
-      Assert.AreEqual(FctMotion.CritPeakScale, FctMotion.ScaleOf(crit, 1200), 0.001);
+      Assert.AreEqual(FctMotion.CritScaleInStart, FctMotion.ScaleOf(crit, 0), 0.001, "the swell starts from below full size - arrival, not overshoot");
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(crit, FctMotion.CritScaleInMs), 0.001);
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(crit, 1200), 0.001, "it rests at exactly the size the font says - the dial owns size, this curve never adds to it");
 
       // collapse over the tail so it shrinks out instead of blinking off
       var late = FctMotion.ScaleOf(crit, crit.LifetimeMs - 10);
@@ -214,10 +219,10 @@ namespace EQLogParser
       Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, FctMotion.PulseSettleMs), 0.001);
       Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, hit.LifetimeMs - 100), 0.001, "and it rests at full size until the fade");
 
-      // a crit outranks the style: it must still get its blowout pop, not the modest swell
+      // a crit outranks the style: it gets its own deeper swell, not the modest pulse one
       hit.Blowout = true;
-      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, 0), 0.001);
-      Assert.AreEqual(FctMotion.CritPeakScale, FctMotion.ScaleOf(hit, FctMotion.CritScaleInMs), 0.001);
+      Assert.AreEqual(FctMotion.CritScaleInStart, FctMotion.ScaleOf(hit, 0), 0.001);
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, FctMotion.CritScaleInMs), 0.001);
     }
 
     /*

@@ -586,7 +586,7 @@ namespace EQLogParser
       }
 
       var size = hit.ValueFontSize * FctStyle.IconSizeFrac;
-      var gap = FctStyle.IconGapPx * FctScale.Text;
+      var gap = hit.ValueFontSize * FctStyle.IconGapFrac;
       var left = (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
       var topOfMark = top + ((FctLayout.TextHeight(hit) - size) / 2.0);
       var scale = size / FctMarks.Unit;

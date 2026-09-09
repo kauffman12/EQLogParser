@@ -116,14 +116,14 @@ namespace EQLogParser
       return FctPlacement.PlaceOrigins(hit, hits, stage, rand, origins, cx, edgeY, MinRowGap);
     }
 
-    /* Half-width a row can occupy at its widest draw — which for a stream is a crit's peak, since that is the only
-     * way an ordinary number gets wide (pulse never runs here; blowout is the crit pop, priced the same way
-     * FctLayout.Spawn prices its own side clamp). */
-    /* The reserved glyph travels with its row: a marked number prices as the wider box it draws. */
-    private static double DrawnHalf(FctHitState h) => ((h.ValueWidth + h.IconAllowance) * (h.Blowout ? FctMotion.CritPeakScale : 1.0)) / 2.0;
+    /* Half-width a row can occupy at its widest draw. Nothing is multiplied on here any more: stream styles never scale a number past the
+     * font it was measured at (the big class carries its size in that font, and its pop swells up from below), so the measured width plus
+     * the reserved glyph IS the widest this row ever gets — which is also what makes the odometer's right edge exact.
+     *
+     * Vertical step: a line has to clear the tallest row this stream can draw, not just this one's. */
+    private static double DrawnHalf(FctHitState h) => (h.ValueWidth + h.IconAllowance) / 2.0;
 
-    /* The same price vertically: a line step has to clear the tallest row this stream can draw, not just this one's. */
-    private static double DrawnHeight(FctHitState h) => FctLayout.TextHeight(h) * (h.Blowout ? FctMotion.CritPeakScale : 1.0);
+    private static double DrawnHeight(FctHitState h) => FctLayout.TextHeight(h);
 
     /*
      * Straight's candidates, cheapest-first: the mouth, then one text line deeper along the column up to five deep,

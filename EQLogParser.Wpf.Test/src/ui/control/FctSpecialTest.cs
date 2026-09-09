@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser.Tests
 {
   /*
-   * The marked events end to end at the engine's edge: the mark colours, pops crit-size whether or not the log called
+   * The marked events end to end at the engine's edge: the mark colours, is written at the big class's size whether or not the log called
    * it a crit, reserves room for its glyph beside the number (geometry charges for it), never breaks the odometer, and
    * can never be folded — swallowed by a count — into any other row. The mask-to-mark mapping itself is Core's
    * LineModifiersParserTest.
@@ -13,6 +13,15 @@ namespace EQLogParser.Tests
   {
     private const double Width = 800;
     private const double Height = 900;
+
+    /* Size assertions below compare against the shipped class sizes, so both dials start at their shipped positions - a parked slider
+       from another test suite would otherwise move the very numbers this file measures. */
+    [TestInitialize]
+    public void ResetPlayerScale()
+    {
+      FctScale.Text = FctScale.SizeDefault;
+      FctScale.Crit = FctScale.CritSizeDefault;
+    }
 
     private static FctIngest Ingest() => new(new Random(41)) { Style = FctMotionStyle.Straight };
 
@@ -35,11 +44,11 @@ namespace EQLogParser.Tests
       Assert.IsTrue(marked.IconAllowance > 10.0, $"the glyph reserves real room ({marked.IconAllowance:0.#})");
       Assert.AreEqual(0.0, plain.IconAllowance, "unmarked rows pay nothing");
 
-      // crit-size as far as size goes: the blowout pop and the crit dial both belong to marked events, crit flag or not
-      Assert.IsTrue(marked.Blowout, "a mark must ride the crit emphasis lever even un-critted");
+      // big-class size: marked events are written at the crit class's font and ride its effects, whether or not the log called them crits
+      Assert.IsTrue(marked.Blowout, "a mark must ride the crit effects lever even un-critted");
       Assert.IsFalse(plain.Blowout);
-      Assert.AreEqual(plain.ValueFontSize * FctScale.Crit, marked.ValueFontSize, 0.001,
-        "the mark's base font rides the crit dial, not the normal one");
+      Assert.AreEqual(FctStyle.DamageDealtFontSize * FctScale.CritSizeDefault, marked.ValueFontSize, 0.001,
+        "the mark is written at the big class's size - its own dial, not the lane tier and never multiplied by both");
     }
 
     /*
