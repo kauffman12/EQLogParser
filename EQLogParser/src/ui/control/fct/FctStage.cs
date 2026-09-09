@@ -116,7 +116,7 @@ namespace EQLogParser
 
     public FctStage Stage(double w, double h) => Mode switch
     {
-      FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp),
+      FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
       FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
         HealLane, IncomingDamageLane, OutgoingDamageLane),
       _ => FctStage.Halves(IncomingSide, IncomingUp, OutgoingUp, w, h),
@@ -165,11 +165,11 @@ namespace EQLogParser
       H = h;
     }
 
-    /* Bands now carries directions like every other scheme — the fountain preset hands its two dials straight through.
-     * The defaults stay the old strip invariant (in sinks, out rises), so every caller that never mentions a direction
-     * draws exactly what bands has always drawn. */
-    internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true)
-      => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
+    /* Bands now carries directions like every other scheme — the fountain preset hands all three dials straight
+     * through, healing's included. The defaults stay the old strip invariant (in sinks, out rises; heals sink), so
+     * every caller that never mentions a direction draws exactly what bands has always drawn. */
+    internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true, bool healUp = false)
+      => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h, healUp: healUp);
 
     internal static FctStage Halves(FctRegionSide incomingSide, bool incomingUp, bool outgoingUp, double w, double h)
       => new(FctLayoutMode.Halves, incomingSide, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
@@ -237,9 +237,12 @@ namespace EQLogParser
     public double UpFor(bool incoming) =>
       incoming ? (_incomingUp ? 1 : -1) : (_outgoingUp ? 1 : -1);
 
-    /* The hit-aware answer: by type gives healing its own direction even when a damage stream shares its column, so the
+    /* The hit-aware answer: healing gets its own direction wherever the scheme has a heals dial — by type (its own
+     * column, even when a damage stream shares it) and bands alike. A fountain therefore sprays heals UP while damage
+     * falls, or sinks them while everything else rises; the dial was always in the settings, this is where the mode
+     * stopped ignoring it. Halves never asks: one stream per side there, type read from colour, no heals row. The
      * question has to know what the number IS, not only who it belongs to. Every rail path asks this one. */
-    public double UpFor(FctHitState hit) => _mode is FctLayoutMode.ByType && hit.Heal
+    public double UpFor(FctHitState hit) => _mode is not FctLayoutMode.Halves && hit.Heal
       ? _healUp ? 1 : -1
       : UpFor(hit.Incoming);
 

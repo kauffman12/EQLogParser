@@ -116,6 +116,31 @@ namespace EQLogParser
       Assert.IsTrue(legacy.Rise > 0, "omitted directions still ship the strip invariant (out rises)");
     }
 
+    /* A fountain is bands wearing spray, and its heals dial speaks for itself: heals may rise while every damage
+     * stream sprays down — the genre's classic look — instead of being silently chained to the damage-in direction
+     * just because a band has no column to give them. The panel shows the dial in both modes now; this pins the
+     * engine honouring it there too. */
+    [TestMethod]
+    public void AFountainRunsHealingItsOwnWay()
+    {
+      var layout = new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, incomingUp: false, outgoingUp: false, healUp: true);
+      var stage = layout.Stage(Width, Height);
+
+      Assert.AreEqual(1.0, stage.UpFor(new FctHitState { Heal = true, Incoming = true }), "heals rise on their own dial");
+      Assert.AreEqual(-1.0, stage.UpFor(new FctHitState { Heal = false, Incoming = true }), "damage taken stays where its own dial put it");
+
+      // and the whole flight agrees with the sign, not just the answer: spawn at the band's far edge, travel across it
+      var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Spray, Layout = layout };
+      var healed = ingest.Accept(new List<FctHitState>(), FctLane.HealingReceived, 800, "Complete Heal", false, false, false, null, Width, Height, 0);
+      var bitten = ingest.Accept(new List<FctHitState>(), FctLane.DamageTaken, 500, "Bite", false, false, false, null, Width, Height, 100);
+
+      Assert.IsNotNull(healed);
+      Assert.IsNotNull(bitten);
+      Assert.IsTrue(healed.Rise > 0, "the heal sprays up on its dial");
+      Assert.IsTrue(bitten.Rise < 0, "the bite sinks on its own");
+      Assert.IsTrue(healed.Y0 > Height / 2 && bitten.Y0 > Height / 2, "both still live in the incoming band; only travel differs");
+    }
+
     /* Three categories, three sides, both damage streams joining the heals on one side — the columns follow the
      * assignment whatever it is, and the untouched schemes (halves, bands) never consult these bits. */
     [TestMethod]

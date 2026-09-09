@@ -50,9 +50,11 @@ namespace EQLogParser
     public bool SampleData = true;
 
     /* The two words the row speaks, resolved to the engine's geometry. Fountain is bands wearing spray — the mode names
-     * the motion, and its only choices are which way each stream runs. */
+     * the motion, and its choices are which way each stream runs: all three dials speak there, healing's included. It
+     * has no lane to own in a band, but "heals rise while damage falls" is the most requested sentence in the genre,
+     * and a fountain that hid it left players tying their heals to their damage-taken dial by accident. */
     internal FctLayoutChoice BuildLayout() => Fountain
-      ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp)
+      ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp, healUp: HealUp)
       : new FctLayoutChoice(
           FctLayoutMode.ByType, FctRailLanes.SideOf(TakenLane), TakenUp, DealtUp,
           FctRailLanes.SideOf(HealLane), HealUp,

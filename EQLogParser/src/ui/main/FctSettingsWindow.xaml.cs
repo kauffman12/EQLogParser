@@ -297,9 +297,12 @@ namespace EQLogParser
 
       shapeCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       sprayCombo.Visibility = fountain ? Visibility.Visible : Visibility.Collapsed;
-      healsTitle.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      healsRow.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
-      takenLaneCombo.Visibility = dealtLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+
+      /* Fountain has no columns to hand out, so the lane pickers step off — but the DIRECTION dials stay, healing's
+         included: a fountain gets to say whether heals rise while damage falls (the genre's classic look) or sink.
+         Hiding the whole heals row had quietly tied healing to the damage-in dial, which is not a sentence anybody
+         meant to write when they moved "damage in". */
+      takenLaneCombo.Visibility = dealtLaneCombo.Visibility = healLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void UpdateReadouts()

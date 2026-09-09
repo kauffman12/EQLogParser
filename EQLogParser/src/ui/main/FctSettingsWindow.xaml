@@ -174,7 +174,8 @@
              Split has four columns — left 1, left 2, right 1, right 2 — and every category names the one it streams
              down; two categories naming one lane share it as a single stream. The names are exactly what is on screen:
              placement can no longer invent a column that the settings did not offer. Fountain has no columns to hand
-             out, so these rows shed their lane picks and the heals row steps off entirely. -->
+             out, so these rows shed their lane picks but keep their direction combos - including the heals row, whose
+             dial a fountain honours: up means healing rises while damage sprays down. -->
         <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage in" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="which lane damage coming in streams down, and which way it travels" />
         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
@@ -206,7 +207,7 @@
         </StackPanel>
 
         <TextBlock x:Name="healsTitle" Grid.Row="4" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which lane healing streams down, and which way it travels" />
+                   ToolTip="which way healing travels - in fountain only direction applies (it shares the middle): up means heals rise while damage sprays down, the classic look. In split it also picks which lane healing streams down" />
         <StackPanel x:Name="healsRow" Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="healLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />

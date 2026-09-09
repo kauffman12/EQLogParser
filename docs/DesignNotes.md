@@ -743,15 +743,20 @@ not meet the geometry vocabulary to choose between looks. What replaces them:
 
 **mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
 and spew out and fall, which is the look every classic FCT draws with; its controls are a shape pick of **spray | settle**
-— spray being what makes it a fountain, settle the same bands drifting their numbers out to rest instead — plus two
-direction dials, the show switches, size and speed. *Split* is the side columns (internally by type) with each category
+— spray being what makes it a fountain, settle the same bands drifting their numbers out to rest instead — plus three
+direction dials, the show switches, size and speed. Healing's dial speaks in fountain too: **heals rise while damage
+sprays down** is the classic FCT look, and until this dial was honoured (in `FctStage.UpFor(hit)` and threaded through
+the bands factory) a fountain silently chained healing to the damage-in direction — the row that controls it was hidden
+whole, because hiding a lane pick had swept up the direction with it. A band gives heals no column, only travel, and
+travel is all the dial asks for. *Split* is the side columns (internally by type) with each category
 assigned its own **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing
 a lane — plus **shape: parabola | line**, one rail machinery under both, with or without the bend. Split offers no
 rest state on purpose: a row parked part-way down a column is not a calmer stream, it is a broken chain, which is the
 one thing the column exists to prevent — so settle belongs to fountain and nowhere else. Controls a mode does not
-obey collapse rather than sit disabled
-(in fountain there is no side to hand out and the threshold steps off too — the minimal UI was the point), and the
-legend re-sentences itself from the staged choice either way. The shape row serves both modes with **two combos in one
+obey collapse rather than sit disabled — in fountain that means the **lane pickers only**: every direction dial stays,
+because every mode has travel to answer for, and the threshold lives above the mode row entirely (it filters numbers,
+not layouts; hiding it there was retired with the minimal-UI era). The legend re-sentences itself from the staged
+choice either way. The shape row serves both modes with **two combos in one
 cell** rather than one list of illegal promises: WPF items cannot live in two lists, and a scheme should never show a
 motion it would only degrade, so each mode owns its list and the mode swap shows one.
 
