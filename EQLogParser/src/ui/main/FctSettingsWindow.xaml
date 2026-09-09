@@ -115,7 +115,7 @@
         </ComboBox>
 
         <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="what to draw: number categories first, then the event words — miss, parry, dodge, block, riposte, resist, absorb, invulnerable — each with its own switch. Hidden kinds are counted; the log, meters and exports never change" />
+                   ToolTip="what to draw, alphabetically: the four number categories and the eight event words (miss, parry, dodge, block, riposte, resist, absorb, invulnerable), each with its own switch. Hidden kinds are counted; the log, meters and exports never change" />
         <ComboBox x:Name="showCombo" Grid.Row="4" Grid.Column="1" Margin="0,3"
                   ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
 

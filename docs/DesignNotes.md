@@ -836,8 +836,11 @@ is lost silently while it is.
 invulnerable: `FctManager`'s `IsDefensiveLabel` set plus Resist, which is everything the parser can write — collect a
 different complaint from the category one. It is never "fewer words"; it is *that* word: misses during a whiff storm,
 resists against the one spell that keeps failing its check. So the **show** combo grew to twelve checkboxes — the four
-categories, then every word as its own — rather than gaining a second dropdown: words answer the same question the
+categories and every word as its own — rather than gaining a second dropdown: words answer the same question the
 categories do ("what may draw"), and two dropdowns asking half of one question each is panel furniture with an opinion.
+The twelve sit **alphabetically**: the first arrangement was "fight order" (categories, quiet defensive words, the loud
+pair), but a dropdown is a lookup list, and ordering it by narrative turned finding a word into a memory test. The
+items are named fields so re-sorting never means rewriting twelve positional indices in two blocks.
 Same opt-out semantics (absent is shown; only an explicit 0 mutes, because a junk value must never eat somebody's
 "resist") and the same `filtered` accounting — a muted word visits `hidden` never, since the threshold's count is
 about numbers and these are not numbers. Three rules keep the layer small: words stay exempt from the threshold; the

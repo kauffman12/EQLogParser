@@ -37,21 +37,24 @@ namespace EQLogParser
        then spell failures, then the loud pair — roughly how often a player reaches for each. They live here as fields
        because both directions need them: LoadFrom writes the checks and Snapshot reads them back, and the combo's
        title is re-summarised whenever the dropdown closes. */
-    private readonly List<ComboBoxItemDetails> _showItems =
-    [
-      new(true, "damage in"),
-      new(true, "damage out"),
-      new(true, "healing"),
-      new(true, "procs"),
-      new(true, "miss"),
-      new(true, "parry"),
-      new(true, "dodge"),
-      new(true, "block"),
-      new(true, "riposte"),
-      new(true, "resist"),
-      new(true, "absorb"),
-      new(true, "invulnerable"),
-    ];
+    /* The show list is a lookup list, so it is alphabetical - the earlier "fight order" arrangement (categories, then
+       quiet defensive words, then the loud pair) was a narrative, and finding a word in it was a memory test. Named
+       fields rather than positional reads: the day somebody re-sorts this list, nobody should have to rewrite twelve
+       index numbers in two blocks and hope they kept them straight. */
+    private readonly ComboBoxItemDetails _absorb = new(true, "absorb");
+    private readonly ComboBoxItemDetails _block = new(true, "block");
+    private readonly ComboBoxItemDetails _damageIn = new(true, "damage in");
+    private readonly ComboBoxItemDetails _damageOut = new(true, "damage out");
+    private readonly ComboBoxItemDetails _dodge = new(true, "dodge");
+    private readonly ComboBoxItemDetails _healing = new(true, "healing");
+    private readonly ComboBoxItemDetails _invulnerable = new(true, "invulnerable");
+    private readonly ComboBoxItemDetails _miss = new(true, "miss");
+    private readonly ComboBoxItemDetails _parry = new(true, "parry");
+    private readonly ComboBoxItemDetails _procs = new(true, "procs");
+    private readonly ComboBoxItemDetails _resist = new(true, "resist");
+    private readonly ComboBoxItemDetails _riposte = new(true, "riposte");
+
+    private readonly List<ComboBoxItemDetails> _showItems;
 
     // The shipped picks, used only as the parse fallback when a combo somehow has nothing selected.
     private static readonly FctConfigState Defaults = new();
@@ -70,6 +73,7 @@ namespace EQLogParser
          numeric spinner draw as bare WPF instead of the skin everything else wears. */
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
+      _showItems = [_absorb, _block, _damageIn, _damageOut, _dodge, _healing, _invulnerable, _miss, _parry, _procs, _resist, _riposte];
       showCombo.ItemsSource = _showItems;
 
       /* The brushes and EQDescriptionSize come from application resources and swap themselves when the theme changes;
@@ -97,19 +101,19 @@ namespace EQLogParser
       SelectByTag(inDirCombo, Up(state.TakenUp));
       SelectByTag(dealtLaneCombo, FctRailLanes.Token(state.DealtLane));
       SelectByTag(outDirCombo, Up(state.DealtUp));
-      _showItems[0].IsChecked = state.ShowTaken;
-      _showItems[1].IsChecked = state.ShowDealt;
-      _showItems[2].IsChecked = state.ShowHeals;
-      _showItems[3].IsChecked = state.ShowProcs;
+      _damageIn.IsChecked = state.ShowTaken;
+      _damageOut.IsChecked = state.ShowDealt;
+      _healing.IsChecked = state.ShowHeals;
+      _procs.IsChecked = state.ShowProcs;
+      _miss.IsChecked = state.ShowMiss;
+      _parry.IsChecked = state.ShowParry;
+      _dodge.IsChecked = state.ShowDodge;
+      _block.IsChecked = state.ShowBlock;
+      _riposte.IsChecked = state.ShowRiposte;
+      _resist.IsChecked = state.ShowResist;
+      _absorb.IsChecked = state.ShowAbsorb;
+      _invulnerable.IsChecked = state.ShowInvulnerable;
       UpdateShowTitle();
-      _showItems[4].IsChecked = state.ShowMiss;
-      _showItems[5].IsChecked = state.ShowParry;
-      _showItems[6].IsChecked = state.ShowDodge;
-      _showItems[7].IsChecked = state.ShowBlock;
-      _showItems[8].IsChecked = state.ShowRiposte;
-      _showItems[9].IsChecked = state.ShowResist;
-      _showItems[10].IsChecked = state.ShowAbsorb;
-      _showItems[11].IsChecked = state.ShowInvulnerable;
       thresholdUpDown.Value = state.Threshold;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
@@ -146,18 +150,18 @@ namespace EQLogParser
         DealtLane = FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane),
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
-        ShowTaken = _showItems[0].IsChecked,
-        ShowDealt = _showItems[1].IsChecked,
-        ShowHeals = _showItems[2].IsChecked,
-        ShowProcs = _showItems[3].IsChecked,
-        ShowMiss = _showItems[4].IsChecked,
-        ShowParry = _showItems[5].IsChecked,
-        ShowDodge = _showItems[6].IsChecked,
-        ShowBlock = _showItems[7].IsChecked,
-        ShowRiposte = _showItems[8].IsChecked,
-        ShowResist = _showItems[9].IsChecked,
-        ShowAbsorb = _showItems[10].IsChecked,
-        ShowInvulnerable = _showItems[11].IsChecked,
+        ShowTaken = _damageIn.IsChecked,
+        ShowDealt = _damageOut.IsChecked,
+        ShowHeals = _healing.IsChecked,
+        ShowProcs = _procs.IsChecked,
+        ShowMiss = _miss.IsChecked,
+        ShowParry = _parry.IsChecked,
+        ShowDodge = _dodge.IsChecked,
+        ShowBlock = _block.IsChecked,
+        ShowRiposte = _riposte.IsChecked,
+        ShowResist = _resist.IsChecked,
+        ShowAbsorb = _absorb.IsChecked,
+        ShowInvulnerable = _invulnerable.IsChecked,
         LabelSide = ComboTag(labelSideCombo) switch
         {
           "left" => FctLabelSide.Left,
