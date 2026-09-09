@@ -122,7 +122,7 @@
         <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million.
              It lives among the always-applies now because the engine never treated it otherwise — a threshold is a
              statement about numbers, not about layout, and fountain filters with it too. -->
-        <TextBlock Grid.Row="5" Text="hide below" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <TextBlock Grid.Row="5" Text="threshold" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="stop showing your damage numbers at or under this value (heals and words like Miss are never hidden); hidden hits are counted, not lost. 0 is off" />
         <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="5" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
                            MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"

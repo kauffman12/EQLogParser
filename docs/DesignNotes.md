@@ -1248,7 +1248,9 @@ configure mode: position the overlay over a real fight, where example numbers ar
 can be switched off next to the speed dial. It is a view aid for the session rather than a setting — nothing writes it, and setup opens with them back on,
 because the next time somebody opens this panel they almost certainly want to see what a dial does again.
 
-**"Hide below" is a number you type.** The damage threshold (MSBT's `damageThreshold`, off by default like theirs) stops drawing
+**"Threshold" is a number you type.** The label reads *threshold*, MSBT's own word (`damageThreshold`, off by default like theirs); it
+briefly shipped as "hide below", which described the effect but sat in a panel of nouns as a verb phrase and never matched what players
+call the thing. The gate stops drawing
 *damage numbers* at or below its value. It began as a six-rung combo — off, 250, 500, 1k, 2k, 5k — because a dropdown cannot offer
 eighty positions; the panel now carries the trigger grid's numeric spinner instead, and every whole number from zero to just under
 ten million is a legitimate opinion, so the ladder is gone and loading no longer snaps: a stored 300 means 300. Heals and the zero-damage words are exempt by design: they are information,

@@ -109,7 +109,9 @@ namespace EQLogParser
     public static void SaveShown(string key, bool shown) => ConfigUtil.SetSetting(key, shown ? "1" : "0");
 
     /*
-     * "Hide below": the damage threshold (MSBT's damageThreshold, off by default like theirs). It used to be a ladder —
+     * The "threshold": MSBT's damageThreshold, off by default like theirs, and named the same word at the same dial —
+     * the label spent a while as "hide below" (a verb phrase in a panel of nouns) and went back to the genre's term.
+     * It used to be a ladder —
      * off, 250, 500, 1k, 2k, 5k — because a combo cannot offer eighty positions; the panel now carries a numeric
      * spinner instead, and every whole number between zero and just under ten million is a legitimate opinion, so
      * loading stopped snapping. A stored 300 means 300. Junk reads as off, which is both the MSBT default and the
