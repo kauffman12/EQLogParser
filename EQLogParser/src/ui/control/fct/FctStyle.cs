@@ -91,7 +91,12 @@ namespace EQLogParser
       hit.ValueArgb = ValueArgb(lane, loud);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = SourceArgb;
-      hit.Blowout = lane == FctLane.Crit;
+      /* Blowout is the engine's whole idea of "this number is a big deal": the pop curve to CritPeakScale and the hold
+         at it, the widest extent every clamp and braid measures against, the top draw pass, the halo, the wider spray
+         spread. A special attack runs through that SAME lever — assassinate and friends are crit-sized events whether or
+         not the log also called them crits — while keeping their lane's column and direction: the pool stays where it
+         was born, so a marked backstab still scrolls in the damage-out column, just huge, on top, and purple. */
+      hit.Blowout = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
 
       /* The mark overrides the lane colour (the event outranks the stream) and reserves its room before any geometry
          reads the width: clamps, collision and stream spacing all charge for the glyph beside the number. */

@@ -3,9 +3,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser.Tests
 {
   /*
-   * The marked events end to end at the engine's edge: the mark colours, reserves room for its glyph beside the
-   * number (geometry charges for it), never breaks the odometer, and can never be folded — swallowed by a count —
-   * into an ordinary row of the same value. The mask-to-mark mapping itself is Core's LineModifiersParserTest.
+   * The marked events end to end at the engine's edge: the mark colours, pops crit-size whether or not the log called
+   * it a crit, reserves room for its glyph beside the number (geometry charges for it), never breaks the odometer, and
+   * can never be folded — swallowed by a count — into any other row. The mask-to-mark mapping itself is Core's
+   * LineModifiersParserTest.
    */
   [TestClass]
   public class FctSpecialTest
@@ -15,7 +16,8 @@ namespace EQLogParser.Tests
 
     private static FctIngest Ingest() => new(new Random(41)) { Style = FctMotionStyle.Straight };
 
-    /* The mark is an identity: purple over the lane colour, and a reserved strip beside the number. */
+    /* The mark is an identity: purple over the lane colour, a reserved strip beside the number, and a crit's size
+       emphasis (the blowout) even when the log never called it a crit. */
     [TestMethod]
     public void AMarkedRowWearsTheMarkAndReservesItsRoom()
     {
@@ -32,17 +34,26 @@ namespace EQLogParser.Tests
       Assert.AreNotEqual(FctStyle.SpecialArgb, plain.ValueArgb);
       Assert.IsTrue(marked.IconAllowance > 10.0, $"the glyph reserves real room ({marked.IconAllowance:0.#})");
       Assert.AreEqual(0.0, plain.IconAllowance, "unmarked rows pay nothing");
+
+      // crit-size as far as size goes: the blowout pop belongs to marked events whatever the crit flag said
+      Assert.IsTrue(marked.Blowout, "a mark must ride the crit emphasis lever even un-critted");
+      Assert.IsFalse(plain.Blowout);
     }
 
-    /* The glyph hangs OUTSIDE the odometer: a marked row and a plain one in the same column still share a right edge. */
+    /*
+     * The glyph hangs OUTSIDE the odometer: a marked row and a plain one in the same column still share a right edge.
+     * Measured on a wide canvas because the ONE thing that may lawfully shift a rail is the edge clamp — a number whose
+     * crit-size pop no longer fits between the rail and the wall gives ground to the wall — and at 800 px a nine-figure
+     * value is past that limit before the mark has any say in it.
+     */
     [TestMethod]
     public void AMarkNeverMovesTheOdometer()
     {
       var ingest = Ingest();
       var hits = new List<FctHitState>();
 
-      var plain = ingest.Accept(hits, FctLane.DamageDealt, 900, null, false, false, false, null, Width, Height, 0);
-      var marked = ingest.Accept(hits, FctLane.DamageDealt, 987654321, "Strike", false, false, false, null, Width, Height, 0,
+      var plain = ingest.Accept(hits, FctLane.DamageDealt, 900, null, false, false, false, null, 1400, Height, 0);
+      var marked = ingest.Accept(hits, FctLane.DamageDealt, 987654321, "Crush", false, false, false, null, 1400, Height, 0,
         special: FctSpecial.SlayUndead);
       Assert.IsNotNull(plain);
       Assert.IsNotNull(marked);
@@ -56,12 +67,12 @@ namespace EQLogParser.Tests
     }
 
     /*
-     * Fold isolation. A marked hit may fold into an identical LIVE MARKED row (the glyph keeps standing, the count says
-     * two), but never into a plain one and never let a plain one move in beside its mark — "an assassinate" hiding
-     * inside a growing "×6" of swings erases the event the row exists to report.
+     * Fold isolation. A marked event rides the crit rule: it never folds, in either direction — "an assassinate" hiding
+     * inside a growing "×6" of swings erases the event the row exists to report, and two identical marks are two events
+     * worth seeing, not one row and a count. Plain duplicates underneath a mark still fold with each other as normal.
      */
     [TestMethod]
-    public void MarksFoldOnlyWithTheirOwnKind()
+    public void MarksNeverFoldInEitherDirection()
     {
       var ingest = Ingest();
       var hits = new List<FctHitState>();
@@ -82,12 +93,12 @@ namespace EQLogParser.Tests
       Assert.AreEqual(1, marked.MergeCount, "the fold went under the mark - that glyph now claims a hit that was not one");
       Assert.AreEqual(2, plain.MergeCount, "the ordinary twins found each other");
 
-      // identical to the marked row in every way including the mark: THIS is the fold that is allowed
+      // identical to the marked row in every way including the mark: still two events, because big events never stack away
       var markedAgain = ingest.Accept(hits, FctLane.DamageDealt, 2040, "Backstab", false, false, false, null, Width, Height, 3,
         special: FctSpecial.Assassinate);
-      Assert.IsNull(markedAgain, "two identical marks should read as one row and a count");
-      Assert.AreEqual(2, marked.MergeCount);
-      Assert.AreEqual(2, hits.Count);
+      Assert.IsNotNull(markedAgain, "two identical marks are two events; neither may be counted away");
+      Assert.AreEqual(1, marked.MergeCount);
+      Assert.AreEqual(3, hits.Count);
     }
   }
 }

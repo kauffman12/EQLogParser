@@ -1519,10 +1519,14 @@ and the silhouette says which.
   and is not part of `ArcedX`. That asymmetry is the whole trick: the number's right edge still lands on
   the rail whether or not there is an axe beside it. A mark that nudged the digits sideways would have
   been cheaper to implement and worse to read.
-- A marked row **cannot fold into an ordinary one** (`FctIngest` compares `Special` alongside value,
-  source, crit and lane) and carries its own `MergeCount`. The alternative — an assassinate swallowed
-  into `×3` on a plain Backstab — is invisible data loss on exactly the events worth seeing. Marks do
-  fold with identical marks.
+- A mark rides the **blowout** lever — the engine's whole idea of crit emphasis: the pop curve to `CritPeakScale`
+  and the hold at it, the widest extent every clamp and braid measures against, the top draw pass, the halo, the
+  wider spray spread. So an assassinate is a crit-sized event **whether or not the log also called it a crit**,
+  while keeping its lane's column and direction: huge, on top, purple — but still in the damage-out stream.
+- Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
+  a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
+  same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks
+  collapsing to one count — is invisible data loss on exactly the events worth seeing.
 - Glyphs are vector paths on a 24-unit grid rather than PNG assets: they scale with the text-size dial,
   need no new deployment files, and the cut-out details (ghost eyes, skull nose) can be forced to the
   outline colour independently of the fill.

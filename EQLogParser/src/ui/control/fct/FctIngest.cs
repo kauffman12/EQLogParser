@@ -340,7 +340,9 @@ namespace EQLogParser
         var hit = hits[i];
         if (hit.Lane != lane || hit.Blowout || hit.FixedText is not null
             || hit.Incoming != incoming || hit.Proc != proc || hit.Periodic != periodic
-            || hit.Special != special // a marked event folds only with its own kind: the mark must never be swallowed by a count
+            // marks blow out like crits, so no marked row can be a fold TARGET; this comparison covers the other direction —
+            // an incoming mark must not quietly fold into a plain row of the same number and lose its event
+            || hit.Special != special
             || !string.Equals(hit.Source, source, StringComparison.Ordinal)
 
             /*

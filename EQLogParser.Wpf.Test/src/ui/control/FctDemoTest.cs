@@ -7,7 +7,7 @@ using System.Linq;
 namespace EQLogParser
 {
   /*
-   * The configure-mode demo: a scripted loop of about twenty events so a size, speed or style change can be seen moving without a fight.
+   * The configure-mode demo: a scripted loop of close to thirty events so a size, speed or style change can be seen moving without a fight.
    *
    * The important assertions are about honesty rather than animation. Its vocabulary has to be EverQuest's own — the melee verbs the
    * parser recognises, spell names that exist in the shipped data/spells.txt, proc names from data/procs.txt, and Labels constants for the
@@ -42,6 +42,42 @@ namespace EQLogParser
         .GroupBy(c => (c.Lane, c.Source, c.Value))
         .Where(g => g.Count() >= 3);
       Assert.IsTrue(folds.Any(), "no damage-over-time tick repeated three times, so the ×N fold is never demonstrated");
+    }
+
+    /*
+     * Value-shape coverage. The formatter has six bands - two digits, three, commaed thousands, tenths-of-k, hundreds of k, and m -
+     * and the odometer's whole case lives at the extremes: a "47" and an "896.8k" must agree to share a right edge with everything
+     * between them. A demo whose values all sit in one band proves the alignment nowhere, so the script owes every band at least
+     * one cue; the same goes for the five special-attack marks, which cost nothing to show and everything to discover in a real
+     * fight if configure mode never showed them.
+     */
+    [TestMethod]
+    public void Script_CoversEveryValueShapeAndEveryMark()
+    {
+      var numeric = FctDemo.Script.Where(c => c.ValueText is null).Select(c => c.Value).ToList();
+
+      string Band(double v) =>
+        v < 100 ? "two digits" :
+        v < 1_000 ? "three digits" :
+        v < 10_000 ? "commaed thousands" :
+        v < 100_000 ? "tenths of k" :
+        v < 1_000_000 ? "hundreds of k" : "m";
+
+      foreach (var band in new[] { "two digits", "three digits", "commaed thousands", "tenths of k", "hundreds of k", "m" })
+      {
+        Assert.IsTrue(numeric.Any(v => Band(v) == band), $"no cue lands in the {band} band: that column never scrolls in configure mode");
+      }
+
+      var marks = FctDemo.Script.Select(c => c.Special).Where(s => s is not FctSpecial.None).Distinct().ToList();
+      foreach (FctSpecial special in Enum.GetValues<FctSpecial>())
+      {
+        if (special is FctSpecial.None)
+        {
+          continue;
+        }
+
+        Assert.IsTrue(marks.Contains(special), $"{special} never appears in the demo: a player could configure the overlay without ever seeing the mark");
+      }
     }
 
     [TestMethod]

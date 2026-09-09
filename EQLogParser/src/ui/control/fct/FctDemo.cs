@@ -5,10 +5,12 @@ namespace EQLogParser
 {
   /*
    * A short loop of numbers that plays while configure mode is up, so a size or style change can be seen moving without waiting for a
-   * fight to produce one of each type on demand. Roughly twenty events over twelve seconds: melee swings, a crit or two, a spell
-   * damage-over-time ticking the same amount three times (which folds into `412 ×3`, the look nothing else in the row has), a proc,
-   * healing received including a crit heal, a hit landing on you, and the zero-damage words. That is the vocabulary a player has to be
-   * able to tell apart, delivered in the order a fight would deliver it rather than as five exhibits pinned to a board.
+   * fight to produce one of each type on demand. Close to thirty events over twelve seconds: melee swings from a two-digit graze up to a
+   * seven-figure nuke — every value shape the formatter can produce gets at least one cue, because the odometer is only convincing when its
+   * narrowest and widest columns scroll side by side — plus a crit or two, a damage-over-time tick repeated three times (the `412 ×3` fold),
+   * a proc, healing received from a HoT tick to a twenty-thousand-point crit heal, hits landing on you, the zero-damage words, and all five
+   * special-attack marks. That is the vocabulary a player has to be able to tell apart, delivered in the order a fight would deliver it
+   * rather than as exhibits pinned to a board.
    *
    * The events run through a private FctIngest into a private list. Same choreography as play — style, band, travel, fold, placement,
    * adaptive lifetime — and the same text building, which is the only reason what you see is what you get. It is a separate ingest
@@ -86,22 +88,32 @@ namespace EQLogParser
       new Cue(3560, FctLane.Defensive, valueText: Labels.Parry),
       new Cue(3900, FctLane.DamageTaken, 268, "Disease", periodic: true),
 
-      // a marked event: the rare kind that earns a glyph and the purple hue (three of the five per cycle; scarcity
-      // is the point, and every loop the player configuring sees the marks move with the numbers)
-      new Cue(4080, FctLane.DamageDealt, 31760, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation),
+      // the marked events: the rare kind that earns a glyph, the purple hue and a crit's size (all five appear once per
+      // cycle, spread through it — a configure session should teach the whole family, and every loop replays the lesson)
+      new Cue(4080, FctLane.DamageDealt, 896805, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation),
 
       // an item or spell proc: a little smaller than the swing that provoked it, and gone sooner
       new Cue(4300, FctLane.DamageDealt, 1380, "Arcane Jolt", proc: true),
+
+      // the odometer's narrow extreme next to the decapitation's 896.8k: a graze that abbreviates to nothing
+      new Cue(4560, FctLane.DamageDealt, 47, "Punch"),
 
       new Cue(4720, FctLane.DamageDealt, 968, "Punch"),
       new Cue(5080, FctLane.HealingReceived, 1450, "Complete Heal"),
       new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
       new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
+      new Cue(5700, FctLane.DamageDealt, 12470, "Slash", crit: true, special: FctSpecial.FinishingBlow),
       new Cue(5900, FctLane.Defensive, valueText: Labels.Riposte),
-      new Cue(6300, FctLane.DamageDealt, 896, "Pierce"),
+
+      // deliberately NOT a crit: the mark carries a crit's size on its own, and this cue is the proof of it
+      new Cue(6100, FctLane.DamageDealt, 10460, "Pierce", special: FctSpecial.Headshot),
       new Cue(6450, FctLane.DamageDealt, 7310, "Crush", special: FctSpecial.SlayUndead),
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
+      new Cue(6850, FctLane.HealingReceived, 24800, "Complete Heal", crit: true),
       new Cue(7150, FctLane.DamageDealt, 4126, "Slash", crit: true),
+
+      // the m band: what a big nuke looks like after the server rates did their thing
+      new Cue(7300, FctLane.DamageDealt, 1240000, "Flare", crit: true),
 
       // my spell failed the way a punch gets blocked: the word lane for outgoing failures, same as Miss
       new Cue(7480, FctLane.Missed, valueText: Labels.Resist),
