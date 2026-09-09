@@ -30,6 +30,7 @@ namespace EQLogParser
     public FctLabelSide LabelSide = FctLabelSide.Below;
 
     public double TextScale = FctScale.SizeDefault;
+    public double CritScale = FctScale.CritSizeDefault;
     public double Speed = FctScale.SpeedDefault;
 
     /* The demo switch is deliberately NOT a setting (nothing writes it), but the checkbox lives in this window, so it

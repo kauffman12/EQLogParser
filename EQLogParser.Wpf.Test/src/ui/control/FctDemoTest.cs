@@ -34,7 +34,7 @@ namespace EQLogParser
       Assert.IsTrue(script.Any(c => !FctLayout.IsIncoming(c.Lane)), "nothing in the outgoing band");
       Assert.IsTrue(script.Any(c => FctLayout.IsIncoming(c.Lane)), "nothing in the incoming band");
       Assert.IsTrue(script.Count(c => c.Crit) >= 2, "a single crit cannot show both dealt and taken crit looks");
-      Assert.IsTrue(script.Any(c => c.Proc), "no proc, so the smaller-and-quicker tier is never shown");
+      Assert.IsTrue(script.Any(c => c.Proc), "no proc, so the quicker tier is never shown");
       Assert.IsTrue(script.Any(c => c.ValueText != null), "no zero-damage word (DODGE/PARRY/MISS)");
 
       // the fold has to be seen happening: three identical ticks in the same lane, which is exactly what folds into "412 ×3"

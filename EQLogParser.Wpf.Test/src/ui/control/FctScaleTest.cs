@@ -40,6 +40,54 @@ namespace EQLogParser
     }
 
     /*
+     * The crit dial shares the normal one's band, its conversions and its rescue rules; only its middle is different, and that middle is a shipped
+     * decision rather than a round number: +10 %, because a big event born at parity with its neighbours would be the overlay's loudest thing arriving
+     * quietly. The clamp falls back to CRIT's default, not the normal one - a hand-edited junk value next to the crit key should not silently flatten
+     * the punctuation the player was reaching for.
+     */
+    [TestMethod]
+    public void CritSizeDial_SharesTheBandAndShipsAtPlusTen()
+    {
+      // the shipped middle is a position on that same band: +10 %, stated once where the player would read it
+      Assert.AreEqual(10, FctScale.PercentOfSize(FctScale.CritSizeDefault), "+10 % is what the dial shows at its default");
+      var bottom = FctScale.SizeFromPercent(-50);
+      var top = FctScale.SizeFromPercent(50);
+      Assert.AreEqual(FctScale.SizeMin, bottom, 0.0001, "same band as the normal dial");
+      Assert.AreEqual(FctScale.SizeMax, top, 0.0001);
+
+      var shipped = FctScale.SizeFromPercent(10);
+      Assert.AreEqual(FctScale.CritSizeDefault, shipped, 0.0001, "the dial's +10 % and the shipped default are the same number");
+
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampCritSize(0));
+      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampCritSize(9000));
+      Assert.AreEqual(FctScale.CritSizeDefault, FctScale.ClampCritSize(double.NaN), "junk lands on the crit dial's own middle, not the normal one");
+    }
+
+    /*
+     * Two dials that answer different questions have to be able to disagree. If the crit multiplier were derived from the normal one - or the reverse -
+     * a player who wants small numbers and a loud exception could not say so.
+     */
+    [TestMethod]
+    public void TheTwoSizeDialsAreIndependent()
+    {
+      var text = FctScale.Text;
+      var crit = FctScale.Crit;
+      try
+      {
+        FctScale.Text = FctScale.SizeFromPercent(-40);
+        Assert.AreNotEqual(FctScale.Text, FctScale.Crit, 0.0001, "moving the normal dial moved the crits with it");
+
+        FctScale.Crit = FctScale.SizeFromPercent(50);
+        Assert.AreEqual(0.6, FctScale.Text, 0.0001, "moving the crit dial moved the ordinary numbers with it");
+      }
+      finally
+      {
+        FctScale.Text = text;
+        FctScale.Crit = crit;
+      }
+    }
+
+    /*
      * The shape of the speed dial. It is centred — plus or minus 50 % of the time a number is on screen, with the middle meaning nothing — and where
      * that middle sits is a decision: it is the midpoint of the band that playing with the previous asymmetric dial produced, about 0.877 of the time
      * everything was choreographed at. Half the time on screen at one end (0.44x), half again as long at the other (1.32x), and neither end in the

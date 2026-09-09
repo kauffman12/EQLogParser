@@ -93,6 +93,7 @@ namespace EQLogParser
     private FctMotionStyle _savedStyle;
     private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
     private double _savedTextScale = FctScale.SizeDefault;
+    private double _savedCritScale = FctScale.CritSizeDefault;
     private double _savedSpeed = FctScale.SpeedDefault;
     private double _savedThreshold;
     private bool _savedShowDealt = true;
@@ -154,6 +155,7 @@ namespace EQLogParser
       _canvas.MotionStyle = _savedStyle;
       _canvas.Layout = _savedLayout;
       FctScale.Text = _savedTextScale;
+      FctScale.Crit = _savedCritScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
       _canvas.Threshold = _savedThreshold;
       _canvas.ShowDealt = _savedShowDealt;
@@ -322,10 +324,12 @@ namespace EQLogParser
       _canvas.MotionStyle = _savedStyle;
       _canvas.Layout = _savedLayout;
 
-      /* The two dials: size is a multiplier, speed is stored as one and shown as a percent (FctScale). */
+      /* The dials: sizes are multipliers, speed is stored as one and shown as a percent (FctScale). */
       _savedTextScale = FctOverlaySettings.LoadTextScale();
+      _savedCritScale = FctOverlaySettings.LoadCritScale();
       _savedSpeed = FctOverlaySettings.LoadSpeed();
       FctScale.Text = _savedTextScale;
+      FctScale.Crit = _savedCritScale;
       FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
 
       /* The threshold arrives already snapped to its ladder (FctOverlaySettings.LoadThreshold), so the filter and the
@@ -531,6 +535,7 @@ namespace EQLogParser
       ShowProcs = _savedShowProcs,
       LabelSide = _savedLabelSide,
       TextScale = _savedTextScale,
+      CritScale = _savedCritScale,
       Speed = _savedSpeed,
     };
 
@@ -550,6 +555,7 @@ namespace EQLogParser
       _canvas.ShowProcs = state.ShowProcs;
       _canvas.LabelSide = state.LabelSide;
       FctScale.Text = FctScale.ClampSize(state.TextScale);
+      FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
       FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
 
       if (_sampleData)
@@ -570,6 +576,7 @@ namespace EQLogParser
       _savedStyle = state.BuildMotion();
       _savedLayout = state.BuildLayout();
       _savedTextScale = state.TextScale;
+      _savedCritScale = state.CritScale;
       _savedSpeed = state.Speed;
       _savedThreshold = state.Threshold;
       _savedShowDealt = state.ShowDealt;
@@ -582,6 +589,7 @@ namespace EQLogParser
       FctOverlaySettings.SaveShape(state.Shape);
       FctOverlaySettings.SaveLayout(_savedLayout);
       FctOverlaySettings.SaveTextScale(_savedTextScale);
+      FctOverlaySettings.SaveCritScale(_savedCritScale);
       FctOverlaySettings.SaveSpeed(_savedSpeed);
       FctOverlaySettings.SaveThreshold(_savedThreshold);
       FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDealtKey, _savedShowDealt);

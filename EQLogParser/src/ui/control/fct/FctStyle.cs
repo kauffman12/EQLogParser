@@ -36,14 +36,12 @@ namespace EQLogParser
     public const double SourceFontMin = 14;
 
     /*
-     * A proc fires on its own schedule, on top of the swing or cast the player was actually watching for, and several
-     * items fire several times a pull. It is real damage and stays legible, but it should not outshout the hit that
-     * provoked it, so it rides a fraction below its lane's size instead of being pushed down to the periodic tier —
-     * 34 becomes about 27 — between a direct hit and the periodic tier, subordinate without being a footnote. A crit proc
-     * keeps the full size: the pop is the answer to "did something big happen", and shrinking the loudest number in the
-     * log would be a lie.
+     * Procs fire on their own schedule, on top of the swing or cast the player was actually watching for — and they are
+     * SUBORDINATE BY TEMPO, NOT BY SIZE: a proc lives and travels shorter (FctLifeController's proc tier), which is what
+     * keeps a stack of item procs from cluttering the picture. Shaving their glyphs smaller than the hit that provoked
+     * them was tried first and read as two different weights of information rather than two different urgencies; the real
+     * damage of a proc is its own event, so it wears its lane's full size like everything else in it.
      */
-    public const double ProcSizeFrac = 0.78;
 
     /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
     public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);
@@ -64,14 +62,16 @@ namespace EQLogParser
      */
     public const int SpecialArgb = unchecked(0xFF << 24 | 0xC1 << 16 | 0x6B << 8 | 0xFF);
 
-    /* The reserved glyph: a square at most this fraction of the value's own font, hanging outside the number's left
-       edge with this gap — both scale with the text dial because they are born from the font size. */
-    public const double IconSizeFrac = 0.95;
-    public const double IconGapPx = 6;
+    /* The reserved glyph: a square at most this fraction of the value's own font, hanging outside the number's left edge
+       with this gap — both scale with the text dial because they are born from the font size. Half-height and nearly
+       touching were chosen by looking at it: the mark is punctuation on the number, and a glyph the height of the digits
+       turned every special event into a picture with a caption. */
+    public const double IconSizeFrac = 0.48;
+    public const double IconGapPx = 2;
 
     public static double IconSpan(double valueFontSize) => (valueFontSize * IconSizeFrac) + (IconGapPx * FctScale.Text);
 
-    public static void ApplyTo(FctHitState hit, FctLane lane, bool minor, bool proc = false)
+    public static void ApplyTo(FctHitState hit, FctLane lane, bool minor)
     {
       var loud = IsLoudLabel(hit.FixedText);
 
@@ -79,13 +79,13 @@ namespace EQLogParser
          size from this point on: line height, vertical reserve, clamp bands, the pulse grid and glyph measurement all read it
          and follow without a second place that has to remember to scale. A hit keeps the size it was born with, so moving the
          slider changes what comes next rather than resizing text already in flight. */
-      var size = ValueSize(lane, minor, loud) * FctScale.Text;
-
-      // scaled here rather than at draw time so the vertical reserve and the width estimate see the real size
-      if (proc && lane is not FctLane.Crit)
-      {
-        size *= ProcSizeFrac;
-      }
+      /* A big event — a crit, or a marked special attack borrowing a crit's emphasis — rides the CRIT dial; everything else rides
+         the normal one. Both multipliers are applied here and nowhere else, scaled here rather than at draw time so the vertical
+         reserve and the width estimate see the real size: hit.ValueFontSize is the drawn size from this point on and line height,
+         clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to scale. A hit
+         keeps the size it was born with, so moving either dial changes what comes next rather than tugging at text in flight. */
+      var big = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
+      var size = ValueSize(lane, minor, loud) * FctScale.Text * (big ? FctScale.Crit : 1.0);
 
       hit.ValueFontSize = size;
       hit.ValueArgb = ValueArgb(lane, loud);
@@ -96,7 +96,7 @@ namespace EQLogParser
          spread. A special attack runs through that SAME lever — assassinate and friends are crit-sized events whether or
          not the log also called them crits — while keeping their lane's column and direction: the pool stays where it
          was born, so a marked backstab still scrolls in the damage-out column, just huge, on top, and purple. */
-      hit.Blowout = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
+      hit.Blowout = big;
 
       /* The mark overrides the lane colour (the event outranks the stream) and reserves its room before any geometry
          reads the width: clamps, collision and stream spacing all charge for the glyph beside the number. */

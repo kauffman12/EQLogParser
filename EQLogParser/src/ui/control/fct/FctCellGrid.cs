@@ -232,7 +232,7 @@ namespace EQLogParser
       var mainRows = MainRowCount(area);
       if (proc)
       {
-        /* The proc row exists only if a row of small text fits in its slice of the block. */
+        /* The proc row exists only if one more full-size row fits in its slice of the block. */
         return Pitch(area, mainRows) >= ProcReserve() ? ProcColumns : 0;
       }
 
@@ -376,9 +376,10 @@ namespace EQLogParser
       return (size * FctLayout.TextHeightFactor) + (FctStyle.SourceSize(size) * FctLayout.SourceLineFactor);
     }
 
+    /* Procs wear their lane's full size, so the proc row of the pulse grid reserves exactly what a dealt row does. */
     private static double ProcReserve()
     {
-      var size = FctStyle.DamageDealtFontSize * FctStyle.ProcSizeFrac;
+      var size = FctStyle.DamageDealtFontSize;
       return (size * FctLayout.TextHeightFactor) + (FctStyle.SourceSize(size) * FctLayout.SourceLineFactor);
     }
   }

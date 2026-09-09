@@ -140,7 +140,7 @@ namespace EQLogParser
 
     /* The promise split makes to the eye: ONE scroll rate for every kind of number, whatever its size, direction or
      * text. Damage, a proc, a miss word, a resist word, damage taken and healing — the sizes differ (procs and words
-     * are drawn smaller, each reserving less road) and the directions differ, and none of that may show as speed. */
+     * live shorter, each clearing its stretch of road sooner) and the directions differ, and none of that may show as speed. */
     [TestMethod]
     public void SplitMovesEveryCategoryAtOneRate()
     {
@@ -155,7 +155,7 @@ namespace EQLogParser
       var rows = new (FctLane Lane, double Value, bool Proc, string? Text)[]
       {
         (FctLane.DamageDealt, 1500, false, null),
-        (FctLane.DamageDealt, 350, true, null),          // proc: smaller, same rate
+        (FctLane.DamageDealt, 350, true, null),          // proc: same size, same rate
         (FctLane.Missed, 0, false, Labels.Miss),         // words: smallest, same rate
         (FctLane.Defensive, 0, false, Labels.Resist),
         (FctLane.DamageTaken, 800, false, null),         // the other direction, same rate

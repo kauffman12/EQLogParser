@@ -63,11 +63,17 @@ namespace EQLogParser
        a dial measured in percent of time taken rather than in rate (see FctScale). FctScale clamps on the way in, so a hand-edited "big" or 12 lands on
        that dial's default instead of drawing nothing or running at four times tempo. */
     public const string TextScaleKey = "FctOverlayTextScale";
+    public const string CritScaleKey = "FctOverlayCritScale";
     public const string SpeedKey = "FctOverlaySpeed";
 
     public static double LoadTextScale() => FctScale.ClampSize(ConfigUtil.GetSettingAsDouble(TextScaleKey, FctScale.SizeDefault));
 
     public static void SaveTextScale(double scale) => ConfigUtil.SetSetting(TextScaleKey, FctScale.ClampSize(scale));
+
+    /* The crit dial rides the same band as the normal one and ships at +10 % — see FctScale.CritSizeDefault. */
+    public static double LoadCritScale() => FctScale.ClampCritSize(ConfigUtil.GetSettingAsDouble(CritScaleKey, FctScale.CritSizeDefault));
+
+    public static void SaveCritScale(double scale) => ConfigUtil.SetSetting(CritScaleKey, FctScale.ClampCritSize(scale));
 
     /*
      * Retired: FctOverlayTimeScale, which held a duration multiplier while that dial was called "time". It is still read once when the speed key is

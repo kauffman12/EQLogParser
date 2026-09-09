@@ -92,7 +92,7 @@ namespace EQLogParser
       // cycle, spread through it — a configure session should teach the whole family, and every loop replays the lesson)
       new Cue(4080, FctLane.DamageDealt, 896805, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation),
 
-      // an item or spell proc: a little smaller than the swing that provoked it, and gone sooner
+      // an item or spell proc: its lane's full size, and gone sooner — tempo is what keeps procs off the picture, not small text
       new Cue(4300, FctLane.DamageDealt, 1380, "Arcane Jolt", proc: true),
 
       // the odometer's narrow extreme next to the decapitation's 896.8k: a graze that abbreviates to nothing

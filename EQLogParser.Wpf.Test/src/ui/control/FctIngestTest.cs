@@ -577,25 +577,23 @@ namespace EQLogParser
     }
 
     /*
-     * A proc lands on top of the swing the player aimed, and items fire them constantly, so it rides a size below its
-     * lane and runs a shorter life. Both halves are pinned because either alone looks like tuning drift rather than a
-     * rule, and the source line is included: a full-size ability name under a shrunken value would undo the whole thing.
+     * A proc lands on top of the swing the player aimed, and items fire them constantly — so it runs a shorter life.
+     * It does NOT run a smaller font: shrinking procs below their lane read as two weights of information rather than
+     * two urgencies, and the tempo tier carries the subordination on its own. The size half of this test is pinned on
+     * purpose too — it is the half that was reversed.
      */
     [TestMethod]
-    public void ProcsAreSmallerAndQuickerThanTheHitThatProvokedThem()
+    public void ProcsAreQuickerNotSmallerThanTheHitThatProvokedThem()
     {
       var plain = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 1000, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
       var proc = NewIngest().Accept(new List<FctHitState>(), FctLane.DamageDealt, 1000, "Soul Strike", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0, proc: true);
 
-      Assert.AreEqual(FctStyle.DamageDealtFontSize * FctStyle.ProcSizeFrac, proc.ValueFontSize, 0.001);
-      Assert.IsTrue(proc.ValueFontSize < plain.ValueFontSize, "a proc must not compete with the hit behind it");
-      Assert.IsTrue(proc.SourceFontSize < plain.SourceFontSize, "the ability line shrinks with its value");
+      Assert.AreEqual(FctStyle.DamageDealtFontSize * FctScale.Text, proc.ValueFontSize, 0.001);
+      Assert.AreEqual(plain.ValueFontSize, proc.ValueFontSize, 0.001, "a proc is its lane's full size; tempo alone subordinates it");
+      Assert.AreEqual(plain.SourceFontSize, proc.SourceFontSize, 0.001, "and the ability line matches");
       Assert.IsTrue(proc.LifetimeMs < plain.LifetimeMs, $"a proc clears sooner (was {proc.LifetimeMs:0} vs {plain.LifetimeMs:0})");
       Assert.IsTrue(proc.MotionMs < plain.MotionMs, "the whole tempo shortens, not just the tail");
       Assert.IsTrue(proc.FadeMs < plain.FadeMs, "and it fades proportionally, or it lingers while shrinking");
-
-      // still legible: subordinate is not footnote
-      Assert.IsTrue(proc.ValueFontSize > FctStyle.MinorFontSize, $"proc size {proc.ValueFontSize:0.#}");
     }
 
     /*

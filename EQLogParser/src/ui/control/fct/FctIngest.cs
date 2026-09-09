@@ -223,7 +223,7 @@ namespace EQLogParser
         Value = value,
       };
 
-      FctStyle.ApplyTo(hit, pooled, minor || periodic, proc);
+      FctStyle.ApplyTo(hit, pooled, minor || periodic);
       FctLayout.Spawn(hit, stage, _rand);
       AssignLifetime(hit, hits, stage, now);
 

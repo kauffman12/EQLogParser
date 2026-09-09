@@ -35,9 +35,11 @@ namespace EQLogParser.Tests
       Assert.IsTrue(marked.IconAllowance > 10.0, $"the glyph reserves real room ({marked.IconAllowance:0.#})");
       Assert.AreEqual(0.0, plain.IconAllowance, "unmarked rows pay nothing");
 
-      // crit-size as far as size goes: the blowout pop belongs to marked events whatever the crit flag said
+      // crit-size as far as size goes: the blowout pop and the crit dial both belong to marked events, crit flag or not
       Assert.IsTrue(marked.Blowout, "a mark must ride the crit emphasis lever even un-critted");
       Assert.IsFalse(plain.Blowout);
+      Assert.AreEqual(plain.ValueFontSize * FctScale.Crit, marked.ValueFontSize, 0.001,
+        "the mark's base font rides the crit dial, not the normal one");
     }
 
     /*

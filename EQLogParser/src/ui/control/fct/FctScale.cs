@@ -31,6 +31,19 @@ namespace EQLogParser
     public const double SizeMax = 1.5;
     public const double SizeDefault = 1.0;
 
+    /*
+     * Two size dials, one band. NORMAL scales everything that is not a big event; CRIT scales the numbers that are - crits and the
+     * marked special attacks, which borrow a crit's size emphasis - and both dials span the same -50 % to +50 %. Only their middles
+     * differ: normal sits at 1.0 because that is what the layout was measured at, while crit ships at +10 % because the pop, the halo
+     * and the draw order already announce a big number and a crit born at parity with its neighbours would be the overlay's loudest
+     * event arriving quietly.
+     *
+     * Two dials rather than one because they answer different questions. Normal is legibility: how much of the screen the stream of
+     * ordinary combat is allowed to take. Crit is punctuation: how much louder the exceptions get once that stream is sized. On their own
+     * each is a one-decision control; combined they would be one dial that can only ever express one ratio between the two.
+     */
+    public const double CritSizeDefault = 1.10;
+
     /* Both ends of the speed dial, in percent of the time a number spends on screen. + is less time, which is faster. */
     public const int SpeedPercentMin = -50;
     public const int SpeedPercentMax = 50;
@@ -59,6 +72,12 @@ namespace EQLogParser
      * height, vertical reserve, clamp bands, the pulse grid, glyph measurement - follows without a second place that has to remember to scale.
      */
     public static double Text = SizeDefault;
+
+    /* The crit dial's multiplier, and the same two rules as ClampSize with the shipped +10 % as the fallback instead of 1.0. */
+    public static double Crit = CritSizeDefault;
+
+    public static double ClampCritSize(double value) =>
+      !double.IsFinite(value) ? CritSizeDefault : Math.Clamp(value, SizeMin, SizeMax);
 
     /*
      * A multiplier on how long a number lives, its travel and its fade together, in the range TimeMin .. TimeMax. Scaling only the lifetime would leave a

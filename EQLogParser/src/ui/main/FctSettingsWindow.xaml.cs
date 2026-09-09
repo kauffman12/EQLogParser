@@ -93,6 +93,7 @@ namespace EQLogParser
       thresholdUpDown.Value = state.Threshold;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
+      critSlider.Value = FctScale.PercentOfSize(state.CritScale);
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
 
@@ -136,6 +137,7 @@ namespace EQLogParser
           _ => FctLabelSide.Below,
         },
         TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
+        CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)),
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
       };
@@ -209,7 +211,11 @@ namespace EQLogParser
       {
         if (sender == sizeSlider)
         {
-          sizeSlider.Value = FctScale.SpeedPercentDefault;
+          sizeSlider.Value = 0;                                  // the normal dial's middle is nothing
+        }
+        else if (sender == critSlider)
+        {
+          critSlider.Value = (FctScale.CritSizeDefault - 1) * 100; // and the crit dial's is its shipped +10 %
         }
         else if (sender == speedSlider)
         {
@@ -267,6 +273,7 @@ namespace EQLogParser
     private void UpdateReadouts()
     {
       sizeValue.Text = Signed((int)Math.Round(sizeSlider.Value));
+      critValue.Text = Signed((int)Math.Round(critSlider.Value));
       speedValue.Text = Signed((int)Math.Round(speedSlider.Value));
     }
 

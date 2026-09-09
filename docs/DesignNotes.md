@@ -709,8 +709,8 @@ keystroke should not silently discard what a click was willing to name. Procs jo
 kind while that combo was being born.
 
 **The panel is ordered by how permanent things are, not by the order features were born.** Above the first hairline sit
-the always-applies — sliders first, then dropdowns, then number boxes, alphabetical inside each kind (speed, text size,
-label, show, hide below); below the second hairline sit the layout decisions the mode actually obeys (mode, shape, and
+the always-applies — sliders first, then dropdowns, then number boxes (speed, normal size, crit size, label, show, hide
+below); below the second hairline sit the layout decisions the mode actually obeys (mode, shape, and
 the three categories alphabetical: damage to me, heals, my damage). The threshold crossed into the permanent block on
 purpose: a threshold is a statement about numbers, not layout, and fountain filters with it too — hiding it there had
 been a UI politeness the engine never shared. The footer under the last hairline lost its legend arrows ("heals ← to me
@@ -989,7 +989,7 @@ one place, GW2 groups into fixed areas. Deterministic positions are the point: t
 - **Cells belong to a band, not a lane.** The scarce thing is space inside a band; separate pools per lane would put the
   damage block on top of the healing block, which is the bug. Colour says what a number is, position only has to say "not
   on top of another number".
-- **The outer row belongs to procs**, smaller cells kept out of the block being read so item spam can never push into it.
+- **The outer row belongs to procs**, kept out of the block being read so item spam can never push into it.
   Outward means away from the protected strip on both sides, which also keeps the strip's neighbour free of the most
   frequent text on screen.
 - **Rows fill nearest the strip first, centre-out within a row**, and every number starts from one point in the band and
@@ -1381,15 +1381,20 @@ over-reserves slightly and never clips). It is a factor rather than measured gly
 `EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`
 pins it in both region schemes, with a source line present and at crit scale.
 
-### Procs are subordinate: a little smaller, and quicker
+### Procs are subordinate by tempo and row, never by size
 
-A proc is not the number anybody aimed at. Item and spell procs fire on their own schedule, several times a pull, and they
-arrive on top of the swing or cast whose timing the player is reading - so at full lane size they compete with the hit
-they accompany without being the reason for it. `FctStyle.ProcSizeFrac` (0.78) rides a proc's value below its lane, which
-turns 34 into about 27: between dealt damage and a DoT tick, subordinate but not a footnote, with the source line shrinking
-alongside it because a full-size ability name under a smaller number would undo the effect on its own.
+A proc is not the number anybody aimed at: item and spell procs fire on their own schedule, several times a pull, arriving
+on top of the swing or cast whose timing the player is reading. The first answer was to shrink them — `ProcSizeFrac`, 0.78,
+turning 34 into about 27 — and looking at it again that was the wrong instrument. A smaller glyph says *this is less important
+information*, which is true of a DoT tick and false of a proc: the proc did real damage with its own name on it. What actually
+separates the two streams is **when and where**, not how big — so procs wear their lane's full size, and subordination is left
+to the two rules that read as urgency rather than as rank: a shorter tempo, and a different row.
 
-Size alone does not separate two streams that land in the same place though, so procs also start in a different row of
+The size dial's rename is what made the reduction visible for what it was. Once the panel asked for *normal size* beside a new
+*crit size*, "0.78 × normal" became an answer to a question the player never asked — there is no proc dial, and could not be, so
+a hidden per-kind multiplier was a fourth dial in nobody's settings.
+
+Row does the separating that size used to claim: procs also start in a different row of
 their band: `FctLayout.ProcInsetFrac` (0.15) moves them further *out* from the protected strip — my procs higher up, procs
 landing on me lower down — so the two occupy different rows of the same band and the eye can ignore one while reading the
 other. Being a share of band depth it is clamped by the band ends, so a small overlay loses separation before it loses text;
@@ -1400,15 +1405,14 @@ together - so a proc is gone shortly after the hit that provoked it instead of h
 A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
 in slow motion. Where the style IS a shared rail though, the discount stops: on parabola and straight a proc crosses at
 exactly its lane's beat, because there the common rate is the whole reading instrument and "same speed as the stream"
-outweighs "gone sooner" - split mode treats a proc as an ordinary value that happens to be small (measured: one scroll
-rate for hits, procs and words alike, whatever the font). Fountain keeps the full discount, which is where quick-and-small
-reads as spam exactly the way the log's own noise should.
+outweighs "gone sooner" - split mode treats a proc as an ordinary value (measured: one scroll rate for hits, procs and
+words alike, whatever the font). Fountain keeps the full tempo discount, which is where quick reads as spam exactly the way
+the log's own noise should.
 
-Neither reduction touches a crit proc, which is the one place where two independent "make it smaller" rules would have
-stacked into a bug. A proc crit is the biggest single number in the log, and reducing both its size and its life would
-have made the loudest event the quietest thing on screen - the opposite of what a pop is for. `FctStyle.ApplyTo` and
-`FctIngest.ApplyProcTempo` each test `Blowout` for this, and a test asserts that a proc crit matches a plain crit in size,
-life and motion, so the exemption cannot be lost by refactoring one of the two.
+A crit proc still takes no tempo discount: `FctIngest.ApplyProcTempo` tests `Blowout`, because a proc crit is the biggest single
+number in the log and running the loudest event on the shortest clock would waste the pop. The old "no shrinking a crit proc"
+carve-out went with the size rule itself — there is nothing left to exempt — and the test that pinned it now asserts the plainer
+thing: a proc and an ordinary hit of the same lane are drawn at exactly the same size, font and source line alike.
 
 What makes this legitimate rather than a guess is that a proc is a **fact** about the record rather than an interpretation
 of it: `DamageLineParser` assigns `Labels.Proc` by looking the spell up in `data/procs.txt` (EQ's own proc list, loaded in
@@ -1461,7 +1465,8 @@ and on each lock toggle instead of from a window hook — re-writing them per mo
 every hover over the overlay and buys nothing observable. Geometry persists through `ConfigUtil`
 (`FctOverlayLeft/Top/Width/Height/Enabled`) — written when a drag or resize is released, not by Save, because where you left the window
 is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
-*Two states*). The presentation switches — motion style (`FctOverlayMotion`), the two dials (`FctOverlayTextScale`, `FctOverlaySpeed`; multipliers
+*Two states*). The presentation switches — motion style (`FctOverlayMotion`), the three dials (`FctOverlayTextScale` for normal text,
+`FctOverlayCritScale` for crits and marked events, `FctOverlaySpeed`; multipliers
 rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) and
 the hide-below threshold (`FctOverlayThreshold`, stored as the plain number it shows) —
 persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
