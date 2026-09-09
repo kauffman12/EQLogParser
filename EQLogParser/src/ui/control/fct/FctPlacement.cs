@@ -293,7 +293,8 @@ namespace EQLogParser
       var x = FctMotion.ArcedX(hit, t, scale);
       var y = FctMotion.RaisedY(hit, t);
 
-      return (x - half, y - pad, x + half, y + (FctLayout.TextHeight(hit) * scale) + pad);
+      // a marked row's glyph hangs outside the value's left edge: the block charges for it, only there
+      return (x - half - (hit.IconAllowance * scale), y - pad, x + half, y + (FctLayout.TextHeight(hit) * scale) + pad);
     }
   }
 }

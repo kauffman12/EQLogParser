@@ -47,9 +47,10 @@ namespace EQLogParser
       public readonly bool Periodic;
       public readonly string ValueText;
       public readonly bool Proc;
+      public readonly FctSpecial Special;
 
       internal Cue(double offsetMs, FctLane lane, double value = 0, string source = null, bool crit = false,
-        bool periodic = false, string valueText = null, bool proc = false)
+        bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None)
       {
         OffsetMs = offsetMs;
         Lane = lane;
@@ -59,6 +60,7 @@ namespace EQLogParser
         Periodic = periodic;
         ValueText = valueText;
         Proc = proc;
+        Special = special;
       }
     }
 
@@ -84,14 +86,20 @@ namespace EQLogParser
       new Cue(3560, FctLane.Defensive, valueText: Labels.Parry),
       new Cue(3900, FctLane.DamageTaken, 268, "Disease", periodic: true),
 
+      // a marked event: the rare kind that earns a glyph and the purple hue (three of the five per cycle; scarcity
+      // is the point, and every loop the player configuring sees the marks move with the numbers)
+      new Cue(4080, FctLane.DamageDealt, 31760, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation),
+
       // an item or spell proc: a little smaller than the swing that provoked it, and gone sooner
       new Cue(4300, FctLane.DamageDealt, 1380, "Arcane Jolt", proc: true),
 
       new Cue(4720, FctLane.DamageDealt, 968, "Punch"),
       new Cue(5080, FctLane.HealingReceived, 1450, "Complete Heal"),
+      new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
       new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
       new Cue(5900, FctLane.Defensive, valueText: Labels.Riposte),
       new Cue(6300, FctLane.DamageDealt, 896, "Pierce"),
+      new Cue(6450, FctLane.DamageDealt, 7310, "Crush", special: FctSpecial.SlayUndead),
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
       new Cue(7150, FctLane.DamageDealt, 4126, "Slash", crit: true),
 
@@ -181,7 +189,7 @@ namespace EQLogParser
 
         // the real path, including whatever folding or placement it decides: a demo that skipped those would be showing a rehearsal
         var hit = _ingest.Accept(_hits, cue.Lane, cue.Value, cue.Source, cue.Crit, minor: false, cue.Periodic,
-          cue.ValueText, w, h, nowMs, cue.Proc, released);
+          cue.ValueText, w, h, nowMs, cue.Proc, cue.Special, released);
 
         if (hit is not null)
         {

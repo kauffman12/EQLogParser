@@ -156,6 +156,33 @@ namespace EQLogParser
       Assert.AreEqual(0, result);
     }
 
+    /* The overlay's mark rule: the four mask events in priority order — a line carries one, the order only decides
+       which wins if a log ever lies about two. */
+    [TestMethod]
+    public void TestSpecialFor_MaskEvents()
+    {
+      Assert.AreEqual(FctSpecial.Assassinate, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate Critical"), null));
+      Assert.AreEqual(FctSpecial.Headshot, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Headshot"), null));
+      Assert.AreEqual(FctSpecial.SlayUndead, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Slay Undead"), null));
+      Assert.AreEqual(FctSpecial.FinishingBlow, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Finishing Blow Critical"), null));
+      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Critical Flurry"), "Incendiary"));
+    }
+
+    /* Decapitation is the Berserker two-hander spell: logged as ordinary damage named in the line ("... by Decapitation
+       XVIII") with no modifier of its own, so its only tell is the spell's name. Everything else — including things
+       that merely start like it — stays unmarked. */
+    [TestMethod]
+    public void TestSpecialFor_DecapitationIsANameNotAMask()
+    {
+      Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decapitation XVIII"));
+      Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Decapitation XVIII"));
+      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Crown of Stars"));
+      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decrees of Kurn"));
+
+      // a real mask event outranks the name rule when one log somehow carries both
+      Assert.AreEqual(FctSpecial.Assassinate, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate"), "Decapitation XVIII"));
+    }
+
     [TestMethod]
     public void TestMaskCache_CacheHit()
     {

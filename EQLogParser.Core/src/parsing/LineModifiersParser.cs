@@ -37,6 +37,20 @@ namespace EQLogParser
     internal static bool IsRiposte(int mask) => mask > -1 && (mask & Riposte) != 0 && (mask & Strikethrough) == 0;
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & Strikethrough) != 0;
 
+    /*
+     * The events the floating-text overlay marks with a glyph: the four mask-flagged ones in priority order (a line
+     * carries at most one of them; the order only decides which wins if a log ever lies about two), plus the one that
+     * is never a modifier — Decapitation arrives as ordinary spell damage named in the line ("... by Decapitation
+     * XVIII"), so its rule is the spell's own name. source is the record SubType, spelled as displayed.
+     */
+    internal static FctSpecial SpecialFor(int mask, string source) =>
+      IsAssassinate(mask) ? FctSpecial.Assassinate :
+      IsHeadshot(mask) ? FctSpecial.Headshot :
+      IsSlayUndead(mask) ? FctSpecial.SlayUndead :
+      IsFinishingBlow(mask) ? FctSpecial.FinishingBlow :
+      source is not null && source.StartsWith("Decapitation", StringComparison.Ordinal) ? FctSpecial.Decapitation :
+      FctSpecial.None;
+
     internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)
     {
       if (record.ModifiersMask > -1 && record.Type != Labels.Miss)

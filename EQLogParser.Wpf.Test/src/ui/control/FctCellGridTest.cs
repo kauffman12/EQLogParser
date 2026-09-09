@@ -307,7 +307,7 @@ namespace EQLogParser
     private static FctHitState Add(FctIngest ingest, List<FctHitState> hits, FctLane lane, double now, double w = Width, double h = Height,
       bool proc = false, bool crit = false, Action<FctHitState>? evicting = null)
     {
-      return ingest.Accept(hits, lane, 500 + (now % 97), Ability, crit, false, false, null, w, h, now, proc, evicting);
+      return ingest.Accept(hits, lane, 500 + (now % 97), Ability, crit, false, false, null, w, h, now, proc, evicting: evicting);
     }
 
     private static (double X, double Y) Rest(FctHitState hit) => (FctMotion.ArcedX(hit, 1), FctMotion.RaisedY(hit, 1));

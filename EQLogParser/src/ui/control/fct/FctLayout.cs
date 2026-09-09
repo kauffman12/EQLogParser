@@ -163,7 +163,7 @@ namespace EQLogParser
       /* X0 is the right-align RAIL (FctMotion.ArcedX), so on a travelling row the reserved margin sits entirely on the
          left: the whole drawn box — at its widest, a crit's peak — hangs left of the rail, and the rail itself only has
          to stay inside the territory. Pulse centres in its cell, so it keeps half on each side. */
-      var peakWidth = hit.ValueWidth * PeakScaleOf(hit);
+      var peakWidth = (hit.ValueWidth * PeakScaleOf(hit)) + hit.IconAllowance;
       var travelling = hit.Style is not FctMotionStyle.Pulse;
       var xLo = region.X + EdgePad + (travelling ? peakWidth : peakWidth / 2);
       var xHi = region.X + region.Width - EdgePad - (travelling ? 0 : peakWidth / 2);
@@ -322,7 +322,7 @@ namespace EQLogParser
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
           hit.Bow = hit.Bow < 0
-            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - (hit.ValueWidth * PeakScaleOf(hit))))
+            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - (hit.ValueWidth * PeakScaleOf(hit)) - hit.IconAllowance))
             : Math.Min(hit.Bow, hit.SideMax - hit.X0);
         }
         return;

@@ -141,7 +141,8 @@ namespace EQLogParser
      */
     public static double ArcedX(FctHitState hit, double t, double scale = 1.0)
     {
-      var peak = hit.ValueWidth * ScaleAllowance(hit);
+      // the reserved special-event glyph is part of the drawn box's reach, though it never moves the rail itself
+      var peak = (hit.ValueWidth * ScaleAllowance(hit)) + hit.IconAllowance;
 
       /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the

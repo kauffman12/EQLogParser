@@ -18,6 +18,23 @@ namespace EQLogParser
     Missed
   }
 
+  /*
+   * The rare events worth a mark beside the number: four combat procs the log flags in the record's modifier mask
+   * (LineModifiersParser) and one that is only ever a spell name — Decapitation is the Berserker two-hander ability,
+   * logged as ordinary spell damage ("... by Decapitation XVIII") with no modifier of its own. Each renders as a
+   * glyph beside the value in one shared epic-purple family hue: purple answers "what kind of event", which is the
+   * same question the lane palette answers, just at the rare end (docs/DesignNotes.md → Five events get marks).
+   */
+  internal enum FctSpecial
+  {
+    None = 0,
+    Assassinate,
+    Headshot,
+    SlayUndead,
+    FinishingBlow,
+    Decapitation,
+  }
+
   /* One floating text handed to the renderer. Kept UI-agnostic so Core owns the feed, and kept free
    * of presentation: Source carries a bare ability/verb name (no parentheses, no casing tricks) and
    * ValueText is the literal main line for the zero-damage labels. See docs/DesignNotes.md. */
@@ -43,6 +60,9 @@ namespace EQLogParser
 
     // non-numeric main-line text (defensive labels); null = format Value
     public string ValueText;
+
+    /* The rare-event mark (assassinate, headshot, ...); None for everything a fight is mostly made of. */
+    public FctSpecial Special;
 
     // Environment.TickCount64 at enqueue; the consumer drops commands that queued up behind a stalled UI
     public long EnqueueTick;

@@ -56,6 +56,21 @@ namespace EQLogParser
     /* Invulnerable and Absorb mean "every cast from here is wasted", so they are the one label allowed to shout. */
     public const int LoudWordArgb = unchecked(0xFF << 24 | 0xF2 << 16 | 0xC9 << 8 | 0x4C);
 
+    /*
+     * The marked events (FctSpecial) share ONE hue — epic purple, the genre's "this is rare" colour — because the
+     * glyph already answers WHICH event and a per-event hue would just be five more answers to a question the picture
+     * does not ask. It sits outside every lane colour (yellow/orange/red/green/whitish words) so a mark cannot be
+     * misread as a lane at a glance, and it colours number and glyph alike.
+     */
+    public const int SpecialArgb = unchecked(0xFF << 24 | 0xC1 << 16 | 0x6B << 8 | 0xFF);
+
+    /* The reserved glyph: a square at most this fraction of the value's own font, hanging outside the number's left
+       edge with this gap — both scale with the text dial because they are born from the font size. */
+    public const double IconSizeFrac = 0.95;
+    public const double IconGapPx = 6;
+
+    public static double IconSpan(double valueFontSize) => (valueFontSize * IconSizeFrac) + (IconGapPx * FctScale.Text);
+
     public static void ApplyTo(FctHitState hit, FctLane lane, bool minor, bool proc = false)
     {
       var loud = IsLoudLabel(hit.FixedText);
@@ -77,6 +92,14 @@ namespace EQLogParser
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = SourceArgb;
       hit.Blowout = lane == FctLane.Crit;
+
+      /* The mark overrides the lane colour (the event outranks the stream) and reserves its room before any geometry
+         reads the width: clamps, collision and stream spacing all charge for the glyph beside the number. */
+      if (hit.Special is not FctSpecial.None)
+      {
+        hit.ValueArgb = SpecialArgb;
+        hit.IconAllowance = IconSpan(size);
+      }
     }
 
     /*

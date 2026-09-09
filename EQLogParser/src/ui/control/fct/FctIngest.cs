@@ -122,7 +122,7 @@ namespace EQLogParser
      * from the list by then.
      */
     public FctHitState Accept(List<FctHitState> hits, FctLane lane, double value, string source, bool crit, bool minor, bool periodic,
-      string fixedText, double w, double h, double now, bool proc = false, Action<FctHitState> evicting = null)
+      string fixedText, double w, double h, double now, bool proc = false, FctSpecial special = FctSpecial.None, Action<FctHitState> evicting = null)
     {
       if (w < 100 || h < 100)
       {
@@ -176,7 +176,7 @@ namespace EQLogParser
       if (fixedText is null)
       {
         if (!celled && !crit && ShouldAbsorb(pooled, periodic) &&
-            TryAbsorb(hits, pooled, incoming, proc, periodic, source, value, now))
+            TryAbsorb(hits, pooled, incoming, proc, periodic, special, source, value, now))
         {
           return null;
         }
@@ -212,6 +212,7 @@ namespace EQLogParser
         Lane = pooled,
         Proc = proc,
         Periodic = periodic,
+        Special = special,
         Heal = heal,
         Incoming = incoming,
         Style = style,
@@ -331,14 +332,15 @@ namespace EQLogParser
      * folds only into a component with identical flags, and Mik's Scrolling Battle Text merges only on matching event type
      * *and* skill name.
      */
-    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool proc, bool periodic, string source,
-      double value, double now)
+    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool proc, bool periodic, FctSpecial special,
+      string source, double value, double now)
     {
       for (var i = hits.Count - 1; i > -1; i--)
       {
         var hit = hits[i];
         if (hit.Lane != lane || hit.Blowout || hit.FixedText is not null
             || hit.Incoming != incoming || hit.Proc != proc || hit.Periodic != periodic
+            || hit.Special != special // a marked event folds only with its own kind: the mark must never be swallowed by a count
             || !string.Equals(hit.Source, source, StringComparison.Ordinal)
 
             /*

@@ -22,6 +22,16 @@ namespace EQLogParser
      * FctLane.Crit like any other, and without this flag the "+" in "its" text would lose track of what it was signing. */
     public bool Heal;
 
+    /* One of the rare marked events (assassinate, headshot, slay undead, finishing blow, decapitation). Part of the fold
+     * key: a marked hit may only fold into another hit carrying the same mark, so an assassinate can never hide inside a
+     * growing "×6" of ordinary swings — the mark is the whole reason the row exists. */
+    public FctSpecial Special;
+
+    /* Horizontal room reserved for that event's glyph: geometry charges for it next to ValueWidth (clamps, collision,
+     * stream spacing), and it never moves the odometer — the glyph hangs outside the number's left edge while the value
+     * keeps its right edge on the rail. Set with the fonts in FctStyle.ApplyTo. */
+    public double IconAllowance;
+
     /*
      * Index of this hit's cell in its band's fixed grid, or -1 while it floats. Only pulse mode allocates cells; the pool
      * is picked by band and by whether the hit is a proc, so this one number names the slot. FctCellGrid owns it.

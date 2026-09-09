@@ -1498,3 +1498,31 @@ constant deliberately rather than assume it is there.
   be confused (my whiff vs a defence that worked) are also separated by size and band — so a palette switch is a
   comfort feature rather than an accessibility blocker.
 - Real GPU presentation via `D3DImage` (see above).
+
+### The purple family: special attacks wear a glyph, not a bigger number
+
+Assassinate, headshot, slay undead, finishing blow and decapitation are the five moments in a fight
+where the log says *something happened beyond the number*. All five are already in `HitRecord`'s
+modifier mask — except decapitation, which arrives as a spell name. Rather than the genre default of
+a bigger, brighter, differently-coloured number (which fights the odometer: a special that changes
+the width of a value is a special that breaks the column), each wears a small glyph hanging **outside**
+the value's right edge, and all five share one colour. A family of five colours would have turned the
+overlay into a rainbow and made the marks impossible to learn; one purple says "special" on its own,
+and the silhouette says which.
+
+- `LineModifiersParser.SpecialFor(mask, source)` resolves the mark once, Core-side, so the parser is
+  the only place that knows what assassinate looks like in a log line. Decapitation matches on the
+  spell name and can only be reached through the parser path — `FctManager`'s direct-damage build (a
+  resist with no underlying record) has a mask but no name, so it cannot produce one.
+- The glyph is **priced into the geometry, then excluded from alignment**: `FctHitState.IconAllowance`
+  is added wherever a row's sideways appetite is measured — the pop peak, the bow cap, the drawn half —
+  and is not part of `ArcedX`. That asymmetry is the whole trick: the number's right edge still lands on
+  the rail whether or not there is an axe beside it. A mark that nudged the digits sideways would have
+  been cheaper to implement and worse to read.
+- A marked row **cannot fold into an ordinary one** (`FctIngest` compares `Special` alongside value,
+  source, crit and lane) and carries its own `MergeCount`. The alternative — an assassinate swallowed
+  into `×3` on a plain Backstab — is invisible data loss on exactly the events worth seeing. Marks do
+  fold with identical marks.
+- Glyphs are vector paths on a 24-unit grid rather than PNG assets: they scale with the text-size dial,
+  need no new deployment files, and the cut-out details (ghost eyes, skull nose) can be forced to the
+  outline colour independently of the fill.

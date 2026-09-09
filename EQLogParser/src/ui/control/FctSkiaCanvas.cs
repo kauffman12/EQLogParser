@@ -272,7 +272,7 @@ namespace EQLogParser
      * Adds one hit. Everything about what happens to it — pooled crit lane, half of the canvas, style,
      * geometry, adaptive lifetime, folding into a live number at the cap — is decided in FctIngest.
      */
-    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false)
+    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None)
     {
       if (_clock is null)
       {
@@ -282,7 +282,7 @@ namespace EQLogParser
       /* ReleaseHalo is the eviction sink: pulse mode can take a full cell off a hit still on screen, and the surface that
        * blurred its glow has to hear about it or the reference count never comes back down. */
       var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight,
-        _clock.Elapsed.TotalMilliseconds, proc, ReleaseHalo);
+        _clock.Elapsed.TotalMilliseconds, proc, special, ReleaseHalo);
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint
@@ -531,6 +531,13 @@ namespace EQLogParser
         CountDraw(1);
       }
 
+      // The special event's mark, hung outside the number's left edge inside the same pop transform: it scales and
+      // fades as one object with the value, and the odometer never moves for it (FctHitState.IconAllowance).
+      if (hit.Special is not FctSpecial.None)
+      {
+        DrawMark(canvas, hit, x, y, opacity);
+      }
+
       // value: black outline pass, then colored fill pass; its x is the value's own center in every label placement,
       // so amounts keep one spine whether the words hang below them (the shipped line) or inline left/right of them.
       var valueBase = y + (hit.ValueFontSize * 0.82);
@@ -551,7 +558,9 @@ namespace EQLogParser
         {
           var gap = hit.SourceFontSize * 0.5;
           var half = hit.ValueWidth / 2.0 + gap + hit.SourceWidth / 2.0;
-          labelX = _labelSide is FctLabelSide.Right ? x + half : x - half;
+
+          // a mark on the left is furniture too: the label leans against the glyph, not through it
+          labelX = _labelSide is FctLabelSide.Right ? x + half : x - (half + hit.IconAllowance);
         }
 
         DrawOutlinedText(canvas, hit.SourceLabel, (float)labelX, (float)labelBase, hit.SourceFontSize, false, hit.SourceArgb, opacity);
@@ -561,6 +570,44 @@ namespace EQLogParser
       {
         canvas.Restore();
       }
+    }
+
+    /*
+     * The mark, drawn the same way as the text it rides beside: black outline pass under a colored fill, so a glyph
+     * over bright lava rock stays as readable as the number next to it. Paths are built once per event (FctMarks);
+     * this only places and scales — no allocation in the frame path.
+     */
+    private void DrawMark(SKCanvas canvas, FctHitState hit, double textCenterX, double top, double opacity)
+    {
+      var mark = FctMarks.For(hit.Special);
+      if (mark.Body.IsEmpty)
+      {
+        return;
+      }
+
+      var size = hit.ValueFontSize * FctStyle.IconSizeFrac;
+      var gap = FctStyle.IconGapPx * FctScale.Text;
+      var left = (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
+      var topOfMark = top + ((FctLayout.TextHeight(hit) - size) / 2.0);
+      var scale = size / FctMarks.Unit;
+
+      canvas.Save();
+      canvas.Translate((float)left, (float)topOfMark);
+      canvas.Scale((float)scale, (float)scale);
+
+      Configure(_outlinePaint, ColorOf(BlackArgb, opacity), SKPaintStyle.StrokeAndFill, 2.4f);
+      canvas.DrawPath(mark.Body, _outlinePaint);
+      Configure(_fillPaint, ColorOf(hit.ValueArgb, opacity), SKPaintStyle.Fill, 0);
+      canvas.DrawPath(mark.Body, _fillPaint);
+
+      if (mark.Dark is not null)
+      {
+        Configure(_fillPaint, ColorOf(BlackArgb, opacity), SKPaintStyle.Fill, 0);
+        canvas.DrawPath(mark.Dark, _fillPaint);
+      }
+
+      canvas.Restore();
+      CountDraw(mark.Dark is null ? 2 : 3);
     }
 
     /* NAG's multi-shadow outline in two passes: black StrokeAndFill under a colored Fill. */

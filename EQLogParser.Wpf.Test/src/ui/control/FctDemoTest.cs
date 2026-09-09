@@ -18,7 +18,7 @@ namespace EQLogParser
   public class FctDemoTest
   {
     /* The six verbs DamageLineParser produces for melee, in the base form FctManager.DisplaySource shows (it singularises "Bites"). */
-    private static readonly string[] MeleeVerbs = ["Bite", "Claw", "Crush", "Pierce", "Punch", "Slash"];
+    private static readonly string[] MeleeVerbs = ["Backstab", "Bite", "Claw", "Crush", "Pierce", "Punch", "Slash"];
 
     private static readonly string[] Words =
       [Labels.Dodge, Labels.Parry, Labels.Block, Labels.Miss, Labels.Riposte, Labels.Absorb, Labels.Invulnerable, Labels.Resist];

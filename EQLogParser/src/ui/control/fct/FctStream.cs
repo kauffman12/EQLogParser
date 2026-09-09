@@ -119,7 +119,8 @@ namespace EQLogParser
     /* Half-width a row can occupy at its widest draw — which for a stream is a crit's peak, since that is the only
      * way an ordinary number gets wide (pulse never runs here; blowout is the crit pop, priced the same way
      * FctLayout.Spawn prices its own side clamp). */
-    private static double DrawnHalf(FctHitState h) => (h.ValueWidth * (h.Blowout ? FctMotion.CritPeakScale : 1.0)) / 2.0;
+    /* The reserved glyph travels with its row: a marked number prices as the wider box it draws. */
+    private static double DrawnHalf(FctHitState h) => ((h.ValueWidth + h.IconAllowance) * (h.Blowout ? FctMotion.CritPeakScale : 1.0)) / 2.0;
 
     /* The same price vertically: a line step has to clear the tallest row this stream can draw, not just this one's. */
     private static double DrawnHeight(FctHitState h) => FctLayout.TextHeight(h) * (h.Blowout ? FctMotion.CritPeakScale : 1.0);

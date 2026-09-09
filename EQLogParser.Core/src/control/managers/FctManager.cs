@@ -137,6 +137,8 @@ namespace EQLogParser
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
         Source = DisplaySource(record),
+        // the glyph'd events: mask flags, plus Decapitation whose only tell is the spell name in SubType
+        Special = LineModifiersParser.SpecialFor(record.ModifiersMask, record.SubType),
       });
     }
 
