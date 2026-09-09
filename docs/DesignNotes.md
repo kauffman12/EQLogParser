@@ -1616,10 +1616,11 @@ and the silhouette says which.
 - The burns' glyphs earned their shapes the same way, in the same rig. The **wizard hat** survives on a thick
   brim and a bent tip — the straight triangle read as an arrowhead, then as party furniture — and its dark band
   rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette into a horn on a pill. The **skeleton**
-  is what survived of "just draw a skeleton": anatomy at 16 px rendered as a lightbulb, so the bone figure keeps
-  three facts and nothing more — skull mass, two eyes, ribs as dark bands across one torso. Reusing the finishing
-  blow's plain skull was on the table and got refused for a structural reason, not taste: two events sharing one
-  silhouette means the mark stops saying which, and saying *which* is a mark's only job.
+  is what survived of "just draw a skeleton": anatomy at 16 px rendered as a lightbulb. A reduced bone figure — skull
+  mass, eyes, ribs as dark bands across one torso — read honestly enough but looked worse than the family skull beside
+  real numbers, so **Life Burn wears the finishing blow's skull**: the one silhouette the set shares. Context carries
+  the difference — a burn is outgoing spell damage, the kill mark comes off a landed weapon hit — which is the argument
+  for silhouettes losing to taste when the alternative looks bad enough to ignore.
 - Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
   a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
   same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks

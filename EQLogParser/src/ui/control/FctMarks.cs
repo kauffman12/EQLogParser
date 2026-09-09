@@ -12,10 +12,12 @@ namespace EQLogParser
    * The set: a dagger (assassinate), a fletched war arrow, point first (headshot), a ghost (slay undead), a skull (finishing blow — the
    * universal kill mark, and deliberately a skull while the undead mark is a ghost) and a double-bit battle axe
    * (decapitation, the Berserker two-hander), a pointed wizard hat with a dark band
-     * (mana burn) and a bone figure — skull, eyes, black rib stripes, pelvis (life burn). The two burns are bake-off
-     * survivors like the arrow was: an anatomical skeleton rendered as a lightbulb at mark size, so the figure is one
-     * mass with dark ribs; and life burn deliberately does not reuse the finishing blow's skull — two events, two
-     * silhouettes, or the mark stops saying which. Shapes are chosen for one job: read at roughly thirty pixels in
+     * (mana burn), and the skull again for life burn. The hat is a bake-off survivor like the arrow was: a straight
+     * triangle read as an arrowhead, so it took a thick brim and a bent tip. The necromancer's own figure did not
+     * survive: anatomy at 16 px rendered as a lightbulb, a reduced bone figure with dark rib bands read honestly but
+     * looked worse than the family skull beside real numbers — so Life Burn wears the skull too. The one silhouette
+     * shared in the set, and the eye tells the two apart by context: burns are outgoing spell damage, the kill mark
+     * comes off a landed weapon hit. Shapes are chosen for one job: read at roughly thirty pixels in
    * peripheral vision over a moving game view. Nothing thin, nothing with more than a silhouette.
    */
   internal static class FctMarks
@@ -48,7 +50,7 @@ namespace EQLogParser
       FctSpecial.FinishingBlow => Skull(),
       FctSpecial.Decapitation => BattleAxe(),
       FctSpecial.ManaBurn => WizardHat(),
-      FctSpecial.LifeBurn => Skeleton(),
+      FctSpecial.LifeBurn => Skull(), // the necro shares the kill mark's skull — see the header note
       _ => new Mark(new SKPath(), null),
     };
 
@@ -202,30 +204,5 @@ namespace EQLogParser
       return new Mark(body, dark);
     }
 
-    /*
-     * Life Burn is the necromancer's, and the request was a skeleton — which the bake-off rendered as a lightbulb:
-     * anatomy at 16 px is a rumour. What survives is the figure REDUCED to its three facts: a skull mass with eyes, a
-     * torso whose ribs are told by dark stripes rather than drawn bones, and a pelvis. Deliberately NOT the finishing
-     * blow's skull (which the fallback offer allowed): two events sharing one silhouette means the mark stops saying
-     * which thing happened, and saying which is the only job a mark has.
-     */
-    private static Mark Skeleton()
-    {
-      var body = new SKPath();
-      body.AddRoundRect(new SKRect(5.6f, 0.6f, 18.4f, 10.6f), 4.4f, 4.4f); // skull mass
-      body.MoveTo(8.4f, 9.8f);                                              // torso, one slab
-      body.LineTo(15.6f, 9.8f);
-      body.LineTo(14.0f, 17.2f);
-      body.LineTo(10.0f, 17.2f);
-      body.Close();
-      body.AddRoundRect(new SKRect(8.2f, 16.6f, 15.8f, 22.6f), 2.2f, 2.2f); // pelvis
-
-      var dark = new SKPath();
-      dark.AddCircle(9.4f, 5.4f, 1.7f);   // eyes: shared language with the skull and ghost
-      dark.AddCircle(14.6f, 5.4f, 1.7f);
-      dark.AddRoundRect(new SKRect(7.8f, 11.2f, 16.0f, 12.9f), 0.8f, 0.8f); // ribs as two black bands across the torso
-      dark.AddRoundRect(new SKRect(9.4f, 14.0f, 14.6f, 15.7f), 0.8f, 0.8f);
-      return new Mark(body, dark);
-    }
   }
 }
