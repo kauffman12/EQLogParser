@@ -1617,10 +1617,13 @@ and the silhouette says which.
   brim and a bent tip — the straight triangle read as an arrowhead, then as party furniture — and its dark band
   rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette into a horn on a pill. The **skeleton**
   is what survived of "just draw a skeleton": anatomy at 16 px rendered as a lightbulb. A reduced bone figure — skull
-  mass, eyes, ribs as dark bands across one torso — read honestly enough but looked worse than the family skull beside
-  real numbers, so **Life Burn wears the finishing blow's skull**: the one silhouette the set shares. Context carries
-  the difference — a burn is outgoing spell damage, the kill mark comes off a landed weapon hit — which is the argument
-  for silhouettes losing to taste when the alternative looks bad enough to ignore.
+  mass, eyes, ribs as dark bands across one torso — read honestly enough but looked worse than the plain skull beside
+  real numbers, and the skull plainly belongs to the necromancer anyway. So **Life Burn owns the skull** and the
+  finishing blow moved to a **tombstone**: a broad arched slab on a flat ground footer — the footer is what keeps it
+  from reading as a round blob, since the stone has no eyes — with two dark engraving bars where the eyes would do
+  their work. Two eliminations got it there: a reaper scythe fused blade-and-haft into "a slash and a checkmark" at
+  shipped size, and a sword driven point-first was the assassinate dagger's own silhouette family. One glyph per
+  event again, which is how the set wanted to be drawn.
 - Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
   a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
   same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks

@@ -9,16 +9,16 @@ namespace EQLogParser
    * once, on a 24x24 unit grid, and scaled by the caller to sit beside its number; bodies cache so a frame allocates
    * nothing.
    *
-   * The set: a dagger (assassinate), a fletched war arrow, point first (headshot), a ghost (slay undead), a skull (finishing blow — the
-   * universal kill mark, and deliberately a skull while the undead mark is a ghost) and a double-bit battle axe
-   * (decapitation, the Berserker two-hander), a pointed wizard hat with a dark band
-     * (mana burn), and the skull again for life burn. The hat is a bake-off survivor like the arrow was: a straight
-     * triangle read as an arrowhead, so it took a thick brim and a bent tip. The necromancer's own figure did not
-     * survive: anatomy at 16 px rendered as a lightbulb, a reduced bone figure with dark rib bands read honestly but
-     * looked worse than the family skull beside real numbers — so Life Burn wears the skull too. The one silhouette
-     * shared in the set, and the eye tells the two apart by context: burns are outgoing spell damage, the kill mark
-     * comes off a landed weapon hit. Shapes are chosen for one job: read at roughly thirty pixels in
-   * peripheral vision over a moving game view. Nothing thin, nothing with more than a silhouette.
+   * The set: a dagger (assassinate), a fletched war arrow, point first (headshot), a ghost (slay undead), a
+   * tombstone (finishing blow — the universal kill mark; death reads, and round blobs stay the ghost's and the
+   * skull's own), a double-bit battle axe (decapitation, the Berserker two-hander), a pointed wizard hat with a dark
+   * band (mana burn) and the skull for life burn. The hat and the tombstone are bake-off survivors like the arrow was:
+   * the hat's straight triangle read as an arrowhead until it grew a thick brim and a bent tip; the kill mark's scythe
+   * fused blade-and-haft into "a slash" at shipped size, and a sword driven point-first was the dagger's silhouette
+   * family — the one thing the set cannot have twice. The necromancer's own figure failed too (anatomy at 16 px reads
+   * as a lightbulb), so the skull belongs to Life Burn outright.
+   * Shapes are chosen for one job: read at roughly thirty pixels in peripheral vision over a moving game view.
+   * Nothing thin, nothing with more than a silhouette.
    */
   internal static class FctMarks
   {
@@ -47,7 +47,7 @@ namespace EQLogParser
       FctSpecial.Assassinate => Dagger(),
       FctSpecial.Headshot => Arrow(),
       FctSpecial.SlayUndead => Ghost(),
-      FctSpecial.FinishingBlow => Skull(),
+      FctSpecial.FinishingBlow => Tombstone(),
       FctSpecial.Decapitation => BattleAxe(),
       FctSpecial.ManaBurn => WizardHat(),
       FctSpecial.LifeBurn => Skull(), // the necro shares the kill mark's skull — see the header note
@@ -179,6 +179,29 @@ namespace EQLogParser
       right.Close();
       body.AddPath(right);
       return new Mark(body, null);
+    }
+
+    /*
+     * The tombstone for the universal kill mark. Broad slab, arc crown, and a FLAT ground slab across the bottom —
+     * that footer is what stops it rendering as a round blob at 16 px (the skull can keep its roundness because it has
+     * eyes; the stone trades eyes for two dark engraving bars, wide horizontals the eye finds first). Chosen over a
+     * scythe and over a sword driven point-first, both eliminated in the bake-off — see the header.
+     */
+    private static Mark Tombstone()
+    {
+      var body = new SKPath();
+      body.MoveTo(4.6f, 20.4f);
+      body.LineTo(4.6f, 9.4f);
+      body.QuadTo(4.6f, 1.6f, 12, 1.6f);          // arc crown
+      body.QuadTo(19.4f, 1.6f, 19.4f, 9.4f);
+      body.LineTo(19.4f, 20.4f);
+      body.Close();
+      body.AddRoundRect(new SKRect(2.4f, 19.2f, 21.6f, 23.0f), 1.6f, 1.6f); // ground slab
+
+      var dark = new SKPath();                    // engraving: two wide bars, not letters — letters are soup here
+      dark.AddRoundRect(new SKRect(8.4f, 7.6f, 15.6f, 9.6f), 0.9f, 0.9f);
+      dark.AddRoundRect(new SKRect(9.6f, 11.4f, 14.4f, 13.2f), 0.9f, 0.9f);
+      return new Mark(body, dark);
     }
 
     /*
