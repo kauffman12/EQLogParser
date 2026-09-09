@@ -513,8 +513,8 @@ namespace EQLogParser
       var t = FctMotion.Progress(hit, ageMs);
       var s = FctMotion.ScaleOf(hit, ageMs);
 
-      // the scale goes in: right-aligned values keep their right edge on the rail at every frame's width
-      var x = FctMotion.ArcedX(hit, t, s);
+      // rest centre; the animated blowout scales symmetrically about it (FctMotion.ArcedX), never off the rail
+      var x = FctMotion.ArcedX(hit, t);
       var y = FctMotion.RaisedY(hit, t);
 
       if (s != 1.0)

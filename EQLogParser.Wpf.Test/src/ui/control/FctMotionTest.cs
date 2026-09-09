@@ -204,6 +204,34 @@ namespace EQLogParser
     }
 
     /*
+     * The scale animation must not STEER. ArcedX used to compensate for the frame's blowout so the right edge stayed
+     * nailed to the rail through it — which meant a dying crit walked sideways toward its own rail as it collapsed,
+     * and on a straight line that looked absurd: every ordinary row rose straight up while crits and marks veered off
+     * to the upper right. The centre is now the pivot (where the genre anchors its pops), so x cannot move with scale.
+     * Pinned here two ways: the centre never shifts across the whole life, and the drawn box only ever tucks further
+     * INSIDE the rail (scale stays <= 1), so the odometer's edge is unbroken in both directions.
+     */
+    [TestMethod]
+    public void ACollapsedCritNeverWalksSideways()
+    {
+      var crit = NewHit(2800);
+      crit.Lane = FctLane.Crit;
+      crit.Blowout = true;
+      crit.Style = FctMotionStyle.Straight;
+      crit.SideMin = 0;
+      crit.SideMax = 1400;
+
+      for (var age = 0.0; age <= crit.LifetimeMs; age += 50)
+      {
+        var t = FctMotion.Progress(crit, age);
+        var s = FctMotion.ScaleOf(crit, age);
+        var centre = FctMotion.ArcedX(crit, t);
+        Assert.AreEqual(crit.X0 - (crit.ValueWidth / 2.0), centre, 0.001, $"x moved at {age:0} ms - the scale is steering again");
+        Assert.IsTrue(centre + ((crit.ValueWidth * s) / 2.0) <= crit.X0 + 0.001, $"the drawn box crossed the rail at {age:0} ms");
+      }
+    }
+
+    /*
      * A celled number barely moves, so its swell is the entire announcement: in small, past full size, settle onto it — and
      * never back below 1.0 afterwards, because a shrinking number reads as leaving before the fade has said so.
      */

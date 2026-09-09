@@ -148,7 +148,7 @@ namespace EQLogParser
      *
      * Degenerate either way — a label wider than its territory degrades to the territory's middle instead of throwing.
      */
-    public static double ArcedX(FctHitState hit, double t, double scale = 1.0)
+    public static double ArcedX(FctHitState hit, double t)
     {
       // the reserved special-event glyph is part of the drawn box's reach, though it never moves the rail itself
       var peak = (hit.ValueWidth * ScaleAllowance(hit)) + hit.IconAllowance;
@@ -176,8 +176,16 @@ namespace EQLogParser
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
 
+      /* Rest centre, always: the right edge rides the rail at rest and under every fold's width change, but the
+         blowout's SCALE animation is anchored here, at the centre — not against the rail. Pinning the edge through
+         an animated scale (the old `rail - w * scale / 2`) made a dying crit walk sideways toward its own rail while
+         it collapsed, and on the straight line that read as crits and marks drifting up-and-RIGHT where every
+         ordinary row rose straight up. Centre anchoring is what the genre does — pop in and collapse are symmetric
+         about the text's anchor — and it can only ever TUCK the drawn box further inside the rail (scale never
+         exceeds 1), so the odometer's edge is safe in both directions. Callers that need the drawn box apply their
+         own scaled half-width around this centre; scoring and drawing agree to the bit exactly as before. */
       var rail = Math.Clamp(hit.X0 + lateral, loR, hit.SideMax);
-      return rail - (hit.ValueWidth * scale) / 2.0;
+      return rail - hit.ValueWidth / 2.0;
     }
 
     /*

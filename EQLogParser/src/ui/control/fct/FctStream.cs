@@ -278,7 +278,7 @@ namespace EQLogParser
          * label's own length keeps the guard honest in tests and headless replay. */
         var bandHalf = Math.Max(a.ValueWidth, a.SourceWidth > 0 ? a.SourceWidth : a.SourceLabel.Length * a.SourceFontSize * 0.52) * sa / 2.0;
         var ax = FctMotion.ArcedX(a, ta);
-        var bx = FctMotion.ArcedX(b, tb, sb);
+        var bx = FctMotion.ArcedX(b, tb);
         var wide = Math.Min(ax + bandHalf, bx + (b.ValueWidth * sb / 2.0)) - Math.Max(ax - bandHalf, bx - (b.ValueWidth * sb / 2.0));
         if (wide >= LabelBiteWide)
         {

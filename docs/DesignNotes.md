@@ -1142,15 +1142,19 @@ A column of centre-anchored numbers is a column whose ones digits jog: 950 centr
 centres six, and spam reads as ragged confetti. Mik ships the answer as an option — per-area text alignment, and
 right-justify is what damage columns actually use — and this overlay ships it the same way everyone who uses MSBT
 ends up configuring it: **on, permanently, with no knob**. `FctMotion.ArcedX` interprets a travelling row's spine
-(`X0 + lateral`) as the value's **right edge**: every row in a lane keeps the same right edge at every t, centres sit
-wherever their own widths put them, and the crit blowout grows the box leftwards out of the rail instead of around a
-centre — which reads correctly for a parse stream: new digits extend the number, they do not shift it.
+(`X0 + lateral`) as the value's **right edge**: every row in a lane keeps the same right edge at rest and under every
+fold's width change, and centres sit wherever their own widths put them — new digits extend the number, they do not
+shift it. The crit blowout's scale animation is the one exception, anchored at the **centre** rather than the rail:
+pinning the edge through an animated scale made a dying crit walk sideways toward its rail as it collapsed (up-and-
+RIGHT on a straight line, while every ordinary row rose straight), and the genre anchors pops at the text's centre for
+this reason. Since the blowout envelope never exceeds 1.0, a centred collapse can only tuck the drawn box further
+inside the rail — the flush edge survives every frame of it.
 
 Pulse is exempt and centres in its cell; a grid of values each hanging half a cell to the left would put neighbours'
 numbers through each other, and a cell is a box a value sits *in*.
 
 The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
-same right-anchored box (`ArcedX(hit, t, scale)` takes the frame's blowout so scoring and drawing agree to the bit),
+same right-anchored box (`Block` scales its half-width around `ArcedX`'s centre, so scoring and drawing agree to the bit),
 the spawn clamp reserves its margin on the left, and the parabola's bow budget measures the full hang (above). Two
 small costs were accepted with measurement: an artificially-over-capacity half grazes to ~30% of a block instead of
 25% (`FctStreamTest` pins the new ceiling — right-alignment is worth half a column of squeeze), and deep-entry line

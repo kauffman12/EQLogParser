@@ -292,7 +292,7 @@ namespace EQLogParser
       var half = (hit.ValueWidth * scale) / 2.0 + pad;
 
       // no fade-out gate here: a number that is on screen at all is one the player could be trying to read
-      var x = FctMotion.ArcedX(hit, t, scale);
+      var x = FctMotion.ArcedX(hit, t);
       var y = FctMotion.RaisedY(hit, t);
 
       // a marked row's glyph hangs outside the value's left edge: the block charges for it, only there
