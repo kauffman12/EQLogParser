@@ -3,18 +3,25 @@ using System;
 namespace EQLogParser
 {
   /*
-   * Overlay presentation settings kept in settings.ini instead of a dialog — there is no FCT configuration UI yet, and
-   * the one that exists today (motion style) is a switch a player flips while deciding which reads better in their own HUD,
-   * so it lives on the overlay header rather than in a modal. Deliberately outside the fct/
-   * folder: the layout and motion maths stay free of ConfigUtil so they can be unit tested on their own, and this is
-   * the only place that knows these key names or their historical spelling.
+   * Overlay presentation settings kept in settings.ini, read once when the overlay starts and written by the configure
+   * session: FctSettingsWindow hands a snapshot to FctOverlayWindow, which is the only thing that writes here. Deliberately
+   * outside the fct/ folder, so the layout and motion maths stay free of ConfigUtil and can be unit tested on their own;
+   * this is the only place that knows these key names or their historical spelling.
    */
   internal static class FctOverlaySettings
   {
     public const string MotionKey = "FctOverlayMotion";
 
+    /* The window itself: whether the View menu had it showing when the app closed, and where it sat. Named here so the
+     * spelling of every FCT key exists once, including the ones MainWindow and FctOverlayWindow write directly. */
+    public const string EnabledKey = "FctOverlayEnabled";
+    public const string WindowLeftKey = "FctOverlayLeft";
+    public const string WindowTopKey = "FctOverlayTop";
+    public const string WindowWidthKey = "FctOverlayWidth";
+    public const string WindowHeightKey = "FctOverlayHeight";
+
     /*
-     * The two modes the configure row offers, over the engine's three schemes: fountain is bands geometry wearing spray
+     * The two modes the settings panel offers, over the engine's three schemes: fountain is bands geometry wearing spray
      * motion (numbers spew out of a clear middle — spray or settle, plus the two direction dials), and split is the side
      * columns with a shape — parabola or line, nothing that rests in a scroll. Engine names stay where the geometry
      * is tested; ini speaks the words
@@ -25,20 +32,30 @@ namespace EQLogParser
     public const string ShapeKey = "FctOverlayShape";
 
     /*
-     * The region scheme and how it is oriented (see FctStage): which side incoming owns in halves, which side healing owns
-     * in by type, and which way each side travels. halves is the shipped default — with its failure mode fixed — and these
-     * keys are read on every start; missing values land on that choice, junk on bands (ParseMode explains the split).
+     * The region scheme and how it is oriented (see FctStage): which lane each category owns and which way each side travels.
+     * What ships is fountain (bands geometry, see LoadIsFountain) and split (ByType columns); the engine's third scheme, halves,
+     * stays reachable from code and from the ini words but no control offers it today, so these keys read to the shipped two.
+     * Junk always lands on a shipped choice rather than reaching geometry as garbage.
      */
-    public const string LayoutKey = "FctOverlayLayout";
+    /* Written so a halves layout round-trips if the panel ever offers one; loading does not read it, because fountain
+       and split take their sides from the lane keys below. */
     public const string IncomingSideKey = "FctOverlayIncomingSide";
 
-    /* Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
-       the two damage streams learned to answer separately in the same engine pass that made bands steerable. */
+    /*
+     * Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
+     * the two damage streams learned to answer separately in the same engine pass that made bands steerable.
+     *
+     * A lane key also accepts "none", which switches that category off in split mode — the replacement for the old
+     * damage-in / damage-out / healing checkboxes, now that the show list carries nine finer rows instead (FctShowList).
+     * Fountain ignores these keys entirely, "none" included.
+     */
     public const string HealSideKey = "FctOverlayHealSide";
     public const string HealLaneKey = "FctOverlayHealLane";
     public const string HealDirectionKey = "FctOverlayHealDirection";
     public const string TakenDamageSideKey = "FctOverlayTakenDamageSide";
     public const string TakenDamageLaneKey = "FctOverlayTakenDamageLane";
+    public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
+    public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
     /* Where the "(source)" label sits by its amount: left, below (the shipped line), or right. */
     public const string LabelSideKey = "FctOverlayLabelSide";
@@ -46,14 +63,13 @@ namespace EQLogParser
     public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
 
     /*
-     * Which categories of number the overlay draws at all (the gate in FctIngest): my damage, damage on me, and
-     * healing either direction. Absent or unreadable means ON — these are opt-outs by design ("hide what I don't
-     * want"), so a fresh overlay shows everything without anybody having to switch it on, and a corrupt value fails
-     * toward information rather than toward silence.
+     * Which kinds of number the overlay draws at all (the gate in FctIngest). There used to be three keys here — my damage,
+     * damage on me, healing either direction — and they are gone: that question is now answered one level finer by the nine
+     * show-list rows, whose keys live beside their labels in FctShowList, and "my side entirely" is answered by giving the
+     * side no lane. Procs keeps its own key named here because it is the one row named before the rows existed; the rest of
+     * the table reaches LoadShown/SaveShown below with the same promise: absent or unreadable means ON, so these are opt-outs
+     * and a corrupt value fails toward information rather than toward silence.
      */
-    public const string ShowDealtKey = "FctOverlayShowDealt";
-    public const string ShowTakenKey = "FctOverlayShowTaken";
-    public const string ShowHealsKey = "FctOverlayShowHeals";
     public const string ShowProcsKey = "FctOverlayShowProcs";
 
     /* One key per event word, same LoadShown opt-out semantics as the categories: absent is shown, and only an
@@ -66,10 +82,8 @@ namespace EQLogParser
     public const string ShowResistKey = "FctOverlayShowResist";
     public const string ShowAbsorbKey = "FctOverlayShowAbsorb";
     public const string ShowInvulnerableKey = "FctOverlayShowInvulnerable";
-    public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
-    public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
-    /* The two dials on the configure row, stored as multipliers rather than percentages: the file is a place where a human may look, and the value
+    /* The two size dials in the settings panel, stored as multipliers rather than percentages: the file is a place where a human may look, and the value
        that means something to the code is the one worth writing. Size runs 0.5 - 1.5; speed runs 0.76 - 2.28 around a shipped 1.14, which are the ends of
        a dial measured in percent of time taken rather than in rate (see FctScale). FctScale clamps on the way in, so a hand-edited "big" or 12 lands on
        that dial's default instead of drawing nothing or running at four times tempo. */
@@ -143,7 +157,7 @@ namespace EQLogParser
       !double.IsFinite(value) || value <= 0 ? 0 : Math.Min(value, ThresholdMax);
 
     /*
-     * Whether anybody has ever pressed Save on the configure row. The overlay's defaults are defensible but they are opinions, and a first enable that
+     * Whether anybody has ever pressed Save in the settings panel. The overlay's defaults are defensible but they are opinions, and a first enable that
      * shows nothing but numbers being what the build decided keeps a player from learning that size, speed and motion are theirs to set - so the menu
      * opens configure mode instead (see MainWindow.SetFctOverlayVisible). Written only by Save: Cancel, Esc and closing all leave it unset, which means
      * the offer comes back rather than nagging into a setting nobody agreed to.
@@ -155,46 +169,81 @@ namespace EQLogParser
     public static void SaveConfigured() => ConfigUtil.SetSetting(ConfiguredKey, true);
 
     /*
-     * A stored choice is read back through the same pure helpers that guard every other key, so junk lands on a shipped
-     * default instead of reaching geometry as garbage. Omitted directions are passed through as null on purpose: bands'
-     * outward invariant (in sinks, out rises) is what "never set" must mean there, and the constructor keeps it that way —
-     * a fountain that defaults to its own shape needs nobody to have chosen it first.
+     * The whole panel in one key, and the whole panel out of one key. This is the only place that knows what the settings are
+     * called, and the only place that assembles a FctConfigState from the file: the overlay loads once at startup and writes
+     * once at Save, and every setting the panel gains has exactly one load and one save here rather than one in each of the
+     * five places the old per-field staging touched.
+     *
+     * Every read goes through the same pure helpers that guard the other keys, so junk lands on a shipped default instead of
+     * reaching geometry as garbage. Directions are read with ParseUp, whose answer for "never set" is the scheme's own.
      */
-    public static FctLayoutChoice LoadLayout()
+    public static FctConfigState LoadConfig()
     {
-      if (LoadIsFountain())
+      var fountain = LoadIsFountain();
+      var state = new FctConfigState
       {
-        return new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left,
-          ParseUpOrNull(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
-          ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)));
-      }
+        Fountain = fountain,
+        /* Lanes are the question now; the old side keys parse through them too ("left" means that side's outer lane), so an
+         * older config lands where it looked. The shipped spread gives each category its own column - outgoing on the left,
+         * what happens to the player on the right, heals just inside that - and leaves left 2 as the first free lane for
+         * anyone who wants five streams. */
+        HealLane = FctRailLanes.Parse(ConfigUtil.GetSetting(HealLaneKey, null) ?? ConfigUtil.GetSetting(HealSideKey, null),
+          FctConfigState.HealLaneDefault),
+        HealUp = ParseUp(ConfigUtil.GetSetting(HealDirectionKey, null)),
+        TakenLane = FctRailLanes.Parse(
+          ConfigUtil.GetSetting(TakenDamageLaneKey, null) ?? ConfigUtil.GetSetting(TakenDamageSideKey, null),
+          FctConfigState.TakenLaneDefault),
+        TakenUp = ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
+        DealtLane = FctRailLanes.Parse(
+          ConfigUtil.GetSetting(DealtDamageLaneKey, null) ?? ConfigUtil.GetSetting(DealtDamageSideKey, null),
+          FctConfigState.DealtLaneDefault),
+        /* The one direction whose "never set" depends on the mode: bands ships the strip invariant (my numbers rise away
+           from the clear middle), the columns ship everything falling. Writing it out at Save makes the file explicit, so
+           this only ever answers for a file nobody has saved yet. */
+        DealtUp = ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)) ?? fountain,
+        Threshold = LoadThreshold(),
+        LabelSide = LoadLabelSide(),
+        TextScale = LoadTextScale(),
+        CritScale = LoadCritScale(),
+        Speed = LoadSpeed(),
+      };
 
-      /* Lanes are the question now; the old side keys parse through them too ("left" means that side's outer lane), so
-       * an older config lands where it looked. The shipped spread gives each category its own column - outgoing on the
-       * left, what happens to the player on the right, heals just inside that - and leaves left 2 as the first free
-       * lane for anyone who wants five streams. */
-      var healLane = FctRailLanes.Parse(ConfigUtil.GetSetting(HealLaneKey, null) ?? ConfigUtil.GetSetting(HealSideKey, null), FctRailLane.Right1);
-      var takenLane = FctRailLanes.Parse(ConfigUtil.GetSetting(TakenDamageLaneKey, null) ?? ConfigUtil.GetSetting(TakenDamageSideKey, null), FctRailLane.Right2);
-      var dealtLane = FctRailLanes.Parse(ConfigUtil.GetSetting(DealtDamageLaneKey, null) ?? ConfigUtil.GetSetting(DealtDamageSideKey, null), FctRailLane.Left1);
-      return new FctLayoutChoice(FctLayoutMode.ByType, FctRailLanes.SideOf(takenLane),
-        ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
-        ParseUp(ConfigUtil.GetSetting(OutgoingDirectionKey, null)),
-        FctRailLanes.SideOf(healLane),
-        ParseUp(ConfigUtil.GetSetting(HealDirectionKey, null)),
-        FctRailLanes.SideOf(takenLane),
-        FctRailLanes.SideOf(dealtLane),
-        healLane, takenLane, dealtLane);
+      /* The shape belongs to the mode, and a file that pairs them wrongly (bands + parabola) is not a decision anybody made,
+         so it resolves to the mode's own rather than reaching the engine as an illegal combination. */
+      state.Shape = LoadShapeFor(fountain ? FctLayoutMode.Bands : FctLayoutMode.ByType);
+
+      /* Rows and words together: FctShowList owns both tables and their keys, so a switch added to the dropdown is loaded by
+         being added there and by nothing else. */
+      FctShowList.LoadInto(state);
+
+      return state;
     }
 
-    public static void SaveLayout(FctLayoutChoice layout)
+    /* Save is one call, so a key cannot be added to the panel and forgotten at the write. The lane tokens include "none":
+       a switched-off category comes back off, which is the whole point of offering it. */
+    public static void SaveConfig(FctConfigState state)
     {
+      if (state is null)
+      {
+        return;
+      }
+
+      var layout = state.BuildLayout();
+      SaveIsFountain(state.Fountain);
+      SaveShape(state.Shape);
       ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
-      ConfigUtil.SetSetting(HealLaneKey, FctRailLanes.Token(layout.HealLane));
-      ConfigUtil.SetSetting(HealDirectionKey, layout.HealUp ? "up" : "down");
-      ConfigUtil.SetSetting(TakenDamageLaneKey, FctRailLanes.Token(layout.IncomingDamageLane));
-      ConfigUtil.SetSetting(DealtDamageLaneKey, FctRailLanes.Token(layout.OutgoingDamageLane));
-      ConfigUtil.SetSetting(IncomingDirectionKey, layout.IncomingUp ? "up" : "down");
-      ConfigUtil.SetSetting(OutgoingDirectionKey, layout.OutgoingUp ? "up" : "down");
+      ConfigUtil.SetSetting(HealLaneKey, FctRailLanes.Token(state.HealLane));
+      ConfigUtil.SetSetting(HealDirectionKey, state.HealUp ? "up" : "down");
+      ConfigUtil.SetSetting(TakenDamageLaneKey, FctRailLanes.Token(state.TakenLane));
+      ConfigUtil.SetSetting(DealtDamageLaneKey, FctRailLanes.Token(state.DealtLane));
+      ConfigUtil.SetSetting(IncomingDirectionKey, state.TakenUp ? "up" : "down");
+      ConfigUtil.SetSetting(OutgoingDirectionKey, state.DealtUp ? "up" : "down");
+      SaveThreshold(state.Threshold);
+      FctShowList.Save(state);
+      SaveLabelSide(state.LabelSide);
+      SaveTextScale(state.TextScale);
+      SaveCritScale(state.CritScale);
+      SaveSpeed(state.Speed);
     }
 
     /* The mode itself, in the player's words; absent is FOUNTAIN. The plume is what makes someone look twice at the
@@ -246,9 +295,12 @@ namespace EQLogParser
      * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
      */
     public static FctLabelSide LoadLabelSide() =>
-      string.Equals(ConfigUtil.GetSetting(LabelSideKey, null), "left", StringComparison.OrdinalIgnoreCase) ? FctLabelSide.Left
-        : string.Equals(ConfigUtil.GetSetting(LabelSideKey, null), "right", StringComparison.OrdinalIgnoreCase) ? FctLabelSide.Right
-        : FctLabelSide.Below;
+      ConfigUtil.GetSetting(LabelSideKey, null) switch
+      {
+        string s when string.Equals(s, "left", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Left,
+        string s when string.Equals(s, "right", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Right,
+        _ => FctLabelSide.Below,
+      };
 
     public static void SaveLabelSide(FctLabelSide side) =>
       ConfigUtil.SetSetting(LabelSideKey, side switch
@@ -257,9 +309,6 @@ namespace EQLogParser
         FctLabelSide.Right => "right",
         _ => "below",
       });
-
-    internal static FctRegionSide ParseSide(string raw) =>
-      string.Equals(raw, "right", StringComparison.OrdinalIgnoreCase) ? FctRegionSide.Right : FctRegionSide.Left;
 
     internal static bool ParseUp(string raw) =>
       string.Equals(raw, "up", StringComparison.OrdinalIgnoreCase);
@@ -274,6 +323,10 @@ namespace EQLogParser
      * Reading order matters: the current key wins, and an absent one inherits the old "fountain" checkbox rather than
      * resetting a player to hold on the first launch after an upgrade. Writing always uses the new key, so the legacy
      * entry fades out on its own and nothing has to migrate a file.
+     *
+     * Fountain and pulse have no control in the settings panel -- fountain is asked for by name through ModeKey, and pulse is a
+     * scheme the panel does not offer yet. Both stay readable here so an ini hand-edit or FctSimulationWindow can still reach
+     * them, which is what keeps those engine paths exercised while they wait for a UI.
      */
     public static FctMotionStyle LoadMotion() =>
       ConfigUtil.GetSetting(MotionKey, null) is { Length: > 0 } name ? ParseMotion(name)
@@ -292,18 +345,5 @@ namespace EQLogParser
         "straight" => FctMotionStyle.Straight,
         _ => FctMotionStyle.Hold,
       };
-
-    public static string Name(FctMotionStyle style) =>
-      style switch
-      {
-        FctMotionStyle.Fountain => "fountain",
-        FctMotionStyle.Pulse => "pulse",
-        FctMotionStyle.Spray => "spray",
-        FctMotionStyle.Parabola => "parabola",
-        FctMotionStyle.Straight => "line",
-        _ => "hold",
-      };
-
-
   }
 }

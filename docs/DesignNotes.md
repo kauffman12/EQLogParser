@@ -870,6 +870,66 @@ final `gates` parameter and copies threshold and switches every frame — the sa
 and layout arrived at after "selecting pulse played hold" — and `TheConfigureDemoObeysTheSwitches` is the test that
 keeps that claim provable.
 
+### The show list: nine rows of numbers, and a side you can switch off
+
+Three categories turned out to be three switches too few and one question too many. The requests that arrived were not "less damage
+to me" — they were narrower than that and specific: **no crits** during a pull where every swing is a crit, **my pet** out of the picture
+during a parse, **heals but not the big green ones**, **spell noise off, keep my melee**. And the fourth request, "hide one side entirely",
+was being answered twice over: by a category switch *and* by sending that category's lane somewhere silly. So the show list is now **nine
+rows** — melee hits, melee crits, spell hits, spell crits, procs, pet melee, pet spells, healing, healing crits — beside the eight words it
+already carried, seventeen checkboxes in the same single alphabetical dropdown, and the closed face counts them as **"kinds"**.
+
+**One record, one row.** The rule that keeps seventeen switches from becoming seventeen ways to be confused: every number resolves to
+exactly one row, in one place (`FctManager.DamageRow`), while the parse still knows who fired it. Procs outrank everything — a proc is the
+event a player watches for and does not care whether it came off a swing or a spell, and muting "melee crits" must not be a way of seeing a
+proc that crit. Then the pet: its numbers are its own, which is the entire content of "get my pet out of my parse", and its crit stays inside
+its row rather than jumping to mine because crits pool on screen. Only then kind and crit: hits/crits, melee/spell. An ambiguous record would
+answer to two switches at once (mute one, still see it under the other), and an unassigned one would be a number nothing can hide — both read
+to a player as an overlay ignoring its own settings, so `FctShowListTest.EveryRowHasExactlyOneSwitch` pins the enum and the table together.
+
+**Which words those rows use, and why not MSBT's.** "Spell" means every non-melee kind the parser produces — direct damage, bane, damage
+shield, reverse DS, other damage — because that is EverQuest's own vocabulary and MSBT's "skill" is a World of Warcraft word that means
+something else here. A damage-over-time tick lands in the spell rows with everything else that did its damage slowly, crit ticks included:
+the eye cannot pick a tick out of a fold (`FctIngest` collapses identical hits into `×N`), so a switch for it alone would be a switch for
+something nobody can see. "Hits" means everything that did not crit, which is why each pair sits beside its own crit row in the table — read
+down and the sentence explains itself without a tooltip having to say "hits here excludes crits".
+
+**Words are not rows.** They carry `FctRow.Word`, meaning not row-gated, and keep the switch they have always had: their own text, because
+the complaint about words has never been "fewer words", it is *that* word. What changed is that they were made honest about being attacks:
+a word belongs to whoever did it (`FctManager` routes `Defensive` against incoming and `Missed` against outgoing), so a hidden side takes its
+words with it — hiding damage taken quiets the blocks and ripostes you caused, and hiding your damage quiets your own misses and resists. The
+direction gate still runs before the word gate, and the order is the whole meaning: AND of everything applicable, never one overriding another.
+
+**The side switches are gone; a lane can be `none`.** "damage in", "damage out" and the old parent "healing" checkbox left the dropdown,
+because split mode already carries three lane combos and a fourth answer to the same question was the duplication. A lane set to **none** hides
+that category entirely (`FctConfigState.OutgoingShown`/`IncomingShown`/`HealingShown`), which serves the sentence the categories were invented
+for — damage left, healing right, incoming gone — with one control per side instead of two that could contradict each other. Fountain has no
+columns to hand out, so it reads `none` as shown: nothing was placed anywhere to switch off, and the setting is written down untouched so going
+back to split restores exactly what was hidden. Geometry never sees the missing lane: `FctConfigState.Placed` parks a hidden category in its
+shipped column, since nothing spawns there to decide what it looks like — `FctIngest` stops it upstream, before folding, so a hidden row cannot
+inflate a visible `×N`, and it visits `filtered` rather than vanishing.
+
+**Healing is inbound only now.** The rows are "healing" and "healing crits", which is an honest pair only if both mean the same story: what
+lands on you. A heal you cast on someone else is dropped at the feed (`FctManager.HandleHeal`), because the overlay pictures your fight and you
+know what you cast — and a pet-targeted heal goes with it, since the pet has rows for its damage and none for what it gets healed by. The rule is
+a plain name comparison and stays that way: `HealingLineParser` already runs every name through `ParserUtil.ReplacePlayer`, which is what turns
+"You have been healed over time for 1063 hit points by Roar of the Lion" into a record carrying my character name, so a second pronoun list down
+in the feed would only be a second place to be wrong about who "you" is. That also makes the HoT case the interesting one — ticks arrive on me
+through the same rule as direct heals, with no branch of their own to get wrong.
+
+**No migration, deliberately.** `FctOverlayShowDealt/Taken/Heals` are not read and not translated; the new rows own new keys and default to
+shown. This is the first release of the row model, no shipped settings file has rows in it, and a translation layer would have had to invent a
+meaning for an old "healing off" that could mean either of two new rows — which is a coin flip wearing a compatibility hat. All seventeen are
+opt-outs (`FctShowList`, absent or junk means ON, so a corrupt value fails toward information rather than toward silence), and the table is the
+single source for label, ini key, row and word: the dropdown builds itself from it, the canvas applies gates through it, `LoadConfig`/`SaveConfig`
+walk it, which is what keeps a row from ever being added twice or half-added with a switch that saves under one name and reads under another.
+
+The **configure demo owes every switch a cue** (`Script_CoversEverySwitchInTheShowList`). A row with no sample is a switch that appears broken,
+and it gets tested in exactly the direction that hides nothing — the player mutes "pet melee" and watches for something to disappear — so the
+loop gained a pet swinging ("Claw") and casting ("Sonic Shock") beside mine, thirty-two events which is what the event ceiling is actually spent
+on. That rule is also the reason spell cues name their row explicitly: a cue whose row disagreed with what it looks like would make the switch
+seem broken in the one direction the player is checking.
+
 ### By type: columns owned by category, directions sharing a rail
 
 The *heals left, damage right, mine up, theirs down* request is nearly MSBT's default geometry, and MSBT cannot actually

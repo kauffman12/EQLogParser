@@ -63,11 +63,11 @@ namespace EQLogParser
      */
     public FctLayoutChoice Layout = FctLayoutChoice.Shipped;
 
-    /* Hits that had nowhere to go, surfaced in the overlay header so overload stays visible. */
+    /* Hits that had nowhere to go, surfaced in the settings panel's stats line so overload stays visible. */
     public int DroppedCount { get; private set; }
 
     /*
-     * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered on the configure row. It is a
+     * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered in the settings panel. It is a
      * display filter applied at the gate, not a parser change: the log and every counter still see all of it. Zero (the
      * default) means off. Heals and zero-damage labels are exempt by design; see Accept.
      */
@@ -78,7 +78,11 @@ namespace EQLogParser
     public int HiddenCount { get; private set; }
 
     /*
-     * Which categories of number reach the screen at all: my damage, damage on me, and healing in either direction.
+     * Which sides reach the screen at all: my damage, damage on me, and healing. The show list stopped offering these, so they
+     * now come from the lane choice — a category with no column in split mode is a category that is not drawn
+     * (FctConfigState.OutgoingShown and friends) — which is also why a word belongs to its side: "miss" is my attack failing,
+     * so hiding my attacks hides it. Fountain has no lanes to ask, so all three are true there.
+     *
      * These are identity filters — "what story does this overlay tell" — where Threshold is the noise filter, which is
      * why they get their own switch and their own count instead of stretching the ladder. All three default on: the
      * controls are opt-outs, never things somebody has to discover. A category that is off pays nothing — no folding,
@@ -89,10 +93,30 @@ namespace EQLogParser
     public bool ShowTaken = true;
     public bool ShowHeals = true;
 
+    /*
+     * The rows: the same question asked one level finer, because "my damage" is three different complaints ("the crits are
+     * too loud", "the ticks are noise", "I do not want to watch my pet"). One row claims each number — FctManager resolves
+     * that where the parse still knows who hit what (FctRow) — and a number pays for its own row and nothing else, so hiding
+     * spell crits cannot quiet a melee hit. The nine default on for the same reason the categories do: these are opt-outs.
+     *
+     * Rows never contradict the categories, they narrow them: a number has to pass both, which is why "pet melee off, my
+     * melee on" and "all outgoing off, pet on" are both unrepresentable rather than ambiguous — the side switch wins, as it
+     * does for the words, because hiding whose story it is hides what happened in it.
+     */
+    public bool ShowMeleeHits = true;
+    public bool ShowMeleeCrits = true;
+    public bool ShowSpellHits = true;
+    public bool ShowSpellCrits = true;
+    public bool ShowPetMelee = true;
+    public bool ShowPetSpells = true;
+    public bool ShowHealing = true;
+    public bool ShowHealingCrits = true;
+
     /* Procs — the 20% weapon abilities that arrive as their own numbers — asked for a switch of their own: a player who
        wants the swing often reads the proc line as double-counting it, and one who does not wants silence. It is an
        extra opt-out on top of the categories (a proc is damage too), so hiding "my damage" hides procs with it; this
-       only ever removes more, never restores. */
+       only ever removes more, never restores. It is also the procs row (FctRow.Procs) — one switch, named after what the
+       panel calls it, because "procs" was already the word for this event before there were rows to put it in. */
     public bool ShowProcs = true;
 
     /*
@@ -133,6 +157,44 @@ namespace EQLogParser
       _ => true,
     };
 
+    /* Row to its switch, the same table and the same promise as WordShown: a row these switches have never heard of draws,
+     * so a new Labels kind can never be silenced by being forgotten. FctRow.Word has no row switch — words are gated by
+     * their text — and answers true here so the two gates stay independent rather than one implying the other. */
+    public bool RowShown(FctRow row) => row switch
+    {
+      FctRow.MeleeHits => ShowMeleeHits,
+      FctRow.MeleeCrits => ShowMeleeCrits,
+      FctRow.SpellHits => ShowSpellHits,
+      FctRow.SpellCrits => ShowSpellCrits,
+      FctRow.Procs => ShowProcs,
+      FctRow.PetMelee => ShowPetMelee,
+      FctRow.PetSpells => ShowPetSpells,
+      FctRow.Healing => ShowHealing,
+      FctRow.HealingCrits => ShowHealingCrits,
+      _ => true,
+    };
+
+    /* Assignment through the same map, so a caller holding a row (the settings window, which sees them as one alphabetical
+     * list) never has to know which field backs it. Answers whether the row was one of these switches at all. */
+    public bool SetRowShown(FctRow row, bool shown)
+    {
+      switch (row)
+      {
+        case FctRow.MeleeHits: ShowMeleeHits = shown; break;
+        case FctRow.MeleeCrits: ShowMeleeCrits = shown; break;
+        case FctRow.SpellHits: ShowSpellHits = shown; break;
+        case FctRow.SpellCrits: ShowSpellCrits = shown; break;
+        case FctRow.Procs: ShowProcs = shown; break;
+        case FctRow.PetMelee: ShowPetMelee = shown; break;
+        case FctRow.PetSpells: ShowPetSpells = shown; break;
+        case FctRow.Healing: ShowHealing = shown; break;
+        case FctRow.HealingCrits: ShowHealingCrits = shown; break;
+        default: return false;
+      }
+
+      return true;
+    }
+
     /* Assignment through the same map; answers whether the word was one of these switches at all, which is how the
      * canvas knows its demo restart is warranted. */
     public bool SetWordShown(string word, bool shown)
@@ -151,6 +213,43 @@ namespace EQLogParser
       }
 
       return true;
+    }
+
+    /*
+     * Everything a second ingest must agree with this one in order to preview it: the category switches, the words and the
+     * threshold — never the counters, which belong to whichever feed is real. The demo loop runs its own ingest so sample
+     * numbers can never reach the player's counts, which means every gate has to be handed over; written out once here rather
+     * than at the call site because a long list of assignments copied by hand is a chance to forget one every time a switch is
+     * added, and the symptom is a preview that contradicts its own controls.
+     */
+    public void CopyGatesFrom(FctIngest other)
+    {
+      if (other is null)
+      {
+        return;
+      }
+
+      Threshold = other.Threshold;
+      ShowDealt = other.ShowDealt;
+      ShowTaken = other.ShowTaken;
+      ShowHeals = other.ShowHeals;
+      ShowMeleeHits = other.ShowMeleeHits;
+      ShowMeleeCrits = other.ShowMeleeCrits;
+      ShowSpellHits = other.ShowSpellHits;
+      ShowSpellCrits = other.ShowSpellCrits;
+      ShowProcs = other.ShowProcs;
+      ShowPetMelee = other.ShowPetMelee;
+      ShowPetSpells = other.ShowPetSpells;
+      ShowHealing = other.ShowHealing;
+      ShowHealingCrits = other.ShowHealingCrits;
+      ShowMiss = other.ShowMiss;
+      ShowParry = other.ShowParry;
+      ShowDodge = other.ShowDodge;
+      ShowBlock = other.ShowBlock;
+      ShowRiposte = other.ShowRiposte;
+      ShowResist = other.ShowResist;
+      ShowAbsorb = other.ShowAbsorb;
+      ShowInvulnerable = other.ShowInvulnerable;
     }
 
     public int LiveCount(List<FctHitState> hits, FctLane lane)
@@ -176,7 +275,8 @@ namespace EQLogParser
      * from the list by then.
      */
     public FctHitState Accept(List<FctHitState> hits, FctLane lane, double value, string source, bool crit, bool minor, bool periodic,
-      string fixedText, double w, double h, double now, bool proc = false, FctSpecial special = FctSpecial.None, Action<FctHitState> evicting = null)
+      string fixedText, double w, double h, double now, bool proc = false, FctRow row = FctRow.Word,
+      FctSpecial special = FctSpecial.None, Action<FctHitState> evicting = null)
     {
       if (w < 100 || h < 100)
       {
@@ -189,8 +289,21 @@ namespace EQLogParser
       var pooled = crit ? FctLane.Crit : lane;
 
       /* The category gate, before even the threshold: whether this kind of number belongs on this overlay at all is a
-         question the player already answered, and a filtered hit should not so much as be measured against the dial. */
+         question the player already answered, and a filtered hit should not so much as be measured against the dial.
+         The proc clause stays beside the row gates on purpose: the row a proc answers to is FctRow.Procs, which reads this
+         same switch, so this only ever catches a caller that named a proc without naming a row — and both spellings of "a
+         proc" agreeing on one switch is the point. */
       if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt) || (proc && !ShowProcs))
+      {
+        FilteredCount++;
+        return null;
+      }
+
+      /* The row gate, one condition behind the categories and ahead of everything else for the same reason: a number whose row
+         is off costs no folding, no placement, no glyph work — and it joins `filtered`, because "you hid that" and "it was
+         under your threshold" are different answers and both need to be given. Rows are checked after the side they belong to
+         because hiding whose story it is hides what happened in it (FctRow). */
+      if (!RowShown(row))
       {
         FilteredCount++;
         return null;
@@ -222,7 +335,7 @@ namespace EQLogParser
 
       /*
        * The parabola is a halves shape: it scrolls straight across whatever region owns the side, and in bands that region
-       * is the canvas — strip included. The configure row cannot select it there, but settings.ini can be hand-written,
+       * is the canvas — strip included. The settings panel cannot select it there, but settings.ini can be hand-written,
        * which is why the degradation lives here rather than only in the UI (see FctMotionStyle.Parabola).
        */
       var style = stage.Mode is FctLayoutMode.Bands && FctMotionStyles.IsRail(Style)
@@ -294,6 +407,9 @@ namespace EQLogParser
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
+      /* The fold key, priced once at spawn rather than once per candidate a later hit might fold into this one. A label has
+         no amount to compare, so it carries none. */
+      hit.FormattedValue = fixedText is null ? FctText.FormatHitValue(value) : null;
       hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1, heal), hit.ValueFontSize);
 
       if (celled)
@@ -459,6 +575,10 @@ namespace EQLogParser
     private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool proc, bool periodic, FctSpecial special,
       string source, double value, double now)
     {
+      /* The one part of the key that costs anything is formatted once for the incoming hit and reused across candidates — 
+         and still only when a candidate has survived every cheaper test, exactly as before. The candidates carry theirs from
+         spawn (FctHitState.FormattedValue), so the other side of the comparison no longer allocates at all. */
+      string incomingText = null;
       for (var i = hits.Count - 1; i > -1; i--)
       {
         var hit = hits[i];
@@ -474,7 +594,7 @@ namespace EQLogParser
              * same number as far as anyone can tell, so 12,480 and 12,520 both being "12.5k" may share a count while 2,040 and
              * 2,041 may not. Compared last, because it is the only part of the key that allocates.
              */
-            || !string.Equals(FctText.FormatHitValue(hit.Value), FctText.FormatHitValue(value), StringComparison.Ordinal))
+            || !string.Equals(FoldValue(hit), incomingText ??= FctText.FormatHitValue(value), StringComparison.Ordinal))
         {
           continue;
         }
@@ -493,6 +613,10 @@ namespace EQLogParser
 
       return false;
     }
+
+    /* The fold key's text for a live number, read through the cache it carries (see FctHitState.FormattedValue). The fallback
+     * exists for hits placed straight into a list — tests mostly, and anything that bypasses Accept. */
+    private static string FoldValue(FctHitState hit) => hit.FormattedValue ??= FctText.FormatHitValue(hit.Value);
 
     /*
      * What a number is worth keeping on screen: everything it stands for, with a proc discounted because one is subordinate

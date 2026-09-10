@@ -113,6 +113,15 @@ namespace EQLogParser
     /* How many hits this one number stands for; 1 means it is simply its own hit. Drawn as "2,040 ×2" (FctText). */
     public int MergeCount = 1;
 
+    /*
+     * The amount as the player reads it ("12.5k"), cached at spawn because it is part of the fold key: FctIngest.TryAbsorb
+     * compares it against every live number in the lane, and formatting both sides per candidate allocated two strings for
+     * every comparison on the busiest path in the overlay during a burst. The drawn amount never changes after spawn — a fold
+     * counts, it does not add — so this cannot go stale. Null until something asks (a hit built straight into a list by a
+     * test, or a fixed-text label that never folds), which TryAbsorb handles by formatting once and keeping the result.
+     */
+    public string FormattedValue;
+
     // ability/verb drawn under the value; null = no source line. Parentheses are added when drawn.
     public string Source;
 

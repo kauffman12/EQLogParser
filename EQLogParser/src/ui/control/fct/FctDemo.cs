@@ -5,12 +5,13 @@ namespace EQLogParser
 {
   /*
    * A short loop of numbers that plays while configure mode is up, so a size or style change can be seen moving without waiting for a
-   * fight to produce one of each type on demand. Close to thirty events over twelve seconds: melee swings from a two-digit graze up to a
+   * fight to produce one of each type on demand. Thirty-two events over twelve seconds: melee swings from a two-digit graze up to a
    * seven-figure nuke — every value shape the formatter can produce gets at least one cue, because the odometer is only convincing when its
    * narrowest and widest columns scroll side by side — plus a crit or two, a damage-over-time tick repeated three times (the `412 ×3` fold),
-   * a proc, healing received from a HoT tick to a twenty-thousand-point crit heal, hits landing on you, the zero-damage words, and all five
-   * special-attack marks. That is the vocabulary a player has to be able to tell apart, delivered in the order a fight would deliver it
-   * rather than as exhibits pinned to a board.
+   * a proc, healing received from a HoT tick to a twenty-thousand-point crit heal, hits landing on you, the pet swinging and casting beside
+   * you, the zero-damage words, and all five special-attack marks. That is the vocabulary a player has to be able to tell apart, delivered in
+   * the order a fight would deliver it rather than as exhibits pinned to a board — and, as FctDemoTest checks, every row of the show list
+   * appears at least once, which is what makes each of those seventeen switches provable on screen in one pass rather than over a fight.
    *
    * The events run through a private FctIngest into a private list. Same choreography as play — style, band, travel, fold, placement,
    * adaptive lifetime — and the same text building, which is the only reason what you see is what you get. It is a separate ingest
@@ -51,8 +52,16 @@ namespace EQLogParser
       public readonly bool Proc;
       public readonly FctSpecial Special;
 
+      /* Which show-list row this number answers to (FctRow), because the sample data has to obey the panel's switches or it
+         is a preview that contradicts its own controls: mute "healing crits" and a healing crit has to leave the loop. Most
+         cues derive theirs from their own flags — a word has none, heals split on crit, damage defaults to melee — and the ones
+         the flags cannot tell (a spell, or anything a pet did) say so, since nothing would be worse than a cue whose row
+         disagrees with what it looks like: the switch would then seem broken in exactly the direction that hides nothing. */
+      public readonly FctRow Row;
+
       internal Cue(double offsetMs, FctLane lane, double value = 0, string source = null, bool crit = false,
-        bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None)
+        bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None,
+        FctRow row = FctRow.Word, bool pet = false)
       {
         OffsetMs = offsetMs;
         Lane = lane;
@@ -63,35 +72,55 @@ namespace EQLogParser
         ValueText = valueText;
         Proc = proc;
         Special = special;
+        Row = row is not FctRow.Word ? row : DeriveRow(lane, crit, proc, pet);
       }
+
+      /* The same rule FctManager applies to a parsed record (FctRow, DamageRow), reduced to what a cue knows about itself:
+         procs first, then the pet, then whether it crit — with melee as the default kind, which is why the spell cues name
+         theirs. A word stays FctRow.Word: its switch is chosen by its text (FctIngest.WordShown), never by a row. */
+      private static FctRow DeriveRow(FctLane lane, bool crit, bool proc, bool pet) => lane switch
+      {
+        FctLane.Defensive or FctLane.Missed => FctRow.Word,
+        FctLane.HealingReceived or FctLane.HealingDealt => crit ? FctRow.HealingCrits : FctRow.Healing,
+        _ => proc ? FctRow.Procs : pet ? FctRow.PetMelee : crit ? FctRow.MeleeCrits : FctRow.MeleeHits,
+      };
     }
 
     /* The script. Offsets are increasing: Advance walks it once per cycle, which is cheaper than searching and enough. */
     public static readonly IReadOnlyList<Cue> Script = new List<Cue>
     {
       new Cue(0, FctLane.DamageDealt, 1140, "Slash"),
+
+      // the pet swinging beside me: my lane (it is my fight), its own row so it can be quieted without quieting me
+      new Cue(140, FctLane.DamageDealt, 388, "Claw", pet: true),
       new Cue(280, FctLane.HealingReceived, 2480, "Complete Heal"),
       new Cue(560, FctLane.DamageTaken, 612, "Bite"),
       new Cue(760, FctLane.DamageDealt, 3418, "Crush", crit: true),
       new Cue(1040, FctLane.Defensive, valueText: Labels.Dodge),
 
       // three identical ticks, eight hundred ms apart: the fold needs to be seen happening, not described
-      new Cue(1280, FctLane.DamageDealt, 412, "Venin", periodic: true),
-      new Cue(1640, FctLane.DamageDealt, 412, "Venin", periodic: true),
+      /* Ticks are spell damage and live in the spell rows with everything else slow (FctRow): a row of their own would be a
+         switch for something nobody can pick out of a fold. */
+      new Cue(1280, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
+      new Cue(1640, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
 
 
       // every word the switches can reach appears once per cycle (FctIngest's eight): mute one and the loop proves it
       new Cue(2060, FctLane.Defensive, valueText: Labels.Block),
       new Cue(2520, FctLane.Missed, valueText: Labels.Miss),
-      new Cue(2840, FctLane.DamageDealt, 412, "Venin", periodic: true),
+      new Cue(2840, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
 
       new Cue(3200, FctLane.HealingReceived, 3120, "Complete Heal", crit: true),
       new Cue(3560, FctLane.Defensive, valueText: Labels.Parry),
-      new Cue(3900, FctLane.DamageTaken, 268, "Disease", periodic: true),
+      new Cue(3900, FctLane.DamageTaken, 268, "Disease", periodic: true, row: FctRow.SpellHits),
+
+      // and the pet casting: which is why "pet spells" is a row apart from "pet melee" rather than one "pet" switch
+      new Cue(3980, FctLane.DamageDealt, 1620, "Sonic Shock", pet: true, row: FctRow.PetSpells),
 
       // the marked events: the rare kind that earns a glyph, the purple hue and a crit's size (all five appear once per
       // cycle, spread through it — a configure session should teach the whole family, and every loop replays the lesson)
-      new Cue(4080, FctLane.DamageDealt, 896805, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation),
+      new Cue(4080, FctLane.DamageDealt, 896805, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation,
+        row: FctRow.SpellCrits),
 
       // an item or spell proc: its lane's full size, and gone sooner — tempo is what keeps procs off the picture, not small text
       new Cue(4300, FctLane.DamageDealt, 1380, "Arcane Jolt", proc: true),
@@ -103,7 +132,7 @@ namespace EQLogParser
       // the loud pair: wasted-cast warnings carry their own font size, so the cycle has to show them next to quiet words
       new Cue(4900, FctLane.Defensive, valueText: Labels.Absorb),
       // the wizard's burn: the mark rides its own size and purple whatever the log called this hit
-      new Cue(5080, FctLane.DamageDealt, 9340, "Mana Burn XX", special: FctSpecial.ManaBurn),
+      new Cue(5080, FctLane.DamageDealt, 9340, "Mana Burn XX", special: FctSpecial.ManaBurn, row: FctRow.SpellHits),
       new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
       new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
       new Cue(5700, FctLane.DamageDealt, 12470, "Slash", crit: true, special: FctSpecial.FinishingBlow),
@@ -116,10 +145,10 @@ namespace EQLogParser
       new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
       new Cue(6850, FctLane.HealingReceived, 24800, "Complete Heal", crit: true),
       // the necromancer's burn
-      new Cue(7150, FctLane.DamageDealt, 21650, "Life Burn X", special: FctSpecial.LifeBurn),
+      new Cue(7150, FctLane.DamageDealt, 21650, "Life Burn X", special: FctSpecial.LifeBurn, row: FctRow.SpellHits),
 
       // the m band: what a big nuke looks like after the server rates did their thing
-      new Cue(7300, FctLane.DamageDealt, 1240000, "Flare", crit: true),
+      new Cue(7300, FctLane.DamageDealt, 1240000, "Flare", crit: true, row: FctRow.SpellCrits),
 
       // my spell failed the way a punch gets blocked: the word lane for outgoing failures, same as Miss
       new Cue(7480, FctLane.Missed, valueText: Labels.Resist),
@@ -178,26 +207,12 @@ namespace EQLogParser
       _ingest.Layout = layout;
 
       /* The gate settings ride along from the real ingest for the same reason style and layout do — this loop has its
-       * own ingest, so everything it must agree with arrives fresh every frame. A demo that ignored the category
-       * switches would cheerfully spawn exactly what the player just asked not to see, and a preview that contradicts
-       * its controls is the bug this method's signature exists to prevent; it is optional only so the existing tests
-       * (which are about the script) need not invent a feed to borrow gates from. */
-      if (gates is not null)
-      {
-        _ingest.Threshold = gates.Threshold;
-        _ingest.ShowDealt = gates.ShowDealt;
-        _ingest.ShowTaken = gates.ShowTaken;
-        _ingest.ShowHeals = gates.ShowHeals;
-        _ingest.ShowProcs = gates.ShowProcs;
-        _ingest.ShowMiss = gates.ShowMiss;
-        _ingest.ShowParry = gates.ShowParry;
-        _ingest.ShowDodge = gates.ShowDodge;
-        _ingest.ShowBlock = gates.ShowBlock;
-        _ingest.ShowRiposte = gates.ShowRiposte;
-        _ingest.ShowResist = gates.ShowResist;
-        _ingest.ShowAbsorb = gates.ShowAbsorb;
-        _ingest.ShowInvulnerable = gates.ShowInvulnerable;
-      }
+       * own ingest, so everything it must agree with arrives fresh every frame (FctIngest.CopyGatesFrom, which owns that
+       * list because it owns those fields). A demo that ignored the category switches would cheerfully spawn exactly what
+       * the player just asked not to see, and a preview that contradicts its controls is the bug this method's signature
+       * exists to prevent; it is optional only so the existing tests (which are about the script) need not invent a feed to
+       * borrow gates from. */
+      _ingest.CopyGatesFrom(gates);
 
       var changed = false;
       var elapsed = nowMs - _cycleStartMs;
@@ -216,7 +231,7 @@ namespace EQLogParser
 
         // the real path, including whatever folding or placement it decides: a demo that skipped those would be showing a rehearsal
         var hit = _ingest.Accept(_hits, cue.Lane, cue.Value, cue.Source, cue.Crit, minor: false, cue.Periodic,
-          cue.ValueText, w, h, nowMs, cue.Proc, cue.Special, released);
+          cue.ValueText, w, h, nowMs, cue.Proc, cue.Row, cue.Special, released);
 
         if (hit is not null)
         {

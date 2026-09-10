@@ -107,11 +107,14 @@ namespace EQLogParser
 
     public int ActiveCount => _hits.Count;
     /*
-     * Which motion new hits get (hold / fountain / pulse / spray); forwarded to ingest, which is what applies it. Hits already in flight keep the
+     * Which motion new hits get; forwarded to ingest, which is what applies it. Hits already in flight keep the
      * style they were born with, which is why changing it mid-fight is a way to compare rather than a way to break something.
      *
      * Configure mode restarts its loop on a change: the loop exists to show what this control does, and waiting up to twelve seconds for the next
      * cycle to reach the part where that is visible is not an effect anybody can see.
+     *
+     * The settings panel offers spray and settle for fountain, parabola and line for split (FctOverlaySettings.ClampShape); the other styles in the
+     * enum stay here because the engine still implements them and FctSimulationWindow can still ask for one.
      */
     public FctMotionStyle MotionStyle
     {
@@ -169,85 +172,56 @@ namespace EQLogParser
     public int FilteredCount => _ingest.FilteredCount;
 
     /*
-     * The category switches, with Threshold's contract: they change what gets through the gate from the next number on
-     * (demo included — Advance copies the gates every frame), never what is already in flight, and nothing reaches
-     * settings.ini until Save. Restarting the demo on a flip is what makes "heals off" provable on screen instantly
-     * rather than after somebody finishes a fight.
+     * Every gate in one call, from a settings snapshot: the nine rows and eight words of the show list (FctShowList), plus
+     * the three sides. It replaces four Show* properties and eight word calls at each of the overlay's apply points — which
+     * is how seventeen switches stayed one place instead of five hand-kept lists of seventeen lines.
+     *
+     * Same contract as every gate here: what changes takes effect from the next number on, never for one already in flight,
+     * and nothing reaches settings.ini until Save (FctOverlaySettings.SaveConfig does that, and only at Save). The sample loop
+     * restarts when a switch actually moved, because that is what makes "healing crits off" provable on screen in the next
+     * second rather than after somebody finishes a fight — and it does NOT restart for a snapshot that changed nothing, since
+     * sending a dragged size dial back to cue one every frame is worse than waiting for the loop.
      */
-    public bool ShowDealt
+    public void ApplyGates(FctConfigState state)
     {
-      get => _ingest.ShowDealt;
-      set
-      {
-        if (_ingest.ShowDealt == value)
-        {
-          return;
-        }
-
-        _ingest.ShowDealt = value;
-        RestartDemo();
-      }
-    }
-
-    public bool ShowTaken
-    {
-      get => _ingest.ShowTaken;
-      set
-      {
-        if (_ingest.ShowTaken == value)
-        {
-          return;
-        }
-
-        _ingest.ShowTaken = value;
-        RestartDemo();
-      }
-    }
-
-    public bool ShowHeals
-    {
-      get => _ingest.ShowHeals;
-      set
-      {
-        if (_ingest.ShowHeals == value)
-        {
-          return;
-        }
-
-        _ingest.ShowHeals = value;
-        RestartDemo();
-      }
-    }
-
-    public bool ShowProcs
-    {
-      get => _ingest.ShowProcs;
-      set
-      {
-        if (_ingest.ShowProcs == value)
-        {
-          return;
-        }
-
-        _ingest.ShowProcs = value;
-        RestartDemo();
-      }
-    }
-
-    /*
-     * The word switches as one entry instead of eight properties: a word IS its Labels constant, so the map from name
-     * to switch lives with the switches (FctIngest.WordShown) and the canvas just forwards. Same contract as every
-     * other gate here — it changes what gets through from the next number on, never what is already drawn — and an
-     * unknown word changes nothing at all, so the demo does not restart for a switch that moved.
-     */
-    public void SetWordShown(string word, bool shown)
-    {
-      if (!_ingest.SetWordShown(word, shown))
+      if (state is null)
       {
         return;
       }
 
-      RestartDemo();
+      Threshold = state.Threshold; // its own no-op check and its own restart, as it has always had
+
+      var changed = false;
+      foreach (var entry in FctShowList.All)
+      {
+        changed |= entry.ApplyTo(_ingest, entry.Get(state));
+      }
+
+      /* The sides are not entries in that table because they stopped being switches: they are the lane choice now — a
+         category with no column is a category that does not draw (FctConfigState.OutgoingShown) — and hiding a side hides the
+         words that belong to it, which is what makes "miss off" and "my damage off" different answers that agree. */
+      if (_ingest.ShowDealt != state.OutgoingShown)
+      {
+        _ingest.ShowDealt = state.OutgoingShown;
+        changed = true;
+      }
+
+      if (_ingest.ShowTaken != state.IncomingShown)
+      {
+        _ingest.ShowTaken = state.IncomingShown;
+        changed = true;
+      }
+
+      if (_ingest.ShowHeals != state.HealingShown)
+      {
+        _ingest.ShowHeals = state.HealingShown;
+        changed = true;
+      }
+
+      if (changed)
+      {
+        RestartDemo();
+      }
     }
 
     /*
@@ -291,8 +265,14 @@ namespace EQLogParser
     /*
      * Adds one hit. Everything about what happens to it — pooled crit lane, half of the canvas, style,
      * geometry, adaptive lifetime, folding into a live number at the cap — is decided in FctIngest.
+     *
+     * `row` is which show-list row the record answers to (FctRow), and the overlay passes it straight from the parsed
+     * command: where a number goes and which switch hides it are different questions, so both travel. Callers that have no
+     * row opinion — the simulation window replaying events, and every test that only cares about geometry — leave it at
+     * FctRow.Word, which no row switch can reach.
      */
-    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None)
+    public void AddHit(FctLane lane, double value, string source, bool crit, bool minor = false, bool periodic = false, string valueText = null,
+      bool proc = false, FctRow row = FctRow.Word, FctSpecial special = FctSpecial.None)
     {
       if (_clock is null)
       {
@@ -302,7 +282,7 @@ namespace EQLogParser
       /* ReleaseHalo is the eviction sink: pulse mode can take a full cell off a hit still on screen, and the surface that
        * blurred its glow has to hear about it or the reference count never comes back down. */
       var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight,
-        _clock.Elapsed.TotalMilliseconds, proc, special, ReleaseHalo);
+        _clock.Elapsed.TotalMilliseconds, proc, row, special, ReleaseHalo);
       if (hit is null)
       {
         _dirty = true; // either folded into a live hit or dropped at the cap: either way, repaint

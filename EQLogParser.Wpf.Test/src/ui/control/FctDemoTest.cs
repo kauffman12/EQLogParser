@@ -7,7 +7,7 @@ using System.Linq;
 namespace EQLogParser
 {
   /*
-   * The configure-mode demo: a scripted loop of close to thirty events so a size, speed or style change can be seen moving without a fight.
+   * The configure-mode demo: a scripted loop of thirty-two events so a size, speed or style change can be seen moving without a fight.
    *
    * The important assertions are about honesty rather than animation. Its vocabulary has to be EverQuest's own — the melee verbs the
    * parser recognises, spell names that exist in the shipped data/spells.txt, proc names from data/procs.txt, and Labels constants for the
@@ -29,7 +29,9 @@ namespace EQLogParser
       var script = FctDemo.Script;
 
       Assert.IsTrue(script.Count >= 18, $"only {script.Count} events: too sparse to read as combat");
-      Assert.IsTrue(script.Count <= 30, $"{script.Count} events is a raid log, not a demo");
+      /* The ceiling is the show list's, not a taste for brevity: seventeen switches have to be demonstrable in one pass, which is what the
+         count is spent on. Room above that is a raid log — configure mode teaches what a switch does, it is not a fight re-enactment. */
+      Assert.IsTrue(script.Count <= 34, $"{script.Count} events is a raid log, not a demo");
 
       Assert.IsTrue(script.Any(c => !FctLayout.IsIncoming(c.Lane)), "nothing in the outgoing band");
       Assert.IsTrue(script.Any(c => FctLayout.IsIncoming(c.Lane)), "nothing in the incoming band");
@@ -77,6 +79,35 @@ namespace EQLogParser
         }
 
         Assert.IsTrue(marks.Contains(special), $"{special} never appears in the demo: a player could configure the overlay without ever seeing the mark");
+      }
+    }
+
+    /*
+     * Switch coverage, the same honesty rule as the vocabulary below it. The panel offers seventeen switches — nine rows of numbers and eight
+     * words — and configure mode is the only place a player meets them without a fight, so every one has to be provable in twelve seconds: mute
+     * "pet melee" and something in the sample has to go quiet. A row with no cue reads as a broken switch, and it gets tested in exactly the
+     * direction that shows nothing, because that is the switch the player just clicked. This is why the demo carries a pet swinging and casting:
+     * without those two cues "pet melee" and "pet spells" could only be discovered by getting a pet into a real fight.
+     */
+    [TestMethod]
+    public void Script_CoversEverySwitchInTheShowList()
+    {
+      var script = FctDemo.Script;
+
+      foreach (var row in FctShowList.Rows)
+      {
+        Assert.IsTrue(script.Any(c => c.Row == row.Row), $"no cue for '{row.Label}': its switch cannot be seen working without a fight");
+      }
+
+      foreach (var word in FctShowList.Words)
+      {
+        Assert.IsTrue(script.Any(c => c.ValueText == word.Word), $"no cue for the word '{word.Label}'");
+      }
+
+      // and no number may be row-less: it would answer to no switch, which reads as an overlay ignoring its own settings
+      foreach (var cue in script.Where(c => c.ValueText is null))
+      {
+        Assert.IsTrue(cue.Row is not FctRow.Word, $"'{cue.Source}' is a number with no row, so nothing on the panel can hide it");
       }
     }
 

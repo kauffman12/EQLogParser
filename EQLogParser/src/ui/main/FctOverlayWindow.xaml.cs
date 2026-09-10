@@ -13,11 +13,11 @@ namespace EQLogParser
    * canvas's EventsFrame, so a log burst becomes one cross-thread hop instead of one dispatcher item per
    * record. Position, motion style and the click-through lock persist like every other overlay window.
    *
-   * Motion is a combo rather than the old fountain checkbox because there are five styles now (hold, fountain, pulse,
-   * spray, parabola) and they are presentation, not information: whichever is chosen, half or band and direction of travel
-   * still say who acted. It applies to hits spawned afterwards, so trying a style during a pull is safe. The parabola is the
-   * one style whose legality depends on the region scheme — it scrolls across whatever owns the side, which in bands is the
-   * strip included — so its item disables under bands and FctStage.DefaultMotion says what each scheme moves with instead.
+   * Motion and shape are chosen in the settings window rather than on this window, because they are presentation and not
+   * information: whichever style is picked, which region a number sits in and which way it travels still say who acted. A
+   * change applies to hits spawned afterwards, so trying one during a pull is safe. What a scheme may move with is decided
+   * in FctStage.DefaultMotion, which takes the shapes that need non-overlapping regions (parabola, straight) away under
+   * bands instead of drawing them across the protected middle strip.
    *
    * It is resizable without being resizeable: Windows gives a transparent, chromeless window no frame to grab, so a band along each
    * edge drags the size and FctResize offers the sizes it settles on. Position and size persist together, and numbers already in
@@ -58,6 +58,10 @@ namespace EQLogParser
     private readonly FctSkiaCanvas _canvas;
     private readonly List<FctHitCommand> _pending = [];
 
+    /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
+     * or closing this window can only ever affect the feed this window itself created. */
+    private readonly FctManager _manager;
+
     /*
      * Resize drag state. The running size is kept unsnapped (_resizeFreeW/H) and snapped only when applied, which is what makes
      * the offered sizes a magnet rather than a ratchet: leave the magnet's range and the drag continues from where it was rather
@@ -80,6 +84,10 @@ namespace EQLogParser
 
     private HwndSource _hwndSource;
     private double _lastStatsMs = -1000;
+
+    /* Which mode this window is in: locked means presenting (click-through, nothing drawn but numbers, the settings window
+       out of sight), unlocked means configuring (the panel is up and its previews land straight on this canvas). It always
+       opens locked — configure is entered from the app menu, never from the overlay itself. */
     private bool _locked;
 
     /* Settings are staged while configuring and committed by Save: the combos preview live so a style or a layout can be judged
@@ -88,30 +96,12 @@ namespace EQLogParser
     /* The companion window configure mode lives in now, and the session-only demo switch its checkbox drives. */
     private FctSettingsWindow _settings;
     private bool _sampleData = true;
-    private FctLabelSide _savedLabelSide = FctLabelSide.Below;
 
-    private FctMotionStyle _savedStyle;
-    private FctLayoutChoice _savedLayout = FctLayoutChoice.Shipped;
-    private double _savedTextScale = FctScale.SizeDefault;
-    private double _savedCritScale = FctScale.CritSizeDefault;
-    private double _savedSpeed = FctScale.SpeedDefault;
-    private double _savedThreshold;
-    private bool _savedShowDealt = true;
-    private bool _savedShowTaken = true;
-    private bool _savedShowHeals = true;
-    private bool _savedShowProcs = true;
-
-    /* The eight word switches (FctIngest), staged and persisted exactly like the categories. */
-    private bool _savedShowMiss = true;
-    private bool _savedShowParry = true;
-    private bool _savedShowDodge = true;
-    private bool _savedShowBlock = true;
-    private bool _savedShowRiposte = true;
-    private bool _savedShowResist = true;
-    private bool _savedShowAbsorb = true;
-    private bool _savedShowInvulnerable = true;
-
-    /* The header controls fire their change handlers while being initialised; only user edits may write settings. */
+    /* What is staged while configuring: one settings snapshot rather than twenty-odd fields, because each of those had to be
+       listed by hand in four places — read on open, worn on lock, handed to the panel, written at Save — and the show list has
+       just grown to seventeen switches. A snapshot makes all four one-liners, so a setting cannot be staged but never applied,
+       or saved but never restored: the class of bug that used to need a checklist and a Windows box to notice. */
+    private FctConfigState _saved = new();
 
     // lets the View menu untick the overlay when the window closes
     public event Action EventsClosed;
@@ -131,7 +121,7 @@ namespace EQLogParser
 
       // a fresh manager per window: it subscribes to the parsers and unsubscribes when we close, so a closed
       // overlay can never keep queueing hits for a dead window
-      FctManager.Create();
+      _manager = FctManager.Create();
 
       HookResizeBands();
 
@@ -162,28 +152,11 @@ namespace EQLogParser
         return;
       }
 
-      _canvas.MotionStyle = _savedStyle;
-      _canvas.Layout = _savedLayout;
-      FctScale.Text = _savedTextScale;
-      FctScale.Crit = _savedCritScale;
-      FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
-      _canvas.Threshold = _savedThreshold;
-      _canvas.ShowDealt = _savedShowDealt;
-      _canvas.ShowTaken = _savedShowTaken;
-      _canvas.ShowHeals = _savedShowHeals;
-      _canvas.ShowProcs = _savedShowProcs;
-      _canvas.SetWordShown(Labels.Miss, _savedShowMiss);
-      _canvas.SetWordShown(Labels.Parry, _savedShowParry);
-      _canvas.SetWordShown(Labels.Dodge, _savedShowDodge);
-      _canvas.SetWordShown(Labels.Block, _savedShowBlock);
-      _canvas.SetWordShown(Labels.Riposte, _savedShowRiposte);
-      _canvas.SetWordShown(Labels.Resist, _savedShowResist);
-      _canvas.SetWordShown(Labels.Absorb, _savedShowAbsorb);
-      _canvas.SetWordShown(Labels.Invulnerable, _savedShowInvulnerable);
-      _canvas.LabelSide = _savedLabelSide;
+      Apply(_saved);
 
-      /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. */
-      _settings?.LoadFrom(StagedState());
+      /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. Silently: this is us
+         filling the controls in, not the player changing anything, so it must not answer with another preview pass. */
+      _settings?.LoadFrom(StagedState(), raisePreview: false);
 
       ApplyLock(true);
     }
@@ -248,7 +221,7 @@ namespace EQLogParser
 
         /* Every entry into setup starts from the saved values and the examples on — never from an abandoned preview
            (Cancel put those back already), and sample data is a view aid for this pass, not a preference. */
-        _settings.LoadFrom(StagedState());
+        _settings.LoadFrom(StagedState(), raisePreview: false);
         if (IsVisible)
         {
           AttachSettingsOwner();
@@ -270,12 +243,15 @@ namespace EQLogParser
       }
     }
 
-    /* Canvas stopped and feed gated off while hidden: an overlay nobody sees must not parse or raster. */
+    /* Showing and hiding are a pair of ordered handshakes: the render clock and the parser feed switch on in that order
+       and off in reverse, because a hit accepted by an enabled manager with no clock running is lost without being
+       counted. An overlay nobody sees must not parse or raster either. */
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
       if ((bool)e.NewValue)
       {
-        FctManager.Instance.Enabled = true;
+        /* The clock starts before the feed opens. AddHit refuses hits while the canvas has no clock, so a manager enabled
+         * first would lose the first seconds of a fight after a re-show without counting one of them as dropped. */
         _canvas.Start();
 
         /* Coming back on screen while configuring: the demo belongs with the controls, and so does the panel. */
@@ -287,11 +263,14 @@ namespace EQLogParser
         }
 
         RefreshDemo();
+        _manager.Enabled = true;
       }
       else
       {
+        /* The other direction of the same rule: gate the feed off first, so nothing arrives in the gap before the clock
+         * stops. An overlay nobody sees must not parse or raster either. */
+        _manager.Enabled = false;
         _canvas.Stop();
-        FctManager.Instance.Enabled = false;
         _settings?.Hide(); // an overlay nobody sees takes its settings window out of sight with it
       }
     }
@@ -303,10 +282,10 @@ namespace EQLogParser
 
     private void RestoreSettings()
     {
-      var left = ConfigUtil.GetSettingAsDouble("FctOverlayLeft", 0);
-      var top = ConfigUtil.GetSettingAsDouble("FctOverlayTop", 0);
-      var width = ConfigUtil.GetSettingAsDouble("FctOverlayWidth", 0);
-      var height = ConfigUtil.GetSettingAsDouble("FctOverlayHeight", 0);
+      var left = ConfigUtil.GetSettingAsDouble(FctOverlaySettings.WindowLeftKey, 0);
+      var top = ConfigUtil.GetSettingAsDouble(FctOverlaySettings.WindowTopKey, 0);
+      var width = ConfigUtil.GetSettingAsDouble(FctOverlaySettings.WindowWidthKey, 0);
+      var height = ConfigUtil.GetSettingAsDouble(FctOverlaySettings.WindowHeightKey, 0);
 
       /* Restored exactly as saved apart from the layout's floor: a size stored by an older build is raised to what the layout can
          draw in, but never snapped — reopening an overlay should not move it. The one thing that does move it is geometry that has
@@ -335,45 +314,12 @@ namespace EQLogParser
          a stale entry in someone's settings.ini is inert, as retired keys should be. */
       _locked = true;
 
-      /* The mode and its controls. fountain's motion is not stored as a preference — the mode names it (spray); split
-         reads its rail shape, defaulting to the genre's curve. What used to live here — a layout key, motion defaults, a
-         legality fix-up for bands-plus-parabola — belonged to the combos era: the mode layer cannot store an illegal
-         combination in the first place, so there is nothing left to repair on load. */
-      _savedLayout = FctOverlaySettings.LoadLayout();
-      _savedStyle = FctOverlaySettings.LoadShapeFor(_savedLayout.Mode);
-      _canvas.MotionStyle = _savedStyle;
-      _canvas.Layout = _savedLayout;
-
-      /* The dials: sizes are multipliers, speed is stored as one and shown as a percent (FctScale). */
-      _savedTextScale = FctOverlaySettings.LoadTextScale();
-      _savedCritScale = FctOverlaySettings.LoadCritScale();
-      _savedSpeed = FctOverlaySettings.LoadSpeed();
-      FctScale.Text = _savedTextScale;
-      FctScale.Crit = _savedCritScale;
-      FctScale.Time = FctScale.TimeFromSpeed(_savedSpeed);
-
-      /* The threshold arrives already snapped to its ladder (FctOverlaySettings.LoadThreshold), so the filter and the
-         settings panel cannot disagree even from a hand-edited file. */
-      _savedThreshold = FctOverlaySettings.LoadThreshold();
-      _canvas.Threshold = _savedThreshold;
-
-      /* The category switches, staged like everything else: Save writes them, Cancel is leaving them unwritten. */
-      _savedShowDealt = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDealtKey);
-      _savedShowTaken = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowTakenKey);
-      _savedShowHeals = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowHealsKey);
-      _savedShowProcs = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowProcsKey);
-      _savedShowMiss = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowMissKey);
-      _savedShowParry = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowParryKey);
-      _savedShowDodge = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowDodgeKey);
-      _savedShowBlock = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowBlockKey);
-      _savedShowRiposte = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowRiposteKey);
-      _savedShowResist = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowResistKey);
-      _savedShowAbsorb = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowAbsorbKey);
-      _savedShowInvulnerable = FctOverlaySettings.LoadShown(FctOverlaySettings.ShowInvulnerableKey);
-
-      /* And the label's seat beside its number, staged like the rest of the typography. */
-      _savedLabelSide = FctOverlaySettings.LoadLabelSide();
-      _canvas.LabelSide = _savedLabelSide;
+      /* Everything the panel offers arrives from one call (FctOverlaySettings.LoadConfig): the mode and its shape, the three
+         lanes and their directions, the dials, the threshold, the seventeen show switches and the label's seat. Applying it is
+         the same call configure mode makes, so there is no second path by which a setting could be honoured at startup and
+         ignored later — or, the way these bugs usually go, saved by the panel and never read again. */
+      _saved = FctOverlaySettings.LoadConfig();
+      Apply(_saved);
     }
 
     /*
@@ -422,18 +368,18 @@ namespace EQLogParser
      */
     internal static void ForgetStoredGeometry()
     {
-      ConfigUtil.SetSetting("FctOverlayLeft", "");
-      ConfigUtil.SetSetting("FctOverlayTop", "");
-      ConfigUtil.SetSetting("FctOverlayWidth", "");
-      ConfigUtil.SetSetting("FctOverlayHeight", "");
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowLeftKey, "");
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowTopKey, "");
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowWidthKey, "");
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowHeightKey, "");
     }
 
     private void SaveSettings()
     {
-      ConfigUtil.SetSetting("FctOverlayLeft", Left);
-      ConfigUtil.SetSetting("FctOverlayTop", Top);
-      ConfigUtil.SetSetting("FctOverlayWidth", ActualWidth > 0 ? ActualWidth : Width);
-      ConfigUtil.SetSetting("FctOverlayHeight", ActualHeight > 0 ? ActualHeight : Height);
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowLeftKey, Left);
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowTopKey, Top);
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowWidthKey, ActualWidth > 0 ? ActualWidth : Width);
+      ConfigUtil.SetSetting(FctOverlaySettings.WindowHeightKey, ActualHeight > 0 ? ActualHeight : Height);
     }
 
     /*
@@ -443,11 +389,11 @@ namespace EQLogParser
      */
     private void OnCanvasFrame(double now)
     {
-      FctManager.Instance.DrainTo(_pending);
+      _manager.DrainTo(_pending);
       foreach (var cmd in _pending)
       {
         _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
-          proc: cmd.Proc, special: cmd.Special);
+          proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
       }
 
       _pending.Clear();
@@ -465,7 +411,7 @@ namespace EQLogParser
       }
 
       _lastStatsMs = now;
-      var dropped = _canvas.DroppedCount + FctManager.Instance.DroppedCount;
+      var dropped = _canvas.DroppedCount + _manager.DroppedCount;
       var hidden = _canvas.HiddenCount;
 
       /* Both counters ride along when nonzero because neither loss is silent here: "dropped" is the overlay running out
@@ -481,8 +427,8 @@ namespace EQLogParser
         stats += $" · {hidden} hidden";
       }
 
-      /* A third number for a third reason: "filtered" is a category switched off — the count only ever grows when
-         somebody asked for it, which is what makes seeing it there reassuring rather than alarming. */
+      /* A third number for a third reason: "filtered" is a row, word or side switched off — the count only ever grows
+         when somebody asked for it, which is what makes seeing it there reassuring rather than alarming. */
       var filtered = _canvas.FilteredCount;
       if (filtered > 0)
       {
@@ -561,37 +507,26 @@ namespace EQLogParser
         Math.Max(SystemParameters.WorkArea.Top, SystemParameters.WorkArea.Bottom - Math.Max(_settings.ActualHeight, 100)));
     }
 
-    /* What the panel displays when configure mode (re)opens: the saved values, because a Cancelled preview was put back
-       the moment it was cancelled. Staging in one place is also what keeps "leaving without saving" honest — the list of
-       staged fields and the list of restored ones can never drift apart. */
-    private FctConfigState StagedState() => new()
+    /* One apply for every way a configuration becomes visible: opening the overlay, leaving configure mode (which puts back
+       what is staged), and previewing a change while configuring it. FctScale keeps its contract — a size lands when the next
+       number is styled, a speed when the next spawns — so nothing already in flight is tugged, and the gates decide only what
+       comes after them (FctSkiaCanvas.ApplyGates says why that part restarts the sample loop and when it leaves it alone). */
+    private void Apply(FctConfigState state)
     {
-      Fountain = _savedLayout.Mode is FctLayoutMode.Bands,
-      Shape = FctOverlaySettings.ClampShape(_savedLayout.Mode, _savedStyle),
-      HealLane = _savedLayout.HealLane,
-      HealUp = _savedLayout.HealUp,
-      TakenLane = _savedLayout.IncomingDamageLane,
-      TakenUp = _savedLayout.IncomingUp,
-      DealtLane = _savedLayout.OutgoingDamageLane,
-      DealtUp = _savedLayout.OutgoingUp,
-      Threshold = _savedThreshold,
-      ShowDealt = _savedShowDealt,
-      ShowTaken = _savedShowTaken,
-      ShowHeals = _savedShowHeals,
-      ShowProcs = _savedShowProcs,
-      ShowMiss = _savedShowMiss,
-      ShowParry = _savedShowParry,
-      ShowDodge = _savedShowDodge,
-      ShowBlock = _savedShowBlock,
-      ShowRiposte = _savedShowRiposte,
-      ShowResist = _savedShowResist,
-      ShowAbsorb = _savedShowAbsorb,
-      ShowInvulnerable = _savedShowInvulnerable,
-      LabelSide = _savedLabelSide,
-      TextScale = _savedTextScale,
-      CritScale = _savedCritScale,
-      Speed = _savedSpeed,
-    };
+      _canvas.Layout = state.BuildLayout();
+      _canvas.MotionStyle = state.BuildMotion();
+      _canvas.LabelSide = state.LabelSide;
+      FctScale.Text = FctScale.ClampSize(state.TextScale);
+      FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
+      FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
+      _canvas.ApplyGates(state);
+    }
+
+    /* What the panel displays when configure mode (re)opens: the staged values, because a cancelled preview was put back the
+       moment it was cancelled. A copy rather than the staged object itself, so the window cannot edit what the overlay is
+       running on before somebody presses Save — and one line rather than a list of twenty-five fields that had to agree with
+       the loader by luck. */
+    private FctConfigState StagedState() => _saved.Clone();
 
     /* The preview is the whole point of the arrangement: every control change wears the canvas immediately — layout,
        motion, gates, threshold, both dials — and writes nothing. FctScale keeps its contract too (size applies when the
@@ -600,25 +535,7 @@ namespace EQLogParser
     {
       _sampleData = state.SampleData;
 
-      _canvas.Layout = state.BuildLayout();
-      _canvas.MotionStyle = state.BuildMotion();
-      _canvas.Threshold = state.Threshold;
-      _canvas.ShowDealt = state.ShowDealt;
-      _canvas.ShowTaken = state.ShowTaken;
-      _canvas.ShowHeals = state.ShowHeals;
-      _canvas.ShowProcs = state.ShowProcs;
-      _canvas.SetWordShown(Labels.Miss, state.ShowMiss);
-      _canvas.SetWordShown(Labels.Parry, state.ShowParry);
-      _canvas.SetWordShown(Labels.Dodge, state.ShowDodge);
-      _canvas.SetWordShown(Labels.Block, state.ShowBlock);
-      _canvas.SetWordShown(Labels.Riposte, state.ShowRiposte);
-      _canvas.SetWordShown(Labels.Resist, state.ShowResist);
-      _canvas.SetWordShown(Labels.Absorb, state.ShowAbsorb);
-      _canvas.SetWordShown(Labels.Invulnerable, state.ShowInvulnerable);
-      _canvas.LabelSide = state.LabelSide;
-      FctScale.Text = FctScale.ClampSize(state.TextScale);
-      FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
-      FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
+      Apply(state);
 
       if (_sampleData)
       {
@@ -635,46 +552,12 @@ namespace EQLogParser
        leaves it. */
     private void SettingsSaved(FctConfigState state)
     {
-      _savedStyle = state.BuildMotion();
-      _savedLayout = state.BuildLayout();
-      _savedTextScale = state.TextScale;
-      _savedCritScale = state.CritScale;
-      _savedSpeed = state.Speed;
-      _savedThreshold = state.Threshold;
-      _savedShowDealt = state.ShowDealt;
-      _savedShowTaken = state.ShowTaken;
-      _savedShowHeals = state.ShowHeals;
-      _savedShowProcs = state.ShowProcs;
-      _savedShowMiss = state.ShowMiss;
-      _savedShowParry = state.ShowParry;
-      _savedShowDodge = state.ShowDodge;
-      _savedShowBlock = state.ShowBlock;
-      _savedShowRiposte = state.ShowRiposte;
-      _savedShowResist = state.ShowResist;
-      _savedShowAbsorb = state.ShowAbsorb;
-      _savedShowInvulnerable = state.ShowInvulnerable;
-      _savedLabelSide = state.LabelSide;
+      /* The snapshot becomes the staged truth — a copy, because both windows hold one and neither may edit the other's — and
+         settings.ini gets every key the panel covers in one call, plus the configured flag that ends first-run
+         configure-on-open. Configure then ends locked, like every exit leaves it. */
+      _saved = state.Clone();
 
-      FctOverlaySettings.SaveIsFountain(state.Fountain);
-      FctOverlaySettings.SaveShape(state.Shape);
-      FctOverlaySettings.SaveLayout(_savedLayout);
-      FctOverlaySettings.SaveTextScale(_savedTextScale);
-      FctOverlaySettings.SaveCritScale(_savedCritScale);
-      FctOverlaySettings.SaveSpeed(_savedSpeed);
-      FctOverlaySettings.SaveThreshold(_savedThreshold);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDealtKey, _savedShowDealt);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowTakenKey, _savedShowTaken);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowHealsKey, _savedShowHeals);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowProcsKey, _savedShowProcs);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowMissKey, _savedShowMiss);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowParryKey, _savedShowParry);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowDodgeKey, _savedShowDodge);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowBlockKey, _savedShowBlock);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowRiposteKey, _savedShowRiposte);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowResistKey, _savedShowResist);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowAbsorbKey, _savedShowAbsorb);
-      FctOverlaySettings.SaveShown(FctOverlaySettings.ShowInvulnerableKey, _savedShowInvulnerable);
-      FctOverlaySettings.SaveLabelSide(_savedLabelSide);
+      FctOverlaySettings.SaveConfig(_saved);
       FctOverlaySettings.SaveConfigured();
       SaveSettings();
 
@@ -838,12 +721,14 @@ namespace EQLogParser
     {
       _hwndSource = null;
 
+      /* Same order as hiding, for the same reason: close the feed before the clock goes away, so nothing is accepted into
+       * a canvas that will never tick again and lost without being counted. */
+      _manager.Enabled = false;
       _canvas.EventsFrame -= OnCanvasFrame;
       _canvas.Stop();
 
       SaveSettings();
-      FctManager.Instance.Enabled = false;
-      FctManager.Instance.Dispose(); // unsubscribes the parsers: nothing may keep feeding a closed window
+      _manager.Dispose(); // unsubscribes the parsers: nothing may keep feeding a closed window
 
       EventsClosed?.Invoke();
     }

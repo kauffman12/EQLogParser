@@ -115,7 +115,7 @@
         </ComboBox>
 
         <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="what to draw, alphabetically: the four number categories and the eight event words (miss, parry, dodge, block, riposte, resist, absorb, invulnerable), each with its own switch. Hidden kinds are counted; the log, meters and exports never change" />
+                   ToolTip="what to draw, alphabetically: nine kinds of number and eight event words, each with its own switch. &quot;hits&quot; is everything that did not crit; &quot;spell&quot; is every non-melee kind, damage-over-time ticks included; &quot;pet&quot; is what your pet did, swinging or casting; healing is what lands on you. Words are attacks too, so a side you hid takes its words with it. Hidden kinds are counted; the log, meters and exports never change" />
         <ComboBox x:Name="showCombo" Grid.Row="4" Grid.Column="1" Margin="0,3"
                   ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
 
@@ -177,13 +177,14 @@
              out, so these rows shed their lane picks but keep their direction combos - including the heals row, whose
              dial a fountain honours: up means healing rises while damage sprays down. -->
         <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage in" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which lane damage coming in streams down, and which way it travels" />
+                   ToolTip="which lane damage coming in streams down, and which way it travels. none hides it entirely — with it go the words about attacks aimed at you (block, riposte)" />
         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="takenLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
             <ComboBoxItem Content="left 2" Tag="left2" />
             <ComboBoxItem Content="right 1" Tag="right1" />
             <ComboBoxItem Content="right 2" Tag="right2" />
+            <ComboBoxItem Content="none" Tag="none" />
           </ComboBox>
           <ComboBox x:Name="inDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />
@@ -192,13 +193,14 @@
         </StackPanel>
 
         <TextBlock x:Name="dealtTitle" Grid.Row="3" Text="damage out" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which lane damage going out streams down, and which way it travels" />
+                   ToolTip="which lane damage going out streams down, and which way it travels. none hides it entirely — with it go the words about your own attacks failing (miss, resist)" />
         <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="dealtLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
             <ComboBoxItem Content="left 2" Tag="left2" />
             <ComboBoxItem Content="right 1" Tag="right1" />
             <ComboBoxItem Content="right 2" Tag="right2" />
+            <ComboBoxItem Content="none" Tag="none" />
           </ComboBox>
           <ComboBox x:Name="outDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />
@@ -207,13 +209,14 @@
         </StackPanel>
 
         <TextBlock x:Name="healsTitle" Grid.Row="4" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which way healing travels - in fountain only direction applies (it shares the middle): up means heals rise while damage sprays down, the classic look. In split it also picks which lane healing streams down" />
+                   ToolTip="which way healing travels - in fountain only direction applies (it shares the middle): up means heals rise while damage sprays down, the classic look. In split it also picks which lane healing streams down, where none hides it entirely" />
         <StackPanel x:Name="healsRow" Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="healLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
             <ComboBoxItem Content="left 2" Tag="left2" />
             <ComboBoxItem Content="right 1" Tag="right1" />
             <ComboBoxItem Content="right 2" Tag="right2" />
+            <ComboBoxItem Content="none" Tag="none" />
           </ComboBox>
           <ComboBox x:Name="healDirCombo" Width="72" Margin="6,0,0,0" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="up" Tag="up" />

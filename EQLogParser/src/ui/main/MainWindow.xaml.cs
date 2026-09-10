@@ -111,7 +111,7 @@ namespace EQLogParser
       enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
 
       // FCT Overlay: same convention as the meter. Restored here so the menu is honest even when the overlay stays shut.
-      SetFctOverlayMenu(ConfigUtil.IfSet("FctOverlayEnabled"), false);
+      SetFctOverlayMenu(ConfigUtil.IfSet(FctOverlaySettings.EnabledKey), false);
 
       // Auto Monitor
       enableAutoMonitorIcon.Visibility = ConfigUtil.IfSet("AutoMonitor") ? Visibility.Visible : Visibility.Hidden;
@@ -242,7 +242,7 @@ namespace EQLogParser
 
         // the FCT overlay comes back showing if it was showing when the app closed (after the dock is up, so it
         // never opens on top of a half-built main window)
-        if (ConfigUtil.IfSet("FctOverlayEnabled"))
+        if (ConfigUtil.IfSet(FctOverlaySettings.EnabledKey))
         {
           SetFctOverlayVisible(true);
         }
@@ -403,10 +403,13 @@ namespace EQLogParser
       {
         _fctOverlay = new FctOverlayWindow();
 
-        // closing drops the reference so the next toggle builds a fresh one
+        /* Closing drops the reference so the next toggle builds a fresh one. The menu writes the enabled key and does not
+           run when the window closes itself (its own close button, alt+F4, an app shutdown), so this path has to clear it too:
+           left set, an overlay the player deliberately closed would reopen on the next launch. */
         _fctOverlay.EventsClosed += () =>
         {
           _fctOverlay = null;
+          ConfigUtil.SetSetting(FctOverlaySettings.EnabledKey, false);
           SetFctOverlayMenu(false, false);
         };
 
@@ -438,7 +441,7 @@ namespace EQLogParser
       }
 
       SetFctOverlayMenu(show, !_fctOverlay.Locked);
-      ConfigUtil.SetSetting("FctOverlayEnabled", show);
+      ConfigUtil.SetSetting(FctOverlaySettings.EnabledKey, show);
 
       // configuring wants the window foreground so its panel can be typed in; a locked one must never take focus from the game
       if (show && !_fctOverlay.Locked)

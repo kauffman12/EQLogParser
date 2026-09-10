@@ -10,12 +10,47 @@ namespace EQLogParser
   {
     DamageDealt,
     DamageTaken,
+
+    /* No longer emitted: the overlay shows only heals that land on you (FctManager.HandleHeal), so nothing hands a number
+     * to the "healing I did" lane any more. It stays because the direction rules and the layout tests still speak it, and
+     * because a player who wants their own outgoing heals back would want them in this lane, not in a new one. */
     HealingDealt,
     HealingReceived,
     Crit,
     // zero-damage evades: Defensive = they failed against me, Missed = my own attack failed
     Defensive,
     Missed
+  }
+
+  /*
+   * Which row of the settings panel's show list a record answers to. Resolved by FctManager, where the parse still knows
+   * who attacked, whether it was melee and whether it crit — downstream there is only a lane and a few flags, which cannot
+   * tell a pet's nuke from your own.
+   *
+   * Exactly one row claims every record, and a record pays for its own row and nothing else: hiding "spell crits" leaves
+   * melee hits alone, hiding "pet melee" leaves your own swings alone. Two orderings do the work — a proc outranks both who
+   * fired it and what fired it (an effect that fires on its own is its own event, which is also why a pet's proc belongs to
+   * procs and not to the pet rows), and crit splits each kind into its own row so "hide the big numbers" is one switch.
+   * Damage-over-time ticks are spell damage and go where their kind goes, crit tick included: they fold with it on screen
+   * anyway (FctIngest), so a separate row would be a switch for something the eye cannot separate.
+   *
+   * Words are not a row. "miss", "block", "resist" and the rest keep their own switches (FctIngest.WordShown) because every
+   * complaint about them has been about one word; they come through as FctRow.Word so that no row switch can reach them,
+   * and the panel lists them beside these nine because that is the list a player reads.
+   */
+  internal enum FctRow
+  {
+    // nothing in this list applies: a zero-damage word, whose switch is chosen by its text
+    Word,
+    MeleeHits,
+    MeleeCrits,
+    SpellHits,
+    SpellCrits,
+    Procs,
+    PetMelee,
+    PetSpells,
+    Healing,
+    HealingCrits,
   }
 
   /*
@@ -46,6 +81,10 @@ namespace EQLogParser
   internal sealed class FctHitCommand
   {
     public FctLane Lane;
+
+    /* Which show-list row this belongs to (FctRow). Where it is drawn and which switch hides it are different questions:
+     * a pet's spell damage shares my DamageDealt lane with my own and must still be hideable on its own. */
+    public FctRow Row;
 
     // the source lane survives even for crits: the renderer pools a crit onto its producing lane's region
     public bool Crit;

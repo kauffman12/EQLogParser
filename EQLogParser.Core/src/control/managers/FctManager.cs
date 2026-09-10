@@ -32,18 +32,34 @@ namespace EQLogParser
      * Replaces the singleton and subscribes the new instance to the parsers. Each FctOverlayWindow owns a
      * manager and disposes it on close; without this a disposed instance would linger in Instance with its
      * parser handlers detached, and the next overlay would silently get no feed.
+     *
+     * The instance being replaced is disposed here rather than left to its window: a replaced manager is by
+     * definition nobody's manager any more, and it stays subscribed to every parser until something lets go,
+     * which is a feed that keeps queueing for a window that will never drain it. Dispose is idempotent, so a
+     * window that already disposed its own manager costs nothing extra.
      */
-    internal static FctManager Create() => Instance = new FctManager();
+    internal static FctManager Create()
+    {
+      Instance?.Dispose();
+      return Instance = new FctManager();
+    }
 
     private readonly ConcurrentQueue<FctHitCommand> _pending = [];
     private int _dropped;
+
+    /*
+     * How many commands are waiting. Counted by hand because ConcurrentQueue<T>.Count is O(n) — it walks every
+     * segment — and Enqueue asks on the log thread for every record: asking it directly turns a raid pull into
+     * quadratic work on exactly the path that has to stay cheap. Approximate under a concurrent drain, which is
+     * fine — it is a backpressure ceiling, not a number anyone reads.
+     */
+    private int _pendingCount;
 
     /* Set by the overlay while it is visible. Reader thread reads it on every record, so it is a
      * volatile field rather than a property. */
     internal volatile bool Enabled;
 
     internal int DroppedCount => Volatile.Read(ref _dropped);
-    internal int PendingCount => _pending.Count;
 
     private FctManager()
     {
@@ -70,6 +86,8 @@ namespace EQLogParser
       {
         // drain only
       }
+
+      Interlocked.Exchange(ref _pendingCount, 0);
     }
 
     /* Pops everything queued, dropping commands older than MaxQueueAgeMs. Returns the count kept. */
@@ -78,6 +96,7 @@ namespace EQLogParser
       var now = Environment.TickCount64;
       while (_pending.TryDequeue(out var command))
       {
+        Interlocked.Decrement(ref _pendingCount);
         if (now - command.EnqueueTick > MaxQueueAgeMs)
         {
           Interlocked.Increment(ref _dropped);
@@ -99,8 +118,12 @@ namespace EQLogParser
       }
 
       var record = e.Record;
-      var iAmAttacker = record.Attacker == ConfigUtil.PlayerName ||
-                         PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == ConfigUtil.PlayerName;
+
+      /* Which of my pets, if either, is on this line: the pet's own numbers get rows of their own (FctRow), so "counts as
+         me" and "is my pet" have to stay separate questions. Damage landing ON the pet is still just damage taken — there
+         is no pet row for that, because "who was hit" is not something a player filters. */
+      var petAttacker = PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == ConfigUtil.PlayerName;
+      var iAmAttacker = record.Attacker == ConfigUtil.PlayerName || petAttacker;
       var iAmDefender = record.Defender == ConfigUtil.PlayerName ||
                         PlayerRegistry.Instance.GetPlayerFromPet(record.Defender) == ConfigUtil.PlayerName;
 
@@ -116,6 +139,7 @@ namespace EQLogParser
         Enqueue(new FctHitCommand
         {
           Lane = iAmDefender ? FctLane.Defensive : FctLane.Missed,
+          Row = FctRow.Word, // the words answer to their own switches, never to a row (FctIngest.WordShown)
           ValueText = record.Type,
           Source = DisplaySource(record),
         });
@@ -127,13 +151,18 @@ namespace EQLogParser
         return; // nothing numeric to show
       }
 
+      var crit = LineModifiersParser.IsCrit(record.ModifiersMask);
+
+      // the parser labels a proc by looking the spell up in procs.txt, so this is not a guess at wording
+      var proc = record.Type == Labels.Proc;
+
       Enqueue(new FctHitCommand
       {
         Lane = iAmAttacker ? FctLane.DamageDealt : FctLane.DamageTaken,
-        Crit = LineModifiersParser.IsCrit(record.ModifiersMask),
+        Row = DamageRow(proc, petAttacker, record.Type == Labels.Melee, crit),
+        Crit = crit,
         Periodic = record.Type == Labels.Dot,
-        // the parser labels a proc by looking the spell up in procs.txt, so this is not a guess at wording
-        Proc = record.Type == Labels.Proc,
+        Proc = proc,
         // Total is the amount actually dealt (damage records never carry OverTotal today)
         Value = record.Total,
         Source = DisplaySource(record),
@@ -142,6 +171,16 @@ namespace EQLogParser
       });
     }
 
+    /*
+     * Healing means healing ON me — that is the whole rule, and it drops two things at once: the numbers from heals I cast on
+     * other people (the overlay is a picture of what is happening to you, and your own outgoing heals are spam to the one
+     * player who already knows they worked) and heals landing on the pet, which are not mine to count either. A self-heal still
+     * shows, because its line names me as the healed once the parser has had it.
+     *
+     * Pronouns are not handled here on purpose: HealingLineParser runs every name through ParserUtil.ReplacePlayer, which is what
+     * turns "You have been healed over time for 1063 hit points by Roar of the Lion" into a record carrying my character name. A
+     * second pronoun list down here would be a second place to be wrong about who "you" is.
+     */
     internal void HandleHeal(HealProcessedEvent e)
     {
       if (!Enabled || e.Record is null || !e.IsMonitor)
@@ -149,32 +188,61 @@ namespace EQLogParser
         return;
       }
 
-      var healedMe = e.Record.Healed == ConfigUtil.PlayerName ||
-                     PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healed) == ConfigUtil.PlayerName;
-      var dealtByMe = e.Record.Healer == ConfigUtil.PlayerName ||
-                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Healer) == ConfigUtil.PlayerName;
-
-      if (!healedMe && !dealtByMe)
+      var record = e.Record;
+      if (record.Healed != ConfigUtil.PlayerName)
       {
-        return; // party-wide healing lands with the group config
+        return; // cast on somebody else, or on the pet: not my number
       }
 
       // EQ heal lines read "for 9409 (11000)": Total is the effective amount, OverTotal the gross
       // (it already includes Total when present) — show effective and drop zero-effective overheals
-      if (e.Record.Total == 0)
+      if (record.Total == 0)
       {
         return;
       }
 
+      var crit = LineModifiersParser.IsCrit(record.ModifiersMask);
+
       Enqueue(new FctHitCommand
       {
-        // a self-heal reads as healing on me
-        Lane = healedMe ? FctLane.HealingReceived : FctLane.HealingDealt,
-        Crit = LineModifiersParser.IsCrit(e.Record.ModifiersMask),
-        Periodic = e.Record.Type == Labels.Hot,
-        Value = e.Record.Total,
-        Source = string.IsNullOrEmpty(e.Record.SubType) ? null : e.Record.SubType,
+        Lane = FctLane.HealingReceived,
+        Row = crit ? FctRow.HealingCrits : FctRow.Healing,
+        Crit = crit,
+        Periodic = record.Type == Labels.Hot,
+        Value = record.Total,
+        Source = string.IsNullOrEmpty(record.SubType) ? null : record.SubType,
       });
+    }
+
+    /*
+     * The show-list row for a damage record, and the ordering is the design (FctRow): a proc is its own event so it outranks
+     * both who fired it and what fired it; then the pet, whose numbers a player wants apart from their own whether it swings
+     * or casts; then kind, and crit inside each kind. Melee means Labels.Melee — everything else the parser can hand here
+     * (Direct Damage, Bane, Damage Shield, Reverse DS, Other Damage, DoT ticks) is "a spell" to the person reading the
+     * overlay, which is also what they call it.
+     *
+     * Totality is the property that matters: one of the four bottom rows answers for every non-proc, non-pet record, and
+     * FctManagerTest walks the whole combination table so a new Labels kind cannot arrive unassigned and default to being
+     * ungated. Note this never returns Word: a record with no number took the label branch above.
+     */
+    internal static FctRow DamageRow(bool proc, bool pet, bool melee, bool crit)
+    {
+      if (proc)
+      {
+        return FctRow.Procs;
+      }
+
+      if (pet)
+      {
+        return melee ? FctRow.PetMelee : FctRow.PetSpells;
+      }
+
+      if (crit)
+      {
+        return melee ? FctRow.MeleeCrits : FctRow.SpellCrits;
+      }
+
+      return melee ? FctRow.MeleeHits : FctRow.SpellHits;
     }
 
     /*
@@ -214,6 +282,7 @@ namespace EQLogParser
       Enqueue(new FctHitCommand
       {
         Lane = iAmCaster ? FctLane.Missed : FctLane.Defensive,
+        Row = FctRow.Word, // a word, so its switch is chosen by its text (FctIngest.WordShown), not by a row
         ValueText = Labels.Resist,
         Source = spell,
       });
@@ -254,14 +323,23 @@ namespace EQLogParser
 
     private void Enqueue(FctHitCommand command)
     {
-      // a consumer that stopped draining must not turn into unbounded memory: drop the oldest first
-      while (_pending.Count >= MaxPending && _pending.TryDequeue(out _))
-      {
-        Interlocked.Increment(ref _dropped);
-      }
-
       command.EnqueueTick = Environment.TickCount64;
       _pending.Enqueue(command);
+
+      /* A consumer that stopped draining must not turn into unbounded memory, so the ceiling is enforced after
+       * the write with a front-throw of the oldest: the queue holds at most MaxPending commands, and every one
+       * that goes is counted where the player can see it. */
+      var queued = Interlocked.Increment(ref _pendingCount);
+      while (queued > MaxPending)
+      {
+        if (!_pending.TryDequeue(out _))
+        {
+          break; // a drain raced ahead of us and took what was queued; nothing left to drop
+        }
+
+        Interlocked.Increment(ref _dropped);
+        queued = Interlocked.Decrement(ref _pendingCount);
+      }
     }
   }
 }

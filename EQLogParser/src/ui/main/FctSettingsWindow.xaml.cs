@@ -30,31 +30,21 @@ namespace EQLogParser
      * in the next second, not whenever the loop happens to come round. */
     internal event Action DialReleased;
 
-    /* The "show" dropdown, in the app's checkbox-in-a-combo pattern (the same template the breakdown column pickers
-       use): number categories first, then the eight event words, which share this combo rather than earning one of
-       their own — they answer the same question ("what may draw"), and two dropdowns asking half each would be panel
-       furniture with a opinion of its own. The word order is the fight's, not alphabetical: quiet defensive words,
-       then spell failures, then the loud pair — roughly how often a player reaches for each. They live here as fields
-       because both directions need them: LoadFrom writes the checks and Snapshot reads them back, and the combo's
-       title is re-summarised whenever the dropdown closes. */
-    /* The show list is a lookup list, so it is alphabetical - the earlier "fight order" arrangement (categories, then
-       quiet defensive words, then the loud pair) was a narrative, and finding a word in it was a memory test. Named
-       fields rather than positional reads: the day somebody re-sorts this list, nobody should have to rewrite twelve
-       index numbers in two blocks and hope they kept them straight. */
-    private readonly ComboBoxItemDetails _absorb = new(true, "absorb");
-    private readonly ComboBoxItemDetails _block = new(true, "block");
-    private readonly ComboBoxItemDetails _damageIn = new(true, "damage in");
-    private readonly ComboBoxItemDetails _damageOut = new(true, "damage out");
-    private readonly ComboBoxItemDetails _dodge = new(true, "dodge");
-    private readonly ComboBoxItemDetails _healing = new(true, "healing");
-    private readonly ComboBoxItemDetails _invulnerable = new(true, "invulnerable");
-    private readonly ComboBoxItemDetails _miss = new(true, "miss");
-    private readonly ComboBoxItemDetails _parry = new(true, "parry");
-    private readonly ComboBoxItemDetails _procs = new(true, "procs");
-    private readonly ComboBoxItemDetails _resist = new(true, "resist");
-    private readonly ComboBoxItemDetails _riposte = new(true, "riposte");
-
-    private readonly List<ComboBoxItemDetails> _showItems;
+    /*
+     * The "show" dropdown, in the app's checkbox-in-a-combo pattern (the same template the breakdown column pickers use):
+     * nine rows of numbers and eight event words sharing one combo rather than earning one each, because they answer one
+     * question — "what may draw" — and two dropdowns holding half of it each would be panel furniture with an opinion of its
+     * own. What shows is alphabetical, because this is a lookup list: the earlier arrangement by narrative (categories, then
+     * quiet defensive words, then the loud pair) read like a fight and made finding a word a memory test.
+     *
+     * It is built from
+       FctShowList rather than from a field per entry: seventeen checkboxes named by hand meant two blocks of seventeen
+       assignments that had to be kept in step with each other, with the ini keys, and with whatever the list actually held.
+       _showItems is what the combo displays (in the table's order); _showCheck maps an entry back to its checkbox for the
+       two passes that fill it in and read it out, which is also why nothing here needs to know whether an entry is a row or
+       a word — FctShowList.Entry answers that. */
+    private readonly List<ComboBoxItemDetails> _showItems = [];
+    private readonly Dictionary<FctShowList.Entry, ComboBoxItemDetails> _showCheck = new();
 
     // The shipped picks, used only as the parse fallback when a combo somehow has nothing selected.
     private static readonly FctConfigState Defaults = new();
@@ -73,7 +63,13 @@ namespace EQLogParser
          numeric spinner draw as bare WPF instead of the skin everything else wears. */
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
-      _showItems = [_absorb, _block, _damageIn, _damageOut, _dodge, _healing, _invulnerable, _miss, _parry, _procs, _resist, _riposte];
+      foreach (var entry in FctShowList.All)
+      {
+        var item = new ComboBoxItemDetails(true, entry.Label);
+        _showItems.Add(item);
+        _showCheck[entry] = item;
+      }
+
       showCombo.ItemsSource = _showItems;
 
       /* The brushes and EQDescriptionSize come from application resources and swap themselves when the theme changes;
@@ -85,7 +81,10 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
 
-    internal void LoadFrom(FctConfigState state)
+    /* Hands the panel a snapshot to display. raisePreview is false when the caller is only filling the controls in as part of
+       its own apply — entering or leaving configure mode — because that pass would otherwise answer itself with a preview of
+       state the caller has already put on the canvas, and restart the demo the caller is about to stop. A user edit raises. */
+    internal void LoadFrom(FctConfigState state, bool raisePreview = true)
     {
       _loading = true;
 
@@ -101,18 +100,13 @@ namespace EQLogParser
       SelectByTag(inDirCombo, Up(state.TakenUp));
       SelectByTag(dealtLaneCombo, FctRailLanes.Token(state.DealtLane));
       SelectByTag(outDirCombo, Up(state.DealtUp));
-      _damageIn.IsChecked = state.ShowTaken;
-      _damageOut.IsChecked = state.ShowDealt;
-      _healing.IsChecked = state.ShowHeals;
-      _procs.IsChecked = state.ShowProcs;
-      _miss.IsChecked = state.ShowMiss;
-      _parry.IsChecked = state.ShowParry;
-      _dodge.IsChecked = state.ShowDodge;
-      _block.IsChecked = state.ShowBlock;
-      _riposte.IsChecked = state.ShowRiposte;
-      _resist.IsChecked = state.ShowResist;
-      _absorb.IsChecked = state.ShowAbsorb;
-      _invulnerable.IsChecked = state.ShowInvulnerable;
+      /* One pass over the table fills every switch, which is what keeps this honest: the list the player sees, the values
+         written back at Snapshot and the keys in settings.ini are all the same seventeen entries (FctShowList), so a row can
+         appear in the dropdown without existing in three other places — or, worse, exist here and be ignored. */
+      foreach (var entry in FctShowList.All)
+      {
+        _showCheck[entry].IsChecked = entry.Get(state);
+      }
       UpdateShowTitle();
       thresholdUpDown.Value = state.Threshold;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
@@ -127,7 +121,10 @@ namespace EQLogParser
          controls, so they get computed exactly the way a user change would compute them. */
       ApplyModeVisibility();
       UpdateReadouts();
-      PreviewChanged?.Invoke(Snapshot());
+      if (raisePreview)
+      {
+        PreviewChanged?.Invoke(Snapshot());
+      }
     }
 
     internal void SetStats(string stats) => statsText.Text = stats;
@@ -150,18 +147,6 @@ namespace EQLogParser
         DealtLane = FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane),
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
-        ShowTaken = _damageIn.IsChecked,
-        ShowDealt = _damageOut.IsChecked,
-        ShowHeals = _healing.IsChecked,
-        ShowProcs = _procs.IsChecked,
-        ShowMiss = _miss.IsChecked,
-        ShowParry = _parry.IsChecked,
-        ShowDodge = _dodge.IsChecked,
-        ShowBlock = _block.IsChecked,
-        ShowRiposte = _riposte.IsChecked,
-        ShowResist = _resist.IsChecked,
-        ShowAbsorb = _absorb.IsChecked,
-        ShowInvulnerable = _invulnerable.IsChecked,
         LabelSide = ComboTag(labelSideCombo) switch
         {
           "left" => FctLabelSide.Left,
@@ -173,6 +158,12 @@ namespace EQLogParser
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
       };
+
+      /* Rows and words alike: the same table, read in the same order it was filled. */
+      foreach (var entry in FctShowList.All)
+      {
+        entry.Set(state, _showCheck[entry].IsChecked);
+      }
 
       return state;
     }
@@ -234,7 +225,7 @@ namespace EQLogParser
     }
 
     /* The combo's closed face counts what is on, in the app's own words — the same summariser the column pickers use. */
-    private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "categories");
+    private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "kinds");
 
     /* Double-click returns a dial to the shipped middle; letting go of either restarts the demo cycle up top. */
     private void SliderReleased(object sender, MouseButtonEventArgs e)

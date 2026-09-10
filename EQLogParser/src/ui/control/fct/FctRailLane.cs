@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 /*
  * FctRailLane - the four columns of split mode.
@@ -16,25 +16,39 @@
  */
 namespace EQLogParser
 {
-  internal enum FctRailLane { Left1, Left2, Right1, Right2 }
+  /*
+   * The four columns, plus `None`: "this category gets no column", which is how split mode says "do not show me that at
+   * all" now that the show list stopped carrying damage-in / damage-out switches (it lists nine rows instead, one per kind
+   * of number, and a player hiding their outgoing damage hides it by giving it nowhere to go). Nothing is placed on None —
+   * the gate in FctIngest stops those numbers before they reach geometry, and FctConfigState.BuildLayout never puts a None
+   * into a FctLayoutChoice — so no layout code has to ask what column "nowhere" is.
+   *
+   * Fountain (bands) ignores lane settings entirely, which means it ignores None too: incoming and outgoing both draw there,
+   * because that scheme's whole arrangement is the two of them facing each other across a clear middle.
+   */
+  internal enum FctRailLane { None, Left1, Left2, Right1, Right2 }
 
   internal static class FctRailLanes
   {
-    // Lane number across the screen: 0 = left1 ... 3 = right2.
+    // Lane number across the screen: 0 = left1 ... 3 = right2. None has no column, and says so rather than borrowing one.
     public static int Index(FctRailLane lane) => lane switch
     {
       FctRailLane.Left1 => 0,
       FctRailLane.Left2 => 1,
       FctRailLane.Right1 => 2,
-      _ => 3,
+      FctRailLane.Right2 => 3,
+      _ => -1,
     };
 
-    // Which half a lane sits in - split's per-side rules (opposite-of-heal defaults) still speak in sides.
+    /* Which half a lane sits in - split's per-side rules (opposite-of-heal defaults) still speak in sides. None has none, so
+     * it answers with the left like any unknown value would: nothing is placed there, and an answer is cheaper than a throw
+     * over a setting a hand-editor can write. */
     public static FctRegionSide SideOf(FctRailLane lane) => Index(lane) < 2 ? FctRegionSide.Left : FctRegionSide.Right;
 
     // Settings spelling for a lane.
     public static string Token(FctRailLane lane) => lane switch
     {
+      FctRailLane.None => "none",
       FctRailLane.Left1 => "left1",
       FctRailLane.Left2 => "left2",
       FctRailLane.Right1 => "right1",
@@ -47,6 +61,7 @@ namespace EQLogParser
     {
       switch ((raw ?? string.Empty).Trim().ToLowerInvariant())
       {
+        case "none": return FctRailLane.None;
         case "left1": return FctRailLane.Left1;
         case "left2": return FctRailLane.Left2;
         case "right1": return FctRailLane.Right1;
