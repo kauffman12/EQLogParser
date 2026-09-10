@@ -12,12 +12,20 @@ namespace EQLogParser
      * number arrives, stays put where it can be read twice, and leaves. Everything else is a variation on that. */
     Hold,
 
-    /* Overshoot, then accelerate under gravity while shrinking (mirrored upward on the incoming band). The most
+    /* Kept for possible future use: no control selects this style — the settings panel's FOUNTAIN mode is bands geometry
+     * wearing Spray (FctOverlaySettings.SaveIsFountain), which is the plume players were offered when the checkbox went away.
+     * Reachable through settings.ini (LoadMotion) and FctSimulationWindow, so the path stays exercised while it waits for a UI.
+     *
+     * Overshoot, then accelerate under gravity while shrinking (mirrored upward on the incoming band). The most
      * legible "something happened" of the lot and the loudest: numbers cross a third of the overlay, which is also why
      * it is opt-in and why it fixes the life to the choreography instead of the adaptive one. */
     Fountain,
 
-    /* Fixed cells: one number per cell in a grid inside each band, placed by allocation rather than by jitter. Each slides
+    /* Kept for possible future use: the settings panel offers no way to reach it, so no player is on it unless settings.ini
+     * says so (LoadMotion) or FctSimulationWindow asks. Kept because the grid placement it needs is implemented and tested
+     * (FctCellGrid), and it is the one style that reserves screen space instead of competing for it.
+     *
+     * Fixed cells: one number per cell in a grid inside each band, placed by allocation rather than by jitter. Each slides
      * briefly in from one spawn point, swells slightly as it lands, then does not move again. For a player who wants the
      * overlay out of the way, for a second small overlay over the target's cast bar, or for healing where motion adds
      * nothing. Cheapest style to draw, and the only one that reserves screen space — static text cannot overlap its own

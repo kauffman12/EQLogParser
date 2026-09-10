@@ -31,6 +31,9 @@ namespace EQLogParser
    */
   internal enum FctLayoutMode
   {
+    /* Kept for possible future use: the settings panel offers fountain (bands) and split (by type) only, so nothing a player
+     * can configure lands here today. The scheme stays implemented — it is the genre standard, it is what the engine's own
+     * default names, and FctHalvesTest covers it — so wiring a control to it later is a settings change, not a rewrite. */
     Halves,
 
     /* Halves' columns with the ownership question swapped: by category instead of by direction. */
@@ -105,8 +108,10 @@ namespace EQLogParser
     }
 
     /*
-     * The shipped default follows the genre standard rather than the history: halves, incoming left, both sides down.
-     * Nothing is released, so flipping the default costs no existing player their view (docs/DesignNotes.md).
+     * The engine's own default, and it follows the genre standard rather than this project's history: halves, incoming left,
+     * both sides down (docs/DesignNotes.md). What the product ships is decided one layer up, in FctOverlaySettings, which
+     * reads fountain (bands) unless settings.ini says split — so this value is what an overlay gets before any load, and what
+     * every test that does not name a scheme compares against. The name says "the default choice", not "the shipping mode".
      */
     public static readonly FctLayoutChoice Shipped = new(FctLayoutMode.Halves, FctRegionSide.Left, false, false);
 

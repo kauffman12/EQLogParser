@@ -10,6 +10,11 @@
 > `docs/DesignNotes.md` → "One region scheme, and why direction went vertical" and "Colour answers what, never who".
 > Everything below about keeping the center clear, capping footprint and routing events into fixed areas still holds.
 
+> The schemes and styles this brief named are still implemented even where no control offers them: the left/right split
+> (`FctLayoutMode.Halves`) and the fixed-cell grid behind *Pulse* (`FctMotionStyle.Pulse`, `FctCellGrid`). They are kept on
+> purpose for possible future use — reachable from `settings.ini` and the simulation window, and covered by tests — not left
+> over from the version this document describes.
+
 ## Recommendation
 
 Build one preset first: **Classic**. Place incoming damage and received healing on the left, outgoing damage and healing on the right, and scroll both streams upward. Keep an empty area between them for the player and target. Use red for incoming damage, green for healing, and warm white/yellow for outgoing damage.

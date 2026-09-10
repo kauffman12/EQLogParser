@@ -6,6 +6,11 @@ namespace EQLogParser
   /*
    * Fixed cells for text that does not travel.
    *
+   * Kept for possible future use: this grid is what FctMotionStyle.Pulse asks for, and the settings panel offers no way to
+   * select pulse today, so no player reaches it unless settings.ini says so (FctOverlaySettings.LoadMotion) or
+   * FctSimulationWindow does. It stays implemented because it is the one style that reserves screen space rather than
+   * competing for it, and because its allocation rules are the ones a second, small overlay would want.
+   *
    * Free-floating positions work for numbers that move, because each one is only in a spot for a moment. Text that stays
    * still has the opposite requirement: two of them in the same place is unreadable mush, which is exactly what pulse mode
    * produced while it chose its own x from lane jitter. Every combat log UI settles on the same answer — slot allocation:
@@ -127,7 +132,7 @@ namespace EQLogParser
         return false;
       }
 
-      var taken = Claimed(hits, PoolKey(stage, hit), hit.Proc, count);
+      var taken = Claimed(area, stage, hits, hit.Proc, count);
       var index = -1;
       for (var i = 0; i < count; i++)
       {
@@ -141,7 +146,7 @@ namespace EQLogParser
       if (index < 0)
       {
         /* Full: take the oldest cell, but never a crit's for anything smaller. */
-        var oldest = OldestOf(hits, PoolKey(stage, hit), hit.Proc, hit.Lane is FctLane.Crit);
+        var oldest = OldestOf(area, stage, hits, hit.Proc, hit.Lane is FctLane.Crit);
         if (oldest is null)
         {
           return false;
@@ -314,16 +319,14 @@ namespace EQLogParser
     }
 
     /* Which cells this pool has live claims on. Derived from the hits themselves, so nothing can drift out of sync when a
-     * hit expires, is absorbed into a total, or is dropped — the list is the only bookkeeping there is. The (pool, proc)
-     * pair is the region's identity — and which question the pool answers follows the scheme (PoolKey): in halves each half
-     * owns its own grid, and a hit can never claim across the seam. */
-    private static bool[] Claimed(List<FctHitState> hits, bool incoming, bool proc, int count)
+     * hit expires, is absorbed into a total, or is dropped — the list is the only bookkeeping there is. */
+    private static bool[] Claimed(Area area, FctStage stage, List<FctHitState> hits, bool proc, int count)
     {
       var claimed = new bool[Math.Max(1, count)];
       for (var i = 0; i < hits.Count; i++)
       {
         var other = hits[i];
-        if (other.Cell >= 0 && other.Incoming == incoming && other.Proc == proc && other.Cell < claimed.Length)
+        if (other.Cell >= 0 && SharesBlock(area, proc, stage, other) && other.Cell < claimed.Length)
         {
           claimed[other.Cell] = true;
         }
@@ -332,22 +335,32 @@ namespace EQLogParser
       return claimed;
     }
 
-    /* The grid lives in a side's region; the pool that shares it is whichever half of ownership the scheme draws — by
-     * direction in halves and bands, by category in by type, where healing's column holds its own grid whatever the
-     * direction its numbers travel (FctStage). */
-    /* By type has three categories choosing two columns, so the pool is the resolved column itself, not whichever bit
-     * picked it: healing and a damage stream assigned to the same side share that side's grid, like any two numbers
-     * sharing territory. */
-    private static bool PoolKey(FctStage stage, FctHitState hit) =>
-      stage.Mode is FctLayoutMode.ByType ? stage.RegionFor(hit).X > 0 : hit.Incoming;
+    /*
+     * The pool's identity is its block: a cell index means nothing except as a position inside one AreaOf result, so two hits
+     * are competitors exactly when their blocks are the same rectangle. Asking the hit instead — which side of the seam it
+     * belongs to — is a different question in the column schemes, where the answer can split one block into two pools (both
+     * then take the same index and draw on top of each other) or merge two blocks into one (evicting numbers that never shared
+     * a cell). Comparing geometry makes both impossible, and it is the rule the class comment already stated: cells belong to a
+     * region.
+     *
+     * Reserve is left out of the comparison on purpose: that is the text height a block's rows were measured for, and two
+     * categories sharing a region share its rows even when their own font sizes differ.
+     */
+    private static bool SharesBlock(Area area, bool proc, FctStage stage, FctHitState other) =>
+      other.Proc == proc && SameBlock(area, AreaOf(stage, other.Incoming, other.Heal));
 
-    private static FctHitState OldestOf(List<FctHitState> hits, bool incoming, bool proc, bool newcomerIsCrit)
+    private static bool SameBlock(Area left, Area right) =>
+      left.X == right.X && left.Width == right.Width && left.Top == right.Top && left.Bottom == right.Bottom
+      && left.SpawnAtTop == right.SpawnAtTop && left.StripFrac == right.StripFrac;
+
+    private static FctHitState OldestOf(Area area, FctStage stage, List<FctHitState> hits, bool proc,
+      bool newcomerIsCrit)
     {
       FctHitState oldest = null;
       for (var i = 0; i < hits.Count; i++)
       {
         var other = hits[i];
-        if (other.Cell < 0 || other.Incoming != incoming || other.Proc != proc)
+        if (other.Cell < 0 || !SharesBlock(area, proc, stage, other))
         {
           continue;
         }
