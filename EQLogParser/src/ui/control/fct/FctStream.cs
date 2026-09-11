@@ -71,12 +71,6 @@ namespace EQLogParser
       return false;
     }
 
-    /* Whether labels are drawn under the value. The canvas owns the choice and stamps this when settings load, so the
-     * engine prices the shape the player will actually see: with labels below, a following number that lands on the word
-     * band is a collision even when the two VALUES clear each other — which is exactly what "labels underneath" asks for.
-     * Shipped default is Below, so that protection is on unless the player moved the words beside the number. */
-    internal static bool LabelBelow = true;
-
     /* A band bite is vertical, and vertical is what reads: a side-kiss between two crowded columns is geometry a player
      * accepts, while a number plunging through the word under the one above it welds two rows into one unusable blob.
      * So the tripwire is depth-based — how far the value box dips into the band — not an overlap fraction, and it needs
@@ -87,7 +81,7 @@ namespace EQLogParser
     /* True when this row's label band is bitten by a neighbour's value box, or its own value would bite a neighbour's. */
     internal static bool LabelBitten(FctHitState hit, List<FctHitState> hits)
     {
-      if (!LabelBelow)
+      if (!FctLayout.LabelsBelow)
       {
         return false;
       }

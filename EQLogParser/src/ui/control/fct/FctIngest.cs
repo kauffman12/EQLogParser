@@ -472,10 +472,10 @@ namespace EQLogParser
       else if (FctMotionStyles.IsRail(style) && stage.Mode is not FctLayoutMode.Bands)
       {
         /*
-         * The parabola in a side scheme is the stream, not a scatter: one centre column at the spawn edge with braided
-         * side columns only for bursts, scored by the same flight maths as every other placement (FctStream). By type
-         * runs the same engine — and needs it: two directions can share a column there, and the flight scoring is what
-         * keeps opposing trains from wearing the same pixels.
+         * The parabola in halves is the stream, not a scatter: one centre column at the spawn edge with braided side columns
+         * only for bursts, scored by the same flight maths as every other placement (FctStream). Split's rails do not come
+         * through here at all — they queue (UseConveyor above) — so what is left is the scheme where two categories share a
+         * half and nobody promised a column of evenly spaced rows.
          */
         hit = FctStream.Place(hit, hits, stage, _rand);
 
@@ -583,14 +583,17 @@ namespace EQLogParser
     }
 
     /*
-     * Which arrangements run as a conveyor: the straight line, in split. Fountain and spray are choreography and keep their
-     * scatter; hold parks numbers where they landed and pulse puts them in cells — none of them is a queue, and none of them
-     * needs one. Bands degrade rails to hold above, so there is nothing to catch here, and halves keeps the flight-scored
-     * stream because its two categories share a half rather than a column: the columns are what make one train per lane a
-     * promise instead of a coincidence (FctStage).
+     * Which arrangements run as a conveyor: any rail, in split — the straight line AND the parabola, which is what the shape
+     * dial actually offers there and what ships by default. In this mode the dial chooses the PATH (straight up the column, or
+     * MSBT's bowing chain), never whether the traffic is ordered: rows that scroll a lane the player reads have to keep their
+     * spacing and one speed, which is FctConveyor's whole subject. Fountain and spray are choreography and keep their scatter;
+     * hold parks numbers where they landed and pulse puts them in cells — none of those is a queue and none needs one. Bands
+     * degrade rails to hold above, so there is nothing to catch there, and halves keeps the flight-scored stream because its two
+     * categories share a HALF rather than a column: owning a column is what makes one train per lane a promise instead of a
+     * coincidence (FctStage).
      */
     private static bool UseConveyor(FctMotionStyle style, FctStage stage) =>
-      style is FctMotionStyle.Straight && stage.Mode is FctLayoutMode.ByType;
+      FctMotionStyles.IsRail(style) && stage.Mode is FctLayoutMode.ByType;
 
     /* A conveyor row's life is a distance, not a duration: it is finished when the lane has carried its own flight past it,
      * which is how a lane under pressure can clear a row in half the nominal time without that row blinking out early in the

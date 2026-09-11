@@ -4,9 +4,10 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * The deliberate rail: one conveyor per column, and everything riding it travels as ONE train.
+   * The deliberate rails: one conveyor per column, and everything riding it travels as ONE train.
    *
-   * This is what split mode's "line" shape is for. Fountain, spray and the free-float styles are choreography — numbers
+   * This is what split mode's rails are for — the straight line and the parabola, which is the shape that ships there; the dial
+   * picks the path up the column, not whether the traffic keeps its spacing. Fountain, spray and the free-float styles are choreography — numbers
    * thrown, arcued, fallen — and a player who picks them has asked for a display that reads as an event. Somebody who
    * picks split + line has asked for the opposite: a column they can read top to bottom without missing a number. That
    * promise cannot be kept by placing rows and giving each its own flight time, which is what the rail used to do: a row
@@ -63,6 +64,12 @@ namespace EQLogParser
     private const double RampUpPerMs = 0.004;
     private const double RampDownPerMs = 0.0008;
 
+    /* A slew limit on top of the proportional ramps: no lane may change its accelerator by more than this in one frame. Without
+       it a burst moves press by 6-7% per frame, which is fast enough for the eye to catch as the column lurching; with it the
+       lane still reaches the floor from nominal inside half a second — the queue holds the traffic meanwhile, so a smoother
+       acceleration costs nothing but a slightly later pickup. */
+    private const double MaxPressStep = 0.03;
+
     /* Dead band, as a fraction of current press: load estimates wobble by a row, and a clock that chases a one-row wobble
        is a lane that never settles. Nothing moves unless the target has genuinely left this much ground. */
     private const double RampDeadBandFrac = 0.05;
@@ -71,6 +78,10 @@ namespace EQLogParser
        count as two seconds of relaxation. Rows re-derive their position from phase every frame, so capping the step costs
        nothing but a slightly longer flight through a stutter. */
     private const double MaxStepMs = 250;
+
+    /* The frame length a pace is quoted against. Named because the tests read a lane's accelerator back out of the pixels it asked for,
+       and that arithmetic has to agree with the harness's clock to the millisecond. */
+    internal const double FrameMs = 16.0;
 
     private readonly Dictionary<int, Lane> _lanes = new();
 
@@ -89,10 +100,13 @@ namespace EQLogParser
         return false;
       }
 
-      /* The taller of the pair plus the gap, because every box hangs down from its own top: separation has to clear whichever
-         of the two is bigger, not their average — an average lets a crit behind a miss lean into it by half the difference. */
+      /* The slot's price: the taller of the pair plus the gap, because every box hangs down from its own top — separation has to clear
+         whichever of the two is bigger, not their average, which lets a crit behind a miss lean into it by half the difference. Rounded UP
+         to whole pixels: a fractional pitch lands glyph baselines a fraction apart from frame to frame, and a column that shimmers by a
+         third of a pixel as it scrolls reads as jitter even though every number moves at exactly the right rate. Up, never down, so the
+         rounding can never eat clearance. */
       var height = FctLayout.TextHeight(hit);
-      var pitch = lane.LastHeight > 0 ? (Math.Max(lane.LastHeight, height) + LaneGapPx) : 0.0;
+      var pitch = lane.LastHeight > 0 ? Math.Ceiling(Math.Max(lane.LastHeight, height) + LaneGapPx) : 0.0;
 
       /* The slot: as far behind the last row enrolled as both of them need. Phase has been moving while that row travelled,
          so an idle lane's next arrival takes the mouth itself (the max), and a busy one gets queued behind the row ahead —
@@ -225,7 +239,7 @@ namespace EQLogParser
         return;
       }
 
-      var step = (gap < 0 ? RampUpPerMs : RampDownPerMs) * lane.StepMs * lane.Press;
+      var step = Math.Min(MaxPressStep, (gap < 0 ? RampUpPerMs : RampDownPerMs) * lane.StepMs * lane.Press);
       lane.Press = gap < 0 ? Math.Max(target, lane.Press - step) : Math.Min(target, lane.Press + step);
     }
 

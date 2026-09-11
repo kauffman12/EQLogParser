@@ -42,9 +42,11 @@ namespace EQLogParser
         {
           _labelSide = value;
 
-          // the engine protects what the player will see: with words beside the numbers, no band exists to defend and
-          // the rails pack looser-by-value only; below (the shipped default) a number biting a word is a collision
-          FctStream.LabelBelow = value is FctLabelSide.Below;
+          /* The engine prices what the player will actually see: with words beside the numbers there is no band to defend
+             (FctStream's label fence stands down) and — the part that shows — a row is only as tall as its number, so every
+             column packs tighter (FctLayout.LabelsBelow). Below, the shipped arrangement, a number biting the word under the
+             one above it is a collision and the label line costs vertical room. */
+          FctLayout.LabelsBelow = value is FctLabelSide.Below;
           _dirty = true;
         }
       }

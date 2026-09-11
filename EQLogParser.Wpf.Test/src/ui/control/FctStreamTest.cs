@@ -220,9 +220,10 @@ namespace EQLogParser
      * readable and short enough that an overlay never keeps typing more than about a second and a half after the last swing;
      * and a lone row on an empty rail still crosses at exactly the configured tempo, pressure untouched.
      *
-     * Read alongside FctConveyorTest, which pins what split's straight line does instead: there the same congestion signal moves
-     * the WHOLE column at once, because that mode promises a readable line and a convoy is the only way to keep one. This rung —
-     * a row's own tempo, fixed at its birth — belongs to the parabola, where numbers are thrown and nobody reads a column.
+     * Read alongside FctConveyorTest, which pins what split does instead: there the same congestion signal moves the WHOLE column
+     * at once, because that mode promises a readable ledger and a convoy is the only way to keep one — at either shape the dial
+     * offers. This rung, a row's own tempo fixed at its birth, belongs to the scheme where numbers share a half instead of owning
+     * a column: halves, where nobody reads a line and flight scoring is what keeps two streams apart.
      */
     [TestMethod]
     public void AFloodSpeedsUpItsOwnNewbornRowsAndDrainsFast()
@@ -230,7 +231,7 @@ namespace EQLogParser
       var ingest = new FctIngest(new Random(4))
       {
         Style = FctMotionStyle.Parabola,
-        Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, false, false),
+        Layout = FctLayoutChoice.Shipped,
       };
 
       var hits = new List<FctHitState>();

@@ -78,6 +78,15 @@ namespace EQLogParser
     public const double SourceLineFactor = 1.25;
 
     /*
+     * Whether "(source)" is drawn under its amount (the shipped arrangement) or inline beside it (FctLabelSide). The canvas owns
+     * the choice and stamps this when settings load, exactly like it stamps the fonts, because it changes what a ROW is
+     * vertically: inline, the words share the value's baseline, so the row is exactly as tall as its number and nothing else —
+     * which is why moving the labels to the side tightens every column on the screen. Below, the label is a second line and has
+     * to be paid for in the same currency the queue spaces rows with, or the next value walks into the word under this one.
+     */
+    internal static bool LabelsBelow = true;
+
+    /*
      * Vertical space a hit occupies below its y anchor, including whatever pop its style gives it: DrawHit scales about a
      * pivot partway down the value, so the largest scale the hit will ever reach is applied to the whole block, which
      * over-reserves slightly and never clips. Reserving one em instead is what let incoming hits — which travel downwards
@@ -91,7 +100,7 @@ namespace EQLogParser
      */
     public static double TextHeight(FctHitState hit) =>
       (hit.ValueFontSize * TextHeightFactor) +
-      (string.IsNullOrEmpty(hit.Source) ? 0 : hit.SourceFontSize * SourceLineFactor);
+      ((LabelsBelow && !string.IsNullOrEmpty(hit.Source)) ? hit.SourceFontSize * SourceLineFactor : 0);
 
     /*
      * Where a lane's column sits across the overlay, in bands — the "what" carrier there: damage toward the middle of the

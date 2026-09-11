@@ -107,7 +107,7 @@
         </Grid>
 
         <TextBlock Grid.Row="3" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label" />
+                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label — but the lines do: beside the amount, a row is only as tall as its number, so every column packs tighter" />
         <ComboBox x:Name="labelSideCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="left" Tag="left" />
           <ComboBoxItem Content="below" Tag="below" />

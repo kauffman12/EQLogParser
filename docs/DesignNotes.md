@@ -1195,8 +1195,8 @@ value box through somebody's label band. A reserve cannot conjure room; only spe
 MSBT's areas *drop* text when they overflow — its throttle was upstream, but the loss was always there.)
 
 The shipped answer is a ladder, and every rung is counted (`FctIngest`'s rail branch, `FctStream`'s congestion block). Read
-with one exception: split's straight line does not use it at all — that mode queues instead of placing, and its rules are
-the next section. What follows governs the parabola, spray and fountain rails.
+with one exception: split's rails do not use it at all, at either shape — that mode queues instead of placing, and its rules are the next
+section. What follows governs the rails of halves, where two categories share a half rather than owning a column, and the styles that scatter.
 
 1. **Birth speed.** A rail at the configured tempo can keep about eight rows legibly apart — mouth, depth stack, braid columns. A
    row born into more crowd than that gets a shorter flight (`FctHitState.RailPress`, Little's law spent on purpose: live count *is*
@@ -1224,10 +1224,12 @@ bites went 7 → 0 and value smears 193 → 1, with the difference paid in count
 left are protected rows choosing crowding over absence, which is exactly the opinion the ladder is supposed to have: *no ordinary
 number is ever painted over another's words.*
 
-### Split's line is a conveyor: one clock per column, spacing bought at entry
+### Split's rails are a conveyor: one clock per column, spacing bought at entry
 
-Split with the **line** shape is not choreography, it is a ledger: somebody chose it because they want to read the column top to
-bottom and miss nothing. That promise cannot be kept by placing rows and giving each its own flight time, which is what the rail
+Split is not choreography, it is a ledger: whoever selects it wants to read the column top to bottom and miss nothing. That promise
+covers **both** rails the mode offers — the straight line, and the parabola that ships there by default. The shape dial chooses the path up
+the column (a straight climb, or MSBT's bow that leaves the column at its widest point and returns); it does not choose whether the traffic
+is ordered, because a lane you are reading has to keep its spacing. Neither shape can therefore keep the promise by placing rows and giving each its own flight time, which is what the rail
 used to do. A row born into a crowd was given a shorter life than the row in front of it (`FctStream.Pressure` stamping
 `RailPress` at birth), so it travelled faster, overtook the row ahead, and the two were drawn through each other for the rest of
 the trip — the same pixels at two speeds, which is why the report reads "some numbers move faster than others" rather than
@@ -1247,15 +1249,25 @@ Three rules, and they are the whole design:
    number changing that moves everybody in the same frame. Position comes from the lane rather than from `ageMs`, which is also
    what lets a congested lane finish a row in half the nominal time without that row blinking out early in mid-column.
 2. **Spacing is bought at entry, once.** A new row pays for its slot behind the last one enrolled: the **taller** of the two plus
-   `LaneGapPx` (10 px — MSBT's line gap is 8; this is a hair wider because it is the mode people read). Height is what
-   `FctLayout.TextHeight` answers, so a crit's own font and a labelled row's source line are both charged — the same lesson
-   `FctCellGrid` learned as inflated bounds. For the uniform column a fight is mostly made of, "taller of the two" *is* one row
-   height plus the gap: exact line spacing, nothing thrown away.
+   `LaneGapPx` (10 px — MSBT's line gap is 8; this is a hair wider because it is the mode people read), rounded **up** to whole pixels so a
+   scrolling column cannot shimmer by a third of a pixel between frames, which reads as a fault even when every value moves at exactly the
+   right rate. Height is what `FctLayout.TextHeight` answers — a crit's own font, and a source line when the labels are drawn below (see
+   *what a row is* just below) — the same lesson `FctCellGrid` learned as inflated bounds. For the uniform column a fight is mostly made of,
+   "taller of the two" *is* one row height plus the gap: exact line spacing, nothing thrown away.
 3. **Congestion scales the lane, never the row.** Load (on-column + waiting) against what the column can hold gives the lane's
    accelerator — Little's law again, spent once per column instead of once per row, floored at `FctStream.PressFloor` so even a
    full emergency still reads as text and clears inside about a second and a half. It ramps: fast to speed up (the traffic is
    already here), five times slower to relax (the load signal is bursty, and a clock that snaps back replays the same burst as a
-   visible stutter).
+   visible stutter), and it is slew-limited as well (`MaxPressStep`, three percent of pace per frame): a lane that lurches looks broken even
+   when its traffic is perfectly spaced, and since the queue behind the mouth holds arrivals anyway, a smooth pickup costs nothing but a
+   slightly later one.
+
+**What a row is tall enough to need.** Where the label sits decides what a row *is*, vertically. With `(source)` drawn under the amount it is
+a second line and must be paid for, or the next value walks into the word under the one above it; drawn beside the amount it shares that
+number's baseline, so the row is exactly as tall as its value and nothing else (`FctLayout.LabelsBelow`, stamped by the canvas when settings
+load). That is why choosing left or right in the label dropdown pulls every column on screen visibly tighter — and why rows with a source and
+rows without one then share one line pitch instead of alternating wide and narrow down the lane. Uniformity, here, is not cosmetics: it is what
+turns "about evenly spaced" into something a reader can scan.
 
 Every row on a lane enters at **one edge** and travels **one distance**, whatever class of number it is: a per-class start — a
 proc's inset from the spawn edge, a slack share off the flight, the depth jitter — spends part of a neighbour's gap before the
@@ -1293,8 +1305,8 @@ moves: identical ticks already fold themselves, categories can be spread over th
 lane (it is a rate, not a lifetime).
 
 Fountain, spray, hold and pulse keep the scatter, the stream and the congestion ladder above — those styles are an event to watch,
-not a column to read, and `UseConveyor` deliberately restricts the queue to split's line (bands degrade rails to hold, so there is
-nothing to catch there). Read `FctConveyorTest` for the invariants as assertions: one rate per frame per lane, gaps that never
+not a column to read, and `UseConveyor` deliberately restricts the queue to split's rails — parabola and line alike, since the dial there
+chooses a path and not a discipline (bands degrade rails to hold, so there is nothing to catch there). Read `FctConveyorTest` for the invariants as assertions: one rate per frame per lane, gaps that never
 change, no pair on a column ever closer than the taller of the two, folded-while-queued duplicates, ordered drain, counted refusal.
 
 ### The odometer: values hang their right edge on the rail

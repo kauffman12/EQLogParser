@@ -21,7 +21,10 @@ namespace EQLogParser
    * Time passes the way it passes on the overlay: FctIngest.PruneExpired is where the lane clock runs, because that is the verb
    * the canvas already calls once a frame. A test that wants a frame asks for one.
    */
+  /* The class pokes a static the whole engine reads (FctLayout.LabelsBelow) to compare the two label arrangements, so it runs on its
+     own rather than alongside tests that price rows for the shipped one. */
   [TestClass]
+  [DoNotParallelize]
   public sealed class FctConveyorTest
   {
     private const double Width = 980;
@@ -458,6 +461,151 @@ namespace EQLogParser
       Assert.IsTrue(sawMiddle, "the flight should have been sampled in its legible middle");
       Assert.IsTrue(sawTail, "and through its fade, so the rule was actually exercised");
       Assert.AreEqual(0, hits.Count, "a row whose flight is spent is gone, however long the lane took to carry it");
+    }
+
+    /* Both shapes split offers are queues, not just the line: the parabola is what ships there, so the ordering promise would mean
+       nothing if it only applied to the shape almost nobody selects. The dial chooses the PATH up the column — straight, or MSBT's
+       bow that leaves the column, bows at half height and comes back — never whether traffic keeps its spacing and its speed. */
+    [TestMethod]
+    public void TheBowingRailKeepsTheSameDisciplineAsTheLine()
+    {
+      var ingest = new FctIngest(new Random(13)) { Style = FctMotionStyle.Parabola, Layout = Split() };
+      var hits = new List<FctHitState>();
+
+      for (var frame = 0; frame < 30; frame++)
+      {
+        var now = frame * 120.0;
+        Swing(ingest, hits, 400 + frame, now, source: "Slash");
+
+        if (frame % 5 == 0)
+        {
+          Swing(ingest, hits, 1700 + frame, now + 30, crit: true);
+        }
+
+        Frame(ingest, hits, now + 120);
+
+        var rows = Visible(hits);
+        for (var i = 0; i < rows.Count; i++)
+        {
+          Assert.IsTrue(rows[i].OnConveyor, "a rail in split rides a lane whatever shape it bows in");
+          for (var j = i + 1; j < rows.Count; j++)
+          {
+            if (rows[i].ConveyorLane != rows[j].ConveyorLane)
+            {
+              continue;
+            }
+
+            var need = Math.Max(FctLayout.TextHeight(rows[i]), FctLayout.TextHeight(rows[j]));
+            Assert.IsTrue(Math.Abs(rows[i].ConveyorQ - rows[j].ConveyorQ) >= need - 1e-6,
+              $"the bowing rail let two rows share pixels at t={now:0}");
+          }
+        }
+      }
+
+      var travelled = Step(ingest, hits, 3720, 3780);
+      Assert.IsTrue(travelled.Count > 2, "the column should still be carrying a run");
+      foreach (var px in travelled)
+      {
+        Assert.AreEqual(travelled[0], px, 0.01, "one lane, one rate — the bow travels with the row, it does not replace the clock");
+      }
+    }
+
+    /* Where the label sits decides what a ROW is, vertically — which is why moving the words beside their amounts pulls every column
+       on the screen closer together. Inline, the words share the value's baseline, so nothing below the number needs paying for; and
+       once that line is out of the height, rows with a source and rows without one measure the SAME, which is what turns "about evenly
+       spaced" into a ledger with a constant line pitch. */
+    [TestMethod]
+    public void LabelsBesideTheirAmountsTightenTheLines()
+    {
+      var shipped = FctLayout.LabelsBelow;
+      try
+      {
+        var under = PitchOf(labeled: true, below: true);
+        var inline = PitchOf(labeled: true, below: false);
+        Assert.IsTrue(inline < under - 9.0,
+          $"a row whose words sit beside it is only as tall as its number: {inline:0.#} px against {under:0.#} px with them underneath");
+
+        // and inline, the mix of rows that a fight actually produces is one height all the way down the column
+        var plain = PitchOf(labeled: false, below: false);
+        Assert.AreEqual(inline, plain, 1e-9, "a row with a source line and a row without one must not space themselves apart");
+      }
+      finally
+      {
+        FctLayout.LabelsBelow = shipped;
+      }
+    }
+
+    /* Two rows entering one after the other, from which the lane's line pitch is read straight off their distance. */
+    private static double PitchOf(bool labeled, bool below)
+    {
+      FctLayout.LabelsBelow = below;
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+
+      Swing(ingest, hits, 500, 0, source: labeled ? "Slash" : null);
+      Swing(ingest, hits, 517, 0, source: labeled ? "Crush" : null);
+
+      return Math.Abs(hits[1].ConveyorQ - hits[0].ConveyorQ);
+    }
+
+    /* Smoothness, as an assertion rather than a feeling: a lane may speed up when its traffic demands it, but it does so by a bounded
+       amount per frame. An accelerator that jumps several percent in one frame reads as the column lurching even though every row is
+       doing exactly what the lane says — and the queue already holds the traffic while the lane eases into its faster pace, so the
+       smoothing costs nothing except a slightly later pickup. */
+    [TestMethod]
+    public void ALaneChangesItsPaceWithoutLurching()
+    {
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+      var msPerPx = FctMotion.ParabolaScrollMsPerPx * FctScale.Time;
+
+      FctHitState? head = null;
+      var previousPress = 0.0;
+      var slowestPress = 1.0;
+      var framesMeasured = 0;
+
+      // arrivals faster than the lane can separate them, at a frame rate worth measuring
+      for (var frame = 1; frame <= 150; frame++)
+      {
+        var now = frame * 16.0;
+        if (frame % 4 == 0)
+        {
+          Swing(ingest, hits, 300 + frame, now - 8);
+        }
+
+        var before = head?.ConveyorQ ?? 0.0;
+        Frame(ingest, hits, now);
+
+        // stay with one row for as long as it is on the column: measuring a different row each frame measures a change of
+        // subject, not a change of pace
+        if (head is null || !hits.Contains(head) || head.ConveyorQ >= head.ConveyorTravel)
+        {
+          head = Visible(hits).OrderByDescending(h => h.ConveyorQ).FirstOrDefault();
+          previousPress = 0.0;
+          continue;
+        }
+
+        var step = head.ConveyorQ - before;
+        if (step <= 0.0)
+        {
+          continue;
+        }
+
+        // the lane's accelerator, read back out of the pixels it asked for: distance per frame against the dialled pace
+        var press = FctConveyor.FrameMs / (msPerPx * step);
+        slowestPress = Math.Min(slowestPress, press);
+        if (previousPress > 0.0)
+        {
+          Assert.IsTrue(Math.Abs(press - previousPress) <= 0.031,
+            $"the column changed its pace by {Math.Abs(press - previousPress):0.###} in one frame at t={now:0}");
+          framesMeasured++;
+        }
+
+        previousPress = press;
+      }
+
+      Assert.IsTrue(framesMeasured > 30, "the flood should have exercised the accelerator for a good stretch of frames");
+      Assert.IsTrue(slowestPress < 0.90, $"a lane this busy should have sped up at all, lowest press {slowestPress:0.###}");
     }
 
     /* The pace is the player's dial and nothing else — the one number a "too fast / too slow" complaint is about. Half the speed
