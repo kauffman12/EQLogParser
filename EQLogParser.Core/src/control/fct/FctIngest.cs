@@ -253,7 +253,9 @@ namespace EQLogParser
       ShowInvulnerable = other.ShowInvulnerable;
     }
 
-    public int LiveCount(List<FctHitState> hits, FctLane lane)
+    /* A count over the caller's list, so it is static: nothing about which ingest is counting decides how many rows of a
+       lane are on screen — only which list is handed in. */
+    public static int LiveCount(List<FctHitState> hits, FctLane lane)
     {
       var live = 0;
       for (var i = 0; i < hits.Count; i++)

@@ -121,6 +121,9 @@ namespace EQLogParser
       FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
       FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
         HealLane, IncomingDamageLane, OutgoingDamageLane),
+      // The same rule the settings parse uses: junk draws the shipped scheme rather than reaching the geometry as garbage —
+      // and here "junk" can only be a value cast into existence, since every reader of FctLayoutMode produces one of the two.
+      _ => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
     };
   }
 
