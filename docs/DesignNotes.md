@@ -1347,6 +1347,13 @@ both rail shapes, not just the bowing one, because alignment does not care which
 Where a region cannot offer a spine and a bend at once, containment wins and every row on that column bows equally
 less, which is a flatter curve rather than a broken one.
 
+The same discipline reads vertically, and it is stated here because the two axes differ on purpose: a row is anchored by its OWN
+height, so every row of a lane enters at one *edge* while their Y0 values legitimately differ. A crit starts lower and a short word
+starts higher, and both rest on the same line — measured at 632.00 for crit, ordinary hit, proc and word alike, with each row's
+travel plus its height equal to that same number. Height is meaning, so it is not flattened to make a field comparison convenient;
+what belongs to the lane is the mouth and the run. The tests assert edges rather than Y0, which is also a note on where an assertion
+is written: one aimed at the wrong field will report a fault in a layout that is correct, and this one did.
+
 The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
 same right-anchored box (`Block` scales its half-width around `ArcedX`'s centre, so scoring and drawing agree to the bit),
 the spawn clamp reserves its margin on the left, and the parabola's bow budget measures the full hang (above). Two
