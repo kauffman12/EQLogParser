@@ -10,6 +10,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 proj
 
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
+- **FCT vocabulary is closed**: two region schemes (`Bands` = the panel's *fountain*, `ByType` = *split*) and four motion styles
+  (`Freeze`, `Fountain`, `Spray`, `Arc`) plus `Straight`, which is arc's rail with the bend taken out. Halves, pulse, the cell grid and the
+  stream were deleted on measurement, not parked: do not resurrect one because a comment mentions it. A new scheme or style arrives with a
+  settings word, a panel entry, and tests — the shape names saved in `settings.ini` are exactly the words the dropdown shows (`arc`, `line`,
+  `spray`, `freeze`; `Straight` excepted, saved as `line`).
 - **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`). Test classes in
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another

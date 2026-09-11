@@ -232,12 +232,14 @@ namespace EQLogParser
     }
 
     /*
-     * Half-width for the tests that space rows against each other about the centre — the stream's scorer, which decides how far apart two
-     * rows in one column have to be. It charges the words when they sit BESIDE their amount, because at that height a wide "(Glormok)" is
+     * Half-width for the tests that space rows against each other about the centre (FctLabelFitTest), which is what the deleted stream's
+     * placement scorer used to be: how far apart two rows in one column have to be. Nothing on the production path asks this question any
+     * more — the conveyor spaces a column by time, not by measured width — but the arithmetic below is the same one the layout charges with.
+     * It charges the words when they sit BESIDE their amount, because at that height a wide "(Glormok)" is
      * exactly as intrusive as a wide number and the row it belongs to no longer reserves a line for it. When they go BELOW they are already
      * paid for vertically (TextHeight charges the second line, so nothing can overlap it), and charging them sideways as well would double-bill
      * the same pixels: rows would braid into neighbouring columns to dodge a label that was never in their way. The column boundary still sees
-     * the overhang — ArcedX and Spawn clamp against BlockFromRail either way, which is what keeps a long word out of the next stream.
+     * the overhang — ArcedX and Spawn clamp against BlockFromRail either way, which is what keeps a long word out of the next column.
      */
     internal static double BlockHalf(FctHitState hit)
     {

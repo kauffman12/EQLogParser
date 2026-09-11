@@ -504,7 +504,7 @@ rather than drawn. A combat number that arrives half a second late describes a s
 reacted to; showing it is worse than losing it, because it lies about what is on global right now.
 
 Two counters make overload visible instead of mysterious: `FctManager.DroppedCount` (queue lost the UI could not
-draw) and `IFctDiagnostics.DroppedCount` on the canvas (hits the lane caps refused). The header shows their sum
+draw) and `FctSkiaCanvas.DroppedCount` on the canvas, which forwards the ingest's (hits the lane caps refused). The header shows their sum
 as "N dropped" only when it is non-zero, so a healthy overlay stays quiet.
 
 ### Parsing costs nothing when nobody is looking
@@ -587,7 +587,7 @@ the target ratio: every tick at 60 Hz, every second at 120 Hz, every second at 1
 threshold produced), every fourth at 240 Hz. Never faster than the display, never a beat pattern, and it re-derives
 itself when the window moves to another monitor mid-fight.
 
-Because smoothness lives in the tail and not the mean, `IFctDiagnostics` reports `MaxFrameMs` (worst frame in the stats
+Because smoothness lives in the tail and not the mean, `FctSkiaCanvas` reports `MaxFrameMs` (worst frame in the stats
 window) alongside the average, plus `DisplayHz` so painted fps can be read against the real refresh rate: 72 fps under a
 144 Hz display is pacing, 60 fps under a 60 Hz display with a 40 ms max frame is overload. The simulation window prints
 both; the gameplay overlay deliberately does not, because a stats line that moves every second is a distraction in a pull.
@@ -885,7 +885,9 @@ event a player watches for and does not care whether it came off a swing or a sp
 proc that crit. Then the pet: its numbers are its own, which is the entire content of "get my pet out of my parse", and its crit stays inside
 its row rather than jumping to mine because crits pool on screen. Only then kind and crit: hits/crits, melee/spell. An ambiguous record would
 answer to two switches at once (mute one, still see it under the other), and an unassigned one would be a number nothing can hide — both read
-to a player as an overlay ignoring its own settings, so `FctShowListTest.EveryRowHasExactlyOneSwitch` pins the enum and the table together.
+to a player as an overlay ignoring its own settings, so two tests hold the line: `FctFilterTest.EachRowAnswersForItselfAlone` (muting one row must
+leave its neighbour visible, which is what an implementation resolving several rows onto one switch fails) and
+`FctDemoTest.Script_CoversEverySwitchInTheShowList` (every row and word has a cue, so every switch can be seen working without a fight).
 
 **Which words those rows use, and why not MSBT's.** "Spell" means every non-melee kind the parser produces — direct damage, bane, damage
 shield, reverse DS, other damage — because that is EverQuest's own vocabulary and MSBT's "skill" is a World of Warcraft word that means
@@ -1031,8 +1033,8 @@ resize maps `Bow` by the x factor exactly like `Arc`, so a number mid-scroll sti
 one place — `FctStage.DefaultMotion`: split → arc, bands → freeze — and the configure row enforces it twice over: the
 arc is never even offered in bands (each mode owns its shape list), and choosing bands while previewing an arc swaps the
 preview to that scheme's default instead of showing a motion ingest is about to degrade anyway. A first-time split user gets
-that default even though nothing was saved: `ParseMotion`'s freeze is the fallback for junk data, not a first-run opinion, and
-`HasStoredMotion` is what tells the two apart.
+that default even though nothing was saved, because an absent key and a junk one land on the same arm of `LoadShape` — and here that is not a
+loss: both mean nobody chose, and both are answered by the scheme's own shape.
 
 Spray needed one constant that measurement forced: `SprayReachFactor`, roughly twice the depth of a band, with height
 capped at what the band offers. Given only the band's own travel budget (`usable * sin(theta)`), spray's horizontal
@@ -1693,9 +1695,11 @@ two sizes side by side is what makes the treatment visible, rather than comparin
 - **Both ends of the fade are eased.** A linear ramp changes slope abruptly at `fadeStart` — steady, then suddenly
   dimming, then gone — and a linear start is a pop. The trade is a slightly steeper mid-fade, which reads as the text
   holding up and then dissolving rather than draining away.
-- **A counting-up total never moves anything else.** A folded DoT stack re-measures its glyphs each frame; letting the
-  widening number also widen `ValueWidth` would widen the clamp band `ArcedX` reads, so the total drifted sideways as it
-  climbed and looked unstable. `FctMotion.IsCountingUp` pins the backend to the widest measurement seen while counting.
+- **A folded row changes its face only when something folds in.** The first design counted the total up, which meant
+  re-measuring glyphs every frame; letting the widening number widen `ValueWidth` too widened the clamp band `ArcedX` reads,
+  so the row drifted sideways as it climbed and looked unstable. Counting was dropped rather than pinned — a folded row shows
+  one face value plus a hit count (`FctText.FormatHit`'s `×N`, asked for by `FctIngest` when a duplicate arrives) — so the
+  width is measured once per visible change and nothing chases it.
 - **The crit halo is shaped like the text it glows behind.** Its sprite is rendered with the same `Hinting = None` as
   the crisp pass; a hinted sprite under unhinted glyphs puts the bloom a fraction off the number.
 

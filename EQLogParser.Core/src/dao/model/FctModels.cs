@@ -58,7 +58,8 @@ namespace EQLogParser
    * (LineModifiersParser) and one that is only ever a spell name — Decapitation is the Berserker two-hander ability,
    * logged as ordinary spell damage ("... by Decapitation XVIII") with no modifier of its own. Each renders as a
    * glyph beside the value in one shared epic-purple family hue: purple answers "what kind of event", which is the
-   * same question the lane palette answers, just at the rare end (docs/DesignNotes.md → Five events get marks).
+   * same question the lane palette answers, just at the rare end
+   * (docs/DesignNotes.md → "The purple family: special attacks wear a glyph, not a bigger number").
    */
   internal enum FctSpecial
   {

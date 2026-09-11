@@ -219,7 +219,7 @@ namespace EQLogParser
           continue;
         }
 
-        Assert.AreEqual(rate, pxPerSecond, 1e-9, $"{lane} crosses at the stream's one rate, not its own");
+        Assert.AreEqual(rate, pxPerSecond, 1e-9, $"{lane} crosses at its lane's one rate, not its own");
       }
     }
 
