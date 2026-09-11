@@ -10,6 +10,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctFramePacerTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     /* Drives the pacer at a nominal refresh, optionally wobbling each interval, and counts how many ticks rasters. */
     private static int PaintAt(double refreshMs, int ticks, double jitterMs = 0, FctFramePacer? pacer = null)
     {

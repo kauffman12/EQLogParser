@@ -5,6 +5,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctLifeControllerTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     [TestMethod]
     public void NoTrafficGetsTheBaseline()
     {

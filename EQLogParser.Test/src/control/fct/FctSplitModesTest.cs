@@ -16,6 +16,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctSplitModesTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private const double Width = 1600;
     private const double Height = 900;
 

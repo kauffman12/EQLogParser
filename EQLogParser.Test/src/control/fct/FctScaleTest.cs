@@ -13,6 +13,9 @@ namespace EQLogParser
   [TestClass]
   public class FctScaleTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     [TestMethod]
     public void ClampSize_HoldsTheRangeAndRescuesJunk()
     {

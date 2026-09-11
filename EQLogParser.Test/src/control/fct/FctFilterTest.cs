@@ -23,6 +23,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctFilterTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private const double Width = 1200;
     private const double Height = 700;
 

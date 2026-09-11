@@ -12,6 +12,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctThresholdTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private const double Width = 980;
     private const double Height = 640;
 

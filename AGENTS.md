@@ -10,6 +10,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 proj
 
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
+- **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`). Test classes in
+  `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
+  `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another
+  (a leaked speed dial was measured moving a row's spine 74 px — a real assertion failing on a machine that ran the same code).
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
 
 ## Post-Implementation Checklist

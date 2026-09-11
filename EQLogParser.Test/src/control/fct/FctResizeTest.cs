@@ -15,6 +15,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctResizeTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     /* Near an offered size it settles on it; between offers it stays exactly where the drag left it. */
     [TestMethod]
     [DataRow(808.0, 566.0, 800.0, 560.0)]

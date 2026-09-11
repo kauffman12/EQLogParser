@@ -17,6 +17,9 @@ namespace EQLogParser
   [DoNotParallelize]
   public sealed class FctLabelFitTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private const double Width = 980;
     private const double Height = 560;
 

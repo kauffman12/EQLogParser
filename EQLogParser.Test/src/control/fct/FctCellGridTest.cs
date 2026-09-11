@@ -16,6 +16,9 @@ namespace EQLogParser
   [TestClass]
   public class FctCellGridTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private const double Width = 980;
     private const double Height = 640;
     private const string Ability = "Crushing Blow";

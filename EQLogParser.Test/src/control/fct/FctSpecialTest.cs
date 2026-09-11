@@ -19,6 +19,7 @@ namespace EQLogParser.Tests
     [TestInitialize]
     public void ResetPlayerScale()
     {
+      FctLayout.LabelSide = FctAmbient.LabelSideDefault;
       FctScale.Text = FctScale.SizeDefault;
       FctScale.Crit = FctScale.CritSizeDefault;
     }

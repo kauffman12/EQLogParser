@@ -17,6 +17,9 @@ namespace EQLogParser
   [TestClass]
   public class FctDemoTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     /* The six verbs DamageLineParser produces for melee, in the base form FctManager.DisplaySource shows (it singularises "Bites"). */
     private static readonly string[] MeleeVerbs = ["Backstab", "Bite", "Claw", "Crush", "Pierce", "Punch", "Slash"];
 

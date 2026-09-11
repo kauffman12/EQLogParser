@@ -8,6 +8,9 @@ namespace EQLogParser
   [TestClass]
   public sealed class FctMotionTest
   {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
     private static FctHitState NewHit(double lifetimeMs = 3500) => new()
     {
       Lane = FctLane.DamageDealt,
