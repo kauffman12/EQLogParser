@@ -235,27 +235,6 @@ namespace EQLogParser
     }
 
     /*
-     * A celled number barely moves, so its swell is the entire announcement: in small, past full size, settle onto it — and
-     * never back below 1.0 afterwards, because a shrinking number reads as leaving before the fade has said so.
-     */
-    [TestMethod]
-    public void PulseSwellsThenRestsAtFullSize()
-    {
-      var hit = NewHit();
-      hit.Style = FctMotionStyle.Pulse;
-
-      Assert.AreEqual(FctMotion.PulseStartScale, FctMotion.ScaleOf(hit, 0), 0.001);
-      Assert.IsTrue(FctMotion.ScaleOf(hit, 60) > FctMotion.PulseStartScale, "it grows from the first frame");
-      Assert.AreEqual(FctMotion.PulsePeakScale, FctMotion.ScaleOf(hit, FctMotion.PulseInMs), 0.001);
-      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, FctMotion.PulseSettleMs), 0.001);
-      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, hit.LifetimeMs - 100), 0.001, "and it rests at full size until the fade");
-
-      // a crit outranks the style: it gets its own deeper swell, not the modest pulse one
-      hit.Blowout = true;
-      Assert.AreEqual(FctMotion.CritScaleInStart, FctMotion.ScaleOf(hit, 0), 0.001);
-      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, FctMotion.CritScaleInMs), 0.001);
-    }
-
     /*
      * Spray and fountain have to differ in flight, not just in where numbers end up, so the shape of the path is pinned.
      * Both axes used to run on one ease curve, which made every spray angle a straight line from origin to apex: the cone

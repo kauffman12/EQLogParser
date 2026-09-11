@@ -339,7 +339,6 @@ namespace EQLogParser
       name?.ToLowerInvariant() switch
       {
         "fountain" => FctMotionStyle.Fountain,
-        "pulse" => FctMotionStyle.Pulse,
         "spray" => FctMotionStyle.Spray,
         "parabola" => FctMotionStyle.Parabola,
         "straight" => FctMotionStyle.Straight,

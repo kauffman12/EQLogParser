@@ -61,17 +61,12 @@ namespace EQLogParser
      * into an assigned cell (FctCellGrid), so the swell carries the announcement — and its overshoot is deliberately modest (12%) because a lane full of pulses
      * shimmering in and out at 30% would be worse than the motion it replaces.
      */
-    public const double PulseStartScale = 0.86;
-    public const double PulsePeakScale = 1.12;
-    public const double PulseInMs = 130;
-    public const double PulseSettleMs = 420;
 
     /*
      * How long a celled (pulse) number takes to slide from its band's single spawn point into the cell it was assigned.
      * Short enough that it is readable in place almost at once, long enough that a burst still reads as one event spreading
      * out. Zero drops numbers straight into their cells, which is what anyone who finds the slide busy should run.
      */
-    public const double PulseSlideMs = 220;
 
     public const double FadeInMs = 160;
 
@@ -176,24 +171,6 @@ namespace EQLogParser
          spawn: outward forever, never back, and it read as nothing in the genre.) */
       var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
 
-      if (hit.Style is FctMotionStyle.Pulse)
-      {
-        /* A number that owns a CELL is clamped by its VALUE alone. The cell is the box the value lives in — the grid already
-           divided the window so those boxes tile it — and the source label beneath it is clamped where it is painted
-           (FctSkiaCanvas.ClipBounds), exactly as a rail row's words are. Charging the label here pushed outer-column numbers
-           inward off their own cells: on a 700-wide overlay the cell at x=99.5 drew at 110.7, which is half a source label of
-           drift (the label being 124 px wide), and it is the same fault the rails carried — words moving the thing they are
-           written beside. A pulse row with no cell still clamps by its whole block, because nothing else is bounding it. */
-        var (halfPeak, halfOther) = hit.Cell >= 0
-          ? FctLayout.BlockFromRail(hit, 0, ScaleAllowance(hit))
-          : (peak, otherSide);
-        var half = Math.Max(halfPeak, halfOther);
-        var loC = hit.SideMin + half;
-        var hiC = hit.SideMax - half;
-        return loC > hiC
-          ? (hit.SideMin + hit.SideMax) / 2.0
-          : Math.Clamp(hit.X0 + lateral, loC, hiC);
-      }
 
       var loR = hit.SideMin + peak; // the whole box fits, growing leftwards from the rail
       var hiR = hit.SideMax - otherSide;
@@ -239,11 +216,6 @@ namespace EQLogParser
         return hit.OnConveyor ? ConveyorBlowoutScale(hit, ageMs) : BlowoutScale(ageMs, hit.LifetimeMs);
       }
 
-
-      if (hit.Style is FctMotionStyle.Pulse)
-      {
-        return PulseScale(ageMs);
-      }
 
       if (hit.FallDist != 0.0)
       {
@@ -307,28 +279,12 @@ namespace EQLogParser
      * agrees with FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. Blowout is not
      * in here any more: the big class swells in from BELOW full size, so it never draws wider than the font that was already measured. */
     private static double ScaleAllowance(FctHitState hit) =>
-      hit.Style is FctMotionStyle.Pulse ? PulsePeakScale : 1.0;
+      1.0; // the pulse pop was the only style that drew wider than its font
 
     /*
      * The pulse swell: in over PulseInMs, back down to full size by PulseSettleMs, then nothing — the eased ends keep it
      * from looking like a screen glitch, and it never returns below 1.0 because a number shrinking away reads as
      * leaving, which is the fade's job.
-     */
-    private static double PulseScale(double ageMs)
-    {
-      if (ageMs < PulseInMs)
-      {
-        return PulseStartScale + ((PulsePeakScale - PulseStartScale) * Ease(ageMs / PulseInMs));
-      }
-
-      if (ageMs < PulseSettleMs)
-      {
-        return PulsePeakScale - ((PulsePeakScale - 1.0) * Ease((ageMs - PulseInMs) / (PulseSettleMs - PulseInMs)));
-      }
-
-      return 1.0;
-    }
-
     /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out. The rest is 1.0 rather than a hold
        above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)

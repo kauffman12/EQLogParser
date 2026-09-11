@@ -187,7 +187,7 @@ namespace EQLogParser
     [TestMethod]
     public void Advance_PlaysTheStyleTheCallerAskedFor()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Pulse, FctMotionStyle.Parabola })
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola })
       {
         var demo = new FctDemo();
         demo.Start(0);

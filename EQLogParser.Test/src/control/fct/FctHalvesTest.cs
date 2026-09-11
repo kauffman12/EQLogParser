@@ -71,7 +71,7 @@ namespace EQLogParser
       var randOld = new Random(77);
       var randNew = new Random(77);
       var lanes = new[] { FctLane.DamageDealt, FctLane.DamageTaken, FctLane.HealingDealt, FctLane.HealingReceived, FctLane.Missed };
-      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray };
+      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray };
 
       for (var i = 0; i < 200; i++)
       {
@@ -106,7 +106,7 @@ namespace EQLogParser
     public void HalvesNumbersStayInsideTheirOwnHalfForTheirWholeLife()
     {
       var rand = new Random(4_242);
-      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray, FctMotionStyle.Parabola };
+      var styles = new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola };
 
       foreach (var style in styles)
       {
@@ -179,94 +179,6 @@ namespace EQLogParser
       // the bounce is a share of the travel already spent: it cannot cross back through the spawn edge
       var depth = Math.Min(Math.Abs(sinking.FallDist), Math.Abs(rising.FallDist));
       Assert.IsTrue(depth > 0 && depth <= FctMotion.IncomingFallsBackFrac * Height, $"bounce depth {depth}");
-    }
-
-    // ---- pulse cells: one block per half, measured against the half ----
-
-    [TestMethod]
-    public void PulseCellsStayInsideTheirHalf()
-    {
-      var stage = Halves(FctRegionSide.Left, false, false);
-      var hits = new List<FctHitState>();
-      var rand = new Random(9);
-
-      for (var i = 0; i < 16; i++)
-      {
-        var incoming = i % 2 == 0;
-        var hit = Spawn(stage, incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, FctMotionStyle.Pulse);
-
-        Assert.IsTrue(FctCellGrid.HasRoom(hit, stage), "a full-size overlay must have room for pulse cells in a half");
-        Assert.IsTrue(FctCellGrid.Assign(hit, hits, stage, now: i * 100.0, out _), "cells are the point of pulse mode");
-        hits.Add(hit);
-
-        var region = stage.RegionFor(incoming);
-        var x = FctMotion.ArcedX(hit, 1.0); // where the slide finishes
-        Assert.IsTrue(x >= region.X + FctLayout.EdgePad - 0.5 && x <= region.X + region.Width - FctLayout.EdgePad + 0.5,
-          $"a cell landed across the seam (x {x}, half {region.X}-{region.X + region.Width})");
-      }
-    }
-
-    [TestMethod]
-    public void TheTwoHalfsNeverShareACell()
-    {
-      // the old halves bug was cells measured against canvas width collapsing onto one place: with per-half grids, every cell
-      // in one half has its own spot and none of them intersect a cell in the other
-      var stage = Halves(FctRegionSide.Left, false, false);
-      var hits = new List<FctHitState>();
-      var rand = new Random(13);
-
-      // eight main cells per half, plus a proc row each: filling both halves is what puts the seam under test
-      for (var i = 0; i < (FctCellGrid.MainColumns * FctCellGrid.MainRows + FctCellGrid.ProcColumns) * 2; i++)
-      {
-        var incoming = i % 2 == 0;
-        var hit = Spawn(stage, incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, FctMotionStyle.Pulse,
-          proc: i >= FctCellGrid.MainColumns * FctCellGrid.MainRows);
-        Assert.IsTrue(FctCellGrid.Assign(hit, hits, stage, now: i * 100.0, out _));
-        hits.Add(hit);
-      }
-
-      for (var a = 0; a < hits.Count; a++)
-      {
-        for (var b = a + 1; b < hits.Count; b++)
-        {
-          var aHit = hits[a];
-          var bHit = hits[b];
-          if (aHit.Incoming == bHit.Incoming)
-          {
-            continue;   // same half, different cells by construction of the grid; this test is about the seam
-          }
-
-          Assert.IsFalse(Intersects(BlockOf(aHit), BlockOf(bHit)), "a block from each half shares a spot");
-        }
-      }
-    }
-
-    [TestMethod]
-    public void ReseatingKeepsCellsInsideTheirNewHalf()
-    {
-      var oldStage = Halves(FctRegionSide.Left, false, false, w: 980, h: 640);
-      var newStage = Halves(FctRegionSide.Left, false, false, w: 720, h: 520);
-      var hits = new List<FctHitState>();
-      var rand = new Random(17);
-
-      for (var i = 0; i < 8; i++)
-      {
-        var incoming = i % 2 == 0;
-        var hit = Spawn(oldStage, incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, FctMotionStyle.Pulse);
-        Assert.IsTrue(FctCellGrid.Assign(hit, hits, oldStage, now: i * 100.0, out _));
-        hits.Add(hit);
-      }
-
-      FctResize.Rescale(hits, 980, 640, newStage);
-
-      for (var i = 0; i < hits.Count; i++)
-      {
-        var hit = hits[i];
-        var region = newStage.RegionFor(hit.Incoming);
-        var x = FctMotion.ArcedX(hit, 1.0);
-        Assert.IsTrue(x >= region.X + FctLayout.EdgePad - 0.5 && x <= region.X + region.Width - FctLayout.EdgePad + 0.5,
-          $"a re-seated cell crossed the seam (x {x})");
-      }
     }
 
     // ---- placement: the search walks the half, not the canvas ----

@@ -160,27 +160,6 @@ namespace EQLogParser
     }
 
     /*
-     * A pulse grows where it stands, so its spawn point has to leave room for the swell instead of for unscaled text.
-     * Nothing travels here, which makes this the one style whose clipping would be pure arithmetic: reserve smaller than
-     * the peak and every pulse is cut off at its widest frame.
-     */
-    [TestMethod]
-    public void PulseSpawnsLeaveRoomForTheirOwnSwell()
-    {
-      var rand = new Random(11);
-
-      for (var i = 0; i < 200; i++)
-      {
-        var hit = Spawn(FctLane.DamageDealt, incoming: false, rand, source: "Crushing Blow", style: FctMotionStyle.Pulse);
-
-        Assert.AreEqual(0.0, hit.Rise, "a pulse travels nowhere, so only its scale can leave the band");
-        Assert.IsTrue(FctLayout.TextReserve(hit) > (hit.ValueFontSize * FctLayout.TextHeightFactor),
-          $"the reserve must carry the swell (got {FctLayout.TextReserve(hit):0.#} for a {hit.ValueFontSize:0} px value)");
-        Assert.IsTrue(hit.Y0 + FctLayout.TextReserve(hit) <= (Height * FctLayout.GapTopFrac) + 0.001,
-          $"its widest frame crosses into the protected strip ({hit.Y0 + FctLayout.TextReserve(hit):0.#} > {Height * FctLayout.GapTopFrac:0.#})");
-      }
-    }
-
 
     /*
      * Procs belong to the fight but not to the number the player is reading, so they start in a different row of the
@@ -333,7 +312,7 @@ namespace EQLogParser
     [TestMethod]
     public void NothingStartsFlushAgainstTheWindowEdge()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Pulse })
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray })
       {
         for (var seed = 1; seed < 40; seed++)
         {

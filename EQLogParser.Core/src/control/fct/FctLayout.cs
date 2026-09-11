@@ -321,7 +321,7 @@ namespace EQLogParser
     /* The largest a hit's block ever gets beyond its measured font. Only the pulse overshoots: the big class carries its size in the
        font itself (its dial, applied once at birth) and its pop swells in from below, so there is nothing left to price above 1.0. */
     private static double PeakScaleOf(FctHitState hit) =>
-      hit.Style is FctMotionStyle.Pulse ? FctMotion.PulsePeakScale : 1.0;
+      1.0; // no shipped style overshoots its measured font: only the deleted pulse pop ever did
 
     /*
      * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest
@@ -380,13 +380,7 @@ namespace EQLogParser
          cannot carry; this keeps the ones it accepted inside their territory at every scale they will ever draw at. */
       var peak = PeakScaleOf(hit);
       double reachLeft, reachRight;
-      if (hit.Style is FctMotionStyle.Pulse)
-      {
-        // a pulsed value sits IN its cell, so the block reaches both ways from the cell centre by whichever side is wider
-        var centred = BlockAboutCentre(hit, hit.SourceWidth, peak);
-        reachLeft = reachRight = Math.Max(centred.Left, centred.Right);
-      }
-      else if (FctMotionStyles.IsRail(hit.Style))
+      if (FctMotionStyles.IsRail(hit.Style))
       {
         /* One spine per column, placed for the widest AMOUNT the lane can roll and for nothing else — not this row's width, and emphatically not
          * this row's WORDS. Two numbers arriving in the same column routinely carry different labels (one hit "(Crush)", another "(Ethereal Fire XIII
@@ -547,13 +541,6 @@ namespace EQLogParser
 
     private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable, double bowDir)
     {
-      if (hit.Style is FctMotionStyle.Pulse)
-      {
-        // the whole style: appear, swell, settle and fade exactly where it landed
-        hit.Rise = 0;
-        hit.Arc = 0;
-        return;
-      }
 
       if (hit.Style is FctMotionStyle.Spray)
       {

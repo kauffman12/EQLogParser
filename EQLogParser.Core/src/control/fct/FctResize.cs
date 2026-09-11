@@ -131,11 +131,6 @@ namespace EQLogParser
           hit.TextDirty = true;
         }
 
-        if (hit.Cell >= 0)
-        {
-          FctCellGrid.Reseat(hit, stage);
-          continue;
-        }
 
         hit.X0 *= sx;
         hit.Y0 = Math.Clamp(y0, hit.BandMinY, Math.Max(hit.BandMinY, hit.BandMaxY));

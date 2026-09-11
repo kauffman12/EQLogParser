@@ -36,7 +36,6 @@ namespace EQLogParser
      * Index of this hit's cell in its band's fixed grid, or -1 while it floats. Only pulse mode allocates cells; the pool
      * is picked by band and by whether the hit is a proc, so this one number names the slot. FctCellGrid owns it.
      */
-    public int Cell = -1;
 
     /* How this hit moves over its life: travel, fountain, pulse in place, or spray. Copied from the canvas's current
      * setting by ingest, then read by FctLayout for geometry and by FctMotion for scale. A hit keeps the style it was

@@ -30,7 +30,6 @@ namespace EQLogParser
      * overlay out of the way, for a second small overlay over the target's cast bar, or for healing where motion adds
      * nothing. Cheapest style to draw, and the only one that reserves screen space — static text cannot overlap its own
      * numbers the way free-floating text does (FctCellGrid). */
-    Pulse,
 
     /* A random cone per hit — height traded for lateral distance — then gravity (mirrored on the incoming band).
      * Diablo/PoE-ish: repeated hits fan out instead of stacking into one unreadable column, and the spread itself

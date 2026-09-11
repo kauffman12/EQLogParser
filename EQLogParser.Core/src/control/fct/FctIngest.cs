@@ -343,13 +343,6 @@ namespace EQLogParser
         ? FctMotionStyle.Hold
         : Style;
 
-      /*
-       * Pulse mode allocates cells, and cells are its capacity: folding a number into a running total that lives in some
-       * other cell would hide the fold, and the lane cap would drop hits that a free cell has room for. So the absorb and
-       * overflow paths below belong to the travelling styles only.
-       */
-      var celled = style is FctMotionStyle.Pulse;
-
       /* Split's straight line is a conveyor rather than a placement problem (FctConveyor): one clock per column, spacing
          bought at entry, congestion scaled for the whole lane at once. It replaces the rail's congestion ladder below, so
          it is decided here, where the two other capacity rules (folding, the lane cap) can see which of them applies. */
@@ -357,7 +350,7 @@ namespace EQLogParser
 
       if (fixedText is null)
       {
-        if (!celled && !crit && ShouldAbsorb(pooled, periodic) &&
+        if (!crit && ShouldAbsorb(pooled, periodic) &&
             TryAbsorb(hits, pooled, incoming, proc, periodic, special, source, value, now))
         {
           return null;
@@ -368,7 +361,7 @@ namespace EQLogParser
          row has no slot to be taken — its place in the queue was bought at entry, or it is waiting behind the mouth for it —
          so eviction would steal a visible number for an invisible one. The conveyor's own backlog ceiling decides capacity
          there, and every loss still counts in DroppedCount. */
-      if (!celled && !conveyor && LiveCount(hits, pooled) >= LaneCap)
+      if (!conveyor && LiveCount(hits, pooled) >= LaneCap)
       {
         /*
          * The lane is full. A duplicate of something already on screen was folded away above — that attempt does not care
@@ -431,28 +424,7 @@ namespace EQLogParser
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
-      if (celled)
-      {
-        /*
-         * Cells when there is room for a grid; on a very small overlay FctCellGrid has nothing to offer and the hit keeps the
-         * static placement FctLayout gave it. Losing the layout is fine, losing the number is not.
-         */
-        if (FctCellGrid.HasRoom(hit, stage))
-        {
-          if (!FctCellGrid.Assign(hit, hits, stage, now, out var bumped))
-          {
-            /* Every cell in the block is held by a crit and this is not one: drop it rather than erase a bigger number. */
-            DroppedCount++;
-            return null;
-          }
-
-          if (bumped is not null)
-          {
-            evicting?.Invoke(bumped);
-          }
-        }
-      }
-      else if (conveyor)
+      if (conveyor)
       {
         /*
          * The row enters at its column's mouth and nowhere else: no search, no depth ladder, no emergency column, because
@@ -478,7 +450,7 @@ namespace EQLogParser
            windows, statistics, anything that asks how long this number will be around. Its position is never read from it. */
         FinalizeRailTempo(hit);
       }
-      else if (FctMotionStyles.IsRail(style) && stage.Mode is not FctLayoutMode.Bands)
+      else if (FctMotionStyles.IsRail(style))
       {
         /*
          * The parabola in halves is the stream, not a scatter: one centre column at the spawn edge with braided side columns

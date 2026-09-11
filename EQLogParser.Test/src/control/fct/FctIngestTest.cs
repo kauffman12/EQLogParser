@@ -489,35 +489,6 @@ namespace EQLogParser
     }
 
     /*
-     * Pulse is the static style, and static text lives or dies by not overlapping, so every number gets a cell of its own:
-     * distinct slots, no two numbers resting in the same place, nothing left moving once it has arrived. Asserted through
-     * the ingest because allocation is what makes the style safe; the raw geometry has its own file (FctCellGridTest) and
-     * the swell is pinned in FctMotionTest.
-     */
-    [TestMethod]
-    public void PulseStyleGivesEveryNumberItsOwnCellAndThenStops()
-    {
-      var ingest = NewIngest();
-      ingest.Style = FctMotionStyle.Pulse;
-      var resting = new List<(double X, double Y)>();
-
-      for (var i = 0; i < 6; i++)
-      {
-        var hit = ingest.Accept(_hits, FctLane.DamageDealt, 5000 - (i * 40), "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, i * 60);
-
-        Assert.IsNotNull(hit, "distinct values must not fold into each other");
-        Assert.IsTrue(hit.Cell >= 0, "pulse mode allocates a cell per number");
-        Assert.AreEqual(0.0, hit.FallDist, "there is nothing to fall from");
-        Assert.AreEqual(FctMotion.PulseSlideMs, hit.MotionMs, 0.001, "the slide into the cell is the whole animation");
-
-        var rest = (X: FctMotion.ArcedX(hit, 1), Y: FctMotion.RaisedY(hit, 1));
-        Assert.IsFalse(resting.Contains(rest), $"number {i} rests on top of an earlier one");
-        resting.Add(rest);
-
-        Assert.AreEqual(rest.Y, FctMotion.RaisedY(hit, FctMotion.Progress(hit, hit.LifetimeMs)), 0.001, "a number being read must not creep");
-      }
-    }
-
     /*
      * Spray exists to fan repeated hits out instead of stacking them into one unreadable column, and it does that by flying
      * sideways, which is what is measured here — every style gets a gentle sway, so total coverage is not the question. It used
@@ -545,7 +516,7 @@ namespace EQLogParser
     [TestMethod]
     public void EveryMotionStyleKeepsTheStripClearAndTheWindowInside()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Pulse, FctMotionStyle.Spray, FctMotionStyle.Parabola })
+      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola })
       {
         var coverage = Sweep(style);
 
@@ -603,7 +574,7 @@ namespace EQLogParser
         Assert.AreEqual(window * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
       }
 
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Pulse })
+      foreach (var style in new[] { FctMotionStyle.Hold })
       {
         var ingest = NewIngest();
         ingest.Style = style;
