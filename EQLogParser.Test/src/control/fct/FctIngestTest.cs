@@ -483,8 +483,8 @@ namespace EQLogParser
       for (var t = 0.0; t <= 1.0; t += 0.05)
       {
         var y = FctMotion.RaisedY(outgoing, t);
-        Assert.IsTrue(y + FctLayout.TextReserve(outgoing) <= gapTop + 0.001,
-          $"outgoing hit fell into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextReserve(outgoing):0.#}, gap top {gapTop:0.#})");
+        Assert.IsTrue(y + FctLayout.TextHeight(outgoing) <= gapTop + 0.001,
+          $"outgoing hit fell into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextHeight(outgoing):0.#}, gap top {gapTop:0.#})");
       }
     }
 
@@ -715,8 +715,8 @@ namespace EQLogParser
           minX = Math.Min(minX, x - (hit.ValueWidth / 2.0));
           maxX = Math.Max(maxX, x + (hit.ValueWidth / 2.0));
 
-          Assert.IsTrue(y + FctLayout.TextReserve(hit) <= gapTop + 0.001,
-            $"{style} put text into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextReserve(hit):0.#}, gap top {gapTop:0.#})");
+          Assert.IsTrue(y + FctLayout.TextHeight(hit) <= gapTop + 0.001,
+            $"{style} put text into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextHeight(hit):0.#}, gap top {gapTop:0.#})");
         }
       }
 

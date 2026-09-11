@@ -59,7 +59,7 @@ namespace EQLogParser
           for (var t = 0.0; t <= 1.0; t += 0.05)
           {
             var y = FctMotion.RaisedY(hit, t);
-            var bottom = y + FctLayout.TextReserve(hit); // y is the top of the value text
+            var bottom = y + FctLayout.TextHeight(hit); // y is the top of the value text
 
             if (incoming)
             {
@@ -151,7 +151,7 @@ namespace EQLogParser
 
           for (var t = 0.0; t <= 1.0; t += 0.05)
           {
-            var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextReserve(hit);
+            var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextHeight(hit);
             Assert.IsTrue(bottom <= Height - FctLayout.EdgePad + 0.001,
               $"text clipped at the bottom edge at t={t:0.00} (bottom {bottom:0.#}, canvas {Height})");
           }
@@ -222,8 +222,8 @@ namespace EQLogParser
                 source: "Crushing Blow", style: style, proc: proc);
 
               Assert.IsTrue(hit.Y0 >= FctLayout.EdgePad - 0.001, $"text ran off the top ({hit.Y0:0.#})");
-              Assert.IsTrue(hit.Y0 + FctLayout.TextReserve(hit) <= TinyH - FctLayout.EdgePad + 0.001,
-                $"text ran off the bottom ({hit.Y0 + FctLayout.TextReserve(hit):0.#} of {TinyH})");
+              Assert.IsTrue(hit.Y0 + FctLayout.TextHeight(hit) <= TinyH - FctLayout.EdgePad + 0.001,
+                $"text ran off the bottom ({hit.Y0 + FctLayout.TextHeight(hit):0.#} of {TinyH})");
             }
           }
         }

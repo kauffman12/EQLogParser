@@ -8,10 +8,10 @@ namespace EQLogParser
   /*
    * A source name is drawn, and it is spaced for: those have to be the same string in the same place. Geometry used to charge the digits
    * alone, so an inline "(Glormok)" was painted outward from a box nobody had measured — across the seam into the neighbouring column at
-   * 980 px, and further into it the wider the words or the narrower the window. FctLayout.BlockAboutCentre is where the drawn block is now
-   * defined (amount, event glyph, label wherever the label side put it) and FctLayout.FitSource is where a name is shortened — only when its
-   * column genuinely cannot carry it, which is why the same name survives whole at a smaller font or in a wider window, and why nothing is
-   * cut that fits.
+   * 980 px, and further into it the wider the words or the narrower the window. FctLayout.BlockFromRail is where production defines the drawn
+   * block — once, from the odometer rail every horizontal clamp lives on (amount, event glyph, label wherever the label side put it) — and FctLayout.FitSource is
+   * where a name is shortened — only when its column genuinely cannot carry it, which is why the same name survives whole at a smaller font or in a wider
+   * window, and why nothing is cut that fits.
    */
   [TestClass]
   [DoNotParallelize]
@@ -71,11 +71,11 @@ namespace EQLogParser
 
         var hit = new FctHitState { ValueWidth = 60, IconAllowance = 0 };
 
-        var (wideLeft, wideRight) = FctLayout.BlockFromRail(hit, 200, 1.0);
+        var (wideLeft, wideRight) = FctLayout.BlockFromRail(hit, 200);
         Assert.AreEqual(30 + 100, wideLeft, "half the amount to its centre, then half the words past that");
         Assert.AreEqual(100 - 30, wideRight, "and as much reach out past the amount's right edge, measured from there and not from the rail");
 
-        var (narrowLeft, narrowRight) = FctLayout.BlockFromRail(hit, 50, 1.0);
+        var (narrowLeft, narrowRight) = FctLayout.BlockFromRail(hit, 50);
         Assert.AreEqual(60.0, narrowLeft, "words narrower than their amount hang nothing outside it");
         Assert.AreEqual(0.0, narrowRight, "which is a label hiding under the damage number, and costing the column nothing");
       }
@@ -104,7 +104,7 @@ namespace EQLogParser
 
         foreach (var hit in new[] { longLabel, shortLabel })
         {
-          var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+          var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
           Assert.IsTrue(hit.X0 - left >= hit.SideMin - 1 && hit.X0 + right <= hit.SideMax + 1,
             $"{hit.Source} and its label have to stay in the column: {hit.X0 - left}..{hit.X0 + right} against [{hit.SideMin}, {hit.SideMax}]");
         }
@@ -176,8 +176,8 @@ namespace EQLogParser
       foreach (var hit in new[] { normal, crit })
       {
         var rail = FctMotion.ArcedX(hit, 0.5);
-        // measured at the scale the layout charged for, which is what a resize mid-flight cannot change under it
-        var (left, _) = FctLayout.BlockFromRail(hit, hit.SourceWidth, FctLayout.TextReserve(hit) / FctLayout.TextHeight(hit));
+        // priced at the size the row draws at: nothing on screen is ever drawn wider than the font it was measured with
+        var (left, _) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
         Assert.IsTrue(rail - left >= hit.SideMin - 1,
           $"the vertex stays home for {hit.FormattedValue} (block from {rail - left:0}, wall at {hit.SideMin:0})");
         Assert.IsTrue(rail <= hit.SideMax + 1, $"and inside the inner wall ({rail:0} / {hit.SideMax:0})");
@@ -212,18 +212,18 @@ namespace EQLogParser
         var gap = FctLayout.LabelGap(hit);
 
         FctLayout.LabelSide = FctLabelSide.Right;
-        var right = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+        var right = FctLayout.BlockFromRail(hit, hit.SourceWidth);
         Assert.AreEqual(0.0, right.Left - (hit.ValueWidth + hit.IconAllowance), 1e-9, "the value's own box still hangs left of the rail");
         // measured from the rail, which IS the value's right edge: the words add their gap and themselves, and nothing else
         Assert.AreEqual(gap + hit.SourceWidth, right.Right, 1e-9, "and the words are the whole of that new reach to the right");
 
         FctLayout.LabelSide = FctLabelSide.Left;
-        var left = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+        var left = FctLayout.BlockFromRail(hit, hit.SourceWidth);
         Assert.AreEqual(0.0, left.Right, 1e-9, "nothing reaches past the rail when the words went the other way");
         Assert.IsTrue(left.Left > right.Left + hit.SourceWidth, "the side that already hung left of the rail now hangs further");
 
         FctLayout.LabelSide = FctLabelSide.Below;
-        var below = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+        var below = FctLayout.BlockFromRail(hit, hit.SourceWidth);
         Assert.AreEqual(below.Left - hit.ValueWidth - hit.IconAllowance, Math.Max(0, (hit.SourceWidth - hit.ValueWidth) / 2.0), 1e-9,
           "a second line overhangs its amount on both sides by half the difference");
       }
@@ -268,7 +268,7 @@ namespace EQLogParser
         var widest = 0.0;
         foreach (var hit in hits)
         {
-          widest = Math.Max(widest, FctLayout.BlockHalf(hit) - (hit.ValueWidth / 2.0));
+          widest = Math.Max(widest, BlockHalf(hit) - (hit.ValueWidth / 2.0));
         }
 
         Assert.IsTrue(widest > 4, $"a label wider than its number should have been charged for, saw {widest:0.#} px of extra reach");
@@ -338,10 +338,51 @@ namespace EQLogParser
        this narrow keeps its three letters and lets the clamp centre it, which is a documented degradation rather than a silent truncation. */
     private static void AssertBlockFits(FctHitState hit, double room)
     {
-      var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+      var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
       var inner = hit.SourceLabel![1..^1].TrimEnd('\u2026').Length;
       Assert.IsTrue(left + right <= room + 1e-9 || inner <= 3,
         $"{hit.SourceLabel} still needs {(left + right):0.#} px of a {room:0} px column and is not at the floor yet");
+    }
+
+    /* How far a row's drawn block reaches either side of its value's CENTRE — the same terms FctLayout.BlockFromRail charges with (measured box,
+       event glyph, label wherever the label side put it), read about the middle instead of the rail. Production has not asked this question since
+       the deleted stream scored placements with it; the tests still do, because "would these two rows overlap" and "is this row inside its column"
+       are centre-anchored questions, and FctMotion.ArcedX is what puts a row there. */
+    private static (double Left, double Right) BlockAboutCentre(FctHitState hit, double sourceWidth)
+    {
+      var half = hit.ValueWidth / 2.0;
+      var left = half + hit.IconAllowance;
+      var right = half;
+
+      if (sourceWidth > 0)
+      {
+        var words = sourceWidth;
+        if (FctLayout.LabelsBelow)
+        {
+          // a second line is centred under its amount, so it can overhang either side by half the difference between the two
+          left = Math.Max(left, words / 2.0);
+          right = Math.Max(right, words / 2.0);
+        }
+        else if (FctLayout.LabelSide is FctLabelSide.Left)
+        {
+          left = half + FctLayout.LabelGap(hit) + words;
+        }
+        else
+        {
+          right = half + FctLayout.LabelGap(hit) + words;
+        }
+      }
+
+      return (left, right);
+    }
+
+    /* Half-width for spacing rows against each other in one column: the words count sideways only when they sit BESIDE their amount, because a
+       label drawn below already paid for its room vertically (TextHeight charges the second line) and charging it sideways too would bill the same
+       pixels twice. The column boundary still sees the overhang — ArcedX clamps against FctLayout.BlockFromRail either way. */
+    private static double BlockHalf(FctHitState hit)
+    {
+      var (left, right) = BlockAboutCentre(hit, FctLayout.LabelsBelow ? 0 : hit.SourceWidth);
+      return Math.Max(left, right);
     }
 
     private static void AssertBlockInsideItsTerritory(FctHitState hit, FctStage stage)
@@ -351,7 +392,7 @@ namespace EQLogParser
       // the clamp band is the territory less its edge pad; SideMin/SideMax carry it (FctLayout.Refit)
       Assert.AreEqual(region.X + FctLayout.EdgePad, hit.SideMin, 1e-6, "the row's band belongs to its own column");
 
-      var (left, right) = FctLayout.BlockAboutCentre(hit, hit.SourceWidth, 1.0);
+      var (left, right) = BlockAboutCentre(hit, hit.SourceWidth);
       for (var t = 0.0; t <= 1.0; t += 0.1)
       {
         var centre = FctMotion.ArcedX(hit, t);

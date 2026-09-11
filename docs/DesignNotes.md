@@ -1201,8 +1201,8 @@ Three rules, and they are the whole design:
    to add 10 px above the reserve (MSBT's own is 8) and the two together put roughly a fifth of the column in empty air, which is what made four ledger
    columns scroll while they still had room for the fight: the reserve IS the gap now. It is 1.2 em of leading around glyphs that need about 1.05
    (`TextHeightFactor`, shortened from the borrowed web value of 1.35), so two neighbours are separated by the slack inside their own boxes, which is real
-   and invisible; the halos that meet between them are translucent blooms brightening a seam rather than numbers hiding numbers, and a class that swells on
-   arrival still pays at peak (`TextReserve`). For the
+   and invisible; the halos that meet between them are translucent blooms brightening a seam rather than numbers hiding numbers. A class that swells on arrival
+   carries that size in its font, so the height it pays for is the height it draws (`FctLayout.TextHeight`). For the
    uniform column a fight is mostly made of, "taller of the two" *is* one row height: exact line spacing, nothing thrown away.
 3. **Congestion scales the lane, never the row.** Load (on-column + waiting) against what the column can hold gives the lane's
    accelerator — Little's law again, spent once per column instead of once per row, floored at `FctConveyor.PressFloor` so even a
@@ -1315,12 +1315,13 @@ its neighbour. The genre cannot make that mistake. NAG's inline label is another
 (renderer.js), so the row grows to hold it and the layout moves everything else out of the way; MSBT stamps one text object per line, so a
 line is exactly as wide as what it stamped. Both reserve what they draw. Ours drew into room that had never been asked for.
 
-`FctLayout.BlockAboutCentre` is now where the drawn block is defined, once: the value's box at its peak scale, the special-event glyph hanging
-outside its left edge, and the source label wherever the label side put it. Everything that tests a row against a wall or another row charges
-these numbers — (`Spawn`'s clamp, `ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), the arc's bow
-budget, and the row's own half-width. The reach is deliberately asymmetric because the odometer above makes it so: with the rail being the
-value's *right* edge, a label on the left deepens a reach that side already had, while a label on the right opens one the row did not have at
-all. Translating that block from a centre to a rail is therefore done per label side (`BlockFromRail`), and the case that matters most is the one
+`FctLayout.BlockFromRail` is where the drawn block is defined, once: the value's box at the size it draws, the special-event glyph hanging outside its
+left edge, and the source label wherever the label side put it. Everything that tests a row against a wall charges these numbers — `Spawn`'s clamp,
+`ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), and the arc's bow budget. Reading the same block about the
+value's *centre* rather than its rail is a question only the tests still ask: row-against-row spacing went with the deleted stream, whose placement scorer
+was the last production caller of it, and the conveyor spaces a column by time rather than by measured width. The reach is deliberately asymmetric because
+the odometer above makes it so: with the rail being the value's *right* edge, a label on the left deepens a reach that side already had, while a label on the
+right opens one the row did not have at all. Each label side is translated on its own terms, and the case that matters most is the one
 that was got wrong first: a second line is centred under its **amount**, whose centre sits half a width left of the rail, so it overhangs the
 value's own edges by half the difference — not the rail's. Charging `words/2` against the rail instead asked a long spell name for 86 px of
 clearance and `"(Crush)"` for none, which is how a crit came to be drawn 46 px away from the hits under it, out of line with the column it was
@@ -1417,7 +1418,7 @@ Re-scaling choreography, layout budgets and the adaptive controller to make that
 plus re-measuring everything measured at 1.0.
 
 Size is ±50 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
-lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextReserve`, the adaptive lifetime under load — and half again in
+lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextHeight`, the adaptive lifetime under load — and half again in
 either direction is where that stops describing the feature: past it, damage and healing columns begin to occupy each other at ordinary window sizes.
 Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
 
@@ -1631,7 +1632,7 @@ presentation decision and a ratio as a design one.
 Bigger type also made an existing bug impossible to miss: `FctHitState.Y0` is the **top** of the value text, and layouts
 that reserved one em ran descenders and the entire source line off the bottom of the overlay — permanently, because
 incoming hits travel downwards and spend their last seconds against the bottom edge. Every vertical bound now reserves
-`FctLayout.TextReserve(hit)`: value height (`TextHeightFactor`), plus the source line's height when the hit carries one,
+`FctLayout.TextHeight(hit)`: value height (`TextHeightFactor`), plus the source line's height when the hit carries one,
 and nothing else: no shipped style draws above its measured font (the crit class carries its size in the font and swells in from below), so
 this is a leading factor rather than a peak-scale envelope. It is a factor rather than measured glyph metrics for the same reason
 `EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`

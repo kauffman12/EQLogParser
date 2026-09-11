@@ -135,10 +135,9 @@ namespace EQLogParser
      * edge, so a 950 and a 12,040 in the same column line their ones digit up under each other instead of their
      * middles — Mik's "right-justify" text alignment, the one every parse-heavy player turns on. It ships as the
      * hidden default with no knob: centre-aligning a number column is never what anyone wants. The clamp keeps the
-     * WHOLE drawn box (at its peak scale) left of SideMax and right of SideMin — the box grows LEFTWARDS out of the
-     * rail, which is also how a crit blowout pops: the rail holds, the number punches wider. `scale` is the frame's
-     * blowout so the returned centre tracks the box that is actually being drawn; placement scoring passes the same
-     * value it scores with, so the odometer the renderer draws and the one the collision cost sees are one number.
+     * WHOLE drawn box left of SideMax and right of SideMin — the box grows LEFTWARDS out of the rail, which is also how a crit blowout pops: the rail
+     * holds and the number punches wider, so the animated scale belongs to the renderer (FctMotion.ScaleOf) and never to this answer. Placement scoring
+     * calls the same function the canvas does, so the odometer the player sees and the one the collision cost measures are one number.
      *
      * Degenerate case — a label wider than its territory degrades to the territory's middle instead of throwing.
      */
@@ -147,7 +146,7 @@ namespace EQLogParser
       /* The drawn block's reach at its widest, from the rail: the value's own box, the reserved special-event glyph, and the source label
          wherever the label side put it — all of it leaves the rail, none of it moves the rail itself. Clamping against the digits alone is what
          let an inline "(Glormok)" be painted across the column boundary (FctLayout.BlockFromRail). */
-      var (peak, otherSide) = FctLayout.BlockFromRail(hit, hit.SourceWidth, ScaleAllowance(hit));
+      var (blockLeft, otherSide) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
 
       /* The bow is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
@@ -158,7 +157,7 @@ namespace EQLogParser
       var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
 
 
-      var loR = hit.SideMin + peak; // the whole box fits, growing leftwards from the rail
+      var loR = hit.SideMin + blockLeft; // the whole box fits, growing leftwards from the rail
       var hiR = hit.SideMax - otherSide;
       if (loR > hiR)
       {
@@ -260,12 +259,6 @@ namespace EQLogParser
       hit.DisplayText = text;
       hit.TextDirty = true;
     }
-
-    /* Widest the drawn text ever gets beyond its measured font, so a one-time clamp still protects the center over its life — and it
-     * agrees with FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. Blowout is not
-     * in here any more: the big class swells in from BELOW full size, so it never draws wider than the font that was already measured. */
-    private static double ScaleAllowance(FctHitState hit) =>
-      1.0; // nothing on screen draws wider than the font it was measured at any more
 
     /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out. The rest is 1.0 rather than a hold
        above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. */

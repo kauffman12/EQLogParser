@@ -881,8 +881,6 @@ namespace EQLogParser
 
     private float TextWidth(string text, double size, bool bold) => GetFont(bold, size).MeasureText(text, _measurePaint);
 
-    // the measurer FctLayout.FitSource asks for: the same shaped width the draw pass will use, at the label's own size
-    private double LabelWidth(string text, double size) => TextWidth(text, size, bold: false);
 
     private void RefreshDpi()
     {

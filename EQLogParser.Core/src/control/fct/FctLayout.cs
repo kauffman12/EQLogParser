@@ -78,8 +78,8 @@ namespace EQLogParser
      * an ascender and the descender above it stop being neighbours without the line below reading as cramped. It was 1.35, two lines of web
      * leading carried over from the first pass, and the extra quarter existed to protect the halo — the wrong thing to reserve air for. A halo
      * is a translucent bloom: two of them meeting brighten a seam rather than hide a number, while the gap they bought ate a fifth of every
-     * column and made four ledger columns scroll before they held a fight. Rows whose class swells on arrival (crits) still pay for the swell,
-     * because the reserve is taken at PEAK scale (TextReserve) and the lane prices spacing from that same peak (FctConveyor).
+     * Nothing on screen ever draws bigger than the font it was measured at — a crit carries its size in the font and swells in from below full
+     * size — so that one figure is both what a row is and what geometry reserves for it, and the lane prices its spacing from the same number (FctConveyor).
      */
     public const double TextHeightFactor = 1.2;
     public const double SourceLineFactor = 1.25;
@@ -98,14 +98,6 @@ namespace EQLogParser
     internal static bool LabelsBelow => LabelSide is FctLabelSide.Below;
 
     /*
-     * Vertical space a hit occupies below its y anchor, including whatever pop its style gives it: DrawHit scales about a
-     * pivot partway down the value, so the largest scale the hit will ever reach is applied to the whole block, which
-     * over-reserves slightly and never clips. Reserving one em instead is what let incoming hits — which travel downwards
-     * and finish their life at the bottom of the band — run their descenders and source line off the edge of the overlay.
-     */
-    public static double TextReserve(FctHitState hit) => TextHeight(hit) * PeakScaleOf(hit);
-
-    /*
      * The widest block a lane can be asked to draw: a crit-class number at the size its dial allows — six of the widest digit with a thousands
      * comma — plus room for the mark a special event hangs outside its edge. A column's spine and its arc are decided against THIS rather than
      * against whichever number happened to arrive first, because every row on a lane has to share one rail and trace one path. Judged per arriving
@@ -122,8 +114,10 @@ namespace EQLogParser
     private const string RailReserveDigits = "999,999";
 
     /*
-     * The drawn block at full size: the value plus its source line, with no scale applied. FctPlacement measures live hits
-     * against each other at moments partway through a flight, where a crit is smaller or larger than its peak.
+     * What a row IS, vertically: the value's own block plus its source line when the labels go below. It is both the height FctPlacement measures live
+     * rows against each other with (mid-flight, where a crit mid-swell is smaller than full size) and the room every vertical bound reserves — one
+     * number for both because no shipped style draws above its measured font. Reserving one em instead is what let incoming hits, which travel downwards
+     * and finish their life at the bottom of the band, run their descenders and source line off the edge of the overlay.
      */
     public static double TextHeight(FctHitState hit) =>
       (hit.ValueFontSize * TextHeightFactor) +
@@ -157,42 +151,8 @@ namespace EQLogParser
        to end in punctuation is the log's own and should be drawn as written. */
     private static string Cut(string text) => text.TrimEnd(' ', ',', '.');
 
-    /*
-     * How far the drawn block reaches either side of the value's CENTRE: its own measured box at a given blowout scale, the special-event
-     * glyph hanging outside the left edge, and the source label wherever the label side put it. Anything testing this row against a wall or
-     * another row charges these numbers, so no "(Glormok)" gets drawn through a column boundary — and the reach is deliberately asymmetric,
-     * because a right-aligned amount already hangs its whole width one way: an inline label on that side deepens a reach the row had anyway,
-     * while on the other it opens one it did not have.
-     */
-    internal static (double Left, double Right) BlockAboutCentre(FctHitState hit, double sourceWidth, double scale)
-    {
-      var half = (hit.ValueWidth * scale) / 2.0;
-      var left = half + hit.IconAllowance;
-      var right = half;
-
-      if (sourceWidth > 0)
-      {
-        var words = sourceWidth * scale;
-        if (LabelsBelow)
-        {
-          // a second line is centred under its amount, so it can overhang either side by half the difference between the two
-          left = Math.Max(left, words / 2.0);
-          right = Math.Max(right, words / 2.0);
-        }
-        else if (LabelSide is FctLabelSide.Left)
-        {
-          left = half + LabelGap(hit) + words;
-        }
-        else
-        {
-          right = half + LabelGap(hit) + words;
-        }
-      }
-
-      return (left, right);
-    }
-
-    /* The same block from the odometer RAIL, which is where every horizontal clamp lives — and this is the arithmetic that decides whether two
+    /* How far the drawn block reaches either side of the odometer RAIL, which is where every horizontal clamp lives. Priced at the size the row draws
+     * at: a caller scoring a row mid-swell applies its own frame scale afterwards (FctPlacement.Block). This is the arithmetic that decides whether two
      * numbers in one column line up, because a rail row carries its whole value box to the LEFT of the rail (FctMotion.ArcedX). Each label side is
      * therefore translated on its own terms rather than shifted symmetrically:
      *
@@ -202,9 +162,9 @@ namespace EQLogParser
      *   the rail instead (which this used to do) bills the outer side for a label that is not standing there: with a long spell name it asked for
      *   86 px of clearance and with "(Crush)" for none, so each row pinned itself against its own wall and the column's numbers — 46 px apart in a
      *   user's screenshot — were never going to line up. A centred word line is charged about the value's centre, which is where it is drawn. */
-    internal static (double Left, double Right) BlockFromRail(FctHitState hit, double sourceWidth, double scale)
+    internal static (double Left, double Right) BlockFromRail(FctHitState hit, double sourceWidth)
     {
-      var valueWidth = hit.ValueWidth * scale;
+      var valueWidth = hit.ValueWidth;
       var left = valueWidth + hit.IconAllowance;   // the whole amount, plus any mark hung outside its left edge
       var right = 0.0;
 
@@ -213,7 +173,7 @@ namespace EQLogParser
         return (left, right);
       }
 
-      var words = sourceWidth * scale;
+      var words = sourceWidth;
       if (LabelsBelow)
       {
         left = Math.Max(left, (valueWidth / 2.0) + (words / 2.0));
@@ -229,22 +189,6 @@ namespace EQLogParser
       }
 
       return (left, right);
-    }
-
-    /*
-     * Half-width for the tests that space rows against each other about the centre (FctLabelFitTest), which is what the deleted stream's
-     * placement scorer used to be: how far apart two rows in one column have to be. Nothing on the production path asks this question any
-     * more — the conveyor spaces a column by time, not by measured width — but the arithmetic below is the same one the layout charges with.
-     * It charges the words when they sit BESIDE their amount, because at that height a wide "(Glormok)" is
-     * exactly as intrusive as a wide number and the row it belongs to no longer reserves a line for it. When they go BELOW they are already
-     * paid for vertically (TextHeight charges the second line, so nothing can overlap it), and charging them sideways as well would double-bill
-     * the same pixels: rows would braid into neighbouring columns to dodge a label that was never in their way. The column boundary still sees
-     * the overhang — ArcedX and Spawn clamp against BlockFromRail either way, which is what keeps a long word out of the next column.
-     */
-    internal static double BlockHalf(FctHitState hit)
-    {
-      var (left, right) = BlockAboutCentre(hit, LabelsBelow ? 0 : hit.SourceWidth, 1.0);
-      return Math.Max(left, right);
     }
 
     /*
@@ -284,7 +228,7 @@ namespace EQLogParser
       {
         var label = $"({name})";
         var width = widthOf(label, hit.SourceFontSize);
-        var (left, right) = BlockFromRail(hit, width, 1.0);
+        var (left, right) = BlockFromRail(hit, width);
 
         // unplaced rows (no rail yet: SideMin/SideMax are zero) fall back to the total-block test against whatever room was stated
         var fits = rightRoom > 0
@@ -318,11 +262,6 @@ namespace EQLogParser
       FctLane.Defensive or FctLane.Missed => w * 0.50,
       _ => w * 0.42, // DamageDealt, DamageTaken
     };
-
-    /* The largest a hit's block ever gets beyond its measured font. Only the pulse overshoots: the big class carries its size in the
-       font itself (its dial, applied once at birth) and its pop swells in from below, so there is nothing left to price above 1.0. */
-    private static double PeakScaleOf(FctHitState hit) =>
-      1.0; // no shipped style overshoots its measured font: only the deleted pulse pop ever did
 
     /*
      * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest
@@ -375,12 +314,10 @@ namespace EQLogParser
        * territory that was set aside for them.
        */
       /* X0 is the right-align RAIL (FctMotion.ArcedX), so on a travelling row the reserved margin sits entirely on the
-         left: the whole drawn box — at its widest, a crit's peak — hangs left of the rail, and the rail itself only has
-         to stay inside the territory. */
+         left: the whole drawn box hangs left of the rail, and the rail itself only has to stay inside the territory. */
       /* The whole drawn block and not just the number: with the words inline they are the widest part of the row, and charging only the amount
          is how a source name came to be drawn across the seam into the neighbouring column. FitSource has already refused the names this column
          cannot carry; this keeps the ones it accepted inside their territory at every scale they will ever draw at. */
-      var peak = PeakScaleOf(hit);
       double reachLeft, reachRight;
       if (FctMotionStyles.IsRail(hit.Style))
       {
@@ -391,13 +328,13 @@ namespace EQLogParser
          * FitSource cuts names to exactly that — so a column also gets the second, quieter benefit of cutting every name at the same width rather than
          * cutting a crit's name sooner than the parry above it. The max() is containment insurance for a row wider than the estimate (an extreme size
          * dial), where drawing through the wall would be worse than one row's spine sitting slightly further in. */
-        var (valueLeft, valueRight) = BlockFromRail(hit, 0, peak);
+        var (valueLeft, valueRight) = BlockFromRail(hit, 0);
         reachLeft = Math.Max(RailReserve(), valueLeft);
         reachRight = valueRight;
       }
       else
       {
-        (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth, peak);
+        (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth);
       }
 
       /* Which way this column bows: toward the outer edge, decided by the region rather than the row so a lane never contains two shapes. */
@@ -497,7 +434,7 @@ namespace EQLogParser
       hit.SideMin = region.X + EdgePad;
       hit.SideMax = Math.Max(region.X + EdgePad + 1, region.X + region.Width - EdgePad);
 
-      var reserve = TextReserve(hit);
+      var reserve = TextHeight(hit);
       if (stage.Mode is FctLayoutMode.Bands)
       {
         if (hit.Incoming)
@@ -575,7 +512,7 @@ namespace EQLogParser
          * therefore bend identically even though one is twice as wide. ArcedX still clamps each row by its own block, as the resize safety net. */
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
-          var (valueLeft, valueRight) = BlockFromRail(hit, 0, PeakScaleOf(hit));   // words excluded: see Spawn
+          var (valueLeft, valueRight) = BlockFromRail(hit, 0);   // words excluded: see Spawn
           hit.Bow = hit.Bow < 0
             ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - Math.Max(RailReserve(), valueLeft))))
             : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - valueRight));
