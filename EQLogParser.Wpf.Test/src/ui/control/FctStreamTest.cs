@@ -219,13 +219,17 @@ namespace EQLogParser
      * (RailPress under 1.0), never the steady traffic ahead of them; the override is floored so even a full emergency stays
      * readable and short enough that an overlay never keeps typing more than about a second and a half after the last swing;
      * and a lone row on an empty rail still crosses at exactly the configured tempo, pressure untouched.
+     *
+     * Read alongside FctConveyorTest, which pins what split's straight line does instead: there the same congestion signal moves
+     * the WHOLE column at once, because that mode promises a readable line and a convoy is the only way to keep one. This rung —
+     * a row's own tempo, fixed at its birth — belongs to the parabola, where numbers are thrown and nobody reads a column.
      */
     [TestMethod]
     public void AFloodSpeedsUpItsOwnNewbornRowsAndDrainsFast()
     {
       var ingest = new FctIngest(new Random(4))
       {
-        Style = FctMotionStyle.Straight,
+        Style = FctMotionStyle.Parabola,
         Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, false, false),
       };
 

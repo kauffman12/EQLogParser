@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -16,7 +17,11 @@ namespace EQLogParser
 
     /* Split's three categories: which of the four columns each streams down (FctRailLane) and which way it travels. The
        shipped spread gives every category its own column; a lane can also be FctRailLane.None, which is how a category gets
-       switched off in split mode — see OutgoingShown and friends. */
+       switched off in split mode — see OutgoingShown and friends.
+
+       Two categories may share a column — that is what lanes are for — but only while they travel the same way, because a
+       column is one queue (FctConveyor) and two trains driving into each other through one queue cannot be spaced by
+       anything. ResolveLaneConflicts enforces it; the settings panel does not offer a choice that would need it. */
     internal const FctRailLane HealLaneDefault = FctRailLane.Right1;
     internal const FctRailLane TakenLaneDefault = FctRailLane.Right2;
     internal const FctRailLane DealtLaneDefault = FctRailLane.Left1;
@@ -151,13 +156,94 @@ namespace EQLogParser
      * the motion, and its choices are which way each stream runs: all three dials speak there, healing's included. It
      * has no lane to own in a band, but "heals rise while damage falls" is the most requested sentence in the genre,
      * and a fountain that hid it left players tying their heals to their damage-taken dial by accident. */
-    internal FctLayoutChoice BuildLayout() => Fountain
-      ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp, healUp: HealUp)
-      : new FctLayoutChoice(
-          FctLayoutMode.ByType, FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), TakenUp, DealtUp,
-          FctRailLanes.SideOf(Placed(HealLane, HealLaneDefault)), HealUp,
-          FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), FctRailLanes.SideOf(Placed(DealtLane, DealtLaneDefault)),
-          Placed(HealLane, HealLaneDefault), Placed(TakenLane, TakenLaneDefault), Placed(DealtLane, DealtLaneDefault));
+    /*
+     * Give every category a column it can travel alone in. Priority runs dealt → taken → healing, which is the order people
+     * look at them in: my damage keeps the column I aimed for, then what lands on me, then the heals — and a category switched
+     * off (FctRailLane.None) owns no column, so it neither conflicts nor gets moved. The move is to the first column nobody has
+     * claimed yet, or that only same-direction traffic shares.
+     *
+     * It runs on the state itself, because there are two ways to arrive here: the settings panel, which cannot express a
+     * conflict (LaneAvailable removes those choices), and settings.ini, which somebody can hand-write into one. Returns how
+     * many categories were moved so a caller can say so.
+     */
+    internal int ResolveLaneConflicts()
+    {
+      if (Fountain)
+      {
+        return 0;   // bands has no columns to conflict over: every stream owns its side of the strip
+      }
+
+      var moved = 0;
+      var claimed = new Dictionary<FctRailLane, bool>();
+
+      // the priority, written out once so the loop below stays about the search rather than about which category is which
+      (FctRailLane Lane, bool Up, Action<FctRailLane> Move)[] groups =
+      [
+        (DealtLane, DealtUp, lane => DealtLane = lane),
+        (TakenLane, TakenUp, lane => TakenLane = lane),
+        (HealLane, HealUp, lane => HealLane = lane),
+      ];
+
+      foreach (var group in groups)
+      {
+        if (group.Lane is FctRailLane.None)
+        {
+          continue;
+        }
+
+        if (!Shares(group.Lane, group.Up, claimed))
+        {
+          claimed[group.Lane] = group.Up;
+          continue;
+        }
+
+        var open = FctRailLane.None;
+        foreach (var column in FctRailLanes.Columns)
+        {
+          if (!Shares(column, group.Up, claimed))
+          {
+            open = column;
+            break;
+          }
+        }
+
+        // nowhere to go means every column is full of opposite traffic; keeping the pick beats inventing a worse one
+        if (open is not FctRailLane.None && open != group.Lane)
+        {
+          group.Move(open);
+          moved++;
+        }
+
+        claimed[open is FctRailLane.None ? group.Lane : open] = group.Up;
+      }
+
+      return moved;
+    }
+
+    /* Whether this column and direction would meet a train already booked through it. Free always fits; shared only when the
+       traffic runs the same way (FctConveyor's one queue per column). */
+    internal static bool LaneAvailable(FctRailLane lane, bool up, FctRailLane other1, bool up1, FctRailLane other2, bool up2) =>
+      !Shares(lane, up, other1, up1) && !Shares(lane, up, other2, up2);
+
+    private static bool Shares(FctRailLane lane, bool up, FctRailLane other, bool otherUp) =>
+      other is not FctRailLane.None && other == lane && otherUp != up;
+
+    private static bool Shares(FctRailLane lane, bool up, Dictionary<FctRailLane, bool> claimed) =>
+      claimed.TryGetValue(lane, out var booked) && booked != up;
+
+    internal FctLayoutChoice BuildLayout()
+    {
+      // geometry is decided once, so this is where an impossible arrangement has to become a possible one
+      ResolveLaneConflicts();
+
+      return Fountain
+        ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp, healUp: HealUp)
+        : new FctLayoutChoice(
+            FctLayoutMode.ByType, FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), TakenUp, DealtUp,
+            FctRailLanes.SideOf(Placed(HealLane, HealLaneDefault)), HealUp,
+            FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), FctRailLanes.SideOf(Placed(DealtLane, DealtLaneDefault)),
+            Placed(HealLane, HealLaneDefault), Placed(TakenLane, TakenLaneDefault), Placed(DealtLane, DealtLaneDefault));
+    }
 
     /* The mode clamps the shape, not a branch that ignores it: fountain sprays or settles, the columns scroll. A state
      * assembled from stale settings resolves to its mode's own motion instead of shipping one the engine would degrade. */

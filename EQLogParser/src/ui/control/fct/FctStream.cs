@@ -172,6 +172,9 @@ namespace EQLogParser
        * locks whatever gap existed at spawn for the whole flight, so a same-frame pair passes as two cleanly separated
        * rows one line ahead of the other, and the sideways columns drop to what they should be: a valve for bursts
        * past the line's throughput, not where an ordinary fight parks its words (PlaceLine). */
+      /* Split's straight line is a conveyor now (FctConveyor) and never reaches this file: a column that keeps its spacing by
+         arithmetic has no candidates left to score. What still comes through here is a line in halves — the scheme the panel no
+         longer offers, where two categories share a HALF rather than a column — so flight scoring is what keeps those apart. */
       if (hit.Style is FctMotionStyle.Straight)
       {
         return PlaceLine(hit, hits, stage, rand, cx, edgeY);

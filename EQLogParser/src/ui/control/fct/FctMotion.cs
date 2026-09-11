@@ -88,8 +88,21 @@ namespace EQLogParser
      * on the hit's very first frame, and NaN survives both Math.Clamp and the band clamps (NaN compares false against
      * every limit), so ArcedX and RaisedY hand back NaN and the number simply fails to be drawn for that frame.
      */
+    /* A conveyor row is somewhere along its column, not somewhere along its life (FctConveyor): the lane's clock is the
+       only thing that moves it, which is exactly how a convoy keeps its spacing. Everywhere else age is still the law. */
     public static double Progress(FctHitState hit, double ageMs) =>
-      hit.MotionMs > 0 ? Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0) : 1.0;
+      hit.OnConveyor ? ConveyorProgress(hit)
+        : hit.MotionMs > 0 ? Math.Clamp(ageMs / hit.MotionMs, 0.0, 1.0) : 1.0;
+
+    /* How much of a conveyor row's flight is spent leaving: the last stretch of rail before it is off, shared by the fade
+       and the crit's collapse so the two always arrive together. Everything before it is full opacity — this is the mode
+       somebody chooses in order to read every number, so a row that has been on screen for half a second in the middle of
+       a column is not allowed to be dim there. */
+    public const double ConveyorFadeOutFrac = 0.12;
+
+    /* The first few pixels of a row's trip are its arrival rather than a fade-in: short enough to read as appearing, long
+       enough that nothing pops into existence mid-column. */
+    private const double ConveyorFadeInPx = 24;
 
     /*
      * Hold style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
@@ -210,7 +223,7 @@ namespace EQLogParser
     {
       if (hit.Blowout)
       {
-        return BlowoutScale(ageMs, hit.LifetimeMs);
+        return hit.OnConveyor ? ConveyorBlowoutScale(hit, ageMs) : BlowoutScale(ageMs, hit.LifetimeMs);
       }
 
 
@@ -241,6 +254,11 @@ namespace EQLogParser
      */
     public static double FadeOpacity(FctHitState hit, double ageMs)
     {
+      if (hit.OnConveyor)
+      {
+        return ConveyorOpacity(hit);
+      }
+
       var o = ageMs < FadeInMs ? Ease(ageMs / FadeInMs) : 1.0;
       var fadeStart = hit.LifetimeMs - hit.FadeMs;
 
@@ -313,6 +331,56 @@ namespace EQLogParser
       }
 
       var p = Math.Clamp((ageMs - (lifetimeMs - CritScaleOutMs)) / CritScaleOutMs, 0.0, 1.0);
+      return 1.0 - ((1.0 - CritScaleEnd) * p * p);
+    }
+
+    /* Where a conveyor row is along its own column: pixels travelled over pixels of flight, and negative while it waits
+       behind the mouth for the slot it bought (clamped to 0, so a queued row sits at the edge — invisible, because opacity
+       below returns 0 for it, and folding still finds it). */
+    private static double ConveyorProgress(FctHitState hit) =>
+      hit.ConveyorTravel > 0 ? Math.Clamp(hit.ConveyorQ / hit.ConveyorTravel, 0.0, 1.0) : 1.0;
+
+    /* Both ends eased like every other style's, but measured on the rail: a conveyor row's position comes from the lane, so
+       a fade keyed to its age would disagree with where it is the moment the lane speeds up — and the complaint that made
+       this whole mode was numbers leaving before they had been read. */
+    private static double ConveyorOpacity(FctHitState hit)
+    {
+      var q = hit.ConveyorQ;
+      if (q <= 0)
+      {
+        return 0.0;
+      }
+
+      var travel = Math.Max(hit.ConveyorTravel, 1.0);
+      var o = q < ConveyorFadeInPx ? Ease(q / ConveyorFadeInPx) : 1.0;
+      var outAt = travel * (1.0 - ConveyorFadeOutFrac);
+      if (q > outAt)
+      {
+        o *= 1.0 - Ease((q - outAt) / Math.Max(1.0, travel - outAt));
+      }
+
+      return Math.Clamp(o, 0.0, 1.0);
+    }
+
+    /* The big class on a conveyor: swell in on the clock like anywhere else (arrival belongs to the moment the row appears,
+       which is when its slot reaches the mouth), rest at the size the font says, then collapse over the same last stretch of
+       rail the fade spans. Measuring the collapse against the lane rather than against a lifetime is what keeps a crit that
+       queued for a moment from arriving already shrunk and dying in the middle of the column. */
+    private static double ConveyorBlowoutScale(FctHitState hit, double ageMs)
+    {
+      if (ageMs < CritScaleInMs)
+      {
+        return CritScaleInStart + ((1.0 - CritScaleInStart) * (ageMs / CritScaleInMs));
+      }
+
+      var outAt = 1.0 - ConveyorFadeOutFrac;
+      var t = ConveyorProgress(hit);
+      if (t <= outAt)
+      {
+        return 1.0;
+      }
+
+      var p = Math.Clamp((t - outAt) / (1.0 - outAt), 0.0, 1.0);
       return 1.0 - ((1.0 - CritScaleEnd) * p * p);
     }
 

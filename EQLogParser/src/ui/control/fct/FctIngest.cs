@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * What happens to an incoming hit: fold it into a live number, spawn it, or lose it to the lane cap.
+   * What happens to an incoming hit: fold it into a live number, spawn it, queue it on its lane, or lose it to capacity.
    * Shared by every backend for the same reason as FctLayout — with two renderers, per-copy policy drifts
    * immediately. Rationale and the numbers behind these constants: docs/DesignNotes.md → Floating Combat Text.
    */
@@ -44,6 +44,7 @@ namespace EQLogParser
     private const double ProcSignificanceFrac = 0.5;
 
     private readonly FctLifeController _life = new();
+    private readonly FctConveyor _conveyor = new();
     private readonly Random _rand;
 
     public FctIngest(Random rand = null) => _rand = rand ?? new Random();
@@ -349,6 +350,11 @@ namespace EQLogParser
        */
       var celled = style is FctMotionStyle.Pulse;
 
+      /* Split's straight line is a conveyor rather than a placement problem (FctConveyor): one clock per column, spacing
+         bought at entry, congestion scaled for the whole lane at once. It replaces the rail's congestion ladder below, so
+         it is decided here, where the two other capacity rules (folding, the lane cap) can see which of them applies. */
+      var conveyor = UseConveyor(style, stage);
+
       if (fixedText is null)
       {
         if (!celled && !crit && ShouldAbsorb(pooled, periodic) &&
@@ -358,7 +364,11 @@ namespace EQLogParser
         }
       }
 
-      if (!celled && LiveCount(hits, pooled) >= LaneCap)
+      /* The lane cap is a scatter rule: it asks "is there a slot?" and answers by taking one away from somebody. A conveyor
+         row has no slot to be taken — its place in the queue was bought at entry, or it is waiting behind the mouth for it —
+         so eviction would steal a visible number for an invisible one. The conveyor's own backlog ceiling decides capacity
+         there, and every loss still counts in DroppedCount. */
+      if (!celled && !conveyor && LiveCount(hits, pooled) >= LaneCap)
       {
         /*
          * The lane is full. A duplicate of something already on screen was folded away above — that attempt does not care
@@ -432,6 +442,32 @@ namespace EQLogParser
             evicting?.Invoke(bumped);
           }
         }
+      }
+      else if (conveyor)
+      {
+        /*
+         * The row enters at its column's mouth and nowhere else: no search, no depth ladder, no emergency column, because
+         * there is nothing to score — the lane already knows where this row may stand (FctConveyor). Pinning it is still the
+         * layout's own maths (FctPlacement.Pin), so the flight, the clamp band and the odometer rail are exactly what the
+         * scatter styles would have measured; only the choice of where to enter differs, and that choice is a queue.
+         *
+         * Nothing here trades readability for room. If the column cannot take the row even at its fastest, with twelve
+         * arrivals already waiting, this one goes back — counted in DroppedCount, after folding already collapsed every
+         * duplicate it could have been. Two numbers on top of each other is the one outcome this mode is not allowed.
+         */
+        var region = stage.RegionFor(hit);
+        hit = FctPlacement.Pin(hit, stage, _rand,
+          region.X + (region.Width / 2), stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY);
+
+        if (!_conveyor.Enrol(hit, stage, now))
+        {
+          DroppedCount++;
+          return null;
+        }
+
+        /* Not the row's tempo but its estimate of the lane's, for the things that still speak in milliseconds: absorb
+           windows, statistics, anything that asks how long this number will be around. Its position is never read from it. */
+        FinalizeRailTempo(hit);
       }
       else if (FctMotionStyles.IsRail(style) && stage.Mode is not FctLayoutMode.Bands)
       {
@@ -525,10 +561,15 @@ namespace EQLogParser
     /* Drops expired hits, newest-last so the list keeps its order. Returns how many went. */
     public int PruneExpired(List<FctHitState> hits, double now, Action<FctHitState> onRemoved = null)
     {
+      /* The conveyor's clock runs here because this is the one verb every host already calls once a frame: a lane nobody
+         advances is a column of numbers standing still (FctConveyor.Advance). Rows are stamped before the sweep below, so a
+         row drawn this frame was drawn at the position the lane had reached by now. */
+      _conveyor.Advance(hits, now);
+
       var removed = 0;
       for (var i = hits.Count - 1; i > -1; i--)
       {
-        if (now - hits[i].SpawnMs <= hits[i].LifetimeMs)
+        if (!Expired(hits[i], now))
         {
           continue;
         }
@@ -540,6 +581,24 @@ namespace EQLogParser
 
       return removed;
     }
+
+    /*
+     * Which arrangements run as a conveyor: the straight line, in split. Fountain and spray are choreography and keep their
+     * scatter; hold parks numbers where they landed and pulse puts them in cells — none of them is a queue, and none of them
+     * needs one. Bands degrade rails to hold above, so there is nothing to catch here, and halves keeps the flight-scored
+     * stream because its two categories share a half rather than a column: the columns are what make one train per lane a
+     * promise instead of a coincidence (FctStage).
+     */
+    private static bool UseConveyor(FctMotionStyle style, FctStage stage) =>
+      style is FctMotionStyle.Straight && stage.Mode is FctLayoutMode.ByType;
+
+    /* A conveyor row's life is a distance, not a duration: it is finished when the lane has carried its own flight past it,
+     * which is how a lane under pressure can clear a row in half the nominal time without that row blinking out early in the
+     * middle of the column. Degenerate flights (no travel to speak of) fall back on the clock so nothing survives forever. */
+    private static bool Expired(FctHitState hit, double now) =>
+      hit.OnConveyor && hit.ConveyorTravel > 0
+        ? hit.ConveyorQ >= hit.ConveyorTravel
+        : now - hit.SpawnMs > hit.LifetimeMs;
 
     /*
      * Whether an incoming hit may be folded into a live number at all — the fold key itself is TryAbsorb's, and it now

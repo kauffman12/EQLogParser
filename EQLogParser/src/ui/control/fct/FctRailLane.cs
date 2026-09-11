@@ -30,6 +30,11 @@ namespace EQLogParser
 
   internal static class FctRailLanes
   {
+    /* The four columns a category can stream down, in the order a search should try them (FctConfigState puts a category that
+       shares a column head-on into the first of these it can have). "none" is a decision about drawing, not a place to put a
+       number, so it is deliberately not one of the columns. */
+    public static readonly FctRailLane[] Columns = [FctRailLane.Left1, FctRailLane.Left2, FctRailLane.Right1, FctRailLane.Right2];
+
     // Lane number across the screen: 0 = left1 ... 3 = right2. None has no column, and says so rather than borrowing one.
     public static int Index(FctRailLane lane) => lane switch
     {

@@ -92,6 +92,22 @@ namespace EQLogParser
     public bool Blowout;
 
     /*
+     * The deliberate rail (FctConveyor): this row rides a lane clock instead of its own flight, so its place on the column is
+     * distance rather than elapsed time. Set by FctConveyor.Enrol and stamped every frame by FctConveyor.Advance; read by
+     * FctMotion for position, opacity and the crit's collapse, and by FctIngest.PruneExpired for the row's end. Rows that are
+     * not on a conveyor (fountain, spray, hold, pulse, parabola, halves) leave these alone and keep the time law below.
+     *
+     * ConveyorQ is how far the lane has carried this row, in pixels, and it starts NEGATIVE: a row whose slot has not reached
+     * the mouth yet waits off-column (invisible, still folding duplicates) until the lane brings its turn. ConveyorTravel is
+     * the whole flight — |Rise|, measured after the row was pinned to the mouth — and passing it is the row's last frame.
+     */
+    public bool OnConveyor;
+    public int ConveyorLane;
+    public double ConveyorBirthPhase;
+    public double ConveyorQ;
+    public double ConveyorTravel = -1.0;
+
+    /*
      * The congestion accelerator, 0.45..1.0, stamped at birth by the stream (FctStream.Pressure) and multiplied into this row's rail
      * tempo exactly once (FctIngest.FinalizeRailTempo). A rail at its configured speed has room for a certain number of rows in flight;
      * text arriving faster than that cannot be separated at the dial's pace no matter where it enters, so a row born into a crowded rail

@@ -33,6 +33,9 @@ namespace EQLogParser
 
     // periodic ticks and the player's own misses: readable, but never competing with a direct hit
     public const double MinorFontSize = 23;
+
+    /* How far a plain event word sits below the tier of whatever lane it shares its column with (see ApplyTo). */
+    public const double WordSizeStepPt = 1;
     public const double SourceFontMin = 14;
 
     /*
@@ -90,8 +93,17 @@ namespace EQLogParser
          here and nowhere else, at birth rather than at draw: hit.ValueFontSize is the real drawn size from this point on — line height,
          vertical reserve, clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to
          scale, and a number never resizes mid-flight. */
+      /* An event word — "DODGE", "PARRY", "Resist" — shares its column with the numbers it happened to now, because a word IS
+         an attack that failed and the queue is per column (FctConveyor). So a plain word is set a point under its lane's tier:
+         written at par, a sentence and a number look like two claims on the same attention, and the row the word interrupts is
+         the one somebody was reading. One point is the whole step, deliberately — this is typography, not hierarchy, and a word
+         still has to be legible across a raid window. The two labels that mean "stop casting" (IsLoudLabel) keep their size,
+         because those outrank the number beside them on purpose. */
+      var quiet = hit.FixedText is not null && !loud;
       var big = lane == FctLane.Crit || hit.Special is not FctSpecial.None;
-      var size = big ? DamageDealtFontSize * FctScale.Crit : ValueSize(lane, minor, loud) * FctScale.Text;
+      var size = big
+        ? DamageDealtFontSize * FctScale.Crit
+        : (ValueSize(lane, minor, loud) - (quiet ? WordSizeStepPt : 0)) * FctScale.Text;
 
       hit.ValueFontSize = size;
       hit.ValueArgb = ValueArgb(lane, loud);

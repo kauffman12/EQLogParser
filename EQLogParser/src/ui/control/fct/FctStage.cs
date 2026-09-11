@@ -26,6 +26,10 @@ namespace EQLogParser
    * (MSBTOptionsTabs.lua). Two flows sharing one column is exactly what whole-flight placement is for: opposite trains
    * pass, braid around each other, graze bounded and counted, never drop (FctStream).
    *
+   * One column carries one train. Categories may share a column — that is the point of lanes — but only in one direction,
+   * because two queues driving opposite ways through the same pixels cannot be spaced by anything except luck; the settings
+   * refuse the combination (FctConfigState.ResolveLaneConflicts) rather than letting the geometry discover it.
+   *
    * A stage is a value: (choice, canvas size) is all a number's region depends on, so asking twice with the same size
    * answers the same thing, and a resize is a new stage rather than a mutation somebody has to schedule.
    */
@@ -166,6 +170,30 @@ namespace EQLogParser
       _healLane = healLane ?? FctRailLanes.OfSide(_healSide);
       _incomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(_incomingDamageSide);
       _outgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(_outgoingDamageSide);
+
+      /* One train per column (FctConveyor): categories booked into the same lane travel together, or a single queue would be
+         asked to run two ways at once — which is every row in it landing on top of every other. The direction dials are per
+         category, so a settings file can ask for the impossible; my damage owns its column, incoming follows it, heals follow
+         whoever got there first. The panel refuses the combination too (FctConfigState.ResolveLaneConflicts), but the rule
+         belongs here at the layer that decides where numbers go, so a hand-written ini, a dial turned mid-fight and a test
+         harness all agree without anyone having to remember to check twice. */
+      if (_mode is FctLayoutMode.ByType)
+      {
+        if (_incomingDamageLane == _outgoingDamageLane)
+        {
+          _incomingUp = _outgoingUp;
+        }
+
+        if (_healLane == _outgoingDamageLane)
+        {
+          _healUp = _outgoingUp;
+        }
+        else if (_healLane == _incomingDamageLane)
+        {
+          _healUp = _incomingUp;
+        }
+      }
+
       W = w;
       H = h;
     }
@@ -224,6 +252,13 @@ namespace EQLogParser
      * halves and placement quietly invented sub-columns; see FctRailLane.) */
     private FctRailLane CategoryLane(FctHitState hit) =>
       hit.Heal ? _healLane : hit.Incoming ? _incomingDamageLane : _outgoingDamageLane;
+
+    /*
+     * Which of the four columns a number owns, as an index — what a conveyor names a lane by (FctConveyor). Schemes without
+     * column lanes answer -1 and the caller falls back to geometry, because in halves or bands there is no column to point at.
+     */
+    internal int LaneIndexOf(FctHitState hit) =>
+      _mode is FctLayoutMode.ByType ? FctRailLanes.Index(CategoryLane(hit)) : -1;
 
     private (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
     {

@@ -121,6 +121,7 @@ namespace EQLogParser
          controls, so they get computed exactly the way a user change would compute them. */
       ApplyModeVisibility();
       UpdateReadouts();
+      RefreshLaneChoices();
       if (raisePreview)
       {
         PreviewChanged?.Invoke(Snapshot());
@@ -185,7 +186,18 @@ namespace EQLogParser
         ApplyModeVisibility();
       }
 
-      PreviewChanged?.Invoke(Snapshot());
+      var state = Snapshot();
+
+      /* Flipping a direction dial can strand the column it was pointed at: two categories, one queue, opposite ways is not a
+         thing a rail can do (FctConveyor). The state resolves it and the controls follow the resolution, so what previews —
+         and what Save will write — is the arrangement the overlay actually runs rather than the one that was typed. */
+      if (state.ResolveLaneConflicts() > 0)
+      {
+        LoadFrom(state, raisePreview: false);
+      }
+
+      RefreshLaneChoices();
+      PreviewChanged?.Invoke(state);
     }
 
     private void ScaleChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -294,6 +306,41 @@ namespace EQLogParser
          Hiding the whole heals row had quietly tied healing to the damage-in dial, which is not a sentence anybody
          meant to write when they moved "damage in". */
       takenLaneCombo.Visibility = dealtLaneCombo.Visibility = healLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /*
+     * One train per column: a category may join a column whose traffic travels its way, and may never book one it would meet
+     * head-on, so those choices are taken out of the dropdowns rather than explained afterwards. Sharing a column with traffic
+     * going the same way stays on offer — "heals in the same column as my damage, both rising" is a real preference and one
+     * queue handles it exactly. A hand-written settings.ini can still arrive in conflict; ResolveLaneConflicts moves somebody
+     * before any geometry is built (FctConfigState.BuildLayout).
+     */
+    private void RefreshLaneChoices()
+    {
+      var (healLane, healUp) = (FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane), ComboTag(healDirCombo) == "up");
+      var (takenLane, takenUp) = (FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane), ComboTag(inDirCombo) == "up");
+      var (dealtLane, dealtUp) = (FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane), ComboTag(outDirCombo) == "up");
+
+      MarkLaneItems(healLaneCombo, healUp, takenLane, takenUp, dealtLane, dealtUp);
+      MarkLaneItems(takenLaneCombo, takenUp, healLane, healUp, dealtLane, dealtUp);
+      MarkLaneItems(dealtLaneCombo, dealtUp, healLane, healUp, takenLane, takenUp);
+    }
+
+    private static void MarkLaneItems(ComboBox combo, bool up, FctRailLane other1, bool up1, FctRailLane other2, bool up2)
+    {
+      foreach (var entry in combo.Items)
+      {
+        if (entry is not ComboBoxItem item)
+        {
+          continue;
+        }
+
+        /* Whatever is already selected stays selectable: greying out a box's own value would advertise a choice this panel is
+           not making. A category switched off owns no column and conflicts with nothing (FctRailLane.None), which
+           LaneAvailable already answers true for, as it does for the "none" item itself. */
+        item.IsEnabled = ReferenceEquals(item, combo.SelectedItem) ||
+          FctConfigState.LaneAvailable(FctRailLanes.Parse(item.Tag as string, FctRailLane.None), up, other1, up1, other2, up2);
+      }
     }
 
     private void UpdateReadouts()

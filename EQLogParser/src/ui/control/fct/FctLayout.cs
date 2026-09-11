@@ -195,7 +195,10 @@ namespace EQLogParser
        * strip" rule, and in halves there is no strip to measure from. The parabola takes no depth start: its whole claim
        * is that every value follows the previous one along one path (FctStream), and a proc beginning part-way down the
        * rail breaks that chain for the sake of a distinction its smaller type already makes. */
-      if (hit.Proc && hit.Style is not FctMotionStyle.Parabola)
+      /* The same reason exempts an explicitly requested origin (FctPlacement.Pin), which is how a conveyor row enters at the
+         mouth of its column (FctConveyor): that queue bought this row's spacing against the exact edge it entered at, so an inset
+         here would spend part of a neighbour's gap — and a lane whose rows do not share one starting edge cannot space anything. */
+      if (hit.Proc && hit.Style is not FctMotionStyle.Parabola && !origin.HasValue)
       {
         var inset = BandSpan(hit) * ProcInsetFrac;
         hit.Y0 = up > 0 ? Math.Max(hit.BandMinY, hit.Y0 - inset) : Math.Min(hit.BandMaxY, hit.Y0 + inset);

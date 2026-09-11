@@ -136,7 +136,7 @@ namespace EQLogParser
         {
           var x = slot + ((col - ((LateralSteps - 1) / 2.0)) * xStep);
 
-          var trial = Trial(hit, stage, rand,
+          var trial = Pin(hit, stage, rand,
             x + (xStep * LatticeJitter * (rand.NextDouble() * 2 - 1)),
             y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1)));
 
@@ -162,12 +162,12 @@ namespace EQLogParser
     internal static FctHitState PlaceOrigins(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand,
       (double X, double Y)[] origins, double anchorX, double anchorY, double pad)
     {
-      var best = Trial(hit, stage, rand, origins[0].X, origins[0].Y);
+      var best = Pin(hit, stage, rand, origins[0].X, origins[0].Y);
       var bestCost = Cost(best, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
 
       for (var i = 1; i < origins.Length; i++)
       {
-        var trial = Trial(hit, stage, rand, origins[i].X, origins[i].Y);
+        var trial = Pin(hit, stage, rand, origins[i].X, origins[i].Y);
         var cost = Cost(trial, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
         if (cost < bestCost)
         {
@@ -179,12 +179,17 @@ namespace EQLogParser
       return best;
     }
 
-    /* One scored candidate: the layout's own spawn at a requested origin, with its fall recomputed because the
+    /*
+     * One row's geometry at an origin the CALLER chose: the primitive every placement search is built from — each candidate a
+     * search tries is one of these — and the whole of what the conveyor needs (FctConveyor), because a row that enters at the
+     * mouth of its column has no search to run, only a flight to be measured right there.
+     *
+     * It is the layout's own spawn at a requested origin, with its fall recomputed because the
      * fall belongs to the travel and a new origin is new travel — and with a rail's tempo restamped for the same
      * reason. A rail trial asked to enter deep has a shorter flight; scoring it on the duration stamped for the
      * mouth would make it crawl, and every row behind it would overtake it in the sample — which is precisely how
      * depth entries were priced into certain collisions (cost 1.0) and pushed sideways. */
-    private static FctHitState Trial(FctHitState hit, FctStage stage, Random rand, double x, double y)
+    internal static FctHitState Pin(FctHitState hit, FctStage stage, Random rand, double x, double y)
     {
       var trial = hit.Clone();
       FctLayout.Spawn(trial, stage, rand, origin: (x, y));
