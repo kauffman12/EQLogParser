@@ -193,13 +193,43 @@ namespace EQLogParser
       return (left, right);
     }
 
-    /* The same block from the odometer RAIL, which is where every horizontal clamp lives: a travelling row carries its whole value box to the
-       left of the rail (FctMotion.ArcedX), so that side pays for the label as well and the other keeps only what the label side gave it. */
+    /* The same block from the odometer RAIL, which is where every horizontal clamp lives — and this is the arithmetic that decides whether two
+     * numbers in one column line up, because a rail row carries its whole value box to the LEFT of the rail (FctMotion.ArcedX). Each label side is
+     * therefore translated on its own terms rather than shifted symmetrically:
+     *
+     * - inline: it hangs outside the value on its side, so that side pays gap + words and the other keeps the box.
+     * - below: the second line is centred under its AMOUNT, whose centre sits a half-width left of the rail — so it reaches past the value's left
+     *   edge by words/2 − valueHalf... and past its right edge by exactly as much, measured from there, NOT from the rail. Charging words/2 against
+     *   the rail instead (which this used to do) bills the outer side for a label that is not standing there: with a long spell name it asked for
+     *   86 px of clearance and with "(Crush)" for none, so each row pinned itself against its own wall and the column's numbers — 46 px apart in a
+     *   user's screenshot — were never going to line up. A centred word line is charged about the value's centre, which is where it is drawn. */
     internal static (double Left, double Right) BlockFromRail(FctHitState hit, double sourceWidth, double scale)
     {
-      var (left, right) = BlockAboutCentre(hit, sourceWidth, scale);
-      var half = (hit.ValueWidth * scale) / 2.0;
-      return (left + half, Math.Max(0.0, right - half));
+      var valueWidth = hit.ValueWidth * scale;
+      var left = valueWidth + hit.IconAllowance;   // the whole amount, plus any mark hung outside its left edge
+      var right = 0.0;
+
+      if (sourceWidth <= 0)
+      {
+        return (left, right);
+      }
+
+      var words = sourceWidth * scale;
+      if (LabelsBelow)
+      {
+        left = Math.Max(left, (valueWidth / 2.0) + (words / 2.0));
+        right = Math.Max(0.0, (words / 2.0) - (valueWidth / 2.0));
+      }
+      else if (LabelSide is FctLabelSide.Left)
+      {
+        left += LabelGap(hit) + words;
+      }
+      else
+      {
+        right = LabelGap(hit) + words;
+      }
+
+      return (left, right);
     }
 
     /*
@@ -224,7 +254,18 @@ namespace EQLogParser
      * whenever the room changes (a resize, a font dial, another label side) rather than damage done once: widen the window and the name comes
      * back by itself.
      */
+    /* The room a label has is not "the column minus the number": it is whatever the rail leaves on EACH side, because that is where each label side
+     * draws. A below line may overhang to either hand from under its amount; an inline one lives entirely on one side and cannot borrow from the other.
+     * Asking the geometry rather than a caller for that answer also makes a name's budget a property of the COLUMN — every row of a lane is placed on
+     * one spine (Spawn), so every row of a lane cuts its names at the same width instead of a crit losing letters before the parry above it does. */
+    internal static void FitSource(FctHitState hit, Func<string, double, double> widthOf)
+      => FitSource(hit, hit.X0 - hit.SideMin, hit.SideMax - hit.X0, widthOf);
+
+    /* Fitting against a stated total, for callers (and tests) that have no placed row to ask. */
     internal static void FitSource(FctHitState hit, double room, Func<string, double, double> widthOf)
+      => FitSource(hit, room, 0, widthOf);
+
+    private static void FitSource(FctHitState hit, double leftRoom, double rightRoom, Func<string, double, double> widthOf)
     {
       if (string.IsNullOrEmpty(hit.Source))
       {
@@ -240,7 +281,13 @@ namespace EQLogParser
         var label = $"({name})";
         var width = widthOf(label, hit.SourceFontSize);
         var (left, right) = BlockFromRail(hit, width, 1.0);
-        if (left + right <= room || name.Length <= MinSourceChars)
+
+        // unplaced rows (no rail yet: SideMin/SideMax are zero) fall back to the total-block test against whatever room was stated
+        var fits = rightRoom > 0
+          ? left <= leftRoom && right <= rightRoom
+          : left + right <= Math.Max(0, leftRoom);
+
+        if (fits || name.Length <= MinSourceChars)
         {
           hit.SourceLabel = label;
           hit.SourceWidth = width;
@@ -336,6 +383,19 @@ namespace EQLogParser
         var centred = BlockAboutCentre(hit, hit.SourceWidth, peak);
         reachLeft = reachRight = Math.Max(centred.Left, centred.Right);
       }
+      else if (FctMotionStyles.IsRail(hit.Style))
+      {
+        /* One spine per column, placed for the widest AMOUNT the lane can roll and for nothing else — not this row's width, and emphatically not
+         * this row's WORDS. Two numbers arriving in the same column routinely carry different labels (one hit "(Crush)", another "(Ethereal Fire XIII
+         * Rk. III)") and a label is an annotation of its own row: let it into the spine's arithmetic and every row pins itself against its own wall,
+         * which is how a column of right-aligned numbers ends up 46 px out of line with itself. What the spine leaves over is the label's budget, and
+         * FitSource cuts names to exactly that — so a column also gets the second, quieter benefit of cutting every name at the same width rather than
+         * cutting a crit's name sooner than the parry above it. The max() is containment insurance for a row wider than the estimate (an extreme size
+         * dial), where drawing through the wall would be worse than one row's spine sitting slightly further in. */
+        var (valueLeft, valueRight) = BlockFromRail(hit, 0, peak);
+        reachLeft = Math.Max(RailReserve(), valueLeft);
+        reachRight = valueRight;
+      }
       else
       {
         (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth, peak);
@@ -347,10 +407,9 @@ namespace EQLogParser
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;
 
-      /* A rail's spine is placed for the widest row its lane can ever draw (RailReserve) AND left room to bow on the side it bows to. Both halves
-       * matter: without the reserve each arriving number slides the spine inward to suit itself and a column of differing widths stops being an
-       * odometer; without the bow room the widest rows find none left and climb in a straight line (AssignTravel caps whatever survives). Where a
-       * region cannot offer both, containment wins — xHi below takes the clamp — and every row on that column bows equally less. */
+      /* The parabola also wants its bend reserved beside the spine (RailReserve above gives the width; this gives the curve). Without the bow room
+       * the widest rows find none left and climb in a straight line, which AssignTravel then caps to whatever survives. Where a region cannot offer
+       * both, containment wins — xHi below takes the clamp — and every row on that column bows equally less. */
       if (hit.Style is FctMotionStyle.Parabola)
       {
         var want = territory * ParabolaBowFrac;
@@ -522,10 +581,10 @@ namespace EQLogParser
          * therefore bend identically even though one is twice as wide. ArcedX still clamps each row by its own block, as the resize safety net. */
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
-          var (_, outward) = BlockFromRail(hit, hit.SourceWidth, PeakScaleOf(hit));
+          var (valueLeft, valueRight) = BlockFromRail(hit, 0, PeakScaleOf(hit));   // words excluded: see Spawn
           hit.Bow = hit.Bow < 0
-            ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - RailReserve())))
-            : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - outward));
+            ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - Math.Max(RailReserve(), valueLeft))))
+            : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - valueRight));
         }
         return;
       }

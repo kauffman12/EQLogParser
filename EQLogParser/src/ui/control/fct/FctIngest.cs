@@ -423,7 +423,9 @@ namespace EQLogParser
          moment it is placed — and the label is then trimmed to it, never below what still says something and never shorter than it has to
          be: a small font or a wide window keeps a long name whole. The canvas re-takes this decision with measured glyphs (and again on a
          resize), because the estimate is only the geometry's best guess about what the renderer will draw. */
-      FctLayout.FitSource(hit, hit.SideMax - hit.SideMin, FctLayout.EstimateTextWidth);
+      /* The label is fitted to what the spine left it on each side (FitSource), not to the width of the region: at this point the row has its rail,
+         so the numbers can be cut with the same geometry that will draw them. */
+      FctLayout.FitSource(hit, FctLayout.EstimateTextWidth);
 
       /*
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived

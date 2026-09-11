@@ -715,7 +715,7 @@ namespace EQLogParser
       /* Real glyphs, real column: the estimate at spawn decided what geometry reserved, and this decides what the player reads. A name the
          estimator trimmed may well fit at this font, and one drawn whole in a wide window is cut when the window shrinks — which is why the
          full source stays on the hit and nothing here is permanent (FctLayout.FitSource). */
-      FctLayout.FitSource(hit, hit.SideMax - hit.SideMin, _labelWidth ??= (text, size) => TextWidth(text, size, bold: false));
+      FctLayout.FitSource(hit, _labelWidth ??= (text, size) => TextWidth(text, size, bold: false));
       hit.TextDirty = false;
 
       if (hit.Blowout)

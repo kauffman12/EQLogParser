@@ -21,9 +21,9 @@ namespace EQLogParser
     private const double Height = 560;
 
     // eleven characters: inside the ceiling (FctLayout.MaxSourceChars), so anything cut from it was cut for lack of room and nothing else
-  private const string FitsFine = "GlormokFury";
+    private const string FitsFine = "GlormokFury";
 
-  // a font-agnostic measurer: five pixels per point per character, so the arithmetic below is readable and exact
+    // a font-agnostic measurer: five pixels per point per character, so the arithmetic below is readable and exact
     private static double FakeWidth(string text, double size) => text.Length * size * 0.5;
 
     /* Shorten a name only when there is no room for it — the user's own caveat, stated as a rule: "if someone chooses smaller fonts maybe it
@@ -48,6 +48,66 @@ namespace EQLogParser
         // ...but never past the point where the label says something: "(…)" names nothing, so the ellipsis is dropped before that
         var desperate = Hit(FitsFine, 1);
         Assert.IsTrue(desperate.SourceLabel!.Length >= 5, $"a name still has to be a name, got {desperate.SourceLabel}");
+      }
+      finally
+      {
+        FctLayout.LabelSide = side;
+      }
+    }
+
+    /* A word line under an amount is centred under the AMOUNT, whose centre sits half a width left of the rail. Measured from the rail instead — which
+       is what every clamp uses — a long spell name bills the outer side for clearance nothing occupies there: two rows in one column were seen 46 px out
+       of line, the one with a spell name pushed inward by its own label while the one with "(Crush)" was not. */
+    [TestMethod]
+    public void AWordLineUnderAnAmountIsChargedWhereItIsDrawn()
+    {
+      var side = FctLayout.LabelSide;
+      try
+      {
+        FctLayout.LabelSide = FctLabelSide.Below;
+
+        var hit = new FctHitState { ValueWidth = 60, IconAllowance = 0 };
+
+        var (wideLeft, wideRight) = FctLayout.BlockFromRail(hit, 200, 1.0);
+        Assert.AreEqual(30 + 100, wideLeft, "half the amount to its centre, then half the words past that");
+        Assert.AreEqual(100 - 30, wideRight, "and as much reach out past the amount's right edge, measured from there and not from the rail");
+
+        var (narrowLeft, narrowRight) = FctLayout.BlockFromRail(hit, 50, 1.0);
+        Assert.AreEqual(60.0, narrowLeft, "words narrower than their amount hang nothing outside it");
+        Assert.AreEqual(0.0, narrowRight, "which is a label hiding under the damage number, and costing the column nothing");
+      }
+      finally
+      {
+        FctLayout.LabelSide = side;
+      }
+    }
+
+    /* So: one spine per column, placed for the widest AMOUNT the lane can roll (FctLayout.RailReserve) and never for a row's words. This is the case that
+       drew a user's overlay as three unrelated right edges — labels below, straight travel, and each row parking itself against its own wall. */
+    [TestMethod]
+    public void WordsBelongToTheirRowAndNeverMoveTheSpine()
+    {
+      var side = FctLayout.LabelSide;
+      try
+      {
+        FctLayout.LabelSide = FctLabelSide.Below;
+
+        // the screenshot that reported this: a crit with a spell name under it, and a plain hit with "(Crush)", in one column
+        var longLabel = Row("Ethereal Fire XIII Rk. VII", value: 18_300_000, crit: true);
+        var shortLabel = Row("Crush", value: 11_800, crit: false);
+
+        Assert.AreEqual(Math.Round(longLabel.X0), Math.Round(shortLabel.X0),
+          $"a long label must not slide its own rail inward: {longLabel.X0} against {shortLabel.X0}");
+
+        foreach (var hit in new[] { longLabel, shortLabel })
+        {
+          var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth, 1.0);
+          Assert.IsTrue(hit.X0 - left >= hit.SideMin - 1 && hit.X0 + right <= hit.SideMax + 1,
+            $"{hit.Source} and its label have to stay in the column: {hit.X0 - left}..{hit.X0 + right} against [{hit.SideMin}, {hit.SideMax}]");
+        }
+
+        Assert.IsTrue(longLabel.SourceLabel!.EndsWith("…)", StringComparison.Ordinal),
+          $"the long name is cut to what the spine leaves it, got {longLabel.SourceLabel}");
       }
       finally
       {
@@ -244,6 +304,19 @@ namespace EQLogParser
     }
 
     /* A hit with the fonts a lane would give it, its label fitted to `room` pixels of territory. */
+    /* A row as it arrives on a straight rail in a by-type overlay — ingest placing the spine and cutting the name in its own order (FctIngest.Spawn), so
+       what is asserted is what gets drawn. Spell hits and spell crits share a lane, which is the point: two rows, one spine. */
+    private static FctHitState Row(string source, double value, bool crit)
+    {
+      var layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp: true, outgoingUp: false,
+        healSide: FctRegionSide.Left, healUp: true);
+      var hits = new List<FctHitState>();
+      var ingest = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight, Layout = layout };
+
+      return ingest.Accept(hits, FctLane.DamageDealt, value, source, crit: crit, minor: false, periodic: false,
+        fixedText: null, Width, Height, now: crit ? 100 : 200, row: crit ? FctRow.SpellCrits : FctRow.SpellHits);
+    }
+
     private static FctHitState Hit(string source, double room)
     {
       var hit = new FctHitState
