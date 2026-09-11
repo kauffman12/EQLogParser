@@ -178,7 +178,16 @@ namespace EQLogParser
 
       if (hit.Style is FctMotionStyle.Pulse)
       {
-        var half = Math.Max(peak, otherSide);
+        /* A number that owns a CELL is clamped by its VALUE alone. The cell is the box the value lives in — the grid already
+           divided the window so those boxes tile it — and the source label beneath it is clamped where it is painted
+           (FctSkiaCanvas.ClipBounds), exactly as a rail row's words are. Charging the label here pushed outer-column numbers
+           inward off their own cells: on a 700-wide overlay the cell at x=99.5 drew at 110.7, which is half a source label of
+           drift (the label being 124 px wide), and it is the same fault the rails carried — words moving the thing they are
+           written beside. A pulse row with no cell still clamps by its whole block, because nothing else is bounding it. */
+        var (halfPeak, halfOther) = hit.Cell >= 0
+          ? FctLayout.BlockFromRail(hit, 0, ScaleAllowance(hit))
+          : (peak, otherSide);
+        var half = Math.Max(halfPeak, halfOther);
         var loC = hit.SideMin + half;
         var hiC = hit.SideMax - half;
         return loC > hiC

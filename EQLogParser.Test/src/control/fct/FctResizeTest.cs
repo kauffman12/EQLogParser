@@ -102,9 +102,8 @@ namespace EQLogParser
     }
 
     /* A number sitting in a pulse cell keeps its index and is re-seated where that cell now is, so the grid survives the resize
-     * instead of leaving cards at coordinates from the old layout. */
-    
-    [Ignore("SUSPECTED REAL BUG: after a resize a pulse number still sits at x=118.4 while the grid's recomputed cell is 99.5 — the resize path looks like it never reseats grid rows (check whether FctResize reaches FctCellGrid.Reseat, and whether ArcedX keeps a stale X0).")][TestMethod]
+     * instead of leaving cards at coordinates from the old layout. */    
+    [Ignore("open 2026-08-11: one row class still drifts 18.9px off its cell after a resize to 700x520. The label charge in FctMotion.ArcedX is fixed (outgoing grid numbers now land dead on their cells, drift 11.2 -> 0.00 measured); what remains is a disagreement between where FctCellGrid.Reseat places the row and where the test\u0027s Position(incoming, proc, cell, w, h) says that cell is — suspect an area (incoming or proc strip) whose AreaOf differs between the two calls.")][TestMethod]
     public void AGridNumberKeepsItsCellAndFindsTheNewOne()
     {
       var hits = LiveHits(FctMotionStyle.Pulse, 980, 640, 8);
