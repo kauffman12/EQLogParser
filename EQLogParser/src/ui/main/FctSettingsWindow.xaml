@@ -107,7 +107,7 @@
         </Grid>
 
         <TextBlock Grid.Row="3" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label — but the lines do: beside the amount, a row is only as tall as its number, so every column packs tighter. A name longer than its column can carry is shortened (thirty characters is the most any name is worth), and it comes back whole if the window widens or the font shrinks" />
+                   ToolTip="where the (source) name sits by its amount: below is how the overlay has always drawn it; left and right put it inline. The number itself never moves for its label — but the lines do: beside the amount, a row is only as tall as its number, so every column packs tighter. A name longer than its column can carry is shortened (forty characters is the most any name is worth), and it comes back whole if the window widens or the font shrinks — a bigger overlay is the fastest way to read more of a name" />
         <ComboBox x:Name="labelSideCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="left" Tag="left" />
           <ComboBoxItem Content="below" Tag="below" />

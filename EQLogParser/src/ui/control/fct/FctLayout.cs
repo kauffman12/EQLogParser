@@ -131,18 +131,20 @@ namespace EQLogParser
       ((LabelsBelow && !string.IsNullOrEmpty(hit.Source)) ? hit.SourceFontSize * SourceLineFactor : 0);
 
     /* The word-space between an inline label and its amount, in source-font sizes. DrawHit places with this and geometry charges it here,
-       so there is one gap rather than two opinions of it that drift apart the moment anybody edits one. */
-    public const double LabelGapFrac = 0.5;
+       so there is one gap rather than two opinions of it that drift apart the moment anybody edits one.
 
-    /* How much of a source name is worth drawing however much room there happens to be: past a dozen characters the extra letters stop
-       identifying the mob and start eating the column. A ceiling, not a target — FitSource shortens nothing that fits, so the same name
-       survives whole at a smaller font or in a wider window, and is cut when it genuinely does not belong. */
+       It used to be half a source font, which is prose spacing — right for a sentence, wasteful between an amount and its parenthetical, where the
+       bracket already says where the name begins. Every pixel here is a fraction of a letter the column will not show, so it came down to a third:
+       still clear of the digits' own halo at shipped sizes, about half a character back per row. */
+    public const double LabelGapFrac = 0.32;
+
     /*
-     * Thirty characters: long enough for the name of nearly anything in Norrath as the log writes it, short enough that a name never decides
-     * the shape of the picture. It is a ceiling and not a target — a label is cut to whatever its column can carry (FitSource), so at small
-     * window sizes, or beside a crit, names still come out shorter than this. Widening the window brings the letters back.
+     * Forty characters: as long as a name gets to be, and nothing more. It is a ceiling and not a target — the room a column has (FitSource) decides
+     * first, so in a narrow window or beside a wide crit names still come out shorter — but it stopped at thirty while the overlay's first-run size was
+     * a guess at a small screen, and at 2048 px wide a split column can carry fifty. A ceiling below what the layout can pay for is the one way to cut
+     * a name that was never in anyone's way, which is precisely the complaint this whole fitting exists to answer.
      */
-    internal const int MaxSourceChars = 30;
+    internal const int MaxSourceChars = 40;
 
     /* The shortest fitted name worth drawing: below this an ellipsis costs more than the letters it replaces, and "(…)" names nothing. */
     private const int MinSourceChars = 3;
@@ -150,6 +152,11 @@ namespace EQLogParser
     private const string Ellipsis = "\u2026";
 
     internal static double LabelGap(FctHitState hit) => hit.SourceFontSize * LabelGapFrac;
+
+    /* A cut that lands on a space or a comma would hang the ellipsis off nothing — "(Champion of …)" reads as a typo rather than as a name with
+       the rest withheld — so a cut walks back to the last real character. Only ever at a cut, never to a whole name, because a name that happens
+       to end in punctuation is the log's own and should be drawn as written. */
+    private static string Cut(string text) => text.TrimEnd(' ', ',', '.');
 
     /*
      * How far the drawn block reaches either side of the value's CENTRE: its own measured box at a given blowout scale, the special-event
@@ -226,7 +233,7 @@ namespace EQLogParser
         return;
       }
 
-      var name = hit.Source.Length > MaxSourceChars ? hit.Source[..MaxSourceChars] + Ellipsis : hit.Source;
+      var name = hit.Source.Length > MaxSourceChars ? Cut(hit.Source[..MaxSourceChars]) : hit.Source;
 
       while (true)
       {
@@ -242,7 +249,7 @@ namespace EQLogParser
 
         // two characters a pass: names are short and the room is measured, but a wide-script name should not need twenty rounds
         var trimmed = name.EndsWith(Ellipsis, StringComparison.Ordinal) ? name[..^Ellipsis.Length] : name;
-        name = trimmed.Length <= MinSourceChars ? trimmed : trimmed[..^2] + Ellipsis;
+        name = trimmed.Length <= MinSourceChars ? trimmed : Cut(trimmed[..^2]) + Ellipsis;
       }
     }
 

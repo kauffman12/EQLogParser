@@ -71,9 +71,13 @@ namespace EQLogParser
         Assert.AreEqual("(Supercalifragilistic)", whole.SourceLabel,
           "a twenty-character name is a name, not a problem: it is drawn whole now that the ceiling has room for it");
 
-        var long_ = Hit("Svarnrhus the Undying Champion of Frost", 100_000);
-        Assert.AreEqual("(Svarnrhus the Undying Champion…)", long_.SourceLabel,
-          "past the ceiling a name is cut by length alone, whatever room there is");
+        var thirtyNine = Hit("Svarnrhus the Undying Champion of Frost", 100_000);
+        Assert.AreEqual("(Svarnrhus the Undying Champion of Frost)", thirtyNine.SourceLabel,
+          "thirty-nine characters is inside the ceiling now that a wide column can pay for them");
+
+        var long_ = Hit("Svarnrhus the Undying Champion of Frost and Cinders", 100_000);
+        Assert.AreEqual("(Svarnrhus the Undying Champion of Frost…)", long_.SourceLabel,
+          "past the ceiling a name is cut by length alone, whatever room there is — and the cut walks back off the space it landed on");
         Assert.IsTrue(long_.SourceLabel.Length <= 2 + FctLayout.MaxSourceChars + 1, "and never past it");
       }
       finally

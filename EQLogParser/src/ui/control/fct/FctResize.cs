@@ -32,8 +32,8 @@ namespace EQLogParser
      * are the sizes a corner drag snaps TO, and the largest of them is what a first run asks for (FctOverlayWindow's defaults) before that
      * clamp. "720 is as narrow as lane columns stay comfortably apart" is still true — it is just no longer the widest thing on offer.
      */
-    public static readonly double[] WidthSnaps = [1600, 1440, 1280, 1120, 980, 800, 760, 720];
-    public static readonly double[] HeightSnaps = [900, 820, 720, 640, 560, 520];
+    public static readonly double[] WidthSnaps = [1920, 1760, 1600, 1440, 1280, 1120, 980, 800, 760, 720];
+    public static readonly double[] HeightSnaps = [1080, 960, 900, 820, 720, 640, 560, 520];
 
     /* The smallest probed layout: at 420x300 every style still places every number inside the window and clear of the strip.
      * Smaller than this and a band is shallower than a line of text, which is not a layout, it is an overlap with extra steps. */

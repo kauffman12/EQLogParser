@@ -275,16 +275,26 @@ namespace EQLogParser
       }
     }
 
-    /* The size the overlay ships with, named so Reset Position and an unusable stored size land on something that was measured
-     * (§6.8) instead of on WPF's own default. These match the Width/Height attributes in the XAML. */
     /*
-     * A first run asks for the middle of the offered range (FctResize) rather than the smallest thing that renders. The overlay is read
-     * across a game window at arm's length, and 800x560 was chosen to prove the layout, not to live in: it fit, but a source line beside a
-     * four-digit number had nowhere to go and names came out shortened. Fit() still trims this to the working area it is given, so on a
-     * small screen a first run gets what the screen has.
+     * A first run takes most of the desktop rather than a fixed rectangle, and never less than the size the layout is measured at. The overlay
+     * is transparent text: what it is competing with for room is the game's own HUD, not another window, so the honest first guess is "as much
+     * screen as the game is not using" — and for the source labels that sit beside every number, screen literally IS the budget. A split column
+     * is a quarter of the overlay's width, so the width available for a name is (overlay ÷ 4) − its own number − the gap between them: about 190 px
+     * at 1280, which is a dozen and a half letters at label size, and about 380 px at 2048, which is thirty. Nothing else in the layout scales a
+     * name's length this directly, which is why the first-run size stopped being a constant.
+     *
+     * The share deliberately stops short of the whole work area: raid frames and a buff line live on those edges, and an overlay that starts by
+     * covering everything teaches the player to shrink it. Fit() clamps the request to the desktop anyway, so a netbook gets what it has, and the
+     * saved size always wins over this — a first-run guess is not something to keep coming back for.
      */
-    internal const double DefaultWidth = 1280;
-    internal const double DefaultHeight = 720;
+    internal static (double Width, double Height) DefaultSize()
+    {
+      var area = SystemParameters.WorkArea;
+      return (Math.Max(1280, area.Width * DefaultWidthShare), Math.Max(720, area.Height * DefaultHeightShare));
+    }
+
+    private const double DefaultWidthShare = 0.8;
+    private const double DefaultHeightShare = 0.75;
 
     private void RestoreSettings()
     {
@@ -360,10 +370,12 @@ namespace EQLogParser
     {
       var area = SystemParameters.WorkArea;
 
-      Width = DefaultWidth;
-      Height = DefaultHeight;
-      Left = area.Left + (area.Width - DefaultWidth) / 2;
-      Top = area.Top + (area.Height - DefaultHeight) / 2;
+      var (width, height) = DefaultSize();
+
+      Width = width;
+      Height = height;
+      Left = area.Left + (area.Width - width) / 2;
+      Top = area.Top + (area.Height - height) / 2;
     }
 
     /*

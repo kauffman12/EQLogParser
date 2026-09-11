@@ -1365,11 +1365,14 @@ all. Below is the exception in both directions — the second line overhangs its
 column boundary but *not* against the spacing between rows in a column, whose vertical reserve already covers it. Charging it twice would make
 rows braid into neighbouring columns to dodge words that were never in their way.
 
-A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: `MaxSourceChars` — thirty, long enough for
-the name of nearly anything in Norrath as the log writes it, short enough that a name never decides the shape of the picture — and whatever width survives
-after the amount itself. Nothing is trimmed
+A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: `MaxSourceChars` — forty, which is as long
+as a name gets to be and nothing more (raised from thirty once the first-run size stopped being a guess at a small screen: a ceiling sitting below what the
+layout can pay for is one more way to cut a name that was in nobody's way) — and whatever width survives after the amount itself. Nothing is trimmed
 that fits, so the same name survives whole at a smaller font or in a wider window; nothing is cut below three letters, where an ellipsis would
-cost more than the name it replaces and "(...)" names nobody. Two measurers take the same decision at different moments — an estimate at spawn,
+cost more than the name it replaces and "(...)" names nobody. Two more small things came out of the same complaint: a cut that lands on a space or a comma
+walks back to the last real character, because "(Champion of …)" reads as a typo rather than as an ending being withheld; and the space between an amount and
+its bracket came down from half a source font to a third (`LabelGapFrac`), prose spacing being wasteful between a number and a parenthetical that opens with
+a bracket to say where it starts. Two measurers take the same decision at different moments — an estimate at spawn,
 before any font exists, and the real glyphs in `RebuildGlyphs`, whose answer is what the player reads — and because the *full* source stays on
 the hit, the decision is re-taken whenever the room changes: a resize marks the text dirty (widen the window and a trimmed name comes back), and
 so does switching label side, since left, right and below leave different amounts of column behind.
@@ -1586,11 +1589,15 @@ presets, so dragging one edge gets the same help as a corner, and a corner near 
 smallest size probed: every style still places every number inside the window and clear of the protected strip there, and below it
 a band is shallower than a line of text.
 
-The default started at 980×640, came down to **800×560** as what most people need over a HUD, and has gone back up to **1280×720**: the narrow window charged
-for itself in a currency nobody was counting, because a source line beside a four-digit number had about a hundred pixels of a split column to live in and
-every name longer than a handful of letters came out shortened. At 1280 that same column carries a mob's whole name in most fights, and halves carries a name
-beside a crit with room left over; Fit() still trims the request to the working area it is given, so a small screen gets what it has. What the narrow sizes
-cost is measured and unchanged: worst-instant pair overlap
+The default started at 980×640, came down to **800×560** as what most people need over a HUD, went back up to 1280×720 when the source labels turned out
+to be the thing being paid for, and is now **not a size at all**: a first run asks for 80% × 75% of the desktop's work area, floored at that same 1280×720
+(`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. In split a column is a quarter of the overlay, and the room
+inside it for a *name* is (overlay ÷ 4) − the number − the gap between them: about 190 px at 1280, which is a dozen and a half letters at label size, and
+about 380 px at 2048, which is thirty. Nothing else in the layout moves a name's length nearly that directly, so the one setting that really decides how
+much of the screen belongs to the game also decides how much of a name a player can read — and it should answer to the monitor rather than to a number
+chosen when the layout was new. The share stops short of the whole work area on purpose (raid frames and buff lines live on those edges, and an overlay
+that begins by covering everything teaches the player to shrink it), Fit() still clamps the request to what the desktop has, and a saved size always wins:
+a first-run guess is not something to keep coming back for. What the narrow sizes cost is measured and unchanged: worst-instant pair overlap
 size (worst-instant pair overlap): fountain 3-in-flight 7.5% → 6.7%, spray 8-in-flight 8.3% → 7.7% — free of charge — while **six
 numbers held at once goes 15.5% → 20.7%**. Held text is the one thing that cannot trade space for motion, so it pays for the narrower
 window; everything else does not.
