@@ -7,13 +7,14 @@
 > out of the bottom, both travelling away from the protected middle this document asks for — because left/right has to
 > be memorised while "up = at my target, down = at me" does not, and because diverging travel keeps the middle clear
 > by construction rather than by clamping. Colour likewise no longer encodes direction anywhere. See
-> `docs/DesignNotes.md` → "One region scheme, and why direction went vertical" and "Colour answers what, never who".
+> `docs/DesignNotes.md` → "Two region schemes: bands and split" and "Colour answers what, never who".
 > Everything below about keeping the center clear, capping footprint and routing events into fixed areas still holds.
 
-> The schemes and styles this brief named are still implemented even where no control offers them: the left/right split
-> (`FctLayoutMode.Halves`) and the fixed-cell grid behind *Pulse* (`FctMotionStyle.Pulse`, `FctCellGrid`). They are kept on
-> purpose for possible future use — reachable from `settings.ini` and the simulation window, and covered by tests — not left
-> over from the version this document describes.
+> Two other things this brief named have since been deleted rather than left unused: the side-by-side halves scheme
+> (`FctLayoutMode.Halves`) and *Pulse* with the fixed-cell grid it existed to fill (`FctCellGrid`). Neither had a control, an
+> ini word anyone types, or a mode that could select it, and each cost the two schemes that did ship a general case to carry.
+> What their work taught — that static text needs slot allocation, and that every rect is measured against its own region —
+> is recorded in `docs/DesignNotes.md` rather than kept compiled.
 
 ## Recommendation
 

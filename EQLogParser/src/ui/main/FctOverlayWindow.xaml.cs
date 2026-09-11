@@ -37,8 +37,9 @@ namespace EQLogParser
    *
    * There are two region schemes (FctStage): bands, top and bottom around a clear middle strip, where direction of travel is
    * the "who" carrier (mine rise, hits on me sink); and split, columns across the overlay, where each category books a lane and
-   * every category's direction is its own dial. Configure mode states whichever is on screen with a four-character legend and
-   * nothing else — a sentence about it gets read once and then sits there being clutter.
+   * every category's direction is its own dial. Nothing here says which one is on screen: the settings window plays live numbers
+   * next to the controls that move them, and the arrow sentences that used to explain the columns in words were removed for
+   * exactly that reason (FctSettingsWindow).
    */
   public partial class FctOverlayWindow : Window
   {

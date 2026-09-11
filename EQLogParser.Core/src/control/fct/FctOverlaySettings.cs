@@ -31,12 +31,6 @@ namespace EQLogParser
     public const string ShapeKey = "FctOverlayShape";
 
     /*
-     * The region scheme and how it is oriented (see FctStage): which lane each category owns and which way each side travels.
-     * What ships is fountain (bands geometry, see LoadIsFountain) and split (ByType columns), and these keys read to those two;
-     * junk always lands on a shipped choice rather than reaching geometry as garbage.
-     */
-
-    /*
      * Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
      * the two damage streams learned to answer separately in the same engine pass that made bands steerable.
      *
