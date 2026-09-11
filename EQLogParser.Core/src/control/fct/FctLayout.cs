@@ -274,7 +274,10 @@ namespace EQLogParser
         return;
       }
 
-      var name = hit.Source.Length > MaxSourceChars ? Cut(hit.Source[..MaxSourceChars]) : hit.Source;
+      /* The ceiling, applied once. The ellipsis goes on here rather than only in the trimming loop below, because a slice that happens to end on a
+         word boundary — "…Champion of Frost" at exactly forty characters — reads as a whole name that merely has a long ending, and the player is left
+         believing the log said "Frost". A cut that does not look like a cut is a wrong fact on screen, which is worse than a clipped one. */
+      var name = hit.Source.Length > MaxSourceChars ? Cut(hit.Source[..MaxSourceChars]) + Ellipsis : hit.Source;
 
       while (true)
       {
