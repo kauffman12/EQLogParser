@@ -158,7 +158,6 @@ namespace EQLogParser
      * directly in the centre row's sweep.
      */
     [TestMethod]
-    [Ignore("revealed-by-move: compression hits the tolerated 0.34 because placement now sees real widths; re-derive at a shipped size")]
     public void NarrowTerritoryCompressesTheColumnsInsteadOfLosingRows()
     {
       var ingest = Streaming();
@@ -194,7 +193,6 @@ namespace EQLogParser
      * The genre's overlays get away with silently overwriting rows; this one trades by value and says so in DroppedCount.
      */
     [TestMethod]
-    [Ignore("revealed-by-move: a row is dropped inside what this test calls capacity, same cause as the compression case")]
     public void CrowdedStreamTradesByValueAndCountsIt()
     {
       var ingest = Streaming();
@@ -231,7 +229,6 @@ namespace EQLogParser
      * a column: halves, where nobody reads a line and flight scoring is what keeps two streams apart.
      */
     [TestMethod]
-    [Ignore("revealed-by-move: the synthetic flood no longer registers as congestion, so the accelerator stays at 1.0")]
     public void AFloodSpeedsUpItsOwnNewbornRowsAndDrainsFast()
     {
       var ingest = new FctIngest(new Random(4))

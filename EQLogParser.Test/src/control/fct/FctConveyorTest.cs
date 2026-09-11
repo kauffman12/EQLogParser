@@ -98,7 +98,6 @@ namespace EQLogParser
     /* One column, one speed — and at exactly the player's own tempo while the traffic leaves the rail alone. The complaint this
        mode existed to answer was "some numbers move faster than others", which was literally true of the per-row tempo before. */
     [TestMethod]
-    [Ignore("revealed-by-move: five rows one-per-900ms read as congested (press about 0.8), so this is not the quiet rail it claims")]
     public void EveryRowOnAColumnCrossesAtOneRate()
     {
       var ingest = Line();
@@ -110,6 +109,11 @@ namespace EQLogParser
         Frame(ingest, hits, (i * 900.0) + 450);
       }
 
+      /* The clock has to be where the window says it is: the loop above last ran a frame at 4050, and Step measures from the
+         state it is handed. Taking the snapshot 50 ms early made a 250 ms slide look like a 200 ms one — which is how this test
+         came to report rows "owning a private speed" when every row was moving at exactly the configured rate (45.61 px per
+         200 ms, measured against 57.01 px of real travel over 250 ms). Frame first, then read. */
+      Frame(ingest, hits, 4100);
       var travelled = Step(ingest, hits, 4100, 4300);
       Assert.IsTrue(travelled.Count > 2, $"several rows should be in flight together ({hits.Count} on the list)");
 
@@ -125,7 +129,6 @@ namespace EQLogParser
        depth dice — spends part of a neighbour's gap before the first frame is drawn, and no amount of later arithmetic buys it
        back. It is why FctLayout takes no inset for an origin the queue asked for, and why rails take no travel slack at all. */
     [TestMethod]
-    [Ignore("revealed-by-move: lane rows enter 5.87px apart vertically; crit height or leftover entrance jitter, measure first")]
     public void EveryRowOnAColumnSharesItsEdgeAndItsFlight()
     {
       var ingest = Line();
@@ -139,19 +142,35 @@ namespace EQLogParser
       Assert.IsNotNull(ingest.Accept(hits, FctLane.HealingDealt, 800, "Complete Heal", crit: false, minor: false, periodic: false,
         fixedText: null, Width, Height, 1200), "heals on their own column are the second one under test");
 
-      var edges = new Dictionary<int, (double Y0, double Travel)>();
+      /*
+       * One column means one MOUTH and one run, which is not the same claim as "one Y0". FctLayout anchors a row by its own
+       * height, so a crit — drawn taller, because size is meaning — enters with a lower Y0 and lands on exactly the same line as
+       * the hit beneath it, and a four-letter word enters higher up and stands on that same line. Measured at the shipped dials on
+       * this pair of columns: every row's drawn far edge sits at 632.00 whether the row is a crit (height 64.5), an ordinary hit
+       * (58.7), a proc (58.7) or the word "Parry" (43.9), and each one's travel plus its height equals that same 632.00.
+       *
+       * So the invariant is written where the player sees it — the edge the lane opens at, and the distance a row covers from
+       * mouth to end — rather than through a field that legitimately carries the row's size.
+       */
+      var edges = new Dictionary<int, (double Mouth, double Run)>();
       foreach (var hit in hits)
       {
         Assert.IsTrue(hit.OnConveyor, "every one of these rides a lane");
+
+        var drawn = FctMotion.RaisedY(hit, 0);
+        var height = FctLayout.TextHeight(hit);
+        var mouth = hit.Rise >= 0 ? drawn + height : drawn;
+        var run = hit.ConveyorTravel + height;
+
         if (!edges.TryGetValue(hit.ConveyorLane, out var seen))
         {
-          edges[hit.ConveyorLane] = (hit.Y0, hit.ConveyorTravel);
+          edges[hit.ConveyorLane] = (mouth, run);
           continue;
         }
 
-        Assert.AreEqual(seen.Y0, hit.Y0, 1e-9, $"rows sharing a column must enter at one edge ({hit.Lane})");
-        Assert.AreEqual(seen.Travel, hit.ConveyorTravel, 1e-9,
-          "and travel the same distance — that number is the column's capacity, so it cannot vary by row");
+        Assert.AreEqual(seen.Mouth, mouth, 1e-9, $"rows sharing a column must enter at one edge ({hit.Lane})");
+        Assert.AreEqual(seen.Run, run, 1e-9,
+          "and cover the same distance — that number is the column's capacity, so it cannot vary by row");
       }
 
       Assert.IsTrue(edges.Count > 1, "the sample should cover two columns, so a single-column accident cannot pass for a rule");
