@@ -737,17 +737,17 @@ and the motion combo (hold/fountain/pulse/spray/parabola) are gone — retired r
 not meet the geometry vocabulary to choose between looks. What replaces them:
 
 **mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
-and spew out and fall, which is the look every classic FCT draws with; its controls are a shape pick of **spray | settle**
-— spray being what makes it a fountain, settle the same bands drifting their numbers out to rest instead — plus three
+and spew out and fall, which is the look every classic FCT draws with; its controls are a shape pick of **spray | freeze**
+— spray being what makes it a fountain, freeze the same bands drifting their numbers out and stopping instead — plus three
 direction dials, the show switches, size and speed. Healing's dial speaks in fountain too: **heals rise while damage
 sprays down** is the classic FCT look, and until this dial was honoured (in `FctStage.UpFor(hit)` and threaded through
 the bands factory) a fountain silently chained healing to the damage-in direction — the row that controls it was hidden
 whole, because hiding a lane pick had swept up the direction with it. A band gives heals no column, only travel, and
 travel is all the dial asks for. *Split* is the side columns (internally by type) with each category
 assigned its own **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing
-a lane — plus **shape: parabola | line**, one rail machinery under both, with or without the bend. Split offers no
+a lane — plus **shape: arc | line**, one rail machinery under both, with or without the bend. Split offers no
 rest state on purpose: a row parked part-way down a column is not a calmer queue, it is a broken chain, which is the
-one thing the column exists to prevent — so settle belongs to fountain and nowhere else. Controls a mode does not
+one thing the column exists to prevent — so freeze belongs to fountain and nowhere else. Controls a mode does not
 obey collapse rather than sit disabled — in fountain that means the **lane pickers only**: every direction dial stays,
 because every mode has travel to answer for, and the threshold lives above the mode row entirely (it filters numbers,
 not layouts; hiding it there was retired with the minimal-UI era). The legend re-sentences itself from the staged
@@ -756,31 +756,36 @@ cell** rather than one list of illegal promises: WPF items cannot live in two li
 motion it would only degrade, so each mode owns its list and the mode swap shows one.
 
 **settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = fountain — the mode that needs no explanation opens the first run) and
-`FctOverlayShape` ("parabola"/"line"/"spray"/"hold"; the retired "straight" spelling still reads) name the mode;
+`FctOverlayShape` ("arc"/"line"/"spray"/"freeze"; the retired "straight" spelling still reads, because it names the same
+rail — the older "parabola"/"hold" spellings do not read at all: they were never in a release, so an ini still carrying one
+resolves to its mode's own shape and nothing complains) name the mode;
 per-category keys carry the rest (`FctOverlayHealDirection`,
 `FctOverlayTakenDamageLane`, `FctOverlayDealtDamageLane` beside the existing direction keys; the older `…Side` spellings
 still parse, to the side's outer lane). The combos-era
 `FctOverlayLayout` key stops being read — nothing of this shipped, so nothing migrates — and an omitted direction still
 reaches the constructor as *null* so bands keeps its outward invariant without anybody having chosen it. Because the mode
-layer cannot express an illegal combination (fountain cannot store parabola), the load-time legality repair the combos era
+layer cannot express an illegal combination (fountain cannot store a rail), the load-time legality repair the combos era
 needed is gone too: there is nothing left to fix up. `FctOverlaySettings.ClampShape` is where that promise lives, so a
 stale key, a hand-edited ini or a half-built state resolves to the mode's own motion — fountain cannot even accidentally
 run a rail.
 
-**Two words the players own.** The rail without the bend is **line**; the drift-stop-fade style is **settle**. The panel,
-the ini ("line") and the tooltips say those words; the engine keeps `Straight` (MSBT's name, and what the geometry tests
-assert) and `Hold` (its own, from the animation hold). Same layering as fountain/split over bands/by type.
+**One word per shape, panel to engine.** The dropdown, settings.ini and the enum now agree: **arc**, **line**, **spray**,
+**freeze**. Carrying a player word and an engine word for the same shape meant a hand-edited ini said one thing while the
+combo showed another, and only one of them was checked on load. One exception survives on purpose: the panel saves and shows
+`line` while the engine says `Straight` (MSBT's name, and what the geometry tests assert). The style once labelled **settle**
+was renamed rather than relabelled — "hold", its old engine word, names a beat in an animation timeline and reads as a frozen
+UI; **freeze** states the thing a player has to predict: it travels, stops, and fades in place.
 
-Engine names stay where geometry carries tests: `FctLayoutMode.Bands`/`ByType` and `FctMotionStyle.Spray`/`Parabola`/
-`Straight`/`Hold`, and that is the whole list — a style that was tried and removed (pulse, with the cell grid built to place it) is described
+Engine names stay where geometry carries tests: `FctLayoutMode.Bands`/`ByType` and `FctMotionStyle.Spray`/`Arc`/
+`Straight`/`Freeze`, and that is the whole list — a style that was tried and removed (pulse, with the cell grid built to place it) is described
 where its lesson is written down, below. "fountain" and "split" name UI states; "bands" and "by type" name the geometry under them.
 
 ### Two simple modes need three engine facts: category columns, steerable bands, and a bow-less rail
 
 The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;
 two direction dials, the show switches, size, speed; nothing else) and **split** (the side columns, with each category —
-healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **parabola** and
-**straight** — since grown into parabola | line). The modes are a settings slice; three engine facts had to
+healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **arc** and
+**straight** — since grown into arc | line). The modes are a settings slice; three engine facts had to
 exist first, and each says goodbye to an old shortcut:
 
 **Directions became per-category.** `FctLayoutChoice` gained `HealUp`, `IncomingDamageSide`, and `OutgoingDamageSide`:
@@ -799,7 +804,7 @@ the band's own edges whatever sign they run at.
 looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one rate per lane, the column's braid
 braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is now
 the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
-silently. Braiding itself splits by shape though, because sideways means something different on each: a parabola crowds
+silently. Braiding itself splits by shape though, because sideways means something different on each: an arc crowds
 into emergency columns beside its lane (bows sweep across them, so they read as part of the dance), while **a line
 steps INTO its travel** — a row denied the mouth enters one text line further along the same column. Sideways offsets on
 straight parked whole categories beside the lane permanently, which is exactly how misses and parries ended up in their
@@ -807,7 +812,7 @@ own little column every fight (frequent enough to always be crowded) while resis
 With a shared scroll rate the spawn-time gap locks for the whole flight, so crowded line rows read as one queue that
 entered slightly staggered. Sideways columns stay underneath as the valve for past-throughput storms — a clean second
  column during a burst beats two numbers printed on each other, and no number is ever dropped — but they are no longer
- where an ordinary fight parks its words. Bands degrades both rail styles to hold exactly as it degraded the parabola.
+ where an ordinary fight parks its words. Bands degrades both rail styles to freeze exactly as it degraded the arc.
 
 ### Category switches: what story an overlay tells
 
@@ -975,12 +980,11 @@ fountain is read as a whole — nothing in it is a scale you measure gaps agains
 ### Four motion styles, and the one thing none of them may change
 
 The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
-wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **hold** (travel away from the strip, stop,
-be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; its name is
-an animation hold, the still beat after a move, and fountain's shape picker shows it as **settle** because "hold" reads
-as a frozen UI state — split does not offer it at all, since parking mid-scroll breaks the chain a column is made of),
+wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **freeze** (travel away from the strip, stop,
+be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; split does not
+offer it at all, since parking mid-scroll breaks the chain a column is made of),
 **fountain** (overshoot, then fall; mirrored upward on the lower band), **spray** (a random cone out of the lane slot, then a
-short fall) and **parabola** (a constant-speed scroll arcing out to a vertex at half height and back — the shape the scrolling-text genre
+short fall) and **arc** (a constant-speed scroll bowing out to a vertex at half height and back — MSBT's parabola, and the shape the scrolling-text genre
 ships as its own default, and split's default for the same reason; see below). A fifth style, **pulse**, lived here with a cell grid of its
 own; what it taught is kept further down. Where a hit goes, how it moves and how numbers stack are three
 orthogonal decisions, and cramming two of them into one boolean was how "fountain" came to mean several things at once.
@@ -991,48 +995,48 @@ Three rules keep five styles from becoming five behaviours:
   style is running, which is what makes "try each during the next pull" a safe thing to offer. The combo therefore applies
   to hits spawned *after* the change rather than restyling what is already on screen.
 - **A hit keeps the style it was born with** (`FctHitState.Style`, snapshotted by `FctIngest.Accept`). If the renderer
-  read one live setting, switching fountain → hold mid-flight would hand every parabola in progress a different
+  read one live setting, switching fountain → freeze mid-flight would hand every arc in progress a different
   velocity for its remaining frames. Snapshotting an enum per hit is what makes switching free.
 - **The protected middle stays clear by construction, for every style allowed in bands.** Rail styles do not run there at
-  all (they degrade to hold, below), so the styles sharing the canvas with the strip are the ones measured against it; spray falls
-  back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; hold
+  all (they degrade to freeze, below), so the styles sharing the canvas with the strip are the ones measured against it; spray falls
+  back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; freeze
   never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
   the strip is behind it and the bottom edge is clamped. The rails live in split, where there is no strip to cross
-  because the regions do not overlap; if settings.ini forces one into bands anyway, `FctIngest` degrades it to hold rather
+  because the regions do not overlap; if settings.ini forces one into bands anyway, `FctIngest` degrades it to freeze rather
   than run it (a test sweeps each style across its whole curve asserting nothing enters the strip or leaves the window,
   so a future sixth style has to pass the same bar).
 
-**The parabola is split's default because it is what the genre ships.** MSBT's profiles are all of them
-`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and arc —
+**The arc is split's default because it is what the genre ships.** MSBT's profiles are all of them
+`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and bow —
 x is a function of y². FCT keeps its tempo system and borrows the shape as MSBT actually writes it rather than as it
 reads in a still: `ScrollLeft/RightParabola…` computes `x = y²/4a` with **y measured from the area's mid-point**
 (`MSBTAnimationStyles.lua`), so the vertex is *mid-flight* — a number leaves its column straight up or down, bows out
 to the widest point at half height, and is back on the column by the time it fades. That symmetry is the semicircle
 chain in Mik's demos, each value tracing its neighbour's path; the monotonic outward drift this project shipped first
 (`x = X0 + Bow·t²`, vertex at spawn) never came back, and looked like nothing in the genre. The vertical run stays
-`y = Y0 − Rise·t` — linear, not eased, because an eased scroll is no longer a parabola at all, it is an arc wearing
-one's coordinates — and with y linear the mid-point formula comes out as `x = X0 + Bow·4t(1−t)`. `Bow` is signed
+`y = Y0 − Rise·t` — linear, not eased, because easing it would leave the equation behind and draw a bend that only looks
+like the genre's curve — and with y linear the mid-point formula comes out as `x = X0 + Bow·4t(1−t)`. `Bow` is signed
 **away from the middle of the overlay** — the one direction a bow may go without reaching a neighbour's lane — and measures a share of that column's
-territory (`ParabolaBowFrac`, 34%): MSBT's own curve swings a full area width, text running off its area while still
+territory (`ArcBowFrac`, 34%): MSBT's own curve swings a full area width, text running off its area while still
 fading, and 34% is as far an arc as this overlay can keep inside the half — far enough to read as a sweeping curve,
-near enough that the widest crit draw still clears both walls at the vertex (`FctParabolaTest` pins containment for
+near enough that the widest crit draw still clears both walls at the vertex (`FctArcTest` pins containment for
 life, both sides, both directions). With right-aligned values (§ *The odometer*) the vertex needs the **whole** drawn
 width on the inward side, not half, and `AssignTravel` trims the formula to whatever the territory actually offers
 before the flight is scored — a clipped vertex would score one shape and draw another.
 
 Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
-and nothing about where the number ends, so a slower parabola is the same curve drawn more slowly, which is what a tempo
+and nothing about where the number ends, so a slower arc is the same curve drawn more slowly, which is what a tempo
 dial should do for a constant-speed motion (a test checks the endpoints agree to the bit at both dial extremes). And a
 resize maps `Bow` by the x factor exactly like `Arc`, so a number mid-scroll still ends in its new half. Legality lives in
-one place — `FctStage.DefaultMotion`: split → parabola, bands → hold — and the configure row enforces it twice over: the
-parabola item is disabled in bands, and choosing bands while previewing a parabola swaps the preview to that scheme's
-default instead of showing a motion ingest is about to degrade anyway. A first-time split user gets that default even
-though nothing was saved: `ParseMotion`'s hold is the fallback for junk data, not a first-run opinion, and
+one place — `FctStage.DefaultMotion`: split → arc, bands → freeze — and the configure row enforces it twice over: the
+arc is never even offered in bands (each mode owns its shape list), and choosing bands while previewing an arc swaps the
+preview to that scheme's default instead of showing a motion ingest is about to degrade anyway. A first-time split user gets
+that default even though nothing was saved: `ParseMotion`'s freeze is the fallback for junk data, not a first-run opinion, and
 `HasStoredMotion` is what tells the two apart.
 
 Spray needed one constant that measurement forced: `SprayReachFactor`, roughly twice the depth of a band, with height
 capped at what the band offers. Given only the band's own travel budget (`usable * sin(theta)`), spray's horizontal
-coverage came out **identical to hold's** — hold already adds 12% of width in arc plus a lane-slot jitter, so a shallow
+coverage came out **identical to freeze's** — freeze already adds 12% of width in sideways sway plus a lane-slot jitter, so a shallow
 cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
 actually move sideways while the steep ones simply top out against the clamp.
 
@@ -1042,15 +1046,15 @@ existed only in where numbers ended up, never in how they got there, so mid-flig
 `FctMotion.LateralProgress` puts spray's sideways travel on an ease-out while its vertical keeps the smootherstep climb:
 shrapnel keeps moving sideways while gravity handles the vertical, so the path bends over into an arc by itself. It eases
 to zero slope at the apex instead of running linearly because a number that stops dead sideways at the moment it begins to
-fall has a kink you can see. Hold and fountain deliberately keep one curve between them — a straight climb is what a thing
-with no gravity does. A test pins the difference rather than trusting the eye: hold's drawn point never leaves the line
+fall has a kink you can see. Freeze and fountain deliberately keep one curve between them — a straight climb is what a thing
+with no gravity does. A test pins the difference rather than trusting the eye: freeze's drawn point never leaves the line
 between its origin and its apex, spray's must leave it by more than 20 px and be nearly spread out by the time it peaks.
 
 Two smaller changes went the same way. The cone opened from ±38° to ±49°, with `SprayMaxLateralFrac` moving from 0.30 to
 0.34 of width — that cap has to travel with the angle or every wide draw stops at the same wall and the fan comes out flat
 topped — and spray's choreography got its own tempo, `SprayMotionWindowMs` (1700 ms against fountain's 2000), because
 shared flight time was the other half of the resemblance: two 2 second arcs read as one effect whatever path they draw, and
-shrapnel is supposed to look quick. Measured at 980×640 with these numbers, spray covers 519 px of x mid-flight where hold
+shrapnel is supposed to look quick. Measured at 980×640 with these numbers, spray covers 519 px of x mid-flight where freeze
 covers 246 and fountain 242.
 
 **What pulse taught, and what is left of it.** A fifth style lived here for a while: **pulse**, text that never travelled —
@@ -1061,7 +1065,7 @@ the outer row, rows filling centre-out), and that grid held up until the geometr
 than its own region, its outer columns collapsed onto one place — 4 overlapping numbers in 8. The lesson outlived the style, and it is the
 reason `FctStage` exists: **geometry depends on the region and the canvas size, never on the hit being placed**, and every rect a row may
 occupy is measured against the region it was assigned. Nothing translates any more without a reason; the reduced-motion reading that pulse
-served is served today by hold, which travels once and then rests.
+served is served today by freeze, which travels once and then rests.
 
 What was deliberately **not** built is anchored-follow (a number tracking its own mob across the screen). EQ's log
 never contains actor positions, only names, so there is nothing to anchor to; that absence is the whole reason the
@@ -1159,15 +1163,15 @@ Split answers it structurally now, and every rung is counted (`FctIngest.Accept`
 
 What went with the deleted placement ladder: a birth-time accelerator stamped per row from how many neighbours happened to be on screen (once
 `RailPress` meant *this row's* crowd), one re-thread of a row that still covered a neighbour, and a depth-based "label fence" that charged a
-plunge through a word band more heavily than a side kiss between columns (`FctStream.LabelBitten`). The fence went because a queue cannot plunge
+plunge through a word band more heavily than a side kiss between columns (`LabelBitten`, deleted with the fence). The fence went because a queue cannot plunge
 into itself, not because it failed: measured on a 200-event raid burst it took label bites 7 → 0 and value smears 193 → 1, paid for in counted
 drops — the number that justified making eviction visible in the first place. Placement still prices a deep overlap above a shallow one
-(`FctPlacement.LabelOverlapBias`), which is what the scatter styles have to work with.
+(the worst-overlap term in `FctPlacement.Cost`), which is what the scatter styles have to work with.
 
 ### Split's rails are a conveyor: one clock per column, spacing bought at entry
 
 Split is not choreography, it is a ledger: whoever selects it wants to read the column top to bottom and miss nothing. That promise
-covers **both** rails the mode offers — the straight line, and the parabola that ships there by default. The shape dial chooses the path up
+covers **both** rails the mode offers — the straight line, and the arc that ships there by default. The shape dial chooses the path up
 the column (a straight climb, or MSBT's bow that leaves the column at its widest point and returns); it does not choose whether the traffic
 is ordered, because a lane you are reading has to keep its spacing. Neither shape can therefore keep the promise by placing rows and giving each its own flight time, which is what the rail
 used to do. A row born into a crowd was given a shorter life than the row in front of it (the per-row accelerator the old placement stamped
@@ -1215,7 +1219,7 @@ turns "about evenly spaced" into something a reader can scan.
 
 **A column's spine and its bend are decided for the widest row it can ever draw, not for the row that arrived.** `FctLayout.RailReserve` prices a rail
 against a crit-class number at its dial's size — six of the widest digit with a thousands comma, plus room for a special event's mark — and Spawn places the
-spine so that box fits *and* leaves `ParabolaBowFrac` of clear room on the side the column bows to; AssignTravel caps the bow by that same reserve rather than by
+spine so that box fits *and* leaves `ArcBowFrac` of clear room on the side the column bows to; AssignTravel caps the bow by that same reserve rather than by
 the arriving number's own width. Both halves matter, and the second was a bug lived with for a long time: charged per arriving row, a wide crit spends the whole
 column on its own glyphs, finds no room left for an arc, and goes up the screen in a dead straight line while every row around it curves — the loudest number in
 the column being the only one without a shape. Deciding it once per column keeps the odometer honest too (a crit no longer slides inward to suit itself, which
@@ -1257,9 +1261,9 @@ case MSBT answers by letting text leave the area, and this overlay answers with 
 moves: identical ticks already fold themselves, categories can be spread over the four columns, and the speed dial scales the whole
 lane (it is a rate, not a lifetime).
 
-Fountain, spray and hold keep the scatter and its congestion ladder above — those styles are an event to watch,
-not a column to read, and `UseConveyor` deliberately restricts the queue to split's rails — parabola and line alike, since the dial there
-chooses a path and not a discipline (bands degrade rails to hold, so there is nothing to catch there). Read `FctConveyorTest` for the invariants as assertions: one rate per frame per lane, gaps that never
+Fountain, spray and freeze keep the scatter and its congestion ladder above — those styles are an event to watch,
+not a column to read, and `UseConveyor` deliberately restricts the queue to split's rails — arc and line alike, since the dial there
+chooses a path and not a discipline (bands degrade rails to freeze, so there is nothing to catch there). Read `FctConveyorTest` for the invariants as assertions: one rate per frame per lane, gaps that never
 change, no pair on a column ever closer than the taller of the two, folded-while-queued duplicates, ordered drain, counted refusal.
 
 ### The odometer: values hang their right edge on the rail
@@ -1294,7 +1298,7 @@ is written: one aimed at the wrong field will report a fault in a layout that is
 
 The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
 same right-anchored box (`Block` scales its half-width around `ArcedX`'s centre, so scoring and drawing agree to the bit),
-the spawn clamp reserves its margin on the left, and the parabola's bow budget measures the full hang (above). Two
+the spawn clamp reserves its margin on the left, and the arc's bow budget measures the full hang (above). Two
 small costs were accepted with measurement: an artificially-over-capacity half grazes to ~30% of a block instead of
 25% (the label tests pin the new ceiling — right-alignment is worth half a column of squeeze), and deep-entry line
 rows price their sideways valve off full widths too. Words align like numbers ("miss", "resist"), so a lane reads as
@@ -1311,7 +1315,7 @@ line is exactly as wide as what it stamped. Both reserve what they draw. Ours dr
 
 `FctLayout.BlockAboutCentre` is now where the drawn block is defined, once: the value's box at its peak scale, the special-event glyph hanging
 outside its left edge, and the source label wherever the label side put it. Everything that tests a row against a wall or another row charges
-these numbers — `Spawn`'s clamp, `ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), the parabola's bow
+these numbers — (`Spawn`'s clamp, `ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), the arc's bow
 budget, and the row's own half-width. The reach is deliberately asymmetric because the odometer above makes it so: with the rail being the
 value's *right* edge, a label on the left deepens a reach that side already had, while a label on the right opens one the row did not have at
 all. Translating that block from a centre to a rail is therefore done per label side (`BlockFromRail`), and the case that matters most is the one
@@ -1651,8 +1655,8 @@ other. Being a share of band depth it is clamped by the band ends, so a small ov
 a test stacks every combination on a 420×300 canvas to keep that true.
 `FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
 together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
-A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the parabola
-in slow motion. Where the style IS a shared rail though, the discount stops: on parabola and straight a proc crosses at
+A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the arc
+in slow motion. Where the style IS a shared rail though, the discount stops: on arc and straight a proc crosses at
 exactly its lane's beat, because there the common rate is the whole reading instrument and "same speed as the column"
 outweighs "gone sooner" - split mode treats a proc as an ordinary value (measured: one scroll rate for hits, procs and
 words alike, whatever the font). Fountain keeps the full tempo discount, which is where quick reads as spam exactly the way
@@ -1720,12 +1724,12 @@ rather than percentages because the file is somewhere a person may look, and spe
 the hide-below threshold (`FctOverlayThreshold`, stored as the plain number it shows) —
 persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
 actually chosen. The old `FctOverlayTimeScale` is still read once, inverted, when the speed key is absent; it is never written again. They are read by
-the overlay and by the simulation window so a hold run and a spray
+the overlay and by the simulation window so a freeze run and a spray
 run differ in nothing but the thing being compared. Being presentation-only, these apply immediately and need neither a lock nor a re-parse —
 which is the exception that proves the rule above: data-shaped settings have to be re-read by everything, and these are read once when a number
 is built. `FctOverlayMotion` also reads the old
 `FctOverlayFountain` boolean when its own key is absent: an upgrade should keep the choreography somebody had already
-chosen instead of silently resetting them to hold, and because writes only ever use the new key the legacy entry fades
+chosen instead of silently resetting them to freeze, and because writes only ever use the new key the legacy entry fades
 out on its own rather than needing a migration.
 
 `MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so dragging is live

@@ -13,7 +13,7 @@ namespace EQLogParser
   internal sealed class FctConfigState
   {
     public bool Fountain;
-    public FctMotionStyle Shape = FctMotionStyle.Parabola;
+    public FctMotionStyle Shape = FctMotionStyle.Arc;
 
     /* Split's three categories: which of the four columns each streams down (FctRailLane) and which way it travels. The
        shipped spread gives every category its own column; a lane can also be FctRailLane.None, which is how a category gets
@@ -245,7 +245,7 @@ namespace EQLogParser
             Placed(HealLane, HealLaneDefault), Placed(TakenLane, TakenLaneDefault), Placed(DealtLane, DealtLaneDefault));
     }
 
-    /* The mode clamps the shape, not a branch that ignores it: fountain sprays or settles, the columns scroll. A state
+    /* The mode clamps the shape, not a branch that ignores it: fountain sprays or freezes, the columns scroll. A state
      * assembled from stale settings resolves to its mode's own motion instead of shipping one the engine would degrade. */
     internal FctMotionStyle BuildMotion() =>
       FctOverlaySettings.ClampShape(Fountain ? FctLayoutMode.Bands : FctLayoutMode.ByType, Shape);

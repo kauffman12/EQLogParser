@@ -1,6 +1,6 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace EQLogParser
 {
@@ -149,15 +149,15 @@ namespace EQLogParser
       }
     }
 
-    /* The report this pins: in parabola mode the crits went up in a dead straight line while everything around them curved. Charged per arriving row, a
-       wide number spends a column's whole inward side on its own glyphs and has no room left for an arc — and it slides off its neighbours' rail into the
+    /* The report this pins: in arc mode the crits went up in a dead straight line while everything around them curved. Charged per arriving row, a
+       wide number spends a column's whole inward side on its own glyphs and has no room left for the bend — and it slides off its neighbours' rail into the
        bargain. A column's spine and its bend belong to the COLUMN (FctLayout.RailReserve), which is both halves of the fix: one rail, one path. */
     [TestMethod]
     public void ACritAndItsNeighbourShareOneSpineAndOneBend()
     {
       var stage = FctStage.ByType(FctRegionSide.Right, incomingUp: false, outgoingUp: true, 1280, 720);
-      var normal = ParabolaHit("486", crit: false);
-      var crit = ParabolaHit("12,847", crit: true);
+      var normal = ArcRow("486", crit: false);
+      var crit = ArcRow("12,847", crit: true);
       FctLayout.Spawn(normal, stage, new Random(7));
       FctLayout.Spawn(crit, stage, new Random(7));
 
@@ -184,7 +184,7 @@ namespace EQLogParser
       }
     }
 
-    private static FctHitState ParabolaHit(string text, bool crit)
+    private static FctHitState ArcRow(string text, bool crit)
     {
       var size = crit ? FctStyle.DamageDealtFontSize * FctScale.Crit : FctStyle.DamageDealtFontSize;
       return new FctHitState
@@ -193,7 +193,7 @@ namespace EQLogParser
         FormattedValue = text,
         ValueFontSize = size,
         SourceFontSize = FctStyle.SourceSize(size),
-        Style = FctMotionStyle.Parabola,
+        Style = FctMotionStyle.Arc,
         Blowout = crit,
         ValueWidth = FakeWidth(text, size), // what RebuildGlyphs will measure: an estimate is enough for geometry
       };
@@ -246,7 +246,7 @@ namespace EQLogParser
 
         var choice = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp: false, outgoingUp: true,
           healSide: FctRegionSide.Right);
-        var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Parabola, Layout = choice };
+        var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Arc, Layout = choice };
         var stage = choice.Stage(Width, Height);
         var hits = new List<FctHitState>();
 

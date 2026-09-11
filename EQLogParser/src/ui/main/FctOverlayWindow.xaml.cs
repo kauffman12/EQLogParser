@@ -16,7 +16,7 @@ namespace EQLogParser
    * Motion and shape are chosen in the settings window rather than on this window, because they are presentation and not
    * information: whichever style is picked, which region a number sits in and which way it travels still say who acted. A
    * change applies to hits spawned afterwards, so trying one during a pull is safe. What a scheme may move with is decided
-   * in FctStage.DefaultMotion, which takes the shapes that need non-overlapping regions (parabola, straight) away under
+   * in FctStage.DefaultMotion, which takes the shapes that need non-overlapping regions (arc, straight) away under
    * bands instead of drawing them across the protected middle strip.
    *
    * It is resizable without being resizeable: Windows gives a transparent, chromeless window no frame to grab, so a band along each

@@ -4,17 +4,17 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * The parabola (FctMotionStyle.Parabola): a constant-speed vertical scroll arcing out to a vertex at half height and
+   * The arc (FctMotionStyle.Arc): a constant-speed vertical scroll arcing out to a vertex at half height and
    * back — MSBT's geometry as written, x = y²/4a measured from the rail's mid-point. Split ships this shape, so these are
    * the pins on the geometry a player actually sees: that the arc leaves its column, reaches its widest away from the
    * canvas centre at half height and returns to the column as it fades; that every value shares one path and one speed,
    * crits and procs included — the chain of numbers following each other up a lane; that it stays inside the lane that
    * owns it at every speed the dial can give; and that resize maps the bow the same way it maps everything else. What a
-   * rail costs in bands (degraded to hold, because a straight scroll across the canvas walks through the protected
+   * rail costs in bands (degraded to freeze, because a straight scroll across the canvas walks through the protected
    * strip) is pinned at the end, where the degradation is the subject rather than the exception.
    */
   [TestClass]
-  public sealed class FctParabolaTest
+  public sealed class FctArcTest
   {
 
     [TestInitialize]
@@ -48,7 +48,7 @@ namespace EQLogParser
     {
       Lane = incoming ? FctLane.DamageTaken : FctLane.DamageDealt,
       Incoming = incoming,
-      Style = FctMotionStyle.Parabola,
+      Style = FctMotionStyle.Arc,
       Source = "Spinning Attack",
       Value = 1234,
     };
@@ -58,7 +58,7 @@ namespace EQLogParser
       Lane = incoming ? FctLane.HealingReceived : FctLane.HealingDealt,
       Incoming = incoming,
       Heal = true,
-      Style = FctMotionStyle.Parabola,
+      Style = FctMotionStyle.Arc,
       Source = "Healing Wind",
       Value = 1234,
     };
@@ -69,7 +69,7 @@ namespace EQLogParser
     {
       var stage = Split(incomingUp: false, outgoingUp: false);
       var hit = Spawn(stage, Damage(incoming: false), new Random(11));
-      Assert.AreNotEqual(0.0, Math.Abs(hit.Rise), "a parabola with no vertical travel is a hold in a costume");
+      Assert.AreNotEqual(0.0, Math.Abs(hit.Rise), "an arc with no vertical travel is a freeze in a costume");
 
       var y1 = FctMotion.RaisedY(hit, 0.25);
       var y2 = FctMotion.RaisedY(hit, 0.50);
@@ -97,7 +97,7 @@ namespace EQLogParser
         // outward is away from the middle of the overlay, which for a lane is whichever wall it is nearer
         var away = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
 
-        Assert.AreEqual(away * stage.TerritoryFor(hit) * FctLayout.ParabolaBowFrac, hit.Bow, 1e-9,
+        Assert.AreEqual(away * stage.TerritoryFor(hit) * FctLayout.ArcBowFrac, hit.Bow, 1e-9,
           $"the vertex must sit outward of the column on the {caseName} lane");
 
         var x0 = FctMotion.ArcedX(hit, 0.0);
@@ -135,7 +135,7 @@ namespace EQLogParser
         var stage = Split(incomingUp: false, outgoingUp: false, w: w, healSide: FctRegionSide.Right);
         var hit = Spawn(stage, Damage(incoming: true), new Random(21));
         var region = stage.RegionFor(hit);
-        var formula = FctLayout.ParabolaBowFrac * stage.TerritoryFor(hit);
+        var formula = FctLayout.ArcBowFrac * stage.TerritoryFor(hit);
 
         Assert.IsTrue(Math.Abs(hit.Bow) <= formula + 1e-9, $"{w} px: the cap only ever trims the formula, never widens it");
         sawTrim |= Math.Abs(hit.Bow) < formula - 1e-9;
@@ -155,7 +155,7 @@ namespace EQLogParser
          permission to arc. */
       var wideLane = Split(incomingUp: false, outgoingUp: false, w: 700, healSide: FctRegionSide.Right);
       var bowsStill = Spawn(wideLane, Heal(incoming: false), new Random(21));
-      Assert.AreEqual(FctLayout.ParabolaBowFrac * wideLane.TerritoryFor(bowsStill), Math.Abs(bowsStill.Bow), 1e-9,
+      Assert.AreEqual(FctLayout.ArcBowFrac * wideLane.TerritoryFor(bowsStill), Math.Abs(bowsStill.Bow), 1e-9,
         "the lane whose outward wall is the middle of the overlay keeps the formula at a width that takes it away from the other");
     }
 
@@ -172,7 +172,7 @@ namespace EQLogParser
     {
       var ingest = new FctIngest(new Random(71))
       {
-        Style = FctMotionStyle.Parabola,
+        Style = FctMotionStyle.Arc,
         Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left)
       };
       var hits = new List<FctHitState>();
@@ -188,7 +188,7 @@ namespace EQLogParser
           Width, Height, i * 900.0, proc);
 
         Assert.IsNotNull(hit, $"value {value} belongs on the rail too");
-        Assert.AreEqual(FctMotionStyle.Parabola, hit.Style, "crits and procs ride the rail, they do not reroute off it");
+        Assert.AreEqual(FctMotionStyle.Arc, hit.Style, "crits and procs ride the rail, they do not reroute off it");
 
         if (i == 0)
         {
@@ -235,7 +235,7 @@ namespace EQLogParser
           FctScale.Time = time;
           var ingest = new FctIngest(new Random(31))
           {
-            Style = FctMotionStyle.Parabola,
+            Style = FctMotionStyle.Arc,
             Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left)
           };
           var hits = new List<FctHitState>();
@@ -264,13 +264,13 @@ namespace EQLogParser
 
     /*
      * The setting can be forced through settings.ini in a scheme where it has no business being. Ingest is where the promise
-     * is kept: the hit comes back a hold, and a hold by construction cannot cross the protected strip, so the sweep below
+     * is kept: the hit comes back a freeze, and a freeze by construction cannot cross the protected strip, so the sweep below
      * stays inside its band at every instant instead of measuring how bad the violation would have been.
      */
     [TestMethod]
-    public void BandsIngestDegradesAParabolaToHoldInsteadOfCrossingTheStrip()
+    public void BandsIngestDegradesAnArcToFreezeInsteadOfCrossingTheStrip()
     {
-      var ingest = new FctIngest(new Random(41)) { Style = FctMotionStyle.Parabola, Layout = FctLayoutChoice.Bands };
+      var ingest = new FctIngest(new Random(41)) { Style = FctMotionStyle.Arc, Layout = FctLayoutChoice.Bands };
       var hits = new List<FctHitState>();
       var checkedAny = false;
 
@@ -284,7 +284,7 @@ namespace EQLogParser
         }
 
         checkedAny = true;
-        Assert.AreEqual(FctMotionStyle.Hold, hit.Style, "ingest must not run a parabola in bands");
+        Assert.AreEqual(FctMotionStyle.Freeze, hit.Style, "ingest must not run an arc in bands");
 
         for (var t = 0.0; t <= 1.0; t += 0.05)
         {

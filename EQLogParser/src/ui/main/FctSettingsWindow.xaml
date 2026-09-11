@@ -160,14 +160,14 @@
              combos at once, so there are two combos sharing this cell and the mode swap shows one. The illegal shapes
              for a mode are never even choices in it - a scheme cannot store a motion it would only degrade. -->
         <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how numbers move: split scrolls to the far edge — parabola bends sideways on the way, line does not. fountain sprays out and falls, or settles: drifts out, stops, stays readable until it fades" />
+                   ToolTip="how numbers move: split scrolls to the far edge — arc bends sideways on the way, line does not. fountain sprays out and falls, or freezes: drifts out, stops, stays readable until it fades" />
         <ComboBox x:Name="shapeCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-          <ComboBoxItem Content="parabola" Tag="parabola" />
+          <ComboBoxItem Content="arc" Tag="arc" />
           <ComboBoxItem Content="line" Tag="line" />
         </ComboBox>
         <ComboBox x:Name="sprayCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" Visibility="Collapsed" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="spray" Tag="spray" />
-          <ComboBoxItem Content="settle" Tag="hold" />
+          <ComboBoxItem Content="freeze" Tag="freeze" />
         </ComboBox>
 
         <!-- The three categories — the two damage streams first, then healing: lane and direction in one cell each.

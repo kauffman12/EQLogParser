@@ -263,10 +263,10 @@ namespace EQLogParser
 
     /*
      * What a scheme moves with when nothing explicit says otherwise: split ships with the genre's own default shape (the
-     * parabola — MSBT runs it, docs/DesignNotes.md), and bands keeps its quiet hold. First-run configure uses this, and so
+     * arc, whose bow is MSBT's, docs/DesignNotes.md), and bands keeps its quiet freeze. First-run configure uses this, and so
      * does a layout change that would leave an illegal style selected.
      */
     public static FctMotionStyle DefaultMotion(FctLayoutMode mode)
-      => mode is FctLayoutMode.Bands ? FctMotionStyle.Hold : FctMotionStyle.Parabola;
+      => mode is FctLayoutMode.Bands ? FctMotionStyle.Freeze : FctMotionStyle.Arc;
   }
 }

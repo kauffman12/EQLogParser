@@ -20,7 +20,7 @@ namespace EQLogParser
 
     private static FctIngest Ingest(double threshold) => new(new Random(3))
     {
-      Style = FctMotionStyle.Hold,
+      Style = FctMotionStyle.Freeze,
       Layout = FctLayoutChoice.Bands,
       Threshold = threshold,
     };

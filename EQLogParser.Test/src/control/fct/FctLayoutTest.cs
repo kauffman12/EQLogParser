@@ -210,7 +210,7 @@ namespace EQLogParser
       const double TinyW = 420;
       const double TinyH = 300;
 
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Spray })
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Spray })
       {
         foreach (var proc in new[] { false, true })
         {
@@ -230,7 +230,7 @@ namespace EQLogParser
       }
     }
 
-    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, string? source = null, FctMotionStyle style = FctMotionStyle.Hold, bool proc = false)
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, string? source = null, FctMotionStyle style = FctMotionStyle.Freeze, bool proc = false)
     {
       // Source, style and proc must be set before layout runs: the vertical reserve, the travel and the band row are all
       // derived from them, exactly as FctIngest does it
@@ -290,7 +290,7 @@ namespace EQLogParser
       for (var seed = 1; seed <= 60; seed++)
       {
         var hits = new List<FctHitState>();
-        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Hold, Layout = FctLayoutChoice.Bands };
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Freeze, Layout = FctLayoutChoice.Bands };
         for (var i = 0; i < 6; i++)
         {
           ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 500.0);
@@ -312,7 +312,7 @@ namespace EQLogParser
     [TestMethod]
     public void NothingStartsFlushAgainstTheWindowEdge()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray })
       {
         for (var seed = 1; seed < 40; seed++)
         {
@@ -385,7 +385,7 @@ namespace EQLogParser
     public void SearchingForRoomStillNeverPutsTextOffScreen()
     {
       // the search widens the throw sideways and away from the protected strip, so the old invariants have to be re-proved
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray })
       {
         foreach (var size in new[] { (W: 980.0, H: 640.0), (W: 1280.0, H: 300.0), (W: 700.0, H: 280.0) })
         {

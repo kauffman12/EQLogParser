@@ -129,7 +129,7 @@ namespace EQLogParser
      * Configure mode restarts its loop on a change: the loop exists to show what this control does, and waiting up to twelve seconds for the next
      * cycle to reach the part where that is visible is not an effect anybody can see.
      *
-     * The settings panel offers spray and settle for fountain, parabola and line for split (FctOverlaySettings.ClampShape); the other styles in the
+     * The settings panel offers spray and freeze for fountain, arc and line for split (FctOverlaySettings.ClampShape); the other styles in the
      * enum stay here because the engine still implements them and FctSimulationWindow can still ask for one.
      */
     public FctMotionStyle MotionStyle

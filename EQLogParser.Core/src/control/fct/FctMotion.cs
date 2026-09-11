@@ -6,7 +6,7 @@ namespace EQLogParser
    * Frame maths shared by every FCT backend: where a hit is, how big it is, how opaque it is and what
    * text it shows. Pure functions of (hit, age) so the whole animation is unit-testable without a
    * window — see EQLogParser.Wpf.Test/src/ui/control/FctMotionTest.cs. Rationale for the motion window
-   * and the hold: docs/DesignNotes.md → Floating Combat Text.
+   * and for resting in place: docs/DesignNotes.md → Floating Combat Text.
    */
   internal static class FctMotion
   {
@@ -14,14 +14,14 @@ namespace EQLogParser
     public const double MotionWindowMs = 2000;
 
     /*
-     * The parabola’s cadence in ms per pixel of region height: MSBT scrolls every value in an area at ONE rate
+     * The arc’s cadence in ms per pixel of region height: MSBT scrolls every value in an area at ONE rate
      * (ScrollUp is height × progress), and the chain look — each number following the one before along the same path
-     * — needs one shared beat rather than a speed per row, so a parabola’s lifetime comes from this and its region’s
+     * — needs one shared beat rather than a speed per row, so an arc’s lifetime comes from this and its region’s
      * height rather than from the adaptive controller (FctIngest.ApplyRailTempo). Rows of different font sizes cover
      * slightly different distances within the beat, a few percent apart in rate and invisible; 5 ms/px is ~200 px/s,
      * the pace measured playable at default size, and like MSBT’s a taller region is a longer journey, not faster text.
      */
-    public const double ParabolaScrollMsPerPx = 5;
+    public const double ArcScrollMsPerPx = 5;
 
     /*
      * Spray's choreography is deliberately shorter than fountain's. Shape separates the two styles (see LateralProgress),
@@ -89,14 +89,14 @@ namespace EQLogParser
     private const double ConveyorFadeInPx = 24;
 
     /*
-     * Hold style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
+     * Freeze style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
      * Rise is negative) and then hold. Fountain style: same travel, then fall over the last FallPhaseFrac of life
      * (paired with shrink + fade by the caller). FallDist is signed the way Rise is: positive accelerates toward the
      * bottom of the screen, negative back up toward the gap, which is how the incoming band gets a mirrored fountain
      * instead of parking against its own bottom edge.
      *
      * Both halves are continuous in velocity: smootherstep arrives at zero speed and the ease-in tail leaves from
-     * zero, so the handoff at riseFrac has no kink to look at — the seam most parabolas show.
+     * zero, so the handoff at riseFrac has no kink to look at — the seam most arcs show.
      *
      * The band clamp is what stops traffic entering the protected middle strip when the two disagree — a resize that
      * moves the gap under a number already in flight, or a fall asked for more room than the band has.
@@ -107,8 +107,8 @@ namespace EQLogParser
     {
       if (hit.FallDist == 0.0)
       {
-        /* The parabola scrolls at constant vertical speed — that is the shape: with y linear in t and x quadratic in t,
-           x is a function of y², which is what makes it a parabola rather than an arc. Everything else eases. */
+        /* The arc scrolls at constant vertical speed — that is the shape: with y linear in t and x quadratic in t,
+           x is a function of y², which is why MSBT's maths names it a parabola and the panel names it arc. Everything else eases. */
         var v = FctMotionStyles.IsRail(hit.Style) ? t : Ease(t);
         return hit.Y0 - (hit.Rise * v);
       }
@@ -149,7 +149,7 @@ namespace EQLogParser
          let an inline "(Glormok)" be painted across the column boundary (FctLayout.BlockFromRail). */
       var (peak, otherSide) = FctLayout.BlockFromRail(hit, hit.SourceWidth, ScaleAllowance(hit));
 
-      /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
+      /* The bow is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
          vertex at half height, and comes BACK to the column by the time it fades. Ends on the column, arc between them:
          that is the semicircle chain in Mik's demos, and it is also why a lane keeps its spacing for the whole
@@ -178,7 +178,7 @@ namespace EQLogParser
     }
 
     /*
-     * How far along its sideways travel a hit is. Hold and fountain share the vertical ease so x and y stay in proportion:
+     * How far along its sideways travel a hit is. Freeze and fountain share the vertical ease so x and y stay in proportion:
      * a number climbs the straight line it appears to be on, which is what a thrown thing with no gravity looks like.
      *
      * Spray must not, and this was why spray and fountain were hard to tell apart. With both axes driven by one curve, every

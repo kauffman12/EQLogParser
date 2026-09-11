@@ -54,7 +54,7 @@ namespace EQLogParser
      * decides and does not ask about. A canvas setting rather than a per-record one: a feed that mixed styles from log
      * line to log line would look like a bug, not a feature.
      */
-    public FctMotionStyle Style = FctMotionStyle.Hold;
+    public FctMotionStyle Style = FctMotionStyle.Freeze;
 
     /*
      * The region scheme for new hits (see FctStage): where a number goes — which stream it belongs to, which edge it starts
@@ -339,10 +339,10 @@ namespace EQLogParser
       /*
        * A rail scrolls across whatever region owns its side, and in bands that region is the canvas — strip included. The
        * settings panel cannot select one there, but settings.ini can be hand-written, which is why the degradation lives
-       * here rather than only in the UI (see FctMotionStyle.Parabola).
+       * here rather than only in the UI (see FctMotionStyle.Arc).
        */
       var style = stage.Mode is FctLayoutMode.Bands && FctMotionStyles.IsRail(Style)
-        ? FctMotionStyle.Hold
+        ? FctMotionStyle.Freeze
         : Style;
 
       /* Every rail is a conveyor rather than a placement problem (FctConveyor): one clock per column, spacing bought at
@@ -454,7 +454,7 @@ namespace EQLogParser
         /*
          * Text that travels gets free placement rather than a queue: several legal throws are measured along their whole
          * paths and the least crowded one wins. The hit that comes back may be one of those trials rather than the object
-         * that went in. Every rail is a conveyor by now, so what reaches this branch is choreography — hold, spray,
+         * that went in. Every rail is a conveyor by now, so what reaches this branch is choreography — freeze, spray,
          * fountain — which is thrown, lands where it lands, and asks nothing of its neighbours but room.
          */
         hit = FctPlacement.Place(hit, hits, stage, _rand);
@@ -490,13 +490,13 @@ namespace EQLogParser
     }
 
     /*
-     * Which arrangements run as a conveyor: any rail — the straight line AND the parabola, which are the two shapes split
+     * Which arrangements run as a conveyor: any rail — the straight line AND the arc, which are the two shapes split
      * offers and the reason the mode exists. The dial chooses the PATH (straight up the column, or MSBT's bowing chain),
      * never whether the traffic is ordered: rows that scroll a lane the player reads have to keep their spacing and one
-     * speed, which is FctConveyor's whole subject. Fountain and spray are choreography and keep their scatter, and hold
+     * speed, which is FctConveyor's whole subject. Fountain and spray are choreography and keep their scatter, and freeze
      * parks numbers where they landed — none of those is a queue and none needs one.
      *
-     * No mode check, because there is nothing left to check: bands degrades every rail to hold a few lines up, so a style
+     * No mode check, because there is nothing left to check: bands degrades every rail to freeze a few lines up, so a style
      * that is still a rail here belongs to the scheme whose regions are columns. Owning a column is what makes one train
      * per lane a promise instead of a coincidence (FctStage), and that promise is why the stream this replaced — flight
      * scoring among braided candidate columns, with congestion valves underneath — went away rather than being kept for
@@ -638,7 +638,7 @@ namespace EQLogParser
        * shape on both sides, keeps the two directions reading as one animation in opposite signs, and cannot reach the
        * protected strip because the return is a fraction of travel already spent below it.
        *
-       * Hold falls through to the adaptive lifetime: it has no fall, so it needs no life dictated by a choreography.
+       * Freeze falls through to the adaptive lifetime: it has no fall, so it needs no life dictated by a choreography.
        * The fall itself is FctLayout.ApplyFall's, because placement may re-roll the origin afterwards
        * and has to be able to ask for it again.
        */
@@ -685,7 +685,7 @@ namespace EQLogParser
      * measured 195.6 px/s for damage against 201.8 for words and slower still for crits, and players read it —
      * correctly — as the streams not agreeing. A shared rate costs almost nothing and keeps every chain property the
      * column relies on: two rows a beat apart keep that gap of road forever BECAUSE they move at one rate; bows run
-     * their own parabolas above the rail, and the lane's clock is what keeps the spacing underneath them. Rows that
+     * their own arcs above the rail, and the lane's clock is what keeps the spacing underneath them. Rows that
      * parked at end of travel would all park in one place and the column would become a queue for a parking space:
      * motion spans the life, so nothing parks.
      *
@@ -706,7 +706,7 @@ namespace EQLogParser
          can keep it, the press is how much of that rhythm congestion takes away, and one row's acceleration must never
          change its neighbours' (rows that share a rail share their BIRTH tempo, not a live one - a row that sped up
          mid-flight would be an odometer lying about where it is going). */
-      hit.LifetimeMs = Math.Abs(hit.Rise) * FctMotion.ParabolaScrollMsPerPx * hit.RailPress;
+      hit.LifetimeMs = Math.Abs(hit.Rise) * FctMotion.ArcScrollMsPerPx * hit.RailPress;
       hit.MotionMs = hit.LifetimeMs;
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
       ApplyPlayerTempo(hit);

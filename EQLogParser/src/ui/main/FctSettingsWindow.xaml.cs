@@ -92,8 +92,8 @@ namespace EQLogParser
 
       /* Each mode reads its shape from its own combo, so both get selected — the hidden one to its mode's default,
        * which is also what a mode switch mid-configure will offer first. */
-      SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight ? "line" : "parabola");
-      SelectByTag(sprayCombo, state.Fountain && state.Shape is FctMotionStyle.Hold ? "hold" : "spray");
+      SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight ? "line" : "arc");
+      SelectByTag(sprayCombo, state.Fountain && state.Shape is FctMotionStyle.Freeze ? "freeze" : "spray");
       SelectByTag(healLaneCombo, FctRailLanes.Token(state.HealLane));
       SelectByTag(healDirCombo, Up(state.HealUp));
       SelectByTag(takenLaneCombo, FctRailLanes.Token(state.TakenLane));
@@ -136,11 +136,11 @@ namespace EQLogParser
       var state = new FctConfigState
       {
         Fountain = fountain,
-        // the panels' words are line and settle; the engine's older names (Straight, Hold) ride in the Tags —
-        // and settle is fountain's alone: a scroll that parks mid-column breaks the chain a column exists to be
+        // the Tags carry the same words the panel shows and settings.ini saves, so one vocabulary spans dropdown, file and engine
+        // (Straight excepted: the player reads "line"). Freezing is fountain's alone — a scroll that parks mid-column breaks the chain
         Shape = fountain
-          ? ComboTag(sprayCombo) == "hold" ? FctMotionStyle.Hold : FctMotionStyle.Spray
-          : ComboTag(shapeCombo) == "line" ? FctMotionStyle.Straight : FctMotionStyle.Parabola,
+          ? ComboTag(sprayCombo) == "freeze" ? FctMotionStyle.Freeze : FctMotionStyle.Spray
+          : ComboTag(shapeCombo) == "line" ? FctMotionStyle.Straight : FctMotionStyle.Arc,
         HealLane = FctRailLanes.Parse(ComboTag(healLaneCombo), Defaults.HealLane),
         HealUp = ComboTag(healDirCombo) == "up",
         TakenLane = FctRailLanes.Parse(ComboTag(takenLaneCombo), Defaults.TakenLane),
@@ -290,7 +290,7 @@ namespace EQLogParser
      * Fountain keeps the always-applies block untouched — shows, label, threshold and dials are statements about
      * numbers, not layout, and the engine never treated them otherwise — and thins the layout block to what it can
      * actually obey: healing's column (bands has none to hand out) and both side picks step off, and the shape picker
-     * swaps lists instead of disappearing — fountain shapes are spray and settle, never a rail it would only degrade.
+     * swaps lists instead of disappearing — fountain shapes are spray and freeze, never a rail it would only degrade.
      * Collapsed, never disabled: a control that changes nothing in the mode you are in is what configure mode was
      * cleaned up to stop showing at all.
      */

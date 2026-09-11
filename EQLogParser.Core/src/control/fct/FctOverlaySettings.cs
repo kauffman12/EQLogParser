@@ -22,8 +22,8 @@ namespace EQLogParser
 
     /*
      * The two modes the settings panel offers, and they are the engine's two schemes: fountain is bands geometry wearing
-     * spray motion (numbers spew out of a clear middle — spray or settle, plus the two direction dials), and split is the
-     * columns with a shape — parabola or line, nothing that rests in a scroll. Engine names stay where the geometry is
+     * spray motion (numbers spew out of a clear middle — spray or freeze, plus the two direction dials), and split is the
+     * columns with a shape — arc or line, nothing that rests in a scroll. Engine names stay where the geometry is
      * tested; ini speaks the words the player chose. The retired FctOverlayLayout key ("halves"/"bytype"/"bands") belonged
      * to the layout+motion combos this replaced and is no longer read — nothing shipped, so nothing migrates.
      */
@@ -197,7 +197,7 @@ namespace EQLogParser
         Speed = LoadSpeed(),
       };
 
-      /* The shape belongs to the mode, and a file that pairs them wrongly (bands + parabola) is not a decision anybody made,
+      /* The shape belongs to the mode, and a file that pairs them wrongly (bands + arc) is not a decision anybody made,
          so it resolves to the mode's own rather than reaching the engine as an illegal combination. */
       state.Shape = LoadShapeFor(fountain ? FctLayoutMode.Bands : FctLayoutMode.ByType);
 
@@ -243,38 +243,40 @@ namespace EQLogParser
 
     public static void SaveIsFountain(bool fountain) => ConfigUtil.SetSetting(ModeKey, fountain ? "fountain" : "split");
 
-    /* The shape both modes pick from, one key: split chooses parabola | line, fountain chooses spray | settle —
-     * hold's rest belongs to bands, where parking a number is the style; in a scroll it would break the chain the
-     * column exists to be ("settle" names an animation hold, the still beat after a move; "line" is what players
-     * call the unbent rail, though the engine still says Straight).
-     * Anything unknown lands back on parabola. The retired "straight" spelling still reads: it is the same rail. */
+    /* The shape both modes pick from, one key: split chooses arc | line, fountain chooses spray | freeze —
+     * freezing mid-flight belongs to bands, where parking a number is the style; in a scroll it would break the chain
+     * the column exists to be ("line" is what players call the unbent rail, though the engine still says Straight).
+     * The saved words are the panel's own words now, so a hand-edited settings.ini says exactly what the dropdown shows.
+     * Anything unknown lands back on arc — which is also what the retired "hold"/"parabola" spellings do, quietly: they
+     * were never in a release, so nothing migrates and nothing complains. The retired "straight" spelling still reads
+     * because it names the same rail. */
     public static FctMotionStyle LoadShape() =>
       ConfigUtil.GetSetting(ShapeKey, null) switch
       {
         string s when string.Equals(s, "line", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Straight,
         string s when string.Equals(s, "straight", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Straight,
-        string s when string.Equals(s, "hold", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Hold,
+        string s when string.Equals(s, "freeze", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Freeze,
         string s when string.Equals(s, "spray", StringComparison.OrdinalIgnoreCase) => FctMotionStyle.Spray,
-        _ => FctMotionStyle.Parabola,
+        _ => FctMotionStyle.Arc,
       };
 
     public static void SaveShape(FctMotionStyle shape) =>
       ConfigUtil.SetSetting(ShapeKey, shape switch
       {
         FctMotionStyle.Straight => "line",
-        FctMotionStyle.Hold => "hold",
+        FctMotionStyle.Freeze => "freeze",
         FctMotionStyle.Spray => "spray",
-        _ => "parabola",
+        _ => "arc",
       });
 
     /* A mode cannot store a shape it would only degrade, and this is where that promise is kept: bands (fountain) knows
-     * spray and settle; the column schemes know parabola and line, full stop — a row that parks mid-column is not
-     * a calmer stream but a broken chain, so settle clamps away there rather than riding in as an illegal pair.
+     * spray and freeze; the column schemes know arc and line, full stop — a row that parks mid-column is not
+     * a calmer stream but a broken chain, so freeze clamps away there rather than riding in as an illegal pair.
      * Stale keys, half-finished states and any other mismatch resolve to the mode's own default. */
     internal static FctMotionStyle ClampShape(FctLayoutMode mode, FctMotionStyle shape) =>
       mode is FctLayoutMode.Bands
-        ? shape is FctMotionStyle.Hold ? FctMotionStyle.Hold : FctMotionStyle.Spray
-        : shape is FctMotionStyle.Straight ? FctMotionStyle.Straight : FctMotionStyle.Parabola;
+        ? shape is FctMotionStyle.Freeze ? FctMotionStyle.Freeze : FctMotionStyle.Spray
+        : shape is FctMotionStyle.Straight ? FctMotionStyle.Straight : FctMotionStyle.Arc;
 
     internal static FctMotionStyle LoadShapeFor(FctLayoutMode mode) => ClampShape(mode, LoadShape());
 
@@ -309,7 +311,7 @@ namespace EQLogParser
 
     /*
      * Reading order matters: the current key wins, and an absent one inherits the old "fountain" checkbox rather than
-     * resetting a player to hold on the first launch after an upgrade. Writing always uses the new key, so the legacy
+     * resetting a player to freeze on the first launch after an upgrade. Writing always uses the new key, so the legacy
      * entry fades out on its own and nothing has to migrate a file.
      *
      * Fountain has no control of its own in the settings panel: the panel asks for it by NAME through ModeKey and that write
@@ -319,7 +321,7 @@ namespace EQLogParser
     public static FctMotionStyle LoadMotion() =>
       ConfigUtil.GetSetting(MotionKey, null) is { Length: > 0 } name ? ParseMotion(name)
         : ConfigUtil.IfSet(LegacyFountainKey) ? FctMotionStyle.Fountain
-        : FctMotionStyle.Hold;
+        : FctMotionStyle.Freeze;
 
     /* An unrecognised value falls back to the default, never to an error dialog over a cosmetic setting that a hand-edit
      * in settings.ini can produce by accident. */
@@ -328,9 +330,9 @@ namespace EQLogParser
       {
         "fountain" => FctMotionStyle.Fountain,
         "spray" => FctMotionStyle.Spray,
-        "parabola" => FctMotionStyle.Parabola,
+        "arc" => FctMotionStyle.Arc,
         "straight" => FctMotionStyle.Straight,
-        _ => FctMotionStyle.Hold,
+        _ => FctMotionStyle.Freeze,
       };
   }
 }

@@ -1,6 +1,6 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace EQLogParser
 {
@@ -93,7 +93,7 @@ namespace EQLogParser
     }
 
     /* What the dial says a frame should move, with nothing in the way. */
-    private static double Nominal(double ms) => ms / (FctMotion.ParabolaScrollMsPerPx * FctScale.Time);
+    private static double Nominal(double ms) => ms / (FctMotion.ArcScrollMsPerPx * FctScale.Time);
 
     /* One column, one speed — and at exactly the player's own tempo while the traffic leaves the rail alone. The complaint this
        mode existed to answer was "some numbers move faster than others", which was literally true of the per-row tempo before. */
@@ -487,13 +487,13 @@ namespace EQLogParser
       Assert.AreEqual(0, hits.Count, "a row whose flight is spent is gone, however long the lane took to carry it");
     }
 
-    /* Both shapes split offers are queues, not just the line: the parabola is what ships there, so the ordering promise would mean
+    /* Both shapes split offers are queues, not just the line: the arc is what ships there, so the ordering promise would mean
        nothing if it only applied to the shape almost nobody selects. The dial chooses the PATH up the column — straight, or MSBT's
        bow that leaves the column, bows at half height and comes back — never whether traffic keeps its spacing and its speed. */
     [TestMethod]
     public void TheBowingRailKeepsTheSameDisciplineAsTheLine()
     {
-      var ingest = new FctIngest(new Random(13)) { Style = FctMotionStyle.Parabola, Layout = Split() };
+      var ingest = new FctIngest(new Random(13)) { Style = FctMotionStyle.Arc, Layout = Split() };
       var hits = new List<FctHitState>();
 
       for (var frame = 0; frame < 30; frame++)
@@ -581,7 +581,7 @@ namespace EQLogParser
     {
       var ingest = Line();
       var hits = new List<FctHitState>();
-      var msPerPx = FctMotion.ParabolaScrollMsPerPx * FctScale.Time;
+      var msPerPx = FctMotion.ArcScrollMsPerPx * FctScale.Time;
 
       FctHitState? head = null;
       var previousPress = 0.0;

@@ -61,7 +61,7 @@ namespace EQLogParser
      * demanded across a size change instead of within one.
      */
     [TestMethod]
-    [DataRow(nameof(FctMotionStyle.Hold))]
+    [DataRow(nameof(FctMotionStyle.Freeze))]
     [DataRow(nameof(FctMotionStyle.Fountain))]
     [DataRow(nameof(FctMotionStyle.Spray))]
     public void NumbersInFlightComeAlongWithTheWindow(string style)
@@ -128,7 +128,7 @@ namespace EQLogParser
     [TestMethod]
     public void ASizingThatIsNotOneChangesNothing()
     {
-      var hits = LiveHits(FctMotionStyle.Hold, 980, 640, 6);
+      var hits = LiveHits(FctMotionStyle.Freeze, 980, 640, 6);
       var first = hits[0].X0;
       var rise = hits[0].Rise;
 

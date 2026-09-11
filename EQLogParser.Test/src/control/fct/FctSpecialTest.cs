@@ -24,7 +24,7 @@ namespace EQLogParser.Tests
       FctScale.Crit = FctScale.CritSizeDefault;
     }
 
-    /* A rail only exists in split: bands degrades Straight to hold (FctSplitModesTest pins that), so these tests ask for
+    /* A rail only exists in split: bands degrades Straight to freeze (FctSplitModesTest pins that), so these tests ask for
        the scheme where the style survives. My damage owns one column, and every row written here — plain, marked, folded —
        shares that column's spine, which is the odometer they are all measuring. */
     private static FctIngest Ingest() => new(new Random(41))

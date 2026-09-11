@@ -134,7 +134,7 @@ namespace EQLogParser
         hit.Rise *= sy;
         hit.FallDist *= sy;
         hit.Arc *= sx;
-        hit.Bow *= sx; // the bow is a territory share too: mapped the same way, so a parabola ends in its new half
+        hit.Bow *= sx; // the bow is a territory share too: mapped the same way, so an arc ends in its new half
 
         /* A rail row rescaled its road; the rate it travels that road at is the one promise split does not resize.
          * Restamp from the new travel so stretching the window buys a row more time, not more speed. */

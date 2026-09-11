@@ -29,7 +29,7 @@ namespace EQLogParser
       => new(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp, outgoingUp, healSide);
 
     private static FctIngest Streaming(FctLayoutChoice choice)
-      => new(new Random(17)) { Style = FctMotionStyle.Parabola, Layout = choice };
+      => new(new Random(17)) { Style = FctMotionStyle.Arc, Layout = choice };
 
     /* The ownership swap itself: healing of either direction to its column, damage of either direction to the other,
      * and flipping the setting flips both — nothing else moves. */
@@ -170,12 +170,12 @@ namespace EQLogParser
       Assert.AreEqual(1, hits.Select(h => Math.Round(h.ConveyorTravel)).Distinct().Count(), "and one flight length for the whole lane");
     }
 
-    /* Legality plumbing: by type is a side scheme, so the genre's shape is its default too — bands alone keeps hold. */
+    /* Legality plumbing: by type is a side scheme, so the genre's shape is its default too — bands alone keeps freeze. */
     [TestMethod]
-    public void ByTypeShipsWithTheParabolaLikeEverySideScheme()
+    public void ByTypeShipsWithTheArcLikeEverySideScheme()
     {
-      Assert.AreEqual(FctMotionStyle.Parabola, FctStage.DefaultMotion(FctLayoutMode.ByType));
-      Assert.AreEqual(FctMotionStyle.Hold, FctStage.DefaultMotion(FctLayoutMode.Bands));
+      Assert.AreEqual(FctMotionStyle.Arc, FctStage.DefaultMotion(FctLayoutMode.ByType));
+      Assert.AreEqual(FctMotionStyle.Freeze, FctStage.DefaultMotion(FctLayoutMode.Bands));
     }
 
     /* The category column must not leak: a by-type question asked of a bands stage is still the bands answer —

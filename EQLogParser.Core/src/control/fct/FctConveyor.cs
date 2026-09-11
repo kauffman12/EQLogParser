@@ -6,7 +6,7 @@ namespace EQLogParser
   /*
    * The deliberate rails: one conveyor per column, and everything riding it travels as ONE train.
    *
-   * This is what split mode's rails are for — the straight line and the parabola, which is the shape that ships there; the dial
+   * This is what split mode's rails are for — the straight line and the arc, which is the shape that ships there; the dial
    * picks the path up the column, not whether the traffic keeps its spacing. Fountain, spray and the free-float styles are choreography — numbers
    * thrown, arcued, fallen — and a player who picks them has asked for a display that reads as an event. Somebody who
    * picks split + line has asked for the opposite: a column they can read top to bottom without missing a number. That
@@ -202,7 +202,7 @@ namespace EQLogParser
          FctConfigState refuses the combination instead of letting two trains meet head-on. */
       var column = stage.LaneIndexOf(hit);
 
-      /* Bands has no columns to name a lane by — and never reaches this conveyor at all, since rails are degraded to hold
+      /* Bands has no columns to name a lane by — and never reaches this conveyor at all, since rails are degraded to freeze
          there — but a lane key still has to be stable if something hands it a stage without columns, so fall back to the
          region's own index rather than to every row sharing bucket 0. */
       var bucket = column >= 0 ? column : (int)(stage.RegionFor(hit).X / Math.Max(1.0, stage.W));
@@ -223,7 +223,7 @@ namespace EQLogParser
       return lane;
     }
 
-    /* Run the clock forward to now. Rate is the dial's own px-per-pixel (FctMotion.ParabolaScrollMsPerPx, the pace measured
+    /* Run the clock forward to now. Rate is the dial's own px-per-pixel (FctMotion.ArcScrollMsPerPx, the pace measured
        playable) scaled by the player's speed setting and by this lane's press — the same arithmetic FinalizeRailTempo does
        per row, done once per lane instead, which is precisely the difference between a convoy and a crowd. */
     private static void Stamp(Lane lane, double now)
@@ -235,7 +235,7 @@ namespace EQLogParser
       }
 
       lane.StepMs = Math.Min(dt, MaxStepMs);
-      lane.Phase += lane.StepMs / (FctMotion.ParabolaScrollMsPerPx * lane.Press * FctScale.Time);
+      lane.Phase += lane.StepMs / (FctMotion.ArcScrollMsPerPx * lane.Press * FctScale.Time);
       lane.LastStampMs = now;
     }
 

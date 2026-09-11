@@ -492,31 +492,31 @@ namespace EQLogParser
     /*
      * Spray exists to fan repeated hits out instead of stacking them into one unreadable column, and it does that by flying
      * sideways, which is what is measured here — every style gets a gentle sway, so total coverage is not the question. It used
-     * to be asserted as coverage against hold, and that stopped meaning anything once FctPlacement started spreading held
+     * to be asserted as coverage against freeze, and that stopped meaning anything once FctPlacement started spreading held
      * numbers into whatever room the band had: two mechanisms, similar footprints, one measurement that could not tell them
      * apart. What has to differ is the flight — spray's cone several times wider than the sway.
      */
     [TestMethod]
-    public void SprayFansWiderThanHold()
+    public void SprayFansWiderThanFreeze()
     {
-      var held = Sweep(FctMotionStyle.Hold);
+      var resting = Sweep(FctMotionStyle.Freeze);
       var sprayed = Sweep(FctMotionStyle.Spray);
 
-      Assert.IsTrue(sprayed.Travel > held.Travel * 2,
-        $"spray is supposed to fan out: hold sways {held.Travel:0} px sideways on average, spray travels {sprayed.Travel:0} px");
+      Assert.IsTrue(sprayed.Travel > resting.Travel * 2,
+        $"spray is supposed to fan out: freeze sways {resting.Travel:0} px sideways on average, spray travels {sprayed.Travel:0} px");
       Assert.IsTrue(sprayed.Width > Width * 0.55,
         $"the cone should reach most of the overlay width, covered {sprayed.Width:0} px");
     }
 
     /*
-     * Every style owes the same two promises; sweep asserts them for all of them alike. The parabola is in on purpose: in bands
-     * ingest degrades it to hold (FctIngest), and this is the test that proves the degradation keeps the strip clear rather
+     * Every style owes the same two promises; sweep asserts them for all of them alike. The arc is in on purpose: in bands
+     * ingest degrades it to freeze (FctIngest), and this is the test that proves the degradation keeps the strip clear rather
      * than merely being present.
      */
     [TestMethod]
     public void EveryMotionStyleKeepsTheStripClearAndTheWindowInside()
     {
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola })
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Arc })
       {
         var coverage = Sweep(style);
 
@@ -556,11 +556,11 @@ namespace EQLogParser
 
     /*
      * The two choreographed styles share one timing shape — life equals the motion window, fade spans exactly the fall —
-     * while the two that stop and hold keep the adaptive lifetime. Getting this wrong is invisible in maths and obvious
+     * while the two that stop and rest keep the adaptive lifetime. Getting this wrong is invisible in maths and obvious
      * on screen: a sprayed number whose life outlasts its travel sits still for a second in mid-air.
      */
     [TestMethod]
-    public void ChoreographySetsTheLifeAndHoldStylesDoNot()
+    public void ChoreographySetsTheLifeAndFreezeStylesDoNot()
     {
       foreach (var (style, window) in new[] { (FctMotionStyle.Fountain, FctMotion.MotionWindowMs), (FctMotionStyle.Spray, FctMotion.SprayMotionWindowMs) })
       {
@@ -570,11 +570,11 @@ namespace EQLogParser
         var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
         Assert.AreEqual(window, hit.LifetimeMs, $"{style} life must be its choreography");
-        Assert.AreEqual(window, hit.MotionMs, $"{style} must not hold mid-flight");
+        Assert.AreEqual(window, hit.MotionMs, $"{style} must not rest mid-flight");
         Assert.AreEqual(window * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
       }
 
-      foreach (var style in new[] { FctMotionStyle.Hold })
+      foreach (var style in new[] { FctMotionStyle.Freeze })
       {
         var ingest = NewIngest();
         ingest.Style = style;
@@ -584,11 +584,11 @@ namespace EQLogParser
         Assert.IsTrue(hit.LifetimeMs > FctMotion.MotionWindowMs, $"{style} keeps the adaptive life (was {hit.LifetimeMs:0})");
       }
 
-      // hold spends the window travelling and then holds, inside the motion window and not past it
-      var hold = NewIngest();
-      hold.Style = FctMotionStyle.Hold;
-      var heldHit = hold.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 0);
-      Assert.AreEqual(FctMotion.MotionWindowMs, heldHit.MotionMs, 0.001, "hold travels inside the motion window, then holds");
+      // freeze spends the window travelling and then stands still, inside the motion window and not past it
+      var restIngest = NewIngest();
+      restIngest.Style = FctMotionStyle.Freeze;
+      var restingHit = restIngest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 0);
+      Assert.AreEqual(FctMotion.MotionWindowMs, restingHit.MotionMs, 0.001, "freeze travels inside the motion window, then stands still");
     }
 
     /*
@@ -629,7 +629,7 @@ namespace EQLogParser
     }
 
     /* A choreographed style scales as a unit: travel and fall share one lifetime, so shortening the life without the
-     * motion would leave a proc holding its parabola in slow motion. */
+     * motion would leave a proc holding its arc in slow motion. */
     [TestMethod]
     public void ProcTempoShortensTheWholeChoreography()
     {

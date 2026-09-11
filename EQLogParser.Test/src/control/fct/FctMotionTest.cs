@@ -2,7 +2,7 @@ namespace EQLogParser
 {
   /*
    * Motion is pure maths over (hit, age), so the whole animation contract is assertable without a window:
-   * the label text must survive, the hold style must stop where it says, the fountain must come back down,
+   * the label text must survive, the freeze style must stop where it says, the fountain must come back down,
    * and crit scale must actually animate. Rationale for the timings: docs/DesignNotes.md → Floating Combat Text.
    */
   [TestClass]
@@ -80,9 +80,9 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void HoldStyleRisesAndStays()
+    public void FreezeStyleRisesAndStays()
     {
-      var hit = NewHit(); // FallDist 0 = hold style
+      var hit = NewHit(); // FallDist 0 = freeze style
 
       Assert.AreEqual(hit.Y0, FctMotion.RaisedY(hit, 0), 0.001);
       Assert.AreEqual(hit.Y0 - hit.Rise, FctMotion.RaisedY(hit, 1.0), 0.001);
@@ -140,7 +140,7 @@ namespace EQLogParser
       Assert.IsTrue(FctMotion.ScaleOf(hit, hit.MotionMs) < 1.0, "a hit in its fall phase shrinks, either direction");
     }
 
-    /* The seam most parabolas show: travel hands over to fall. Neither side may arrive or leave with speed, or the
+    /* The seam most arcs show: travel hands over to fall. Neither side may arrive or leave with speed, or the
      * number visibly jerks at the exact moment it changes its mind about gravity. */
     [TestMethod]
     public void TravelHandsOverToFallWithoutAJerk()
@@ -238,18 +238,18 @@ namespace EQLogParser
     /*
      * Spray and fountain have to differ in flight, not just in where numbers end up, so the shape of the path is pinned.
      * Both axes used to run on one ease curve, which made every spray angle a straight line from origin to apex: the cone
-     * existed only in the endpoints and mid-flight a wide spray was a slanted fountain. Hold still draws a straight line -
+     * existed only in the endpoints and mid-flight a wide spray was a slanted fountain. Freeze still draws a straight line -
      * that is what a thing with no gravity looks like - and spray must visibly leave that line.
      */
     [TestMethod]
-    public void SprayDrawsAnArcWhileHoldGoesStraight()
+    public void SprayDrawsAnArcWhileFreezeGoesStraight()
     {
-      var hold = ArcHit(FctMotionStyle.Hold);
-      var spray = ArcHit(FctMotionStyle.Spray);
+      var freeze = TraceHit(FctMotionStyle.Freeze);
+      var spray = TraceHit(FctMotionStyle.Spray);
 
       for (var t = 0.05; t < 0.96; t += 0.05)
       {
-        Assert.AreEqual(0.0, Deviation(hold, t), 0.01, $"hold drifted off its own line at t {t:0.##}");
+        Assert.AreEqual(0.0, Deviation(freeze, t), 0.01, $"freeze drifted off its own line at t {t:0.##}");
       }
 
       var strayed = 0.0;
@@ -290,8 +290,8 @@ namespace EQLogParser
        point instead of against the alignment. */
     private static (double X, double Y) At(FctHitState hit, double t) => (FctMotion.ArcedX(hit, t) + (hit.ValueWidth / 2.0), FctMotion.RaisedY(hit, t));
 
-    /* A wide cone draw: well to one side as it climbs. Hold gets no fall so its line stays a line. */
-    private static FctHitState ArcHit(FctMotionStyle style)
+    /* A wide cone draw: well to one side as it climbs. Freeze gets no fall so its line stays a line. */
+    private static FctHitState TraceHit(FctMotionStyle style)
     {
       var hit = NewHit();
       hit.Style = style;

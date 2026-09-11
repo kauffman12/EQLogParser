@@ -50,8 +50,9 @@ namespace EQLogParser
     public double Rise, Arc;
 
     /*
-     * Parabola's sideways drift (px, signed): reaches Bow at t=1, quadratically — x ∝ t² while y runs linearly, which is
-     * exactly the genre's parabola with y as the independent variable. Separate from Arc because its time law differs
+     * Arc's sideways drift (px, signed): reaches Bow at t=1, quadratically — x ∝ t² while y runs linearly, which is
+     * exactly the genre's parabola with y as the independent variable. Separate from hit.Arc, the amplitude above, because
+     * its time law differs
      * (quadratic vs ease), and a shared field would force FctMotion to guess which law a number meant.
      */
     public double Bow;
@@ -60,7 +61,7 @@ namespace EQLogParser
      * Fountain fall distance, and note the sign runs opposite to Rise because it is screen-relative: positive
      * accelerates toward the bottom of the screen (the usual gravity tail), negative back up toward the gap, which is
      * how the incoming band mirrors the outgoing fountain instead of parking against its own bottom edge. Zero means
-     * hold style: no fall phase at all. Mixing the two conventions up is what makes this worth a comment.
+     * freeze style: no fall phase at all. Mixing the two conventions up is what makes this worth a comment.
      */
     public double FallDist;
 
@@ -89,7 +90,7 @@ namespace EQLogParser
      * The deliberate rail (FctConveyor): this row rides a lane clock instead of its own flight, so its place on the column is
      * distance rather than elapsed time. Set by FctConveyor.Enrol and stamped every frame by FctConveyor.Advance; read by
      * FctMotion for position, opacity and the crit's collapse, and by FctIngest.PruneExpired for the row's end. Rows that are
-     * not on a conveyor — hold, fountain, spray, anything thrown rather than queued — leave these alone and keep the time law below.
+     * not on a conveyor — freeze, fountain, spray, anything thrown rather than queued — leave these alone and keep the time law below.
      *
      * ConveyorQ is how far the lane has carried this row, in pixels, and it starts NEGATIVE: a row whose slot has not reached
      * the mouth yet waits off-column (invisible, still folding duplicates) until the lane brings its turn. ConveyorTravel is

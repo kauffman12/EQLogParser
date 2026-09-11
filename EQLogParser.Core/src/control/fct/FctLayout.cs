@@ -50,7 +50,7 @@ namespace EQLogParser
      * the clamp.
      *
      * Reach is deliberately longer than a band is deep. Given only the band's own travel budget, even a wide angle moved
-     * no further sideways than a lane-slot jitter — measured identical to hold's existing arc, which already swings 12%
+     * no further sideways than a lane-slot jitter — measured identical to freeze's existing sway, which already swings 12%
      * of width, so spray would have been invisible. With the longer reach, steep draws top out against the band clamp
      * and wide draws get the lateral distance this style exists for.
      */
@@ -404,12 +404,12 @@ namespace EQLogParser
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;
 
-      /* The parabola also wants its bend reserved beside the spine (RailReserve above gives the width; this gives the curve). Without the bow room
+      /* The arc also wants its bend reserved beside the spine (RailReserve above gives the width; this gives the curve). Without the bow room
        * the widest rows find none left and climb in a straight line, which AssignTravel then caps to whatever survives. Where a region cannot offer
        * both, containment wins — xHi below takes the clamp — and every row on that column bows equally less. */
-      if (hit.Style is FctMotionStyle.Parabola)
+      if (hit.Style is FctMotionStyle.Arc)
       {
-        var want = territory * ParabolaBowFrac;
+        var want = territory * ArcBowFrac;
         if (bowOut < 0)
         {
           xLo = Math.Max(xLo, region.X + EdgePad + RailReserve() + want);
@@ -444,20 +444,20 @@ namespace EQLogParser
       /* A proc starts deeper in its band than the row of hits it arrived beside — deeper being further along the travel,
        * away from the spawn edge. Clamped by the band ends, which already carry the vertical reserve on one side and the
        * edge pad on the other, so this cannot push anything out of the window; in bands it is the old "further from the
-       * strip" rule, and in split it is simply deeper inside the lane. The parabola takes no depth start: its whole claim
+       * strip" rule, and in split it is simply deeper inside the lane. The arc takes no depth start: its whole claim
        * is that every value follows the previous one along one path, and a proc beginning part-way down the rail breaks
        * that chain for the sake of a distinction its smaller type already makes. */
       /* The same reason exempts an explicitly requested origin (FctPlacement.Pin), which is how a conveyor row enters at the
          mouth of its column (FctConveyor): that queue bought this row's spacing against the exact edge it entered at, so an inset
          here would spend part of a neighbour's gap — and a lane whose rows do not share one starting edge cannot space anything. */
-      if (hit.Proc && hit.Style is not FctMotionStyle.Parabola && !origin.HasValue)
+      if (hit.Proc && hit.Style is not FctMotionStyle.Arc && !origin.HasValue)
       {
         var inset = BandSpan(hit) * ProcInsetFrac;
         hit.Y0 = up > 0 ? Math.Max(hit.BandMinY, hit.Y0 - inset) : Math.Min(hit.BandMaxY, hit.Y0 + inset);
       }
 
       /* The far end of the band, minus a random share of slack: exactly how much room this hit has to travel in — and
-       * no two numbers the same, which is what stops hold-style rows parking in one another. The parabola takes no
+       * no two numbers the same, which is what stops freeze rows parking in one another. The arc takes no
        * slack: its rail is defined by shared endpoints, one per region and direction, so every value stops where the
        * one before it stopped and the chain reads as a train rather than as N separate journeys. */
       var far = FctMotionStyles.IsRail(hit.Style)
@@ -523,7 +523,7 @@ namespace EQLogParser
     /*
      * Travel per motion style, always measured from the origin *away* from the protected strip: `up` is +1 when the hit
      * rises and -1 when it sinks (bands mode's incoming band), and `usable` is how far it may go from where it spawned.
-     * Hold spends all of it once and then stands still, Fountain runs all of it in a straight line, Spray trades height for
+     * Freeze spends all of it once and then stands still, Fountain runs all of it in a straight line, Spray trades height for
      * lateral distance inside a cone, and the rails take the whole distance at one rate (FctConveyor prices the spacing).
      * Adding a style means adding a branch here and, if it needs gravity, one in AssignLifetime; nothing
      * in a backend changes, which is the point of keeping geometry in one table.
@@ -532,14 +532,14 @@ namespace EQLogParser
      * The territory parameter is what the sideways amounts measure against — canvas in bands, one lane in split — so
      * "12% of width" keeps meaning 12% of the rect this number actually owns, in either scheme.
      */
-    /* How far a parabola bows from its column at the vertex of its arc — half height — as a share of the side's
+    /* How far an arc bows from its column at its vertex — half height — as a share of the side's
      * territory, entering and leaving on the column either way (FctMotion.ArcedX). MSBT's own curve swings a full area
      * width, text running off the side of its area while still fading; this keeps the arc inside the lane where it can
      * be read instead, 0.34 being as far out as the widest crit draw still clears both walls at the vertex
-     * (FctParabolaTest pins the containment). It is a wish rather than a promise: a column too narrow to hold its widest number and this much
+     * (FctArcTest pins the containment). It is a wish rather than a promise: a column too narrow to hold its widest number and this much
      * curve takes less, uniformly for every row on it — Spawn reserves the room, AssignTravel caps what is left of it — but never nothing
      * merely because THAT row happened to be wide. */
-    public const double ParabolaBowFrac = 0.34;
+    public const double ArcBowFrac = 0.34;
 
     private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable, double bowDir)
     {
@@ -564,7 +564,7 @@ namespace EQLogParser
          * FctMotion keeps that shape). Straight runs every word of that with the bow taken out — the train needs no arc to exist. */
         hit.Rise = up * usable;
         hit.Arc = 0;
-        hit.Bow = hit.Style is FctMotionStyle.Parabola ? bowDir * territory * ParabolaBowFrac : 0.0;
+        hit.Bow = hit.Style is FctMotionStyle.Arc ? bowDir * territory * ArcBowFrac : 0.0;
 
         /* The value hangs its FULL drawn width left of the rail (right-alignment, FctMotion.ArcedX), so a bow toward the outer wall needs that much
          * room or the vertex clips — and a clipped vertex is a flight whose scored shape is not the shape. The outward side is capped against
@@ -588,7 +588,7 @@ namespace EQLogParser
     /*
      * The gravity tail of the choreographed styles, and note the sign runs opposite to Rise because it is screen-relative:
      * positive falls toward the bottom of the screen, negative back up toward the protected strip, which is how the incoming
-     * band mirrors an outgoing fountain instead of parking it against its own bottom edge. Hold has no fall and
+     * band mirrors an outgoing fountain instead of parking it against its own bottom edge. Freeze has no fall and
      * are left at zero.
      *
      * Depth itself is deliberately not one number. Spray measures against the height this particular number reached —

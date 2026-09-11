@@ -152,14 +152,14 @@ namespace EQLogParser
     public void Player_SpawnsTheScriptIntoItsOwnList()
     {
       var demo = new FctDemo();
-      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null), "an unstarted demo must not run");
+      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null), "an unstarted demo must not run");
 
       var spawned = 0;
       demo.Start(0);
 
       for (var now = 0.0; now <= 3000; now += 100)
       {
-        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, _ => spawned++, null))
+        if (demo.Advance(now, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, _ => spawned++, null))
         {
           Assert.IsTrue(demo.Hits.Count > 0, "a frame that changed should have something in it");
         }
@@ -174,24 +174,24 @@ namespace EQLogParser
       foreach (var hit in demo.Hits)
       {
         Assert.IsTrue(hit.LifetimeMs > 0, $"{hit.Lane} landed with no lifetime");
-        Assert.AreEqual(FctMotionStyle.Hold, hit.Style, "the default style is what the demo has to start on");
+        Assert.AreEqual(FctMotionStyle.Freeze, hit.Style, "the default style is what the demo has to start on");
       }
     }
 
     /*
      * Why the style is an argument of Advance instead of something set on the demo once. The loop runs its own ingest - that is what keeps it out of
      * the counters - which also means it holds its own copy of the motion style, and a copy set from outside can be forgotten. It was: selecting
-     * a style played hold, and the dropdown looked dead. Everything the caller passes in beside the canvas size arrives every frame, so it cannot go
+     * a style played freeze, and the dropdown looked dead. Everything the caller passes in beside the canvas size arrives every frame, so it cannot go
      * stale between a control changing and a number spawning.
      */
     [TestMethod]
     public void Advance_PlaysTheStyleTheCallerAskedFor()
     {
       /* Split, not the shipped bands: a rail is only a rail in the scheme whose regions are columns, and bands answering
-         Parabola with Hold (FctSplitModesTest pins that degradation) would make this test about the wrong thing. Every style
+         Arc with Freeze (FctSplitModesTest pins that degradation) would make this test about the wrong thing. Every style
          in this loop is legal in split, which is what makes one loop over all of them the honest shape. */
       var split = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left);
-      foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola })
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Arc })
       {
         var demo = new FctDemo();
         demo.Start(0);
@@ -231,7 +231,7 @@ namespace EQLogParser
       Assert.IsTrue(FctDemo.Script.Select(c => c.OffsetMs).SequenceEqual(FctDemo.Script.Select(c => c.OffsetMs).OrderBy(x => x)),
         "Advance walks the script once per cycle, so the offsets have to be in order");
 
-      /* Measured off the overlay rather than remembered: hold lives 1.4 motion windows, which is the longest anything gets.
+      /* Measured off the overlay rather than remembered: freeze lives 1.4 motion windows, which is the longest anything gets.
          Comparing the last cue against that number is what notices when the loop gets crowded or the lifetimes get longer. */
       var longest = FctMotion.MotionWindowMs * 1.4;
 
@@ -252,13 +252,13 @@ namespace EQLogParser
 
       for (var now = 0.0; now < FctDemo.CycleMs; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null);
       }
 
       Assert.AreEqual(0, demo.Hits.Count, "everything should have expired in the tail before the loop restarts");
 
       var spawned = 0;
-      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, _ => spawned++, null);
+      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, _ => spawned++, null);
 
       Assert.IsTrue(spawned > 0, "the script ran once and stopped - configure mode would go quiet");
     }
@@ -282,7 +282,7 @@ namespace EQLogParser
       for (var now = 1000.0 / 60; now <= 9000; now += 1000.0 / 60)
       {
         ticks++;
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null);
 
         if (demo.Animated)
         {
@@ -294,7 +294,7 @@ namespace EQLogParser
       Assert.IsTrue(moving > ticks * 0.9, $"only {moving} of {ticks} ticks had anything moving");
 
       /* The quiet seconds at the end of a cycle are dead time on purpose, and dead time must not cost rasters. */
-      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
+      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null);
       Assert.IsFalse(demo.Animated, "the tail between loops should stop asking for frames");
     }
 
@@ -305,7 +305,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now < 1500; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null);
       }
 
       var live = demo.Hits.ToList();
@@ -321,7 +321,7 @@ namespace EQLogParser
 
       // and the loop can be started again after configure mode closes and opens
       demo.Start(2000);
-      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null), "the demo cannot be restarted");
+      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Freeze, FctLayoutChoice.Bands, null, null), "the demo cannot be restarted");
     }
 
     /*

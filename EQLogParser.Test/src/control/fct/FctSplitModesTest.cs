@@ -10,8 +10,8 @@ namespace EQLogParser
    * of three categories — healing, damage on me, my damage — its own column and its own direction; "fountain" keeps
    * bands' geometry but its dials must actually steer, so bands reads directions instead of hard-coding the strip
    * invariant (its omitted defaults still ARE that invariant, which is every pre-existing test). And the split shapes:
-   * straight is the parabola's rail with the bow taken out — same train, same beat, no arc — while bands degrades both
-   * rail styles to hold exactly as it always degraded the parabola.
+   * straight is the arc's rail with the bow taken out — same train, same beat, no bend — while bands degrades both
+   * rail styles to freeze exactly as it always degraded the arc.
    */
   [TestClass]
   public sealed class FctSplitModesTest
@@ -23,7 +23,7 @@ namespace EQLogParser
     private const double Height = 900;
 
     /* Split with the shipped assignment: heals on the left, both damage streams on the opposite side. Every rail test
-     * here needs the scheme where a rail EXISTS — bands degrades both shapes to hold (BandsDegradesEveryRailStyleToHold
+     * here needs the scheme where a rail EXISTS — bands degrades both shapes to freeze (BandsDegradesEveryRailStyleToFreeze
      * pins that), and a default-constructed ingest gets bands, so "split" has to be said out loud. */
     private static FctLayoutChoice Split => new(FctLayoutMode.ByType, FctRegionSide.Left);
 
@@ -95,11 +95,11 @@ namespace EQLogParser
       }
     }
 
-    /* Bands still refuses to scroll across itself: both rail styles degrade to hold there, hand-written settings.ini included. */
+    /* Bands still refuses to scroll across itself: both rail styles degrade to freeze there, hand-written settings.ini included. */
     [TestMethod]
-    public void BandsDegradesEveryRailStyleToHold()
+    public void BandsDegradesEveryRailStyleToFreeze()
     {
-      foreach (var rail in new[] { FctMotionStyle.Parabola, FctMotionStyle.Straight })
+      foreach (var rail in new[] { FctMotionStyle.Arc, FctMotionStyle.Straight })
       {
         var ingest = new FctIngest(new Random(7)) { Style = rail, Layout = FctLayoutChoice.Bands };
         var hits = new List<FctHitState>();
@@ -107,7 +107,7 @@ namespace EQLogParser
         var hit = ingest.Accept(hits, FctLane.DamageDealt, 500, "Flurry", false, false, false, null, Width, Height, 0);
 
         Assert.IsNotNull(hit);
-        Assert.AreEqual(FctMotionStyle.Hold, hit.Style, $"{rail} cannot scroll across a scheme whose region is the whole canvas");
+        Assert.AreEqual(FctMotionStyle.Freeze, hit.Style, $"{rail} cannot scroll across a scheme whose region is the whole canvas");
       }
     }
 
@@ -191,7 +191,7 @@ namespace EQLogParser
     {
       var ingest = new FctIngest(new Random(11))
       {
-        Style = FctMotionStyle.Parabola,
+        Style = FctMotionStyle.Arc,
         Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp: true, outgoingUp: false, healUp: true),
       };
 
