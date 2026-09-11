@@ -163,8 +163,10 @@ namespace EQLogParser
      */
     public static double ArcedX(FctHitState hit, double t)
     {
-      // the reserved special-event glyph is part of the drawn box's reach, though it never moves the rail itself
-      var peak = (hit.ValueWidth * ScaleAllowance(hit)) + hit.IconAllowance;
+      /* The drawn block's reach at its widest, from the rail: the value's own box, the reserved special-event glyph, and the source label
+         wherever the label side put it — all of it leaves the rail, none of it moves the rail itself. Clamping against the digits alone is what
+         let an inline "(Glormok)" be painted across the column boundary (FctLayout.BlockFromRail). */
+      var (peak, otherSide) = FctLayout.BlockFromRail(hit, hit.SourceWidth, ScaleAllowance(hit));
 
       /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
@@ -176,15 +178,17 @@ namespace EQLogParser
 
       if (hit.Style is FctMotionStyle.Pulse)
       {
-        var loC = hit.SideMin + peak / 2.0;
-        var hiC = hit.SideMax - peak / 2.0;
+        var half = Math.Max(peak, otherSide);
+        var loC = hit.SideMin + half;
+        var hiC = hit.SideMax - half;
         return loC > hiC
           ? (hit.SideMin + hit.SideMax) / 2.0
           : Math.Clamp(hit.X0 + lateral, loC, hiC);
       }
 
       var loR = hit.SideMin + peak; // the whole box fits, growing leftwards from the rail
-      if (loR > hit.SideMax)
+      var hiR = hit.SideMax - otherSide;
+      if (loR > hiR)
       {
         return (hit.SideMin + hit.SideMax) / 2.0;
       }
@@ -197,7 +201,7 @@ namespace EQLogParser
          about the text's anchor — and it can only ever TUCK the drawn box further inside the rail (scale never
          exceeds 1), so the odometer's edge is safe in both directions. Callers that need the drawn box apply their
          own scaled half-width around this centre; scoring and drawing agree to the bit exactly as before. */
-      var rail = Math.Clamp(hit.X0 + lateral, loR, hit.SideMax);
+      var rail = Math.Clamp(hit.X0 + lateral, loR, hiR);
       return rail - hit.ValueWidth / 2.0;
     }
 

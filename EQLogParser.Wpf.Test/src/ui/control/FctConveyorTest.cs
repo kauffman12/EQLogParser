@@ -40,8 +40,8 @@ namespace EQLogParser
       new(new Random(7)) { Style = FctMotionStyle.Straight, Layout = layout ?? Split() };
 
     private static FctHitState Swing(FctIngest ingest, List<FctHitState> hits, double value, double now,
-      FctLane lane = FctLane.DamageDealt, string source = "Slash", bool crit = false) =>
-      ingest.Accept(hits, lane, value, source, crit: crit, minor: false, periodic: false, fixedText: null, Width, Height, now);
+      FctLane lane = FctLane.DamageDealt, string? source = "Slash", bool crit = false) =>
+      ingest.Accept(hits, lane, value, source ?? "", crit: crit, minor: false, periodic: false, fixedText: null, Width, Height, now);
 
     private static FctHitState Word(FctIngest ingest, List<FctHitState> hits, string word, double now) =>
       ingest.Accept(hits, FctLane.Missed, 0, "Flurry", crit: false, minor: false, periodic: false, fixedText: word, Width, Height, now);
@@ -517,7 +517,7 @@ namespace EQLogParser
     [TestMethod]
     public void LabelsBesideTheirAmountsTightenTheLines()
     {
-      var shipped = FctLayout.LabelsBelow;
+      var shipped = FctLayout.LabelSide;
       try
       {
         var under = PitchOf(labeled: true, below: true);
@@ -531,14 +531,14 @@ namespace EQLogParser
       }
       finally
       {
-        FctLayout.LabelsBelow = shipped;
+        FctLayout.LabelSide = shipped;
       }
     }
 
     /* Two rows entering one after the other, from which the lane's line pitch is read straight off their distance. */
     private static double PitchOf(bool labeled, bool below)
     {
-      FctLayout.LabelsBelow = below;
+      FctLayout.LabelSide = below ? FctLabelSide.Below : FctLabelSide.Right;
       var ingest = Line();
       var hits = new List<FctHitState>();
 

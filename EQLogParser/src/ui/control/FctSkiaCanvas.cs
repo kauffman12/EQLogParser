@@ -44,9 +44,19 @@ namespace EQLogParser
 
           /* The engine prices what the player will actually see: with words beside the numbers there is no band to defend
              (FctStream's label fence stands down) and — the part that shows — a row is only as tall as its number, so every
-             column packs tighter (FctLayout.LabelsBelow). Below, the shipped arrangement, a number biting the word under the
-             one above it is a collision and the label line costs vertical room. */
-          FctLayout.LabelsBelow = value is FctLabelSide.Below;
+             column packs tighter. The other half of the answer is horizontal: the words now reach out sideways instead of
+             hanging under the amount, which changes how much of the column they eat (FctLayout.LabelSide), so every name in
+             flight has to be re-fitted against the room that arrangement leaves it. A wider gap and a shorter name are the
+             same decision seen from either side; nothing here throws a number away over typography. */
+          FctLayout.LabelSide = value;
+          foreach (var hit in _hits)
+          {
+            if (hit.Source is not null)
+            {
+              hit.TextDirty = true;
+            }
+          }
+
           _dirty = true;
         }
       }
@@ -86,6 +96,10 @@ namespace EQLogParser
     /* Long-lived measuring paint (3.119.2 MeasureText requires one) and the halo bake's blurred black — built with
        the renderer, not per spawn. See EnsureSkiaResources. */
     private SKPaint _measurePaint, _haloPaint;
+
+    /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
+       fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
+    private Func<string, double, double> _labelWidth;
 
     private SKSurface _surface;
     private WriteableBitmap _bitmap;
@@ -558,7 +572,8 @@ namespace EQLogParser
         }
         else
         {
-          var gap = hit.SourceFontSize * 0.5;
+          // the same gap geometry charges for (FctLayout.LabelGap): what is drawn and what was spaced against are one arrangement
+          var gap = FctLayout.LabelGap(hit);
           var half = hit.ValueWidth / 2.0 + gap + hit.SourceWidth / 2.0;
 
           // a mark on the left is furniture too: the label leans against the glyph, not through it
@@ -696,7 +711,11 @@ namespace EQLogParser
        * there is no flicker to guard against now that folded hits stop changing their face value.
        */
       hit.ValueWidth = measured;
-      hit.SourceWidth = hit.SourceLabel is null ? 0 : TextWidth(hit.SourceLabel, hit.SourceFontSize, bold: false);
+
+      /* Real glyphs, real column: the estimate at spawn decided what geometry reserved, and this decides what the player reads. A name the
+         estimator trimmed may well fit at this font, and one drawn whole in a wide window is cut when the window shrinks — which is why the
+         full source stays on the hit and nothing here is permanent (FctLayout.FitSource). */
+      FctLayout.FitSource(hit, hit.SideMax - hit.SideMin, _labelWidth ??= (text, size) => TextWidth(text, size, bold: false));
       hit.TextDirty = false;
 
       if (hit.Blowout)
@@ -860,6 +879,9 @@ namespace EQLogParser
     private static byte AlphaOf(double opacity, int max = 255) => (byte)Math.Round(Math.Clamp(opacity, 0.0, 1.0) * max);
 
     private float TextWidth(string text, double size, bool bold) => GetFont(bold, size).MeasureText(text, _measurePaint);
+
+    // the measurer FctLayout.FitSource asks for: the same shaped width the draw pass will use, at the label's own size
+    private double LabelWidth(string text, double size) => TextWidth(text, size, bold: false);
 
     private void RefreshDpi()
     {

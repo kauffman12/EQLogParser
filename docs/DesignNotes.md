@@ -1264,7 +1264,7 @@ Three rules, and they are the whole design:
 
 **What a row is tall enough to need.** Where the label sits decides what a row *is*, vertically. With `(source)` drawn under the amount it is
 a second line and must be paid for, or the next value walks into the word under the one above it; drawn beside the amount it shares that
-number's baseline, so the row is exactly as tall as its value and nothing else (`FctLayout.LabelsBelow`, stamped by the canvas when settings
+number's baseline, so the row is exactly as tall as its value and nothing else (`FctLayout.LabelSide`, stamped by the canvas when settings
 load). That is why choosing left or right in the label dropdown pulls every column on screen visibly tighter — and why rows with a source and
 rows without one then share one line pitch instead of alternating wide and narrow down the lane. Uniformity, here, is not cosmetics: it is what
 turns "about evenly spaced" into something a reader can scan.
@@ -1334,6 +1334,35 @@ small costs were accepted with measurement: an artificially-over-capacity half g
 rows price their sideways valve off full widths too. Words align like numbers ("miss", "resist"), so a lane reads as
 one flush ledger, labels included.
 
+### The row is wider than its number: labels measured, names trimmed to fit
+
+Every horizontal clamp in the overlay charged for the *digits*, which was true of the arrangement that existed when they were written — the
+label underneath, inside the reserve TextHeight already pays for. Making labels sit beside their amounts broke that quietly: DrawHit paints a
+second string at an offset out from the number, and nothing had ever measured it, so a "(Complete Heal)" reached past the column boundary into
+its neighbour. The genre cannot make that mistake. NAG's inline label is another span in the same flex line as its damage number
+(renderer.js), so the row grows to hold it and the layout moves everything else out of the way; MSBT stamps one text object per line, so a
+line is exactly as wide as what it stamped. Both reserve what they draw. Ours drew into room that had never been asked for.
+
+`FctLayout.BlockAboutCentre` is now where the drawn block is defined, once: the value's box at its peak scale, the special-event glyph hanging
+outside its left edge, and the source label wherever the label side put it. Everything that tests a row against a wall or another row charges
+these numbers — `Spawn`'s clamp, `ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), the parabola's bow
+budget, and `FctStream`'s row half-width. The reach is deliberately asymmetric because the odometer above makes it so: with the rail being the
+value's *right* edge, a label on the left deepens a reach that side already had, while a label on the right opens one the row did not have at
+all. Below is the exception in both directions — the second line overhangs its amount by half the difference, so it is charged against the
+column boundary but *not* against the spacing between rows in a column, whose vertical reserve already covers it. Charging it twice would make
+rows braid into neighbouring columns to dodge words that were never in their way.
+
+A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: twelve characters, past which
+the extra letters stop identifying the mob and start eating the column, and whatever width survives after the amount itself. Nothing is trimmed
+that fits, so the same name survives whole at a smaller font or in a wider window; nothing is cut below three letters, where an ellipsis would
+cost more than the name it replaces and "(...)" names nobody. Two measurers take the same decision at different moments — an estimate at spawn,
+before any font exists, and the real glyphs in `RebuildGlyphs`, whose answer is what the player reads — and because the *full* source stays on
+the hit, the decision is re-taken whenever the room changes: a resize marks the text dirty (widen the window and a trimmed name comes back), and
+so does switching label side, since left, right and below leave different amounts of column behind.
+
+Seeding that estimate surfaced an ordering bug worth naming: `FctIngest` stamped `ValueWidth` *after* calling `Spawn`, so every number in the
+history of this overlay was placed against a zero-width block and only the per-frame draw clamp ever caught up — a candidate scored as occupying
+a tenth of the room it would actually take. The estimate now precedes placement, which is also the point at which the label's room exists.
 ### Two states: numbers only, or configuring
 
 Locked is not a setting — it is what the overlay *is*. It opens locked, it is played with locked, and it has no header: while locked

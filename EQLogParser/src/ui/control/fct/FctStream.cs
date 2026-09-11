@@ -315,12 +315,11 @@ namespace EQLogParser
       var room = ComfortableRows / (live + 1.0);
       return room >= 1.0 ? 1.0 : Math.Max(room, PressFloor);
     }
-    /* Half-width a row can occupy at its widest draw. Nothing is multiplied on here any more: stream styles never scale a number past the
-     * font it was measured at (the big class carries its size in that font, and its pop swells up from below), so the measured width plus
-     * the reserved glyph IS the widest this row ever gets — which is also what makes the odometer's right edge exact.
-     *
-     * Vertical step: a line has to clear the tallest row this stream can draw, not just this one's. */
-    private static double DrawnHalf(FctHitState h) => (h.ValueWidth + h.IconAllowance) / 2.0;
+    /* Half-width a row can occupy at its widest draw: the whole block — amount, reserved event glyph and the source label wherever the label
+     * side put it — because the words are the widest part of an inline-labelled row and braiding around a number whose name is drawn through
+     * its neighbour is not spacing. Nothing else is multiplied on here: stream styles never scale a number past the font it was measured at
+     * (the big class carries its size in that font, and its pop swells up from below), which is also what makes the odometer's edge exact. */
+    private static double DrawnHalf(FctHitState h) => FctLayout.BlockHalf(h);
 
     private static double DrawnHeight(FctHitState h) => FctLayout.TextHeight(h);
 

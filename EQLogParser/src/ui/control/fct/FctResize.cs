@@ -113,6 +113,13 @@ namespace EQLogParser
 
         FctLayout.Refit(hit, stage);
 
+        /* A column that got wider can carry more name again, and one that shrank has to give some back: the fitted label is a decision
+           against the room, so the room changing invalidates it. The canvas re-measures with real glyphs on the next frame. */
+        if (hit.Source is not null)
+        {
+          hit.TextDirty = true;
+        }
+
         if (hit.Cell >= 0)
         {
           FctCellGrid.Reseat(hit, stage);

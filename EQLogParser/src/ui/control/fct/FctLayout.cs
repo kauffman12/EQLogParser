@@ -78,13 +78,17 @@ namespace EQLogParser
     public const double SourceLineFactor = 1.25;
 
     /*
-     * Whether "(source)" is drawn under its amount (the shipped arrangement) or inline beside it (FctLabelSide). The canvas owns
-     * the choice and stamps this when settings load, exactly like it stamps the fonts, because it changes what a ROW is
-     * vertically: inline, the words share the value's baseline, so the row is exactly as tall as its number and nothing else —
-     * which is why moving the labels to the side tightens every column on the screen. Below, the label is a second line and has
-     * to be paid for in the same currency the queue spaces rows with, or the next value walks into the word under this one.
+     * Where "(source)" sits relative to its amount (FctLabelSide): the canvas owns the choice and stamps it when settings load,
+     * because it is geometry twice over, not typography. Vertically it decides what a ROW is — inline, the words share the value's
+     * baseline, so a row is exactly as tall as its number and nothing else, which is why moving the labels to the side tightens every
+     * column on screen; below, the label is a second line and must be paid for in the same currency the queue spaces rows with.
+     * Horizontally it decides where the DRAWN BLOCK reaches — below, the words can overhang either side of their amount; left, they join
+     * the value in hanging off the odometer rail; right, they open a reach on the side that had none. Both answers come from here, or the
+     * engine spaces and clamps for an arrangement nobody drew.
      */
-    internal static bool LabelsBelow = true;
+    internal static FctLabelSide LabelSide = FctLabelSide.Below;
+
+    internal static bool LabelsBelow => LabelSide is FctLabelSide.Below;
 
     /*
      * Vertical space a hit occupies below its y anchor, including whatever pop its style gives it: DrawHit scales about a
@@ -101,6 +105,118 @@ namespace EQLogParser
     public static double TextHeight(FctHitState hit) =>
       (hit.ValueFontSize * TextHeightFactor) +
       ((LabelsBelow && !string.IsNullOrEmpty(hit.Source)) ? hit.SourceFontSize * SourceLineFactor : 0);
+
+    /* The word-space between an inline label and its amount, in source-font sizes. DrawHit places with this and geometry charges it here,
+       so there is one gap rather than two opinions of it that drift apart the moment anybody edits one. */
+    public const double LabelGapFrac = 0.5;
+
+    /* How much of a source name is worth drawing however much room there happens to be: past a dozen characters the extra letters stop
+       identifying the mob and start eating the column. A ceiling, not a target — FitSource shortens nothing that fits, so the same name
+       survives whole at a smaller font or in a wider window, and is cut when it genuinely does not belong. */
+    internal const int MaxSourceChars = 12;
+
+    /* The shortest fitted name worth drawing: below this an ellipsis costs more than the letters it replaces, and "(…)" names nothing. */
+    private const int MinSourceChars = 3;
+
+    private const string Ellipsis = "\u2026";
+
+    internal static double LabelGap(FctHitState hit) => hit.SourceFontSize * LabelGapFrac;
+
+    /*
+     * How far the drawn block reaches either side of the value's CENTRE: its own measured box at a given blowout scale, the special-event
+     * glyph hanging outside the left edge, and the source label wherever the label side put it. Anything testing this row against a wall or
+     * another row charges these numbers, so no "(Glormok)" gets drawn through a column boundary — and the reach is deliberately asymmetric,
+     * because a right-aligned amount already hangs its whole width one way: an inline label on that side deepens a reach the row had anyway,
+     * while on the other it opens one it did not have.
+     */
+    internal static (double Left, double Right) BlockAboutCentre(FctHitState hit, double sourceWidth, double scale)
+    {
+      var half = (hit.ValueWidth * scale) / 2.0;
+      var left = half + hit.IconAllowance;
+      var right = half;
+
+      if (sourceWidth > 0)
+      {
+        var words = sourceWidth * scale;
+        if (LabelsBelow)
+        {
+          // a second line is centred under its amount, so it can overhang either side by half the difference between the two
+          left = Math.Max(left, words / 2.0);
+          right = Math.Max(right, words / 2.0);
+        }
+        else if (LabelSide is FctLabelSide.Left)
+        {
+          left = half + LabelGap(hit) + words;
+        }
+        else
+        {
+          right = half + LabelGap(hit) + words;
+        }
+      }
+
+      return (left, right);
+    }
+
+    /* The same block from the odometer RAIL, which is where every horizontal clamp lives: a travelling row carries its whole value box to the
+       left of the rail (FctMotion.ArcedX), so that side pays for the label as well and the other keeps only what the label side gave it. */
+    internal static (double Left, double Right) BlockFromRail(FctHitState hit, double sourceWidth, double scale)
+    {
+      var (left, right) = BlockAboutCentre(hit, sourceWidth, scale);
+      var half = (hit.ValueWidth * scale) / 2.0;
+      return (left + half, Math.Max(0.0, right - half));
+    }
+
+    /*
+     * Half-width for the tests that space rows against each other about the centre — the stream's scorer, which decides how far apart two
+     * rows in one column have to be. It charges the words when they sit BESIDE their amount, because at that height a wide "(Glormok)" is
+     * exactly as intrusive as a wide number and the row it belongs to no longer reserves a line for it. When they go BELOW they are already
+     * paid for vertically (TextHeight charges the second line, so nothing can overlap it), and charging them sideways as well would double-bill
+     * the same pixels: rows would braid into neighbouring columns to dodge a label that was never in their way. The column boundary still sees
+     * the overhang — ArcedX and Spawn clamp against BlockFromRail either way, which is what keeps a long word out of the next stream.
+     */
+    internal static double BlockHalf(FctHitState hit)
+    {
+      var (left, right) = BlockAboutCentre(hit, LabelsBelow ? 0 : hit.SourceWidth, 1.0);
+      return Math.Max(left, right);
+    }
+
+    /*
+     * The source name this row can actually draw, shortened only when its column genuinely runs out of room. Two bounds do the work:
+     * MaxSourceChars, past which letters stop being useful, and whatever width survives after the amount itself. Width arrives as a function
+     * because there are two honest measurers — an estimate at spawn, before any font exists, and the real glyphs in the canvas, whose answer is
+     * the one that decides what the player sees. The full name always stays on the hit (FctHitState.Source), so cutting is a decision re-taken
+     * whenever the room changes (a resize, a font dial, another label side) rather than damage done once: widen the window and the name comes
+     * back by itself.
+     */
+    internal static void FitSource(FctHitState hit, double room, Func<string, double, double> widthOf)
+    {
+      if (string.IsNullOrEmpty(hit.Source))
+      {
+        hit.SourceLabel = null;
+        hit.SourceWidth = 0;
+        return;
+      }
+
+      var name = hit.Source.Length > MaxSourceChars ? hit.Source[..MaxSourceChars] + Ellipsis : hit.Source;
+
+      while (true)
+      {
+        var label = $"({name})";
+        var width = widthOf(label, hit.SourceFontSize);
+        var (left, right) = BlockFromRail(hit, width, 1.0);
+        if (left + right <= room || name.Length <= MinSourceChars)
+        {
+          hit.SourceLabel = label;
+          hit.SourceWidth = width;
+          return;
+        }
+
+        // two characters a pass: names are short and the room is measured, but a wide-script name should not need twenty rounds
+        var trimmed = name.EndsWith(Ellipsis, StringComparison.Ordinal) ? name[..^Ellipsis.Length] : name;
+        name = trimmed.Length <= MinSourceChars ? trimmed : trimmed[..^2] + Ellipsis;
+      }
+    }
+
 
     /*
      * Where a lane's column sits across the overlay, in bands — the "what" carrier there: damage toward the middle of the
@@ -173,10 +289,24 @@ namespace EQLogParser
       /* X0 is the right-align RAIL (FctMotion.ArcedX), so on a travelling row the reserved margin sits entirely on the
          left: the whole drawn box — at its widest, a crit's peak — hangs left of the rail, and the rail itself only has
          to stay inside the territory. Pulse centres in its cell, so it keeps half on each side. */
-      var peakWidth = (hit.ValueWidth * PeakScaleOf(hit)) + hit.IconAllowance;
-      var travelling = hit.Style is not FctMotionStyle.Pulse;
-      var xLo = region.X + EdgePad + (travelling ? peakWidth : peakWidth / 2);
-      var xHi = region.X + region.Width - EdgePad - (travelling ? 0 : peakWidth / 2);
+      /* The whole drawn block and not just the number: with the words inline they are the widest part of the row, and charging only the amount
+         is how a source name came to be drawn across the seam into the neighbouring column. FitSource has already refused the names this column
+         cannot carry; this keeps the ones it accepted inside their territory at every scale they will ever draw at. */
+      var peak = PeakScaleOf(hit);
+      double reachLeft, reachRight;
+      if (hit.Style is FctMotionStyle.Pulse)
+      {
+        // a pulsed value sits IN its cell, so the block reaches both ways from the cell centre by whichever side is wider
+        var centred = BlockAboutCentre(hit, hit.SourceWidth, peak);
+        reachLeft = reachRight = Math.Max(centred.Left, centred.Right);
+      }
+      else
+      {
+        (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth, peak);
+      }
+
+      var xLo = region.X + EdgePad + reachLeft;
+      var xHi = region.X + region.Width - EdgePad - reachRight;
       hit.X0 = xHi <= xLo
         ? region.X + (region.Width / 2)        // text wider than its territory: nothing to place, so centre it there
         : Math.Clamp(hit.X0, xLo, xHi);
@@ -334,9 +464,10 @@ namespace EQLogParser
          * inward: the rail only has to stay inside). ArcedX still clamps as the resize safety net. */
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
+          var (inward, outward) = BlockFromRail(hit, hit.SourceWidth, PeakScaleOf(hit));
           hit.Bow = hit.Bow < 0
-            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - (hit.ValueWidth * PeakScaleOf(hit)) - hit.IconAllowance))
-            : Math.Min(hit.Bow, hit.SideMax - hit.X0);
+            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - inward))
+            : Math.Min(hit.Bow, hit.SideMax - hit.X0 - outward);
         }
         return;
       }

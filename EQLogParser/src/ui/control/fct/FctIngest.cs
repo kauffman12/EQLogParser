@@ -403,25 +403,32 @@ namespace EQLogParser
         Incoming = incoming,
         Style = style,
         SpawnMs = now,
-        Source = source,
-        SourceLabel = string.IsNullOrEmpty(source) ? null : $"({source})", // once here, not once per frame in the draw pass
+        Source = source, // the name as the log said it; its drawn form is fitted to the column below, once, not per frame in the draw pass
         FixedText = fixedText,
         Value = value,
       };
 
       FctStyle.ApplyTo(hit, pooled, minor || periodic);
+
+      /* Seeded BEFORE the placement that uses it. The clamp that keeps a row inside its own column is derived from the drawn width — and
+         until a canvas exists to measure glyphs this estimate is all the geometry has, so stamping it afterwards meant every number was
+         placed against a zero-width block and only the per-frame draw clamp ever caught up. */
+      hit.FormattedValue = fixedText is null ? FctText.FormatHitValue(value) : null;
+      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1, heal), hit.ValueFontSize);
+
       FctLayout.Spawn(hit, stage, _rand);
       AssignLifetime(hit, hits, stage, now);
+
+      /* What this row's own column can pay for in words. Placement gives the hit its territory (SideMin/SideMax), so the room is known the
+         moment it is placed — and the label is then trimmed to it, never below what still says something and never shorter than it has to
+         be: a small font or a wide window keeps a long name whole. The canvas re-takes this decision with measured glyphs (and again on a
+         resize), because the estimate is only the geometry's best guess about what the renderer will draw. */
+      FctLayout.FitSource(hit, hit.SideMax - hit.SideMin, FctLayout.EstimateTextWidth);
 
       /*
        * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
        * from the drawn width, and the backend does not measure real glyphs until its first draw.
        */
-      /* The fold key, priced once at spawn rather than once per candidate a later hit might fold into this one. A label has
-         no amount to compare, so it carries none. */
-      hit.FormattedValue = fixedText is null ? FctText.FormatHitValue(value) : null;
-      hit.ValueWidth = FctLayout.EstimateTextWidth(fixedText ?? FctText.FormatHit(value, 1, heal), hit.ValueFontSize);
-
       if (celled)
       {
         /*
