@@ -277,8 +277,14 @@ namespace EQLogParser
 
     /* The size the overlay ships with, named so Reset Position and an unusable stored size land on something that was measured
      * (§6.8) instead of on WPF's own default. These match the Width/Height attributes in the XAML. */
-    internal const double DefaultWidth = 800;
-    internal const double DefaultHeight = 560;
+    /*
+     * A first run asks for the middle of the offered range (FctResize) rather than the smallest thing that renders. The overlay is read
+     * across a game window at arm's length, and 800x560 was chosen to prove the layout, not to live in: it fit, but a source line beside a
+     * four-digit number had nowhere to go and names came out shortened. Fit() still trims this to the working area it is given, so on a
+     * small screen a first run gets what the screen has.
+     */
+    internal const double DefaultWidth = 1280;
+    internal const double DefaultHeight = 720;
 
     private void RestoreSettings()
     {

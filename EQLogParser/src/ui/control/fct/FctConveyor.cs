@@ -45,7 +45,16 @@ namespace EQLogParser
   {
     /* Clear air between two rows on one rail. MSBT's line gap is 8 px; this is a hair wider because it is the mode people
        choose in order to read, and because a row carrying a source line hangs that line into the air below it. */
-    public const double LaneGapPx = 10;
+    /*
+     * Zero, on purpose, and it was not always. The gap between two rows on a lane used to be this many pixels ON TOP of the row's own
+     * vertical reserve — and that reserve (FctLayout.TextHeight) is already about a third taller than the glyphs it protects, because it
+     * has to hold an ascent, a descent, and the halo that blooms out past both. Ten pixels of air above that read as four columns of a
+     * ledger with every other line left blank: the column ran out of screen long before it ran out of numbers worth showing. The reserve IS
+     * the gap now; what separates two neighbours is the slack inside their own boxes, which is real (it has to be) and invisible (which is
+     * the point). Halves keeps a fraction of the same idea (FctStream.RowGapFrac) rather than a fixed pixel count, because it spaces rows
+     * by measured height plus a share and has no lane clock to price against.
+     */
+    public const double LaneGapPx = 0;
 
     /* How many arrivals may wait behind the mouth of one lane before the next is refused. Twelve is roughly "one screenful
        of backlog": enough that a pull-opening burst, a DoT application or an AoE spike is held and then delivered in order

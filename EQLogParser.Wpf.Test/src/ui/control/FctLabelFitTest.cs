@@ -55,28 +55,81 @@ namespace EQLogParser
       }
     }
 
-    /* The other bound: past a dozen characters the extra letters stop identifying the mob and start eating the column, so that is the most a
-       name is worth even in a window with room to spare. A ceiling on usefulness, not on pixels — which is what makes cutting predictable
-       rather than a function of how wide somebody's crit happened to be. */
+    /* The other bound: past thirty characters the extra letters stop identifying the mob and start eating the column, so that is the most a name
+       is worth even in a window with room to spare (raised from twelve on request — the shorter cut truncated real names well before the column
+       was full). A ceiling on usefulness rather than on pixels, which is what makes cutting predictable instead of a function of how wide somebody's
+       crit happened to be, and generous enough that a name in Norrath is shortened by its length alone rather than by layout. */
     [TestMethod]
-    public void TwelveCharactersIsTheMostANameIsWorth()
+    public void TheCeilingIsTheMostANameIsWorth()
     {
       var side = FctLayout.LabelSide;
       try
       {
         FctLayout.LabelSide = FctLabelSide.Right;
 
-        var hit = Hit("Supercalifragilistic", 100_000);
-        Assert.AreEqual("(Supercalifra…)", hit.SourceLabel,
-          "twelve characters of name and an ellipsis, whatever room there is");
+        var whole = Hit("Supercalifragilistic", 100_000);
+        Assert.AreEqual("(Supercalifragilistic)", whole.SourceLabel,
+          "a twenty-character name is a name, not a problem: it is drawn whole now that the ceiling has room for it");
 
-        var short_ = Hit("Glormok", 100_000);
-        Assert.AreEqual("(Glormok)", short_.SourceLabel, "a name inside the ceiling is untouched by it");
+        var long_ = Hit("Svarnrhus the Undying Champion of Frost", 100_000);
+        Assert.AreEqual("(Svarnrhus the Undying Champion…)", long_.SourceLabel,
+          "past the ceiling a name is cut by length alone, whatever room there is");
+        Assert.IsTrue(long_.SourceLabel.Length <= 2 + FctLayout.MaxSourceChars + 1, "and never past it");
       }
       finally
       {
         FctLayout.LabelSide = side;
       }
+    }
+
+    /* The report this pins: in parabola mode the crits went up in a dead straight line while everything around them curved. Charged per arriving row, a
+       wide number spends a column's whole inward side on its own glyphs and has no room left for an arc — and it slides off its neighbours' rail into the
+       bargain. A column's spine and its bend belong to the COLUMN (FctLayout.RailReserve), which is both halves of the fix: one rail, one path. */
+    [TestMethod]
+    public void ACritAndItsNeighbourShareOneSpineAndOneBend()
+    {
+      var stage = FctStage.ByType(FctRegionSide.Right, incomingUp: false, outgoingUp: true, 1280, 720);
+      var normal = ParabolaHit("486", crit: false);
+      var crit = ParabolaHit("12,847", crit: true);
+      FctLayout.Spawn(normal, stage, new Random(7));
+      FctLayout.Spawn(crit, stage, new Random(7));
+
+      Assert.AreEqual(Math.Round(normal.X0), Math.Round(crit.X0),
+        $"one rail for the column whatever rolled (normal {normal.X0:0}, crit {crit.X0:0})");
+      Assert.IsTrue(crit.ValueWidth > normal.ValueWidth, "the crit is meant to be the wide one here");
+
+      Assert.IsTrue(Math.Abs(normal.Bow) > 1, $"ordinary rows curve ({normal.Bow:0})");
+      Assert.IsTrue(Math.Abs(crit.Bow) > 1, $"and so do crits ({crit.Bow:0})");
+      Assert.AreEqual(Math.Round(Math.Abs(normal.Bow)), Math.Round(Math.Abs(crit.Bow)),
+        $"one amount of curve per column (normal {normal.Bow:0}, crit {crit.Bow:0})");
+      Assert.IsTrue(normal.Bow * crit.Bow > 0, "the same way round as well");
+
+      // and neither leaves its territory at the vertex, where the widest row reaches furthest out: the rail is the value's right edge, so the
+      // block's LEFT edge is what a too-sharp curve would push through the outer wall (BlockFromRail is the same arithmetic the clamp uses)
+      foreach (var hit in new[] { normal, crit })
+      {
+        var rail = FctMotion.ArcedX(hit, 0.5);
+        // measured at the scale the layout charged for, which is what a resize mid-flight cannot change under it
+        var (left, _) = FctLayout.BlockFromRail(hit, hit.SourceWidth, FctLayout.TextReserve(hit) / FctLayout.TextHeight(hit));
+        Assert.IsTrue(rail - left >= hit.SideMin - 1,
+          $"the vertex stays home for {hit.FormattedValue} (block from {rail - left:0}, wall at {hit.SideMin:0})");
+        Assert.IsTrue(rail <= hit.SideMax + 1, $"and inside the inner wall ({rail:0} / {hit.SideMax:0})");
+      }
+    }
+
+    private static FctHitState ParabolaHit(string text, bool crit)
+    {
+      var size = crit ? FctStyle.DamageDealtFontSize * FctScale.Crit : FctStyle.DamageDealtFontSize;
+      return new FctHitState
+      {
+        Incoming = false,
+        FormattedValue = text,
+        ValueFontSize = size,
+        SourceFontSize = FctStyle.SourceSize(size),
+        Style = FctMotionStyle.Parabola,
+        Blowout = crit,
+        ValueWidth = FakeWidth(text, size), // what RebuildGlyphs will measure: an estimate is enough for geometry
+      };
     }
 
     /* The block itself, per label side — the numbers every clamp and collision test charges. Right: the words open a reach on the side a

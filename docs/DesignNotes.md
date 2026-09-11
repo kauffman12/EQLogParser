@@ -1248,12 +1248,16 @@ Three rules, and they are the whole design:
    between two rows is therefore whatever it was at entry, forever, nothing can overtake anything, and "the lane sped up" is one
    number changing that moves everybody in the same frame. Position comes from the lane rather than from `ageMs`, which is also
    what lets a congested lane finish a row in half the nominal time without that row blinking out early in mid-column.
-2. **Spacing is bought at entry, once.** A new row pays for its slot behind the last one enrolled: the **taller** of the two plus
-   `LaneGapPx` (10 px — MSBT's line gap is 8; this is a hair wider because it is the mode people read), rounded **up** to whole pixels so a
-   scrolling column cannot shimmer by a third of a pixel between frames, which reads as a fault even when every value moves at exactly the
-   right rate. Height is what `FctLayout.TextHeight` answers — a crit's own font, and a source line when the labels are drawn below (see
-   *what a row is* just below) — the same lesson `FctCellGrid` learned as inflated bounds. For the uniform column a fight is mostly made of,
-   "taller of the two" *is* one row height plus the gap: exact line spacing, nothing thrown away.
+2. **Spacing is bought at entry, once.** A new row pays for its slot behind the last one enrolled: the **taller** of the two, rounded **up** to
+   whole pixels so a scrolling column cannot shimmer by a third of a pixel between frames, which reads as a fault even when every value moves at
+   exactly the right rate. Height is what `FctLayout.TextHeight` answers — a crit's own font, and a source line when the labels are drawn below (see
+   *what a row is* just below) — the same lesson `FctCellGrid` learned as inflated bounds. There is no line gap on top of that any more. `LaneGapPx` used
+   to add 10 px above the reserve (MSBT's own is 8) and the two together put roughly a fifth of the column in empty air, which is what made four ledger
+   columns scroll while they still had room for the fight: the reserve IS the gap now. It is 1.2 em of leading around glyphs that need about 1.05
+   (`TextHeightFactor`, shortened from the borrowed web value of 1.35), so two neighbours are separated by the slack inside their own boxes, which is real
+   and invisible; the halos that meet between them are translucent blooms brightening a seam rather than numbers hiding numbers, and a class that swells on
+   arrival still pays at peak (`TextReserve`). Halves gets the same relief for free, because its placement claims boxes of exactly this height. For the
+   uniform column a fight is mostly made of, "taller of the two" *is* one row height: exact line spacing, nothing thrown away.
 3. **Congestion scales the lane, never the row.** Load (on-column + waiting) against what the column can hold gives the lane's
    accelerator — Little's law again, spent once per column instead of once per row, floored at `FctStream.PressFloor` so even a
    full emergency still reads as text and clears inside about a second and a half. It ramps: fast to speed up (the traffic is
@@ -1268,6 +1272,15 @@ number's baseline, so the row is exactly as tall as its value and nothing else (
 load). That is why choosing left or right in the label dropdown pulls every column on screen visibly tighter — and why rows with a source and
 rows without one then share one line pitch instead of alternating wide and narrow down the lane. Uniformity, here, is not cosmetics: it is what
 turns "about evenly spaced" into something a reader can scan.
+
+**A column's spine and its bend are decided for the widest row it can ever draw, not for the row that arrived.** `FctLayout.RailReserve` prices a rail
+against a crit-class number at its dial's size — six of the widest digit with a thousands comma, plus room for a special event's mark — and Spawn places the
+spine so that box fits *and* leaves `ParabolaBowFrac` of clear room on the side the column bows to; AssignTravel caps the bow by that same reserve rather than by
+the arriving number's own width. Both halves matter, and the second was a bug lived with for a long time: charged per arriving row, a wide crit spends the whole
+column on its own glyphs, finds no room left for an arc, and goes up the screen in a dead straight line while every row around it curves — the loudest number in
+the column being the only one without a shape. Deciding it once per column keeps the odometer honest too (a crit no longer slides inward to suit itself, which
+used to put fifteen pixels between two neighbours' right edges) and gives every row on a lane ONE path, which is what the spacing model has always assumed:
+identical bows cancel when the distance to the next row is measured.
 
 Every row on a lane enters at **one edge** and travels **one distance**, whatever class of number it is: a per-class start — a
 proc's inset from the spawn edge, a slack share off the flight, the depth jitter — spends part of a neighbour's gap before the
@@ -1352,8 +1365,9 @@ all. Below is the exception in both directions — the second line overhangs its
 column boundary but *not* against the spacing between rows in a column, whose vertical reserve already covers it. Charging it twice would make
 rows braid into neighbouring columns to dodge words that were never in their way.
 
-A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: twelve characters, past which
-the extra letters stop identifying the mob and start eating the column, and whatever width survives after the amount itself. Nothing is trimmed
+A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: `MaxSourceChars` — thirty, long enough for
+the name of nearly anything in Norrath as the log writes it, short enough that a name never decides the shape of the picture — and whatever width survives
+after the amount itself. Nothing is trimmed
 that fits, so the same name survives whole at a smaller font or in a wider window; nothing is cut below three letters, where an ellipsis would
 cost more than the name it replaces and "(...)" names nobody. Two measurers take the same decision at different moments — an estimate at spawn,
 before any font exists, and the real glyphs in `RebuildGlyphs`, whose answer is what the player reads — and because the *full* source stays on
@@ -1566,12 +1580,17 @@ aiming. Controls keep their own clicks because a combo or button handles the pre
 question by making the window click-through.
 
 What it settles on is a **magnet, not a menu** (`FctResize`): drag freely and each axis is pulled onto an offered value when it
-comes near — 980×640, 800×560, 760×520, 720×560 — and stays exactly where the hand stopped in between. Per-axis rather than whole
+comes near — 1600/1440/1280/1120/980/800/760/720 across, 900/820/720/640/560/520 down (the range grew at the top rather than moving, so the small end is
+unchanged for anyone on a small screen) — and stays exactly where the hand stopped in between. Per-axis rather than whole
 presets, so dragging one edge gets the same help as a corner, and a corner near 800×560 lands on it. The floor is 420×300, the
 smallest size probed: every style still places every number inside the window and clear of the protected strip there, and below it
 a band is shallower than a line of text.
 
-The default moved from 980×640 to **800×560**, which is what most people need over a HUD. The honest cost, measured at each offered
+The default started at 980×640, came down to **800×560** as what most people need over a HUD, and has gone back up to **1280×720**: the narrow window charged
+for itself in a currency nobody was counting, because a source line beside a four-digit number had about a hundred pixels of a split column to live in and
+every name longer than a handful of letters came out shortened. At 1280 that same column carries a mob's whole name in most fights, and halves carries a name
+beside a crit with room left over; Fit() still trims the request to the working area it is given, so a small screen gets what it has. What the narrow sizes
+cost is measured and unchanged: worst-instant pair overlap
 size (worst-instant pair overlap): fountain 3-in-flight 7.5% → 6.7%, spray 8-in-flight 8.3% → 7.7% — free of charge — while **six
 numbers held at once goes 15.5% → 20.7%**. Held text is the one thing that cannot trade space for motion, so it pays for the narrower
 window; everything else does not.

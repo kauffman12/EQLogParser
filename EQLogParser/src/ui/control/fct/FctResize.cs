@@ -21,8 +21,19 @@ namespace EQLogParser
    */
   internal static class FctResize
   {
-    public static readonly double[] WidthSnaps = [980, 800, 760, 720];
-    public static readonly double[] HeightSnaps = [640, 560, 520];
+    /*
+     * The offered sizes start wide now, because the narrow end of the range spends the thing the overlay needs most: room beside a
+     * number for the name of whatever did it. At 980 in split a source line has a quarter column to live in — about a hundred pixels
+     * after the digits and their mark — and every name longer than a handful of letters is shortened to fit. At 1280 that same column
+     * carries a mob's whole name in most fights, and halves at 1280 carries a name beside a crit with room left over. The old sizes stay
+     * offered for anyone playing on a small screen or beside another window: the range grew at the top, it did not move.
+     *
+     * Nothing here is a maximum. Fit() clamps to the working area it is given, so a second monitor offers more and a netbook less; these
+     * are the sizes a corner drag snaps TO, and the largest of them is what a first run asks for (FctOverlayWindow's defaults) before that
+     * clamp. "720 is as narrow as lane columns stay comfortably apart" is still true — it is just no longer the widest thing on offer.
+     */
+    public static readonly double[] WidthSnaps = [1600, 1440, 1280, 1120, 980, 800, 760, 720];
+    public static readonly double[] HeightSnaps = [900, 820, 720, 640, 560, 520];
 
     /* The smallest probed layout: at 420x300 every style still places every number inside the window and clear of the strip.
      * Smaller than this and a band is shallower than a line of text, which is not a layout, it is an overlap with extra steps. */

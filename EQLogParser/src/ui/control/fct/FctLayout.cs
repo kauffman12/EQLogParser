@@ -74,7 +74,15 @@ namespace EQLogParser
      * optionally the parenthesised source line under it. Factor rather than measured glyph metrics because the band
      * has to exist at spawn time, before a backend has built any text — see EstimateTextWidth for the same trade.
      */
-    public const double TextHeightFactor = 1.35;
+    /*
+     * How much vertical room a row is charged, as a multiple of its value's font: 1.2 em, what typographers call leading — the point at which
+     * an ascender and the descender above it stop being neighbours without the line below reading as cramped. It was 1.35, two lines of web
+     * leading carried over from the first pass, and the extra quarter existed to protect the halo — the wrong thing to reserve air for. A halo
+     * is a translucent bloom: two of them meeting brighten a seam rather than hide a number, while the gap they bought ate a fifth of every
+     * column and made four ledger columns scroll before they held a fight. Rows whose class swells on arrival (crits) still pay for the swell,
+     * because the reserve is taken at PEAK scale (TextReserve) and the lane prices spacing from that same peak (FctConveyor).
+     */
+    public const double TextHeightFactor = 1.2;
     public const double SourceLineFactor = 1.25;
 
     /*
@@ -99,6 +107,22 @@ namespace EQLogParser
     public static double TextReserve(FctHitState hit) => TextHeight(hit) * PeakScaleOf(hit);
 
     /*
+     * The widest block a lane can be asked to draw: a crit-class number at the size its dial allows — six of the widest digit with a thousands
+     * comma — plus room for the mark a special event hangs outside its edge. A column's spine and its arc are decided against THIS rather than
+     * against whichever number happened to arrive first, because every row on a lane has to share one rail and trace one path. Judged per arriving
+     * number, a wide crit spends the whole column on its own glyphs, finds no room left for an arc, and goes up the screen in a dead straight line
+     * while everything around it curves. Sized from the class and the dials rather than measured, so it is one value for every row of every column
+     * (docs/DesignNotes.md).
+     */
+    internal static double RailReserve()
+    {
+      var critSize = FctStyle.DamageDealtFontSize * FctScale.Crit;
+      return EstimateTextWidth(RailReserveDigits, critSize) + FctStyle.IconSpan(critSize);
+    }
+
+    private const string RailReserveDigits = "999,999";
+
+    /*
      * The drawn block at full size: the value plus its source line, with no scale applied. FctPlacement measures live hits
      * against each other at moments partway through a flight, where a crit is smaller or larger than its peak.
      */
@@ -113,7 +137,12 @@ namespace EQLogParser
     /* How much of a source name is worth drawing however much room there happens to be: past a dozen characters the extra letters stop
        identifying the mob and start eating the column. A ceiling, not a target — FitSource shortens nothing that fits, so the same name
        survives whole at a smaller font or in a wider window, and is cut when it genuinely does not belong. */
-    internal const int MaxSourceChars = 12;
+    /*
+     * Thirty characters: long enough for the name of nearly anything in Norrath as the log writes it, short enough that a name never decides
+     * the shape of the picture. It is a ceiling and not a target — a label is cut to whatever its column can carry (FitSource), so at small
+     * window sizes, or beside a crit, names still come out shorter than this. Widening the window brings the letters back.
+     */
+    internal const int MaxSourceChars = 30;
 
     /* The shortest fitted name worth drawing: below this an ellipsis costs more than the letters it replaces, and "(…)" names nothing. */
     private const int MinSourceChars = 3;
@@ -305,8 +334,29 @@ namespace EQLogParser
         (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth, peak);
       }
 
+      /* Which way this column bows: toward the outer edge, decided by the region rather than the row so a lane never contains two shapes. */
+      var bowOut = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
+
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;
+
+      /* A rail's spine is placed for the widest row its lane can ever draw (RailReserve) AND left room to bow on the side it bows to. Both halves
+       * matter: without the reserve each arriving number slides the spine inward to suit itself and a column of differing widths stops being an
+       * odometer; without the bow room the widest rows find none left and climb in a straight line (AssignTravel caps whatever survives). Where a
+       * region cannot offer both, containment wins — xHi below takes the clamp — and every row on that column bows equally less. */
+      if (hit.Style is FctMotionStyle.Parabola)
+      {
+        var want = territory * ParabolaBowFrac;
+        if (bowOut < 0)
+        {
+          xLo = Math.Max(xLo, region.X + EdgePad + RailReserve() + want);
+        }
+        else
+        {
+          xHi = Math.Min(xHi, region.X + region.Width - EdgePad - reachRight - want);
+        }
+      }
+
       hit.X0 = xHi <= xLo
         ? region.X + (region.Width / 2)        // text wider than its territory: nothing to place, so centre it there
         : Math.Clamp(hit.X0, xLo, xHi);
@@ -353,10 +403,8 @@ namespace EQLogParser
           ? hit.BandMinY + (BandSpan(hit) * TravelSlackFrac * rand.NextDouble())
           : hit.BandMaxY - (BandSpan(hit) * TravelSlackFrac * rand.NextDouble());
 
-      // a parabola bows away from the seam: outward is the genre's shape and the only drift that cannot reach the other
-      // side's stream. Bands has no seam, so the sign is moot there (ingest will not run a parabola in it).
-      var bowDir = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
-      AssignTravel(hit, territory, rand, up, Math.Abs(hit.Y0 - far), bowDir);
+      // outward is the genre's shape, and the only drift that cannot reach the other side's stream (bowOut; bands has no seam, so the sign there is moot)
+      AssignTravel(hit, territory, rand, up, Math.Abs(hit.Y0 - far), bowOut);
     }
 
     /*
@@ -423,7 +471,9 @@ namespace EQLogParser
      * territory, entering and leaving on the column either way (FctMotion.ArcedX). MSBT's own curve swings a full area
      * width, text running off the side of its area while still fading; this keeps the arc inside the half where it can
      * be read instead, 0.34 being as far out as the widest crit draw still clears both walls at the vertex
-     * (FctHalvesTest pins the containment). */
+     * (FctHalvesTest pins the containment). It is a wish rather than a promise: a column too narrow to hold its widest number and this much
+     * curve takes less, uniformly for every row on it — Spawn reserves the room, AssignTravel caps what is left of it — but never nothing
+     * merely because THAT row happened to be wide. */
     public const double ParabolaBowFrac = 0.34;
 
     private static void AssignTravel(FctHitState hit, double territory, Random rand, double up, double usable, double bowDir)
@@ -458,16 +508,17 @@ namespace EQLogParser
         hit.Arc = 0;
         hit.Bow = hit.Style is FctMotionStyle.Parabola ? bowDir * territory * ParabolaBowFrac : 0.0;
 
-        /* The value hangs its FULL drawn width left of the rail (right-alignment, FctMotion.ArcedX), so a bow toward
-         * the inward wall needs that much room or the vertex clips — and a clipped vertex is a flight whose scored
-         * shape is not the shape. Cap the formula to what the territory offers (outward: full width + rail room;
-         * inward: the rail only has to stay inside). ArcedX still clamps as the resize safety net. */
+        /* The value hangs its FULL drawn width left of the rail (right-alignment, FctMotion.ArcedX), so a bow toward the outer wall needs that much
+         * room or the vertex clips — and a clipped vertex is a flight whose scored shape is not the shape. The outward side is capped against
+         * RailReserve rather than this row's own width, deliberately: every row of a lane has to trace ONE path, so how far it bends is a property of
+         * the column — whose spawn already left that much room — and not of how many digits this particular hit rolled. A crit and the parry above it
+         * therefore bend identically even though one is twice as wide. ArcedX still clamps each row by its own block, as the resize safety net. */
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
-          var (inward, outward) = BlockFromRail(hit, hit.SourceWidth, PeakScaleOf(hit));
+          var (_, outward) = BlockFromRail(hit, hit.SourceWidth, PeakScaleOf(hit));
           hit.Bow = hit.Bow < 0
-            ? Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - inward))
-            : Math.Min(hit.Bow, hit.SideMax - hit.X0 - outward);
+            ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - RailReserve())))
+            : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - outward));
         }
         return;
       }
