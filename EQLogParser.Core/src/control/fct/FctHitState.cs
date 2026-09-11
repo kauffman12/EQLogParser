@@ -45,16 +45,18 @@ namespace EQLogParser
     // spawn anchor: x is the value text's center, y its top
     public double X0, Y0;
 
-    /* Total travel (px, signed): positive rises, negative sinks — incoming hits in bands mode travel downwards so
-     * that direction of motion says who acted. Arc is sideways amplitude (sign = which way first). */
-    public double Rise, Arc;
-
-    /*
-     * Arc's sideways drift (px, signed): reaches Bow at t=1, quadratically — x ∝ t² while y runs linearly, which is
-     * exactly the genre's parabola with y as the independent variable. Separate from hit.Arc, the amplitude above, because
-     * its time law differs
-     * (quadratic vs ease), and a shared field would force FctMotion to guess which law a number meant.
+    /* Total travel (px, signed): positive rises, negative sinks — incoming hits in bands mode travel downwards so that
+     * direction of motion says who acted. Sway is how hard the row was thrown sideways (px, sign = which way first): spray
+     * takes a cone angle, the scatter styles a random drift, and how that amplitude is spent over time is the style's own
+     * business (FctMotion.LateralProgress — ease-out for spray so the path bends over into an arc, plain ease otherwise). An
+     * amount rather than a shape on purpose: FctMotionStyle.Arc is a style, and what it bends with is Bow below.
      */
+    public double Rise, Sway;
+
+    /* The rail's sideways bend (px, signed): out to the vertex at half height and back to the column by the end — MSBT's
+     * x = y²/4a with y running linearly, which comes out as 4·t(1−t) in FctMotion.ArcedX. Separate from Sway because the time
+     * laws differ (this returns to where it started, that drifts away and stays), and one field for both would leave FctMotion
+     * guessing which law a number meant. */
     public double Bow;
 
     /*

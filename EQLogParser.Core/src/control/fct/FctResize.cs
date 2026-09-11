@@ -133,7 +133,7 @@ namespace EQLogParser
         hit.Y0 = Math.Clamp(y0, hit.BandMinY, Math.Max(hit.BandMinY, hit.BandMaxY));
         hit.Rise *= sy;
         hit.FallDist *= sy;
-        hit.Arc *= sx;
+        hit.Sway *= sx;
         hit.Bow *= sx; // the bow is a territory share too: mapped the same way, so an arc ends in its new half
 
         /* A rail row rescaled its road; the rate it travels that road at is the one promise split does not resize.

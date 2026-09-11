@@ -1029,7 +1029,7 @@ before the flight is scored — a clipped vertex would score one shape and draw 
 Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
 and nothing about where the number ends, so a slower arc is the same curve drawn more slowly, which is what a tempo
 dial should do for a constant-speed motion (a test checks the endpoints agree to the bit at both dial extremes). And a
-resize maps `Bow` by the x factor exactly like `Arc`, so a number mid-scroll still ends in its new half. Legality lives in
+resize maps `Bow` by the x factor exactly like `Sway`, so a number mid-scroll still ends in its new half. Legality lives in
 one place — `FctStage.DefaultMotion`: split → arc, bands → freeze — and the configure row enforces it twice over: the
 arc is never even offered in bands (each mode owns its shape list), and choosing bands while previewing an arc swaps the
 preview to that scheme's default instead of showing a motion ingest is about to degrade anyway. A first-time split user gets

@@ -291,7 +291,7 @@ namespace EQLogParser
       => Spawn(hit, FctStage.Bands(w, h), rand, origin);
 
     /*
-     * Everything a number needs before it can move: where it starts (x and y), how far it may go (Rise/Arc, via
+     * Everything a number needs before it can move: where it starts (x and y), how far it may go (Rise/Sway, via
      * AssignTravel) and the clamp band it stays inside (via Refit). All of it comes out of the hit's stage — bands and split
      * are one code path that differs in which rect owns the number and which sign its travel has, not two layouts.
      */
@@ -490,7 +490,7 @@ namespace EQLogParser
 
         // height is capped at what the band offers, which is what keeps every angle of the cone out of the strip
         hit.Rise = up * Math.Min(usable, reach * Math.Cos(theta));
-        hit.Arc = Math.Clamp(reach * Math.Sin(theta), -(territory * SprayMaxLateralFrac), territory * SprayMaxLateralFrac);
+        hit.Sway = Math.Clamp(reach * Math.Sin(theta), -(territory * SprayMaxLateralFrac), territory * SprayMaxLateralFrac);
         return;
       }
 
@@ -502,7 +502,7 @@ namespace EQLogParser
          * a beat apart are meant to trace the same line at the same speed, one behind the other (the conveyor keeps that gap;
          * FctMotion keeps that shape). Straight runs every word of that with the bow taken out — the train needs no arc to exist. */
         hit.Rise = up * usable;
-        hit.Arc = 0;
+        hit.Sway = 0;
         hit.Bow = hit.Style is FctMotionStyle.Arc ? bowDir * territory * ArcBowFrac : 0.0;
 
         /* The value hangs its FULL drawn width left of the rail (right-alignment, FctMotion.ArcedX), so a bow toward the outer wall needs that much
@@ -521,7 +521,7 @@ namespace EQLogParser
       }
 
       hit.Rise = up * usable;
-      hit.Arc = (rand.NextDouble() * 2 - 1) * territory * (hit.Blowout ? 0.15 : 0.12);
+      hit.Sway = (rand.NextDouble() * 2 - 1) * territory * (hit.Blowout ? 0.15 : 0.12);
     }
 
     /*

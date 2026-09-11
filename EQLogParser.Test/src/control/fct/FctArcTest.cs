@@ -297,7 +297,7 @@ namespace EQLogParser
       Assert.IsTrue(checkedAny, "nothing was spawned to check");
     }
 
-    /* The bow is a territory share exactly like Arc: resize maps it by the x factor, and the number still ends in its lane. */
+    /* The bow is a territory share exactly like Sway: resize maps it by the x factor, and the number still ends in its lane. */
     [TestMethod]
     public void ResizeMapsTheBowAndTheNumberStillEndsInItsLane()
     {

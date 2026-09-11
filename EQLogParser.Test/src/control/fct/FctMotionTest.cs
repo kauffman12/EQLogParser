@@ -21,7 +21,7 @@ namespace EQLogParser
       Y0 = 500,
       Rise = 400,
       X0 = 700,
-      Arc = 40,
+      Sway = 40,
       ValueWidth = 120,
       ValueFontSize = 31,
       Value = 1000,
@@ -265,7 +265,7 @@ namespace EQLogParser
        * a fan at the top instead of arriving as a corner and dropping straight down.
        */
       var apex = 1.0 - FctMotion.FallPhaseFrac;
-      var lateralAtApex = (At(spray, apex).X - spray.X0) / spray.Arc;
+      var lateralAtApex = (At(spray, apex).X - spray.X0) / spray.Sway;
       Assert.IsTrue(lateralAtApex > 0.75, $"spray should be nearly spread out by the time it peaks ({lateralAtApex:0.##})");
     }
 
@@ -302,7 +302,7 @@ namespace EQLogParser
       hit.X0 = 700;
       hit.Y0 = 480;
       hit.Rise = 220;
-      hit.Arc = 300;
+      hit.Sway = 300;
       hit.FallDist = style is FctMotionStyle.Spray ? 88 : 0;
       hit.MotionMs = style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
       return hit;

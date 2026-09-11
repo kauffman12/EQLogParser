@@ -154,7 +154,7 @@ namespace EQLogParser
          that is the semicircle chain in Mik's demos, and it is also why a lane keeps its spacing for the whole
          flight — a shared bow cancels in every difference. (The old t² drift here was a curve with its vertex at the
          spawn: outward forever, never back, and it read as nothing in the genre.) */
-      var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
+      var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Sway * LateralProgress(hit, t);
 
 
       var loR = hit.SideMin + blockLeft; // the whole box fits, growing leftwards from the rail
