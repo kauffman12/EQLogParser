@@ -107,12 +107,14 @@ namespace EQLogParser
     public double ConveyorTravel = -1.0;
 
     /*
-     * The congestion accelerator, 0.45..1.0, stamped at birth by the stream (FctStream.Pressure) and multiplied into this row's rail
-     * tempo exactly once (FctIngest.FinalizeRailTempo). A rail at its configured speed has room for a certain number of rows in flight;
-     * text arriving faster than that cannot be separated at the dial's pace no matter where it enters, so a row born into a crowded rail
-     * simply travels faster - the backlog speeds up while the flood lasts and relaxes back to the player's setting as the rail empties.
-     * Bounded below because even fully accelerated a number must stay readable, and bounded in effect: the floor still clears the region
-     * inside about a second and a half, so a fight that stops never keeps typing for seconds after. Ordinary rows are 1.0.
+     * The congestion accelerator, FctConveyor.PressFloor..1.0, copied off the lane this row enrolled into (FctConveyor.Enrol) and
+     * multiplied into its rail tempo exactly once (FctIngest.FinalizeRailTempo). A column at the dialled pace holds a certain number of
+     * rows in flight; text arriving faster than that cannot be separated at that pace no matter where it enters, so a crowded lane runs
+     * its whole queue faster — the backlog speeds up while the flood lasts and relaxes back to the player's setting as the column empties.
+     * It is the LANE's number rather than this row's own decision, which is the difference between a convoy and a crowd: two rows on one
+     * column at different presses drift apart, and the player reports it. Bounded below because even fully accelerated a number must stay
+     * readable, and bounded in effect: the floor still clears the region inside about a second and a half, so a fight that stops never
+     * keeps typing for seconds after. Rows outside a pressed lane are 1.0.
      */
     public double RailPress = 1.0;
 

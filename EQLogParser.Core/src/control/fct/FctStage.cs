@@ -1,46 +1,42 @@
 namespace EQLogParser
 {
   /*
-   * Which region scheme the overlay is using and where each side sits in it — the halves/bands choice, which side
+   * Which region scheme the overlay is using and where each side sits in it — the bands/by-type choice, which side
    * incoming lives on, and which way each side travels. The player-facing half of this (names, defaults, settings.ini
    * keys) lives in FctOverlaySettings; this file is the geometry the layout maths consumes, kept free of ConfigUtil for
    * the same reason as everything else in fct/.
    *
-   * Two schemes:
+   * Two schemes, which are the two words the settings panel speaks — fountain and split:
    *
-   * bands — the original: a band across the top for my numbers, one across the bottom for what lands on me, and a
-   * protected strip between them that stays empty by construction because both sides travel away from it. Direction is
-   * fixed (out rises, in sinks) because direction is the "who" carrier there — freeing it would send traffic into the
-   * strip.
+   * bands — the original, and what "fountain" is: a band across the top for my numbers, one across the bottom for what
+   * lands on me, and a protected strip between them that stays empty by construction because both sides travel away from
+   * it. Direction is the "who" carrier there (out rises, in sinks), so the strip — not a column boundary — is what keeps
+   * the two reads apart.
    *
-   * halves — the genre standard (MSBT's own shipped default: two side-by-side areas, incoming left, both scrolling down
-   * with an outward bow; see docs/DesignNotes.md for citations). Position carries "who" instead of direction, which is
-   * what makes per-side up/down a legal setting: each half owns its whole vertical extent, so a number travelling up
-   * on one side cannot meet anything it should not. There is no protected strip to keep clear — the regions do not
-   * overlap — and there are no lane columns inside a half: one stream per side, which is also how MSBT ships it.
-   *
-   * by type — the two columns of halves, but the side carries WHAT a number is instead of who it belongs to: healing
-   * owns one column, everything else the other, and each direction's travel stays its own setting. That is the view a
-   * player asks for ("heals left, damage right, mine up, theirs down") and the one MSBT cannot serve from a single area
-   * — his areas scroll one way — so his users assemble it out of Add Scroll Area plus re-mapping the heal events
-   * (MSBTOptionsTabs.lua). Two flows sharing one column is exactly what whole-flight placement is for: opposite trains
-   * pass, braid around each other, graze bounded and counted, never drop (FctStream).
+   * by type — "split": columns across the overlay whose side carries WHAT a number is rather than who it belongs to.
+   * Four named lanes (FctRailLane), each a quarter of the width owned outright by whoever books it: healing in one,
+   * either damage stream in another, and each category's travel dial still its own. That is the view a player asks for
+   * ("heals left, damage right, mine up, theirs down") and the one MSBT cannot serve from a single area — his areas
+   * scroll one way — so his users assemble it out of Add Scroll Area plus re-mapping the heal events
+   * (MSBTOptionsTabs.lua). Here it is one mode.
    *
    * One column carries one train. Categories may share a column — that is the point of lanes — but only in one direction,
    * because two queues driving opposite ways through the same pixels cannot be spaced by anything except luck; the settings
-   * refuse the combination (FctConfigState.ResolveLaneConflicts) rather than letting the geometry discover it.
+   * refuse the combination (FctConfigState.ResolveLaneConflicts) rather than letting the geometry discover it, and the
+   * column itself enforces the rest (FctConveyor).
+   *
+   * A third scheme lived here for a while — halves, the genre's two side-by-side areas, with one flight-scored stream per
+   * side. It came out: no control could select it, no settings value reached it, and every hour spent on its braided
+   * columns and congestion valves was an hour spent on geometry nobody could ask for. If it returns it gets written
+   * against the lane model rather than dug out of history.
    *
    * A stage is a value: (choice, canvas size) is all a number's region depends on, so asking twice with the same size
    * answers the same thing, and a resize is a new stage rather than a mutation somebody has to schedule.
    */
   internal enum FctLayoutMode
   {
-    /* Kept for possible future use: the settings panel offers fountain (bands) and split (by type) only, so nothing a player
-     * can configure lands here today. The scheme stays implemented — it is the genre standard, it is what the engine's own
-     * default names, and FctHalvesTest covers it — so wiring a control to it later is a settings change, not a rewrite. */
-    Halves,
-
-    /* Halves' columns with the ownership question swapped: by category instead of by direction. */
+    /* Split: columns assigned by category. The name stayed after halves went because "by type" is what the
+     * ownership question actually is — healing here, damage there, whoever booked the lane. */
     ByType,
 
     Bands,
@@ -66,7 +62,8 @@ namespace EQLogParser
     /* By type only: which column healing owns. Everything else takes the other one. */
     public readonly FctRegionSide HealSide;
 
-    /* Halves and by type: travel direction per side. Bands ignores both — its directions are the strip invariant. */
+    /* By type: travel direction per side. Bands reads these too since the fountain's dials, but its shipped answers
+     * ARE the strip invariant. */
     public readonly bool IncomingUp;
     public readonly bool OutgoingUp;
 
@@ -88,7 +85,7 @@ namespace EQLogParser
 
     /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
      * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while
-     * halves and by type ship both-down. Tests that built a bands choice with bare positional bools keep the old
+     * the columns ship both-down. Tests that built a bands choice with bare positional bools keep the old
      * answers explicitly; only omission changes meaning. */
     public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
       FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
@@ -112,15 +109,11 @@ namespace EQLogParser
     }
 
     /*
-     * The engine's own default, and it follows the genre standard rather than this project's history: halves, incoming left,
-     * both sides down (docs/DesignNotes.md). What the product ships is decided one layer up, in FctOverlaySettings, which
-     * reads fountain (bands) unless settings.ini says split — so this value is what an overlay gets before any load, and what
-     * every test that does not name a scheme compares against. The name says "the default choice", not "the shipping mode".
+     * The original top/bottom scheme, and the engine's own default: it is what the product ships too (FctOverlaySettings
+     * reads fountain unless settings.ini says split), so an overlay that has not loaded anything yet and a test that does
+     * not name a scheme both get the two bands. Directions omitted on purpose: bands' own defaults ARE the strip invariant
+     * (in sinks, out rises), which is what every pre-existing bands test rides.
      */
-    public static readonly FctLayoutChoice Shipped = new(FctLayoutMode.Halves, FctRegionSide.Left, false, false);
-
-    /* The original top/bottom scheme: its directions are the strip invariant, so only the mode of this choice carries meaning here. */
-    /* Directions omitted on purpose: bands' own defaults ARE the strip invariant (in sinks, out rises). */
     public static readonly FctLayoutChoice Bands = new(FctLayoutMode.Bands, FctRegionSide.Left);
 
     public FctStage Stage(double w, double h) => Mode switch
@@ -128,7 +121,6 @@ namespace EQLogParser
       FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
       FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
         HealLane, IncomingDamageLane, OutgoingDamageLane),
-      _ => FctStage.Halves(IncomingSide, IncomingUp, OutgoingUp, w, h),
     };
   }
 
@@ -136,8 +128,6 @@ namespace EQLogParser
   internal readonly struct FctStage
   {
     private readonly FctLayoutMode _mode;
-    private readonly FctRegionSide _incomingSide;
-    private readonly FctRegionSide _healSide;
     private readonly bool _incomingUp;
     private readonly bool _outgoingUp;
     private readonly bool _healUp;
@@ -158,8 +148,6 @@ namespace EQLogParser
       FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
     {
       _mode = mode;
-      _incomingSide = incomingSide;
-      _healSide = healSide;
       _incomingUp = incomingUp;
       _outgoingUp = outgoingUp;
       _healUp = healUp;
@@ -167,7 +155,7 @@ namespace EQLogParser
       _incomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
       _outgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
         : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
-      _healLane = healLane ?? FctRailLanes.OfSide(_healSide);
+      _healLane = healLane ?? FctRailLanes.OfSide(healSide);
       _incomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(_incomingDamageSide);
       _outgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(_outgoingDamageSide);
 
@@ -204,9 +192,6 @@ namespace EQLogParser
     internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true, bool healUp = false)
       => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h, healUp: healUp);
 
-    internal static FctStage Halves(FctRegionSide incomingSide, bool incomingUp, bool outgoingUp, double w, double h)
-      => new(FctLayoutMode.Halves, incomingSide, FctRegionSide.Left, incomingUp, outgoingUp, w, h);
-
     /* Lanes are the same ownership question one level finer; callers that pass only sides get each side's outer lane,
      * which is centred where that half always has been. */
     internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
@@ -216,46 +201,32 @@ namespace EQLogParser
         healLane, incomingDamageLane, outgoingDamageLane);
 
     /*
-     * The rect that owns a side's numbers. Bands: the whole canvas (the bands inside it are FctLayout's business).
-     * Halves: one of two side-by-side halves meeting at the centre; each insets itself with EdgePad, which is what the
-     * seam between them gets.
-     */
-    public (double X, double Y, double Width, double Height) RegionFor(bool incoming, bool heal = false)
-    {
-      if (Mode is FctLayoutMode.Bands)
-      {
-        return (0, 0, W, H);
-      }
-
-      /* By type decides by WHAT a number is; halves by who it belongs to. Either answer is one bit against one seam. */
-      var useLeft = Mode is FctLayoutMode.ByType
-        ? heal == (_healSide == FctRegionSide.Left)
-        : incoming == (_incomingSide == FctRegionSide.Left);
-      return (useLeft ? 0 : W / 2, 0, W / 2, H);
-    }
-
-    /*
-     * Which column a NUMBER owns — the question by type exists to ask differently. Bands and halves answer it by who the
-     * number belongs to; by type answers it by what the number is: healing goes to its own side, everything else
-     * (damage, misses, words) to the other, and each direction's travel setting still applies inside the column. Both
-     * flows may therefore occupy one column at once — in halves the two sides' ranges were disjoint by construction,
-     * here they are not, and what keeps them apart is that placement scores whole flights against everything sharing
-     * the territory (FctStream's rows count neighbours by range, not by direction).
+     * The rect that owns a number's geometry — the only region question anything still asks.
+     *
+     * Bands: the whole canvas, because the bands inside it are FctLayout's business and the protected strip is kept clear
+     * by travel direction rather than by a boundary. Split: the LANE (FctRailLane), one quarter of the width owned
+     * outright by whoever booked it, which is what makes "my damage never lands in your heals' column" a fact instead of
+     * a scored preference. Two categories that booked the same lane share it as one queue (FctConveyor), so they are one
+     * train rather than two crowds.
+     *
+     * There used to be a second overload answering this in halves — whose side, not which column — because halves owned
+     * the half outright and had no lanes inside it. Nothing asks that question now, and a region that quietly meant
+     * something other than what a row is drawn inside is how a column's numbers came to disagree with their own spine.
      */
     public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit) => _mode is FctLayoutMode.ByType
       ? LaneRect(CategoryLane(hit))
-      : RegionFor(hit.Incoming);
+      : (0, 0, W, H);
 
     /* Which column a number's category owns: four named lanes, each holding its quarter of the width outright.
-     * Categories that choose the SAME lane share it as one stream — which is the point; categories that choose
-     * different lanes can never be woven into each other's pixels. (Before lanes existed by type answered this with
-     * halves and placement quietly invented sub-columns; see FctRailLane.) */
+     * Categories that choose the SAME lane share it as one queue — which is the point; categories that choose different
+     * lanes can never be woven into each other's pixels. (Before lanes existed by type answered this in halves and
+     * placement quietly invented sub-columns; see FctRailLane.) */
     private FctRailLane CategoryLane(FctHitState hit) =>
       hit.Heal ? _healLane : hit.Incoming ? _incomingDamageLane : _outgoingDamageLane;
 
     /*
-     * Which of the four columns a number owns, as an index — what a conveyor names a lane by (FctConveyor). Schemes without
-     * column lanes answer -1 and the caller falls back to geometry, because in halves or bands there is no column to point at.
+     * Which of the four columns a number owns, as an index — what a conveyor names a lane by (FctConveyor). Bands has no
+     * columns to point at, answers -1, and the caller falls back to geometry.
      */
     internal int LaneIndexOf(FctHitState hit) =>
       _mode is FctLayoutMode.ByType ? FctRailLanes.Index(CategoryLane(hit)) : -1;
@@ -270,31 +241,25 @@ namespace EQLogParser
     public double TerritoryFor(FctHitState hit) => _mode is FctLayoutMode.Bands ? W : RegionFor(hit).Width;
 
     /*
-     * The travel sign for a side: +1 rises, -1 sinks. Bands keeps the old rule — out up, in down — because that is the
-     * strip invariant. Halves takes it from the per-side settings, which are legal there only because each half owns
-     * its whole height. By type always reads both settings: its columns carry whatever directions were chosen.
+     * The travel sign for a direction: +1 rises, -1 sinks. Both dials are read as given; the strip invariant bands ships
+     * with (out up, in down) is the values FctLayoutChoice.Bands arrives with, not a rule applied here — which is what lets
+     * the fountain's dials steer at all. Split's columns carry whatever directions were chosen per category, reconciled
+     * per lane in the constructor so one column never runs two ways.
      */
     public double UpFor(bool incoming) =>
       incoming ? (_incomingUp ? 1 : -1) : (_outgoingUp ? 1 : -1);
 
-    /* The hit-aware answer: healing gets its own direction wherever the scheme has a heals dial — by type (its own
-     * column, even when a damage stream shares it) and bands alike. A fountain therefore sprays heals UP while damage
+    /* The hit-aware answer: healing gets its own direction wherever the scheme has a heals dial — split (its own column,
+     * even when a damage stream shares it) and bands alike. A fountain therefore sprays heals UP while damage
      * falls, or sinks them while everything else rises; the dial was always in the settings, this is where the mode
-     * stopped ignoring it. Halves never asks: one stream per side there, type read from colour, no heals row. The
-     * question has to know what the number IS, not only who it belongs to. Every rail path asks this one. */
-    public double UpFor(FctHitState hit) => _mode is not FctLayoutMode.Halves && hit.Heal
+     * stopped ignoring it. The question has to know what the number IS, not only who it belongs to. Every rail path
+     * asks this one. */
+    public double UpFor(FctHitState hit) => hit.Heal
       ? _healUp ? 1 : -1
       : UpFor(hit.Incoming);
 
     /*
-     * What the style amplitudes — spawn jitter, hold's arc, spray's cone cap — measure against: the whole canvas in
-     * bands, one half in halves. A ±9% jitter that was 72 px of an 800 px canvas is ±9% of the half in halves, which is
-     * what keeps a stream inside its own territory instead of reaching across the seam for room.
-     */
-    public double TerritoryFor(bool incoming) => Mode is FctLayoutMode.Bands ? W : RegionFor(incoming).Width;
-
-    /*
-     * What a scheme moves with when nothing explicit says otherwise: halves ships with the genre's own default shape (the
+     * What a scheme moves with when nothing explicit says otherwise: split ships with the genre's own default shape (the
      * parabola — MSBT runs it, docs/DesignNotes.md), and bands keeps its quiet hold. First-run configure uses this, and so
      * does a layout change that would leave an illegal style selected.
      */

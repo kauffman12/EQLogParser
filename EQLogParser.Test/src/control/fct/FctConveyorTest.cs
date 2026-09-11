@@ -300,7 +300,7 @@ namespace EQLogParser
 
       foreach (var hit in hits)
       {
-        Assert.IsTrue(hit.RailPress is >= FctStream.PressFloor and <= 1.0,
+        Assert.IsTrue(hit.RailPress is >= FctConveyor.PressFloor and <= 1.0,
           $"the lane's accelerator stays between the floor and the dial: {hit.RailPress:0.###}");
       }
     }

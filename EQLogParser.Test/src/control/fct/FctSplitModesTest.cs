@@ -22,6 +22,23 @@ namespace EQLogParser
     private const double Width = 1600;
     private const double Height = 900;
 
+    /* Split with the shipped assignment: heals on the left, both damage streams on the opposite side. Every rail test
+     * here needs the scheme where a rail EXISTS — bands degrades both shapes to hold (BandsDegradesEveryRailStyleToHold
+     * pins that), and a default-constructed ingest gets bands, so "split" has to be said out loud. */
+    private static FctLayoutChoice Split => new(FctLayoutMode.ByType, FctRegionSide.Left);
+
+    /* Run the lane's clock the way a host does. A conveyor is stamped from FctIngest.PruneExpired once a FRAME and one call
+     * may only credit MaxStepMs of it (FctConveyor), so a test that leaps a second at a time runs every column several times
+     * slow, its queue never drains, and starts refusing arrivals no overlay would refuse. Anything here that claims to be at
+     * "a rate a fight can sustain" has to wind the clock in frame steps first. */
+    private static void Wind(FctIngest ingest, List<FctHitState> hits, double from, double to)
+    {
+      for (var t = Math.Max(0, from) + FctConveyor.FrameMs; t <= to; t += FctConveyor.FrameMs)
+      {
+        ingest.PruneExpired(hits, t);
+      }
+    }
+
     /* Values are an odometer (right-aligned, the hidden default): two rows of different widths sharing a column keep
      * the SAME right edge for the whole flight — ones digits line up under each other — while their centres sit
      * wherever their own widths put them. A centre-anchored column jogs 950 out from under 12,040; the rail carries
@@ -29,7 +46,7 @@ namespace EQLogParser
     [TestMethod]
     public void ValuesInAColumnShareTheirRightEdge()
     {
-      var ingest = new FctIngest(new Random(31)) { Style = FctMotionStyle.Straight };
+      var ingest = new FctIngest(new Random(31)) { Style = FctMotionStyle.Straight, Layout = Split };
       var hits = new List<FctHitState>();
 
       // values whose ABBREVIATED text differs by three glyphs ("900" vs "987.7m"; the format abbreviates hard)
@@ -55,7 +72,7 @@ namespace EQLogParser
     [TestMethod]
     public void StraightRunsTheSameRailWithTheArcTakenOut()
     {
-      var ingest = new FctIngest(new Random(29)) { Style = FctMotionStyle.Straight };
+      var ingest = new FctIngest(new Random(29)) { Style = FctMotionStyle.Straight, Layout = Split };
       var hits = new List<FctHitState>();
 
       for (var i = 0; i < 4; i++)
@@ -206,6 +223,8 @@ namespace EQLogParser
       }
     }
 
+
+
     /* A line never parks a whole category beside itself. The old sideways braid pushed the steady stream of misses and
      * parries into permanent offset mini-columns every fight, while resists -- rare enough to always find the mouth
      * clear -- sat centre, which is exactly what players read as miss/parry being "offset". Crowding now steps INTO
@@ -215,13 +234,14 @@ namespace EQLogParser
     [TestMethod]
     public void CrowdedLinesStepAlongThemselvesBeforeSideways()
     {
-      var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Straight };
+      var ingest = new FctIngest(new Random(5)) { Style = FctMotionStyle.Straight, Layout = Split };
       var hits = new List<FctHitState>();
 
       for (var round = 0; round < 12; round++)
       {
         // fighting pace: a swing a second, each answered by damage or a word, sometimes on the same frame
         var now = round * 1000;
+        Wind(ingest, hits, from: round * 1000 - 1000, to: now);
         Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 300 + round, "Flurry", false, false, false, null, Width, Height, now));
         Assert.IsNotNull(ingest.Accept(hits, FctLane.Missed, 0, "Flurry", false, false, false,
           round % 2 == 0 ? Labels.Miss : Labels.Parry, Width, Height, now + 30));
@@ -233,14 +253,22 @@ namespace EQLogParser
         Assert.AreEqual(centre, hit.X0, 1e-9, "at fighting speed every row holds the line: crowding steps along travel, not sideways");
       }
 
-      // and a same-frame triple on top of it all still finds three separate entrances
+      // and a same-frame triple on top of it all still gets three rows that never print into each other
       var before = hits.Count;
+      Wind(ingest, hits, from: 11000, to: 12000);
+
       // crits for the burst: they neither absorb nor fold (their policy is pinned elsewhere), so all three really do
-      // demand entrances in one instant — which is exactly the placement question this asserts
+      // demand an entrance in one instant — which is exactly the capacity question this asserts
       Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 999, "Flurry", true, false, false, null, Width, Height, 12000));
       Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 888, "Flurry", true, false, false, null, Width, Height, 12000));
       Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 777, "Flurry", true, false, false, null, Width, Height, 12000));
 
+      /* The burst is where the column stops being a place and becomes a queue. Three rows arriving in one instant share
+         ONE entrance — the same mouth, the same spine, which is the point of holding the line above — so "they never
+         overlap" can no longer mean "they were thrown to different spots". It means the queue priced them apart: each
+         pair sits at least a row's height apart along the rail from entry (FctConveyor.Enrol pays for the taller of the
+         two), and being a difference of one shared phase, that gap is kept for the whole flight rather than closed by
+         anybody overtaking. Row heights, not positions: the rows themselves are still behind the mouth at this instant. */
       var burst = hits.Skip(before).ToList();
       foreach (var a in burst)
       {
@@ -251,7 +279,10 @@ namespace EQLogParser
             continue;
           }
 
-          Assert.IsTrue(Math.Abs(a.Y0 - b.Y0) > 1.0 || Math.Abs(a.X0 - b.X0) > 1.0, "two numbers never share an entrance");
+          var room = Math.Min(FctLayout.TextHeight(a), FctLayout.TextHeight(b));
+          Assert.IsTrue(Math.Abs(a.ConveyorQ - b.ConveyorQ) >= room - 1e-9,
+            $"two rows of a burst were queued {(Math.Abs(a.ConveyorQ - b.ConveyorQ)):0.#} px apart, under the " +
+            $"{room:0.#} px one of them needs");
         }
       }
     }

@@ -9,11 +9,11 @@ namespace EQLogParser
    * own windows sit and where the spell effects being looked at happen (docs/combat-text-overlay-design.md §1).
    *
    * There are two region schemes, and which one is live is a FctStage: bands (the original — the vertical direction above
-   * is its invariant) and halves (two side-by-side streams, the genre standard, with per-side direction). Halves was removed
-   * once, as a fallback, for two reasons that are now both fixed on the region rather than on the styles: every geometry
-   * below is measured against the hit's own region (FctCellGrid included — the old collapse was columns measured against
-   * canvas width), and halves has no protected strip to fall into because the regions do not overlap, so the choreographed
-   * falls bounce off the far end of their own half instead. Rationale for both: docs/DesignNotes.md → Floating Combat Text.
+   * is its invariant, and the protected strip lives in the middle of the canvas) and split (the genre's side-by-side layout,
+   * where each category owns a COLUMN rather than a half and the seam carries no protected band). Everything below is measured
+   * against the hit's own region — which is what both schemes are: one layout asked and answered per rect, not two code paths
+   * (the old collapse was columns measured against canvas width, and there was no far end for a fall to bounce off).
+   * Rationale for both: docs/DesignNotes.md → Floating Combat Text.
    */
   internal static class FctLayout
   {
@@ -306,8 +306,8 @@ namespace EQLogParser
 
     /*
      * Where a lane's column sits across the overlay, in bands — the "what" carrier there: damage toward the middle of the
-     * band, healing out wide, crits and labels centred. Halves has none of these columns (one stream per side; type is read
-     * from colour, size and the heal sign), so halves callers never ask it. Kept in this class because Spawn and FctPlacement
+     * band, healing out wide, crits and labels centred. Split has no use for them (its columns ARE the x assignment, and they
+     * come from FctStage.AnchoredCentre rather than from here), so its callers never ask. Kept in this class because Spawn and FctPlacement
      * both need it, and a placement search that invented its own columns would be a second layout pretending not to be one.
      */
     public static double LaneSlot(FctLane lane, double w) => lane switch
@@ -352,15 +352,15 @@ namespace EQLogParser
 
     /*
      * Everything a number needs before it can move: where it starts (x and y), how far it may go (Rise/Arc, via
-     * AssignTravel) and the clamp band it stays inside (via Refit). All of it comes out of the hit's stage — bands and halves
-     * are one code path that differs in which rect owns the side and which sign its travel has, not two layouts.
+     * AssignTravel) and the clamp band it stays inside (via Refit). All of it comes out of the hit's stage — bands and split
+     * are one code path that differs in which rect owns the number and which sign its travel has, not two layouts.
      */
     public static void Spawn(FctHitState hit, FctStage stage, Random rand, (double X, double Y)? origin = null)
     {
       var region = stage.RegionFor(hit);
       var territory = stage.TerritoryFor(hit);
 
-      /* Halves and by type have no lane columns — one stream per side, so every lane spawns in the side's own centre. Bands keeps them. */
+      /* Split has no lane columns — a category owns its whole lane, so every lane spawns on that lane's spine. Bands keeps them. */
       var cx = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : LaneSlot(hit.Lane, stage.W);
 
       hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
@@ -444,9 +444,9 @@ namespace EQLogParser
       /* A proc starts deeper in its band than the row of hits it arrived beside — deeper being further along the travel,
        * away from the spawn edge. Clamped by the band ends, which already carry the vertical reserve on one side and the
        * edge pad on the other, so this cannot push anything out of the window; in bands it is the old "further from the
-       * strip" rule, and in halves there is no strip to measure from. The parabola takes no depth start: its whole claim
-       * is that every value follows the previous one along one path (FctStream), and a proc beginning part-way down the
-       * rail breaks that chain for the sake of a distinction its smaller type already makes. */
+       * strip" rule, and in split it is simply deeper inside the lane. The parabola takes no depth start: its whole claim
+       * is that every value follows the previous one along one path, and a proc beginning part-way down the rail breaks
+       * that chain for the sake of a distinction its smaller type already makes. */
       /* The same reason exempts an explicitly requested origin (FctPlacement.Pin), which is how a conveyor row enters at the
          mouth of its column (FctConveyor): that queue bought this row's spacing against the exact edge it entered at, so an inset
          here would spend part of a neighbour's gap — and a lane whose rows do not share one starting edge cannot space anything. */
@@ -488,8 +488,9 @@ namespace EQLogParser
 
     public static void Refit(FctHitState hit, FctStage stage)
     {
-      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. Halves measures them
-       * against the half, which is what keeps a sideways sway inside one stream instead of reaching across the seam. */
+      /* The arc's own bounds; the text half-width allowance is applied on top of these by FctMotion.ArcedX. Split measures them
+       * against the lane, which is what keeps a sideways sway inside the column that owns it instead of reaching into its
+       * neighbour's pixels. */
       var region = stage.RegionFor(hit);
       hit.SideMin = region.X + EdgePad;
       hit.SideMax = Math.Max(region.X + EdgePad + 1, region.X + region.Width - EdgePad);
@@ -510,7 +511,7 @@ namespace EQLogParser
         return;
       }
 
-      /* Halves: the whole height of the side's own half is travel space — there is no strip inside it. The bottom end carries
+      /* Split: the whole height of the lane is travel space — there is no strip inside it. The bottom end carries
        * the text reserve in both schemes, because the drawn block hangs down from its anchor and the bottom edge is what it
        * must not leave. A window short enough to invert the band degrades to the region inset by its own edge pad, never to a
        * clamp that throws every frame. */
@@ -527,14 +528,14 @@ namespace EQLogParser
      * in a backend changes, which is the point of keeping geometry in one table.
      */
     /*
-     * The territory parameter is what the sideways amounts measure against — canvas in bands, half-width in halves — so
-     * "12% of width" keeps meaning 12% of this stream's own territory in both schemes.
+     * The territory parameter is what the sideways amounts measure against — canvas in bands, one lane in split — so
+     * "12% of width" keeps meaning 12% of the rect this number actually owns, in either scheme.
      */
     /* How far a parabola bows from its column at the vertex of its arc — half height — as a share of the side's
      * territory, entering and leaving on the column either way (FctMotion.ArcedX). MSBT's own curve swings a full area
-     * width, text running off the side of its area while still fading; this keeps the arc inside the half where it can
+     * width, text running off the side of its area while still fading; this keeps the arc inside the lane where it can
      * be read instead, 0.34 being as far out as the widest crit draw still clears both walls at the vertex
-     * (FctHalvesTest pins the containment). It is a wish rather than a promise: a column too narrow to hold its widest number and this much
+     * (FctParabolaTest pins the containment). It is a wish rather than a promise: a column too narrow to hold its widest number and this much
      * curve takes less, uniformly for every row on it — Spawn reserves the room, AssignTravel caps what is left of it — but never nothing
      * merely because THAT row happened to be wide. */
     public const double ParabolaBowFrac = 0.34;
@@ -558,8 +559,8 @@ namespace EQLogParser
         /* The shape: a straight vertical scroll at one constant rate with a symmetric arc — out to the vertex at half
          * height and back to the column — whose size is a share of the region, so resize and the speed dial keep working
          * on it untouched. No jitter anywhere in this branch, and none in the far end that produced `usable`: two values
-         * a beat apart are meant to trace the same line at the same speed, one behind the other (FctStream). Straight
-         * runs every word of that with the bow taken out — the train needs no arc to exist. */
+         * a beat apart are meant to trace the same line at the same speed, one behind the other (the conveyor keeps that gap;
+         * FctMotion keeps that shape). Straight runs every word of that with the bow taken out — the train needs no arc to exist. */
         hit.Rise = up * usable;
         hit.Arc = 0;
         hit.Bow = hit.Style is FctMotionStyle.Parabola ? bowDir * territory * ParabolaBowFrac : 0.0;

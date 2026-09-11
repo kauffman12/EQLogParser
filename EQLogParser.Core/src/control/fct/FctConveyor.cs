@@ -11,7 +11,7 @@ namespace EQLogParser
    * thrown, arcued, fallen — and a player who picks them has asked for a display that reads as an event. Somebody who
    * picks split + line has asked for the opposite: a column they can read top to bottom without missing a number. That
    * promise cannot be kept by placing rows and giving each its own flight time, which is what the rail used to do: a row
-   * born into a crowd got a shorter life than the row in front of it (FctStream.Pressure), overtook it, and the two were
+   * born into a crowd got a shorter life than the row in front of it (its own congestion press), overtook it, and the two were
    * drawn on top of each other for the rest of the trip. Same pixels, two speeds, and the player correctly reports that
    * "some numbers move faster than others".
    *
@@ -29,11 +29,11 @@ namespace EQLogParser
    *      is a change to one number that moves everybody by the same amount in the same frame.
    *   2. SPACING IS BOUGHT AT ENTRY, ONCE. A new row pays for its slot behind the last one enrolled: the TALLER of the two,
    *      plus the gap. Height is what FctLayout.TextHeight answers — a crit's own font, a labelled row's source line — so a
-   *      big number cannot arrive taller than the air its neighbour reserved (the same lesson FctCellGrid learned as inflated
-   *      bounds). For the uniform column a fight is mostly made of, "taller of the two" IS one row height plus the gap: exact
+   *      big number cannot arrive taller than the air its neighbour reserved — the lesson every crowded layout here has
+   *      learned as inflated bounds. For the uniform column a fight is mostly made of, "taller of the two" IS one row height plus the gap: exact
    *      line spacing, nothing thrown away.
    *   3. CONGESTION SCALES THE LANE, NOT THE ROW. Load is measured as rows wanting room against what the column can hold,
-   *      and the answer — up to FctStream.PressFloor of the nominal flight time — is applied to the lane's clock, which
+   *      and the answer — down to PressFloor of the nominal flight time — is applied to the lane's clock, which
    *      everyone on it shares. It ramps (fast to speed up, slower to relax) so a burst never makes the column stutter.
    *
    * Waiting rows live in the caller's list like any other number, at a negative distance: they fold duplicates while they
@@ -51,8 +51,8 @@ namespace EQLogParser
      * has to hold an ascent, a descent, and the halo that blooms out past both. Ten pixels of air above that read as four columns of a
      * ledger with every other line left blank: the column ran out of screen long before it ran out of numbers worth showing. The reserve IS
      * the gap now; what separates two neighbours is the slack inside their own boxes, which is real (it has to be) and invisible (which is
-     * the point). Halves keeps a fraction of the same idea (FctStream.RowGapFrac) rather than a fixed pixel count, because it spaces rows
-     * by measured height plus a share and has no lane clock to price against.
+     * the point). A fraction-of-height gap was tried here first; it belongs to a layout that spaces rows by measured height plus a
+     * share, with no lane clock to price the air against. On a conveyor that is double-counting.
      */
     public const double LaneGapPx = 0;
 
@@ -61,6 +61,14 @@ namespace EQLogParser
        instead of thrown away, and small enough that a lane which has been over capacity for a minute has not quietly built
        a queue the player will never see. What the queue costs is lateness, and lateness is cheap next to a lost number. */
     public const int BacklogCap = 12;
+
+    /* The floor a pressed column's rhythm is taken to, as a share of the shipped flight time: 45%, which is about 0.87 s for an
+       800 px column at ScrollMsPerPx 4.6 against the 1.9 s of the unpressed rate — traffic moving quickly rather than a blur.
+       It came off the congestion ladder this conveyor replaced, where the same number capped how far ONE row could speed itself
+       up; the same floor now caps how far a WHOLE lane can, because press here is bought by shortening every life on the column
+       at once. Past it the lane has no knob left and turns new arrivals away (Enrol's door, behind BacklogCap), which is why a
+       flood shows up as DroppedCount instead of as an unreadable column. */
+    public const double PressFloor = 0.45;
 
     /*
      * How fast a lane may change its mind about speed, per millisecond of elapsed time. Speeding up is nearly immediate:
@@ -233,13 +241,13 @@ namespace EQLogParser
     /*
      * Little's law, spent on the lane instead of on the row: a column holding N rows with room for M needs to clear them
      * N/M times faster than nominal, and no more. Below capacity the answer is 1.0 and the rail keeps the tempo the player
-     * dialled; past it the whole lane drives toward FctStream.PressFloor, which still reads as text rather than a blur and
+     * dialled; past it the whole lane drives toward PressFloor, which still reads as text rather than a blur and
      * clears the region inside about a second and a half, so an overlay stops typing shortly after a fight does.
      */
     private static void Ramp(Lane lane)
     {
       var capacity = Math.Max(1, (int)((lane.Travel + LaneGapPx) / Math.Max(1.0, lane.Pitch)));
-      var wanted = Math.Clamp((lane.OnScreen + lane.Waiting) / (double)capacity, 1.0, 1.0 / FctStream.PressFloor);
+      var wanted = Math.Clamp((lane.OnScreen + lane.Waiting) / (double)capacity, 1.0, 1.0 / PressFloor);
       var target = 1.0 / wanted;
 
       var gap = target - lane.Press;
@@ -263,8 +271,9 @@ namespace EQLogParser
       public double LastStampMs;
       public double StepMs;
 
-      /* The lane's accelerator, 0.45..1: a multiplier on flight TIME (FctStream.RailPress's convention, kept so the two
-         rails mean the same number), shared by every row on it and changed for all of them at once. */
+      /* The lane's accelerator, PressFloor..1: a multiplier on flight TIME rather than on speed, which is the convention the
+         rail used and the one kept so FctMotion.RailPress means the same thing here as it does anywhere else — 1.0 is the pace
+         the player dialled. Shared by every row on the lane and changed for all of them at once. */
       public double Press = 1.0;
 
       // the last slot sold here, and how tall the row that bought it was: the next price is measured from these

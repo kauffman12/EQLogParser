@@ -152,14 +152,14 @@ namespace EQLogParser
     public void Player_SpawnsTheScriptIntoItsOwnList()
     {
       var demo = new FctDemo();
-      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null), "an unstarted demo must not run");
+      Assert.IsFalse(demo.Advance(100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null), "an unstarted demo must not run");
 
       var spawned = 0;
       demo.Start(0);
 
       for (var now = 0.0; now <= 3000; now += 100)
       {
-        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, _ => spawned++, null))
+        if (demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, _ => spawned++, null))
         {
           Assert.IsTrue(demo.Hits.Count > 0, "a frame that changed should have something in it");
         }
@@ -187,6 +187,10 @@ namespace EQLogParser
     [TestMethod]
     public void Advance_PlaysTheStyleTheCallerAskedFor()
     {
+      /* Split, not the shipped bands: a rail is only a rail in the scheme whose regions are columns, and bands answering
+         Parabola with Hold (FctSplitModesTest pins that degradation) would make this test about the wrong thing. Every style
+         in this loop is legal in split, which is what makes one loop over all of them the honest shape. */
+      var split = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left);
       foreach (var style in new[] { FctMotionStyle.Hold, FctMotionStyle.Fountain, FctMotionStyle.Spray, FctMotionStyle.Parabola })
       {
         var demo = new FctDemo();
@@ -195,7 +199,7 @@ namespace EQLogParser
         var born = new List<FctHitState>();
         for (var now = 100.0; now <= 900; now += 100)
         {
-          demo.Advance(now, 800, 560, style, FctLayoutChoice.Shipped, born.Add, null);
+          demo.Advance(now, 800, 560, style, split, born.Add, null);
         }
 
         Assert.IsTrue(born.Count > 0, $"{style}: nothing was spawned to check");
@@ -206,10 +210,8 @@ namespace EQLogParser
          * The other half of the fingerprint, and it is structural rather than a measurement of travel: only the choreographed styles get a gravity
          * tail baked in (FctIngest calls ApplyFall for fountain and spray and nothing else), so their numbers must have depth to fall through.
          *
-         * What this deliberately does NOT assert is that pulse has no travel. It has a little: FctCellGrid hands each number a short slide into its
-         * cell, measured at ~84 px of Rise against hold's ~178 in an 800x560 window. "Pulse means Rise == 0" reads true off AssignTravel and is
-         * wrong about the style, which is exactly the kind of confident assumption a test should not be built on. The swell-and-settle shape itself
-         * belongs to FctMotion and is covered in FctMotionTest.
+         * What this deliberately does NOT assert is anything about how far a style travels: Rise measures the flight, not the look, and two styles
+         * with the same Rise can move nothing alike. The shapes themselves belong to FctMotion and are covered in FctMotionTest.
          */
         var choreographed = style is FctMotionStyle.Fountain or FctMotionStyle.Spray;
 
@@ -251,13 +253,13 @@ namespace EQLogParser
 
       for (var now = 0.0; now < FctDemo.CycleMs; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
       }
 
       Assert.AreEqual(0, demo.Hits.Count, "everything should have expired in the tail before the loop restarts");
 
       var spawned = 0;
-      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, _ => spawned++, null);
+      demo.Advance(FctDemo.CycleMs + 700, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, _ => spawned++, null);
 
       Assert.IsTrue(spawned > 0, "the script ran once and stopped - configure mode would go quiet");
     }
@@ -281,7 +283,7 @@ namespace EQLogParser
       for (var now = 1000.0 / 60; now <= 9000; now += 1000.0 / 60)
       {
         ticks++;
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
 
         if (demo.Animated)
         {
@@ -293,7 +295,7 @@ namespace EQLogParser
       Assert.IsTrue(moving > ticks * 0.9, $"only {moving} of {ticks} ticks had anything moving");
 
       /* The quiet seconds at the end of a cycle are dead time on purpose, and dead time must not cost rasters. */
-      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
+      demo.Advance(FctDemo.CycleMs - 1, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
       Assert.IsFalse(demo.Animated, "the tail between loops should stop asking for frames");
     }
 
@@ -304,7 +306,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now < 1500; now += 100)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null);
       }
 
       var live = demo.Hits.ToList();
@@ -320,7 +322,7 @@ namespace EQLogParser
 
       // and the loop can be started again after configure mode closes and opens
       demo.Start(2000);
-      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, null, null), "the demo cannot be restarted");
+      Assert.IsTrue(demo.Advance(2100, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, null, null), "the demo cannot be restarted");
     }
 
     /*

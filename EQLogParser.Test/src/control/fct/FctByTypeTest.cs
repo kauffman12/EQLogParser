@@ -178,29 +178,27 @@ namespace EQLogParser
       Assert.AreEqual(FctMotionStyle.Hold, FctStage.DefaultMotion(FctLayoutMode.Bands));
     }
 
-    /* The stage answers must not leak: a by-type question answered on a halves stage is still the halves answer —
-     * the new heal bit is inert unless the mode is by type. */
+    /* The category column must not leak: a by-type question asked of a bands stage is still the bands answer —
+     * which column a category booked is inert in a scheme that draws no columns at all. */
     [TestMethod]
     public void TheHealBitIsInertOutsideItsOwnMode()
     {
-      var halves = FctStage.Halves(FctRegionSide.Left, false, false, Width, Height);
+      var bands = FctStage.Bands(Width, Height);
       var stage = FctStage.ByType(FctRegionSide.Right, false, false, Width, Height);
 
       var incomingHeal = new FctHitState { Lane = FctLane.HealingReceived, Incoming = true, Heal = true };
       var outgoingHeal = new FctHitState { Lane = FctLane.HealingDealt, Incoming = false, Heal = true };
 
-      Assert.AreEqual(halves.RegionFor(true).X, halves.RegionFor(incomingHeal).X, "halves answers by direction whatever the heal flag says");
-      Assert.AreEqual(halves.RegionFor(false).X, halves.RegionFor(outgoingHeal).X, "halves again, from the other direction");
+      /* Bands owns one rect and every number lives in it: neither a category nor a direction moves a boundary there. */
+      Assert.AreEqual(0.0, bands.RegionFor(incomingHeal).X, "bands answers the whole canvas whatever the heal flag says");
+      Assert.AreEqual(Width, bands.RegionFor(outgoingHeal).Width, "bands again, from the other direction");
 
-      Assert.AreEqual(stage.RegionFor(true, true).X, stage.RegionFor(false, true).X, "by type ignores direction entirely");
-
-      /* Per-hit regions now answer in lanes (FctRailLane); the bool overload still answers in halves because the
-       * cell grid — its only other caller — does not know categories. Both questions describe the same column, so
-       * the healing lane must sit inside the healing half, and every healing number must land in it. */
+      /* Per-hit regions answer in lanes (FctRailLane): four columns, each owned outright by whoever booked it, and the
+       * booking says nothing about who sent the number. */
       var healColumn = stage.RegionFor(incomingHeal);
       Assert.AreEqual(healColumn.X, stage.RegionFor(outgoingHeal).X, "every healing number gets the category column whatever its direction");
       Assert.AreEqual(Width - Width / 4, healColumn.X, "a lane-less choice falls back to its side's outer column");
-      Assert.IsTrue(healColumn.Width <= Width / 2 && healColumn.X >= Width / 2, "the healing lane sits inside the healing half");
+      Assert.IsTrue(healColumn.Width <= Width / 2 && healColumn.X >= Width / 2, "a quarter column sits inside the half its side owns");
     }
 
     /* The four lanes are what the panel offers, so they are what the geometry answers: four quarters, disjoint by

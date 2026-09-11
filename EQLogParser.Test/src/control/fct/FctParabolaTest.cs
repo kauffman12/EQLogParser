@@ -5,11 +5,13 @@ namespace EQLogParser
 {
   /*
    * The parabola (FctMotionStyle.Parabola): a constant-speed vertical scroll arcing out to a vertex at half height and
-   * back — MSBT's geometry as written, x = y²/4a measured from the rail's mid-point. What these pin down: that the arc
-   * leaves its column, reaches its widest away from the seam at half height, and returns to the column as it fades; that
-   * every value shares one path and one speed, crits and procs included — the chain of numbers following each other;
-   * that it stays inside its half at every speed the dial can give; that bands ingest degrades it to hold instead of
-   * letting a number cross the strip; and that resize maps the bow the same way it maps everything else.
+   * back — MSBT's geometry as written, x = y²/4a measured from the rail's mid-point. Split ships this shape, so these are
+   * the pins on the geometry a player actually sees: that the arc leaves its column, reaches its widest away from the
+   * canvas centre at half height and returns to the column as it fades; that every value shares one path and one speed,
+   * crits and procs included — the chain of numbers following each other up a lane; that it stays inside the lane that
+   * owns it at every speed the dial can give; and that resize maps the bow the same way it maps everything else. What a
+   * rail costs in bands (degraded to hold, because a straight scroll across the canvas walks through the protected
+   * strip) is pinned at the end, where the degradation is the subject rather than the exception.
    */
   [TestClass]
   public sealed class FctParabolaTest
@@ -20,46 +22,53 @@ namespace EQLogParser
     private const double Width = 980;
     private const double Height = 640;
 
-    private static FctStage Halves(FctRegionSide side, bool incomingUp, bool outgoingUp, double w = Width, double h = Height)
-      => FctStage.Halves(side, incomingUp, outgoingUp, w, h);
+    /* Split with one assignment throughout: heals on `healSide`, both damage streams on the opposite side, each category
+     * taking its side's outer lane (FctRailLanes.OfSide). A damage number therefore owns a quarter of the canvas whose
+     * spine sits an eighth of the width from the near edge, and its outward wall is the edge of the overlay. */
+    private static FctStage Split(bool incomingUp, bool outgoingUp, double w = Width, double h = Height,
+      FctRegionSide healSide = FctRegionSide.Left)
+      => FctStage.ByType(healSide, incomingUp, outgoingUp, w, h);
 
-    private static FctHitState Spawn(FctStage stage, bool incoming, Random rand, FctMotionStyle style = FctMotionStyle.Parabola)
+    /* A number the way a rail spawns it: one pass to read the lane's band, then the lane's spine and the spawn edge pinned
+     * like the conveyor does (FctPlacement.Pin), so these asserts measure the arc itself and not the origin jitter an
+     * unstreamed throw would add to it. Both questions are asked of the HIT — a lane is per category, not per side. */
+    private static FctHitState Spawn(FctStage stage, FctHitState hit, Random rand)
     {
-      var lane = incoming ? FctLane.DamageTaken : FctLane.DamageDealt;
-      var hit = new FctHitState
-      {
-        Lane = lane,
-        Incoming = incoming,
-        Style = style,
-        Source = "Spinning Attack",
-        Value = 1234,
-      };
-
       FctStyle.ApplyTo(hit, hit.Lane, minor: false);
       hit.ValueWidth = FctLayout.EstimateTextWidth("1,234", hit.ValueFontSize); // what FctIngest.Accept does after style
 
-      /* Spawned the way the stream spawns it: one pass to read the bands, then the column and edge pinned like FctStream
-       * does — so these asserts measure the arc itself, not the origin jitter an unstreamed throw would add to it. */
       FctLayout.Spawn(hit, stage, rand);
-      var region = stage.RegionFor(incoming);
-      var edgeY = stage.UpFor(incoming) > 0 ? hit.BandMaxY : hit.BandMinY;
+      var region = stage.RegionFor(hit);
+      var edgeY = stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY;
       FctLayout.Spawn(hit, stage, rand, (region.X + (region.Width / 2.0), edgeY));
       return hit;
     }
 
-    [TestMethod]
-    public void HalvesDefaultMotionIsTheParabolaAndBandsKeepHold()
+    private static FctHitState Damage(bool incoming) => new()
     {
-      Assert.AreEqual(FctMotionStyle.Parabola, FctStage.DefaultMotion(FctLayoutMode.Halves));
-      Assert.AreEqual(FctMotionStyle.Hold, FctStage.DefaultMotion(FctLayoutMode.Bands));
-    }
+      Lane = incoming ? FctLane.DamageTaken : FctLane.DamageDealt,
+      Incoming = incoming,
+      Style = FctMotionStyle.Parabola,
+      Source = "Spinning Attack",
+      Value = 1234,
+    };
+
+    private static FctHitState Heal(bool incoming) => new()
+    {
+      Lane = incoming ? FctLane.HealingReceived : FctLane.HealingDealt,
+      Incoming = incoming,
+      Heal = true,
+      Style = FctMotionStyle.Parabola,
+      Source = "Healing Wind",
+      Value = 1234,
+    };
 
     /* The shape's first clause: with y linear in t, equal time steps cover equal distances. Eased motion does not. */
     [TestMethod]
     public void TheVerticalScrollRunsAtConstantSpeed()
     {
-      var stage = Halves(FctRegionSide.Left, false, false);
-      var hit = Spawn(stage, incoming: false, new Random(11));
+      var stage = Split(incomingUp: false, outgoingUp: false);
+      var hit = Spawn(stage, Damage(incoming: false), new Random(11));
       Assert.AreNotEqual(0.0, Math.Abs(hit.Rise), "a parabola with no vertical travel is a hold in a costume");
 
       var y1 = FctMotion.RaisedY(hit, 0.25);
@@ -69,21 +78,27 @@ namespace EQLogParser
     }
 
     /* The shape's second clause — MSBT's formula as written (x = y²/4a from the rail's mid-point): the value leaves its
-     * column, bows out to a vertex at half height pointing away from the seam, and is back on the column when it fades. */
+     * column, bows out to a vertex at half height pointing away from the middle of the overlay, and is back on the column
+     * when it fades. Asked of a damage lane and a healing lane, which bow in opposite directions by construction: the
+     * outward direction is whichever way leaves this column, never whichever side the number belongs to. */
     [TestMethod]
     public void TheArcBowsToAVertexAtHalfHeightAndReturnsToItsColumn()
     {
-      foreach (var side in new[] { FctRegionSide.Left, FctRegionSide.Right })
+      foreach (var caseName in new[] { "damage", "heal" })
       {
-        // 1400 wide so the formula's vertex never meets the right-align room cap (FctLayout.AssignTravel):
-        // this test pins MSBT's pure geometry; the cap's honesty has its own containment tests.
-        var stage = Halves(side, false, false, w: 1400);
-        var hit = Spawn(stage, incoming: true, new Random(21));
-        var region = stage.RegionFor(true);
-        var away = side is FctRegionSide.Left ? -1.0 : 1.0;
+        // 4000 wide so the formula's vertex never meets the right-align room cap (FctLayout.AssignTravel): this test
+        // pins MSBT's pure geometry, and the cap's honesty has its own containment test below. A lane is a quarter of
+        // the canvas, so the headroom the formula needs takes an overlay wider than any real one — which is the point
+        // of separating the two questions.
+        var stage = Split(incomingUp: false, outgoingUp: false, w: 4000);
+        var hit = Spawn(stage, caseName is "heal" ? Heal(incoming: false) : Damage(incoming: true), new Random(21));
+        var region = stage.RegionFor(hit);
 
-        Assert.AreEqual(away * stage.TerritoryFor(true) * FctLayout.ParabolaBowFrac, hit.Bow, 1e-9,
-          $"the vertex must sit outward of the column on {side} half's stream");
+        // outward is away from the middle of the overlay, which for a lane is whichever wall it is nearer
+        var away = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
+
+        Assert.AreEqual(away * stage.TerritoryFor(hit) * FctLayout.ParabolaBowFrac, hit.Bow, 1e-9,
+          $"the vertex must sit outward of the column on the {caseName} lane");
 
         var x0 = FctMotion.ArcedX(hit, 0.0);
         Assert.AreEqual(0.0, FctMotion.ArcedX(hit, 1.0) - x0, 1e-9, "ends — and begins — on its own column");
@@ -91,49 +106,75 @@ namespace EQLogParser
         Assert.AreEqual(0.75, (FctMotion.ArcedX(hit, 0.25) - x0) / hit.Bow, 1e-9,
           "4·t(1−t): a quarter of the way in is three quarters of the bow");
 
-        // and for the whole life, wherever it is, it is in the half that owns it
+        // and for the whole life, wherever it is, it is in the lane that owns it
         for (var t = 0.0; t <= 1.0; t += 0.1)
         {
           var x = FctMotion.ArcedX(hit, t);
           Assert.IsTrue(x >= region.X && x <= region.X + region.Width,
-            $"t={t:0.0}: x {x:0.#} left its half [{region.X:0.#}..{region.X + region.Width:0.#}]");
+            $"t={t:0.0}: x {x:0.#} left the {caseName} lane [{region.X:0.#}..{region.X + region.Width:0.#}]");
         }
       }
     }
 
-    /* Right-align and a narrow half: the drawn box hangs its whole width left of the rail, so a full-formula bow
-     * toward the inward wall would clip — and a clipped vertex scores one flight while drawing another. The layout
-     * trims the bow instead; this pins that the WHOLE box never leaves the territory at any t. */
+    /* Right-align and a narrow lane: the drawn box hangs its whole width left of the rail, so a full-formula bow toward
+     * the inward wall would clip — and a clipped vertex scores one flight while drawing another. The layout trims the bow
+     * instead; this pins that the WHOLE box never leaves the lane at any t. A quarter of a 700 px canvas is a column this
+     * text genuinely does not fit comfortably, which is what makes it the cap's test rather than another shape test. */
     [TestMethod]
-    public void ANarrowHalfTrimsTheBowToKeepTheWholeBoxIn()
+    public void ANarrowLaneTrimsTheBowToKeepTheWholeBoxIn()
     {
-      var stage = Halves(FctRegionSide.Left, false, false, w: 700);
-      var hit = Spawn(stage, incoming: true, new Random(21));
-      var region = stage.RegionFor(true);
+      var sawTrim = false;
 
-      Assert.IsTrue(Math.Abs(hit.Bow) <= (FctLayout.ParabolaBowFrac * stage.TerritoryFor(true)) + 1e-9,
-        "the cap only ever trims the formula, never widens it");
-
-      for (var t = 0.0; t <= 1.0001; t += 0.05)
+      /* The lane that can run out of room is the one against the near edge: its numbers hang their WHOLE width left of
+         the rail (right-align, FctMotion.ArcedX) and the rail itself is placed to hold "999,999" at crit size plus a mark,
+         so the outward wall has already given ground before the curve asks for any. The sweep runs several widths because how
+         narrow that is in practice depends on the font dials, and the claim below needs the cap to have had work to do at
+         least once (asserted at the end) while every width owes the same containment. */
+      foreach (var w in new[] { 980, 700, 520, 420 })
       {
-        var x = FctMotion.ArcedX(hit, t);
-        Assert.IsTrue((x - (hit.ValueWidth / 2.0)) >= region.X && ((x + (hit.ValueWidth / 2.0)) <= (region.X + region.Width)),
-          $"t={t:0.##}: the drawn box left its half");
+        var stage = Split(incomingUp: false, outgoingUp: false, w: w, healSide: FctRegionSide.Right);
+        var hit = Spawn(stage, Damage(incoming: true), new Random(21));
+        var region = stage.RegionFor(hit);
+        var formula = FctLayout.ParabolaBowFrac * stage.TerritoryFor(hit);
+
+        Assert.IsTrue(Math.Abs(hit.Bow) <= formula + 1e-9, $"{w} px: the cap only ever trims the formula, never widens it");
+        sawTrim |= Math.Abs(hit.Bow) < formula - 1e-9;
+
+        for (var t = 0.0; t <= 1.0001; t += 0.05)
+        {
+          var x = FctMotion.ArcedX(hit, t);
+          Assert.IsTrue((x - (hit.ValueWidth / 2.0)) >= region.X && ((x + (hit.ValueWidth / 2.0)) <= (region.X + region.Width)),
+            $"{w} px, t={t:0.##}: the drawn box left its lane");
+        }
       }
+
+      Assert.IsTrue(sawTrim, "none of these lanes was too narrow for the full bow, so nothing here tested the cap at all");
+
+      /* And the asymmetry is the near wall's, not a kill switch: the healing lane on the same canvas bows its full share at
+         the widths where the damage lane lost its curve entirely, because what it ran out of was room against the edge, not
+         permission to arc. */
+      var wideLane = Split(incomingUp: false, outgoingUp: false, w: 700, healSide: FctRegionSide.Right);
+      var bowsStill = Spawn(wideLane, Heal(incoming: false), new Random(21));
+      Assert.AreEqual(FctLayout.ParabolaBowFrac * wideLane.TerritoryFor(bowsStill), Math.Abs(bowsStill.Bow), 1e-9,
+        "the lane whose outward wall is the middle of the overlay keeps the formula at a width that takes it away from the other");
     }
 
     /*
      * MSBT's chain law in one test: every value on the rail — plain, crit or proc — enters at the same edge on the same
      * beat, because the hair of difference per row is what sheared the train apart before this: adaptive lifetimes made
-     * rows overtake their neighbours, travel jitter ended them in different places, and a tempo computed before the
-     * stream pinned the geometry gave three rows on one rail three private speeds. Same beat means same-size values
-     * also share speed and endpoint exactly; a crit's endpoint is its own because the band reserves room for how tall
-     * the text is — one rail per text size, which is as it should be: the big number stops where it stays inside.
+     * rows overtake their neighbours, travel jitter ended them in different places, and a tempo computed before the rail
+     * pinned the geometry gave three rows on one rail three private speeds. Same beat means same-size values also share
+     * speed and endpoint exactly; a crit's endpoint is its own because the band reserves room for how tall the text is —
+     * one rail per text size, which is as it should be: the big number stops where it stays inside.
      */
     [TestMethod]
     public void EveryValueOnTheRailSharesItsPathAndSpeed()
     {
-      var ingest = new FctIngest(new Random(71)) { Style = FctMotionStyle.Parabola, Layout = FctLayoutChoice.Shipped };
+      var ingest = new FctIngest(new Random(71))
+      {
+        Style = FctMotionStyle.Parabola,
+        Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left)
+      };
       var hits = new List<FctHitState>();
 
       // value, crit, proc: the rail does not care, and neither do these asserts
@@ -178,7 +219,7 @@ namespace EQLogParser
     }
 
     /*
-     * The tempo system's promise for the new style: FctScale.Time stretches or squeezes how long a number scrolls, and nothing
+     * The tempo system's promise for this style: FctScale.Time stretches or squeezes how long a number scrolls, and nothing
      * about where it lands. Endpoints must agree to the bit; only the duration may differ — by exactly the dial's ratio.
      */
     [TestMethod]
@@ -192,7 +233,11 @@ namespace EQLogParser
         foreach (var time in new[] { FctScale.TimeMin, FctScale.TimeDefault, FctScale.TimeMax })
         {
           FctScale.Time = time;
-          var ingest = new FctIngest(new Random(31)) { Style = FctMotionStyle.Parabola, Layout = FctLayoutChoice.Shipped };
+          var ingest = new FctIngest(new Random(31))
+          {
+            Style = FctMotionStyle.Parabola,
+            Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left)
+          };
           var hits = new List<FctHitState>();
           var hit = ingest.Accept(hits, FctLane.DamageDealt, 5000, "Flurry", false, false, false, null, Width, Height, 0);
           Assert.IsNotNull(hit, $"time {time:0.###}: nothing was spawned");
@@ -252,35 +297,37 @@ namespace EQLogParser
       Assert.IsTrue(checkedAny, "nothing was spawned to check");
     }
 
-    /* The bow is a territory share exactly like Arc: resize maps it by the x factor, and the number still ends in its new half. */
+    /* The bow is a territory share exactly like Arc: resize maps it by the x factor, and the number still ends in its lane. */
     [TestMethod]
-    public void ResizeMapsTheBowAndTheNumberStillEndsInItsHalf()
+    public void ResizeMapsTheBowAndTheNumberStillEndsInItsLane()
     {
-      var stage = Halves(FctRegionSide.Left, false, false);
-      var hit = Spawn(stage, incoming: true, new Random(51));
+      var stage = Split(incomingUp: false, outgoingUp: false);
+      var hit = Spawn(stage, Damage(incoming: true), new Random(51));
       var bowBefore = hit.Bow;
       Assert.AreNotEqual(0.0, bowBefore);
 
-      var newStage = FctStage.Halves(FctRegionSide.Left, false, false, 1200, 700);
+      var newStage = FctStage.ByType(FctRegionSide.Left, false, false, 1200, 700);
       FctResize.Rescale(new List<FctHitState> { hit }, Width, Height, newStage);
 
       Assert.AreEqual(bowBefore * (1200.0 / Width), hit.Bow, 1e-9, "the bow scales with the territory, like the arc");
 
-      var region = newStage.RegionFor(true);
+      var region = newStage.RegionFor(hit);
       for (var t = 0.0; t <= 1.0; t += 0.1)
       {
         var x = FctMotion.ArcedX(hit, t);
         Assert.IsTrue(x >= region.X && x <= region.X + region.Width,
-          $"t={t:0.0}: x {x:0.#} left its resized half");
+          $"t={t:0.0}: x {x:0.#} left its resized lane");
       }
     }
+
+
 
     /* A zero-length motion (the life shorter than the travel) is finished, not NaN — same contract the other styles owe. */
     [TestMethod]
     public void AZeroLengthMotionFinishesAtTheEndOfTheTravel()
     {
-      var stage = Halves(FctRegionSide.Left, false, false);
-      var hit = Spawn(stage, incoming: false, new Random(61));
+      var stage = Split(incomingUp: false, outgoingUp: false);
+      var hit = Spawn(stage, Damage(incoming: false), new Random(61));
       hit.MotionMs = 0;
 
       var x = FctMotion.ArcedX(hit, 1.0);

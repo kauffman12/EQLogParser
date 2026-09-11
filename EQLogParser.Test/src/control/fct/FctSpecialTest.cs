@@ -24,7 +24,14 @@ namespace EQLogParser.Tests
       FctScale.Crit = FctScale.CritSizeDefault;
     }
 
-    private static FctIngest Ingest() => new(new Random(41)) { Style = FctMotionStyle.Straight };
+    /* A rail only exists in split: bands degrades Straight to hold (FctSplitModesTest pins that), so these tests ask for
+       the scheme where the style survives. My damage owns one column, and every row written here — plain, marked, folded —
+       shares that column's spine, which is the odometer they are all measuring. */
+    private static FctIngest Ingest() => new(new Random(41))
+    {
+      Style = FctMotionStyle.Straight,
+      Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left),
+    };
 
     /* The mark is an identity: purple over the lane colour, a reserved strip beside the number, and a crit's size
        emphasis (the blowout) even when the log never called it a crit. */
@@ -55,8 +62,8 @@ namespace EQLogParser.Tests
     /*
      * The glyph hangs OUTSIDE the odometer: a marked row and a plain one in the same column still share a right edge.
      * Measured on a wide canvas because the ONE thing that may lawfully shift a rail is the edge clamp — a number whose
-     * crit-size pop no longer fits between the rail and the wall gives ground to the wall — and at 800 px a nine-figure
-     * value is past that limit before the mark has any say in it.
+     * crit-size pop no longer fits between the rail and the wall gives ground to the wall — and a lane is only a quarter of
+     * the overlay, so at this file's 800 px a nine-figure value is past that limit before the mark has any say in it.
      */
     [TestMethod]
     public void AMarkNeverMovesTheOdometer()
@@ -64,8 +71,8 @@ namespace EQLogParser.Tests
       var ingest = Ingest();
       var hits = new List<FctHitState>();
 
-      var plain = ingest.Accept(hits, FctLane.DamageDealt, 900, null, false, false, false, null, 1400, Height, 0);
-      var marked = ingest.Accept(hits, FctLane.DamageDealt, 987654321, "Crush", false, false, false, null, 1400, Height, 0,
+      var plain = ingest.Accept(hits, FctLane.DamageDealt, 900, null, false, false, false, null, 2400, Height, 0);
+      var marked = ingest.Accept(hits, FctLane.DamageDealt, 987654321, "Crush", false, false, false, null, 2400, Height, 0,
         special: FctSpecial.SlayUndead);
       Assert.IsNotNull(plain);
       Assert.IsNotNull(marked);

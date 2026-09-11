@@ -62,7 +62,7 @@ namespace EQLogParser
      * in-flight numbers keep the stage they were born under (it is baked into their bands and travel at spawn), so flipping
      * the layout mid-fight changes what comes next rather than teleporting what is already on screen.
      */
-    public FctLayoutChoice Layout = FctLayoutChoice.Shipped;
+    public FctLayoutChoice Layout = FctLayoutChoice.Bands;
 
     /* Hits that had nowhere to go, surfaced in the settings panel's stats line so overload stays visible. */
     public int DroppedCount { get; private set; }
@@ -335,18 +335,19 @@ namespace EQLogParser
       var stage = Layout.Stage(w, h);
 
       /*
-       * The parabola is a halves shape: it scrolls straight across whatever region owns the side, and in bands that region
-       * is the canvas — strip included. The settings panel cannot select it there, but settings.ini can be hand-written,
-       * which is why the degradation lives here rather than only in the UI (see FctMotionStyle.Parabola).
+       * A rail scrolls across whatever region owns its side, and in bands that region is the canvas — strip included. The
+       * settings panel cannot select one there, but settings.ini can be hand-written, which is why the degradation lives
+       * here rather than only in the UI (see FctMotionStyle.Parabola).
        */
       var style = stage.Mode is FctLayoutMode.Bands && FctMotionStyles.IsRail(Style)
         ? FctMotionStyle.Hold
         : Style;
 
-      /* Split's straight line is a conveyor rather than a placement problem (FctConveyor): one clock per column, spacing
-         bought at entry, congestion scaled for the whole lane at once. It replaces the rail's congestion ladder below, so
-         it is decided here, where the two other capacity rules (folding, the lane cap) can see which of them applies. */
-      var conveyor = UseConveyor(style, stage);
+      /* Every rail is a conveyor rather than a placement problem (FctConveyor): one clock per column, spacing bought at
+         entry, congestion scaled for the whole lane at once. It replaces the eviction check below too — a queued row has no
+         slot to be stolen — so it is decided here, where the two other capacity rules (folding, the lane cap) can see which
+         of them applies. */
+      var conveyor = UseConveyor(style);
 
       if (fixedText is null)
       {
@@ -450,86 +451,13 @@ namespace EQLogParser
            windows, statistics, anything that asks how long this number will be around. Its position is never read from it. */
         FinalizeRailTempo(hit);
       }
-      else if (FctMotionStyles.IsRail(style))
-      {
-        /*
-         * The parabola in halves is the stream, not a scatter: one centre column at the spawn edge with braided side columns
-         * only for bursts, scored by the same flight maths as every other placement (FctStream). Split's rails do not come
-         * through here at all — they queue (UseConveyor above) — so what is left is the scheme where two categories share a
-         * half and nobody promised a column of evenly spaced rows.
-         */
-        hit = FctStream.Place(hit, hits, stage, _rand);
-
-        /* The row now knows how far it actually travels; the stream's one rate is only true of final flights. */
-        FinalizeRailTempo(hit);
-
-        /*
-         * The congestion rungs past birth speed (FctStream.Pressure stamped the first). An ordinary number that still covers a
-         * neighbour after normal placement:
-         *
-         *   1. floors its OWN accelerator and re-threads — a moving row slips gaps a standing one cannot, and a shorter life
-         *      is a read this row can afford to pay itself;
-         *   2. still covered: the weakest ordinary neighbour (equal counts, ties evicting the older) gives up its pixels;
-         *   3. no weaker neighbour exists, so this arrival is the weakest at the door: it turns around.
-         *
-         * Every loss — eviction or refusal — counts in DroppedCount, and protected rows (crits, marks, heals, words) skip the
-         * valve entirely: they keep their pixels and take the marginal overlap rather than let congestion delete important
-         * news. No retry loop past step 2: accelerated rail plus one sacrifice settles what a flood can present, whatever
-         * survives is open least-bad grazing under ValveOverlap, and a fight that stops stops typing inside a second and a half.
-         */
-        if ((FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits)) && FctStream.Sacrificable(hit))
-        {
-          /* Escalation's middle rung, spent before anyone else's number is touched: this row floors its own accelerator and
-           * re-threads. A moving row can slip through a gap a standing one cannot — deeper entries, earlier exits — and the
-           * read it costs itself (a shorter, faster life) is cheaper than the read it costs a neighbour (deletion). */
-          hit.RailPress = FctStream.PressFloor;
-          hit = FctStream.Place(hit, hits, stage, _rand, keepPress: true);
-          FinalizeRailTempo(hit);
-
-          if (FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits))
-          {
-            var weakest = FctStream.WeakestNeighbour(hit, hits, stage);
-            if (weakest is null)
-            {
-              DroppedCount++; // the weakest arrival at a full door turns around
-              return null;
-            }
-
-            hits.Remove(weakest);
-            DroppedCount++;
-            evicting?.Invoke(weakest);
-            hit = FctStream.Place(hit, hits, stage, _rand, keepPress: true);
-            FinalizeRailTempo(hit);
-
-            if (FctStream.OverlapsAny(hit, hits) || FctStream.LabelBitten(hit, hits))
-            {
-              // even the freed room only offered smears and bites: this arrival leaves too, counted. Two losses buy the
-              // one guarantee the player asked for — no ordinary number is ever painted over another's words.
-              DroppedCount++;
-              return null;
-            }
-          }
-        }
-        else if (FctStream.LabelBitten(hit, hits))
-        {
-          /* A protected row biting a word: never traded, but it can try its own tempo — one lossless re-thread shot.
-           * A faster row sweeps more lane, so the retry is adopted only when it lands genuinely clean; every lane
-           * biting means the crit keeps its birth placement and its bite, because important news briefly crowded beats
-           * important news missing. */
-          var threaded = FctStream.Place(hit, hits, stage, _rand, forcePress: FctStream.PressFloor);
-          FinalizeRailTempo(threaded);
-          if (!FctStream.LabelBitten(threaded, hits))
-          {
-            hit = threaded;
-          }
-        }
-      }
       else
       {
         /*
-         * Text that travels gets free placement rather than cells, and FctPlacement is what keeps it off a number already in
-         * flight: several legal throws are measured along their whole paths and the least crowded one wins. The hit that comes
-         * back may be one of those trials rather than the object that went in.
+         * Text that travels gets free placement rather than a queue: several legal throws are measured along their whole
+         * paths and the least crowded one wins. The hit that comes back may be one of those trials rather than the object
+         * that went in. Every rail is a conveyor by now, so what reaches this branch is choreography — hold, spray,
+         * fountain — which is thrown, lands where it lands, and asks nothing of its neighbours but room.
          */
         hit = FctPlacement.Place(hit, hits, stage, _rand);
       }
@@ -564,17 +492,19 @@ namespace EQLogParser
     }
 
     /*
-     * Which arrangements run as a conveyor: any rail, in split — the straight line AND the parabola, which is what the shape
-     * dial actually offers there and what ships by default. In this mode the dial chooses the PATH (straight up the column, or
-     * MSBT's bowing chain), never whether the traffic is ordered: rows that scroll a lane the player reads have to keep their
-     * spacing and one speed, which is FctConveyor's whole subject. Fountain and spray are choreography and keep their scatter;
-     * hold parks numbers where they landed and pulse puts them in cells — none of those is a queue and none needs one. Bands
-     * degrade rails to hold above, so there is nothing to catch there, and halves keeps the flight-scored stream because its two
-     * categories share a HALF rather than a column: owning a column is what makes one train per lane a promise instead of a
-     * coincidence (FctStage).
+     * Which arrangements run as a conveyor: any rail — the straight line AND the parabola, which are the two shapes split
+     * offers and the reason the mode exists. The dial chooses the PATH (straight up the column, or MSBT's bowing chain),
+     * never whether the traffic is ordered: rows that scroll a lane the player reads have to keep their spacing and one
+     * speed, which is FctConveyor's whole subject. Fountain and spray are choreography and keep their scatter, and hold
+     * parks numbers where they landed — none of those is a queue and none needs one.
+     *
+     * No mode check, because there is nothing left to check: bands degrades every rail to hold a few lines up, so a style
+     * that is still a rail here belongs to the scheme whose regions are columns. Owning a column is what makes one train
+     * per lane a promise instead of a coincidence (FctStage), and that promise is why the stream this replaced — flight
+     * scoring among braided candidate columns, with congestion valves underneath — went away rather than being kept for
+     * some second rail scheme.
      */
-    private static bool UseConveyor(FctMotionStyle style, FctStage stage) =>
-      FctMotionStyles.IsRail(style) && stage.Mode is FctLayoutMode.ByType;
+    private static bool UseConveyor(FctMotionStyle style) => FctMotionStyles.IsRail(style);
 
     /* A conveyor row's life is a distance, not a duration: it is finished when the lane has carried its own flight past it,
      * which is how a lane under pressure can clear a row in half the nominal time without that row blinking out early in the
@@ -732,10 +662,10 @@ namespace EQLogParser
         return;
       }
 
-      /* The rail's tempo belongs to the stream, not here: placement re-spawns a stream row at its pinned edge,
-       * so this hit's Rise is still provisional at this point in Accept — and a duration computed from a distance
-       * that changes afterwards is how three rows on one rail each ended up with their own private tempo, phase drift
-       * shearing apart exactly the chain this style exists to make. See ApplyRailTempo. */
+      /* The rail's tempo belongs to the lane, not here: a conveyor row has its edge pinned after this call, so its Rise is
+       * still provisional at this point in Accept — and a duration computed from a distance that changes afterwards is how
+       * three rows on one rail each ended up with their own private tempo, phase drift shearing apart exactly the chain
+       * this style exists to make. FctConveyor.Enrol and FinalizeRailTempo settle it once the flight is final. */
       if (FctMotionStyles.IsRail(hit.Style))
       {
         return;
@@ -756,31 +686,16 @@ namespace EQLogParser
      * version shared a DURATION computed from the region instead, which is precisely a per-category speed difference:
      * measured 195.6 px/s for damage against 201.8 for words and slower still for crits, and players read it —
      * correctly — as the streams not agreeing. A shared rate costs almost nothing and keeps every chain property the
-     * stream relies on: two rows a beat apart keep that gap of road forever BECAUSE they move at one rate; bows run
-     * their own parabolas, and flight-scored placement measures real flights rather than assuming identical phases.
-     * Rows that parked at end of travel would all park in one place and the centre column would become a queue for a
-     * parking space (FctStream): motion spans the life, so nothing parks. The stream applies it BEFORE scoring
-     * candidate columns, because the candidates are whole flights and a trial cloned without a lifetime is a flight
-     * that already ended — every column would read as empty (which is exactly how this was first missed).
-     */
-    internal static void ApplyRailTempo(FctHitState hit, FctStage stage)
-    {
-      var travel = Math.Abs(hit.Rise);
-      hit.LifetimeMs = (travel > 1.0 ? travel : stage.RegionFor(hit).Height) * FctMotion.ParabolaScrollMsPerPx;
-      hit.MotionMs = hit.LifetimeMs;
-      hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000);
-
-      /* No player tempo here: placement is about to decide this row's real travel, and FinalizeRailTempo restamps
-       * everything once and exactly one time with it. Scaling the estimate here would compound with that. */
-    }
-
-    /*
-     * The rail's EXACT tempo, stamped after placement has pinned the row on its edge. The tempo that candidate
-     * columns were scored with ran on a provisional Rise — respawning the row at its edge happens inside placement —
-     * and "every number in split crosses at one speed" is a statement about the real flight, not the estimate: with
-     * the shared estimate left in place, rows measured 229-257 px/s against each other. Recomputed from the final
-     * travel over the shared scroll rate, then scaled once by the player's speed dial; an assignment rather than a
-     * multiplier, so nothing compounds however often placement passes through.
+     * column relies on: two rows a beat apart keep that gap of road forever BECAUSE they move at one rate; bows run
+     * their own parabolas above the rail, and the lane's clock is what keeps the spacing underneath them. Rows that
+     * parked at end of travel would all park in one place and the column would become a queue for a parking space:
+     * motion spans the life, so nothing parks.
+     *
+     * Stamped where the flight becomes final — after FctPlacement.Pin has put the row on its edge (which is also why Pin
+     * restamps a trial: neighbours carry their real tempo, and pricing a candidate at anything else rates it against the
+     * traffic as if it moved at some other speed) — and again on a resize, where stretching the window must buy a row more
+     * time rather than more speed. Recomputed from travel over the shared scroll rate, then scaled once by the player's
+     * dial; an assignment rather than a multiplier, so nothing compounds however often it is called.
      */
     internal static void FinalizeRailTempo(FctHitState hit)
     {

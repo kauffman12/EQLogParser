@@ -164,7 +164,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now <= FctDemo.CycleMs + 100; now += 50)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, spawned.Add, null, gates);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, spawned.Add, null, gates);
       }
 
       Assert.IsTrue(spawned.Count > 0, "the loop still runs — filtering is not pausing");
@@ -280,7 +280,7 @@ namespace EQLogParser
       demo.Start(0);
       for (var now = 0.0; now <= FctDemo.CycleMs + 100; now += 50)
       {
-        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, spawned.Add, null);
+        demo.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, spawned.Add, null);
       }
 
       foreach (var word in all)
@@ -296,7 +296,7 @@ namespace EQLogParser
       demo2.Start(0);
       for (var now = 0.0; now <= FctDemo.CycleMs + 100; now += 50)
       {
-        demo2.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Shipped, muted.Add, null, gates);
+        demo2.Advance(now, 800, 560, FctMotionStyle.Hold, FctLayoutChoice.Bands, muted.Add, null, gates);
       }
 
       Assert.IsFalse(muted.Any(h => h.FixedText == Labels.Dodge), "dodge obeys its switch inside the demo");

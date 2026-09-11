@@ -10,8 +10,9 @@ namespace EQLogParser
    * moment. In practice that was not enough — three live fountains can and did draw nearly the same origin, and two numbers
    * climbing almost the same path are unreadable for their whole flight while most of the band around them sits empty. Measured
    * on a 980x640 overlay at 700 ms intervals, three fountains had 58% of their pairs overlap at some point in their shared
-   * life; six numbers held in one band collided 71% of pairs. The grid is the right answer for text that stays still
-   * (FctCellGrid) and the wrong one here: thrown text has to look thrown, and filing it into slots is a different style's job.
+   * life; six numbers held in one band collided 71% of pairs. A grid is the right answer for text that stays still and the
+   * wrong one here: thrown text has to look thrown, and filing it into slots is a different layout's job (the conveyor's,
+   * for the rails that scroll a column the player reads).
    *
    * So: ask where a number would actually go from a lattice of legal launch points across its band, and keep the one that gets
    * its own space. Every candidate comes out of `FctLayout.Spawn`, which is what keeps this honest — no candidate can sit in the
@@ -153,33 +154,6 @@ namespace EQLogParser
     }
 
     /*
-     * A search over a caller-supplied list of launch points instead of the lattice — this is what FctStream scores
-     * its three row positions with, and why "stream vs scatter" is one difference of candidate sets rather than two
-     * scoring engines. Unlike Place it has no nothing-to-dodge shortcut: the trial IS the placement even against an
-     * empty overlay, because the caller's origin (the stream's centre) outranks wherever the free throw landed.
-     * `pad` inflates every pair test; see Cost.
-     */
-    internal static FctHitState PlaceOrigins(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand,
-      (double X, double Y)[] origins, double anchorX, double anchorY, double pad)
-    {
-      var best = Pin(hit, stage, rand, origins[0].X, origins[0].Y);
-      var bestCost = Cost(best, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
-
-      for (var i = 1; i < origins.Length; i++)
-      {
-        var trial = Pin(hit, stage, rand, origins[i].X, origins[i].Y);
-        var cost = Cost(trial, anchorX, anchorY, stage.W, stage.H, hits, 0, pad);
-        if (cost < bestCost)
-        {
-          best = trial;
-          bestCost = cost;
-        }
-      }
-
-      return best;
-    }
-
-    /*
      * One row's geometry at an origin the CALLER chose: the primitive every placement search is built from — each candidate a
      * search tries is one of these — and the whole of what the conveyor needs (FctConveyor), because a row that enters at the
      * mouth of its column has no search to run, only a flight to be measured right there.
@@ -211,11 +185,8 @@ namespace EQLogParser
      * Opacity is not part of it. Weighting by fade would make a collision at spawn look cheap — every hit fades in — and
      * spawn collisions are exactly what reads as one blob of unreadable text.
      *
-     * `pad` grows every pair test by that many pixels: with padding, "costs nothing" means *this far apart*, not merely
-     * *not touching* — which is how FctStream keeps MSBT's minimum line gap without changing what the lattice search
-     * (pad 0) scores. Bit-identical for the old call sites because 0 inflation is arithmetic nobody can feel.
      */
-    private static double Cost(FctHitState candidate, double canonicalX, double canonicalY, double w, double h, List<FctHitState> hits, double penalty, double pad = 0)
+    private static double Cost(FctHitState candidate, double canonicalX, double canonicalY, double w, double h, List<FctHitState> hits, double penalty)
     {
       var cost = penalty
         + (DriftWeight * Math.Abs(candidate.Y0 - canonicalY) / h)
@@ -223,20 +194,20 @@ namespace EQLogParser
 
       for (var i = 0; i < hits.Count; i++)
       {
-        cost += WorstOverlap(candidate, hits[i], pad);
+        cost += WorstOverlap(candidate, hits[i]);
       }
 
       return cost;
     }
 
-    /* Visible beyond this file for the stream's congestion valve (FctIngest): a row that still covers a neighbour after
-     * every accelerator has fired is the signal that only a sacrifice can settle it. */
-    internal static double WorstOverlap(FctHitState candidate, FctHitState other, double pad)
+    /* Visible beyond this file for the lane cap's eviction check (FctIngest): the row a new arrival would cover is the one
+     * that gives up its pixels, and this is the measurement that decides both whether there is a victim and who it is. */
+    internal static double WorstOverlap(FctHitState candidate, FctHitState other)
     {
       /* A drawn block never leaves its own [SideMin, SideMax]: ArcedX clamps the centre to that range with the half-width
        * priced at peak scale, and the block is never wider than it was priced. Two numbers whose side ranges do not overlap
-       * therefore cannot touch at any sampled instant — in halves that answers every cross-region pair before a single sample
-       * is spent (the two halves' ranges are disjoint by construction), while in bands both sides carry the canvas range and
+       * therefore cannot touch at any sampled instant — in split that answers every cross-column pair before a single sample
+       * is spent (the lanes' ranges are disjoint by construction), while in bands both sides carry the canvas range and
        * no pair is ever skipped. Bit-identical output, because the sweep these pairs would run always scored zero.
        */
       if (candidate.SideMax <= other.SideMin || other.SideMax <= candidate.SideMin)
@@ -261,7 +232,7 @@ namespace EQLogParser
       for (var s = 0; s <= TimeSamples; s++)
       {
         var age = shared * s / TimeSamples;
-        var overlap = Overlap(Block(candidate, age, pad), Block(other, age + ageOffset, pad));
+        var overlap = Overlap(Block(candidate, age), Block(other, age + ageOffset));
         if (overlap > worst)
         {
           worst = overlap;
@@ -288,20 +259,19 @@ namespace EQLogParser
       return smaller <= 0 ? 0 : (ix * iy) / smaller;
     }
 
-    /* Where the drawn block actually is at a given age: the same maths the canvases draw with, centre-anchored like
-     * the text, then grown by pad on every side — "within padding of" is what a stream counts as a blocked row. */
-    private static (double Left, double Top, double Right, double Bottom) Block(FctHitState hit, double ageMs, double pad)
+    /* Where the drawn block actually is at a given age: the same maths the canvases draw with, centre-anchored like the text. */
+    private static (double Left, double Top, double Right, double Bottom) Block(FctHitState hit, double ageMs)
     {
       var t = FctMotion.Progress(hit, ageMs);
       var scale = FctMotion.ScaleOf(hit, ageMs);
-      var half = (hit.ValueWidth * scale) / 2.0 + pad;
+      var half = (hit.ValueWidth * scale) / 2.0;
 
       // no fade-out gate here: a number that is on screen at all is one the player could be trying to read
       var x = FctMotion.ArcedX(hit, t);
       var y = FctMotion.RaisedY(hit, t);
 
       // a marked row's glyph hangs outside the value's left edge: the block charges for it, only there
-      return (x - half - (hit.IconAllowance * scale), y - pad, x + half, y + (FctLayout.TextHeight(hit) * scale) + pad);
+      return (x - half - (hit.IconAllowance * scale), y, x + half, y + (FctLayout.TextHeight(hit) * scale));
     }
   }
 }
