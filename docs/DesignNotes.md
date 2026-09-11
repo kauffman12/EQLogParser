@@ -1339,6 +1339,14 @@ inside the rail — the flush edge survives every frame of it.
 Pulse is exempt and centres in its cell; a grid of values each hanging half a cell to the left would put neighbours'
 numbers through each other, and a cell is a box a value sits *in*.
 
+The rail itself is placed for **the widest amount the lane can roll** (`FctLayout.RailReserve`: crit-class digits at
+the crit's own size, plus a mark's room) rather than for the row being spawned. A spine derived from each row's own
+width is not one spine: `9` would sit where `18.3m` cannot, and the column would move under every number that landed.
+The same reasoning excludes a row's *words* from the arithmetic — see the next section — and the reservation covers
+both rail shapes, not just the bowing one, because alignment does not care which path a number takes up its column.
+Where a region cannot offer a spine and a bend at once, containment wins and every row on that column bows equally
+less, which is a flatter curve rather than a broken one.
+
 The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
 same right-anchored box (`Block` scales its half-width around `ArcedX`'s centre, so scoring and drawing agree to the bit),
 the spawn clamp reserves its margin on the left, and the parabola's bow budget measures the full hang (above). Two
@@ -1361,9 +1369,21 @@ outside its left edge, and the source label wherever the label side put it. Ever
 these numbers — `Spawn`'s clamp, `ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), the parabola's bow
 budget, and `FctStream`'s row half-width. The reach is deliberately asymmetric because the odometer above makes it so: with the rail being the
 value's *right* edge, a label on the left deepens a reach that side already had, while a label on the right opens one the row did not have at
-all. Below is the exception in both directions — the second line overhangs its amount by half the difference, so it is charged against the
-column boundary but *not* against the spacing between rows in a column, whose vertical reserve already covers it. Charging it twice would make
-rows braid into neighbouring columns to dodge words that were never in their way.
+all. Translating that block from a centre to a rail is therefore done per label side (`BlockFromRail`), and the case that matters most is the one
+that was got wrong first: a second line is centred under its **amount**, whose centre sits half a width left of the rail, so it overhangs the
+value's own edges by half the difference — not the rail's. Charging `words/2` against the rail instead asked a long spell name for 86 px of
+clearance and `"(Crush)"` for none, which is how a crit came to be drawn 46 px away from the hits under it, out of line with the column it was
+supposed to flush every number in. A centred word line is also charged against the column boundary but *not* against the spacing between rows,
+whose vertical reserve already covers it; charging it twice would make rows braid into neighbouring columns to dodge words that were never in
+their way.
+
+**Words never place the spine.** The rail a number hangs on comes from the widest amount the lane can roll (above), and a label — which belongs
+to its own row, while two rows in one column routinely carry different ones — gets whatever the spine leaves over. `FitSource` asks for that
+budget per side of the rail rather than as a total for the region, because that is where each label side draws: an inline label cannot borrow from
+the hand it is not drawn in, while a centred line may reach past its amount on either side. The measured consequence is worth choosing a setting
+on, at default fonts in a 1280 px overlay: about **twenty-three characters** of a name below the number against about **ten** beside it, since
+beside shares one line with the amount while below spends both halves of the column. Height runs the other way — 41 px a row beside, 66 px below —
+so inline columns hold roughly sixty percent more numbers at once. Neither arrangement is better; they trade the same pixels.
 
 A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: `MaxSourceChars` — forty, which is as long
 as a name gets to be and nothing more (raised from thirty once the first-run size stopped being a guess at a small screen: a ceiling sitting below what the
