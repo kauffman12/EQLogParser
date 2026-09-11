@@ -28,16 +28,11 @@ namespace EQLogParser
     public FctSpecial Special;
 
     /* Horizontal room reserved for that event's glyph: geometry charges for it next to ValueWidth (clamps, collision,
-     * stream spacing), and it never moves the odometer — the glyph hangs outside the number's left edge while the value
+     * lane spacing), and it never moves the odometer — the glyph hangs outside the number's left edge while the value
      * keeps its right edge on the rail. Set with the fonts in FctStyle.ApplyTo. */
     public double IconAllowance;
 
-    /*
-     * Index of this hit's cell in its band's fixed grid, or -1 while it floats. Only pulse mode allocates cells; the pool
-     * is picked by band and by whether the hit is a proc, so this one number names the slot. FctCellGrid owns it.
-     */
-
-    /* How this hit moves over its life: travel, fountain, pulse in place, or spray. Copied from the canvas's current
+    /* How this hit moves over its life: queued down a lane, thrown as a fountain, sprayed, or held in place. Copied from the canvas's current
      * setting by ingest, then read by FctLayout for geometry and by FctMotion for scale. A hit keeps the style it was
      * spawned with, so flipping the overlay's choice mid-fight changes what comes next rather than teleporting what is
      * already on screen. */
@@ -94,7 +89,7 @@ namespace EQLogParser
      * The deliberate rail (FctConveyor): this row rides a lane clock instead of its own flight, so its place on the column is
      * distance rather than elapsed time. Set by FctConveyor.Enrol and stamped every frame by FctConveyor.Advance; read by
      * FctMotion for position, opacity and the crit's collapse, and by FctIngest.PruneExpired for the row's end. Rows that are
-     * not on a conveyor (fountain, spray, hold, pulse, parabola, halves) leave these alone and keep the time law below.
+     * not on a conveyor — hold, fountain, spray, anything thrown rather than queued — leave these alone and keep the time law below.
      *
      * ConveyorQ is how far the lane has carried this row, in pixels, and it starts NEGATIVE: a row whose slot has not reached
      * the mouth yet waits off-column (invisible, still folding duplicates) until the lane brings its turn. ConveyorTravel is

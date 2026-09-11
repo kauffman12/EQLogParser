@@ -191,7 +191,7 @@ namespace EQLogParser
      *
      * The motion style and the layout choice arrive as parameters of the frame rather than as things set once on the demo, and that is
      * the whole lesson of this class: the loop runs its own FctIngest so it cannot touch the real counters, which also means it has its
-     * own copy of both. Set those copies from the outside and forgetting once is invisible - selecting pulse played hold, and the
+     * own copy of both. Set those copies from the outside and forgetting once is invisible - selecting a style played hold, and the
      * dropdown looked broken. Passed in beside the canvas size, there is nothing to remember, and neither can go stale between a control
      * changing and a number spawning.
      */

@@ -43,7 +43,7 @@ namespace EQLogParser
           _labelSide = value;
 
           /* The engine prices what the player will actually see: with words beside the numbers there is no band to defend
-             (FctStream's label fence stands down) and — the part that shows — a row is only as tall as its number, so every
+             and — the part that shows — a row is only as tall as its number, so every
              column packs tighter. The other half of the answer is horizontal: the words now reach out sideways instead of
              hanging under the amount, which changes how much of the column they eat (FctLayout.LabelSide), so every name in
              flight has to be re-fitted against the room that arrangement leaves it. A wider gap and a shorter name are the
@@ -148,7 +148,8 @@ namespace EQLogParser
     }
 
     /*
-     * Which region scheme new hits spawn into (see FctStage): halves, bands, and which side incoming sits on. Forwarded to ingest the way
+     * Which region scheme new hits spawn into (see FctStage): split's column assignment or bands' two bands, and which side
+     * incoming sits on. Forwarded to ingest the way
      * MotionStyle is, with the same contract — in-flight numbers keep the stage they were born under, and configure mode restarts its loop
      * on a change so the choice can be judged on the very next number rather than twelve seconds later.
      */
@@ -295,7 +296,7 @@ namespace EQLogParser
         return;
       }
 
-      /* ReleaseHalo is the eviction sink: pulse mode can take a full cell off a hit still on screen, and the surface that
+      /* ReleaseHalo is the eviction sink: a conveyor lane can take a full row's worth of space off a number still on screen, and the surface that
        * blurred its glow has to hear about it or the reference count never comes back down. */
       var hit = _ingest.Accept(_hits, lane, value, source, crit, minor, periodic, valueText, ActualWidth, ActualHeight,
         _clock.Elapsed.TotalMilliseconds, proc, row, special, ReleaseHalo);

@@ -25,7 +25,7 @@ namespace EQLogParser
      * The offered sizes start wide now, because the narrow end of the range spends the thing the overlay needs most: room beside a
      * number for the name of whatever did it. At 980 in split a source line has a quarter column to live in — about a hundred pixels
      * after the digits and their mark — and every name longer than a handful of letters is shortened to fit. At 1280 that same column
-     * carries a mob's whole name in most fights, and halves at 1280 carries a name beside a crit with room left over. The old sizes stay
+     * carries a mob's whole name in most fights, and the same width beside a crit's bigger digits still leaves room. The old sizes stay
      * offered for anyone playing on a small screen or beside another window: the range grew at the top, it did not move.
      *
      * Nothing here is a maximum. Fit() clamps to the working area it is given, so a second monitor offers more and a netbook less; these
@@ -83,14 +83,10 @@ namespace EQLogParser
      * They carry geometry measured against the window they were born in: band edges, side bounds, travel distance and cell
      * position are all pixels, and motion is a pure function of (hit, age) with no canvas argument — so a resize that touches
      * nothing leaves them drawing where the old window used to be. Probed at 980x640 shrunk to 620x400: 10 of 15 held numbers
-     * drawn outside the overlay, 4 more sitting in the protected strip, and pulse was worse than the rest because its grid was
-     * the one thing calculated once. It healed itself as hits expired, which is a way of being wrong politely, not a fix.
+     * drawn outside the overlay and 4 more sitting in the protected strip. It healed itself as hits expired, which is a way of
+     * being wrong politely, not a fix.
      *
      * Free text scales by the ratio of each axis: a thrown number keeps the same shape relative to the window it is thrown in.
-     * A number holding a pulse cell is not scaled but re-seated, because cells come out of the grid for the current size rather
-     * than from each other — its index survives (that is what an index is for) and where that index now sits is the grid's
-     * business, see FctCellGrid.Reseat.
-     *
      * Font sizes are not touched: how big a number is drawn is a style decision, not a layout one. Shrinking therefore means
      * proportionally less room per number, which is what the lane cap and the life shortener absorb rather than smaller type —
      * and FctLayout's and FctMotion's clamps are why this can be a mapping instead of a rebuild.
@@ -99,9 +95,10 @@ namespace EQLogParser
       => Rescale(hits, oldW, oldH, FctStage.Bands(w, h));
 
     /*
-     * Halves needs no special case here: the regions are fixed fractions of the canvas, so a proportional map sends each
-     * half onto its new self and nothing crosses the seam — a number's side is decided by its lane at spawn, never by where
-     * it happens to be. What does change with the size is everything derived from it, which Refit and Reseat re-derive.
+     * Split needs no special case here: the lanes are fixed fractions of the canvas, so a proportional map sends every lane onto
+     * its new self and nothing crosses into a neighbour — which column a number belongs to is decided by its category at spawn,
+     * never by where it happens to be standing. What does change with the size is everything derived from that size, which Refit
+     * and Reseat re-derive.
      */
     internal static void Rescale(List<FctHitState> hits, double oldW, double oldH, FctStage stage)
     {

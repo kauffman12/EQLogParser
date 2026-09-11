@@ -100,7 +100,7 @@ namespace EQLogParser
       => Place(hit, hits, FctStage.Bands(w, h), rand);
 
     /*
-     * The search walks the candidate's own band and column territory: in halves both are one side's half, so a candidate can
+     * The search walks the candidate's own band and column territory: in split both are one lane, so a candidate can
      * never be proposed across the seam, and the overlap pass below never spends a sample on a number that cannot reach it.
      */
     internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand)
@@ -114,7 +114,7 @@ namespace EQLogParser
 
       /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
        * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the half's own
-       * centre in halves — there are no columns there to drift back toward, and the canonical-x preference below does the
+       * centre in split — the spine is where it is — and the canonical-x preference below does the
        * job of keeping a stream centred on its side instead. */
       var slot = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : FctLayout.LaneSlot(hit.Lane, stage.W);
       var reach = Math.Min(stage.TerritoryFor(hit) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);

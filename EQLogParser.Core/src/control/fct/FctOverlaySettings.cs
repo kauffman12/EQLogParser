@@ -21,25 +21,20 @@ namespace EQLogParser
     public const string WindowHeightKey = "FctOverlayHeight";
 
     /*
-     * The two modes the settings panel offers, over the engine's three schemes: fountain is bands geometry wearing spray
-     * motion (numbers spew out of a clear middle — spray or settle, plus the two direction dials), and split is the side
-     * columns with a shape — parabola or line, nothing that rests in a scroll. Engine names stay where the geometry
-     * is tested; ini speaks the words
-     * the player chose. The retired FctOverlayLayout key ("halves"/"bytype"/"bands") belonged to the layout+motion combos
-     * this replaced and is no longer read — nothing shipped, so nothing migrates.
+     * The two modes the settings panel offers, and they are the engine's two schemes: fountain is bands geometry wearing
+     * spray motion (numbers spew out of a clear middle — spray or settle, plus the two direction dials), and split is the
+     * columns with a shape — parabola or line, nothing that rests in a scroll. Engine names stay where the geometry is
+     * tested; ini speaks the words the player chose. The retired FctOverlayLayout key ("halves"/"bytype"/"bands") belonged
+     * to the layout+motion combos this replaced and is no longer read — nothing shipped, so nothing migrates.
      */
     public const string ModeKey = "FctOverlayMode";
     public const string ShapeKey = "FctOverlayShape";
 
     /*
      * The region scheme and how it is oriented (see FctStage): which lane each category owns and which way each side travels.
-     * What ships is fountain (bands geometry, see LoadIsFountain) and split (ByType columns); the engine's third scheme, halves,
-     * stays reachable from code and from the ini words but no control offers it today, so these keys read to the shipped two.
-     * Junk always lands on a shipped choice rather than reaching geometry as garbage.
+     * What ships is fountain (bands geometry, see LoadIsFountain) and split (ByType columns), and these keys read to those two;
+     * junk always lands on a shipped choice rather than reaching geometry as garbage.
      */
-    /* Written so a halves layout round-trips if the panel ever offers one; loading does not read it, because fountain
-       and split take their sides from the lane keys below. */
-    public const string IncomingSideKey = "FctOverlayIncomingSide";
 
     /*
      * Split's categories, per category: which column it owns and which way it travels. Healing has always asked;
@@ -231,7 +226,6 @@ namespace EQLogParser
       var layout = state.BuildLayout();
       SaveIsFountain(state.Fountain);
       SaveShape(state.Shape);
-      ConfigUtil.SetSetting(IncomingSideKey, layout.IncomingSide == FctRegionSide.Right ? "right" : "left");
       ConfigUtil.SetSetting(HealLaneKey, FctRailLanes.Token(state.HealLane));
       ConfigUtil.SetSetting(HealDirectionKey, state.HealUp ? "up" : "down");
       ConfigUtil.SetSetting(TakenDamageLaneKey, FctRailLanes.Token(state.TakenLane));
@@ -324,9 +318,9 @@ namespace EQLogParser
      * resetting a player to hold on the first launch after an upgrade. Writing always uses the new key, so the legacy
      * entry fades out on its own and nothing has to migrate a file.
      *
-     * Fountain and pulse have no control in the settings panel -- fountain is asked for by name through ModeKey, and pulse is a
-     * scheme the panel does not offer yet. Both stay readable here so an ini hand-edit or FctSimulationWindow can still reach
-     * them, which is what keeps those engine paths exercised while they wait for a UI.
+     * Fountain has no control of its own in the settings panel: the panel asks for it by NAME through ModeKey and that write
+     * picks the motion here. Anything else a hand-edit or FctSimulationWindow names still parses, which is what keeps an engine
+     * style reachable the day someone wants it on screen.
      */
     public static FctMotionStyle LoadMotion() =>
       ConfigUtil.GetSetting(MotionKey, null) is { Length: > 0 } name ? ParseMotion(name)

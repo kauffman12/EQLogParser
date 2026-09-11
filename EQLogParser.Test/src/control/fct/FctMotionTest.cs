@@ -346,10 +346,10 @@ namespace EQLogParser
     }
 
     /*
-     * A hit with no motion left to travel is *finished*, not undefined. This matters because MotionMs is a style's slide
-     * length in pulse mode (FctCellGrid.SlideMs), so "appear straight in place" — 0 — is the obvious thing for someone to
-     * want, and dividing by it produced NaN on the first frame. NaN then survived Math.Clamp and both band clamps, because
-     * NaN compares false against every limit, and the number simply failed to be drawn.
+     * A hit with no motion left to travel is *finished*, not undefined. MotionMs is allowed to be 0 — a style that arrives in
+     * place, a life shorter than its travel, a caller that wants the endpoint asked for directly — and dividing by it used to
+     * produce NaN on the first frame. NaN then survived Math.Clamp and both band clamps, because NaN compares false against
+     * every limit, and the number simply failed to be drawn.
      */
     [TestMethod]
     public void AHitWithNoMotionIsFinishedAndNotNaN()

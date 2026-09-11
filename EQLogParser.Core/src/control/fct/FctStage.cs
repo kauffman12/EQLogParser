@@ -192,8 +192,8 @@ namespace EQLogParser
     internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true, bool healUp = false)
       => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h, healUp: healUp);
 
-    /* Lanes are the same ownership question one level finer; callers that pass only sides get each side's outer lane,
-     * which is centred where that half always has been. */
+    /* Lanes are the ownership question asked one level finer; callers that pass only sides get that side's OUTER lane,
+     * which is the quarter whose centre sits where a side's numbers have always been centred. */
     internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
       bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
       FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)

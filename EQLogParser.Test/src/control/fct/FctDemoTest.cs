@@ -181,7 +181,7 @@ namespace EQLogParser
     /*
      * Why the style is an argument of Advance instead of something set on the demo once. The loop runs its own ingest - that is what keeps it out of
      * the counters - which also means it holds its own copy of the motion style, and a copy set from outside can be forgotten. It was: selecting
-     * pulse played hold, and the dropdown looked dead. Everything the caller passes in beside the canvas size arrives every frame, so it cannot go
+     * a style played hold, and the dropdown looked dead. Everything the caller passes in beside the canvas size arrives every frame, so it cannot go
      * stale between a control changing and a number spawning.
      */
     [TestMethod]
@@ -231,9 +231,8 @@ namespace EQLogParser
       Assert.IsTrue(FctDemo.Script.Select(c => c.OffsetMs).SequenceEqual(FctDemo.Script.Select(c => c.OffsetMs).OrderBy(x => x)),
         "Advance walks the script once per cycle, so the offsets have to be in order");
 
-      /* Measured off the overlay rather than remembered: hold and pulse live 1.4 motion windows, which is the longest anything gets. Comparing
-         the last cue against that number is what notices when the loop gets crowded or the lifetimes get longer. */
-      /* Hold lives 1.4 motion windows, the longest anything gets. */
+      /* Measured off the overlay rather than remembered: hold lives 1.4 motion windows, which is the longest anything gets.
+         Comparing the last cue against that number is what notices when the loop gets crowded or the lifetimes get longer. */
       var longest = FctMotion.MotionWindowMs * 1.4;
 
       Assert.IsTrue(longest < FctDemo.TailMs, $"a number can live {longest:F0} ms but the loop leaves only {FctDemo.TailMs:F0} ms of tail");

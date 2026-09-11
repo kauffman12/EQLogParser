@@ -6,14 +6,14 @@ using System.Linq;
 namespace EQLogParser
 {
   /*
-   * by type — halves' two columns with the ownership question swapped: healing owns a column of its own, each damage stream owns a
-   * column, and every category's direction dial still steers inside it. This is the view a player asks for ("heals left, damage right,
-   * mine up, theirs down") and the one MSBT cannot serve from a single area — his areas scroll one way — so his users assemble it out
-   * of Add Scroll Area plus re-mapping the heal events. Here it is one mode.
+   * by type — split: columns across the overlay whose side carries WHAT a number is. Healing owns a column, each damage stream owns
+   * a column, and every category's direction dial still steers inside it. This is the view a player asks for ("heals left, damage
+   * right, mine up, theirs down") and the one MSBT cannot serve from a single area — his areas scroll one way — so his users assemble
+   * it out of Add Scroll Area plus re-mapping the heal events. Here it is one mode, four lanes (FctRailLane), and nothing else.
    *
    * Since the rails became queues (FctConveyor) this mode is where the ordering law lives, because owning a column is what makes one
    * train per lane provable: which column owns what; that categories sharing a lane share its queue and its direction; that opposing
-   * trains in their own lanes drop nothing and never leave home; and that the plumbing left halves' and bands' answers alone. The
+   * trains in their own lanes drop nothing and never leave home; and that bands still answers for itself. The
    * ordering itself — one rate, spacing kept, no row ever drawn through another — is pinned by FctConveyorTest.
    */
   [TestClass]
@@ -142,14 +142,14 @@ namespace EQLogParser
     }
 
     /*
-     * Split does not stream, it queues (FctConveyor). Twelve rows at a beat enter at one mouth of one column, share one flight and
-     * one rate, and none of them is nudged sideways to find room — so the discipline halves' stream test pins ("one region, one
+     * Split does not scatter, it queues (FctConveyor). Twelve rows at a beat enter at one mouth of one column, share one flight and
+     * one rate, and none of them is nudged sideways to find room — so the discipline the conveyor tests ("one region, one
      * beat") is asserted here with the placement search taken out of the loop, which makes it stricter rather than looser: not "no
      * more than a handful of columns" but exactly one rail for the whole run, and one flight length per lane because that number is
      * what the lane's capacity is made of.
      */
     [TestMethod]
-    public void SplitQueuesItsRailInsteadOfStreamingIt()
+    public void SplitQueuesItsRailInsteadOfScatteringIt()
     {
       var ingest = Streaming(Choice(FctRegionSide.Right));
       var hits = new List<FctHitState>();

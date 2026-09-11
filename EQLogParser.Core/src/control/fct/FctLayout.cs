@@ -38,8 +38,7 @@ namespace EQLogParser
      * accompany, so a proc starts further *out* from the protected strip: my procs higher up, procs landing on me lower
      * down. The two streams then sit in different rows of the same band and the eye can ignore one while reading the other.
      * Clamped by the band ends, which already carry the text reserve on the gap-facing side and the edge pad on the other,
-     * so a cramped overlay loses separation before it loses text. Pulse mode does not need this at all — FctCellGrid gives
-     * procs their own block of cells outright.
+     * so a cramped overlay loses separation before it loses text.
      */
     public const double ProcInsetFrac = 0.15;
 
@@ -370,11 +369,12 @@ namespace EQLogParser
        * do it here too is candour: two candidates that both end up pinned against a window edge are one position, scored as two
        * they read as empty space — the damage column sits left of centre, so its wide draws went off the left edge first, and
        * numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
-       * there" comes from. In halves the walls are the half's own edges, which is what keeps a stream inside its territory.
+       * there" comes from. In split the walls are the lane's own edges, which is what keeps a column's numbers inside the
+       * territory that was set aside for them.
        */
       /* X0 is the right-align RAIL (FctMotion.ArcedX), so on a travelling row the reserved margin sits entirely on the
          left: the whole drawn box — at its widest, a crit's peak — hangs left of the rail, and the rail itself only has
-         to stay inside the territory. Pulse centres in its cell, so it keeps half on each side. */
+         to stay inside the territory. */
       /* The whole drawn block and not just the number: with the words inline they are the widest part of the row, and charging only the amount
          is how a source name came to be drawn across the seam into the neighbouring column. FitSource has already refused the names this column
          cannot carry; this keeps the ones it accepted inside their territory at every scale they will ever draw at. */
@@ -429,7 +429,7 @@ namespace EQLogParser
 
       /* The spawn edge is whichever end the side starts from: down-travelling numbers start at the top of their band and
        * rising ones at the bottom. Bands arrives here with out-up/in-down, so this is the old rule expressed through the sign;
-       * halves reads the same two lines for whatever direction each side was given. */
+       * split reads the same two lines for whatever direction each category was given. */
       hit.Y0 = up > 0
         ? hit.BandMaxY - (BandSpan(hit) * OriginJitterFrac * rand.NextDouble())
         : hit.BandMinY + (BandSpan(hit) * OriginJitterFrac * rand.NextDouble());
@@ -523,8 +523,9 @@ namespace EQLogParser
     /*
      * Travel per motion style, always measured from the origin *away* from the protected strip: `up` is +1 when the hit
      * rises and -1 when it sinks (bands mode's incoming band), and `usable` is how far it may go from where it spawned.
-     * Pulse spends none of it, Hold and Fountain all of it in a straight line, Spray trades height for lateral distance
-     * inside a cone. Adding a style means adding a branch here and, if it needs gravity, one in AssignLifetime; nothing
+     * Hold spends all of it once and then stands still, Fountain runs all of it in a straight line, Spray trades height for
+     * lateral distance inside a cone, and the rails take the whole distance at one rate (FctConveyor prices the spacing).
+     * Adding a style means adding a branch here and, if it needs gravity, one in AssignLifetime; nothing
      * in a backend changes, which is the point of keeping geometry in one table.
      */
     /*
@@ -587,7 +588,7 @@ namespace EQLogParser
     /*
      * The gravity tail of the choreographed styles, and note the sign runs opposite to Rise because it is screen-relative:
      * positive falls toward the bottom of the screen, negative back up toward the protected strip, which is how the incoming
-     * band mirrors an outgoing fountain instead of parking it against its own bottom edge. Hold and pulse have no fall and
+     * band mirrors an outgoing fountain instead of parking it against its own bottom edge. Hold has no fall and
      * are left at zero.
      *
      * Depth itself is deliberately not one number. Spray measures against the height this particular number reached —
@@ -602,8 +603,8 @@ namespace EQLogParser
      * The sign follows the travel, which is how both schemes get the same shape: a number that rose gets its fall back down
      * (screen-positive), one that sank gets it back up. In bands the outgoing rise falls a canvas-relative h*0.28 — the strip
      * is behind it and the bottom edge is clamped — while every sink, in both schemes, bounces a fixed share of the distance
-     * it already spent: in halves there is no strip on either side, so a literal screen-down fall at the bottom of a down-
-     * travelling half would park against its own edge exactly as badly as it did in the old incoming band. Fountain and spray
+     * it already spent: in split there is no strip on either side, so a literal screen-down fall at the bottom of a down-
+     * travelling lane would park against its own edge exactly as badly as it did in the old incoming band. Fountain and spray
      * always carry a nonzero Rise (spawn and far end are distinct), which is what the sign is read from.
      */
     public static void ApplyFall(FctHitState hit, FctStage stage)

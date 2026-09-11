@@ -35,10 +35,10 @@ namespace EQLogParser
    * Settings are staged while configuring and written only by the Save button; Cancel ends configuring with the previous ones back.
    * Placement is the exception, saved as soon as a drag or resize is released — where you left it is never ambiguous.
    *
-   * There are two region schemes (FctStage): halves — one stream per side, the genre standard — and bands — top and bottom
-   * around a clear middle strip. In bands, direction of travel is the "who" carrier (mine rise, hits on me sink), so it is not a
-   * setting there; in halves, position carries who and each side's up/down is free to choose. Configure mode states whichever is on
-   * screen with a four-character legend and nothing else — a sentence about it gets read once and then sits there being clutter.
+   * There are two region schemes (FctStage): bands, top and bottom around a clear middle strip, where direction of travel is
+   * the "who" carrier (mine rise, hits on me sink); and split, columns across the overlay, where each category books a lane and
+   * every category's direction is its own dial. Configure mode states whichever is on screen with a four-character legend and
+   * nothing else — a sentence about it gets read once and then sits there being clutter.
    */
   public partial class FctOverlayWindow : Window
   {

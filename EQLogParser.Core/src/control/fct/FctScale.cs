@@ -75,7 +75,7 @@ namespace EQLogParser
 
     /*
      * A multiplier on every type size, applied once in FctStyle.ApplyTo so the hit carries its real drawn size and everything downstream - line
-     * height, vertical reserve, clamp bands, the pulse grid, glyph measurement - follows without a second place that has to remember to scale.
+     * height, vertical reserve, clamp bands, glyph measurement - follows without a second place that has to remember to scale.
      */
     public static double Text = SizeDefault;
 

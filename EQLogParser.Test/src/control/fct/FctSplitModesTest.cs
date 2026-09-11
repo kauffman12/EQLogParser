@@ -162,7 +162,7 @@ namespace EQLogParser
     }
 
     /* Three categories, three sides, both damage streams joining the heals on one side — the columns follow the
-     * assignment whatever it is, and the untouched schemes (halves, bands) never consult these bits. */
+     * assignment whatever it is, and bands — which has no columns to consult — never reads these bits. */
     [TestMethod]
     public void AllThreeCategoriesMayShareOneColumnByRequest()
     {

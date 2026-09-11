@@ -91,7 +91,7 @@ namespace EQLogParser
          the one promise a two-dial UI can keep, and neither number hides a multiplication of the other. What separates a 0 % crit from an
          ordinary number then is everything that is not size: the swell-in, the halo, the orange, the top draw pass. Sizes are applied
          here and nowhere else, at birth rather than at draw: hit.ValueFontSize is the real drawn size from this point on — line height,
-         vertical reserve, clamp bands, the pulse grid and glyph measurement all follow without a second place that has to remember to
+         vertical reserve, clamp bands and glyph measurement all follow without a second place that has to remember to
          scale, and a number never resizes mid-flight. */
       /* An event word — "DODGE", "PARRY", "Resist" — shares its column with the numbers it happened to now, because a word IS
          an attack that failed and the queue is per column (FctConveyor). So a plain word is set a point under its lane's tier:

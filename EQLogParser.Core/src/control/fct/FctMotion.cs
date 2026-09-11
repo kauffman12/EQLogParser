@@ -48,25 +48,13 @@ namespace EQLogParser
      * The envelope never exceeds 1.0, and that is the whole point. Size belongs to FctStyle.ApplyTo and to nothing else: the big class is
      * written at its own font, so a pop that also scaled the number above 1 would be a second multiplication stacked on the player's dial -
      * which is exactly how this used to work, and how "crit size at its minimum" still produced numbers far bigger than ordinary hits.
-     * Emphasis without arithmetic: growth from below reads as ARRIVAL (the pulse swell makes the same move), while the halo, the hue and the
+     * Emphasis without arithmetic: growth from below reads as ARRIVAL, while the halo, the hue and the
      * top draw pass were never size in the first place.
      */
     public const double CritScaleInStart = 0.72;
     public const double CritScaleInMs = 90;
     public const double CritScaleOutMs = 700;
     public const double CritScaleEnd = 0.06;
-
-    /*
-     * Pulse style: appear a little small, swell just past full size, settle onto it. Its only movement is the short slide
-     * into an assigned cell (FctCellGrid), so the swell carries the announcement — and its overshoot is deliberately modest (12%) because a lane full of pulses
-     * shimmering in and out at 30% would be worse than the motion it replaces.
-     */
-
-    /*
-     * How long a celled (pulse) number takes to slide from its band's single spawn point into the cell it was assigned.
-     * Short enough that it is readable in place almost at once, long enough that a burst still reads as one event spreading
-     * out. Zero drops numbers straight into their cells, which is what anyone who finds the slide busy should run.
-     */
 
     public const double FadeInMs = 160;
 
@@ -78,10 +66,11 @@ namespace EQLogParser
     public const double ProcTimeFrac = 0.7;
 
     /*
-     * Where a hit is along its travel, 0..1. The zero guard is not decoration: pulse mode's MotionMs comes from
-     * FctCellGrid.SlideMs, so setting that to 0 — "appear straight in place", a plausible knob to expose — divides 0 by 0
-     * on the hit's very first frame, and NaN survives both Math.Clamp and the band clamps (NaN compares false against
-     * every limit), so ArcedX and RaisedY hand back NaN and the number simply fails to be drawn for that frame.
+     * Where a hit is along its travel, 0..1. The zero guard is not decoration: MotionMs is allowed to be 0 — a style that
+     * arrives in place, a life shorter than its travel, a test asking for the endpoint directly — and dividing by it makes
+     * t NaN on the hit's very first frame. NaN survives both Math.Clamp and the band clamps (NaN compares false against every
+     * limit), so ArcedX and RaisedY would hand back NaN and the number would simply fail to be drawn. A finished motion is a
+     * real answer; NaN is not. FctMotionTest pins it.
      */
     /* A conveyor row is somewhere along its column, not somewhere along its life (FctConveyor): the lane's clock is the
        only thing that moves it, which is exactly how a convoy keeps its spacing. Everywhere else age is still the law. */
@@ -140,9 +129,9 @@ namespace EQLogParser
       hit.BandMaxY > hit.BandMinY ? Math.Clamp(y, hit.BandMinY, hit.BandMaxY) : y;
 
     /*
-     * Where the value's CENTRE is at time t. Two rules, one shared spine:
+     * Where the value's CENTRE is at time t, for every style, from one rule:
      *
-     * Right-aligned (everything but pulse): values are an odometer. The spine X0+lateral carries the value's RIGHT
+     * Values are an odometer. The spine X0+lateral carries the value's RIGHT
      * edge, so a 950 and a 12,040 in the same column line their ones digit up under each other instead of their
      * middles — Mik's "right-justify" text alignment, the one every parse-heavy player turns on. It ships as the
      * hidden default with no knob: centre-aligning a number column is never what anyone wants. The clamp keeps the
@@ -151,10 +140,7 @@ namespace EQLogParser
      * blowout so the returned centre tracks the box that is actually being drawn; placement scoring passes the same
      * value it scores with, so the odometer the renderer draws and the one the collision cost sees are one number.
      *
-     * Centre-aligned (pulse only): a cell is a box the value sits IN; hanging it off the cell's left edge would put
-     * neighbours' values inside each other. The pulse grid keeps the old half-width clamp at the cell centre.
-     *
-     * Degenerate either way — a label wider than its territory degrades to the territory's middle instead of throwing.
+     * Degenerate case — a label wider than its territory degrades to the territory's middle instead of throwing.
      */
     public static double ArcedX(FctHitState hit, double t)
     {
@@ -166,7 +152,7 @@ namespace EQLogParser
       /* The parabola is MSBT's geometry as written — x = y²/4a measured from the rail's mid-point, which with y linear
          in t comes out as 4·t(1−t) off the column: a number leaves its column straight up or down, bows out to the
          vertex at half height, and comes BACK to the column by the time it fades. Ends on the column, arc between them:
-         that is the semicircle chain in Mik's demos, and it is also why stream columns keep their spacing for the whole
+         that is the semicircle chain in Mik's demos, and it is also why a lane keeps its spacing for the whole
          flight — a shared bow cancels in every difference. (The old t² drift here was a curve with its vertex at the
          spawn: outward forever, never back, and it read as nothing in the genre.) */
       var lateral = FctMotionStyles.IsRail(hit.Style) ? hit.Bow * 4 * t * (1 - t) : hit.Arc * LateralProgress(hit, t);
@@ -208,7 +194,7 @@ namespace EQLogParser
     /* Quadratic ease-out: fastest at the start, arriving at rest. */
     private static double EaseOutQuad(double p) => p * (2 - p);
 
-    /* Crit pop, the pulse swell, or the fall-phase shrink. 1 when none applies. */
+    /* Crit pop or the fall-phase shrink. 1 when neither applies. */
     public static double ScaleOf(FctHitState hit, double ageMs)
     {
       if (hit.Blowout)
@@ -279,12 +265,8 @@ namespace EQLogParser
      * agrees with FctLayout.TextReserve about the peak, because x and y must not disagree about how big this hit becomes. Blowout is not
      * in here any more: the big class swells in from BELOW full size, so it never draws wider than the font that was already measured. */
     private static double ScaleAllowance(FctHitState hit) =>
-      1.0; // the pulse pop was the only style that drew wider than its font
+      1.0; // nothing on screen draws wider than the font it was measured at any more
 
-    /*
-     * The pulse swell: in over PulseInMs, back down to full size by PulseSettleMs, then nothing — the eased ends keep it
-     * from looking like a screen glitch, and it never returns below 1.0 because a number shrinking away reads as
-     * leaving, which is the fade's job.
     /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out. The rest is 1.0 rather than a hold
        above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. */
     private static double BlowoutScale(double ageMs, double lifetimeMs)

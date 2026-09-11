@@ -271,7 +271,7 @@ namespace EQLogParser
      * The single entry point both backends call. Returns the newly spawned hit — the caller still has to
      * build its glyphs — or null when the hit was folded into an existing one or dropped at the cap.
      *
-     * `evicting` is called for any hit whose screen space this one took over, which today means pulse mode stealing a full
+     * `evicting` is called for any hit whose screen space this one took over, which today means the conveyor pushing a
      * cell. The caller owns releasing what it kept for that hit (glyph runs, halo references), and the hit is already gone
      * from the list by then.
      */
@@ -384,7 +384,7 @@ namespace EQLogParser
         }
 
         hits.Remove(taken);
-        evicting?.Invoke(taken);   // same contract as pulse cell-stealing: the backend releases what it kept for it
+        evicting?.Invoke(taken);   // same contract as any other eviction: the backend releases what it kept for it
       }
 
       var hit = new FctHitState
@@ -421,10 +421,6 @@ namespace EQLogParser
          so the numbers can be cut with the same geometry that will draw them. */
       FctLayout.FitSource(hit, FctLayout.EstimateTextWidth);
 
-      /*
-       * Seed the width estimate now: the clamp band that keeps text out of the protected center is derived
-       * from the drawn width, and the backend does not measure real glyphs until its first draw.
-       */
       if (conveyor)
       {
         /*
@@ -640,8 +636,8 @@ namespace EQLogParser
        * shape on both sides, keeps the two directions reading as one animation in opposite signs, and cannot reach the
        * protected strip because the return is a fraction of travel already spent below it.
        *
-       * Pulse and Hold fall through to the adaptive lifetime: neither has a fall, so neither needs its life dictated
-       * by a choreography. The fall itself is FctLayout.ApplyFall's, because placement may re-roll the origin afterwards
+       * Hold falls through to the adaptive lifetime: it has no fall, so it needs no life dictated by a choreography.
+       * The fall itself is FctLayout.ApplyFall's, because placement may re-roll the origin afterwards
        * and has to be able to ask for it again.
        */
       if (hit.Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)

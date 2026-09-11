@@ -100,7 +100,6 @@ namespace EQLogParser
       }
     }
 
-    /* A number sitting in a pulse cell keeps its index and is re-seated where that cell now is, so the grid survives the resize
     /* Free text scales by ratio and bands are re-derived from the size, so going back should come home. Tolerances are generous
      * because the clamps are allowed to have had an opinion in the middle — this pins that nothing is lost, not that pixels match. */
     [TestMethod]

@@ -584,7 +584,7 @@ namespace EQLogParser
         Assert.IsTrue(hit.LifetimeMs > FctMotion.MotionWindowMs, $"{style} keeps the adaptive life (was {hit.LifetimeMs:0})");
       }
 
-      // hold spends the window travelling and then holds; pulse spends a fraction of it sliding into its cell
+      // hold spends the window travelling and then holds, inside the motion window and not past it
       var hold = NewIngest();
       hold.Style = FctMotionStyle.Hold;
       var heldHit = hold.Accept(new List<FctHitState>(), FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 0);

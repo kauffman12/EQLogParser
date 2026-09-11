@@ -12,7 +12,7 @@ namespace EQLogParser
    * runs are comparable and a change can be measured rather than felt; click or Esc stops early. It was built to A/B two render backends and
    * outlived the loser: what it is good for now is reproducing raid-pull load on a machine that misbehaves. Folding/count-up is no longer simulated here: the
    * canvas does it for real through FctIngest, which is the point of the comparison. The region scheme comes from
-   * the same setting the live overlay uses, so a bands run and a halves run differ in nothing but layout.
+   * the same setting the live overlay uses, so a fountain run and a split run differ in nothing but layout.
    */
   public partial class FctSimulationWindow : Window
   {
@@ -146,7 +146,7 @@ namespace EQLogParser
     {
       var rand = new Random(RandomSeed);
 
-      // outgoing (top band, or the right half in halves mode): yellow damage, orange crits, green heals I cast
+      // outgoing (top band in fountain, my damage's column in split): yellow damage, orange crits, green heals I cast
       AddStream(rand, 2.0, 0.18, FctLane.DamageDealt, MeleeActions, () => 600 * Math.Exp(NextGaussian(rand) * 0.55), 250, 2600);
       AddStream(rand, 0.85, 0.15, FctLane.DamageDealt, SpellActions, () => 1400 * Math.Exp(NextGaussian(rand) * 0.6), 700, 5600);
       AddStream(rand, 1.5, 0.05, FctLane.DamageDealt, DotActions, () => 180 * Math.Exp(NextGaussian(rand) * 0.5), 90, 750, minor: true, periodic: true);

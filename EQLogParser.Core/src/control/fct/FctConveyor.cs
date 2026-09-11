@@ -43,9 +43,8 @@ namespace EQLogParser
    */
   internal sealed class FctConveyor
   {
-    /* Clear air between two rows on one rail. MSBT's line gap is 8 px; this is a hair wider because it is the mode people
-       choose in order to read, and because a row carrying a source line hangs that line into the air below it. */
-    /*
+    /* Clear air between two rows on one lane.
+     *
      * Zero, on purpose, and it was not always. The gap between two rows on a lane used to be this many pixels ON TOP of the row's own
      * vertical reserve — and that reserve (FctLayout.TextHeight) is already about a third taller than the glyphs it protects, because it
      * has to hold an ascent, a descent, and the halo that blooms out past both. Ten pixels of air above that read as four columns of a
@@ -203,7 +202,9 @@ namespace EQLogParser
          FctConfigState refuses the combination instead of letting two trains meet head-on. */
       var column = stage.LaneIndexOf(hit);
 
-      // no columns (a scheme the conveyor does not run in): fall back to the region's own half so the answer is still stable
+      /* Bands has no columns to name a lane by — and never reaches this conveyor at all, since rails are degraded to hold
+         there — but a lane key still has to be stable if something hands it a stage without columns, so fall back to the
+         region's own index rather than to every row sharing bucket 0. */
       var bucket = column >= 0 ? column : (int)(stage.RegionFor(hit).X / Math.Max(1.0, stage.W));
 
       return (bucket * 2) + (stage.UpFor(hit) > 0 ? 1 : 0);
