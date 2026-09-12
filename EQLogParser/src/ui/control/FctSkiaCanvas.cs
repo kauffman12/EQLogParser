@@ -113,6 +113,9 @@ namespace EQLogParser
     // set when GuideDiag stamps its arithmetic; consumed by the pixel twin (DiagSurface) once the frame is fully drawn
     private bool _diagPending;
 
+    // columns already lit when only the guide had drawn — anything lit later was painted by hit drawing, and the frame line says so
+    private List<int>? _phaseGuideCols;
+
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
     private Func<string, double, double> _labelWidth;
@@ -424,6 +427,11 @@ namespace EQLogParser
       if (_demoWanted || _demo.Active)
       {
         DrawLaneGuide(canvas);
+        if (_diagPending)
+        {
+          using var afterGuide = SKBitmap.FromImage(_surface.Snapshot());
+          _phaseGuideCols = LitColumns(afterGuide);
+        }
       }
 
       // two passes: regular hits first, crits last — crits draw on top of everything
@@ -462,6 +470,7 @@ namespace EQLogParser
       }
 
       Blit(dc, scale);
+      _phaseGuideCols = null;
       _dirty = false;
     }
 
@@ -623,11 +632,55 @@ namespace EQLogParser
       using var snap = SKBitmap.FromImage(_surface.Snapshot());
       var wPix = snap.Width;
       var hPix = snap.Height;
-      int[] ys = [(int)(hPix * 0.25), (int)(hPix * 0.5), (int)(hPix * 0.75)];
+      var yMid = hPix / 2;
 
       var lit = string.Empty;
       var profiles = string.Empty;
-      for (var x = 4; x < wPix - 4; x++)
+      foreach (var x in LitColumns(snap))
+      {
+        // '>' marks a column the guide did not draw: it arrived with the hit passes
+        lit += (lit.Length > 0 ? "," : "") + (_phaseGuideCols is not null && !_phaseGuideCols.Contains(x) ? ">" : "") + x;
+
+        /* The column's alpha profile, eleven depths: a guide stroke reads flat (same alpha top to bottom), a halo or glow fades,
+           text flickers — the shape names the drawer. The slice (<...>) crosses the column at mid-height and settles its exact
+           thickness and sub-pixel seat, which distinguishes a 1.5px AA stroke from a 1px line or a fill edge. */
+        if (profiles.Length < 400)
+        {
+          var prof = string.Empty;
+          for (var k = 0; k <= 10; k++)
+          {
+            // GetPixel does not bounds-check, and k == 10 walks the row hPix — one past the bottom — straight into an AccessViolation
+            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, Math.Min(hPix - 1, hPix * k / 10)).Alpha;
+          }
+
+          var slice = string.Empty;
+          for (var dx = -4; dx <= 4; dx++)
+          {
+            slice += (slice.Length > 0 ? " " : "") + snap.GetPixel(x + dx, yMid).Alpha;
+          }
+
+          profiles += $" {x}:[{prof}]<{slice}>";
+        }
+      }
+
+      var live = string.Empty;
+      foreach (var hit in _demo.Hits)
+      {
+        live += (live.Length > 0 ? "," : "") + $"{hit.Lane}@{hit.X0:F0},{hit.Y0:F0}({hit.FormattedValue})";
+      }
+
+      var win = Window.GetWindow(this);
+      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} afterGuide=[{_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols)}] hits=[{live}] lit=[{lit}]{profiles}");
+    }
+
+    /* Full-height stroke scan: columns carrying an alpha spike at three heights a quarter-window apart — number glyphs
+       (~40 px) are far shorter than that gap, so only something spanning the frame can light all three. */
+    private static List<int> LitColumns(SKBitmap snap)
+    {
+      int[] ys = [(int)(snap.Height * 0.25), (int)(snap.Height * 0.5), (int)(snap.Height * 0.75)];
+      var cols = new List<int>();
+
+      for (var x = 4; x < snap.Width - 4; x++)
       {
         var stroke = true;
         foreach (var y in ys)
@@ -640,36 +693,13 @@ namespace EQLogParser
           }
         }
 
-        if (!stroke)
+        if (stroke)
         {
-          continue;
-        }
-
-        lit += (lit.Length > 0 ? "," : "") + x;
-
-        /* The column's alpha profile, eleven depths: a guide stroke reads flat (same alpha top to bottom), a halo or glow fades,
-           text flickers. This is what tells us WHICH draw made the column, not merely that one did. */
-        if (profiles.Length < 400)
-        {
-          var prof = string.Empty;
-          for (var k = 0; k <= 10; k++)
-          {
-            // GetPixel does not bounds-check, and k == 10 walks the row hPix — one past the bottom — straight into an AccessViolation
-            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, Math.Min(hPix - 1, hPix * k / 10)).Alpha;
-          }
-
-          profiles += $" {x}:[{prof}]";
+          cols.Add(x);
         }
       }
 
-      var live = string.Empty;
-      foreach (var hit in _demo.Hits)
-      {
-        live += (live.Length > 0 ? "," : "") + $"{hit.Lane}@{hit.X0:F0},{hit.Y0:F0}({hit.FormattedValue})";
-      }
-
-      var win = Window.GetWindow(this);
-      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} hits=[{live}] lit=[{lit}]{profiles}");
+      return cols;
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
