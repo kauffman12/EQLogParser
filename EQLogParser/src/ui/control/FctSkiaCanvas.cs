@@ -570,9 +570,15 @@ namespace EQLogParser
 
         /* The settings' own spelling of the lane (FctRailLanes.Token) - what the dropdown says is what the outline says. */
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(178), SKPaintStyle.Fill, 0);
-        canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), 20f, SKTextAlign.Left, GetFont(false, 13), _laneGuidePaint);
+        var tokenSize = TitleFontSize;
+        canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(false, tokenSize), _laneGuidePaint);
       }
     }
+
+    /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
+       the rest of the UI. 13 is the size the guide used before it joined the theme; it remains the fallback for a canvas that
+       runs before ThemeConfig has populated the resource. */
+    private static double TitleFontSize => Application.Current is { } app && app.TryFindResource("EQTitleSize") is double size ? size : 13;
 
     /* One hit = halo blit (crits) + value outline/fill + source outline/fill: ~5-6 Skia draw ops. */
     private void DrawHit(SKCanvas canvas, FctHitState hit, double ageMs)
