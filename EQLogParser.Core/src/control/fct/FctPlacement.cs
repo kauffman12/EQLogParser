@@ -113,10 +113,10 @@ namespace EQLogParser
       var region = stage.RegionFor(hit);
 
       /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
-       * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the half's own
-       * centre in split — the spine is where it is — and the canonical-x preference below does the
-       * job of keeping a stream centred on its side instead. */
-      var slot = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : FctLayout.LaneSlot(hit.Lane, stage.W);
+       * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the lane's own
+       * spine in split — welded to its slot, not to wherever a vacated neighbour pushed the region centre — and the
+       * canonical-x preference below does the job of keeping a stream centred on its side instead. */
+      var slot = stage.Mode is not FctLayoutMode.Bands ? stage.SpineFor(hit) : FctLayout.LaneSlot(hit.Lane, stage.W);
       var reach = Math.Min(stage.TerritoryFor(hit) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
       var canonicalX = hit.X0;
       var canonicalY = hit.Y0;

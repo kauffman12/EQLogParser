@@ -300,8 +300,9 @@ namespace EQLogParser
       var region = stage.RegionFor(hit);
       var territory = stage.TerritoryFor(hit);
 
-      /* Split has no lane columns — a category owns its whole lane, so every lane spawns on that lane's spine. Bands keeps them. */
-      var cx = stage.Mode is not FctLayoutMode.Bands ? region.X + (region.Width / 2) : LaneSlot(hit.Lane, stage.W);
+      /* Split has no lane columns — a category owns its whole lane, and the lane's spine is its slot centre whether the
+         neighbour is booked or has just freed the half for wider labels: spawn on the spine (bands keeps its lane slots). */
+      var cx = stage.Mode is not FctLayoutMode.Bands ? stage.SpineFor(hit) : LaneSlot(hit.Lane, stage.W);
 
       hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
 

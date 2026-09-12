@@ -268,6 +268,40 @@ namespace EQLogParser
       Assert.AreEqual((Width / 2, Width / 2), (shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).X, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width), "a lone right 1 owns the whole right half");
     }
 
+    /* What tiling frees is space, not position. A lane whose neighbour went none takes the half as REGION - labels, sway and walls
+       all measure it, asserted above - but its SPINE keeps the centre of the slot it would hold in a full house. Players centre the
+       overlay on their crosshair, so right 1 books next to the centre line to sit near the fight: freeing right 2 must widen its
+       labels, never slide its numbers from 1000 out to 1200 at this width. Reported from the shipped spread, where exactly that
+       slide made the damage column leave the NPC behind. */
+    [TestMethod]
+    public void ASpineHoldsItsSlotWhenItsNeighbourFreesTheHalf()
+    {
+      var hit = (FctLane lane, bool incoming, bool heal) => new FctHitState { Lane = lane, Incoming = incoming, Heal = heal };
+
+      // the shipped spread: right 1 alone with right 2 free — region is the whole half, spine stays at the inner slot's middle
+      var shipped = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1).Stage(Width, Height);
+      Assert.AreEqual(Width * 5 / 8, shipped.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 1 parks beside the seam it was booked next to");
+
+      // book the neighbour back and nothing about either spine moves - only the region shrinks back to quarters
+      var pair = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Right1, outgoingDamageLane: FctRailLane.Right2).Stage(Width, Height);
+      Assert.AreEqual(Width * 5 / 8, pair.SpineFor(hit(FctLane.DamageTaken, true, false)), "booking the neighbour changes no spine");
+      Assert.AreEqual(Width * 7 / 8, pair.SpineFor(hit(FctLane.DamageDealt, false, false)), "right 2's slot is the outer quarter's middle");
+
+      // the rule is uniform: a lone right 2 holds that same 7/8 mark it held in the full house
+      var loneOuter = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right2).Stage(Width, Height);
+      Assert.AreEqual(Width * 7 / 8, loneOuter.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 2 holds its outer slot too");
+
+      // and mirrored inside: healing booked alone on the INNER-left column parks at 3/16, not at the half's centre
+      var inner = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, healLane: FctRailLane.Left2).Stage(Width, Height);
+      Assert.AreEqual(Width * 3 / 8, inner.SpineFor(hit(FctLane.HealingDealt, false, true)), "a lone left 2 parks at its slot's middle");
+
+      // the region still grew underneath all that standing still - spine fixed, budget doubled (asserted by AClaimOnAHalfIsNotAFixedQuarter)
+      Assert.AreEqual(Width / 2, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "the freed air is still handed to the region");
+    }
+
     /* The configure-mode guide's own call sequence (FctSkiaCanvas.DrawLaneGuide): a config state, BuildLayout, Stage,
        LaneRect - traced for the two arrangements whose outlines are disputed. The shipped spread books one category per
        lane and leaves right 2 free, so its solo right 1 outlines centre line to right edge while the left pair takes the

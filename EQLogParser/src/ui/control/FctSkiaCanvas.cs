@@ -576,7 +576,8 @@ namespace EQLogParser
         /* The settings' own spelling of the lane (FctRailLanes.Token) - what the dropdown says is what the outline says. */
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(178), SKPaintStyle.Fill, 0);
         var tokenSize = TitleFontSize;
-        canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(false, tokenSize), _laneGuidePaint);
+        /* Bold: the token sits over whatever the numbers do, and the hairline face vanished into them. */
+        canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(true, tokenSize), _laneGuidePaint);
       }
     }
 

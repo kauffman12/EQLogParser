@@ -12,8 +12,9 @@ using System;
  * claimant takes the whole half, because a lane nobody booked is air the number may use rather than a wall (FctStage
  *
  * Numbering runs left to right across the screen, as the names read: left1 is the far-left column, right2 the far
- * right. The old side spellings ("left", "right") parse to the OUTER lane of that side, and a lane that owns its half
- * alone — as in the shipped default — centres exactly where a side's numbers were always centred.
+ * right. The old side spellings ("left", "right") parse to the OUTER lane of that side. A lane that owns its half alone
+ * keeps it as REGION - labels, sway and clamps measure the whole half - but its numbers stay parked at the centre of the
+ * slot they would hold in a full house (FctStage.SpineFor): freeing a neighbour buys space, never a moved column.
  */
 namespace EQLogParser
 {

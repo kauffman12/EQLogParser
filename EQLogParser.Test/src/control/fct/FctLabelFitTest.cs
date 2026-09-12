@@ -87,8 +87,10 @@ namespace EQLogParser
 
     /* So: one spine per column, placed for the widest AMOUNT the lane can roll (FctLayout.RailReserve) and never for a row's words. This is the case that
        drew a user's overlay as three unrelated right edges — labels below, straight travel, and each row parking itself against its own wall. The label budget
-       itself moved with the lanes that stopped being quarters (FctStage tiles them): the screenshot's name now survives whole in the half its lane owns,
-       while a name past what even that leaves is still cut to it. */
+       itself moved with the lanes that stopped being quarters (FctStage tiles them), and then moved again when the spine stopped
+       following a lone lane's region centre: the name now survives whole in the half its lane owns AND on the wide hand of a lane
+       whose slot holds while its neighbour's air is freed (FctStage.SpineFor). Names past even FitSource's rooms are still cut —
+       that part lives on below, against stated rooms. */
     [TestMethod]
     public void WordsBelongToTheirRowAndNeverMoveTheSpine()
     {
@@ -119,8 +121,12 @@ namespace EQLogParser
 
         Assert.IsFalse(longLabel.SourceLabel!.Contains("…", StringComparison.Ordinal),
           $"a medium name survives whole once its lane owns the half: {longLabel.SourceLabel}");
-        Assert.IsTrue(wallLabel.SourceLabel.EndsWith("…)", StringComparison.Ordinal),
-          $"past what the spine leaves, the name is still cut to it, got {wallLabel.SourceLabel}");
+        /* The wall case moved with the spine. This row's lane (right 2 by side default) keeps its OUTER slot centre when it owns
+           the half alone — measured: X0 857.5, 359 px of room on its inner hand against 114 outside — so a ceiling-length name now
+           fits without crossing either wall and survives whole. That is the freed quarter paying exactly the rent it was freed for;
+           the cutting itself stays under test in the Hit(source, room) cases, where rooms are stated rather than grown. */
+        Assert.IsFalse(wallLabel.SourceLabel!.Contains("…", StringComparison.Ordinal),
+          $"the freed half buys the longest name a whole line: {wallLabel.SourceLabel}");
       }
       finally
       {

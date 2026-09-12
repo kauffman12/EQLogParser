@@ -15,7 +15,8 @@ namespace EQLogParser
    *
    * by type — "split": columns across the overlay whose side carries WHAT a number is rather than who it belongs to.
    * Four named lanes (FctRailLane); the ones a category actually books tile their half of the width - two claimants
-   * get a quarter apiece, one claimant gets the whole half, because a lane nobody booked is air, not a wall: healing in
+   * get a quarter apiece, one claimant gets the whole half, because a lane nobody booked is air, not a wall — though what
+   * the freed air buys is label room, never a shifted column: a lane's spine stays welded to its own slot (SpineFor). Healing in
    * one, either damage stream in another, and each category's travel dial still its own. That is the view a player asks for
    * ("heals left, damage right, mine up, theirs down") and the one MSBT cannot serve from a single area — his areas
    * scroll one way — so his users assemble it out of Add Scroll Area plus re-mapping the heal events
@@ -257,6 +258,28 @@ namespace EQLogParser
       hit.Heal ? _healLane : hit.Incoming ? _incomingDamageLane : _outgoingDamageLane;
 
     /*
+     * Where a row's column STANDS — the x its numbers park on and its labels measure outward from. It is the lane slot's
+     * centre whatever the tiling hands out: players centre the overlay on their crosshair, so the fight happens at W/2 and a
+     * lane booked next to it (right 1) was put there to stay near the fight. Setting the neighbour to none must therefore buy
+     * the wider read that was its whole point — the freed quarter becomes label room behind the spine (FitSource budgets
+     * from X0 to the region walls) — not a column that slides away toward the screen edge, which is what anchoring on the
+     * region's centre did. A row whose category just lost its lane keeps the centre of the walls it was born under, matching
+     * RegionFor's own fallback. Bands resolves to the old answers: its defaults put one lane per half, at each half's centre.
+     */
+    internal double SpineFor(FctHitState hit)
+    {
+      var lane = CategoryLane(hit);
+
+      if (lane is FctRailLane.None)
+      {
+        var region = RegionFor(hit);
+        return region.X + (region.Width / 2);
+      }
+
+      return LaneSpine(lane);
+    }
+
+    /*
      * Which of the four columns a number owns, as an index — what a conveyor names a lane by (FctConveyor). Bands has no
      * columns to point at, answers -1, and the caller falls back to geometry.
      */
@@ -270,6 +293,17 @@ namespace EQLogParser
      * live rows' categories always own the lane they are drawn in, and the one exception — a row outliving its column's
      * reclamation — is answered by RegionFor, not by this.
      */
+    /* Which slot the lane would hold even in a full house, as a centre: the inner quarter's middle for left 2 / right 1,
+       the outer one's for left 1 / right 2. The half's freed air goes to the region (labels, sway and clamps all measure the
+       region), while this stays put — see SpineFor. */
+    internal double LaneSpine(FctRailLane lane)
+    {
+      var i = FctRailLanes.Index(lane);
+      var halfW = W / 2.0;
+
+      return (i < 2 ? 0.0 : halfW) + ((i % 2) + 0.5) * (halfW / 2.0);
+    }
+
     internal (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
     {
       var i = FctRailLanes.Index(lane);

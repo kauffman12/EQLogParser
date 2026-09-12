@@ -435,9 +435,8 @@ namespace EQLogParser
          * arrivals already waiting, this one goes back — counted in DroppedCount, after folding already collapsed every
          * duplicate it could have been. Two numbers on top of each other is the one outcome this mode is not allowed.
          */
-        var region = stage.RegionFor(hit);
         hit = FctPlacement.Pin(hit, stage, _rand,
-          region.X + (region.Width / 2), stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY);
+          stage.SpineFor(hit), stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY);
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
