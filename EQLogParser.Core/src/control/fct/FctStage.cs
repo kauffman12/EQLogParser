@@ -85,9 +85,10 @@ namespace EQLogParser
     public readonly FctRailLane OutgoingDamageLane;
 
     /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
-     * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while
-     * the columns ship both-down. Tests that built a bands choice with bare positional bools keep the old
-     * answers explicitly; only omission changes meaning. */
+     * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while an
+     * omitted column direction is down - the player-facing shipped spread (FctConfigState) is what gives the columns
+     * their rising traffic. Tests that built a choice with bare positional bools keep the old answers explicitly; only
+     * omission changes meaning. */
     public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
       FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
       FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,

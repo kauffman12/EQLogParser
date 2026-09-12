@@ -22,9 +22,11 @@ namespace EQLogParser
        Two categories may share a column — that is what lanes are for — but only while they travel the same way, because a
        column is one queue (FctConveyor) and two trains driving into each other through one queue cannot be spaced by
        anything. ResolveLaneConflicts enforces it; the settings panel does not offer a choice that would need it. */
-    internal const FctRailLane HealLaneDefault = FctRailLane.Right1;
-    internal const FctRailLane TakenLaneDefault = FctRailLane.Right2;
-    internal const FctRailLane DealtLaneDefault = FctRailLane.Left1;
+    /* The shipped split spread: heals left 1 rising, damage in left 2 sinking, damage out right 1 rising - each category its
+       own column, and right 2 the free lane, so on first sight the outgoing-damage column owns its whole half (FctStage tiles). */
+    internal const FctRailLane HealLaneDefault = FctRailLane.Left1;
+    internal const FctRailLane TakenLaneDefault = FctRailLane.Left2;
+    internal const FctRailLane DealtLaneDefault = FctRailLane.Right1;
 
     public FctRailLane HealLane = HealLaneDefault;
     public bool HealUp;

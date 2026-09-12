@@ -973,9 +973,9 @@ shipped default, its spine sits exactly where the half used to be centred, so st
 panel's words finally match everyone's: **damage in** and **damage out**, not "damage to me" and "my damage", in the
 rows (before heals — the streams come first, the reacting category last), in the categories combo, everywhere a human
 reads them. The two-word versions won over "incoming damage"/"outgoing damage" for the same reason the rest of the row
-is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped spread puts damage out in left 1, damage in
-in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 free, so the two columns that exist on a first run
-each own a half of the screen. That is where split's label budget used to die (a name beside numbers had a quarter-lane minus the digits),
+is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped split spread puts healing in
+left 1 rising, damage in in left 2 sinking, damage out in right 1 rising — each category its own column on first sight — and leaves right 2 free, so the
+outgoing-damage column owns its whole half of the screen while the two left-hand categories share theirs in quarters. That is where split's label budget used to die (a name beside numbers had a quarter-lane minus the digits),
 and it shows in setup mode: while the configure loop runs, every booked lane is outlined with its own spelling — left 1, right 2 and the rest
 (`FctSkiaCanvas.DrawLaneGuide`) — under the demo numbers. An unbooked lane gets no outline because it has no rect left; that is the feature
 wearing a thin white line.

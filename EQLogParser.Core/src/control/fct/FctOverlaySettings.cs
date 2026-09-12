@@ -173,12 +173,15 @@ namespace EQLogParser
       {
         Fountain = fountain,
         /* Lanes are the question now; the old side keys parse through them too ("left" means that side's outer lane), so an
-         * older config lands where it looked. The shipped spread gives each category its own column - outgoing on the left,
-         * what happens to the player on the right, heals just inside that - and leaves left 2 as the first free lane for
-         * anyone who wants five streams. */
+         * older config lands where it looked. The shipped spread gives each category its own column - healing in left 1,
+         * what happens to the player in left 2, my damage out in right 1 - and leaves right 2 free for anyone who wants a
+         * fourth column (or hides a category). */
         HealLane = FctRailLanes.Parse(ConfigUtil.GetSetting(HealLaneKey, null) ?? ConfigUtil.GetSetting(HealSideKey, null),
           FctConfigState.HealLaneDefault),
-        HealUp = ParseUp(ConfigUtil.GetSetting(HealDirectionKey, null)),
+        /* Heals ship rising in the columns but still sink in a fresh fountain: the classic there is damage falling past healing,
+           and changing one mode's shipped look would be exactly the surprise this file exists to avoid. A saved value wins
+           either way, so this only ever answers for a file nobody has written yet. */
+        HealUp = ParseUpOrNull(ConfigUtil.GetSetting(HealDirectionKey, null)) ?? !fountain,
         TakenLane = FctRailLanes.Parse(
           ConfigUtil.GetSetting(TakenDamageLaneKey, null) ?? ConfigUtil.GetSetting(TakenDamageSideKey, null),
           FctConfigState.TakenLaneDefault),
@@ -186,10 +189,10 @@ namespace EQLogParser
         DealtLane = FctRailLanes.Parse(
           ConfigUtil.GetSetting(DealtDamageLaneKey, null) ?? ConfigUtil.GetSetting(DealtDamageSideKey, null),
           FctConfigState.DealtLaneDefault),
-        /* The one direction whose "never set" depends on the mode: bands ships the strip invariant (my numbers rise away
-           from the clear middle), the columns ship everything falling. Writing it out at Save makes the file explicit, so
-           this only ever answers for a file nobody has saved yet. */
-        DealtUp = ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)) ?? fountain,
+        /* My numbers ship rising in both modes now - the strip invariant in bands, the genre's classic read in the columns -
+           while what lands on the player stays down (ParseUp's own answer). Writing it out at Save makes the file explicit,
+           so this only ever answers for a file nobody has saved yet. */
+        DealtUp = ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)) ?? true,
         Threshold = LoadThreshold(),
         LabelSide = LoadLabelSide(),
         TextScale = LoadTextScale(),
