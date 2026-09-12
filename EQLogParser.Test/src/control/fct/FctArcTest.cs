@@ -94,11 +94,15 @@ namespace EQLogParser
         var hit = Spawn(stage, caseName is "heal" ? Heal(incoming: false) : Damage(incoming: true), new Random(21));
         var region = stage.RegionFor(hit);
 
-        // outward is away from the middle of the overlay, which for a lane is whichever wall it is nearer
-        var away = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
+        /* Which way a split lane bends is the open hand (FctLayout.Spawn): with the value box hanging left of the rail, whichever side
+           of the spine has more air is the side the curve spends — a promise made by the lane, identical for every row on it. This pins
+           that the sign points into the lane's own air (not at some global "away", which shoved rails off their spines to buy the bend),
+           and the magnitude at the full formula — this canvas is deliberately huge so the travel cap never speaks. */
+        var spine = stage.SpineFor(hit);
+        var away = region.X + region.Width - FctLayout.EdgePad - spine >= spine - region.X - FctLayout.EdgePad - FctLayout.RailReserve() ? 1.0 : -1.0;
 
         Assert.AreEqual(away * stage.TerritoryFor(hit) * FctLayout.ArcBowFrac, hit.Bow, 1e-9,
-          $"the vertex must sit outward of the column on the {caseName} lane");
+          $"the vertex must sit over the open hand of the {caseName} lane");
 
         var x0 = FctMotion.ArcedX(hit, 0.0);
         Assert.AreEqual(0.0, FctMotion.ArcedX(hit, 1.0) - x0, 1e-9, "ends — and begins — on its own column");

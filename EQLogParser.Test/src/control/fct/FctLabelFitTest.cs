@@ -311,9 +311,15 @@ namespace EQLogParser
         {
           var hit = Hit(FitsFine, room);
           AssertBlockFits(hit, room);
-          Assert.IsTrue(hit.SourceLabel!.Length <= previous.Length || previous.Length == 0,
+
+          /* What may never grow is the NAME. "(Glo)" becoming "(Glo…)" as room narrows is not a longer name — it is the floor
+             finally wearing its ellipsis: the same three letters plus the mark that says more was withheld. That glyph rides in the
+             row's own edge pad and FctMotion.ArcedX tucks the rail back in against it, so no wall is crossed; comparing raw label
+             lengths would outlaw the honesty itself. */
+          var name = hit.SourceLabel!.TrimStart('(').TrimEnd(')', '\u2026');
+          Assert.IsTrue(name.Length <= previous.Length || previous.Length == 0,
             $"a narrower column cannot carry a longer name: {previous} then {hit.SourceLabel}");
-          previous = hit.SourceLabel;
+          previous = name;
         }
       }
       finally

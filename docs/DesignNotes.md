@@ -1897,3 +1897,29 @@ to gutter-aware expressions (Half/Seam computed from the constant) rather than n
 The same pass gave the demo switch a memory: SampleData saves to settings.ini like anything else, because "don't play
 sample numbers, I'm laying this out over my actual raid" was an answer that had to be re-given every session, which is
 the definition of a setting wearing furniture's clothes.
+
+### The bow that ate the label: why a spell called "Desperate Renewal XIII Rk. II" shipped as "(Des)"
+
+The user's screenshot asked the question better than the code answered it: three lanes configured, right 2 freed, and
+the left-hand heal showing `+74k (Des)` with a visible acre of empty overlay between it and the neighbour's numbers.
+"Isn't there room for more of the label than we're displaying?" — measured, yes, and the culprit was not the label code.
+
+A diagnostic run at the screenshot's width said the true arithmetic: the rail parked at x=294 in a lane whose spine is
+168. Not jitter — the arc's **bow carve**. Spawn pre-paid for the outward bend by shoving the rail 126 px inward (the
+value box hangs left of the rail, and an outward vertex needs that room or it clips), which left every right-seated
+label `SideMax − rail = 33 px` of budget. The lane's air was all there; the name just wasn't allowed to spend it, and
+the floor cut produced a bare "(Des)" — three letters wearing no mark that anything was withheld. Two wrongs stacked:
+the shove broke the spine weld FctStage promises ("a lane's spine stays welded to its slot"), and the floor dropped the
+ellipsis precisely when the cut was most dishonest.
+
+Split lanes are private — there is no neighbour stream to dodge — so "outward" was demoted from law to preference and
+replaced by the **open hand**: a split column bows toward whichever side of its spine has more air (lane-decided, equal
+for every row), bands keeps the genre rule untouched. The rail holds its slot, the bend spends the leftover, and names
+inherit the lane: the diagnostic's heal row now draws "(Desperate Renewal XIII Rk. II)" whole at 147 px of label room,
+and where a lane truly cannot carry a name, the floor wears its mark too — "(Des…)", overshoot charged to SourceWidth so
+ArcedX tucks the rail back and the ellipsis never crosses a wall.
+
+Two pinned laws came out rewritten rather than broken, which is what measuring is for: `TheArcBowsToAVertex...` now
+asserts the vertex sits over the lane's open hand instead of "away from the middle", and `ANameFollowsTheRoomItHas`
+compares NAME lengths where it compared label lengths — "(Glo)" growing "(Glo…)" as a column narrows is the cut mark
+appearing, not the name growing. 1081/1081; the real question was the screenshot's, and the answer was "yes".

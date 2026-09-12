@@ -237,6 +237,17 @@ namespace EQLogParser
 
         if (fits || name.Length <= MinSourceChars)
         {
+          /* A name bottoming out at the floor WITHOUT fitting was still cut, and a bare "(Des)" reads as an abbreviation the log chose —
+             the player believes the spell is called Des. Say what happened: the ellipsis goes on at the floor too. Its half-glyph can
+             overshoot the row's own edge pad by a few px, and that overshoot is charged to SourceWidth here, which is the number
+             FctMotion.ArcedX clamps against — so the rail slides inward by exactly as much as the drawn block needs and no wall is ever
+             crossed; honesty about the cut never costs containment. */
+          if (!fits)
+          {
+            label = $"({name}{Ellipsis})";
+            width = widthOf(label, hit.SourceFontSize);
+          }
+
           hit.SourceLabel = label;
           hit.SourceWidth = width;
           return;
@@ -338,16 +349,25 @@ namespace EQLogParser
         (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth);
       }
 
-      /* Which way this column bows: toward the outer edge, decided by the region rather than the row so a lane never contains two shapes. */
-      var bowOut = region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0;
+      /* Which way this column bows, decided by the region rather than the row so a lane never contains two shapes.
+       * Bands keeps the genre rule — away from the shared strip, toward the outer edge, where no flight can lean into the other stream.
+       * A split lane is private: there is no other stream to dodge, and "outward" turned out to be a demand rather than a direction — the
+       * left-half rail shoved itself 126 px off its own spine (breaking FctStage.SpineFor's weld) to pre-pay for a bend that then starved
+       * every right-seated name on the lane to "(Des)". In split the bow curves toward whichever hand of the lane is open, measured at the
+       * spine and equal for every row; the rail holds its slot and the bend spends the lane's leftover air instead of eating its label share. */
+      var bowOut = stage.Mode is FctLayoutMode.Bands
+        ? (region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0)
+        : (region.X + region.Width - EdgePad - cx >= cx - region.X - EdgePad - RailReserve() ? 1.0 : -1.0);
 
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;
 
-      /* The arc also wants its bend reserved beside the spine (RailReserve above gives the width; this gives the curve). Without the bow room
-       * the widest rows find none left and climb in a straight line, which AssignTravel then caps to whatever survives. Where a region cannot offer
-       * both, containment wins — xHi below takes the clamp — and every row on that column bows equally less. */
-      if (hit.Style is FctMotionStyle.Arc)
+      /* The arc also wants its bend reserved beside the spine (RailReserve above gives the width; this gives the curve) — in BANDS.
+       * In split the park-shove below is banned by the lane's own law: a spine is welded to its slot (FctStage.SpineFor), and shoving the rail
+       * 126 px inward to pre-pay for a bend broke that promise while charging the bill to the label side — a quarter lane parked its rail at the
+       * right wall and every right-seated name on it died at "(Des)" with the lane's air behind it. Split pays for the bend the other way:
+       * AssignTravel caps the bow against the walls (every row bows equally less), and the rail stays where the column lives. */
+      if (hit.Style is FctMotionStyle.Arc && stage.Mode is FctLayoutMode.Bands)
       {
         var want = territory * ArcBowFrac;
         if (bowOut < 0)
