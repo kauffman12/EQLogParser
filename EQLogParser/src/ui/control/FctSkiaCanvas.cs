@@ -670,7 +670,7 @@ namespace EQLogParser
       }
 
       var win = Window.GetWindow(this);
-      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} afterGuide=[{_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols)}] hits=[{live}] lit=[{lit}]{profiles}");
+      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} afterGuide=[{(_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols))}] hits=[{live}] lit=[{lit}]{profiles}");
     }
 
     /* Full-height stroke scan: columns carrying an alpha spike at three heights a quarter-window apart — number glyphs
