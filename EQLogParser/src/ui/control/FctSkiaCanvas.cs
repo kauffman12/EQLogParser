@@ -626,6 +626,7 @@ namespace EQLogParser
       int[] ys = [(int)(hPix * 0.25), (int)(hPix * 0.5), (int)(hPix * 0.75)];
 
       var lit = string.Empty;
+      var profiles = string.Empty;
       for (var x = 2; x < wPix - 2; x++)
       {
         var stroke = true;
@@ -639,14 +640,35 @@ namespace EQLogParser
           }
         }
 
-        if (stroke)
+        if (!stroke)
         {
-          lit += (lit.Length > 0 ? "," : "") + x;
+          continue;
+        }
+
+        lit += (lit.Length > 0 ? "," : "") + x;
+
+        /* The column's alpha profile, eleven depths: a guide stroke reads flat (same alpha top to bottom), a halo or glow fades,
+           text flickers. This is what tells us WHICH draw made the column, not merely that one did. */
+        if (profiles.Length < 400)
+        {
+          var prof = string.Empty;
+          for (var k = 0; k <= 10; k++)
+          {
+            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, hPix * k / 10).Alpha;
+          }
+
+          profiles += $" {x}:[{prof}]";
         }
       }
 
+      var live = string.Empty;
+      foreach (var hit in _demo.Hits)
+      {
+        live += (live.Length > 0 ? "," : "") + $"{hit.Category}@{hit.X:F0},{hit.Y:F0}";
+      }
+
       var win = Window.GetWindow(this);
-      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} lit=[{lit}]");
+      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} hits=[{live}] lit=[{lit}]{profiles}");
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
