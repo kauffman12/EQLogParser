@@ -114,7 +114,7 @@ namespace EQLogParser
     private bool _diagPending;
 
     // columns already lit when only the guide had drawn — anything lit later was painted by hit drawing, and the frame line says so
-    private List<int>? _phaseGuideCols;
+    private List<int> _phaseGuideCols;
 
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
