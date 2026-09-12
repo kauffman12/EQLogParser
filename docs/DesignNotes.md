@@ -980,6 +980,18 @@ and it shows in setup mode: while the configure loop runs, every booked lane is 
 (`FctSkiaCanvas.DrawLaneGuide`) — under the demo numbers. An unbooked lane gets no outline because it has no rect left; that is the feature
 wearing a thin white line.
 
+The guide also taught the branch's hardest debugging lesson. Its outlines showed a second lane wall through the middle of
+any half that a single category owned — a ghost line at exactly three quarters of the window width, reproducible only on the
+player's machine, invisible to every unit test because the arithmetic in `FctStage` was innocent: logs proved the stage handed
+out x=627 w=627 while the screen kept a wall at 940. Ten probe builds later (arithmetic stamp, pixel scan of the Skia surface,
+per-phase column snapshots, paint-state dump, and one whole frame smuggled out as a PNG) the pixels and the numbers were still
+contradictory until someone reread the draw call itself: `canvas.DrawRect(x, y, x + w, h, paint)` — and SkiaSharp's four-float
+overload means **(x, y, width, height)**. The guide had been passing right/bottom where the API read width/height; left2's box
+really was drawn from 313.5 across 627 px, its outline landing at ≈940 every frame. Every measurement was honest; only the
+delivery was illiterate. The calls now build explicit `SKRect`s, which are unambiguous by construction. The moral, priced at
+≈10 builds: when logs and pixels disagree, one of them is being read wrong — re-read the API signature before you re-read
+the algorithm, and never log your intent when you could log the call.
+
 The one promise lanes had to keep is that a lane moves as ONE thing. The first attempt shared a duration per side and
 still showed per-category speeds — bigger text reserves more road, so equal times meant unequal px/s (see *The rail's tempo*
 below); the rail runs to one scroll RATE now, measured identical for damage, procs, crits and

@@ -1,9 +1,7 @@
-using log4net;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
@@ -102,25 +100,6 @@ namespace EQLogParser
     /* The configure-mode lane guide reconfigures itself per lane rather than allocating (DrawLaneGuide redraws under the numbers
        every frame a setup window is open). */
     private SKPaint _laneGuidePaint;
-
-    /* Temporary probe for a reported dispute between the lane outlines and their arithmetic (GuideDiag): Info level so it
-       survives every log config as shipped, stamped only while configure mode runs. Strip with FctStage.Diag when closed. */
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-
-    // one line per second while the guide is on screen; the guide itself redraws at frame rate
-    private long _diagMs;
-
-    // set when GuideDiag stamps its arithmetic; consumed by the pixel twin (DiagSurface) once the frame is fully drawn
-    private bool _diagPending;
-
-    // columns already lit when only the guide had drawn — anything lit later was painted by hit drawing, and the frame line says so
-    private List<int> _phaseGuideCols;
-
-    // what DrawOne actually handed Skia this frame (lane and exact span): the last word before pixels exist
-    private string _diagDrawn;
-
-    // one whole surface smuggled out as base64 PNG per session — pixels judged by eye, not by probe arithmetic
-    private bool _diagPngSent;
 
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
@@ -433,17 +412,6 @@ namespace EQLogParser
       if (_demoWanted || _demo.Active)
       {
         DrawLaneGuide(canvas);
-        if (_diagPending)
-        {
-          using var afterGuide = SKBitmap.FromImage(_surface.Snapshot());
-          _phaseGuideCols = LitColumns(afterGuide);
-
-          if (!_diagPngSent && _clock != null && _clock.Elapsed.TotalSeconds > 5)
-          {
-            _diagPngSent = true;
-            DiagPng();
-          }
-        }
       }
 
       // two passes: regular hits first, crits last — crits draw on top of everything
@@ -475,14 +443,7 @@ namespace EQLogParser
         }
       }
 
-      if (_diagPending)
-      {
-        _diagPending = false;
-        DiagSurface(scale);
-      }
-
       Blit(dc, scale);
-      _phaseGuideCols = null;
       _dirty = false;
     }
 
@@ -581,8 +542,6 @@ namespace EQLogParser
 
       var stage = choice.Stage(ActualWidth, ActualHeight);
 
-      GuideDiag(stage, a, b, c);
-
       DrawOne(a);
       if (b != a)
       {
@@ -603,171 +562,22 @@ namespace EQLogParser
 
         var (x, _, w, h) = stage.LaneRect(lane);
 
-        if (_diagPending)
-        {
-          _diagDrawn += (_diagDrawn.Length > 0 ? "," : "") + $"{FctRailLanes.Token(lane)}({x:F2}..{x + w:F2})";
-        }
-
+        /* Explicit SKRects, never four loose floats: SkiaSharp resolves DrawRect(float, float, float, float, paint) as
+           (x, y, WIDTH, HEIGHT). These lines once passed right/bottom where the API wanted width/height, so left2's box ran
+           from 313.5 with width 627 — its fill bled over right1 and its outline printed a lane wall through the middle of
+           the half at x≈940 on every configure frame. The ghost line, found ten probe-builds later: the arithmetic in the
+           log had been honest the whole time; only its delivery was illiterate. */
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(14), SKPaintStyle.Fill, 0);
-        canvas.DrawRect((float)x, 0f, (float)(x + w), (float)h, _laneGuidePaint);
+        canvas.DrawRect(SKRect.Create((float)x, 0f, (float)w, (float)h), _laneGuidePaint);
 
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(84), SKPaintStyle.Stroke, 1.5f);
-
-        if (_diagPending && lane is FctRailLane.Right1)
-        {
-          var g = _laneGuidePaint;
-          Log.Info($"fctdiag paint stroke={g.StrokeWidth:F2} style={g.Style} aa={g.IsAntialias} color=rgba{g.Color.Red},{g.Color.Green},{g.Color.Blue},{g.Color.Alpha} " +
-            $"shader={(g.Shader is null ? "null" : g.Shader.GetType().Name)} xfer={g.BlendMode} filter={(g.ImageFilter is null ? "null" : g.ImageFilter.ToString())} " +
-            $"cf={(g.ColorFilter is null ? "null" : g.ColorFilter.ToString())} effect={(g.PathEffect is null ? "null" : g.PathEffect.ToString())} " +
-            $"dither={g.IsDither} cap={g.StrokeCap} join={g.StrokeJoin} miter={g.StrokeMiter:F1}");
-          Log.Info($"fctdiag clip local=[{canvas.LocalClipBounds.Left:F1},{canvas.LocalClipBounds.Top:F1},{canvas.LocalClipBounds.Right:F1},{canvas.LocalClipBounds.Bottom:F1}] " +
-            $"device=[{canvas.DeviceClipBounds.Left},{canvas.DeviceClipBounds.Top},{canvas.DeviceClipBounds.Right},{canvas.DeviceClipBounds.Bottom}] " +
-            $"m={canvas.TotalMatrix.ScaleX:F3},{canvas.TotalMatrix.ScaleY:F3}@{canvas.TotalMatrix.TransX:F1},{canvas.TotalMatrix.TransY:F1}");
-        }
-
-        canvas.DrawRect((float)(x + 0.75), 0.75f, (float)(x + w - 0.75), (float)(h - 0.75), _laneGuidePaint);
+        canvas.DrawRect(new SKRect((float)(x + 0.75), 0.75f, (float)(x + w - 0.75), (float)(h - 0.75)), _laneGuidePaint);
 
         /* The settings' own spelling of the lane (FctRailLanes.Token) - what the dropdown says is what the outline says. */
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(178), SKPaintStyle.Fill, 0);
         var tokenSize = TitleFontSize;
         canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(false, tokenSize), _laneGuidePaint);
       }
-    }
-
-    /* What this stamps for: outlines reported at half the width their own numbers use, on one player's machine only.
-       Once a second of configure mode, the exact stage the guide draws from reports its size, per-half claimant counts,
-       lane bookings and the rect each booked lane gets - beside the binary that ran it. Reading: a half holding ONE
-       booking must report occ=1 and hand out w=W/2; an exe path outside the build folder says an old copy was launched. */
-    private void GuideDiag(FctStage stage, FctRailLane a, FctRailLane b, FctRailLane c)
-    {
-      var now = Environment.TickCount64;
-      if (now - _diagMs < 1000)
-      {
-        return;
-      }
-
-      _diagMs = now;
-      _diagPending = true;
-      _diagDrawn = string.Empty;
-      Log.Info($"fctdiag {stage.Diag()} {Rect(a)} {Rect(b)} {Rect(c)} exe={Environment.ProcessPath}");
-
-      string Rect(FctRailLane lane) => lane is FctRailLane.None ? "-" : $"{FctRailLanes.Token(lane)}[x={stage.LaneRect(lane).X:F0} w={stage.LaneRect(lane).Width:F0}]";
-    }
-
-    /* The pixel twin of the guide's arithmetic, stamped once the frame is fully rastered and before it blits: which columns of
-       OUR surface actually carry a vertical stroke, sampled at three heights so no number's glyphs can fake one. A reported
-       line that is ours shows its column here; one that is not was drawn above this canvas, and the hunt moves to the WPF tree.
-       The ids say who drew it too: two different canvas or window hashes across lines means a second window is alive. */
-    private void DiagSurface(double scale)
-    {
-      using var snap = SKBitmap.FromImage(_surface.Snapshot());
-      var wPix = snap.Width;
-      var hPix = snap.Height;
-      var yMid = hPix / 2;
-
-      var lit = string.Empty;
-      var profiles = string.Empty;
-      foreach (var x in LitColumns(snap))
-      {
-        // '>' marks a column the guide did not draw: it arrived with the hit passes
-        lit += (lit.Length > 0 ? "," : "") + (_phaseGuideCols is not null && !_phaseGuideCols.Contains(x) ? ">" : "") + x;
-
-        /* The column's alpha profile, eleven depths: a guide stroke reads flat (same alpha top to bottom), a halo or glow fades,
-           text flickers — the shape names the drawer. The slice (<...>) crosses the column at mid-height and settles its exact
-           thickness and sub-pixel seat, which distinguishes a 1.5px AA stroke from a 1px line or a fill edge. */
-        if (profiles.Length < 400)
-        {
-          var prof = string.Empty;
-          for (var k = 0; k <= 10; k++)
-          {
-            // GetPixel does not bounds-check, and k == 10 walks the row hPix — one past the bottom — straight into an AccessViolation
-            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, Math.Min(hPix - 1, hPix * k / 10)).Alpha;
-          }
-
-          var slice = string.Empty;
-          for (var dx = -4; dx <= 4; dx++)
-          {
-            slice += (slice.Length > 0 ? " " : "") + snap.GetPixel(x + dx, yMid).Alpha;
-          }
-
-          profiles += $" {x}:[{prof}]<{slice}>";
-        }
-      }
-
-      var live = string.Empty;
-      foreach (var hit in _demo.Hits)
-      {
-        live += (live.Length > 0 ? "," : "") + $"{hit.Lane}@{hit.X0:F0},{hit.Y0:F0}({hit.FormattedValue})";
-      }
-
-      var win = Window.GetWindow(this);
-      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} drawn=[{(_diagDrawn ?? "-")}] afterGuide=[{(_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols))}] hits=[{live}] lit=[{lit}]{profiles}");
-    }
-
-    /* Reads the surface through the very same path the WPF blit uses (ReadPixels → raw bytes → PNG), so this image is what
-       the player's screen is built from — every summary the probe logs, this frame is the evidence behind it. Written to disk
-       once per session (a base64 copy through a terminal lost 456 bytes mid-IDAT; a file cannot). Temporary instrumentation
-       for the ghost-line hunt: open it, or drop it in the repo under local/ for inspection at x≈940. */
-    private void DiagPng()
-    {
-      try
-      {
-        using var image = _surface.Snapshot();
-        var info = image.Info;
-        var stride = info.RowBytes;
-        var buffer = new byte[stride * info.Height];
-        var handle = System.Runtime.InteropServices.GCHandle.Alloc(buffer, System.Runtime.InteropServices.GCHandleType.Pinned);
-
-        try
-        {
-          if (!image.ReadPixels(info, handle.AddrOfPinnedObject(), stride, 0, 0) || image.Encode(SKEncodedImageFormat.Png, 90) is not { } data)
-          {
-            Log.Info("fctdiag png FAILED");
-            return;
-          }
-
-          var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EQLogParser", "fctdiag.png");
-          System.IO.File.WriteAllBytes(path, data.ToArray());
-          Log.Info($"fctdiag png saved {path} w={info.Width} h={info.Height} bytes={data.Size}");
-        }
-        finally
-        {
-          handle.Free();
-        }
-      }
-      catch (Exception e)
-      {
-        Log.Error("fctdiag png failed", e);
-      }
-    }
-
-    /* Full-height stroke scan: columns carrying an alpha spike at three heights a quarter-window apart — number glyphs
-       (~40 px) are far shorter than that gap, so only something spanning the frame can light all three. */
-    private static List<int> LitColumns(SKBitmap snap)
-    {
-      int[] ys = [(int)(snap.Height * 0.25), (int)(snap.Height * 0.5), (int)(snap.Height * 0.75)];
-      var cols = new List<int>();
-
-      for (var x = 4; x < snap.Width - 4; x++)
-      {
-        var stroke = true;
-        foreach (var y in ys)
-        {
-          var a = snap.GetPixel(x, y).Alpha;
-          if (a < 40 || snap.GetPixel(x - 3, y).Alpha > a - 25 || snap.GetPixel(x + 3, y).Alpha > a - 25)
-          {
-            stroke = false;
-            break;
-          }
-        }
-
-        if (stroke)
-        {
-          cols.Add(x);
-        }
-      }
-
-      return cols;
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
