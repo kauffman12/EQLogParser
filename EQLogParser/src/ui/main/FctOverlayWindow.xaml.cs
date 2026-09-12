@@ -96,6 +96,10 @@ namespace EQLogParser
        mis-click silently changes somebody's setup, and there is no Undo next to the control that did it. */
     /* The companion window configure mode lives in now, and the session-only demo switch its checkbox drives. */
     private FctSettingsWindow _settings;
+
+    /* Where the overlay last stood, so LocationChanged can speak in deltas rather than absolutes — see FollowSettings. */
+    private double? _lastOverlayLeft;
+    private double? _lastOverlayTop;
     private bool _sampleData = true;
 
     /* What is staged while configuring: one settings snapshot rather than twenty-odd fields, because each of those had to be
@@ -133,7 +137,7 @@ namespace EQLogParser
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
       IsVisibleChanged += OnVisibleChanged;
-      LocationChanged += (_, _) => PositionSettings(); // dragging the overlay carries its settings panel along
+      LocationChanged += (_, _) => FollowSettings(); // dragging the overlay carries its settings panel along, by whatever offset it sits at
       Closed += OnClosed;
     }
 
@@ -516,9 +520,31 @@ namespace EQLogParser
       }
     }
 
+    /* The pair moves together: dragging the overlay carries the panel by exactly as much as the overlay moved, which
+       preserves whatever offset the panel sits at — even one somebody dragged it to. The old law ("a dragged panel keeps
+       its spot, full stop") made the two feel unattached the moment anyone moved the panel once; relative carry is what
+       "they move together" always meant. Docking below still only happens on entering configure mode, and still asks
+       permission of a user-placed panel — this handler just never lets the gap between them change. */
+    private void FollowSettings()
+    {
+      var wasLeft = _lastOverlayLeft;
+      var wasTop = _lastOverlayTop;
+      _lastOverlayLeft = Left;
+      _lastOverlayTop = Top;
+
+      if (_settings is not { IsVisible: true } || wasLeft is null || wasTop is null)
+      {
+        return;
+      }
+
+      _settings.Left += Left - wasLeft.Value;
+      _settings.Top += Top - wasTop.Value;
+    }
+
     /* Parked to the left of the overlay — watching numbers on the canvas while the panel sits beside it is what the
        pairing is for — unless the screen's left edge objects, in which case it goes right. A panel somebody dragged
-       keeps its spot until configure mode reopens; only a panel nobody moved follows the overlay across the screen. */
+       keeps its OFFSET through every later drag (FollowSettings); what MovedByUser protects here is only the docking
+       moment: reopening configure mode does not teleport a panel the player placed by hand. */
     private void PositionSettings()
     {
       if (_settings is null || !_settings.IsVisible || _settings.MovedByUser)
