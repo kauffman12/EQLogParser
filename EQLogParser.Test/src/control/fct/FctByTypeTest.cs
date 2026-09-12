@@ -260,6 +260,12 @@ namespace EQLogParser
       // a solo INNER lane takes its half too - the space belongs to the claimant, not to the wall position
       var inner = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, healLane: FctRailLane.Left2).Stage(Width, Height);
       Assert.AreEqual((0.0, Width / 2), (inner.RegionFor(hit(FctLane.HealingDealt, false, true)).X, inner.RegionFor(hit(FctLane.HealingDealt, false, true)).Width), "a lone left 2 still owns the whole left half");
+
+      // and the shipped spread itself (FctConfigState's lanes): right 1 alone with right 2 empty tiles centre line to
+      // the window's right edge - the case a player asks about when they free right 2 in setup mode
+      var shipped = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1).Stage(Width, Height);
+      Assert.AreEqual((Width / 2, Width / 2), (shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).X, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width), "a lone right 1 owns the whole right half");
     }
 
     /* A row still in flight when its category hands its column back keeps the walls it was born under until it scrolls out: the gate

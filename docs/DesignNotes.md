@@ -1569,12 +1569,13 @@ smallest size probed: every style still places every number inside the window an
 a band is shallower than a line of text.
 
 The default started at 980×640, came down to **800×560** as what most people need over a HUD, went back up to 1280×720 when the source labels turned out
-to be the thing being paid for, and is now **not a size at all**: a first run asks for 80% × 75% of the desktop's work area, floored at that same 1280×720
+to be the thing being paid for, and is now **not a size at all**: a first run asks for 65% × 60% of the desktop's work area, floored at that same
+1280×720 - which on a common desktop IS the floor, with wider monitors scaling past it
 (`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. The shipped split spread books two categories on one side
-and one on the other, so the halves do not share the same room: the solo outgoing-damage column owns its whole half (lanes tile their half, above) — about
-510 px at a first-run size over a 1280-wide desktop, past the label ceiling once its own number is out of the way, where a name's length rather than the
-window decides what gets cut, and still more at 2048 — while the two left-hand categories split their half in quarters, comfortable for the default
-below-label seat and modest for an inline one. Nothing else in the
+and one on the other, so the halves do not share the same room: the solo outgoing-damage column owns its whole half (lanes tile their half, above) — 640 px
+at the first-run width, past the label ceiling once its own number is out of the way, where a name's length rather than the window decides what gets cut,
+and more on wider monitors — while the two left-hand categories split their half in quarters, comfortable for the default below-label seat and modest
+for an inline one. Nothing else in the
 layout moves a name's length nearly that directly, so the one setting that really decides how
 much of the screen belongs to the game also decides how much of a name a player can read — and it should answer to the monitor rather than to a number
 chosen when the layout was new. The share stops short of the whole work area on purpose (raid frames and buff lines live on those edges, and an overlay
