@@ -47,15 +47,16 @@
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
-      <!-- Two sections because the palette grew pickers: "setup" is every control as it was always ordered, "colors" is
-           the seven hues the player may restage (FctPalette). SfAccordion rather than tabs: the theme draws its header
-           bars and chevron natively, SelectionMode=One keeps exactly one section open like a page would, and the window
-           reads as one panel that breathes taller or shorter instead of two windows stapled together. SelectedIndex=0
-           opens on setup. The footer — demo switch, counters, Save and Cancel — deliberately lives OUTSIDE the accordion:
-           it belongs to the visit, not to one category of decision. -->
+      <!-- Three sections, headers in caps so they read as chrome rather than as another row of settings: MAIN is every
+           control that always applies, LAYOUT is where numbers go (the mode-dependent picks), COLORS is the seven hues the
+           player may restage (FctPalette). SfAccordion rather than tabs: the theme draws its header bars and chevron
+           natively, SelectionMode=One keeps exactly one section open like a page would, and the window reads as one panel
+           that breathes taller or shorter instead of two windows stapled together. SelectedIndex=0 opens on main. The
+           footer — demo switch, counters, Save and Cancel — deliberately lives OUTSIDE the accordion: it belongs to the
+           visit, not to one category of decision. -->
       <syncfusion:SfAccordion Margin="0,4,0,0" SelectionMode="One" SelectedIndex="0">
-      <syncfusion:SfAccordionItem Header="setup">
-        <StackPanel>
+      <syncfusion:SfAccordionItem Header="MAIN">
+        <StackPanel Margin="0,4,0,10">
       <!-- The settings in the order they are actually decided: first the things that always apply — dials first, then
            dropdowns, then number boxes, alphabetical inside each kind — under a hairline the mode-dependent picks,
            which is also where rows visibly empty when a mode does not obey them. Collapsed, never disabled. -->
@@ -143,10 +144,13 @@
           </syncfusion:UpDown.NumberFormatInfo>
         </syncfusion:UpDown>
       </Grid>
+        </StackPanel>
+      </syncfusion:SfAccordionItem>
 
-      <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,2" />
-
-      <!-- Everything below the hairline is a layout decision, and fountain keeps only a few of them. -->
+      <!-- What used to live under the hairline: a section now, since it is exactly one kind of decision, and fountain
+           keeps only a few of its rows — ones visibly empty when a mode does not obey them. Collapsed, never disabled. -->
+      <syncfusion:SfAccordionItem Header="LAYOUT">
+        <StackPanel Margin="0,4,0,10">
       <Grid Margin="0,2,0,0">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="106" />
@@ -238,8 +242,8 @@
         </StackPanel>
       </syncfusion:SfAccordionItem>
 
-      <syncfusion:SfAccordionItem Header="colors">
-        <StackPanel Margin="0,6,0,0">
+      <syncfusion:SfAccordionItem Header="COLORS">
+        <StackPanel Margin="0,6,0,10">
           <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.75" FontSize="11"
                      Foreground="{DynamicResource ContentForegroundAlt}"
                      Text="seven hues, one per class of number; every word shares one and so do all (source) labels. A picked colour paints the numbers that spawn after it — the demo shows it immediately — and only Save remembers it." />
