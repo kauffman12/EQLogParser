@@ -116,6 +116,9 @@ namespace EQLogParser
     // columns already lit when only the guide had drawn — anything lit later was painted by hit drawing, and the frame line says so
     private List<int> _phaseGuideCols;
 
+    // what DrawOne actually handed Skia this frame (lane and exact span): the last word before pixels exist
+    private string _diagDrawn;
+
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
     private Func<string, double, double> _labelWidth;
@@ -591,6 +594,11 @@ namespace EQLogParser
 
         var (x, _, w, h) = stage.LaneRect(lane);
 
+        if (_diagPending)
+        {
+          _diagDrawn += (_diagDrawn.Length > 0 ? "," : "") + $"{FctRailLanes.Token(lane)}({x:F2}..{x + w:F2})";
+        }
+
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(14), SKPaintStyle.Fill, 0);
         canvas.DrawRect((float)x, 0f, (float)(x + w), (float)h, _laneGuidePaint);
 
@@ -618,6 +626,7 @@ namespace EQLogParser
 
       _diagMs = now;
       _diagPending = true;
+      _diagDrawn = string.Empty;
       Log.Info($"fctdiag {stage.Diag()} {Rect(a)} {Rect(b)} {Rect(c)} exe={Environment.ProcessPath}");
 
       string Rect(FctRailLane lane) => lane is FctRailLane.None ? "-" : $"{FctRailLanes.Token(lane)}[x={stage.LaneRect(lane).X:F0} w={stage.LaneRect(lane).Width:F0}]";
@@ -670,7 +679,7 @@ namespace EQLogParser
       }
 
       var win = Window.GetWindow(this);
-      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} afterGuide=[{(_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols))}] hits=[{live}] lit=[{lit}]{profiles}");
+      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} drawn=[{(_diagDrawn ?? "-")}] afterGuide=[{(_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols))}] hits=[{live}] lit=[{lit}]{profiles}");
     }
 
     /* Full-height stroke scan: columns carrying an alpha spike at three heights a quarter-window apart — number glyphs
