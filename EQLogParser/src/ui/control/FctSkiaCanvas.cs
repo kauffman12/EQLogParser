@@ -627,7 +627,7 @@ namespace EQLogParser
 
       var lit = string.Empty;
       var profiles = string.Empty;
-      for (var x = 2; x < wPix - 2; x++)
+      for (var x = 4; x < wPix - 4; x++)
       {
         var stroke = true;
         foreach (var y in ys)
@@ -654,7 +654,8 @@ namespace EQLogParser
           var prof = string.Empty;
           for (var k = 0; k <= 10; k++)
           {
-            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, hPix * k / 10).Alpha;
+            // GetPixel does not bounds-check, and k == 10 walks the row hPix — one past the bottom — straight into an AccessViolation
+            prof += (prof.Length > 0 ? " " : "") + snap.GetPixel(x, Math.Min(hPix - 1, hPix * k / 10)).Alpha;
           }
 
           profiles += $" {x}:[{prof}]";
