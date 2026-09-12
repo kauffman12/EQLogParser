@@ -164,11 +164,29 @@ namespace EQLogParser
      * five places the old per-field staging touched.
      *
      * Every read goes through the same pure helpers that guard the other keys, so junk lands on a shipped default instead of
-     * reaching geometry as garbage. Directions are read with ParseUp, whose answer for "never set" is the scheme's own.
+     * reaching geometry as garbage. Directions go through ShippedDirections, whose answer for a value nobody wrote is the
+     * shipped spread's own.
      */
+
+    /*
+     * The direction dials' never-set policy in one pure place, so the shipped answers are pinned where they are written and
+     * testable without a file: my numbers rise (the strip invariant in bands, the genre's classic read in the columns) and the
+     * heals rise with them - "heals rise while damage falls" is the look most asked for, and a direction nobody set should not
+     * arrive pointing down merely because the file happened to load in the other mode first, because Save writes every dial out
+     * explicitly and one first-run save would otherwise bake that accident into somebody's file forever. What lands on the player
+     * sinks. A saved word always wins, so this only ever answers for values the file does not carry.
+     */
+    internal static (bool HealUp, bool TakenUp, bool DealtUp) ShippedDirections(string healRaw, string takenRaw, string dealtRaw) =>
+      (ParseUpOrNull(healRaw) ?? true, ParseUpOrNull(takenRaw) ?? false, ParseUpOrNull(dealtRaw) ?? true);
+
     public static FctConfigState LoadConfig()
     {
       var fountain = LoadIsFountain();
+      var (healUp, takenUp, dealtUp) = ShippedDirections(
+        ConfigUtil.GetSetting(HealDirectionKey, null),
+        ConfigUtil.GetSetting(IncomingDirectionKey, null),
+        ConfigUtil.GetSetting(OutgoingDirectionKey, null));
+
       var state = new FctConfigState
       {
         Fountain = fountain,
@@ -178,21 +196,15 @@ namespace EQLogParser
          * fourth column (or hides a category). */
         HealLane = FctRailLanes.Parse(ConfigUtil.GetSetting(HealLaneKey, null) ?? ConfigUtil.GetSetting(HealSideKey, null),
           FctConfigState.HealLaneDefault),
-        /* Heals ship rising in the columns but still sink in a fresh fountain: the classic there is damage falling past healing,
-           and changing one mode's shipped look would be exactly the surprise this file exists to avoid. A saved value wins
-           either way, so this only ever answers for a file nobody has written yet. */
-        HealUp = ParseUpOrNull(ConfigUtil.GetSetting(HealDirectionKey, null)) ?? !fountain,
+        HealUp = healUp,
         TakenLane = FctRailLanes.Parse(
           ConfigUtil.GetSetting(TakenDamageLaneKey, null) ?? ConfigUtil.GetSetting(TakenDamageSideKey, null),
           FctConfigState.TakenLaneDefault),
-        TakenUp = ParseUp(ConfigUtil.GetSetting(IncomingDirectionKey, null)),
+        TakenUp = takenUp,
         DealtLane = FctRailLanes.Parse(
           ConfigUtil.GetSetting(DealtDamageLaneKey, null) ?? ConfigUtil.GetSetting(DealtDamageSideKey, null),
           FctConfigState.DealtLaneDefault),
-        /* My numbers ship rising in both modes now - the strip invariant in bands, the genre's classic read in the columns -
-           while what lands on the player stays down (ParseUp's own answer). Writing it out at Save makes the file explicit,
-           so this only ever answers for a file nobody has saved yet. */
-        DealtUp = ParseUpOrNull(ConfigUtil.GetSetting(OutgoingDirectionKey, null)) ?? true,
+        DealtUp = dealtUp,
         Threshold = LoadThreshold(),
         LabelSide = LoadLabelSide(),
         TextScale = LoadTextScale(),

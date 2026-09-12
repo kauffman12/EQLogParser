@@ -279,11 +279,12 @@ namespace EQLogParser
     /*
      * A first run takes most of the desktop rather than a fixed rectangle, and never less than the size the layout is measured at. The overlay
      * is transparent text: what it is competing with for room is the game's own HUD, not another window, so the honest first guess is "as much
-     * screen as the game is not using" — and for the source labels that sit beside every number, screen literally IS the budget. In the shipped
-     * split default one column owns each half of the overlay (FctStage tiles the booked lanes), so the width available for a name is (overlay ÷ 2)
-     * − its own number − the gap between them: about 470 px at 1280 — past the label ceiling itself, where a name's LENGTH rather than the window
-     * decides what gets cut (FctLayout.MaxSourceChars) — and still more at 2048. Nothing else in the layout scales a name's length this directly,
-     * which is why the first-run size stopped being a constant.
+     * screen as the game is not using" — and for the source labels that sit beside every number, screen literally IS the budget. The shipped split
+     * spread books two categories on one side and one on the other, so the halves do not share the same room: the solo outgoing-damage column owns
+     * its whole half (FctStage tiles the booked lanes) — about 510 px at a first-run size over a 1280-wide desktop, past the label ceiling once its
+     * own number is out of the way, where a name's LENGTH rather than the window decides what gets cut (FctLayout.MaxSourceChars), and still more at
+     * 2048 — while the two left-hand categories split their half in quarters, comfortable for the default below-label seat and modest for an inline
+     * one. Nothing else in the layout scales a name's length this directly, which is why the first-run size stopped being a constant.
      *
      * The share deliberately stops short of the whole work area: raid frames and a buff line live on those edges, and an overlay that starts by
      * covering everything teaches the player to shrink it. Fit() clamps the request to the desktop anyway, so a netbook gets what it has, and the
