@@ -612,6 +612,19 @@ namespace EQLogParser
         canvas.DrawRect((float)x, 0f, (float)(x + w), (float)h, _laneGuidePaint);
 
         Configure(_laneGuidePaint, SKColors.White.WithAlpha(84), SKPaintStyle.Stroke, 1.5f);
+
+        if (_diagPending && lane is FctRailLane.Right1)
+        {
+          var g = _laneGuidePaint;
+          Log.Info($"fctdiag paint stroke={g.StrokeWidth:F2} style={g.Style} aa={g.IsAntialias} color=rgba{g.Color.Red},{g.Color.Green},{g.Color.Blue},{g.Color.Alpha} " +
+            $"shader={(g.Shader is null ? "null" : g.Shader.GetType().Name)} xfer={g.BlendMode} filter={(g.ImageFilter is null ? "null" : g.ImageFilter.ToString())} " +
+            $"cf={(g.ColorFilter is null ? "null" : g.ColorFilter.ToString())} effect={(g.PathEffect is null ? "null" : g.PathEffect.ToString())} " +
+            $"dither={g.IsDither} cap={g.StrokeCap} join={g.StrokeJoin} miter={g.StrokeMiter:F1}");
+          Log.Info($"fctdiag clip local=[{canvas.LocalClipBounds.Left:F1},{canvas.LocalClipBounds.Top:F1},{canvas.LocalClipBounds.Right:F1},{canvas.LocalClipBounds.Bottom:F1}] " +
+            $"device=[{canvas.DeviceClipBounds.Left},{canvas.DeviceClipBounds.Top},{canvas.DeviceClipBounds.Right},{canvas.DeviceClipBounds.Bottom}] " +
+            $"m={canvas.TotalMatrix.ScaleX:F3},{canvas.TotalMatrix.ScaleY:F3}@{canvas.TotalMatrix.TransX:F1},{canvas.TotalMatrix.TransY:F1}");
+        }
+
         canvas.DrawRect((float)(x + 0.75), 0.75f, (float)(x + w - 0.75), (float)(h - 0.75), _laneGuidePaint);
 
         /* The settings' own spelling of the lane (FctRailLanes.Token) - what the dropdown says is what the outline says. */
