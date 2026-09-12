@@ -74,6 +74,13 @@ namespace EQLogParser
      */
     public double Threshold;
 
+    /* Accumulation, the panel's switch and settings.ini's "FctOverlayAccumulate": ON, an event identical to a number already
+     * on screen joins that number with a count - "412 ×3" where three 412s used to fly, and words stack too ("miss ×2").
+     * OFF - as it ships - every event keeps its own row and the fold below is never consulted. The switch guards only the
+     * door: the key, the age rules and who may never fold stay correct either way, so flipping it changes what joins from
+     * now on and nothing that is already flying. */
+    public bool Accumulate;
+
     /* How many numbers the threshold has hidden, surfaced next to the drop count so a filter that is working is never
      * mistaken for a filter that is losing things silently. */
     public int HiddenCount { get; private set; }
@@ -231,6 +238,7 @@ namespace EQLogParser
       }
 
       Threshold = other.Threshold;
+      Accumulate = other.Accumulate;
       ShowDealt = other.ShowDealt;
       ShowTaken = other.ShowTaken;
       ShowHeals = other.ShowHeals;
@@ -351,13 +359,15 @@ namespace EQLogParser
          of them applies. */
       var conveyor = UseConveyor(style);
 
-      if (fixedText is null)
+      /* The accumulation switch is the whole door; policy lives behind it. Marked events never fold at either end - an
+         assassinate counted away is the event itself lost - and crits now fold, but only onto crits: the pooling above put
+         every crit in a pool of its own, so lane equality alone keeps a stack of crits off the ordinary numbers and vice
+         versa. Words (fixedText) join by the yard: "miss ×4" hides nothing a lone "miss" told. */
+      if (Accumulate && special is FctSpecial.None &&
+          ShouldAbsorb(lane, periodic, fixedText) &&
+          TryAbsorb(hits, pooled, incoming, heal, proc, periodic, source, value, fixedText, now))
       {
-        if (!crit && ShouldAbsorb(pooled, periodic) &&
-            TryAbsorb(hits, pooled, incoming, proc, periodic, special, source, value, now))
-        {
-          return null;
-        }
+        return null;
       }
 
       /* The lane cap is a scatter rule: it asks "is there a slot?" and answers by taking one away from somebody. A conveyor
@@ -521,17 +531,19 @@ namespace EQLogParser
      *
      * Healing direct casts never may, because players read heals one by one and collapsing two casts hides who got patched
      * and for how much. A heal with nowhere to go gets a slot taken for it (PickEvictionTarget) or is counted as dropped;
-     * it does not join another heal's number.
+     * it does not join another heal's number. Words are foldable on their own terms: they carry no value to total, only a
+     * fact to count - four identical evasions are one fact said four times.
      */
-    private static bool ShouldAbsorb(FctLane lane, bool periodic) =>
-      periodic || lane is FctLane.DamageDealt or FctLane.DamageTaken;
+    private static bool ShouldAbsorb(FctLane lane, bool periodic, string fixedText) =>
+      fixedText is not null || periodic || lane is FctLane.DamageDealt or FctLane.DamageTaken;
 
     /*
      * Folds a hit into the live number already showing exactly this — NAG's accumulateHits, with NAG's key plus the face
-     * value: same pooled lane, same side, same proc/direct and periodic/direct kind, same ability name, same amount. Then the
-     * age rules: the target has to be young enough that one number standing for several still reads as one exchange, and have
-     * most of its life left, so a count never lands on something about to fade out. Crits never absorb — each one is the event
-     * — and their overload is what the drop counter exists to make visible.
+     * value: same pooled lane, same side, same heal/damage kind, same proc/direct and periodic/direct kind, same ability name
+     * (or same word), same amount. Then the age rules: the target has to be young enough that one number standing for several
+     * still reads as one exchange, and have most of its life left, so a count never lands on something about to fade out.
+     * Crits fold onto crits — the pool keeps them off every ordinary row — and the overload case (a crit flood whose twins
+     * already faded) is what the drop counter exists to make visible.
      *
      * Matching on the value is what makes "×N" a fact rather than an estimate: 2,040 ×2 really was two hits of 2,040.
      * Summing instead, which this used to do, put a number on screen that no hit ever landed for and made the player divide
@@ -542,8 +554,8 @@ namespace EQLogParser
      * folds only into a component with identical flags, and Mik's Scrolling Battle Text merges only on matching event type
      * *and* skill name.
      */
-    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool proc, bool periodic, FctSpecial special,
-      string source, double value, double now)
+    private static bool TryAbsorb(List<FctHitState> hits, FctLane lane, bool incoming, bool heal, bool proc, bool periodic,
+      string source, double value, string fixedText, double now)
     {
       /* The one part of the key that costs anything is formatted once for the incoming hit and reused across candidates — 
          and still only when a candidate has survived every cheaper test, exactly as before. The candidates carry theirs from
@@ -552,11 +564,13 @@ namespace EQLogParser
       for (var i = hits.Count - 1; i > -1; i--)
       {
         var hit = hits[i];
-        if (hit.Lane != lane || hit.Blowout || hit.FixedText is not null
+        if (hit.Lane != lane || hit.Heal != heal
             || hit.Incoming != incoming || hit.Proc != proc || hit.Periodic != periodic
-            // marks blow out like crits, so no marked row can be a fold TARGET; this comparison covers the other direction —
-            // an incoming mark must not quietly fold into a plain row of the same number and lose its event
-            || hit.Special != special
+            // marks fold at neither end: equality here pairs a mark only with its own kind, and Accept keeps marked
+            // arrivals out of the attempt entirely, so no mark is ever target or newcomer
+            || hit.Special != FctSpecial.None
+            // words match words and numbers match numbers; "miss" can never count into 0-value damage or back
+            || !string.Equals(hit.FixedText, fixedText, StringComparison.Ordinal)
             || !string.Equals(hit.Source, source, StringComparison.Ordinal)
 
             /*

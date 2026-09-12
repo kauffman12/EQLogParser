@@ -50,6 +50,12 @@ namespace EQLogParser
 
     public double Threshold;
 
+    /* Accumulation, the panel checkbox beside "sample data": identical numbers landing while one flies stack onto it with a
+     * count ("412 ×3"), words count too ("miss ×2"). Off as shipped - every hit its own row - because compacting somebody
+     * else's fight log without asking is exactly the surprise this project's dials refuse to be. One word in settings.ini;
+     * FctOverlaySettings owns the key, FctIngest.Accumulate does the work. */
+    public bool Accumulate;
+
     /* The nine show-list rows (FctShowList), keyed by row so adding one costs a line in that table rather than a field, a
      * load, a save, a dropdown item and two blocks of assignments. Every row defaults on; a row nobody stored reads as shown
      * (GetRow), which is the same promise FctIngest.RowShown makes about an unknown row and LoadShown makes about a missing
@@ -138,6 +144,7 @@ namespace EQLogParser
       DealtLane = DealtLane,
       DealtUp = DealtUp,
       Threshold = Threshold,
+      Accumulate = Accumulate,
       Rows = new Dictionary<FctRow, bool>(Rows),
       ShowMiss = ShowMiss,
       ShowParry = ShowParry,

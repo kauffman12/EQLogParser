@@ -1847,3 +1847,33 @@ and the silhouette says which.
 - Glyphs are vector paths on a 24-unit grid rather than PNG assets: they scale with both size dials,
   need no new deployment files, and the cut-out details (ghost eyes, skull nose) can be forced to the
   outline colour independently of the fill.
+
+### Accumulation: a door on a machine that was always there
+
+The overlay has folded identical hits since the first ingest engine — one number reading "412 ×6" instead of six 412s,
+keyed so tightly (lane, side, kind, ability, face value) that a reader could trust the count as a fact. What it never had
+was the player's answer to *whether*. The fold was constitution: always on, tuned, defended by a wall of tests — and a
+player who wanted to see every hit of a fight individually had no way to say so, which is the wrong shape for a feature
+whose whole job is deciding what the player sees.
+
+It ships now as a checkbox beside sample data, and as `FctOverlayAccumulate` in settings.ini: off — the shipped default —
+means every event keeps its own row and the fold is never consulted; on buys the compact ledger. Off-by-default costs
+nobody anything (the machine runs correctly either way, and the switch guards only the door), and it follows the rule
+this project's dials all keep: nothing about somebody's fight changes because a build decided it looked better.
+
+Opening the door let two policies widen, both asked for by players rather than found in the code's own logic:
+
+- **Crits fold onto crits.** They used to refuse folding outright ("each one is the event"), which quietly also meant a
+  DoT-crit storm could never compact and its overflow landed in the drop counter. Now identical crits stack — honestly,
+  because crit pooling keeps a crit lane of its own, so plain numbers can join a crit stack (or the reverse) by
+  construction rather than by another clause in the key. A taken crit still never joins a dealt one: whose story an
+  event tells was already in the key.
+- **Words count.** "Miss" arrived four times and drew four times; four identical evasions are one fact said four times,
+  so words fold by their own rule ("Miss ×2") — they carry no value, so there is nothing to total wrongly, which is also
+  why they may fold when the face-value rule exists to stop numbers doing something similar. Direct heals and marked
+  events (assassinate and friends) still never stack at either end: players read heals one by one, and a counted-away
+  mark is the event itself lost.
+
+The existing fold-policy tests moved with it by opening the door themselves (`ingest.Accumulate = true`, one line each),
+which keeps them pinning policy rather than accident, and a new `FctAccumulationTest` pins the door: off spawns six of
+six, on stacks the stream, words count, crits meet only crits, and the nevers never. Suite 1082/1082.

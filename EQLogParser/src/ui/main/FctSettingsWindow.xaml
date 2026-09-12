@@ -231,8 +231,12 @@
            demo switch rather than on a line of its own. -->
       <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,6" />
       <Grid>
-        <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left" Checked="ControlChanged" Unchecked="ControlChanged"
-                  ToolTip="the demo numbers that play while configuring; turn off to set this up over a real fight" />
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center" Checked="ControlChanged" Unchecked="ControlChanged"
+                    ToolTip="the demo numbers that play while configuring; turn off to set this up over a real fight" />
+          <CheckBox x:Name="accumulateCheck" Content="accumulation" Margin="18,0,0,0" VerticalAlignment="Center" Checked="ControlChanged" Unchecked="ControlChanged"
+                    ToolTip="stack identical hits onto the number already flying (412 ×3 instead of three 412s); words count too (miss ×2). off keeps every hit its own number" />
+        </StackPanel>
         <TextBlock x:Name="statsText" VerticalAlignment="Center" HorizontalAlignment="Right" TextAlignment="Right" Opacity="0.65" TextWrapping="Wrap"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>

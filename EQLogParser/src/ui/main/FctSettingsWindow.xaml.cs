@@ -114,6 +114,7 @@ namespace EQLogParser
       critSlider.Value = FctScale.PercentOfSize(state.CritScale);
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
+      accumulateCheck.IsChecked = state.Accumulate;
 
       _loading = false;
 
@@ -158,6 +159,7 @@ namespace EQLogParser
         CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
+        Accumulate = accumulateCheck.IsChecked == true,
       };
 
       /* Rows and words alike: the same table, read in the same order it was filled. */

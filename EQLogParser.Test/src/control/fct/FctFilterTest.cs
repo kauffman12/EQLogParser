@@ -314,6 +314,7 @@ namespace EQLogParser
     public void AHiddenRowSpawnsNothingAndFoldsNothing()
     {
       var ingest = Open();
+      ingest.Accumulate = true; // the promise is that a hidden row folds nothing EVEN with accumulation on; door itself: FctAccumulationTest
       var hits = new List<FctHitState>();
 
       Assert.IsNotNull(TakeRow(ingest, hits, FctLane.DamageDealt, 500, "Slash", row: FctRow.MeleeHits), "every row ships visible");

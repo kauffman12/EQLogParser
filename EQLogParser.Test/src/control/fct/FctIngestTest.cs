@@ -132,6 +132,7 @@ namespace EQLogParser
     public void IdenticalTicksBecomeOneNumberWithACount()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // the fold policy is under test here; the switch's own door is FctAccumulationTest
 
       ingest.Accept(_hits, FctLane.DamageDealt, 200, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 0);
 
@@ -151,6 +152,7 @@ namespace EQLogParser
     public void HealingStaysOneNumberPerCast()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
 
       for (var now = 0.0; now < 3000; now += 500)
       {
@@ -207,12 +209,13 @@ namespace EQLogParser
     /*
      * The overload contract has two halves, and the tests for them are separate on purpose: normal numbers must
      * never be lost while a hit of their lane is still alive to take them, and the case where nothing can take
-     * them (crits, which refuse to absorb) has to be counted instead of silently vanishing.
+     * them (crits whose twins already faded, or a flood with accumulation switched off) has to be counted instead of silently vanishing.
      */
     [TestMethod]
     public void SustainedOverloadMergesInsteadOfLosingDamage()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // the fold policy is under test here; the switch's own door is FctAccumulationTest
       var now = 0.0;
 
       // 60 ms apart is faster than any lane can display, and it goes on long enough that every early hit ages
@@ -260,6 +263,7 @@ namespace EQLogParser
     public void TicksOfTwoDifferentDoTsNeverShareANumber()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
 
       ingest.Accept(_hits, FctLane.DamageTaken, 400, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 0);
       ingest.Accept(_hits, FctLane.DamageTaken, 350, "Burn", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
@@ -275,6 +279,7 @@ namespace EQLogParser
     public void AProcNeverInflatesTheSwingItLandedOn()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
 
       // ordinary swings first, so 40 is "routine" for the lane — the size test alone would happily fold it
       for (var now = 0.0; now < 900; now += 100)
@@ -295,6 +300,7 @@ namespace EQLogParser
     public void ADoTTickDoesNotGrowAMeleeNumber()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
 
       var swing = ingest.Accept(_hits, FctLane.DamageDealt, 1500, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
       var tick = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Immolation", crit: false, minor: true, periodic: true, fixedText: null, Width, Height, 100);
@@ -387,6 +393,7 @@ namespace EQLogParser
     public void AStreamOfIdenticalHitsNeverReachesTheLaneCap()
     {
       var ingest = NewIngest();
+      ingest.Accumulate = true; // the fold policy is under test here; the switch's own door is FctAccumulationTest
 
       for (var i = 0; i < 13; i++)
       {

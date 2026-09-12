@@ -257,7 +257,8 @@ namespace EQLogParser
       var before = hits.Count;
       Wind(ingest, hits, from: 11000, to: 12000);
 
-      // crits for the burst: they neither absorb nor fold (their policy is pinned elsewhere), so all three really do
+      // crits for the burst, three different amounts so no folding is possible even with accumulation on (its policy is
+      // pinned in FctAccumulationTest), so all three really do
       // demand an entrance in one instant — which is exactly the capacity question this asserts
       Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 999, "Flurry", true, false, false, null, Width, Height, 12000));
       Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 888, "Flurry", true, false, false, null, Width, Height, 12000));

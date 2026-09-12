@@ -53,6 +53,13 @@ namespace EQLogParser
         ? $"{FormatHitValue(value)} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
         : FormatHitValue(value));
 
+    /* The same count convention on a word: identical evasions stacked read "DODGE! ×2", which says more than either one did.
+     * A word carries no value, so there is nothing to total and no face-value rule to keep - the fold here only counts. */
+    internal static string FormatWord(string word, int mergeCount) =>
+      mergeCount > 1
+        ? $"{word} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
+        : word;
+
     /* "0.#" keeps 12k looking like 12k and 12.5k looking like 12.5k. */
     private static string Shorten(double value, string suffix) => value.ToString("0.#", CultureInfo.InvariantCulture) + suffix;
   }

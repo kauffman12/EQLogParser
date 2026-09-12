@@ -239,6 +239,15 @@ namespace EQLogParser
         changed = true;
       }
 
+      /* Accumulation rides the same contract as every gate here: it decides what joins from the next number on, never what
+         is already flying - and a change restarts the demo below, which is how "turn it on and watch the ×3 tick appear in
+         the sample loop" works without anybody fighting a boss. */
+      if (_ingest.Accumulate != state.Accumulate)
+      {
+        _ingest.Accumulate = state.Accumulate;
+        changed = true;
+      }
+
       if (changed)
       {
         RestartDemo();
