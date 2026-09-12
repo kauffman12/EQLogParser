@@ -664,7 +664,7 @@ namespace EQLogParser
       var live = string.Empty;
       foreach (var hit in _demo.Hits)
       {
-        live += (live.Length > 0 ? "," : "") + $"{hit.Category}@{hit.X:F0},{hit.Y:F0}";
+        live += (live.Length > 0 ? "," : "") + $"{hit.Lane}@{hit.X0:F0},{hit.Y0:F0}({hit.FormattedValue})";
       }
 
       var win = Window.GetWindow(this);
