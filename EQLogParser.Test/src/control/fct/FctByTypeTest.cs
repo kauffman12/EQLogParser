@@ -268,6 +268,28 @@ namespace EQLogParser
       Assert.AreEqual((Width / 2, Width / 2), (shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).X, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width), "a lone right 1 owns the whole right half");
     }
 
+    /* The configure-mode guide's own call sequence (FctSkiaCanvas.DrawLaneGuide): a config state, BuildLayout, Stage,
+       LaneRect - traced for the two arrangements whose outlines are disputed. The shipped spread books one category per
+       lane and leaves right 2 free, so its solo right 1 outlines centre line to right edge while the left pair takes the
+       quarters; taking healing back to "none" grows the left outline the same way. A box that disagrees with its numbers
+       cannot survive this test and the row-side assertions above at the same time, because both read the one LaneRect. */
+    [TestMethod]
+    public void AGuideOutlineIsItsRowsOwnBox()
+    {
+      var spread = new FctConfigState { Fountain = false };
+      Assert.AreEqual(0, spread.ResolveLaneConflicts(), "the shipped spread books no conflicts and gets no moves");
+      var stage = spread.BuildLayout().Stage(Width, Height);
+      Assert.AreEqual((0.0, Width / 4), (stage.LaneRect(FctRailLane.Left1).X, stage.LaneRect(FctRailLane.Left1).Width), "left 1 outlines the far-left quarter");
+      Assert.AreEqual((Width / 4, Width / 4), (stage.LaneRect(FctRailLane.Left2).X, stage.LaneRect(FctRailLane.Left2).Width), "left 2 outlines the inner-left quarter");
+      Assert.AreEqual((Width / 2, Width / 2), (stage.LaneRect(FctRailLane.Right1).X, stage.LaneRect(FctRailLane.Right1).Width), "solo right 1 outlines its whole half - right 2 free is air, not a wall");
+
+      var freed = new FctConfigState { Fountain = false, HealLane = FctRailLane.None };
+      freed.ResolveLaneConflicts();
+      var bare = freed.BuildLayout().Stage(Width, Height);
+      Assert.AreEqual((0.0, Width / 2), (bare.LaneRect(FctRailLane.Left2).X, bare.LaneRect(FctRailLane.Left2).Width), "with healing off the rail, left 2 outlines the whole left half");
+      Assert.AreEqual((Width / 2, Width / 2), (bare.LaneRect(FctRailLane.Right1).X, bare.LaneRect(FctRailLane.Right1).Width), "and right 1 still owns its half the same way");
+    }
+
     /* A row still in flight when its category hands its column back keeps the walls it was born under until it scrolls out: the gate
      * stops new numbers of that category (FctIngest.Show*), but the old ones must not be left dangling in a lane that no longer exists.
      * And None must not couple directions against itself on the way through. */
