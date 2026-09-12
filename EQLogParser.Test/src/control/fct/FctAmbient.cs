@@ -17,6 +17,7 @@ namespace EQLogParser
       FctScale.Crit = FctScale.CritSizeDefault;
       FctScale.Time = FctScale.TimeDefault;
       FctLayout.LabelSide = LabelSideDefault;
+      FctPalette.Reset(); // the seventh dial's family: hues are process globals like size and speed, and leak the same way
     }
 
     /* What the geometry uses before a canvas has stamped the setting — the same value the shipped overlay draws with. */

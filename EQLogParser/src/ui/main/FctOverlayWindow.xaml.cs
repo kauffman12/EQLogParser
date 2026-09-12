@@ -550,6 +550,7 @@ namespace EQLogParser
       FctScale.Text = FctScale.ClampSize(state.TextScale);
       FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
       FctScale.Time = FctScale.TimeFromSpeed(state.Speed);
+      FctPalette.Apply(state);
       _canvas.ApplyGates(state);
     }
 

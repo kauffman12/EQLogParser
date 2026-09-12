@@ -162,6 +162,46 @@ namespace EQLogParser
      * opens configure mode instead (see MainWindow.SetFctOverlayVisible). Written only by Save: Cancel, Esc and closing all leave it unset, which means
      * the offer comes back rather than nagging into a setting nobody agreed to.
      */
+    /* The seven hues, one key each; the text is always eight uppercase hex digits, alpha first (ColorText below), and a
+       hand-edit may drop the alpha or lead with '#'. Parse nonsense lands on shipped — the pure-parse law of every FCT key:
+       settings.ini is hand-editable furniture, not a place garbage gets to reach the canvas from. */
+    public const string ColorDamageDealtKey = "FctOverlayColorDamageDealt";
+    public const string ColorDamageTakenKey = "FctOverlayColorDamageTaken";
+    public const string ColorHealingKey = "FctOverlayColorHealing";
+    public const string ColorCritKey = "FctOverlayColorCrit";
+    public const string ColorSpecialKey = "FctOverlayColorSpecial";
+    public const string ColorWordsKey = "FctOverlayColorWords";
+    public const string ColorSourceKey = "FctOverlayColorSource";
+
+    /* Pure for testability: '#' optional, six hex digits mean opaque, eight carry their own alpha; anything else is the shipped value. */
+    public static int ParseColor(string raw, int shipped)
+    {
+      if (raw is null)
+      {
+        return shipped;
+      }
+
+      var text = raw.Trim();
+      if (text.StartsWith("#", StringComparison.Ordinal))
+      {
+        text = text[1..];
+      }
+
+      if (text.Length == 6)
+      {
+        text = "FF" + text;
+      }
+
+      return text.Length == 8
+          && int.TryParse(text, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var argb)
+        ? argb
+        : shipped;
+    }
+
+    /* The ini's one honest spelling: alpha always first, always uppercase, so what a player writes by hand and what the
+       panel saves parse to identical ints and a diff of settings.ini never hides a silent alpha. */
+    public static string ColorText(int argb) => argb.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
+
     public const string ConfiguredKey = "FctOverlayConfigured";
 
     public static bool IsConfigured() => ConfigUtil.IfSet(ConfiguredKey);
@@ -222,6 +262,13 @@ namespace EQLogParser
         CritScale = LoadCritScale(),
         Speed = LoadSpeed(),
         SampleData = LoadSampleData(),
+        ColorDamageDealt = ParseColor(ConfigUtil.GetSetting(ColorDamageDealtKey, null), FctStyle.DamageDealtArgb),
+        ColorDamageTaken = ParseColor(ConfigUtil.GetSetting(ColorDamageTakenKey, null), FctStyle.DamageTakenArgb),
+        ColorHealing = ParseColor(ConfigUtil.GetSetting(ColorHealingKey, null), FctStyle.HealingArgb),
+        ColorCrit = ParseColor(ConfigUtil.GetSetting(ColorCritKey, null), FctStyle.CritArgb),
+        ColorSpecial = ParseColor(ConfigUtil.GetSetting(ColorSpecialKey, null), FctStyle.SpecialArgb),
+        ColorWords = ParseColor(ConfigUtil.GetSetting(ColorWordsKey, null), FctStyle.WordsArgb),
+        ColorSource = ParseColor(ConfigUtil.GetSetting(ColorSourceKey, null), FctStyle.SourceArgb),
       };
 
       /* The shape belongs to the mode, and a file that pairs them wrongly (bands + arc) is not a decision anybody made,
@@ -260,6 +307,13 @@ namespace EQLogParser
       SaveCritScale(state.CritScale);
       SaveSpeed(state.Speed);
       SaveSampleData(state.SampleData);
+      ConfigUtil.SetSetting(ColorDamageDealtKey, ColorText(state.ColorDamageDealt));
+      ConfigUtil.SetSetting(ColorDamageTakenKey, ColorText(state.ColorDamageTaken));
+      ConfigUtil.SetSetting(ColorHealingKey, ColorText(state.ColorHealing));
+      ConfigUtil.SetSetting(ColorCritKey, ColorText(state.ColorCrit));
+      ConfigUtil.SetSetting(ColorSpecialKey, ColorText(state.ColorSpecial));
+      ConfigUtil.SetSetting(ColorWordsKey, ColorText(state.ColorWords));
+      ConfigUtil.SetSetting(ColorSourceKey, ColorText(state.ColorSource));
     }
 
     /* The mode itself, in the player's words; absent is FOUNTAIN. The plume is what makes someone look twice at the

@@ -49,13 +49,20 @@ namespace EQLogParser
     /* The ability/verb line, deliberately neutral so it never competes with a value colour for meaning. */
     public const int SourceArgb = unchecked(0xF2 << 24 | 0xC6 << 16 | 0xCF << 8 | 0xDA);
 
-    /* Zero-damage labels are hueless: high value against any zone, low value against each other. The player's own
-     * whiff sits a step behind a defence that worked, which is the only ranking here worth encoding. */
-    public const int WordArgb = unchecked(0xFF << 24 | 0xCF << 16 | 0xE0 << 8 | 0xEA);
-    public const int OwnWordArgb = unchecked(0xFF << 24 | 0xAF << 16 | 0xBB << 8 | 0xC6);
+    /* Zero-damage words are hueless and — since the palette simplification that sized the colour pickers — ONE colour: the former trio
+     * (a defence that worked CFE0EA, the player's own whiff a step dimmer, Invulnerable/Absorb an amber shout) merged into this pale.
+     * The trio answered "did I stop it, miss it, or bounce it entirely" three shades apart, and at overlay distance that is a question
+     * the WORD already spells out. The one ranking still worth encoding survives where it always really lived: SIZE — loud words keep
+     * their own bigger tier (ValueSize), so "stop casting" still stands taller than the footnotes, it just no longer shouts in gold. */
+    public const int WordsArgb = unchecked(0xFF << 24 | 0xCF << 16 | 0xE0 << 8 | 0xEA);
 
-    /* Invulnerable and Absorb mean "every cast from here is wasted", so they are the one label allowed to shout. */
-    public const int LoudWordArgb = unchecked(0xFF << 24 | 0xF2 << 16 | 0xC9 << 8 | 0x4C);
+    /* The four numeric classes, named for FctPalette's seed: the drawing path reads hues through the palette and these are
+     * its shipped truth (the meanings each colour answers with live in this file's header — house advice for whoever picks
+     * a replacement). */
+    public const int DamageDealtArgb = unchecked(0xFF << 24 | 0xFF << 16 | 0xD7 << 8 | 0x5E); // yellow
+    public const int DamageTakenArgb = unchecked(0xFF << 24 | 0xFF << 16 | 0x6B << 8 | 0x5E); // red
+    public const int HealingArgb = unchecked(0xFF << 24 | 0x7F << 16 | 0xE0 << 8 | 0x61);     // green
+    public const int CritArgb = unchecked(0xFF << 24 | 0xFF << 16 | 0x8A << 8 | 0x1E);        // deep orange - away from dealt yellow, not toward taken red
 
     /*
      * The marked events (FctSpecial) share ONE hue — epic purple, the genre's "this is rare" colour — because the
@@ -106,9 +113,9 @@ namespace EQLogParser
         : (ValueSize(lane, minor, loud) - (quiet ? WordSizeStepPt : 0)) * FctScale.Text;
 
       hit.ValueFontSize = size;
-      hit.ValueArgb = ValueArgb(lane, loud);
+      hit.ValueArgb = ValueArgb(lane);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
-      hit.SourceArgb = SourceArgb;
+      hit.SourceArgb = FctPalette.Source;
       /* Blowout is the size-INDEPENDENT half of "this number is a big deal": the swell-in from below full size and the
          collapse out, the halo, the wider spray spread, the top draw pass, immunity to folding. Size itself lives in the
          font above, so no envelope multiplies what the dial set — the two ever stacked (font x pop hold) were the bug that
@@ -121,7 +128,7 @@ namespace EQLogParser
          reads the width: clamps, collision and stream spacing all charge for the glyph beside the number. */
       if (hit.Special is not FctSpecial.None)
       {
-        hit.ValueArgb = SpecialArgb;
+        hit.ValueArgb = FctPalette.Special;
         hit.IconAllowance = IconSpan(size);
       }
     }
@@ -161,18 +168,16 @@ namespace EQLogParser
       };
     }
 
-    private static int ValueArgb(FctLane lane, bool loud) =>
+    /* Every hue answers through the palette — the shipped table until a player restages it. One colour for every word
+     * (see WordsArgb): the words' remaining ranking is a size question and ValueSize keeps answering it. */
+    private static int ValueArgb(FctLane lane) =>
       lane switch
       {
-        FctLane.Crit => Argb(0xFF, 0x8A, 0x1E),       // deep orange - away from dealt yellow, not toward taken red
-        FctLane.HealingDealt or FctLane.HealingReceived => Argb(0x7F, 0xE0, 0x61), // green
-        FctLane.DamageDealt => Argb(0xFF, 0xD7, 0x5E), // yellow
-        // hueless labels; amber only where the message is "stop casting", dimmer step for my own whiff
-        FctLane.Defensive => loud ? LoudWordArgb : WordArgb,
-        FctLane.Missed => loud ? LoudWordArgb : OwnWordArgb,
-        _ => Argb(0xFF, 0x6B, 0x5E),                   // red - damage taken
+        FctLane.Crit => FctPalette.Crit,
+        FctLane.HealingDealt or FctLane.HealingReceived => FctPalette.Healing,
+        FctLane.DamageDealt => FctPalette.DamageDealt,
+        FctLane.Defensive or FctLane.Missed => FctPalette.Words,
+        _ => FctPalette.DamageTaken,
       };
-
-    private static int Argb(int r, int g, int b) => (0xFF << 24) | (r << 16) | (g << 8) | b;
   }
 }

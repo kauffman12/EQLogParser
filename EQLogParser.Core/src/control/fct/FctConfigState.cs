@@ -126,6 +126,17 @@ namespace EQLogParser
        (FctOverlaySettings.SampleDataKey); Cancel still does not, same as every other control here. */
     public bool SampleData = true;
 
+    /* The seven remembered hues (FctPalette): one per class of number, one for every word together, one for the labels.
+       Defaults are FctStyle's shipped table — which is also why FctPalette.Reset is just "apply a default state" and the
+       shipped palette exists in exactly one place. */
+    public int ColorDamageDealt = FctStyle.DamageDealtArgb;
+    public int ColorDamageTaken = FctStyle.DamageTakenArgb;
+    public int ColorHealing = FctStyle.HealingArgb;
+    public int ColorCrit = FctStyle.CritArgb;
+    public int ColorSpecial = FctStyle.SpecialArgb;
+    public int ColorWords = FctStyle.WordsArgb;
+    public int ColorSource = FctStyle.SourceArgb;
+
     /* A copy that can be handed across the window boundary without the two sides sharing a dictionary: previews are
      * disposable, and a preview that edited the staged state behind its owner's back would make Cancel a lie. */
     internal FctConfigState Clone() => new()
@@ -153,6 +164,13 @@ namespace EQLogParser
       CritScale = CritScale,
       Speed = Speed,
       SampleData = SampleData,
+      ColorDamageDealt = ColorDamageDealt,
+      ColorDamageTaken = ColorDamageTaken,
+      ColorHealing = ColorHealing,
+      ColorCrit = ColorCrit,
+      ColorSpecial = ColorSpecial,
+      ColorWords = ColorWords,
+      ColorSource = ColorSource,
     };
 
     /* The two words the row speaks, resolved to the engine's geometry. Fountain is bands wearing spray — the mode names

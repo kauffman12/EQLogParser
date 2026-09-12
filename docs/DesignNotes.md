@@ -1616,10 +1616,19 @@ fit — rather than by type nobody can read at arm's length.
 reads as mana, arcane damage or a friendly nameplate to anyone arriving from another MMO, so it was a wrong sign on
 top of a redundant one. Nothing is blue now: yellow dealt / deep-orange crit / red taken / green heals, with crit's
 hue pushed *deeper* than dealt damage rather than brighter (at 1.3× scale plus the pop, a light orange and the yellow
-it must stand apart from converge). The zero-damage labels are hueless — pale slate for a defence that worked, one
-step dimmer for my own whiff — with amber reserved for `Invulnerable`/`Absorb`, the two labels that mean "every cast
-from here is wasted" and so deserve to beat the routine one next to them. The source line went neutral grey for the
+it must stand apart from converge). The zero-damage labels are hueless — all of them ONE pale now: the former trio
+(a defence that worked, my own whiff, an amber `Invulnerable`/`Absorb` shout) merged into a single `Words` colour, because
+at overlay distance the WORD already spells out which defence happened and the one ranking still worth encoding lives in
+SIZE — loud words keep their taller tier, they just no longer shout in gold. The source line went neutral grey for the
 same reason: it must not compete with a value colour for meaning.
+
+That table is advice now rather than law, because the hues moved in: the settings window's *colors* tab holds seven
+pickers — dealt, taken, heals, crits, specials, words, labels — each with a ↺ to its shipped value. The hues joined the
+engine's dial family as `FctPalette`, process globals seeded from these constants and applied by the same staged-settings
+path as sizes and speed, so the old promises ride unchanged: a picked colour wears the NEXT spawned number, mid-flight
+rows keep theirs, and only Save remembers (`FctOverlayColor*` keys, eight uppercase hex digits; `#` and a dropped alpha
+survive hand-editing, nonsense lands on shipped and never on the canvas). What stays unfree is small: the crit halo's
+warmth still follows `ColorWarms`, and per-word hues stay unoffered until the seven are ironed out.
 
 Healing values additionally wear a **leading plus** ("+9,409", "+12.5k ×3") — a fifth channel that costs one glyph. It
 exists for the readers colour is already failing: red/green separation is what roughly one man in twelve cannot do at a
@@ -1779,10 +1788,11 @@ constant deliberately rather than assume it is there.
   spell failed goes to the Missed lane, I resisted theirs to Defensive — because a punch that gets blocked and a spell that gets resisted
   are the same piece of information wearing different grammar. The spell name rides along as the source line (the parser's "your pet's X"
   quirk gets "pet's " stripped on the way); party mates' resists stay out, like the rest of the feed.
-- Per-character or per-lane configuration, palette customization, and a reduced-motion mode. Colour is deliberately
-  not load-bearing for reading the overlay — direction comes from region plus travel, and the two lanes that could
-  be confused (my whiff vs a defence that worked) are also separated by size and band — so a palette switch is a
-  comfort feature rather than an accessibility blocker.
+- Per-character or per-lane configuration and a reduced-motion mode. Palette customization used to sit here too, on the
+  reasoning that colour is not load-bearing for reading the overlay — direction comes from region plus travel, and the two
+  classes that could be confused (my whiff vs a defence that worked) are separated by size and word, not hue. That
+  reasoning is exactly why the seven pickers shipped: if a restage can only cost comfort, it belongs to the player; the
+  one thing the colours tab did NOT relax is the separations themselves, which are carried by non-colour channels.
 - Real GPU presentation via `D3DImage` (see above).
 
 ### The purple family: special attacks wear a glyph, not a bigger number
