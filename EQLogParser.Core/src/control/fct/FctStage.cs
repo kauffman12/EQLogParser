@@ -301,9 +301,10 @@ namespace EQLogParser
        label that spills across the centre reads as belonging to whatever the player is looking at, which is never the
        intent of a number streaming past it. The halves therefore tile the TRACK (the width minus the gutter), equally
        and symmetrically: left ends at halfW, right starts at halfW + CenterGutter. Bands never asks — its protected
-       region is the horizontal strip, not a column — and 20 px against a 100 px minimum canvas stays the same deal,
-       so this does not scale with the window. */
-    internal const double CenterGutter = 20;
+       region is the horizontal strip, not a column. Absolute rather than scaled: forty pixels of target frame is the
+       same fact on any monitor, and the layout floors (FctResize) keep a canvas narrow enough to squeeze it out from ever
+       being drawn on. */
+    internal const double CenterGutter = 40;
 
     /* Half of the track each side gets to tile. Every split-mode measure — spines, rects, the label walls they imply —
        derives from this one number, so the gutter cannot exist in one and not another. */

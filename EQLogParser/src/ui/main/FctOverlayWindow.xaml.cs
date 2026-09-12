@@ -277,13 +277,14 @@ namespace EQLogParser
     }
 
     /*
-     * A first run asks for 65% x 60% of the desktop's work area, floored at 1280 x 720: on every work area up to about a 1970 px width and a 1200 px
-     * height that is exactly the floor - the size the layout was designed and measured at, with headroom - and wider monitors scale past it. The
+     * A first run asks for 55% x 60% of the desktop's work area, floored at 1280 x 720: on every work area up to about a 2330 px width (and a 1200 px
+     * height) that is exactly the floor - the size the layout was designed and measured at, with headroom - and wider monitors scale past it. The
      * overlay is transparent text: what it is competing with for room is the game's own HUD, not another window, and for the source labels that sit
      * beside every number, screen literally IS the budget. The shares were set against a 1080p player's screen, where the older 80% share read as
-     * covering the fight rather than sitting over it. The shipped split spread books two categories on one side and one on the other, so the halves
-     * do not share the same room: the solo outgoing-damage column owns its whole half (FctStage tiles the booked lanes) - 640 px at the first-run
-     * width, past the label ceiling once its own number is out of the way, where a name's LENGTH rather than the window decides what gets cut
+     * covering the fight rather than sitting over it; the width came down again to 55% on the same reasoning (the height stays 60% - it is the
+     * columns' room labels compete for, and the vertical travel was already measured comfortable). The shipped split spread books two categories on one side and one on the other, so the halves
+     * do not share the same room: the solo outgoing-damage column owns its whole half (FctStage tiles the booked lanes) - 620 px at the first-run
+     * width once the centre gutter takes its forty, past the label ceiling once its own number is out of the way, where a name's LENGTH rather than the window decides what gets cut
      * (FctLayout.MaxSourceChars), and more on wider monitors - while the two left-hand categories split their half in quarters, comfortable for the
      * default below-label seat and modest for an inline one. Nothing else in the layout scales a name's length this directly, which is why the
      * first-run size answers to the monitor at all.
@@ -298,7 +299,7 @@ namespace EQLogParser
       return (Math.Max(1280, area.Width * DefaultWidthShare), Math.Max(720, area.Height * DefaultHeightShare));
     }
 
-    private const double DefaultWidthShare = 0.65;
+    private const double DefaultWidthShare = 0.55;
     private const double DefaultHeightShare = 0.60;
 
     private void RestoreSettings()
