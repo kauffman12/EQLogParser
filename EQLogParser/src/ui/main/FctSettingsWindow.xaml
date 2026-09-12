@@ -33,7 +33,7 @@
   <!-- FontSize comes from the theme like everything else's does (ThemeConfig publishes EQDescriptionSize beside the
        app's own font scale), so this panel shrinks and grows with the rest of the application. One attribute on the
        root: font size is an inherited property, and every label, combo, checkbox and button below wants exactly this. -->
-  <Border Background="{DynamicResource ContentBackgroundAlt2}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
+  <Border Background="{DynamicResource ContentBackground}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
           BorderThickness="1" CornerRadius="8" Padding="14,10,14,12"
           TextElement.FontSize="{DynamicResource EQDescriptionSize}">
     <StackPanel>
