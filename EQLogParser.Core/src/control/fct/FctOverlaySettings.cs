@@ -145,6 +145,17 @@ namespace EQLogParser
     internal static double ClampThreshold(double value) =>
       !double.IsFinite(value) || value <= 0 ? 0 : Math.Min(value, ThresholdMax);
 
+    /* The demo switch remembers itself: leaving configure mode was losing the answer to "do you want sample numbers
+       while you set things up?", so every session started the loop again even for the player who turned it off to lay
+       lanes out over a real fight. Only the word "off" lands off — junk and absence both keep the shipped on, because
+       the demo is how the panel teaches itself. */
+    public const string SampleDataKey = "FctOverlaySampleData";
+
+    public static bool LoadSampleData() =>
+      !string.Equals(ConfigUtil.GetSetting(SampleDataKey, null), "off", StringComparison.OrdinalIgnoreCase);
+
+    public static void SaveSampleData(bool value) => ConfigUtil.SetSetting(SampleDataKey, value ? "on" : "off");
+
     /*
      * Whether anybody has ever pressed Save in the settings panel. The overlay's defaults are defensible but they are opinions, and a first enable that
      * shows nothing but numbers being what the build decided keeps a player from learning that size, speed and motion are theirs to set - so the menu
@@ -210,6 +221,7 @@ namespace EQLogParser
         TextScale = LoadTextScale(),
         CritScale = LoadCritScale(),
         Speed = LoadSpeed(),
+        SampleData = LoadSampleData(),
       };
 
       /* The shape belongs to the mode, and a file that pairs them wrongly (bands + arc) is not a decision anybody made,
@@ -247,6 +259,7 @@ namespace EQLogParser
       SaveTextScale(state.TextScale);
       SaveCritScale(state.CritScale);
       SaveSpeed(state.Speed);
+      SaveSampleData(state.SampleData);
     }
 
     /* The mode itself, in the player's words; absent is FOUNTAIN. The plume is what makes someone look twice at the

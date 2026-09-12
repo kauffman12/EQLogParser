@@ -25,6 +25,13 @@ namespace EQLogParser
     private const double Width = 1600;
     private const double Height = 900;
 
+    /* Split tiles its halves on the track minus the centre gutter (FctStage.CenterGutter): the left half is [0..Half] and
+       the right starts at Seam. Quarters and spines below are expressions of Half, not hard-coded fractions of a
+       full-bleed width - the 20 px players keep free for their target frame moves every mark equally outward, and the
+       expected values stay honest arithmetic instead of archaeology. */
+    private static readonly double Half = (Width - FctStage.CenterGutter) / 2;
+    private static readonly double Seam = Half + FctStage.CenterGutter;
+
     private static FctLayoutChoice Choice(FctRegionSide healSide, bool incomingUp = false, bool outgoingUp = false)
       => new(FctLayoutMode.ByType, FctRegionSide.Left, incomingUp, outgoingUp, healSide);
 
@@ -46,7 +53,7 @@ namespace EQLogParser
         var swung = ingest.Accept(hits, FctLane.DamageDealt, 777, "Flurry", false, false, false, null, Width, Height, 1200);
         var bitten = ingest.Accept(hits, FctLane.DamageTaken, 555, "Bite", false, false, false, null, Width, Height, 1800);
 
-        var mid = Width / 2;
+        var mid = Half + FctStage.CenterGutter / 2.0; // the gutter's own middle is the seam a number must not lean on
         foreach (var (hit, heals, what) in new[]
         {
           (dealt, true, "my healing"), (cured, true, "healing on me"),
@@ -197,8 +204,8 @@ namespace EQLogParser
        * who sent the number. This choice books one lane per half, so each claimant tiles its whole half. */
       var healColumn = stage.RegionFor(incomingHeal);
       Assert.AreEqual(healColumn.X, stage.RegionFor(outgoingHeal).X, "every healing number gets the category column whatever its direction");
-      Assert.AreEqual(Width / 2, healColumn.X, "a lane-less choice falls back to its side's outer column");
-      Assert.AreEqual(Width / 2, healColumn.Width, "one claimant per half tiles the half outright");
+      Assert.AreEqual(Seam, healColumn.X, "a lane-less choice falls back to its side's outer column");
+      Assert.AreEqual(Half, healColumn.Width, "one claimant per half tiles the half outright");
     }
 
     /* The four lanes are what the panel offers, so they are what the geometry answers: the lanes a category books tile their
@@ -211,14 +218,18 @@ namespace EQLogParser
         healLane: FctRailLane.Right1, incomingDamageLane: FctRailLane.Right2, outgoingDamageLane: FctRailLane.Left1)
         .Stage(800, 560);
 
+      // gutter-aware marks for this 800 px stage: halves are (800 - 20) / 2 and the right one starts past the seam
+      var half8 = (800 - FctStage.CenterGutter) / 2;
+      var seam8 = half8 + FctStage.CenterGutter;
+
       var dealt = stage.RegionFor(new FctHitState { Lane = FctLane.DamageDealt });
       var taken = stage.RegionFor(new FctHitState { Lane = FctLane.DamageTaken, Incoming = true });
       var heal = stage.RegionFor(new FctHitState { Lane = FctLane.HealingReceived, Incoming = true, Heal = true });
 
       Assert.AreEqual(0, (int)dealt.X, "left 1 alone in its half owns it from the far left");
-      Assert.AreEqual(400, (int)dealt.Width, "one claimant per half tiles the half outright");
-      Assert.AreEqual(400, (int)heal.X, "right 1 is the inner-right quarter");
-      Assert.AreEqual(200, (int)heal.Width, "two claimants in a half take it in quarters");
+      Assert.AreEqual((int)half8, (int)dealt.Width, "one claimant per half tiles the half outright");
+      Assert.AreEqual((int)seam8, (int)heal.X, "right 1 is the inner-right quarter");
+      Assert.AreEqual((int)(half8 / 2), (int)heal.Width, "two claimants in a half take it in quarters");
       Assert.IsTrue(dealt.X + dealt.Width <= taken.X && heal.X + heal.Width <= taken.X,
         "different lanes can never share pixels — that was the whole point");
 
@@ -243,29 +254,29 @@ namespace EQLogParser
       // the shipped default: heals alone on the left, both damage streams sharing right 2 - one claim per half
       var stage = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left).Stage(Width, Height);
       Assert.AreEqual(0.0, stage.RegionFor(hit(FctLane.HealingDealt, false, true)).X, "heals own their half from the far left");
-      Assert.AreEqual(Width / 2, stage.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "one claim per half tiles the whole half");
+      Assert.AreEqual(Half, stage.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "one claim per half tiles the whole half");
 
       // two claims on the left: back to quarters in screen order; the shared right stays a half
       var split = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2).Stage(Width, Height);
-      Assert.AreEqual((0.0, Width / 4), (split.RegionFor(hit(FctLane.HealingDealt, false, true)).X, split.RegionFor(hit(FctLane.HealingDealt, false, true)).Width), "left 1 is the far-left quarter");
-      Assert.AreEqual((Width / 4, Width / 4), (split.RegionFor(hit(FctLane.DamageTaken, true, false)).X, split.RegionFor(hit(FctLane.DamageTaken, true, false)).Width), "left 2 is the inner-left quarter");
-      Assert.AreEqual(Width / 2, split.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "the shared right lane still owns its half");
+      Assert.AreEqual((0.0, Half / 2), (split.RegionFor(hit(FctLane.HealingDealt, false, true)).X, split.RegionFor(hit(FctLane.HealingDealt, false, true)).Width), "left 1 is the far-left quarter");
+      Assert.AreEqual((Half / 2, Half / 2), (split.RegionFor(hit(FctLane.DamageTaken, true, false)).X, split.RegionFor(hit(FctLane.DamageTaken, true, false)).Width), "left 2 is the inner-left quarter");
+      Assert.AreEqual(Half, split.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "the shared right lane still owns its half");
 
       // a shared lane is ONE claim: two categories naming left 1 free the rest of the half
       var shared = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left1, outgoingDamageLane: FctRailLane.Right2).Stage(Width, Height);
-      Assert.AreEqual(Width / 2, shared.RegionFor(hit(FctLane.HealingDealt, false, true)).Width, "a shared lane counts once");
+      Assert.AreEqual(Half, shared.RegionFor(hit(FctLane.HealingDealt, false, true)).Width, "a shared lane counts once");
 
       // a solo INNER lane takes its half too - the space belongs to the claimant, not to the wall position
       var inner = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, healLane: FctRailLane.Left2).Stage(Width, Height);
-      Assert.AreEqual((0.0, Width / 2), (inner.RegionFor(hit(FctLane.HealingDealt, false, true)).X, inner.RegionFor(hit(FctLane.HealingDealt, false, true)).Width), "a lone left 2 still owns the whole left half");
+      Assert.AreEqual((0.0, Half), (inner.RegionFor(hit(FctLane.HealingDealt, false, true)).X, inner.RegionFor(hit(FctLane.HealingDealt, false, true)).Width), "a lone left 2 still owns the whole left half");
 
       // and the shipped spread itself (FctConfigState's lanes): right 1 alone with right 2 empty tiles centre line to
       // the window's right edge - the case a player asks about when they free right 2 in setup mode
       var shipped = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1).Stage(Width, Height);
-      Assert.AreEqual((Width / 2, Width / 2), (shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).X, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width), "a lone right 1 owns the whole right half");
+      Assert.AreEqual((Seam, Half), (shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).X, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width), "a lone right 1 owns the whole right half");
     }
 
     /* What tiling frees is space, not position. A lane whose neighbour went none takes the half as REGION - labels, sway and walls
@@ -281,25 +292,25 @@ namespace EQLogParser
       // the shipped spread: right 1 alone with right 2 free — region is the whole half, spine stays at the inner slot's middle
       var shipped = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1).Stage(Width, Height);
-      Assert.AreEqual(Width * 5 / 8, shipped.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 1 parks beside the seam it was booked next to");
+      Assert.AreEqual(Seam + Half / 4, shipped.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 1 parks beside the gutter it was booked next to");
 
       // book the neighbour back and nothing about either spine moves - only the region shrinks back to quarters
       var pair = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Right1, outgoingDamageLane: FctRailLane.Right2).Stage(Width, Height);
-      Assert.AreEqual(Width * 5 / 8, pair.SpineFor(hit(FctLane.DamageTaken, true, false)), "booking the neighbour changes no spine");
-      Assert.AreEqual(Width * 7 / 8, pair.SpineFor(hit(FctLane.DamageDealt, false, false)), "right 2's slot is the outer quarter's middle");
+      Assert.AreEqual(Seam + Half / 4, pair.SpineFor(hit(FctLane.DamageTaken, true, false)), "booking the neighbour changes no spine");
+      Assert.AreEqual(Seam + 3 * Half / 4, pair.SpineFor(hit(FctLane.DamageDealt, false, false)), "right 2's slot is the outer quarter's middle");
 
       // the rule is uniform: a lone right 2 holds that same 7/8 mark it held in the full house
       var loneOuter = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right2).Stage(Width, Height);
-      Assert.AreEqual(Width * 7 / 8, loneOuter.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 2 holds its outer slot too");
+      Assert.AreEqual(Seam + 3 * Half / 4, loneOuter.SpineFor(hit(FctLane.DamageDealt, false, false)), "a lone right 2 holds its outer slot too");
 
       // and mirrored inside: healing booked alone on the INNER-left column parks at 3/16, not at the half's centre
       var inner = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, healLane: FctRailLane.Left2).Stage(Width, Height);
-      Assert.AreEqual(Width * 3 / 8, inner.SpineFor(hit(FctLane.HealingDealt, false, true)), "a lone left 2 parks at its slot's middle");
+      Assert.AreEqual(3 * Half / 4, inner.SpineFor(hit(FctLane.HealingDealt, false, true)), "a lone left 2 parks at its slot's middle");
 
       // the region still grew underneath all that standing still - spine fixed, budget doubled (asserted by AClaimOnAHalfIsNotAFixedQuarter)
-      Assert.AreEqual(Width / 2, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "the freed air is still handed to the region");
+      Assert.AreEqual(Half, shipped.RegionFor(hit(FctLane.DamageDealt, false, false)).Width, "the freed air is still handed to the region");
     }
 
     /* The configure-mode guide's own call sequence (FctSkiaCanvas.DrawLaneGuide): a config state, BuildLayout, Stage,
@@ -313,15 +324,15 @@ namespace EQLogParser
       var spread = new FctConfigState { Fountain = false };
       Assert.AreEqual(0, spread.ResolveLaneConflicts(), "the shipped spread books no conflicts and gets no moves");
       var stage = spread.BuildLayout().Stage(Width, Height);
-      Assert.AreEqual((0.0, Width / 4), (stage.LaneRect(FctRailLane.Left1).X, stage.LaneRect(FctRailLane.Left1).Width), "left 1 outlines the far-left quarter");
-      Assert.AreEqual((Width / 4, Width / 4), (stage.LaneRect(FctRailLane.Left2).X, stage.LaneRect(FctRailLane.Left2).Width), "left 2 outlines the inner-left quarter");
-      Assert.AreEqual((Width / 2, Width / 2), (stage.LaneRect(FctRailLane.Right1).X, stage.LaneRect(FctRailLane.Right1).Width), "solo right 1 outlines its whole half - right 2 free is air, not a wall");
+      Assert.AreEqual((0.0, Half / 2), (stage.LaneRect(FctRailLane.Left1).X, stage.LaneRect(FctRailLane.Left1).Width), "left 1 outlines the far-left quarter");
+      Assert.AreEqual((Half / 2, Half / 2), (stage.LaneRect(FctRailLane.Left2).X, stage.LaneRect(FctRailLane.Left2).Width), "left 2 outlines the inner-left quarter");
+      Assert.AreEqual((Seam, Half), (stage.LaneRect(FctRailLane.Right1).X, stage.LaneRect(FctRailLane.Right1).Width), "solo right 1 outlines its whole half - right 2 free is air, not a wall");
 
       var freed = new FctConfigState { Fountain = false, HealLane = FctRailLane.None };
       freed.ResolveLaneConflicts();
       var bare = freed.BuildLayout().Stage(Width, Height);
-      Assert.AreEqual((0.0, Width / 2), (bare.LaneRect(FctRailLane.Left2).X, bare.LaneRect(FctRailLane.Left2).Width), "with healing off the rail, left 2 outlines the whole left half");
-      Assert.AreEqual((Width / 2, Width / 2), (bare.LaneRect(FctRailLane.Right1).X, bare.LaneRect(FctRailLane.Right1).Width), "and right 1 still owns its half the same way");
+      Assert.AreEqual((0.0, Half), (bare.LaneRect(FctRailLane.Left2).X, bare.LaneRect(FctRailLane.Left2).Width), "with healing off the rail, left 2 outlines the whole left half");
+      Assert.AreEqual((Seam, Half), (bare.LaneRect(FctRailLane.Right1).X, bare.LaneRect(FctRailLane.Right1).Width), "and right 1 still owns its half the same way");
     }
 
     /* A row still in flight when its category hands its column back keeps the walls it was born under until it scrolls out: the gate

@@ -296,19 +296,32 @@ namespace EQLogParser
     /* Which slot the lane would hold even in a full house, as a centre: the inner quarter's middle for left 2 / right 1,
        the outer one's for left 1 / right 2. The half's freed air goes to the region (labels, sway and clamps all measure the
        region), while this stays put — see SpineFor. */
+    /* The empty band split mode keeps out of the middle (px, absolute). It is where players park the target frame —
+       their own words: "that's where you should place the NPC" — and it earns its two decades a second way: a long
+       label that spills across the centre reads as belonging to whatever the player is looking at, which is never the
+       intent of a number streaming past it. The halves therefore tile the TRACK (the width minus the gutter), equally
+       and symmetrically: left ends at halfW, right starts at halfW + CenterGutter. Bands never asks — its protected
+       region is the horizontal strip, not a column — and 20 px against a 100 px minimum canvas stays the same deal,
+       so this does not scale with the window. */
+    internal const double CenterGutter = 20;
+
+    /* Half of the track each side gets to tile. Every split-mode measure — spines, rects, the label walls they imply —
+       derives from this one number, so the gutter cannot exist in one and not another. */
+    private double LaneTrackHalf => (W - CenterGutter) / 2.0;
+
     internal double LaneSpine(FctRailLane lane)
     {
       var i = FctRailLanes.Index(lane);
-      var halfW = W / 2.0;
+      var halfW = LaneTrackHalf;
 
-      return (i < 2 ? 0.0 : halfW) + ((i % 2) + 0.5) * (halfW / 2.0);
+      return (i < 2 ? 0.0 : halfW + CenterGutter) + ((i % 2) + 0.5) * (halfW / 2.0);
     }
 
     internal (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
     {
       var i = FctRailLanes.Index(lane);
-      var halfW = W / 2.0;
-      var halfStart = i < 2 ? 0.0 : halfW;
+      var halfW = LaneTrackHalf;
+      var halfStart = i < 2 ? 0.0 : halfW + CenterGutter;
 
       if ((i < 2 ? _leftOccupied : _rightOccupied) is 1)
       {

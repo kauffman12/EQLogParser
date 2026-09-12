@@ -121,8 +121,9 @@ namespace EQLogParser
     public double CritScale = FctScale.CritSizeDefault;
     public double Speed = FctScale.SpeedDefault;
 
-    /* The demo switch is deliberately NOT a setting (nothing writes it), but the checkbox lives in this window, so it
-       rides along in the state for exactly as long as configure mode lasts. */
+    /* The demo switch: a remembered setting since players kept answering "no" to it — turning it off to lay lanes out
+       over a live fight should survive closing the panel, not restart the loop next session. Save writes it
+       (FctOverlaySettings.SampleDataKey); Cancel still does not, same as every other control here. */
     public bool SampleData = true;
 
     /* A copy that can be handed across the window boundary without the two sides sharing a dictionary: previews are

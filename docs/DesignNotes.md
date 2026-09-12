@@ -1877,3 +1877,23 @@ Tests moved with the deletion: the opt-in lines came out of five files, `CritOve
 became `…WhenTheCritsDiffer`, the crowded-lanes word cadence went from alternating to eight distinct words (alternating
 identical words now correctly collapse), and `FctAccumulationTest` lost its two door tests and kept the shape: duplicates
 print once with a count, face value frozen, crits only onto crits, words onto words, heals and marks never. 1081/1081.
+
+### The centre gutter: twenty pixels reserved for what the player is looking at
+
+Split mode's halves used to meet exactly at the middle of the overlay, which put left 2's right edge and right 1's left
+edge — the two lanes a fight actually lives in — directly on top of the spot where the target frame sits. The user's
+sentence for it: "that's where you should place the NPC." And long labels made it worse rather than better: FitSource
+budgets a label from spine to region wall, and when the wall was dead-centre, an inward-reaching `(Long Spell Name)`
+printed across the player's own target.
+
+Split halves now tile the track minus a 20 px centre gutter (FctStage.CenterGutter, absolute — a constant deal against
+any canvas width): left ends at (W-20)/2, right starts twenty past it. Everything downstream derives from that one
+measure, so the gutter cannot exist in geometry and not in labels: spines shift equally outward (right 1's slot sits a
+hair further from the seam, which is still "beside the middle, near the fight"), lane rects and their configure-mode
+outlines show the empty band, and label walls — which ARE region walls — now stop long words short of the centre
+instead of printing over it. Bands never asks; its protected region is the horizontal strip, not a column. Tests moved
+to gutter-aware expressions (Half/Seam computed from the constant) rather than new magic numbers, 1081/1081.
+
+The same pass gave the demo switch a memory: SampleData saves to settings.ini like anything else, because "don't play
+sample numbers, I'm laying this out over my actual raid" was an answer that had to be re-given every session, which is
+the definition of a setting wearing furniture's clothes.
