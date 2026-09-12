@@ -5,6 +5,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 proj
 ## Core Principles
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
+- **Git**: Commit with detailed messages, but **never push to remote**. Pushing is the user's call.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
 
