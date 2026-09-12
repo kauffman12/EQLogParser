@@ -119,6 +119,9 @@ namespace EQLogParser
     // what DrawOne actually handed Skia this frame (lane and exact span): the last word before pixels exist
     private string _diagDrawn;
 
+    // one whole surface smuggled out as base64 PNG per session — pixels judged by eye, not by probe arithmetic
+    private bool _diagPngSent;
+
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
     private Func<string, double, double> _labelWidth;
@@ -434,6 +437,12 @@ namespace EQLogParser
         {
           using var afterGuide = SKBitmap.FromImage(_surface.Snapshot());
           _phaseGuideCols = LitColumns(afterGuide);
+
+          if (!_diagPngSent && _clock != null && _clock.Elapsed.TotalSeconds > 5)
+          {
+            _diagPngSent = true;
+            DiagPng();
+          }
         }
       }
 
@@ -680,6 +689,40 @@ namespace EQLogParser
 
       var win = Window.GetWindow(this);
       Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} drawn=[{(_diagDrawn ?? "-")}] afterGuide=[{(_phaseGuideCols is null ? "-" : string.Join(",", _phaseGuideCols))}] hits=[{live}] lit=[{lit}]{profiles}");
+    }
+
+    /* Reads the surface through the very same path the WPF blit uses (ReadPixels → raw bytes → PNG), so this image is what
+       the player's screen is built from — every summary the probe logs, this frame is the evidence behind it. One line per
+       session: decode base64 after 'fctdiag png ', look at x≈940. Temporary instrumentation for the ghost-line hunt. */
+    private void DiagPng()
+    {
+      try
+      {
+        using var image = _surface.Snapshot();
+        var info = image.Info;
+        var stride = info.RowBytes;
+        var buffer = new byte[stride * info.Height];
+        var handle = System.Runtime.InteropServices.GCHandle.Alloc(buffer, System.Runtime.InteropServices.GCHandleType.Pinned);
+
+        try
+        {
+          if (!image.ReadPixels(info, handle.AddrOfPinnedObject(), stride, 0, 0) || image.Encode(SKEncodedImageFormat.Png, 90) is not { } data)
+          {
+            Log.Info("fctdiag png FAILED");
+            return;
+          }
+
+          Log.Info($"fctdiag png w={info.Width} h={info.Height} b64len={data.Size} data={Convert.ToBase64String(data.ToArray())}");
+        }
+        finally
+        {
+          handle.Free();
+        }
+      }
+      catch (Exception e)
+      {
+        Log.Error("fctdiag png failed", e);
+      }
     }
 
     /* Full-height stroke scan: columns carrying an alpha spike at three heights a quarter-window apart — number glyphs
