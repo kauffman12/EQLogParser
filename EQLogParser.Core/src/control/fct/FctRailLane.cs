@@ -7,12 +7,13 @@ using System;
  * that one". The first model offered only halves, and placement then did what placement does: two categories sharing
  * a half got woven into neighbouring sub-columns by the burst scorer (measured: x = 200, 271, 343 in one half), so
  * the machine had columns while the settings had sides — and nobody could say which column a value would use.
- * Four named lanes make the visible thing the configurable thing: each is a quarter of the width, owns its stream
- * territory outright, and shares nothing with any other category that did not choose it.
+ * Four named lanes make the visible thing the configurable thing: the lanes a category books own their territory
+ * outright and share nothing with any other category - two claimants to a half of the width take it in quarters, one
+ * claimant takes the whole half, because a lane nobody booked is air the number may use rather than a wall (FctStage
  *
  * Numbering runs left to right across the screen, as the names read: left1 is the far-left column, right2 the far
- * right. The old side spellings ("left", "right") parse to the OUTER lane of that side, which is where a side's
- * numbers were centred (a quarter's centre equals a half's centre only at the outer lanes).
+ * right. The old side spellings ("left", "right") parse to the OUTER lane of that side, and a lane that owns its half
+ * alone — as in the shipped default — centres exactly where a side's numbers were always centred.
  */
 namespace EQLogParser
 {
@@ -20,8 +21,8 @@ namespace EQLogParser
    * The four columns, plus `None`: "this category gets no column", which is how split mode says "do not show me that at
    * all" now that the show list stopped carrying damage-in / damage-out switches (it lists nine rows instead, one per kind
    * of number, and a player hiding their outgoing damage hides it by giving it nowhere to go). Nothing is placed on None —
-   * the gate in FctIngest stops those numbers before they reach geometry, and FctConfigState.BuildLayout never puts a None
-   * into a FctLayoutChoice — so no layout code has to ask what column "nowhere" is.
+   * the gate in FctIngest stops those numbers before they reach geometry — and None's only geometric meaning is the
+   * absence itself: an empty lane frees its share of the half to its neighbours (FctStage tiles the lanes that book).
    *
    * Fountain (bands) ignores lane settings entirely, which means it ignores None too: incoming and outgoing both draw there,
    * because that scheme's whole arrangement is the two of them facing each other across a clear middle.

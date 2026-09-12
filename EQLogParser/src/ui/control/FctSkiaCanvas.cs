@@ -97,6 +97,10 @@ namespace EQLogParser
        the renderer, not per spawn. See EnsureSkiaResources. */
     private SKPaint _measurePaint, _haloPaint;
 
+    /* The configure-mode lane guide reconfigures itself per lane rather than allocating (DrawLaneGuide redraws under the numbers
+       every frame a setup window is open). */
+    private SKPaint _laneGuidePaint;
+
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
     private Func<string, double, double> _labelWidth;
@@ -404,6 +408,12 @@ namespace EQLogParser
       canvas.ResetMatrix();
       canvas.Scale((float)scale, (float)scale); // draw in logical coordinates
 
+      /* Setup mode maps split's columns under everything else: a demo number sits on its guide rather than hiding behind it. */
+      if (_demoWanted || _demo.Active)
+      {
+        DrawLaneGuide(canvas);
+      }
+
       // two passes: regular hits first, crits last — crits draw on top of everything
       for (var pass = 0; pass < 2; pass++)
       {
@@ -506,6 +516,62 @@ namespace EQLogParser
       }
 
       PublishStats(now);
+    }
+
+    /*
+     * The configure-mode map of split's columns: each lane the settings actually book gets its outline and its name in the
+     * corner, under every number - the demo exists to show where a column IS now that lanes tile their half instead of sitting
+     * in fixed quarters. Lanes nobody books are not drawn: they have no rect left to outline, which is exactly the point (they
+     * gave their space away). Bands has no columns and gets no map.
+     */
+    private void DrawLaneGuide(SKCanvas canvas)
+    {
+      var choice = _ingest.Layout;
+      if (choice.Mode is not FctLayoutMode.ByType)
+      {
+        return;
+      }
+
+      var a = choice.HealLane;
+      var b = choice.IncomingDamageLane;
+      var c = choice.OutgoingDamageLane;
+      if (a is FctRailLane.None && b is FctRailLane.None && c is FctRailLane.None)
+      {
+        return;
+      }
+
+      var stage = choice.Stage(ActualWidth, ActualHeight);
+
+      DrawOne(a);
+      if (b != a)
+      {
+        DrawOne(b);
+      }
+
+      if (c != a && c != b)
+      {
+        DrawOne(c);
+      }
+
+      void DrawOne(FctRailLane lane)
+      {
+        if (lane is FctRailLane.None)
+        {
+          return;
+        }
+
+        var (x, _, w, h) = stage.LaneRect(lane);
+
+        Configure(_laneGuidePaint, SKColors.White.WithAlpha(14), SKPaintStyle.Fill, 0);
+        canvas.DrawRect((float)x, 0f, (float)(x + w), (float)h, _laneGuidePaint);
+
+        Configure(_laneGuidePaint, SKColors.White.WithAlpha(84), SKPaintStyle.Stroke, 1.5f);
+        canvas.DrawRect((float)(x + 0.75), 0.75f, (float)(x + w - 0.75), (float)(h - 0.75), _laneGuidePaint);
+
+        /* The settings' own spelling of the lane (FctRailLanes.Token) - what the dropdown says is what the outline says. */
+        Configure(_laneGuidePaint, SKColors.White.WithAlpha(178), SKPaintStyle.Fill, 0);
+        canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), 20f, SKTextAlign.Left, GetFont(false, 13), _laneGuidePaint);
+      }
     }
 
     /* One hit = halo blit (crits) + value outline/fill + source outline/fill: ~5-6 Skia draw ops. */
@@ -830,6 +896,7 @@ namespace EQLogParser
       _outlinePaint = new SKPaint { IsAntialias = true };
       _fillPaint = new SKPaint { IsAntialias = true };
       _blitPaint = new SKPaint { IsAntialias = true };
+      _laneGuidePaint = new SKPaint { IsAntialias = true };
 
       /* 3.119.2 MeasureText overloads require a paint argument but only read it for encoding, and halo baking wants one
          paint with the blur attached: both live as long as the renderer instead of being built per spawn — SKPaint is

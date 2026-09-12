@@ -160,10 +160,11 @@ namespace EQLogParser
         "the hidden sides are kept, not resolved away, so returning to split restores what was switched off");
     }
 
-    /* Geometry never sees the none lane: a hidden category is parked in its shipped column (FctConfigState.Placed) so no stage, stream or cell has to
-       invent a shape for a lane that does not exist. Nothing spawns there — FctIngest stops it upstream — so the column decides nothing. */
+    /* A hidden category reaches geometry as None now: the empty lane is the fact that frees its share of the half to whatever lane is left
+       (FctStage tiles the booked lanes), and nothing on a hidden category's row ever spawns — FctIngest stops it upstream. Geometry answers
+       "nowhere" with the absence itself rather than with a parked column. */
     [TestMethod]
-    public void HiddenLanesStillGiveGeometryARealColumn()
+    public void HiddenLanesArriveAtGeometryAsNone()
     {
       var hidden = new FctConfigState
       {
@@ -174,9 +175,9 @@ namespace EQLogParser
       }.BuildLayout();
 
       Assert.AreEqual(FctLayoutMode.ByType, hidden.Mode);
-      Assert.AreEqual(FctConfigState.DealtLaneDefault, hidden.OutgoingDamageLane);
-      Assert.AreEqual(FctConfigState.TakenLaneDefault, hidden.IncomingDamageLane);
-      Assert.AreEqual(FctConfigState.HealLaneDefault, hidden.HealLane);
+      Assert.AreEqual(FctRailLane.None, hidden.OutgoingDamageLane);
+      Assert.AreEqual(FctRailLane.None, hidden.IncomingDamageLane);
+      Assert.AreEqual(FctRailLane.None, hidden.HealLane);
     }
 
     /* The ini spelling of the off position, both ways. This is the seam where a hand-written settings.ini arrives, and "none" arriving as

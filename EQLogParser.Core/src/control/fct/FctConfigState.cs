@@ -236,13 +236,16 @@ namespace EQLogParser
       // geometry is decided once, so this is where an impossible arrangement has to become a possible one
       ResolveLaneConflicts();
 
+      /* Hidden categories arrive as None rather than parked in some column: an empty lane is a geometric fact now - it
+         frees its share of the half to whatever lane is left (FctStage tiles them) - and nothing on a hidden category's
+         row ever spawns, so no stage ever has to draw for one. */
       return Fountain
         ? new FctLayoutChoice(FctLayoutMode.Bands, FctRegionSide.Left, TakenUp, DealtUp, healUp: HealUp)
         : new FctLayoutChoice(
-            FctLayoutMode.ByType, FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), TakenUp, DealtUp,
-            FctRailLanes.SideOf(Placed(HealLane, HealLaneDefault)), HealUp,
-            FctRailLanes.SideOf(Placed(TakenLane, TakenLaneDefault)), FctRailLanes.SideOf(Placed(DealtLane, DealtLaneDefault)),
-            Placed(HealLane, HealLaneDefault), Placed(TakenLane, TakenLaneDefault), Placed(DealtLane, DealtLaneDefault));
+            FctLayoutMode.ByType, FctRailLanes.SideOf(TakenLane), TakenUp, DealtUp,
+            FctRailLanes.SideOf(HealLane), HealUp,
+            FctRailLanes.SideOf(TakenLane), FctRailLanes.SideOf(DealtLane),
+            HealLane, TakenLane, DealtLane);
     }
 
     /* The mode clamps the shape, not a branch that ignores it: fountain sprays or freezes, the columns scroll. A state
@@ -250,9 +253,5 @@ namespace EQLogParser
     internal FctMotionStyle BuildMotion() =>
       FctOverlaySettings.ClampShape(Fountain ? FctLayoutMode.Bands : FctLayoutMode.ByType, Shape);
 
-    /* A hidden category is parked in its shipped column rather than carrying FctRailLane.None into geometry: nothing on that
-     * row ever spawns (FctIngest stops it), so the column it would have used decides nothing — but a stage, stream or cell
-     * should not have to ask what a lane that does not exist looks like. */
-    private static FctRailLane Placed(FctRailLane lane, FctRailLane shipped) => lane is FctRailLane.None ? shipped : lane;
   }
 }

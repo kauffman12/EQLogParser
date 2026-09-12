@@ -86,7 +86,9 @@ namespace EQLogParser
     }
 
     /* So: one spine per column, placed for the widest AMOUNT the lane can roll (FctLayout.RailReserve) and never for a row's words. This is the case that
-       drew a user's overlay as three unrelated right edges — labels below, straight travel, and each row parking itself against its own wall. */
+       drew a user's overlay as three unrelated right edges — labels below, straight travel, and each row parking itself against its own wall. The label budget
+       itself moved with the lanes that stopped being quarters (FctStage tiles them): the screenshot's name now survives whole in the half its lane owns,
+       while a name past what even that leaves is still cut to it. */
     [TestMethod]
     public void WordsBelongToTheirRowAndNeverMoveTheSpine()
     {
@@ -95,22 +97,30 @@ namespace EQLogParser
       {
         FctLayout.LabelSide = FctLabelSide.Below;
 
-        // the screenshot that reported this: a crit with a spell name under it, and a plain hit with "(Crush)", in one column
-        var longLabel = Row("Ethereal Fire XIII Rk. VII", value: 18_300_000, crit: true);
+        // the screenshot that reported this was a crit with "(Ethereal Fire XIII Rk. VII)" under it and a plain hit with "(Crush)" in one column;
+        // the medium row here keeps the same spine question at a length that fits its half lane with room to spare
+        var longLabel = Row("Ethereal Fire XIII Rk.", value: 18_300_000, crit: true);
         var shortLabel = Row("Crush", value: 11_800, crit: false);
+
+        // thirty-four letters: past what even a half column leaves at 980 px
+        var wallLabel = Row("Supercalifragilisticexpialidocious", value: 18_300_000, crit: true);
 
         Assert.AreEqual(Math.Round(longLabel.X0), Math.Round(shortLabel.X0),
           $"a long label must not slide its own rail inward: {longLabel.X0} against {shortLabel.X0}");
+        Assert.AreEqual(Math.Round(wallLabel.X0), Math.Round(shortLabel.X0),
+          $"a longer name slides the rail no further either: {wallLabel.X0} against {shortLabel.X0}");
 
-        foreach (var hit in new[] { longLabel, shortLabel })
+        foreach (var hit in new[] { longLabel, shortLabel, wallLabel })
         {
           var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
           Assert.IsTrue(hit.X0 - left >= hit.SideMin - 1 && hit.X0 + right <= hit.SideMax + 1,
             $"{hit.Source} and its label have to stay in the column: {hit.X0 - left}..{hit.X0 + right} against [{hit.SideMin}, {hit.SideMax}]");
         }
 
-        Assert.IsTrue(longLabel.SourceLabel!.EndsWith("…)", StringComparison.Ordinal),
-          $"the long name is cut to what the spine leaves it, got {longLabel.SourceLabel}");
+        Assert.IsFalse(longLabel.SourceLabel!.Contains("…", StringComparison.Ordinal),
+          $"a medium name survives whole once its lane owns the half: {longLabel.SourceLabel}");
+        Assert.IsTrue(wallLabel.SourceLabel.EndsWith("…)", StringComparison.Ordinal),
+          $"past what the spine leaves, the name is still cut to it, got {wallLabel.SourceLabel}");
       }
       finally
       {

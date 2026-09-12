@@ -14,8 +14,9 @@ namespace EQLogParser
    * the two reads apart.
    *
    * by type — "split": columns across the overlay whose side carries WHAT a number is rather than who it belongs to.
-   * Four named lanes (FctRailLane), each a quarter of the width owned outright by whoever books it: healing in one,
-   * either damage stream in another, and each category's travel dial still its own. That is the view a player asks for
+   * Four named lanes (FctRailLane); the ones a category actually books tile their half of the width - two claimants
+   * get a quarter apiece, one claimant gets the whole half, because a lane nobody booked is air, not a wall: healing in
+   * one, either damage stream in another, and each category's travel dial still its own. That is the view a player asks for
    * ("heals left, damage right, mine up, theirs down") and the one MSBT cannot serve from a single area — his areas
    * scroll one way — so his users assemble it out of Add Scroll Area plus re-mapping the heal events
    * (MSBTOptionsTabs.lua). Here it is one mode.
@@ -138,9 +139,14 @@ namespace EQLogParser
     private readonly FctRegionSide _outgoingDamageSide;
 
     // By type: the same question one level finer — which of the four columns each category streams down (FctRailLane).
+    // A hidden category carries None into the stage now rather than being parked in a column: the empty lane is the
+    // geometric fact that frees its share of the half, and nothing on that category's rows ever reaches geometry.
     private readonly FctRailLane _healLane;
     private readonly FctRailLane _incomingDamageLane;
     private readonly FctRailLane _outgoingDamageLane;
+
+    // By type only: how many distinct lanes each half holds — the tiling question LaneRect answers in one lookup.
+    private readonly int _leftOccupied, _rightOccupied;
 
     public FctLayoutMode Mode => _mode;
     public double W { get; }
@@ -170,19 +176,25 @@ namespace EQLogParser
          harness all agree without anyone having to remember to check twice. */
       if (_mode is FctLayoutMode.ByType)
       {
-        if (_incomingDamageLane == _outgoingDamageLane)
+        /* None must not couple directions against itself: two hidden categories share no column, run no train, and have
+           no direction to reconcile. */
+        if (_incomingDamageLane is not FctRailLane.None && _incomingDamageLane == _outgoingDamageLane)
         {
           _incomingUp = _outgoingUp;
         }
 
-        if (_healLane == _outgoingDamageLane)
+        if (_healLane is not FctRailLane.None && _healLane == _outgoingDamageLane)
         {
           _healUp = _outgoingUp;
         }
-        else if (_healLane == _incomingDamageLane)
+        else if (_healLane is not FctRailLane.None && _healLane == _incomingDamageLane)
         {
           _healUp = _incomingUp;
         }
+
+        /* How many distinct columns each half will tile (below): a shared lane is one train and counts once. */
+        _leftOccupied = Occupied(_healLane, _incomingDamageLane, _outgoingDamageLane, 0, 2);
+        _rightOccupied = Occupied(_healLane, _incomingDamageLane, _outgoingDamageLane, 2, 4);
       }
 
       W = w;
@@ -196,7 +208,7 @@ namespace EQLogParser
       => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h, healUp: healUp);
 
     /* Lanes are the ownership question asked one level finer; callers that pass only sides get that side's OUTER lane,
-     * which is the quarter whose centre sits where a side's numbers have always been centred. */
+     * which - owning its half alone, as in the shipped default - centres where a side's numbers have always been centred. */
     internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
       bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
       FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
@@ -207,20 +219,36 @@ namespace EQLogParser
      * The rect that owns a number's geometry — the only region question anything still asks.
      *
      * Bands: the whole canvas, because the bands inside it are FctLayout's business and the protected strip is kept clear
-     * by travel direction rather than by a boundary. Split: the LANE (FctRailLane), one quarter of the width owned
-     * outright by whoever booked it, which is what makes "my damage never lands in your heals' column" a fact instead of
-     * a scored preference. Two categories that booked the same lane share it as one queue (FctConveyor), so they are one
-     * train rather than two crowds.
+     * by travel direction rather than by a boundary. Split: the LANE (FctRailLane), the span that lane owns under the
+     * half-tiling rule, which is what makes "my damage never lands in your heals' column" a fact instead of a scored
+     * preference. Two categories that booked the same lane share it as one queue (FctConveyor), so they are one train
+     * rather than two crowds.
      *
      * There used to be a second overload answering this in halves — whose side, not which column — because halves owned
      * the half outright and had no lanes inside it. Nothing asks that question now, and a region that quietly meant
      * something other than what a row is drawn inside is how a column's numbers came to disagree with their own spine.
      */
-    public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit) => _mode is FctLayoutMode.ByType
-      ? LaneRect(CategoryLane(hit))
-      : (0, 0, W, H);
+    public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit)
+    {
+      if (_mode is not FctLayoutMode.ByType)
+      {
+        return (0, 0, W, H);
+      }
 
-    /* Which column a number's category owns: four named lanes, each holding its quarter of the width outright.
+      var lane = CategoryLane(hit);
+
+      /* A row still in flight when its category gave its column away keeps the walls it was born under until it scrolls
+         out: new numbers of that category never spawn at all (FctIngest stops them), so this answers for the old ones
+         alone, and their stamped sides are the only truth left about where they live. */
+      if (lane is FctRailLane.None)
+      {
+        return hit.SideMin > 0 ? (hit.SideMin, 0, Math.Max(1.0, hit.SideMax - hit.SideMin), H) : (0, 0, W, H);
+      }
+
+      return LaneRect(lane);
+    }
+
+    /* Which column a number's category owns: four named lanes, whose booked spans tile their half and hold it outright.
      * Categories that choose the SAME lane share it as one queue — which is the point; categories that choose different
      * lanes can never be woven into each other's pixels. (Before lanes existed by type answered this in halves and
      * placement quietly invented sub-columns; see FctRailLane.) */
@@ -234,10 +262,54 @@ namespace EQLogParser
     internal int LaneIndexOf(FctHitState hit) =>
       _mode is FctLayoutMode.ByType ? FctRailLanes.Index(CategoryLane(hit)) : -1;
 
-    private (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
+    /*
+     * The rect a lane owns under the tiling rule: two claimants in a half take it in quarters, in screen order; one
+     * claimant takes the whole half - the empty slot is air the number may use, not a wall. LaneRect is also where the
+     * configure-mode guide asks what to outline (FctSkiaCanvas). A lane that books no category is never asked for here:
+     * live rows' categories always own the lane they are drawn in, and the one exception — a row outliving its column's
+     * reclamation — is answered by RegionFor, not by this.
+     */
+    internal (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
     {
-      var quarter = W / 4;
-      return (FctRailLanes.Index(lane) * quarter, 0, quarter, H);
+      var i = FctRailLanes.Index(lane);
+      var halfW = W / 2.0;
+      var halfStart = i < 2 ? 0.0 : halfW;
+
+      if ((i < 2 ? _leftOccupied : _rightOccupied) is 1)
+      {
+        return (halfStart, 0, halfW, H);
+      }
+
+      return (halfStart + (i % 2) * (halfW / 2.0), 0, halfW / 2.0, H);
+    }
+
+    /* How many distinct lanes among the three category assignments sit in [lo, hi): a shared lane counts once, None not at all. */
+    private static int Occupied(FctRailLane heal, FctRailLane incoming, FctRailLane outgoing, int lo, int hi)
+    {
+      var n = 0;
+
+      if (InHalf(heal, lo, hi))
+      {
+        n++;
+      }
+
+      if (InHalf(incoming, lo, hi) && incoming != heal)
+      {
+        n++;
+      }
+
+      if (InHalf(outgoing, lo, hi) && outgoing != heal && outgoing != incoming)
+      {
+        n++;
+      }
+
+      return n;
+
+      static bool InHalf(FctRailLane lane, int lo, int hi)
+      {
+        var i = FctRailLanes.Index(lane);
+        return i >= lo && i < hi;
+      }
     }
 
     /* Territory for a number: see RegionFor(hit). Bands measures amplitude against the whole canvas either way. */

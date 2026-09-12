@@ -961,19 +961,24 @@ column, heals in that one" — but with only halves to configure, placement kept
 sharing a side got woven into neighbouring sub-columns by the burst scorer (measured x = 200, 271, 343 inside one half),
 so the settings said *side* and the screen showed something else, and nobody could predict which column a number would
 use or why two categories refused to share one. `FctRailLane` makes the visible thing the configurable thing: four named
-columns, each owning its quarter of the width outright, and every category names the one it travels down. Categories that
-name the **same** lane genuinely share it — identical region, identical queue, chained like any two hits
-of one category; categories that name different lanes can never touch each other's pixels, because a lane's territory is its lane's
-quarter and the quarters are disjoint by construction. Directions stay per category: opposite ways
+columns; the lanes a category actually books **tile their half** — two claimants take it in quarters in screen order, one
+claimant takes the whole half, because a lane nobody books is air the number may use rather than a wall. Every category names the
+lane it travels down. Categories that name the **same** lane genuinely share it — identical region, identical queue, chained like any two hits
+of one category; categories that name different lanes can never touch each other's pixels, because a lane's territory is the span the
+tiling gives it and those spans are disjoint by construction. Directions stay per category: opposite ways
 in a shared lane means trains passing, which was always placement's puzzle to solve.
 
-Two things fall out for free. The old side spellings parse to a side's OUTER lane — whose centre is exactly where that
-half used to be centred — so side-only callers and stored configs land visually unchanged; and the
+Two things fall out for free. The old side spellings parse to a side's OUTER lane — and when that lane owns its whole half, as in the
+shipped default, its spine sits exactly where the half used to be centred, so stored configs land visually unchanged; and the
 panel's words finally match everyone's: **damage in** and **damage out**, not "damage to me" and "my damage", in the
 rows (before heals — the streams come first, the reacting category last), in the categories combo, everywhere a human
 reads them. The two-word versions won over "incoming damage"/"outgoing damage" for the same reason the rest of the row
 is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped spread puts damage out in left 1, damage in
-in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 as the first free lane.
+in right 2, heals in right 1 — each category its own column on first sight — and leaves left 2 free, so the two columns that exist on a first run
+each own a half of the screen. That is where split's label budget used to die (a name beside numbers had a quarter-lane minus the digits),
+and it shows in setup mode: while the configure loop runs, every booked lane is outlined with its own spelling — left 1, right 2 and the rest
+(`FctSkiaCanvas.DrawLaneGuide`) — under the demo numbers. An unbooked lane gets no outline because it has no rect left; that is the feature
+wearing a thin white line.
 
 The one promise lanes had to keep is that a lane moves as ONE thing. The first attempt shared a duration per side and
 still showed per-category speeds — bigger text reserves more road, so equal times meant unequal px/s (see *The rail's tempo*
@@ -1565,9 +1570,10 @@ a band is shallower than a line of text.
 
 The default started at 980×640, came down to **800×560** as what most people need over a HUD, went back up to 1280×720 when the source labels turned out
 to be the thing being paid for, and is now **not a size at all**: a first run asks for 80% × 75% of the desktop's work area, floored at that same 1280×720
-(`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. In split a column is a quarter of the overlay, and the room
-inside it for a *name* is (overlay ÷ 4) − the number − the gap between them: about 190 px at 1280, which is a dozen and a half letters at label size, and
-about 380 px at 2048, which is thirty. Nothing else in the layout moves a name's length nearly that directly, so the one setting that really decides how
+(`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. In the shipped split default one column owns each half of
+the overlay (lanes tile their half, above), and the room inside it for a *name* is (overlay ÷ 2) − the number − the gap between them: about 470 px at
+1280 — past the label ceiling itself, where a name's length rather than the window decides what gets cut — and still more at 2048. Nothing else in the
+layout moves a name's length nearly that directly, so the one setting that really decides how
 much of the screen belongs to the game also decides how much of a name a player can read — and it should answer to the monitor rather than to a number
 chosen when the layout was new. The share stops short of the whole work area on purpose (raid frames and buff lines live on those edges, and an overlay
 that begins by covering everything teaches the player to shrink it), Fit() still clamps the request to what the desktop has, and a saved size always wins:

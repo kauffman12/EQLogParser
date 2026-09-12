@@ -279,10 +279,11 @@ namespace EQLogParser
     /*
      * A first run takes most of the desktop rather than a fixed rectangle, and never less than the size the layout is measured at. The overlay
      * is transparent text: what it is competing with for room is the game's own HUD, not another window, so the honest first guess is "as much
-     * screen as the game is not using" — and for the source labels that sit beside every number, screen literally IS the budget. A split column
-     * is a quarter of the overlay's width, so the width available for a name is (overlay ÷ 4) − its own number − the gap between them: about 190 px
-     * at 1280, which is a dozen and a half letters at label size, and about 380 px at 2048, which is thirty. Nothing else in the layout scales a
-     * name's length this directly, which is why the first-run size stopped being a constant.
+     * screen as the game is not using" — and for the source labels that sit beside every number, screen literally IS the budget. In the shipped
+     * split default one column owns each half of the overlay (FctStage tiles the booked lanes), so the width available for a name is (overlay ÷ 2)
+     * − its own number − the gap between them: about 470 px at 1280 — past the label ceiling itself, where a name's LENGTH rather than the window
+     * decides what gets cut (FctLayout.MaxSourceChars) — and still more at 2048. Nothing else in the layout scales a name's length this directly,
+     * which is why the first-run size stopped being a constant.
      *
      * The share deliberately stops short of the whole work area: raid frames and a buff line live on those edges, and an overlay that starts by
      * covering everything teaches the player to shrink it. Fit() clamps the request to the desktop anyway, so a netbook gets what it has, and the

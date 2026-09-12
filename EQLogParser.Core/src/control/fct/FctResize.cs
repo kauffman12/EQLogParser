@@ -16,17 +16,19 @@ namespace EQLogParser
    * of the protected strip, which was probed at 980x640, 900x600, 700x520, 560x420, 460x360 and 420x300 rather than assumed.
    *
    * 980x640 is the size the layout was designed and measured at. The three smaller ones exist because that is wider than most
-   * people need over a HUD, and 720 is as narrow as the lane columns stay comfortably apart: damage sits at 0.42 of the width and
-   * healing at 0.63, so under ~700 a wide crit starts touching its neighbour column.
+   * people need over a HUD, and 720 is as narrow as the lane columns stay comfortably apart: in the shipped default one column owns each
+   * half of split, spines at 0.25 and 0.625 of the width (the containment floor takes over when the window gets smaller), so a wide crit
+   * keeps its gap to the neighbour until well under the offered minimum.
    */
   internal static class FctResize
   {
     /*
      * The offered sizes start wide now, because the narrow end of the range spends the thing the overlay needs most: room beside a
-     * number for the name of whatever did it. At 980 in split a source line has a quarter column to live in — about a hundred pixels
-     * after the digits and their mark — and every name longer than a handful of letters is shortened to fit. At 1280 that same column
-     * carries a mob's whole name in most fights, and the same width beside a crit's bigger digits still leaves room. The old sizes stay
-     * offered for anyone playing on a small screen or beside another window: the range grew at the top, it did not move.
+     * number for the name of whatever did it. At 980 in split a lane that owns its half gives a source line two to three hundred pixels
+     * after the digits and their mark (FctStage tiles the booked lanes), so cutting is a question of how long a name is rather than of
+     * how narrow the window is. At 1280 that same column carries a mob's whole name with room to spare, and the same width beside a
+     * crit's bigger digits still leaves room. The old sizes stay offered for anyone playing on a small screen or beside another window:
+     * the range grew at the top, it did not move.
      *
      * Nothing here is a maximum. Fit() clamps to the working area it is given, so a second monitor offers more and a netbook less; these
      * are the sizes a corner drag snaps TO, and the largest of them is what a first run asks for (FctOverlayWindow's defaults) before that
