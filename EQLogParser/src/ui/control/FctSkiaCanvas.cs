@@ -692,8 +692,9 @@ namespace EQLogParser
     }
 
     /* Reads the surface through the very same path the WPF blit uses (ReadPixels → raw bytes → PNG), so this image is what
-       the player's screen is built from — every summary the probe logs, this frame is the evidence behind it. One line per
-       session: decode base64 after 'fctdiag png ', look at x≈940. Temporary instrumentation for the ghost-line hunt. */
+       the player's screen is built from — every summary the probe logs, this frame is the evidence behind it. Written to disk
+       once per session (a base64 copy through a terminal lost 456 bytes mid-IDAT; a file cannot). Temporary instrumentation
+       for the ghost-line hunt: open it, or drop it in the repo under local/ for inspection at x≈940. */
     private void DiagPng()
     {
       try
@@ -712,7 +713,9 @@ namespace EQLogParser
             return;
           }
 
-          Log.Info($"fctdiag png w={info.Width} h={info.Height} b64len={data.Size} data={Convert.ToBase64String(data.ToArray())}");
+          var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EQLogParser", "fctdiag.png");
+          System.IO.File.WriteAllBytes(path, data.ToArray());
+          Log.Info($"fctdiag png saved {path} w={info.Width} h={info.Height} bytes={data.Size}");
         }
         finally
         {
