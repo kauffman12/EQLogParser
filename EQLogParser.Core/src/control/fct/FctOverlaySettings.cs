@@ -317,6 +317,7 @@ namespace EQLogParser
       {
         string s when string.Equals(s, "left", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Left,
         string s when string.Equals(s, "right", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Right,
+        string s when string.Equals(s, "none", StringComparison.OrdinalIgnoreCase) => FctLabelSide.None,
         _ => FctLabelSide.Below,
       };
 
@@ -325,6 +326,7 @@ namespace EQLogParser
       {
         FctLabelSide.Left => "left",
         FctLabelSide.Right => "right",
+        FctLabelSide.None => "none",
         _ => "below",
       });
 

@@ -295,6 +295,31 @@ namespace EQLogParser
       }
     }
 
+    /* The None seat: a name is never measured and never drawn — the row collapses to its number alone. Pinned at the fitting door so
+       neither measurer (the spawn estimate nor the canvas's real glyphs) can smuggle a label back in, and so the row's width with no
+       label is exactly the value's own reach: the label was the only thing standing on its right. */
+    [TestMethod]
+    public void TheNoneSeatDrawsNumbersAlone()
+    {
+      var side = FctLayout.LabelSide;
+      try
+      {
+        FctLayout.LabelSide = FctLabelSide.None;
+
+        var hit = Hit(FitsFine, 60);
+        Assert.IsNull(hit.SourceLabel, "a name fitted while None is selected is still no name at all");
+        Assert.AreEqual(0.0, hit.SourceWidth, "and nothing is charged for measuring a thing that is not drawn");
+
+        var (left, right) = FctLayout.BlockFromRail(hit, hit.SourceWidth);
+        Assert.AreEqual(hit.ValueWidth, left, "the number's own box is the row's whole reach leftward");
+        Assert.AreEqual(0.0, right, "and it hangs nothing off its right");
+      }
+      finally
+      {
+        FctLayout.LabelSide = side;
+      }
+    }
+
     /* A row's block also has to survive the window shrinking under it: FctResize re-derives the territory and marks the text, so the name is
        re-fitted against the room there now — and a column made wider gives back the letters it took. The room arithmetic is what is pinned here;
        the canvas is what re-runs it with real glyphs. */

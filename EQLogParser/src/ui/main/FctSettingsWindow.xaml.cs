@@ -152,6 +152,7 @@ namespace EQLogParser
         {
           "left" => FctLabelSide.Left,
           "right" => FctLabelSide.Right,
+          "none" => FctLabelSide.None,
           _ => FctLabelSide.Below,
         },
         TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
@@ -357,6 +358,7 @@ namespace EQLogParser
       {
         FctLabelSide.Left => "left",
         FctLabelSide.Right => "right",
+        FctLabelSide.None => "none",
         _ => "below",
       };
 

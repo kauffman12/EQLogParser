@@ -212,6 +212,16 @@ namespace EQLogParser
 
     private static void FitSource(FctHitState hit, double leftRoom, double rightRoom, Func<string, double, double> widthOf)
     {
+      /* The None seat: names are not wanted, so no name is measured and none is drawn. Every width question downstream answers
+       * "no words" once the label is absent (BlockFromRail's early return is the load-bearing one), which is what makes this a seat
+       * rather than a shader — and both measurers, the spawn estimate and the canvas's real glyphs, walk through this one door. */
+      if (LabelSide is FctLabelSide.None)
+      {
+        hit.SourceLabel = null;
+        hit.SourceWidth = 0;
+        return;
+      }
+
       if (string.IsNullOrEmpty(hit.Source))
       {
         hit.SourceLabel = null;

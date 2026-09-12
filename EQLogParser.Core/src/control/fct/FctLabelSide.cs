@@ -12,5 +12,10 @@ namespace EQLogParser
     Left,
     Below,
     Right,
+
+    /* No name at all: the number stands alone. A SEAT, not a shader — with no label to measure, every width question downstream
+     * (BlockFromRail, ArcedX's rail clamp, the conveyor's spacing) answers "no words" on its own, which is why hiding costs no
+     * special cases anywhere but the one fit that declines to run. */
+    None,
   }
 }
