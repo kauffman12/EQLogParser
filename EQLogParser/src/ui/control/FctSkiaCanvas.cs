@@ -1,7 +1,9 @@
+using log4net;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
@@ -100,6 +102,13 @@ namespace EQLogParser
     /* The configure-mode lane guide reconfigures itself per lane rather than allocating (DrawLaneGuide redraws under the numbers
        every frame a setup window is open). */
     private SKPaint _laneGuidePaint;
+
+    /* Temporary probe for a reported dispute between the lane outlines and their arithmetic (GuideDiag): Info level so it
+       survives every log config as shipped, stamped only while configure mode runs. Strip with FctStage.Diag when closed. */
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    // one line per second while the guide is on screen; the guide itself redraws at frame rate
+    private long _diagMs;
 
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
@@ -542,6 +551,8 @@ namespace EQLogParser
 
       var stage = choice.Stage(ActualWidth, ActualHeight);
 
+      GuideDiag(stage, a, b, c);
+
       DrawOne(a);
       if (b != a)
       {
@@ -573,6 +584,24 @@ namespace EQLogParser
         var tokenSize = TitleFontSize;
         canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(false, tokenSize), _laneGuidePaint);
       }
+    }
+
+    /* What this stamps for: outlines reported at half the width their own numbers use, on one player's machine only.
+       Once a second of configure mode, the exact stage the guide draws from reports its size, per-half claimant counts,
+       lane bookings and the rect each booked lane gets - beside the binary that ran it. Reading: a half holding ONE
+       booking must report occ=1 and hand out w=W/2; an exe path outside the build folder says an old copy was launched. */
+    private void GuideDiag(FctStage stage, FctRailLane a, FctRailLane b, FctRailLane c)
+    {
+      var now = Environment.TickCount64;
+      if (now - _diagMs < 1000)
+      {
+        return;
+      }
+
+      _diagMs = now;
+      Log.Info($"fctdiag {stage.Diag()} {Rect(a)} {Rect(b)} {Rect(c)} exe={Environment.ProcessPath}");
+
+      string Rect(FctRailLane lane) => lane is FctRailLane.None ? "-" : $"{FctRailLanes.Token(lane)}[x={stage.LaneRect(lane).X:F0} w={stage.LaneRect(lane).Width:F0}]";
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as

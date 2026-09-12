@@ -284,6 +284,14 @@ namespace EQLogParser
       return (halfStart + (i % 2) * (halfW / 2.0), 0, halfW / 2.0, H);
     }
 
+    /* The self-report the configure-mode guide stamps into the log (FctSkiaCanvas.GuideDiag), so an outline on screen
+       and the arithmetic that made it read as one line: size, how many claimants each half counted, and what each
+       category booked. Temporary instrumentation for a reported dispute; delete it with the caller when boxes and
+       numbers stop disagreeing about who owns a half. */
+    internal string Diag() => _mode is not FctLayoutMode.ByType
+      ? $"bands W={W:F0} H={H:F0}"
+      : $"split W={W:F0} H={H:F0} occL={_leftOccupied} occR={_rightOccupied} heal={FctRailLanes.Token(_healLane)} taken={FctRailLanes.Token(_incomingDamageLane)} dealt={FctRailLanes.Token(_outgoingDamageLane)}";
+
     /* How many distinct lanes among the three category assignments sit in [lo, hi): a shared lane counts once, None not at all. */
     private static int Occupied(FctRailLane heal, FctRailLane incoming, FctRailLane outgoing, int lo, int hi)
     {
