@@ -47,11 +47,14 @@
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
-      <!-- Two tabs because the palette grew pickers: "setup" is every control as it was always ordered, "colors" is the
-           seven hues the player may restage (FctPalette). The footer — demo switch, counters, Save and Cancel — deliberately
-           lives OUTSIDE the tabs: it belongs to the visit, not to one category of decision. -->
-      <TabControl Margin="0,4,0,0" Background="Transparent" BorderThickness="0">
-      <TabItem Header="setup">
+      <!-- Two sections because the palette grew pickers: "setup" is every control as it was always ordered, "colors" is
+           the seven hues the player may restage (FctPalette). SfAccordion rather than tabs: the theme draws its header
+           bars and chevron natively, SelectionMode=One keeps exactly one section open like a page would, and the window
+           reads as one panel that breathes taller or shorter instead of two windows stapled together. SelectedIndex=0
+           opens on setup. The footer — demo switch, counters, Save and Cancel — deliberately lives OUTSIDE the accordion:
+           it belongs to the visit, not to one category of decision. -->
+      <syncfusion:SfAccordion Margin="0,4,0,0" SelectionMode="One" SelectedIndex="0">
+      <syncfusion:SfAccordionItem Header="setup">
         <StackPanel>
       <!-- The settings in the order they are actually decided: first the things that always apply — dials first, then
            dropdowns, then number boxes, alphabetical inside each kind — under a hairline the mode-dependent picks,
@@ -233,9 +236,9 @@
         </StackPanel>
       </Grid>
         </StackPanel>
-      </TabItem>
+      </syncfusion:SfAccordionItem>
 
-      <TabItem Header="colors">
+      <syncfusion:SfAccordionItem Header="colors">
         <StackPanel Margin="0,6,0,0">
           <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.75" FontSize="11"
                      Foreground="{DynamicResource ContentForegroundAlt}"
@@ -340,8 +343,8 @@
 
           </Grid>
         </StackPanel>
-      </TabItem>
-    </TabControl>
+      </syncfusion:SfAccordionItem>
+    </syncfusion:SfAccordion>
 
       <!-- Under the last hairline: what the overlay is showing right now, never what it saves. The arrows that used to
            sit here — a sentence of the form "heals ← to me →" — are gone; they explained columns in a panel that shows
