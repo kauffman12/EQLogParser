@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
         xmlns:NumberFormat="clr-namespace:System.Globalization;assembly=mscorlib"
         xmlns:local="clr-namespace:EQLogParser"
         mc:Ignorable="d"
@@ -46,6 +47,12 @@
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
+      <!-- Two tabs because the palette grew pickers: "setup" is every control as it was always ordered, "colors" is the
+           seven hues the player may restage (FctPalette). The footer — demo switch, counters, Save and Cancel — deliberately
+           lives OUTSIDE the tabs: it belongs to the visit, not to one category of decision. -->
+      <TabControl Margin="0,4,0,0" Background="Transparent" BorderThickness="0">
+      <TabItem Header="setup">
+        <StackPanel>
       <!-- The settings in the order they are actually decided: first the things that always apply — dials first, then
            dropdowns, then number boxes, alphabetical inside each kind — under a hairline the mode-dependent picks,
            which is also where rows visibly empty when a mode does not obey them. Collapsed, never disabled. -->
@@ -225,6 +232,116 @@
           </ComboBox>
         </StackPanel>
       </Grid>
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="colors">
+        <StackPanel Margin="0,6,0,0">
+          <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.75" FontSize="11"
+                     Foreground="{DynamicResource ContentForegroundAlt}"
+                     Text="seven hues, one per class of number; every word shares one and so do all (source) labels. A picked colour paints the numbers that spawn after it — the demo shows it immediately — and only Save remembers it." />
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="106" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="dealt" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="the colour of your outgoing damage numbers — shipped yellow, the loudest class on screen" />
+        <Grid Grid.Row="0" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="dealtColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="dealt"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="1" Text="taken" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="damage landing on you — shipped red; it answers 'what hit me' at a glance, so pick carefully" />
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="takenColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="taken"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="2" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="healing numbers, both directions — shipped green" />
+        <Grid Grid.Row="2" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="healsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="heals"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="3" Text="crits" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="the crit class: your crits in every lane — shipped deep orange, deliberately deeper than dealt yellow rather than brighter" />
+        <Grid Grid.Row="3" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="critColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="crit"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="4" Text="special" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="marked special attacks (assassinate, headshot, slay undead, finishing blow, decapitation): their number and its glyph — shipped epic purple, outside every lane colour so a mark cannot be misread as a stream" />
+        <Grid Grid.Row="4" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="specialColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="special"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="5" Text="words" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="every event word in one colour: block, parry, riposte, resist, miss, dodge, absorb, invulnerable — shipped pale grey; the words' ranking is carried by SIZE (invulnerable and absorb stand taller), not hue" />
+        <Grid Grid.Row="5" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="wordsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="words"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+        <TextBlock Grid.Row="6" Text="labels" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="the (source) names beside numbers — shipped neutral grey so they never compete with a value's colour; inert while the label dropdown says none" />
+        <Grid Grid.Row="6" Grid.Column="1" Margin="0,2">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
+          </Grid.ColumnDefinitions>
+          <shared:ColorPicker x:Name="labelsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
+          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="labels"
+                  ToolTip="back to the shipped colour" />
+        </Grid>
+
+          </Grid>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
 
       <!-- Under the last hairline: what the overlay is showing right now, never what it saves. The arrows that used to
            sit here — a sentence of the form "heals ← to me →" — are gone; they explained columns in a panel that shows

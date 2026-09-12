@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using Syncfusion.Windows.Shared;
 
 namespace EQLogParser
 {
@@ -115,6 +118,19 @@ namespace EQLogParser
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
 
+      /* The seven hues, filled in row order (see ColorRows). Setting a picker raises its event like a click would, so the
+         whole fill rides under _loading — a load is not an edit, and a storm of previews from one open would be noise. */
+      var hues = new[]
+      {
+        state.ColorDamageDealt, state.ColorDamageTaken, state.ColorHealing, state.ColorCrit,
+        state.ColorSpecial, state.ColorWords, state.ColorSource,
+      };
+      var rows = ColorRows();
+      for (var i = 0; i < rows.Length; i++)
+      {
+        rows[i].Picker.Color = ToMedia(hues[i]);
+      }
+
       _loading = false;
 
       /* One pass with the guard down: mode visibility, the legend sentence and the dial readouts all derive from the
@@ -159,6 +175,13 @@ namespace EQLogParser
         CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
+        ColorDamageDealt = ToInt(dealtColor.Color),
+        ColorDamageTaken = ToInt(takenColor.Color),
+        ColorHealing = ToInt(healsColor.Color),
+        ColorCrit = ToInt(critColor.Color),
+        ColorSpecial = ToInt(specialColor.Color),
+        ColorWords = ToInt(wordsColor.Color),
+        ColorSource = ToInt(labelsColor.Color),
       };
 
       /* Rows and words alike: the same table, read in the same order it was filled. */
@@ -380,5 +403,58 @@ namespace EQLogParser
 
       combo.SelectedIndex = 0;
     }
+
+    /* ----------------------------------------- the colors tab ------------------------------------------ */
+
+    /* The seven rows of the palette, in the XAML's order, each with the shipped value its ↺ restores: one table so a hue
+     * cannot join the tab and be forgotten at load, save or reset. (The WPF Color <-> 0xAARRGGBB int translation lives at
+     * the bottom; the engine and settings.ini only ever speak ints.) */
+    private (ColorPicker Picker, int Shipped)[] ColorRows() =>
+    [
+      (dealtColor, FctStyle.DamageDealtArgb),
+      (takenColor, FctStyle.DamageTakenArgb),
+      (healsColor, FctStyle.HealingArgb),
+      (critColor, FctStyle.CritArgb),
+      (specialColor, FctStyle.SpecialArgb),
+      (wordsColor, FctStyle.WordsArgb),
+      (labelsColor, FctStyle.SourceArgb),
+    ];
+
+    /* A picked colour is a staged edit like any other: straight into the preview, which the overlay applies to its palette
+       dial — so the NEXT spawned number wears it and nothing already mid-flight gets tugged, the same promise the size dial
+       makes. The picker keeps its own recent-colours memory across opens; only Save writes ini. */
+    private void ColourPicked(object sender, SelectedColorChangedEventArgs e)
+    {
+      if (_loading || !IsLoaded)
+      {
+        return;
+      }
+
+      PreviewChanged?.Invoke(Snapshot());
+    }
+
+    /* ↺ is per-row and means exactly one thing: this row's shipped hue, through the same preview path a pick takes. */
+    private void ColourReset_Click(object sender, RoutedEventArgs e)
+    {
+      if (_loading || sender is not Button { Tag: string tag })
+      {
+        return;
+      }
+
+      var picker = FindName(tag + "Color") as ColorPicker;
+      if (picker is null)
+      {
+        return;
+      }
+
+      var shipped = ColorRows().First(r => ReferenceEquals(r.Picker, picker)).Shipped;
+      picker.Color = ToMedia(shipped); // raises ColourPicked like a hand would — the preview rides the same path
+    }
+
+    /* One int is the whole colour everywhere the engine speaks — Skia draws it, settings.ini stores it, tests assert it. */
+    private static Color ToMedia(int argb) =>
+      Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
+
+    private static int ToInt(Color c) => unchecked((c.A << 24) | (c.R << 16) | (c.G << 8) | c.B);
   }
 }
