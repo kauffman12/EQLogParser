@@ -243,8 +243,11 @@ namespace EQLogParser
         var now = round * 1000;
         Wind(ingest, hits, from: round * 1000 - 1000, to: now);
         Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 300 + round, "Flurry", false, false, false, null, Width, Height, now));
+        // eight different words over eight rounds: identical words would collapse onto each other (policy, not accident -
+        // FctAccumulationTest), and this test is about where a word's ROW stands, so every one here must be its own event
+        string[] words = [Labels.Miss, Labels.Parry, Labels.Dodge, Labels.Block, Labels.Riposte, Labels.Resist, Labels.Absorb, Labels.Invulnerable];
         Assert.IsNotNull(ingest.Accept(hits, FctLane.Missed, 0, "Flurry", false, false, false,
-          round % 2 == 0 ? Labels.Miss : Labels.Parry, Width, Height, now + 30));
+          words[round % words.Length], Width, Height, now + 30));
       }
 
       var centre = hits[0].X0;

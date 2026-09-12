@@ -366,7 +366,6 @@ namespace EQLogParser
     public void RowsWaitingTheirTurnStillFoldDuplicates()
     {
       var ingest = Line();
-      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
       var hits = new List<FctHitState>();
 
       var first = ingest.Accept(hits, FctLane.DamageDealt, 412, "Venin", crit: false, minor: false, periodic: true,

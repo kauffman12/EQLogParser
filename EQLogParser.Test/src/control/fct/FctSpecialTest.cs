@@ -94,7 +94,6 @@ namespace EQLogParser.Tests
     public void MarksNeverFoldInEitherDirection()
     {
       var ingest = Ingest();
-      ingest.Accumulate = true; // folding's policy, tested with the door open; see FctAccumulationTest for the door itself
       var hits = new List<FctHitState>();
 
       var plain = ingest.Accept(hits, FctLane.DamageDealt, 2040, "Backstab", false, false, false, null, Width, Height, 0);

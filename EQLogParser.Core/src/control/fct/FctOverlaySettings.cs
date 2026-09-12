@@ -145,15 +145,6 @@ namespace EQLogParser
     internal static double ClampThreshold(double value) =>
       !double.IsFinite(value) || value <= 0 ? 0 : Math.Min(value, ThresholdMax);
 
-    /* Accumulation in one file word, the same on/off plain as "up"/"down": anything but the word "on" - junk included -
-       keeps the shipped answer, which is off. Every hit its own number until the player says otherwise. */
-    public const string AccumulationKey = "FctOverlayAccumulate";
-
-    public static bool LoadAccumulation() =>
-      string.Equals(ConfigUtil.GetSetting(AccumulationKey, null), "on", StringComparison.OrdinalIgnoreCase);
-
-    public static void SaveAccumulation(bool value) => ConfigUtil.SetSetting(AccumulationKey, value ? "on" : "off");
-
     /*
      * Whether anybody has ever pressed Save in the settings panel. The overlay's defaults are defensible but they are opinions, and a first enable that
      * shows nothing but numbers being what the build decided keeps a player from learning that size, speed and motion are theirs to set - so the menu
@@ -219,7 +210,6 @@ namespace EQLogParser
         TextScale = LoadTextScale(),
         CritScale = LoadCritScale(),
         Speed = LoadSpeed(),
-        Accumulate = LoadAccumulation(),
       };
 
       /* The shape belongs to the mode, and a file that pairs them wrongly (bands + arc) is not a decision anybody made,
@@ -257,7 +247,6 @@ namespace EQLogParser
       SaveTextScale(state.TextScale);
       SaveCritScale(state.CritScale);
       SaveSpeed(state.Speed);
-      SaveAccumulation(state.Accumulate);
     }
 
     /* The mode itself, in the player's words; absent is FOUNTAIN. The plume is what makes someone look twice at the

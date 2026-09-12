@@ -61,7 +61,6 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- The dials keep their meanings and lose their furniture: the row's label says which is which, and
@@ -132,15 +131,6 @@
             <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
           </syncfusion:UpDown.NumberFormatInfo>
         </syncfusion:UpDown>
-
-        <!-- Accumulation is a read-the-fight decision beside the others up here, not a configure-mode helper like the
-             demo switch below; it joins the general grid under threshold and travels in settings.ini as
-             "FctOverlayAccumulate" (off ships: every hit its own number until the player says otherwise). -->
-        <TextBlock Grid.Row="6" Text="accumulation" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="stack identical hits onto the number already flying (412 ×3 instead of three 412s); words count too (Miss ×2). crits stack only onto crits; heals and marked events never stack. off keeps every hit its own number" />
-        <CheckBox x:Name="accumulateCheck" Grid.Row="6" Grid.Column="1" Content="stack identical hits" Margin="0,3"
-                  VerticalAlignment="Center" HorizontalAlignment="Left" Checked="ControlChanged" Unchecked="ControlChanged"
-                  ToolTip="stack identical hits onto the number already flying (412 ×3 instead of three 412s); words count too (Miss ×2). off keeps every hit its own number" />
       </Grid>
 
       <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,2" />

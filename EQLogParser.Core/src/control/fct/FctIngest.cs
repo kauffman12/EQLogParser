@@ -74,13 +74,6 @@ namespace EQLogParser
      */
     public double Threshold;
 
-    /* Accumulation, the panel's switch and settings.ini's "FctOverlayAccumulate": ON, an event identical to a number already
-     * on screen joins that number with a count - "412 ×3" where three 412s used to fly, and words stack too ("miss ×2").
-     * OFF - as it ships - every event keeps its own row and the fold below is never consulted. The switch guards only the
-     * door: the key, the age rules and who may never fold stay correct either way, so flipping it changes what joins from
-     * now on and nothing that is already flying. */
-    public bool Accumulate;
-
     /* How many numbers the threshold has hidden, surfaced next to the drop count so a filter that is working is never
      * mistaken for a filter that is losing things silently. */
     public int HiddenCount { get; private set; }
@@ -238,7 +231,6 @@ namespace EQLogParser
       }
 
       Threshold = other.Threshold;
-      Accumulate = other.Accumulate;
       ShowDealt = other.ShowDealt;
       ShowTaken = other.ShowTaken;
       ShowHeals = other.ShowHeals;
@@ -359,11 +351,13 @@ namespace EQLogParser
          of them applies. */
       var conveyor = UseConveyor(style);
 
-      /* The accumulation switch is the whole door; policy lives behind it. Marked events never fold at either end - an
-         assassinate counted away is the event itself lost - and crits now fold, but only onto crits: the pooling above put
-         every crit in a pool of its own, so lane equality alone keeps a stack of crits off the ordinary numbers and vice
-         versa. Words (fixedText) join by the yard: "miss ×4" hides nothing a lone "miss" told. */
-      if (Accumulate && special is FctSpecial.None &&
+      /* Duplicate collapse, always on: an event identical to a number already flying joins it with a count - two 52k
+         slashes are one row reading "52k ×2", never two rows - because the second copy of the same fact says nothing and
+         costs a row. Marked events never fold at either end (an assassinate counted away is the event itself lost), and
+         crits fold only onto crits: the pooling above gives every crit a pool of its own, so lane equality alone keeps
+         the stacks apart. Words collapse by the yard - "Miss ×4" hides nothing a lone "Miss" told. What joins is decided
+         by the key below; nothing is ever summed - the row keeps one hit's face value and only the count moves. */
+      if (special is FctSpecial.None &&
           ShouldAbsorb(lane, periodic, fixedText) &&
           TryAbsorb(hits, pooled, incoming, heal, proc, periodic, source, value, fixedText, now))
       {
@@ -543,7 +537,7 @@ namespace EQLogParser
      * (or same word), same amount. Then the age rules: the target has to be young enough that one number standing for several
      * still reads as one exchange, and have most of its life left, so a count never lands on something about to fade out.
      * Crits fold onto crits — the pool keeps them off every ordinary row — and the overload case (a crit flood whose twins
-     * already faded) is what the drop counter exists to make visible.
+     * already faded, so nothing identical is left to take them) is what the drop counter exists to make visible.
      *
      * Matching on the value is what makes "×N" a fact rather than an estimate: 2,040 ×2 really was two hits of 2,040.
      * Summing instead, which this used to do, put a number on screen that no hit ever landed for and made the player divide

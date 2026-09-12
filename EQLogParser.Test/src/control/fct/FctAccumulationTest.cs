@@ -4,12 +4,14 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * The accumulation switch, which is the door rather than the policy: OFF (as it ships) every event keeps its own row and
-   * folding is never consulted; ON, an event identical to a number already flying joins it with a count - "412 ×3" where
-   * three 412s used to fly, words stack too ("Miss ×2"), crits stack only onto crits, and marks and direct heals never
-   * stack at all. The key itself, the age rules and every never are pinned by FctIngestTest, FctSpecialTest and friends,
-   * which run with the switch explicitly open; this file is about the door and the two policies that changed when it
-   * arrived: crits found their pool, and words learned to count.
+   * Duplicate collapse: an event identical to a number already flying joins it with a count - two 52k slashes are one row
+   * reading "52k ×2", never two rows - always on, with no switch, because the second copy of the same fact says nothing and
+   * costs a row. What joins is the key (lane, side, heal/damage, kind, ability or word, printed value), pinned in detail by
+   * FctIngestTest, FctSpecialTest and friends; this file pins the shape of the whole: duplicates never print twice, the
+   * value on screen is always one real hit's (nothing is ever summed - the count moves, the number does not), crits stack
+   * only onto crits, words stack onto words ("Miss ×2"), and direct heals and marked events never stack at all. A toggle
+   * was built for this once, tried in play, and removed: reading a fight means never asking whether a repeat should have
+   * been collapsed - it should have, every time; the dial people want is what THRESHOLD is for.
    */
   [TestClass]
   public sealed class FctAccumulationTest
@@ -28,31 +30,12 @@ namespace EQLogParser
 
     private static FctIngest Ingest() => new(new Random(20_260_731)) { Layout = FctLayoutChoice.Bands };
 
+    /* One spawn, then five identical ticks fold into it: the count moves and the printed value stays one hit's face,
+       so "412 ×6" is six facts, not one invented total. */
     [TestMethod]
-    public void TheSwitchShipsOffAndEveryHitKeepsItsOwnRow()
+    public void IdenticalHitsPrintOnceWithACount()
     {
       var ingest = Ingest();
-      var hits = new List<FctHitState>();
-
-      for (var now = 0.0; now < 600; now += 100)
-      {
-        Assert.IsNotNull(ingest.Accept(hits, FctLane.DamageDealt, 412, "Immolation", crit: false, minor: true, periodic: true,
-          fixedText: null, Width, Height, now), "off means the door is shut: six ticks, six rows");
-      }
-
-      Assert.AreEqual(6, hits.Count);
-      foreach (var hit in hits)
-      {
-        Assert.AreEqual(1, hit.MergeCount);
-        Assert.AreEqual("412", hit.DisplayText, "and nothing wears a count nobody asked for");
-      }
-    }
-
-    [TestMethod]
-    public void TurningItOnStacksTheIdenticalStream()
-    {
-      var ingest = Ingest();
-      ingest.Accumulate = true;
       var hits = new List<FctHitState>();
 
       var first = ingest.Accept(hits, FctLane.DamageDealt, 412, "Immolation", crit: false, minor: true, periodic: true,
@@ -65,6 +48,7 @@ namespace EQLogParser
           fixedText: null, Width, Height, now), "the row already flying takes the next identical tick");
       }
 
+      Assert.AreEqual(1, hits.Count, "six ticks, one row");
       Assert.AreEqual(6, first.MergeCount);
       Assert.AreEqual("412 ×6", first.DisplayText, "the face value stays one tick's; only the count moves");
     }
@@ -75,7 +59,6 @@ namespace EQLogParser
     public void WordsStackTheirCountToo()
     {
       var ingest = Ingest();
-      ingest.Accumulate = true;
       var hits = new List<FctHitState>();
 
       var first = ingest.Accept(hits, FctLane.Missed, 0, "Flurry", crit: false, minor: false, periodic: false,
@@ -97,14 +80,13 @@ namespace EQLogParser
       Assert.AreEqual(2, hits.Count);
     }
 
-    /* Crits found their pool: identical crits stack onto each other - honest ledgers, since the pool keeps them off every
-       ordinary row and back - while a plain hit of the same amount and ability is a different class of event entirely,
-       and whose story a crit tells (dealt vs taken) is part of its key. */
+    /* Crits stack onto crits - honest ledgers, since the pool keeps them off every ordinary row and back - while a plain
+       hit of the same amount and ability is a different class of event entirely, and whose story a crit tells (dealt vs
+       taken) is part of its key. */
     [TestMethod]
     public void CritsStackOnlyOntoCrits()
     {
       var ingest = Ingest();
-      ingest.Accumulate = true;
       var hits = new List<FctHitState>();
 
       var crit = ingest.Accept(hits, FctLane.DamageDealt, 1700, "Backstab", crit: true, minor: false, periodic: false,
@@ -127,14 +109,12 @@ namespace EQLogParser
       Assert.AreEqual(2, crit.MergeCount, "and the stack is still two");
     }
 
-    /* The nevers hold with the door wide open: a direct heal is read one cast at a time, and a marked event counted
-       away is the event itself lost. (The same rules re-pinned under fold-key pressure live in FctIngestTest and
-       FctSpecialTest.) */
+    /* The nevers: a direct heal is read one cast at a time, and a marked event counted away is the event itself lost.
+       (The same rules re-pinned under fold-key pressure live in FctIngestTest and FctSpecialTest.) */
     [TestMethod]
-    public void HealsAndMarksNeverStackEvenWithTheSwitchOn()
+    public void HealsAndMarksNeverStack()
     {
       var ingest = Ingest();
-      ingest.Accumulate = true;
       var hits = new List<FctHitState>();
 
       for (var now = 0.0; now < 1500; now += 300)

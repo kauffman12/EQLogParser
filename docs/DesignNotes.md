@@ -1848,32 +1848,32 @@ and the silhouette says which.
   need no new deployment files, and the cut-out details (ghost eyes, skull nose) can be forced to the
   outline colour independently of the fill.
 
-### Accumulation: a door on a machine that was always there
+### Accumulation: the knob we built, tried, and deleted
 
-The overlay has folded identical hits since the first ingest engine — one number reading "412 ×6" instead of six 412s,
-keyed so tightly (lane, side, kind, ability, face value) that a reader could trust the count as a fact. What it never had
-was the player's answer to *whether*. The fold was constitution: always on, tuned, defended by a wall of tests — and a
-player who wanted to see every hit of a fight individually had no way to say so, which is the wrong shape for a feature
-whose whole job is deciding what the player sees.
+The overlay has collapsed duplicate hits since the first ingest engine — one number reading "412 ×6" instead of six 412s,
+keyed to lane, side, kind, ability and *printed* value so the count is a fact. For a while this week it also had a switch:
+an "accumulation" checkbox (settings.ini `FctOverlayAccumulate`, default off) with the argument that compacting somebody's
+fight without asking was the wrong shape for a feature about what they see. Played for a day, the verdict came back the
+other way: nobody wants the second row of an identical hit. The knob is gone — checkbox, config field, ini key — and
+duplicate collapse is unconditional again, which is also what MSBT-class overlays ship. The dial for "I want to see less"
+already exists and is honest about it: that's THRESHOLD, and it counts what it hides.
 
-It ships now as a checkbox beside sample data, and as `FctOverlayAccumulate` in settings.ini: off — the shipped default —
-means every event keeps its own row and the fold is never consulted; on buys the compact ledger. Off-by-default costs
-nobody anything (the machine runs correctly either way, and the switch guards only the door), and it follows the rule
-this project's dials all keep: nothing about somebody's fight changes because a build decided it looked better.
+What the knob's short life did settle is two policy wideners the playtest actually wanted, kept after the switch died:
 
-Opening the door let two policies widen, both asked for by players rather than found in the code's own logic:
+- **Crits collapse onto crits.** They used to refuse folding outright, which meant a crit storm could only overflow into
+  the drop counter. Identical crits now stack honestly — every crit lives in a pool lane of its own, so plain numbers can
+  join a crit stack (or receive one) by construction, not by another key clause; a taken crit still never joins a dealt
+  one because whose-story was already in the key. The overload test survives as what real storms are: differing crits
+  (900, 1.2k, 1.4k…), which nothing on screen may take, counted when the cap bites.
+- **Words collapse too.** Four identical evasions are one fact said four times ("Miss ×2"), and a word carries no value,
+  so the face-value rule that protects numbers has nothing to guard — words fold where numbers need the printed-equality
+  clause. Numbers and words still never fold across kinds: two sorts of fact keep separate rows.
+- **Never summed.** The value on screen is always one real hit's; only the count moves. (Asked again during the knob's
+  trial whether players want literal totals — "642k" for two 321k hits — the answer was no: there's no need to literally
+  add numbers together, and an amount no single hit landed for is exactly what the original design refused. The row says
+  size-of-one and how-many, every claim on screen stays a fact.)
 
-- **Crits fold onto crits.** They used to refuse folding outright ("each one is the event"), which quietly also meant a
-  DoT-crit storm could never compact and its overflow landed in the drop counter. Now identical crits stack — honestly,
-  because crit pooling keeps a crit lane of its own, so plain numbers can join a crit stack (or the reverse) by
-  construction rather than by another clause in the key. A taken crit still never joins a dealt one: whose story an
-  event tells was already in the key.
-- **Words count.** "Miss" arrived four times and drew four times; four identical evasions are one fact said four times,
-  so words fold by their own rule ("Miss ×2") — they carry no value, so there is nothing to total wrongly, which is also
-  why they may fold when the face-value rule exists to stop numbers doing something similar. Direct heals and marked
-  events (assassinate and friends) still never stack at either end: players read heals one by one, and a counted-away
-  mark is the event itself lost.
-
-The existing fold-policy tests moved with it by opening the door themselves (`ingest.Accumulate = true`, one line each),
-which keeps them pinning policy rather than accident, and a new `FctAccumulationTest` pins the door: off spawns six of
-six, on stacks the stream, words count, crits meet only crits, and the nevers never. Suite 1082/1082.
+Tests moved with the deletion: the opt-in lines came out of five files, `CritOverloadIsCountedBecauseCritsNeverAbsorb`
+became `…WhenTheCritsDiffer`, the crowded-lanes word cadence went from alternating to eight distinct words (alternating
+identical words now correctly collapse), and `FctAccumulationTest` lost its two door tests and kept the shape: duplicates
+print once with a count, face value frozen, crits only onto crits, words onto words, heals and marks never. 1081/1081.
