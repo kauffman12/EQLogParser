@@ -110,6 +110,9 @@ namespace EQLogParser
     // one line per second while the guide is on screen; the guide itself redraws at frame rate
     private long _diagMs;
 
+    // set when GuideDiag stamps its arithmetic; consumed by the pixel twin (DiagSurface) once the frame is fully drawn
+    private bool _diagPending;
+
     /* The measurer handed to FctLayout.FitSource, cached so fitting a name to its column allocates nothing when a number's text changes: the
        fit runs on spawn and on folds, both of which arrive in bursts, and the delegate would otherwise be rebuilt per hit. */
     private Func<string, double, double> _labelWidth;
@@ -452,6 +455,12 @@ namespace EQLogParser
         }
       }
 
+      if (_diagPending)
+      {
+        _diagPending = false;
+        DiagSurface(scale);
+      }
+
       Blit(dc, scale);
       _dirty = false;
     }
@@ -599,9 +608,45 @@ namespace EQLogParser
       }
 
       _diagMs = now;
+      _diagPending = true;
       Log.Info($"fctdiag {stage.Diag()} {Rect(a)} {Rect(b)} {Rect(c)} exe={Environment.ProcessPath}");
 
       string Rect(FctRailLane lane) => lane is FctRailLane.None ? "-" : $"{FctRailLanes.Token(lane)}[x={stage.LaneRect(lane).X:F0} w={stage.LaneRect(lane).Width:F0}]";
+    }
+
+    /* The pixel twin of the guide's arithmetic, stamped once the frame is fully rastered and before it blits: which columns of
+       OUR surface actually carry a vertical stroke, sampled at three heights so no number's glyphs can fake one. A reported
+       line that is ours shows its column here; one that is not was drawn above this canvas, and the hunt moves to the WPF tree.
+       The ids say who drew it too: two different canvas or window hashes across lines means a second window is alive. */
+    private void DiagSurface(double scale)
+    {
+      using var snap = SKBitmap.FromImage(_surface.Snapshot());
+      var wPix = snap.Width;
+      var hPix = snap.Height;
+      int[] ys = [(int)(hPix * 0.25), (int)(hPix * 0.5), (int)(hPix * 0.75)];
+
+      var lit = string.Empty;
+      for (var x = 2; x < wPix - 2; x++)
+      {
+        var stroke = true;
+        foreach (var y in ys)
+        {
+          var a = snap.GetPixel(x, y).Alpha;
+          if (a < 40 || snap.GetPixel(x - 3, y).Alpha > a - 25 || snap.GetPixel(x + 3, y).Alpha > a - 25)
+          {
+            stroke = false;
+            break;
+          }
+        }
+
+        if (stroke)
+        {
+          lit += (lit.Length > 0 ? "," : "") + x;
+        }
+      }
+
+      var win = Window.GetWindow(this);
+      Log.Info($"fctdiag frame surf={wPix}x{hPix} el={ActualWidth:F0}x{ActualHeight:F0} dpi={scale:F2} canvas={GetHashCode():X} win={(win is null ? "-" : $"{win.GetHashCode():X}@{win.Left:F0},{win.Top:F0} {win.Width:F0}x{win.Height:F0}")} lit=[{lit}]");
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
