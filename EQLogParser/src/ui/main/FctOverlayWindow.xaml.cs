@@ -220,8 +220,9 @@ namespace EQLogParser
       {
         EnsureSettings();
 
-        /* Every entry into setup starts from the saved values and the examples on — never from an abandoned preview
-           (Cancel put those back already), and sample data is a view aid for this pass, not a preference. */
+        /* Every entry into setup starts from the saved values — never from an abandoned preview (Cancel put those back already) —
+           and that now includes the remembered demo switch: a player who saved "off" is laying out over a live fight, and setup
+           opening the fountain anyway was the whole complaint the switch exists to answer. */
         _settings.LoadFrom(StagedState(), raisePreview: false);
         if (IsVisible)
         {
@@ -341,6 +342,12 @@ namespace EQLogParser
          the same call configure mode makes, so there is no second path by which a setting could be honoured at startup and
          ignored later — or, the way these bugs usually go, saved by the panel and never read again. */
       _saved = FctOverlaySettings.LoadConfig();
+
+      /* The demo switch is loaded state like any other, and RefreshDemo reads THIS field rather than _saved — a startup that left
+         it on its field default would play the fountain into a setup pass whose checkbox honestly says off (the way this bug was
+         reported: "started displaying the sample data even though the checkbox wasn't checked"). One line here makes the saved
+         answer true from frame zero; SettingsPreview owns it afterwards, and Save re-stages both together. */
+      _sampleData = _saved.SampleData;
       Apply(_saved);
     }
 
