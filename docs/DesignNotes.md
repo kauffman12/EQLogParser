@@ -885,9 +885,11 @@ event a player watches for and does not care whether it came off a swing or a sp
 proc that crit. Then the pet: its numbers are its own, which is the entire content of "get my pet out of my parse", and its crit stays inside
 its row rather than jumping to mine because crits pool on screen. Only then kind and crit: hits/crits, melee/spell. An ambiguous record would
 answer to two switches at once (mute one, still see it under the other), and an unassigned one would be a number nothing can hide — both read
-to a player as an overlay ignoring its own settings, so two tests hold the line: `FctFilterTest.EachRowAnswersForItselfAlone` (muting one row must
-leave its neighbour visible, which is what an implementation resolving several rows onto one switch fails) and
-`FctDemoTest.Script_CoversEverySwitchInTheShowList` (every row and word has a cue, so every switch can be seen working without a fight).
+to a player as an overlay ignoring its own settings. Three tests hold the line: `FctShowListTest.EveryRowHasExactlyOneSwitch` (every `FctRow` but
+`Word` appears exactly once in the table, so a row added to the enum without a line in it cannot quietly become unhideable — that one lives in
+`EQLogParser.Wpf.Test`, which needs Windows to run), `FctFilterTest.EachRowAnswersForItselfAlone` (muting one row must leave its neighbour visible,
+which is what an implementation resolving several rows onto one switch fails) and `FctDemoTest.Script_CoversEverySwitchInTheShowList` (every row and
+word has a cue, so every switch can be seen working without a fight).
 
 **Which words those rows use, and why not MSBT's.** "Spell" means every non-melee kind the parser produces — direct damage, bane, damage
 shield, reverse DS, other damage — because that is EverQuest's own vocabulary and MSBT's "skill" is a World of Warcraft word that means
