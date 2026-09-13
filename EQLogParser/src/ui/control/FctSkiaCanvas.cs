@@ -1024,6 +1024,7 @@ namespace EQLogParser
       _halos.Clear();
       _haloKey.Clear();
       _hits.Clear();
+      _ingest.ResetConveyor(); // stop restarts the canvas clock's epoch; the rails must clear with the rows (FctConveyor.Reset)
       _demo.Clear(null); // the halos its numbers referenced were disposed with every other halo above
       ReleaseSurface();
 

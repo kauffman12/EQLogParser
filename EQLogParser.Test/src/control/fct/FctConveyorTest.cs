@@ -660,5 +660,38 @@ namespace EQLogParser
         FctScale.Time = dial;
       }
     }
+
+    /* The overlay's stop-and-start: the canvas clears its rows and restarts its clock from zero. The rail ledger goes with the
+       rows - a lane that keeps the old epoch's timestamp stamps nothing until the new now climbs past it, so its ghost queue
+       fills the backlog cap and every arrival after the re-show is rejected for as long as the previous show ran (reported:
+       one side of the damage went dark on re-enable, then recovered by itself a minute later). */
+    [TestMethod]
+    public void AStopAndRestartClearsTheRailLedger()
+    {
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+
+      // the old epoch: a row in flight on the rail...
+      Assert.IsNotNull(Swing(ingest, hits, 1000, 90000));
+      Frame(ingest, hits, 90200);
+
+      // ...and the host stops: rows clear, ledger with them
+      hits.Clear();
+      ingest.ResetConveyor();
+
+      // the new epoch starts far below every old timestamp. The first row enters...
+      var first = Swing(ingest, hits, 1000, 5);
+      Assert.IsNotNull(first);
+
+      // ...and a frame later it is on screen: a lane frozen on the old epoch would never carry it past the mouth
+      Frame(ingest, hits, 400);
+      Assert.IsTrue(first.ConveyorQ > 0, "the restarted lane carries its first row");
+
+      // and the door stays open: what looked like a full backlog was a ghost, not a queue
+      var second = Swing(ingest, hits, 2000, 416);
+      Assert.IsNotNull(second);
+      Frame(ingest, hits, 3000);
+      Assert.IsTrue(second.ConveyorQ > 0, "the restarted lane keeps admitting");
+    }
   }
 }

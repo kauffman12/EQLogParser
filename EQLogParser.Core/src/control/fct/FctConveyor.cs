@@ -194,6 +194,17 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The companion to a host clearing its rows (its Stop). The canvas restarts its clock from zero on every start, so a lane
+     * that outlives the clear keeps a LastStampMs from the old epoch and stamps nothing until the new now climbs past it - and
+     * meanwhile its ghost queue counts as waiting, the backlog cap closes the door, and every arrival after the stop is rejected
+     * for as long as the previous show ran. The ledger is part of the rows' life: they go together.
+     */
+    public void Reset()
+    {
+      _lanes.Clear();
+    }
+
     private static int KeyOf(FctHitState hit, FctStage stage)
     {
       /* One train per column, in one direction: the column index and the travel sign are the whole identity. Two categories

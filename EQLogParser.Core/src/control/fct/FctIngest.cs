@@ -494,6 +494,12 @@ namespace EQLogParser
       return hit;
     }
 
+    /*
+     * The host's Stop clears its hit list; this goes with it. The rails are the rows' ledger, and a rail that outlives its rows
+     * carries a clock epoch the canvas has already restarted (FctConveyor.Reset) - see there for what that costs.
+     */
+    public void ResetConveyor() => _conveyor.Reset();
+
     /* Drops expired hits, newest-last so the list keeps its order. Returns how many went. */
     public int PruneExpired(List<FctHitState> hits, double now, Action<FctHitState> onRemoved = null)
     {
