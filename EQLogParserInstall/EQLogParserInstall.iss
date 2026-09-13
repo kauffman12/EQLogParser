@@ -112,6 +112,8 @@ Source: "{#MyReleaseDir}\Syncfusion.GridCommon.WPF.dll"; DestDir: "{app}"; Flags
 Source: "{#MyReleaseDir}\Syncfusion.Licensing.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.OfficeChart.Base.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.PropertyGrid.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
+; Setup panels (FCT and damage meter) fold their sections with SfAccordion.
+Source: "{#MyReleaseDir}\Syncfusion.SfAccordion.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfBusyIndicator.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfChart.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfGrid.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion

@@ -45,6 +45,7 @@ for %%F in (
     "%RELEASE_DIR%\Syncfusion.Licensing.dll"
     "%RELEASE_DIR%\Syncfusion.OfficeChart.Base.dll"
     "%RELEASE_DIR%\Syncfusion.PropertyGrid.WPF.dll"
+    "%RELEASE_DIR%\Syncfusion.SfAccordion.WPF.dll"
     "%RELEASE_DIR%\Syncfusion.SfBusyIndicator.WPF.dll"
     "%RELEASE_DIR%\Syncfusion.SfChart.WPF.dll"
     "%RELEASE_DIR%\Syncfusion.SfGrid.WPF.dll"
