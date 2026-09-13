@@ -1935,3 +1935,33 @@ Two pinned laws came out rewritten rather than broken, which is what measuring i
 asserts the vertex sits over the lane's open hand instead of "away from the middle", and `ANameFollowsTheRoomItHas`
 compares NAME lengths where it compared label lengths — "(Glo)" growing "(Glo…)" as a column narrows is the cut mark
 appearing, not the name growing. 1081/1081; the real question was the screenshot's, and the answer was "yes".
+
+## Damage meter setup window
+
+Configure used to be a form painted on top of the thing it configured: pressing the cog swapped the live meter for a
+preview instance whose face carried eleven controls, three dropdowns deep, with Save/Cancel/Close buttons that enabled
+themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
+but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
+took its job: three accordion sections (MAIN for rows/font/thin bars/percent, METER for reset/crit rate/class filter/
+hide names/streamer, COLORS for bar and highlight), Save and Cancel as the entire exit vocabulary, everything previewed
+live on the sample stage and nothing written to ini until Save.
+
+The staging rides a `DamageMeterConfigState` copy that `Load()`s with exactly the overlay constructor's guards, so
+setup always opens on what is on screen. The overlay grew three internal verbs — `PreviewMeterState` (apply without
+persisting), `CommitMeterState` (apply, persist the same ini keys the old panel wrote, hand back to the game) and
+`DiscardMeterSettings` (just end: MainWindow reopens a live meter that reads the untouched values back off disk, so
+discarding restores itself and no undo code exists). The `_current*` fields stopped being half-state/half-control —
+rows, font, mini bars, percent, streamer and both colors now have working-set fields the Update methods maintain, and
+the update tick reads those instead of asking a ComboBox that no longer exists.
+
+Two deliberate inherited oddities. Geometry stays out of the staged object: dragging and resizing the stage is the
+geometry editor, and Save captures whatever rectangle the stage ended on (the `heightRectangle` measuring line is all
+of the old panel that survives). And Save closes configure rather than lingering — the old form's three exit buttons
+enabled and disabled in a dance around each other; here every change is already visible two inches away on the stage,
+so "keep these" and "walk away" are enough words.
+
+Placement follows the companion conventions: the window docks right of the meter when the work area has room and left
+when it doesn't, clamps into the screen, moves by the stage's drag delta so a pairing the user chose survives being
+moved, and closes with its owner automatically because `Owner` says so. The bar pool rebuilds only when the row count
+actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
+reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
