@@ -192,12 +192,18 @@ namespace EQLogParser
 
     internal void PreviewMeterState(DamageMeterConfigState s)
     {
+      // Only these three move the bottom edge; re-fitting on a color-picker stop would snap back a stage somebody
+      // resized by hand in between.
+      var refit = s.FontSize != _currentFontSize || s.MiniBars != _currentMiniBars || s.MaxRows != _currentMaxRows;
+
       UpdateFontSize(s.FontSize);
       UpdateDamageMode(s.DamageResetMode);
       UpdateSelectedClass(s.SelectedClass);
       UpdateHideOthers(s.HideOtherPlayers);
       UpdateShowCritRate(s.CritRateDisplay);
       _currentStreamerMode = s.StreamerMode;
+      UpdateShowDamagePercent(s.ShowDamagePercent);
+      UpdateMiniBars(s.MiniBars);
       UpdateProgressBrush(s.ProgressColor);
       UpdateHighlightBrush(s.HighlightColor);
 
@@ -207,6 +213,31 @@ namespace EQLogParser
       {
         UpdateMaxRows(s.MaxRows);
       }
+
+      if (refit)
+      {
+        AdjustHeight();
+      }
+    }
+
+    // The stage hugs its content while configuring: rows, font size and thin bars all move the bottom edge, so each
+    // preview re-fits the window (dispatched behind layout, so it measures the NEW bar heights). Live meters never
+    // hear from it — their height is a saved setting and stays exactly where the player left it.
+    private void AdjustHeight()
+    {
+      if (!_preview)
+      {
+        return;
+      }
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        var needed = damageContent.ActualHeight + 8;
+        if (!needed.Equals(Height))
+        {
+          Height = needed;
+        }
+      }, DispatcherPriority.Background);
     }
 
     internal void CommitMeterState(DamageMeterConfigState s)
