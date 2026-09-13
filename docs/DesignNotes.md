@@ -1622,8 +1622,10 @@ at overlay distance the WORD already spells out which defence happened and the o
 SIZE — loud words keep their taller tier, they just no longer shout in gold. The source line went neutral grey for the
 same reason: it must not compete with a value colour for meaning.
 
-That table is advice now rather than law, because the hues moved in: the settings window's *colors* tab holds seven
-pickers — dealt, taken, heals, crits, specials, words, labels — each with a ↺ to its shipped value. The hues joined the
+That table is advice now rather than law, because the hues moved in: the settings window's COLOR section holds seven
+pickers — **damage out, damage in, heals, crits, special, events** (the zero-damage words: block, miss, dodge, all of
+them one hue) **and labels**, named by what the number is rather than by engine vocabulary, and deliberately without
+per-row reset arrows: Cancel returns every hue, and the pickers keep their own recent-colour memory. The hues joined the
 engine's dial family as `FctPalette`, process globals seeded from these constants and applied by the same staged-settings
 path as sizes and speed, so the old promises ride unchanged: a picked colour wears the NEXT spawned number, mid-flight
 rows keep theirs, and only Save remembers (`FctOverlayColor*` keys, eight uppercase hex digits; `#` and a dropped alpha

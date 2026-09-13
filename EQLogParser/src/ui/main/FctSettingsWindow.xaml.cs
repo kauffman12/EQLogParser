@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -118,17 +117,18 @@ namespace EQLogParser
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
 
-      /* The seven hues, filled in row order (see ColorRows). Setting a picker raises its event like a click would, so the
-         whole fill rides under _loading — a load is not an edit, and a storm of previews from one open would be noise. */
+      /* The seven hues, filled in the section's order (see ColorPickers). Setting a picker raises its event like a click
+         would, so the whole fill rides under _loading — a load is not an edit, and a storm of previews from one open
+         would be noise. */
       var hues = new[]
       {
         state.ColorDamageDealt, state.ColorDamageTaken, state.ColorHealing, state.ColorCrit,
         state.ColorSpecial, state.ColorWords, state.ColorSource,
       };
-      var rows = ColorRows();
-      for (var i = 0; i < rows.Length; i++)
+      var pickers = ColorPickers();
+      for (var i = 0; i < pickers.Length; i++)
       {
-        rows[i].Picker.Color = ToMedia(hues[i]);
+        pickers[i].Color = ToMedia(hues[i]);
       }
 
       _loading = false;
@@ -406,18 +406,14 @@ namespace EQLogParser
 
     /* ----------------------------------------- the colors tab ------------------------------------------ */
 
-    /* The seven rows of the palette, in the XAML's order, each with the shipped value its ↺ restores: one table so a hue
-     * cannot join the tab and be forgotten at load, save or reset. (The WPF Color <-> 0xAARRGGBB int translation lives at
-     * the bottom; the engine and settings.ini only ever speak ints.) */
-    private (ColorPicker Picker, int Shipped)[] ColorRows() =>
+    /* The seven pickers in the section's order, matched to the state's hue order: one table so a colour cannot join the
+     * XAML and be forgotten at load or save — that promise does not need a per-row reset button to be worth keeping.
+     * (The WPF Color <-> 0xAARRGGBB int translation lives at the bottom; the engine and settings.ini only ever speak
+     * ints. Reaching a shipped value needs no arrow either: Cancel puts every hue back, and the pickers remember recent
+     * colours across opens on their own.) */
+    private ColorPicker[] ColorPickers() =>
     [
-      (dealtColor, FctStyle.DamageDealtArgb),
-      (takenColor, FctStyle.DamageTakenArgb),
-      (healsColor, FctStyle.HealingArgb),
-      (critColor, FctStyle.CritArgb),
-      (specialColor, FctStyle.SpecialArgb),
-      (wordsColor, FctStyle.WordsArgb),
-      (labelsColor, FctStyle.SourceArgb),
+      dealtColor, takenColor, healsColor, critColor, specialColor, wordsColor, labelsColor,
     ];
 
     /* A picked colour is a staged edit like any other: straight into the preview, which the overlay applies to its palette
@@ -431,24 +427,6 @@ namespace EQLogParser
       }
 
       PreviewChanged?.Invoke(Snapshot());
-    }
-
-    /* ↺ is per-row and means exactly one thing: this row's shipped hue, through the same preview path a pick takes. */
-    private void ColourReset_Click(object sender, RoutedEventArgs e)
-    {
-      if (_loading || sender is not Button { Tag: string tag })
-      {
-        return;
-      }
-
-      var picker = FindName(tag + "Color") as ColorPicker;
-      if (picker is null)
-      {
-        return;
-      }
-
-      var shipped = ColorRows().First(r => ReferenceEquals(r.Picker, picker)).Shipped;
-      picker.Color = ToMedia(shipped); // raises ColourPicked like a hand would — the preview rides the same path
     }
 
     /* One int is the whole colour everywhere the engine speaks — Skia draws it, settings.ini stores it, tests assert it. */

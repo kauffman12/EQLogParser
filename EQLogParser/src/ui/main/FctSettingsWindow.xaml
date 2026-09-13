@@ -34,7 +34,7 @@
        app's own font scale), so this panel shrinks and grows with the rest of the application. One attribute on the
        root: font size is an inherited property, and every label, combo, checkbox and button below wants exactly this. -->
   <Border Background="{DynamicResource ContentBackground}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
-          BorderThickness="1" CornerRadius="8" Padding="14,10,14,12"
+          BorderThickness="1" CornerRadius="8" Padding="16,10,16,12"
           TextElement.FontSize="{DynamicResource EQDescriptionSize}">
     <StackPanel>
 
@@ -244,12 +244,9 @@
 
       <syncfusion:SfAccordionItem Header="COLORS">
         <StackPanel Margin="0,6,0,10">
-          <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.75" FontSize="11"
-                     Foreground="{DynamicResource ContentForegroundAlt}"
-                     Text="seven hues, one per class of number; every word shares one and so do all (source) labels. A picked colour paints the numbers that spawn after it — the demo shows it immediately — and only Save remembers it." />
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="106" />
+              <ColumnDefinition Width="96" />
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
@@ -261,89 +258,40 @@
               <RowDefinition Height="Auto" />
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="dealt" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <TextBlock Grid.Row="0" Text="damage out" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="the colour of your outgoing damage numbers — shipped yellow, the loudest class on screen" />
-        <Grid Grid.Row="0" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="dealtColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="dealt"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <shared:ColorPicker x:Name="dealtColor" Grid.Row="0" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="1" Text="taken" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+        <TextBlock Grid.Row="1" Text="damage in" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="damage landing on you — shipped red; it answers 'what hit me' at a glance, so pick carefully" />
-        <Grid Grid.Row="1" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="takenColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="taken"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <shared:ColorPicker x:Name="takenColor" Grid.Row="1" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
         <TextBlock Grid.Row="2" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="healing numbers, both directions — shipped green" />
-        <Grid Grid.Row="2" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="healsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="heals"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <shared:ColorPicker x:Name="healsColor" Grid.Row="2" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
         <TextBlock Grid.Row="3" Text="crits" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the crit class: your crits in every lane — shipped deep orange, deliberately deeper than dealt yellow rather than brighter" />
-        <Grid Grid.Row="3" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="critColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="crit"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+                   ToolTip="the crit class: your crits in every lane — shipped deep orange, deliberately deeper than the damage-out yellow rather than brighter" />
+        <shared:ColorPicker x:Name="critColor" Grid.Row="3" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
         <TextBlock Grid.Row="4" Text="special" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="marked special attacks (assassinate, headshot, slay undead, finishing blow, decapitation): their number and its glyph — shipped epic purple, outside every lane colour so a mark cannot be misread as a stream" />
-        <Grid Grid.Row="4" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="specialColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="special"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <shared:ColorPicker x:Name="specialColor" Grid.Row="4" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="5" Text="words" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="every event word in one colour: block, parry, riposte, resist, miss, dodge, absorb, invulnerable — shipped pale grey; the words' ranking is carried by SIZE (invulnerable and absorb stand taller), not hue" />
-        <Grid Grid.Row="5" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="wordsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="words"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <TextBlock Grid.Row="5" Text="events" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="the zero-damage event words in one colour: block, parry, riposte, resist, miss, dodge, absorb, invulnerable — shipped pale grey; what separates these is carried by SIZE (invulnerable and absorb stand taller), not hue" />
+        <shared:ColorPicker x:Name="wordsColor" Grid.Row="5" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
         <TextBlock Grid.Row="6" Text="labels" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="the (source) names beside numbers — shipped neutral grey so they never compete with a value's colour; inert while the label dropdown says none" />
-        <Grid Grid.Row="6" Grid.Column="1" Margin="0,2">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="30" />
-          </Grid.ColumnDefinitions>
-          <shared:ColorPicker x:Name="labelsColor" VerticalAlignment="Center" SelectedColorChanged="ColourPicked" />
-          <Button Grid.Column="1" Content="↺" Margin="4,0,0,0" Padding="4,0" Click="ColourReset_Click" Tag="labels"
-                  ToolTip="back to the shipped colour" />
-        </Grid>
+        <shared:ColorPicker x:Name="labelsColor" Grid.Row="6" Grid.Column="1" Margin="0,2,4,2" VerticalAlignment="Center"
+                            SelectedColorChanged="ColourPicked" />
 
           </Grid>
         </StackPanel>
