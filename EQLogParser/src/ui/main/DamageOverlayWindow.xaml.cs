@@ -22,10 +22,6 @@ namespace EQLogParser
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
     private Task _lastUpdateTask = Task.CompletedTask;
-    private double _savedHeight;
-    private double _savedWidth;
-    private double _savedTop = double.NaN;
-    private double _savedLeft;
     private long _lastTopTicks = long.MinValue;
     private int _savedFontSize;
     private int _savedMaxRows;
@@ -159,11 +155,11 @@ namespace EQLogParser
         damageContent.Visibility = Visibility.Visible;
         controlPanel.Visibility = Visibility.Visible;
         Visibility = Visibility.Visible;
-        SetMinHeight(true);
+        MinHeight = 40;
       }
       else
       {
-        SetMinHeight(false);
+        MinHeight = 0;
         ResizeMode = ResizeMode.NoResize;
         lineGrid.Visibility = Visibility.Collapsed;
         controlPanel.Visibility = Visibility.Collapsed;
@@ -247,13 +243,9 @@ namespace EQLogParser
       var calcHeight = GetOverlayHeight();
       ConfigUtil.SetSetting("OverlayHeight", calcHeight);
       ConfigUtil.SetSetting("OverlayWidth", Width);
-      _savedHeight = calcHeight;
-      _savedWidth = Width;
 
       ConfigUtil.SetSetting("OverlayTop", Top);
       ConfigUtil.SetSetting("OverlayLeft", Left);
-      _savedTop = Top;
-      _savedLeft = Left;
 
       ConfigUtil.SetSetting("OverlayFontSize", (double)s.FontSize);
       _savedFontSize = s.FontSize;
@@ -526,21 +518,6 @@ namespace EQLogParser
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
 
-    private void SetMinHeight(bool isFixed)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (isFixed)
-        {
-          MinHeight = 40;
-        }
-        else
-        {
-          MinHeight = 0;
-        }
-      }, DispatcherPriority.Background);
-    }
-
     private double GetOverlayHeight()
     {
       var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
@@ -554,12 +531,8 @@ namespace EQLogParser
 
     private void WindowContentRendered(object sender, EventArgs e)
     {
-      // delay to avoid WindowSize event from saving new values
-      _savedHeight = Height;
-      _savedWidth = Width;
-      _savedTop = Top;
-      _savedLeft = Left;
-
+      // the stage is laid out and parked where it will stay: only now does its companion panel exist, because docking
+      // reads the measured rectangle
       if (_preview && _meterSettings is null)
       {
         _meterSettings = new DamageMeterSettingsWindow(this) { Owner = this };

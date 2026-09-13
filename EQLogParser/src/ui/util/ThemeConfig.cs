@@ -383,18 +383,6 @@ namespace EQLogParser
     {
       var theme = CurrentTheme == "MaterialLight" ? new Theme("MaterialLight") : new Theme("MaterialDarkCustom;MaterialDark");
       SfSkinManager.SetTheme(main, theme);
-
-      // workaround for DM
-      if (CurrentTheme == "MaterialLight")
-      {
-        Application.Current.Resources["EQDamageMeterCheckBoxForeground"] =
-          Application.Current.Resources["ContentBackground"];
-      }
-      else
-      {
-        Application.Current.Resources["EQDamageMeterCheckBoxForeground"] =
-          Application.Current.Resources["ContentForeground"];
-      }
     }
 
     private static void LoadDictionary(string path)
