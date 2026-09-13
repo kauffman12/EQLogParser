@@ -182,7 +182,7 @@ namespace EQLogParser
       }
 
       var text = raw.Trim();
-      if (text.StartsWith("#", StringComparison.Ordinal))
+      if (text.Length > 0 && text[0] == '#')
       {
         text = text[1..];
       }
