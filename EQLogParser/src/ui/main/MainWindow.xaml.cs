@@ -426,6 +426,8 @@ namespace EQLogParser
          shown anybody's Owner, and unlocking builds the settings window immediately. A setting-less first run drove
          straight through here (configure offer → SetLocked(false) → EnsureSettings → Owner = this) with the overlay
          still hidden, and the dispatcher ate an exception; showing a frame locked is nothing next to that. */
+      Log.Info($"FCT-DBG toggle show={show} window=re-show locked={_fctOverlay.Locked}");
+
       if (show)
       {
         _fctOverlay.Show();

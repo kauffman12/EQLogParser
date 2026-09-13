@@ -1,3 +1,4 @@
+using log4net;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -5,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
+using System.Reflection;
 using System.Windows.Media.Imaging;
 
 namespace EQLogParser
@@ -114,6 +116,9 @@ namespace EQLogParser
     private double _lastDpiCheckMs;
     private double _statFrameMsMax;
     private Stopwatch _clock;
+
+    /* FCT-DBG: temporary diagnostics for the re-enable bug; grep and strip. */
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private bool _dirty;
 
     /* Which render ticks get rastered, measured from tick spacing; shared with the vector backend. */
@@ -243,6 +248,8 @@ namespace EQLogParser
       {
         RestartDemo();
       }
+
+      Log.Info($"FCT-DBG gates applied: dealt={_ingest.ShowDealt} taken={_ingest.ShowTaken} heals={_ingest.ShowHeals} procs={_ingest.ShowProcs} threshold={Threshold} changed={changed}");
     }
 
     /*
@@ -269,6 +276,7 @@ namespace EQLogParser
     /* The host drains its feed from EventsFrame, which fires before the paint decision below. */
     public void Start()
     {
+      Log.Info($"FCT-DBG canvas Start size={ActualWidth:0}x{ActualHeight:0}");
       _clock = Stopwatch.StartNew();
       _statsWindowStartMs = 0;
       _pacer.Reset();
@@ -281,6 +289,7 @@ namespace EQLogParser
     {
       CompositionTarget.Rendering -= OnRendering;
       ReleaseAllResources();
+      Log.Info("FCT-DBG canvas Stop");
     }
 
     /*
@@ -297,6 +306,7 @@ namespace EQLogParser
     {
       if (_clock is null)
       {
+        Log.Info("FCT-DBG AddHit dropped (no clock)");
         return;
       }
 
