@@ -130,10 +130,11 @@ namespace EQLogParser
     /*
      * The source line's baseline when labels go below, from the row's top: a fraction of the VALUE font plus the label's own baseline in its em box.
      * The fraction used to be 1.25, which sat the name almost on the next row's top edge — measured on a live column, a number was three times farther
-     * from its own name than the name was from the digits below it, so each label read as belonging to the NEXT entry. At 0.9 the name leans under its
-     * own amount and the row's bottom (TextHeight) is clear air between one number/name pair and the next.
+     * from its own name than the name was from the digits below it, so each label read as belonging to the NEXT entry. At 0.9 the pair closed up tight;
+     * at 1.0 there is about nine pixels of clear gap between the number and its name at shipped size — leaning under its own amount without touching it —
+     * and the row's bottom (TextHeight) still leaves more air before the next entry than the pair has inside it.
      */
-    public const double LabelBaselineFrac = 0.9;
+    public const double LabelBaselineFrac = 1.0;
 
     /* The source line's own baseline within its em box, in source-font units: where text engines sit a baseline in a line it owns. */
     public const double SourceBaselineFrac = 0.85;
