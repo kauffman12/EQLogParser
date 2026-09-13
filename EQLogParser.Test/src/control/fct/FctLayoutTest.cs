@@ -249,6 +249,27 @@ namespace EQLogParser
       return hit;
     }
 
+    /* A below label belongs to the number above it, not the entry below: its baseline sits inside its own row and leans toward its value's baseline
+     * rather than toward where the next entry's number starts at the row's bottom edge. This was once inverted — the name sat almost on the next
+     * number — so each label read as belonging to the digits below it instead of above it. */
+    [TestMethod]
+    public void ABelowLabelLeansUnderItsOwnNumber()
+    {
+      foreach (var crit in new[] { false, true })
+      {
+        var hit = Spawn(FctLane.DamageDealt, incoming: false, new Random(3), source: "Hammer of Magic II", crit: crit);
+
+        var valueBase = hit.ValueFontSize * FctLayout.ValueBaselineFrac;
+        var labelBase = FctLayout.BelowLabelY(0.0, hit);
+        var rowBottom = FctLayout.TextHeight(hit);
+
+        Assert.IsTrue(labelBase > valueBase, $"label must sit under its number (crit {crit})");
+        Assert.IsTrue(labelBase < rowBottom, $"label must stay inside its own row (crit {crit})");
+        Assert.IsTrue(labelBase - valueBase < (rowBottom - labelBase) + valueBase,
+          $"label must lean toward its own number, not the next entry's (crit {crit}: step {labelBase - valueBase:0.#}, tail {(rowBottom - labelBase) + valueBase:0.#})");
+      }
+    }
+
     // ---- placement: throwing text so it does not land on text already in flight (FctPlacement) ----
     [TestMethod]
     public void ThreeFountainsGetTheirOwnAir()

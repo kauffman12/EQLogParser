@@ -645,7 +645,7 @@ namespace EQLogParser
 
       // value: black outline pass, then colored fill pass; its x is the value's own center in every label placement,
       // so amounts keep one spine whether the words hang below them (the shipped line) or inline left/right of them.
-      var valueBase = y + (hit.ValueFontSize * 0.82);
+      var valueBase = y + (hit.ValueFontSize * FctLayout.ValueBaselineFrac);
       DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueArgb, opacity);
 
       if (hit.SourceLabel is not null)
@@ -657,7 +657,8 @@ namespace EQLogParser
 
         if (_labelSide is FctLabelSide.Below)
         {
-          labelBase = y + (hit.ValueFontSize * 1.25) + (hit.SourceFontSize * 0.85);
+          // the label leans under its own number; the row's reserved bottom is the air before the next entry (FctLayout.BelowLabelY)
+          labelBase = FctLayout.BelowLabelY(y, hit);
         }
         else
         {
@@ -843,7 +844,8 @@ namespace EQLogParser
             return;
           }
 
-          surf.Canvas.DrawText(hit.DisplayText, pad, (float)(pad + (hit.ValueFontSize * 0.82)), SKTextAlign.Left, font, _haloPaint);
+          // the sprite's own box is 1.25 ems tall with the baseline where FctLayout puts it in its row: glow and text share one baseline
+          surf.Canvas.DrawText(hit.DisplayText, pad, (float)(pad + (hit.ValueFontSize * FctLayout.ValueBaselineFrac)), SKTextAlign.Left, font, _haloPaint);
 
           entry = new HaloEntry { Image = surf.Snapshot(), Refs = 0, Pad = pad };
           _halos[key] = entry;

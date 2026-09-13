@@ -117,11 +117,29 @@ namespace EQLogParser
      * What a row IS, vertically: the value's own block plus its source line when the labels go below. It is both the height FctPlacement measures live
      * rows against each other with (mid-flight, where a crit mid-swell is smaller than full size) and the room every vertical bound reserves — one
      * number for both because no shipped style draws above its measured font. Reserving one em instead is what let incoming hits, which travel downwards
-     * and finish their life at the bottom of the band, run their descenders and source line off the edge of the overlay.
+     * and finish their life at the bottom of the band, run their descenders and source line off the edge of the overlay. On a labelled row it reaches
+     * a little below the drawn label (BelowLabelY): that clear tail is deliberate — it is the air that keeps the next entry outside the pair.
      */
     public static double TextHeight(FctHitState hit) =>
       (hit.ValueFontSize * TextHeightFactor) +
       ((LabelsBelow && !string.IsNullOrEmpty(hit.Source)) ? hit.SourceFontSize * SourceLineFactor : 0);
+
+    /* Where the value's own baseline sits in its row, from the top, in value-font units: below the em's middle so the digits' ink fills the block. */
+    public const double ValueBaselineFrac = 0.82;
+
+    /*
+     * The source line's baseline when labels go below, from the row's top: a fraction of the VALUE font plus the label's own baseline in its em box.
+     * The fraction used to be 1.25, which sat the name almost on the next row's top edge — measured on a live column, a number was three times farther
+     * from its own name than the name was from the digits below it, so each label read as belonging to the NEXT entry. At 0.9 the name leans under its
+     * own amount and the row's bottom (TextHeight) is clear air between one number/name pair and the next.
+     */
+    public const double LabelBaselineFrac = 0.9;
+
+    /* The source line's own baseline within its em box, in source-font units: where text engines sit a baseline in a line it owns. */
+    public const double SourceBaselineFrac = 0.85;
+
+    internal static double BelowLabelY(double rowTop, FctHitState hit) =>
+      rowTop + (hit.ValueFontSize * LabelBaselineFrac) + (hit.SourceFontSize * SourceBaselineFrac);
 
     /* The word-space between an inline label and its amount, in source-font sizes. DrawHit places with this and geometry charges it here,
        so there is one gap rather than two opinions of it that drift apart the moment anybody edits one.
