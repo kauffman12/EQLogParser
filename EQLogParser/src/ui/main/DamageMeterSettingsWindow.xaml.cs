@@ -20,7 +20,15 @@ namespace EQLogParser
 
     internal DamageMeterSettingsWindow(DamageOverlayWindow stage)
     {
+      // The same ritual every other window in the app performs: SfSkinManager must stamp this window with the active
+      // theme before any content exists, or its ComboBoxes, spinner and pickers draw as bare WPF instead of the skin
+      // everything else wears. The static theme event re-stamps live; the unsubscribe on Closed matters because that
+      // event outlives every window listening to it.
+      ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
+
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+      Closed += (_, _) => ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
       _stage = stage;
       _lastStageLeft = stage.Left;
@@ -75,6 +83,8 @@ namespace EQLogParser
       Left += dLeft;
       Top += dTop;
     }
+
+    private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
 
     private void HeaderDrag(object sender, MouseButtonEventArgs e)
     {
