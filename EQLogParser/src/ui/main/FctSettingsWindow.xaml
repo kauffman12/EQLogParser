@@ -296,6 +296,63 @@
           </Grid>
         </StackPanel>
       </syncfusion:SfAccordionItem>
+
+      <!-- Where the overlay sits, as a number rather than a drag: the same four values Save writes to settings.ini, edited
+           live on the window beside this panel. Position is deliberately outside the staged snapshot — the window itself is
+           the editor (mouse or these), so a change is real at once and Cancel walks it back to where configure found it. -->
+      <syncfusion:SfAccordionItem Header="POSITION">
+        <StackPanel Margin="0,6,6,10">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="96" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="height" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="how tall the overlay window is, from its top edge to its bottom; the resize lands on the overlay right now" />
+        <syncfusion:UpDown x:Name="heightUpDown" Grid.Row="0" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="GeometryFieldChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
+
+        <TextBlock Grid.Row="1" Text="left" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="where the overlay's left edge sits, counted from the left of your whole desktop (all monitors); a negative number is a monitor left of your primary. The move lands on the overlay right now" />
+        <syncfusion:UpDown x:Name="leftUpDown" Grid.Row="1" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="GeometryFieldChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
+
+        <TextBlock Grid.Row="2" Text="top" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="where the overlay's top edge sits, counted from the top of your whole desktop (all monitors); the move lands on the overlay right now" />
+        <syncfusion:UpDown x:Name="topUpDown" Grid.Row="2" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="GeometryFieldChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
+
+        <TextBlock Grid.Row="3" Text="width" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="how wide the overlay window is, from its left edge to its right; the resize lands on the overlay right now" />
+        <syncfusion:UpDown x:Name="widthUpDown" Grid.Row="3" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="GeometryFieldChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
+
+          </Grid>
+        </StackPanel>
+      </syncfusion:SfAccordionItem>
     </syncfusion:SfAccordion>
 
       <!-- Under the last hairline: what the overlay is showing right now, never what it saves. The arrows that used to

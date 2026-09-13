@@ -105,6 +105,12 @@ namespace EQLogParser
     /* Where the overlay last stood, so LocationChanged can speak in deltas rather than absolutes — see FollowSettings. */
     private double? _lastOverlayLeft;
     private double? _lastOverlayTop;
+
+    /* Where configure mode found this window, and where Cancel puts it back: position is live-applied, so a cancel has to undo
+       real movement rather than just refill the panel's fields (restoring the window is what also keeps every later SaveSettings
+       honest, including the one at close). Null outside configure — Save needs no restoring, because whatever is on screen then
+       is exactly what was asked for. */
+    private (double Left, double Top, double Width, double Height)? _configureBounds;
     private bool _sampleData = true;
 
     /* What is staged while configuring: one settings snapshot rather than twenty-odd fields, because each of those had to be
@@ -142,7 +148,8 @@ namespace EQLogParser
       _canvas.EventsFrame += OnCanvasFrame;
       SourceInitialized += OnSourceInitialized;
       IsVisibleChanged += OnVisibleChanged;
-      LocationChanged += (_, _) => FollowSettings(); // dragging the overlay carries its settings panel along, by whatever offset it sits at
+      LocationChanged += (_, _) => { FollowSettings(); MirrorBoundsToPanel(); }; // dragging the overlay carries its settings panel along, by whatever offset it sits at
+      SizeChanged += (_, _) => MirrorBoundsToPanel(); // the position fields read this window's bounds, so they follow a resize as well
       Closed += OnClosed;
     }
 
@@ -157,11 +164,13 @@ namespace EQLogParser
     {
       if (!locked)
       {
+        _configureBounds = (Left, Top, Width, Height); // Cancel's home position: where this configure session found the window
         ApplyLock(false);
         Activate();
         return;
       }
 
+      _configureBounds = null;
       Apply(_saved);
 
       /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. Silently: this is us
@@ -240,6 +249,7 @@ namespace EQLogParser
           PositionSettings();
         }
 
+        MirrorBoundsToPanel(); // the position fields show this window's bounds; re-entering configure re-syncs them from wherever it is now
         RefreshDemo();
       }
 
@@ -504,8 +514,13 @@ namespace EQLogParser
       AttachSettingsOwner();
       _settings.PreviewChanged += SettingsPreview;
       _settings.Saved += SettingsSaved;
-      _settings.Cancelled += () => SetLocked(true);
+      _settings.Cancelled += () =>
+      {
+        RestoreConfigureBounds(); // geometry edits were live on this window; Cancel walks them home before configure ends
+        SetLocked(true);
+      };
       _settings.DialReleased += () => _canvas.RestartDemo();
+      _settings.GeometryEdited += ApplyGeometry;
       _settings.Closed += (_, _) =>
       {
         _settings = null;
@@ -527,6 +542,44 @@ namespace EQLogParser
       {
         _settings.Owner = this;
       }
+    }
+
+    /* What the panel's position fields write to this window: a full rectangle, applied at once. The floors are the layout's own
+       (a size below them draws nothing honest) and a position is exactly what was typed — geometry that later loses its monitor
+       is the startup restore's problem, as it already is for a mouse-dragged window. */
+    private void ApplyGeometry(double left, double top, double width, double height)
+    {
+      Width = Math.Max(FctResize.MinWidth, width);
+      Height = Math.Max(FctResize.MinHeight, height);
+      Left = left;
+      Top = top;
+    }
+
+    /* Cancel's half of the live-apply promise: whatever configure found on screen is what a walked-back pass leaves. */
+    private void RestoreConfigureBounds()
+    {
+      if (_configureBounds is not { } bounds)
+      {
+        return;
+      }
+
+      Left = bounds.Left;
+      Top = bounds.Top;
+      Width = bounds.Width;
+      Height = bounds.Height;
+    }
+
+    /* The position fields read this window, so they must follow it: a mouse drag after a field edit (or the other way round)
+       rewrites what the other shows. The panel fills under its loading guard, so the write-back never announces itself as an
+       edit. */
+    private void MirrorBoundsToPanel()
+    {
+      if (_settings is not { IsVisible: true })
+      {
+        return;
+      }
+
+      _settings.UpdateFromWindow(Left, Top, Width, Height);
     }
 
     /* The pair moves together: dragging the overlay carries the panel by exactly as much as the overlay moved, which

@@ -32,6 +32,11 @@ namespace EQLogParser
      * in the next second, not whenever the loop happens to come round. */
     internal event Action DialReleased;
 
+    /* Raised as (left, top, width, height) when a position field commits anything — typing or spinning. The overlay applies it
+     * to its own window at once: these fields are the mouse's job with numbers instead of a drag, so a change is live like
+     * every other control here, and Cancelled is how it walks back (the overlay restores where configure found the window). */
+    internal event Action<double, double, double, double> GeometryEdited;
+
     /*
      * The "show" dropdown, in the app's checkbox-in-a-combo pattern (the same template the breakdown column pickers use):
      * nine rows of numbers and eight event words sharing one combo rather than earning one each, because they answer one
@@ -74,6 +79,19 @@ namespace EQLogParser
 
       showCombo.ItemsSource = _showItems;
 
+      /* The position fields' reach is the virtual screen — every monitor at once, and negative left/top included, because a
+         display left of or above the primary is legal geometry, not an error. Sizes floor at what the layout can draw in and
+         cap at the desktop itself. Values arrive from the overlay through UpdateFromWindow; the XAML ships none, because there
+         is no right default for another machine's desktop. */
+      heightUpDown.MinValue = FctResize.MinHeight;
+      heightUpDown.MaxValue = SystemParameters.VirtualScreenHeight;
+      widthUpDown.MinValue = FctResize.MinWidth;
+      widthUpDown.MaxValue = SystemParameters.VirtualScreenWidth;
+      leftUpDown.MinValue = SystemParameters.VirtualScreenLeft;
+      leftUpDown.MaxValue = SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth;
+      topUpDown.MinValue = SystemParameters.VirtualScreenTop;
+      topUpDown.MaxValue = SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
+
       /* The brushes and EQDescriptionSize come from application resources and swap themselves when the theme changes;
          what does not follow on its own is this window's own SfSkinManager stamp, so it gets re-stamped. The unsubscribe
          on Closed matters: the static theme event outlives every window that listens to it. */
@@ -82,6 +100,19 @@ namespace EQLogParser
     }
 
     private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
+
+    /* The window's own bounds, written into the position fields without announcing an edit: the overlay calls it when configure
+       opens and after every move or resize (mouse or field), which is what keeps two editors of one rectangle honest. Filling
+       rides under the loading guard for the same reason LoadFrom does — a load is not an edit. */
+    internal void UpdateFromWindow(double left, double top, double width, double height)
+    {
+      _loading = true;
+      leftUpDown.Value = left;
+      topUpDown.Value = top;
+      widthUpDown.Value = width;
+      heightUpDown.Value = height;
+      _loading = false;
+    }
 
     /* Hands the panel a snapshot to display. raisePreview is false when the caller is only filling the controls in as part of
        its own apply — entering or leaving configure mode — because that pass would otherwise answer itself with a preview of
@@ -245,6 +276,21 @@ namespace EQLogParser
       }
 
       PreviewChanged?.Invoke(Snapshot());
+    }
+
+    /* One handler for all four position fields: a move is one rectangle, and raising per field would send the overlay three
+       disagreeing rectangles out of a two-field edit before it agrees with itself. An emptied field is no rectangle at all, so a
+       null in any of the four says wait — the next real edit raises all four again. */
+    private void GeometryFieldChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (_loading || !IsLoaded ||
+          leftUpDown.Value is not { } left || topUpDown.Value is not { } top ||
+          widthUpDown.Value is not { } width || heightUpDown.Value is not { } height)
+      {
+        return;
+      }
+
+      GeometryEdited?.Invoke(left, top, width, height);
     }
 
     /* Closing the dropdown is the commit — title re-summarised, snapshot out. Checking a box inside an open dropdown
