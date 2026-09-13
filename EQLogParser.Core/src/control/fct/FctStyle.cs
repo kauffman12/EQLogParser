@@ -96,7 +96,7 @@ namespace EQLogParser
          is absolute for the class — 0 % draws a crit exactly as big as a baseline normal hit, +50 % half again, and it can go to half-size
          for someone who wants crits quiet — and the text dial deliberately does not reach into it: two classes sized independently is
          the one promise a two-dial UI can keep, and neither number hides a multiplication of the other. What separates a 0 % crit from an
-         ordinary number then is everything that is not size: the swell-in, the halo, the orange, the top draw pass. Sizes are applied
+         ordinary number then is everything that is not size: the swell-in, the halo, the orange (heals keep their green: size and motion already say crit), the top draw pass. Sizes are applied
          here and nowhere else, at birth rather than at draw: hit.ValueFontSize is the real drawn size from this point on — line height,
          vertical reserve, clamp bands and glyph measurement all follow without a second place that has to remember to
          scale, and a number never resizes mid-flight. */
@@ -113,7 +113,7 @@ namespace EQLogParser
         : (ValueSize(lane, minor, loud) - (quiet ? WordSizeStepPt : 0)) * FctScale.Text;
 
       hit.ValueFontSize = size;
-      hit.ValueArgb = ValueArgb(lane);
+      hit.ValueArgb = ValueArgb(lane, hit.Heal);
       hit.SourceFontSize = SourceSize(hit.ValueFontSize);
       hit.SourceArgb = FctPalette.Source;
       /* Blowout is the size-INDEPENDENT half of "this number is a big deal": the swell-in from below full size and the
@@ -170,10 +170,15 @@ namespace EQLogParser
 
     /* Every hue answers through the palette — the shipped table until a player restages it. One colour for every word
      * (see WordsArgb): the words' remaining ranking is a size question and ValueSize keeps answering it. */
-    private static int ValueArgb(FctLane lane) =>
+    /* Hue says WHAT happened; the crit machinery - size, swell, halo, draw pass - says HOW loudly. A heal crit
+     * therefore wears the healing colour, not the shared crit orange: painting a heal with damage's shout-hue reads
+     * as "damage is in the room" to the exact people watching for it. This is also the genre's grammar (WoW and
+     * FFXIV heal crits are green at shout size), and it is why FctHitState carried its Heal flag through the crit
+     * pooling all along. */
+    private static int ValueArgb(FctLane lane, bool heal) =>
       lane switch
       {
-        FctLane.Crit => FctPalette.Crit,
+        FctLane.Crit => heal ? FctPalette.Healing : FctPalette.Crit,
         FctLane.HealingDealt or FctLane.HealingReceived => FctPalette.Healing,
         FctLane.DamageDealt => FctPalette.DamageDealt,
         FctLane.Defensive or FctLane.Missed => FctPalette.Words,

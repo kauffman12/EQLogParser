@@ -33,6 +33,26 @@ namespace EQLogParser.Tests
       Layout = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left),
     };
 
+    /* Hue is category, machinery is emphasis: a heal crit rides the crit lane for size, swell, halo and draw pass,
+       but keeps healing green - the orange belongs to damage's shout, and the eye that reads orange as "incoming"
+       is usually the healer's. */
+    [TestMethod]
+    public void AHealCritKeepsTheHealingHue()
+    {
+      var ingest = Ingest();
+      var hits = new List<FctHitState>();
+
+      var heal = ingest.Accept(hits, FctLane.HealingReceived, 1800, "Complete Heal", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+      var crit = ingest.Accept(hits, FctLane.DamageDealt, 3400, "Backstab", crit: true, minor: false, periodic: false, fixedText: null, Width, Height, 100);
+
+      Assert.IsNotNull(heal);
+      Assert.IsNotNull(crit);
+      Assert.AreEqual(FctLane.Crit, heal.Lane, "the crit class still pools the shape");
+      Assert.IsTrue(heal.Blowout, "and every non-size crit lever still fires on it");
+      Assert.AreEqual(FctPalette.Healing, heal.ValueArgb, "but the hue stays healing green");
+      Assert.AreEqual(FctStyle.CritArgb, crit.ValueArgb, "damage crits keep the orange");
+    }
+
     /* The mark is an identity: purple over the lane colour, a reserved strip beside the number, and a crit's size
        emphasis (the blowout) even when the log never called it a crit. */
     [TestMethod]
