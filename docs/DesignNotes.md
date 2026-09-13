@@ -1965,3 +1965,25 @@ when it doesn't, clamps into the screen, moves by the stage's drag delta so a pa
 moved, and closes with its owner automatically because `Owner` says so. The bar pool rebuilds only when the row count
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
+
+## Event ribbon
+
+Trigger: the damage meter ranks the present, but fights turn on moments — a mez breaking, somebody willing a
+named pet, a taunt landing. Those records always went to storage; nothing kept them alive in the live moment.
+`DamageRibbon` (Core) holds the last few formatted lines and the meter paints them under its target row, newest
+at the bottom edge like a ticker.
+
+What earns a line is player-signal only: every mez break (`Kizant breaks mez!` — a mob breaking is an AE waking
+up, which is the louder case), a player or named pet being killed (`Kizant wills Puksu` when a player did it,
+`{name} died` otherwise), and successful taunts (`Kizant taunts a skeleton`). Mob deaths never join — every raid
+kill would drown the events that matter. Pets ride EQ's folded display names: `Sancus`s pet Puksu` shows as just
+`Puksu`, and a pet with no personal name (`Sancus`s pet`) is ignored entirely, because nobody is mourning those.
+Who counts as a player is `PlayerRegistry.IsVerifiedPlayer`, kept behind a settable seam so the wording rules test
+without registry state.
+
+The dial (off / 3 / 5 lines, ini `OverlayEventRibbon`, default on) lives in the setup window's METER section; off
+collapses the band structurally, so layouts already tuned carry no risk from the feature. The preview stage shows
+three sample lines when the ribbon has no history — a preview is exactly where a player decides whether they want
+it. The meter refreshes it once per tick outside the stats check: deaths keep happening when there is no damage to
+rank, and rebuilding only happens when the joined content actually changed. A full reset clears it along with the
+damage numbers.

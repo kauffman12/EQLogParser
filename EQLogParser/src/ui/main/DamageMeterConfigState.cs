@@ -17,6 +17,7 @@ namespace EQLogParser
     internal int CritRateDisplay;                // 0 off, 1 DoT, 2 nuke, 3 both
     internal int DamageResetMode;                // 0 = on kill, otherwise seconds before zeroing
     internal string SelectedClass = Resource.ANY_CLASS;
+    internal int RibbonRows = 3;                   // event lines under the target row: 0 off, else 3 or 5
     internal string ProgressColor = "#FF1D397E";
     internal string HighlightColor = "Gold";
 
@@ -42,6 +43,12 @@ namespace EQLogParser
       if (mode >= 0 && mode <= 100)
       {
         s.DamageResetMode = mode;
+      }
+
+      var ribbon = ConfigUtil.GetSetting("OverlayEventRibbon");
+      if (ribbon != null && int.TryParse(ribbon, out var rb) && (rb == 0 || rb == 3 || rb == 5))
+      {
+        s.RibbonRows = rb;
       }
 
       var crit = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");

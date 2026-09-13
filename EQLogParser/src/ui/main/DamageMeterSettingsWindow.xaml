@@ -92,6 +92,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
               <TextBlock Grid.Row="0" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
@@ -128,6 +129,14 @@
               <CheckBox x:Name="streamerCheck" Grid.Row="4" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
                         Checked="ControlChanged" Unchecked="ControlChanged"
                         ToolTip="the meter gets its own normal window so screen capture tools like OBS can grab it" />
+
+              <TextBlock Grid.Row="5" Text="events" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="a few lines under the target row worth remembering: mez breaks, players and named pets killed, successful taunts" />
+              <ComboBox x:Name="ribbonCombo" Grid.Row="5" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+                <ComboBoxItem Tag="0">off</ComboBoxItem>
+                <ComboBoxItem Tag="3">3 lines</ComboBoxItem>
+                <ComboBoxItem Tag="5">5 lines</ComboBoxItem>
+              </ComboBox>
             </Grid>
           </StackPanel>
         </syncfusion:SfAccordionItem>

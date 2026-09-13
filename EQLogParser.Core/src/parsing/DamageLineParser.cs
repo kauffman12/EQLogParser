@@ -9,6 +9,7 @@ namespace EQLogParser
   {
     public static event Action<DamageProcessedEvent> EventsDamageProcessed;
     public static event Action<TauntEvent> EventsNewTaunt;
+    public static event Action<DeathEvent> EventsNewDeath;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex CheckEyeRegex = EyeRegex();
     private static readonly Dictionary<string, string> SpellTypeCache = [];
@@ -1053,6 +1054,7 @@ namespace EQLogParser
           }
 
           RecordsStore.Instance.Add(death, currentTime);
+          EventsNewDeath?.Invoke(new DeathEvent { Record = death, BeginTime = currentTime });
         }
       }
     }

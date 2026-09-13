@@ -145,6 +145,7 @@ namespace EQLogParser
 
         MainActions.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
         AudioManager.Initialize(AppCache, null, ConfigUtil.GetSetting("TtsEngine"));
+        DamageRibbon.Instance.Initialize();
         await LoadVoicesSafe();
 
         // preload trigger DB
