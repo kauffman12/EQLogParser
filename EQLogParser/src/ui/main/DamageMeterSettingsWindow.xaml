@@ -31,7 +31,7 @@
 
       <!-- No close mark on purpose, same law as the FCT panel: Save and Cancel are the entire exit vocabulary. -->
       <Grid x:Name="headerBar" Background="Transparent" Margin="-4,-2,-4,4" MouseLeftButtonDown="HeaderDrag">
-        <TextBlock Text="METER SETUP" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
+        <TextBlock Text="Damage Meter Setup" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
