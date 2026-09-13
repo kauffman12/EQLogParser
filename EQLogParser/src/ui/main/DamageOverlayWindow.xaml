@@ -46,8 +46,6 @@
           </StackPanel>
           <StackPanel x:Name="damageContent" Orientation="Vertical" Visibility="Collapsed" />
           <StackPanel x:Name="tankContent" Orientation="Vertical" Visibility="Collapsed" />
-          <!-- event ribbon: the last few moments worth remembering, under the target row (see DamageRibbon) -->
-          <StackPanel x:Name="ribbonContent" Orientation="Vertical" Margin="1,2,0,1" Visibility="Collapsed" />
         </StackPanel>
       </Border>
       <Grid x:Name="lineGrid">

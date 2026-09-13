@@ -1966,24 +1966,13 @@ moved, and closes with its owner automatically because `Owner` says so. The bar 
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 
-## Event ribbon
+## Combat event emitters
 
-Trigger: the damage meter ranks the present, but fights turn on moments — a mez breaking, somebody willing a
-named pet, a taunt landing. Those records always went to storage; nothing kept them alive in the live moment.
-`DamageRibbon` (Core) holds the last few formatted lines and the meter paints them under its target row, newest
-at the bottom edge like a ticker.
-
-What earns a line is player-signal only: every mez break (`Kizant breaks mez!` — a mob breaking is an AE waking
-up, which is the louder case), a player or named pet being killed (`Kizant wills Puksu` when a player did it,
-`{name} died` otherwise), and successful taunts (`Kizant taunts a skeleton`). Mob deaths never join — every raid
-kill would drown the events that matter. Pets ride EQ's folded display names: `Sancus`s pet Puksu` shows as just
-`Puksu`, and a pet with no personal name (`Sancus`s pet`) is ignored entirely, because nobody is mourning those.
-Who counts as a player is `PlayerRegistry.IsVerifiedPlayer`, kept behind a settable seam so the wording rules test
-without registry state.
-
-The dial (off / 3 / 5 lines, ini `OverlayEventRibbon`, default on) lives in the setup window's METER section; off
-collapses the band structurally, so layouts already tuned carry no risk from the feature. The preview stage shows
-three sample lines when the ribbon has no history — a preview is exactly where a player decides whether they want
-it. The meter refreshes it once per tick outside the stats check: deaths keep happening when there is no damage to
-rank, and rebuilding only happens when the joined content actually changed. A full reset clears it along with the
-damage numbers.
+The damage meter briefly carried an event ribbon under its target row; the UI was withdrawn (a feed wants its own
+surface and design, not leftovers bolted under a ranking list). What remains is only broadcasting: parsers fire
+`DamageLineParser.EventsNewDeath` and `MiscLineParser.EventsNewMezBreak` alongside the existing taunt event wherever
+those records already hit storage, and `DamageRibbon` (Core) keeps the tested wording rules - mez break names its
+breaker, players/pets killed read as a will or a plain death, named pets shorten to their personal name
+(`Puksu`, never `Sancus`s pet Puksu`), generic unnamed pets and mob deaths never speak, taunts land on success only,
+and `PlayerRegistry.IsVerifiedPlayer` answers the player question behind a settable seam. Nothing subscribes at
+startup; whoever builds the real feed takes it from there.

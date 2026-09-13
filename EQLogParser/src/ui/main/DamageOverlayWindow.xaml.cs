@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -140,11 +140,6 @@ namespace EQLogParser
       _currentMaxRows = _savedMaxRows;
       _currentStreamerMode = _savedStreamerMode;
 
-      // Event ribbon rows under the target row: off / 3 / 5
-      var ribbonRowsString = ConfigUtil.GetSetting("OverlayEventRibbon");
-      _savedRibbonRows = ribbonRowsString != null && int.TryParse(ribbonRowsString, out var parseRibbon) && (parseRibbon == 0 || parseRibbon == 3 || parseRibbon == 5) ? parseRibbon : 3;
-      _currentRibbonRows = _savedRibbonRows;
-
       _currentShowDps = ConfigUtil.IfSetOrElse("OverlayShowingDps", true);
 
       _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, false, DispatcherPriority.DataBind);
@@ -173,8 +168,6 @@ namespace EQLogParser
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
         _updateTimer.Start();
       }
-
-      UpdateRibbon();
     }
 
     // staged-config working set (mirrors _saved* until the setup window restages it) and its companion window
@@ -183,12 +176,6 @@ namespace EQLogParser
     private bool _currentMiniBars;
     private bool _currentShowDamagePercent;
     private bool _currentStreamerMode;
-    private int _savedRibbonRows;
-    private int _currentRibbonRows;
-    private string _shownRibbon;
-
-    // the preview stage has no history, so it shows what the ribbon is for: the meter's own audition cast
-    private static readonly List<string> SampleRibbonLines = ["Kizant breaks mez!", "Kizant wills Puksu", "Kizant taunts a skeleton"];
     private int _currentMaxRows = 5;
     private string _currentProgressColor = "#FF1D397E";
     private string _currentHighlightColor = "Gold";
@@ -211,7 +198,6 @@ namespace EQLogParser
       UpdateHideOthers(s.HideOtherPlayers);
       UpdateShowCritRate(s.CritRateDisplay);
       _currentStreamerMode = s.StreamerMode;
-      _currentRibbonRows = s.RibbonRows;
       UpdateShowDamagePercent(s.ShowDamagePercent);
       UpdateMiniBars(s.MiniBars);
       UpdateProgressBrush(s.ProgressColor);
@@ -285,9 +271,6 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayStreamerMode", s.StreamerMode);
       _savedStreamerMode = s.StreamerMode;
 
-      ConfigUtil.SetSetting("OverlayEventRibbon", s.RibbonRows);
-      _savedRibbonRows = s.RibbonRows;
-
       ConfigUtil.SetSetting("OverlayMaxRows", s.MaxRows);
       _savedMaxRows = s.MaxRows;
       _currentMaxRows = s.MaxRows;
@@ -347,9 +330,6 @@ namespace EQLogParser
       });
 
       await _lastUpdateTask;
-
-      // deaths and mez breaks keep happening when there is no damage to rank; the ribbon must not stop for that
-      UpdateRibbon();
 
       if (damageOverlayStats != null)
       {
@@ -676,65 +656,6 @@ namespace EQLogParser
       Application.Current.Resources["DamageOverlayProgressBrush"] = UiUtil.GetBrush(colorString);
     }
 
-    /*
-     * Paint the event ribbon under the target row. Rebuild only when the content actually changed - the meter
-     * asks once per tick, and a no-change compare keeps that invisible. Lines arrive oldest-first; the tail is
-     * what shows, so the newest event sits at the bottom edge like a ticker.
-     */
-    private void UpdateRibbon()
-    {
-      var lines = RibbonLinesToShow();
-
-      var joined = string.Join("|", lines);
-      if (joined == _shownRibbon)
-      {
-        return;
-      }
-
-      _shownRibbon = joined;
-
-      ribbonContent.Children.Clear();
-      foreach (var line in lines)
-      {
-        var text = new TextBlock
-        {
-          Text = line,
-          Foreground = Brushes.White,
-          FontFamily = new FontFamily("Tahoma"),
-          Margin = new Thickness(0, 1, 0, 0),
-          TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        text.SetResourceReference(TextBlock.FontSizeProperty, "DamageOverlayFontSize");
-        ribbonContent.Children.Add(text);
-      }
-
-      ribbonContent.Visibility = lines.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    // the dial caps the view; a preview stage with no fight history auditions instead of sitting empty
-    private List<string> RibbonLinesToShow()
-    {
-      if (_currentRibbonRows <= 0)
-      {
-        return [];
-      }
-
-      var raw = DamageRibbon.Instance.Lines();
-      if (_preview && raw.Count == 0)
-      {
-        raw = SampleRibbonLines;
-      }
-
-      var skip = Math.Max(0, raw.Count - _currentRibbonRows);
-      var lines = new List<string>();
-      for (var i = skip; i < raw.Count; i++)
-      {
-        lines.Add(raw[i]);
-      }
-
-      return lines;
-    }
-
     private void UpdateHighlightBrush(string colorString)
     {
       _currentHighlightColor = colorString;
@@ -935,7 +856,6 @@ namespace EQLogParser
         _stats = null;
         _statsBuilder = new();
         FightManager.Instance.ResetOverlayFights();
-        DamageRibbon.Instance.Clear();
       }
     }
 

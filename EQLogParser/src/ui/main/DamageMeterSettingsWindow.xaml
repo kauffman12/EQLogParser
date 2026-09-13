@@ -36,7 +36,8 @@
       </Grid>
 
       <syncfusion:SfAccordion Margin="0,4,0,0" SelectionMode="One" SelectedIndex="0">
-        <syncfusion:SfAccordionItem Header="MAIN">
+        <syncfusion:SfAccordionItem Header="STYLE">
+          <!-- how the meter looks: shape, type and colors together -->
           <StackPanel Margin="0,4,6,10">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -44,6 +45,7 @@
                 <ColumnDefinition Width="*" />
               </Grid.ColumnDefinitions>
               <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -72,14 +74,22 @@
               <CheckBox x:Name="miniCheck" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5" Content="thin bars"
                         Checked="ControlChanged" Unchecked="ControlChanged"
                         ToolTip="slim ranking bars: more names in the same room" />
-              <CheckBox x:Name="percentCheck" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5" Content="show % damage"
-                        Checked="ControlChanged" Unchecked="ControlChanged"
-                        ToolTip="each row's share of the damage dealt" />
+
+              <TextBlock Grid.Row="3" Text="bar color" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="the colour of every ranking bar" />
+              <shared:ColorPicker x:Name="barColor" Grid.Row="3" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
+                                  SelectedColorChanged="ColourPicked" />
+
+              <TextBlock Grid.Row="4" Text="highlight" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="the colour your own row gets: name and bar stand out in it" />
+              <shared:ColorPicker x:Name="highlightColor" Grid.Row="4" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
+                                  SelectedColorChanged="ColourPicked" />
             </Grid>
           </StackPanel>
         </syncfusion:SfAccordionItem>
 
-        <syncfusion:SfAccordionItem Header="METER">
+        <syncfusion:SfAccordionItem Header="OPTIONS">
+          <!-- how the meter behaves: what it counts, shows and hides while you fight -->
           <StackPanel Margin="0,4,6,10">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -95,9 +105,13 @@
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
-              <TextBlock Grid.Row="0" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+              <CheckBox x:Name="percentCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="show % damage"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="each row's share of the damage dealt" />
+
+              <TextBlock Grid.Row="1" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="choose 'on kill' for the meter to reset after NPCs are killed; otherwise it keeps counting until this long after the last hit" />
-              <ComboBox x:Name="resetCombo" Grid.Row="0" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+              <ComboBox x:Name="resetCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
                 <ComboBoxItem Tag="0">on kill</ComboBoxItem>
                 <ComboBoxItem Tag="3">3s</ComboBoxItem>
                 <ComboBoxItem Tag="5">5s</ComboBoxItem>
@@ -110,58 +124,25 @@
                 <ComboBoxItem Tag="90">90s</ComboBoxItem>
               </ComboBox>
 
-              <TextBlock Grid.Row="1" Text="crit rate" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+              <TextBlock Grid.Row="2" Text="crit rate" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="show crit rate alongside the numbers: DoT crits, nuke crits or both; assumes max level and AAs" />
-              <ComboBox x:Name="critCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+              <ComboBox x:Name="critCombo" Grid.Row="2" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
                 <ComboBoxItem>Crit% off</ComboBoxItem>
                 <ComboBoxItem>DoT Crit%</ComboBoxItem>
                 <ComboBoxItem>Nuke Crit%</ComboBoxItem>
                 <ComboBoxItem>Both Crit%</ComboBoxItem>
               </ComboBox>
 
-              <TextBlock Grid.Row="2" Text="class filter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+              <TextBlock Grid.Row="3" Text="class filter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="show only one class's numbers, or everyone" />
-              <ComboBox x:Name="classCombo" Grid.Row="2" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged" />
+              <ComboBox x:Name="classCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged" />
 
-              <CheckBox x:Name="hideCheck" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
+              <CheckBox x:Name="hideCheck" Grid.Row="4" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
                         Checked="ControlChanged" Unchecked="ControlChanged"
                         ToolTip="mask every name but yours" />
-              <CheckBox x:Name="streamerCheck" Grid.Row="4" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
+              <CheckBox x:Name="streamerCheck" Grid.Row="5" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
                         Checked="ControlChanged" Unchecked="ControlChanged"
                         ToolTip="the meter gets its own normal window so screen capture tools like OBS can grab it" />
-
-              <TextBlock Grid.Row="5" Text="events" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="a few lines under the target row worth remembering: mez breaks, players and named pets killed, successful taunts" />
-              <ComboBox x:Name="ribbonCombo" Grid.Row="5" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-                <ComboBoxItem Tag="0">off</ComboBoxItem>
-                <ComboBoxItem Tag="3">3 lines</ComboBoxItem>
-                <ComboBoxItem Tag="5">5 lines</ComboBoxItem>
-              </ComboBox>
-            </Grid>
-          </StackPanel>
-        </syncfusion:SfAccordionItem>
-
-        <syncfusion:SfAccordionItem Header="COLORS">
-          <StackPanel Margin="0,4,6,10">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="106" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-              </Grid.RowDefinitions>
-
-              <TextBlock Grid.Row="0" Text="bar color" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="the colour of every ranking bar" />
-              <shared:ColorPicker x:Name="barColor" Grid.Row="0" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
-                                  SelectedColorChanged="ColourPicked" />
-
-              <TextBlock Grid.Row="1" Text="highlight" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="the colour your own row gets: name and bar stand out in it" />
-              <shared:ColorPicker x:Name="highlightColor" Grid.Row="1" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
-                                  SelectedColorChanged="ColourPicked" />
             </Grid>
           </StackPanel>
         </syncfusion:SfAccordionItem>

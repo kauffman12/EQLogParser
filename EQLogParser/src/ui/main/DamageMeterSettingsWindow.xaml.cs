@@ -140,7 +140,6 @@ namespace EQLogParser
         StreamerMode = streamerCheck.IsChecked == true,
         CritRateDisplay = critCombo.SelectedIndex is >= 0 ? critCombo.SelectedIndex : 0,
         DamageResetMode = TagOf(resetCombo.SelectedItem, 0),
-        RibbonRows = TagOf(ribbonCombo.SelectedItem, 3),
         SelectedClass = classCombo.SelectedItem?.ToString() ?? Resource.ANY_CLASS,
         ProgressColor = ToHex(barColor.Color),
         HighlightColor = ToHex(highlightColor.Color)
@@ -161,7 +160,6 @@ namespace EQLogParser
       streamerCheck.IsChecked = s.StreamerMode;
       critCombo.SelectedIndex = s.CritRateDisplay is >= 0 and <= 3 ? s.CritRateDisplay : 0;
       SelectByTag(resetCombo, s.DamageResetMode);
-      SelectByTag(ribbonCombo, s.RibbonRows);
 
       var classes = (System.Collections.Generic.IList<string>)classCombo.ItemsSource;
       classCombo.SelectedItem = classes != null && classes.Contains(s.SelectedClass) ? s.SelectedClass : Resource.ANY_CLASS;
