@@ -37,7 +37,7 @@
 
       <syncfusion:SfAccordion Margin="0,4,0,0" SelectionMode="One" SelectedIndex="0">
         <syncfusion:SfAccordionItem Header="STYLE">
-          <!-- how the meter looks: shape, type and colors together -->
+          <!-- how the meter looks: checkboxes, then choices in alphabetical order, then the color pickers -->
           <StackPanel Margin="0,4,6,10">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -52,15 +52,9 @@
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
-              <TextBlock Grid.Row="0" Text="rows" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="how many ranked players the meter shows (1 to 10)" />
-              <syncfusion:UpDown x:Name="rowsUpDown" Grid.Row="0" Grid.Column="1" Margin="0,3" Padding="0,2" Value="5"
-                                 MinValue="1" MaxValue="10" BorderThickness="0" ApplyZeroColor="False"
-                                 ValueChanged="RowsChanged">
-                <syncfusion:UpDown.NumberFormatInfo>
-                  <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
-                </syncfusion:UpDown.NumberFormatInfo>
-              </syncfusion:UpDown>
+              <CheckBox x:Name="miniCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="thin bars"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="slim ranking bars: more names in the same room" />
 
               <TextBlock Grid.Row="1" Text="font size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="text size on every row; the bars grow and shrink with it" />
@@ -71,9 +65,15 @@
                 <ComboBoxItem Tag="16">16pt</ComboBoxItem>
               </ComboBox>
 
-              <CheckBox x:Name="miniCheck" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5" Content="thin bars"
-                        Checked="ControlChanged" Unchecked="ControlChanged"
-                        ToolTip="slim ranking bars: more names in the same room" />
+              <TextBlock Grid.Row="2" Text="rows" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="how many ranked players the meter shows (1 to 10)" />
+              <syncfusion:UpDown x:Name="rowsUpDown" Grid.Row="2" Grid.Column="1" Margin="0,3" Padding="0,2" Value="5"
+                                 MinValue="1" MaxValue="10" BorderThickness="0" ApplyZeroColor="False"
+                                 ValueChanged="RowsChanged">
+                <syncfusion:UpDown.NumberFormatInfo>
+                  <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+                </syncfusion:UpDown.NumberFormatInfo>
+              </syncfusion:UpDown>
 
               <TextBlock Grid.Row="3" Text="bar color" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="the colour of every ranking bar" />
@@ -89,7 +89,7 @@
         </syncfusion:SfAccordionItem>
 
         <syncfusion:SfAccordionItem Header="OPTIONS">
-          <!-- how the meter behaves: what it counts, shows and hides while you fight -->
+          <!-- how the meter behaves: checkboxes in alphabetical order, then the dropdowns in theirs -->
           <StackPanel Margin="0,4,6,10">
             <Grid>
               <Grid.ColumnDefinitions>
@@ -105,13 +105,32 @@
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
-              <CheckBox x:Name="percentCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="show % damage"
+              <CheckBox x:Name="hideCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="mask every name but yours" />
+              <CheckBox x:Name="percentCheck" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5" Content="show % damage"
                         Checked="ControlChanged" Unchecked="ControlChanged"
                         ToolTip="each row's share of the damage dealt" />
+              <CheckBox x:Name="streamerCheck" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="the meter gets its own normal window so screen capture tools like OBS can grab it" />
 
-              <TextBlock Grid.Row="1" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+              <TextBlock Grid.Row="3" Text="class filter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="show only one class's numbers, or everyone" />
+              <ComboBox x:Name="classCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged" />
+
+              <TextBlock Grid.Row="4" Text="crit rate" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="show crit rate alongside the numbers: DoT crits, nuke crits or both; assumes max level and AAs" />
+              <ComboBox x:Name="critCombo" Grid.Row="4" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+                <ComboBoxItem>Crit% off</ComboBoxItem>
+                <ComboBoxItem>DoT Crit%</ComboBoxItem>
+                <ComboBoxItem>Nuke Crit%</ComboBoxItem>
+                <ComboBoxItem>Both Crit%</ComboBoxItem>
+              </ComboBox>
+
+              <TextBlock Grid.Row="5" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="choose 'on kill' for the meter to reset after NPCs are killed; otherwise it keeps counting until this long after the last hit" />
-              <ComboBox x:Name="resetCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+              <ComboBox x:Name="resetCombo" Grid.Row="5" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
                 <ComboBoxItem Tag="0">on kill</ComboBoxItem>
                 <ComboBoxItem Tag="3">3s</ComboBoxItem>
                 <ComboBoxItem Tag="5">5s</ComboBoxItem>
@@ -123,26 +142,6 @@
                 <ComboBoxItem Tag="60">60s</ComboBoxItem>
                 <ComboBoxItem Tag="90">90s</ComboBoxItem>
               </ComboBox>
-
-              <TextBlock Grid.Row="2" Text="crit rate" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="show crit rate alongside the numbers: DoT crits, nuke crits or both; assumes max level and AAs" />
-              <ComboBox x:Name="critCombo" Grid.Row="2" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-                <ComboBoxItem>Crit% off</ComboBoxItem>
-                <ComboBoxItem>DoT Crit%</ComboBoxItem>
-                <ComboBoxItem>Nuke Crit%</ComboBoxItem>
-                <ComboBoxItem>Both Crit%</ComboBoxItem>
-              </ComboBox>
-
-              <TextBlock Grid.Row="3" Text="class filter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                         ToolTip="show only one class's numbers, or everyone" />
-              <ComboBox x:Name="classCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged" />
-
-              <CheckBox x:Name="hideCheck" Grid.Row="4" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
-                        Checked="ControlChanged" Unchecked="ControlChanged"
-                        ToolTip="mask every name but yours" />
-              <CheckBox x:Name="streamerCheck" Grid.Row="5" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
-                        Checked="ControlChanged" Unchecked="ControlChanged"
-                        ToolTip="the meter gets its own normal window so screen capture tools like OBS can grab it" />
             </Grid>
           </StackPanel>
         </syncfusion:SfAccordionItem>
