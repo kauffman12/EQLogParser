@@ -1410,7 +1410,7 @@ other retired key here.
 ### Two dials and a short loop: what configuring is for
 
 A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries two
-dials — **size** and **speed** — each ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
+dials — **size** and **speed** — the size ones ±75 % and speed ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
 is three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed underneath — **with its own percent sign**,
 because a bare 50 next to a slider reads like a count of something. That shape is about room. The row started as one line with each number read out
 beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout that grows sideways runs out of window at some
@@ -1436,14 +1436,15 @@ near the twice-as-long nobody can fight under). The shape of the usable band sur
 Re-scaling choreography, layout budgets and the adaptive controller to make that the new 1.0 would have been the same opinion with forty constants in it,
 plus re-measuring everything measured at 1.0.
 
-Size is ±50 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
-lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextHeight`, the adaptive lifetime under load — and half again in
-either direction is where that stops describing the feature: past it, damage and healing columns begin to occupy each other at ordinary window sizes.
-Values saved while the ceiling was ±30 % stay legal, which is why raising it needed no migration.
+Size is ±75 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
+lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextHeight`, the adaptive lifetime under load. Past one-and-a-half in
+either direction that stops describing the feature comfortably: damage and healing columns begin to occupy each other at ordinary window sizes, so the last
+quarter of each dial is for wide overlays rather than a mistake. Values saved while the ceiling was lower stay legal, which is why opening it wider needed no
+migration.
 
 **Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Text size* sizes every ordinary number; *crit size* sizes the big
 class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both are percent of the measured
-baseline over the same ±50 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
+baseline over the same ±75 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
 why it has no hidden parts. Version one kept a fixed 40 px crit tier above every lane: parked both dials mid and crits stood clearly bigger than normal hits, so
 the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the text dial* — honest parity at 0 %, but stacked:
 font × dial × the pop's 1.3 hold, and setting the crit slider to its floor still produced numbers thirty percent over the neighbors, because the multiplication was
@@ -1451,7 +1452,7 @@ hiding in choreography no label mentioned. Both failures are the same failure �
 class rule closes it from both ends: each class has exactly one dial, and `FctStyle.ApplyTo` is where that dial meets the font, once, at birth. In particular the
 blowout no longer scales anything: it swells *in from below* full size (arrival reads as growth), rests at exactly 1.0, and
 collapses out through the tail — emphasis that cannot lie because it cannot multiply. What a 0 % crit keeps is everything that was never size: the halo, the orange,
-the top draw pass, the fold immunity; and pulled to −50 % it is a small, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
+the top draw pass, the fold immunity; and pulled to its −75 % floor it is a quarter-size, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
 
 **Sample data has a checkbox, on by default.** The scripted loop is the reason configure mode teaches anything, but there is a second thing people do in
 configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples

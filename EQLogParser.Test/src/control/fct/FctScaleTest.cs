@@ -21,10 +21,10 @@ namespace EQLogParser
     {
       Assert.AreEqual(1.0, FctScale.ClampSize(1.0), "the default survives");
 
-      /* Half to one and a half, or it is not plus or minus 50 %. Measured through the dial's own conversion rather than against the constants, so this
-         says something about the pair of them rather than restating a definition. */
-      var bottom = FctScale.SizeFromPercent(-50);
-      var top = FctScale.SizeFromPercent(50);
+      /* Quarter to one and three quarters, or it is not plus or minus 75 %. Measured through the dial's own conversion rather than against the constants,
+         so this says something about the pair of them rather than restating a definition. */
+      var bottom = FctScale.SizeFromPercent(-75);
+      var top = FctScale.SizeFromPercent(75);
       Assert.AreEqual(FctScale.SizeMin, bottom, 0.0001);
       Assert.AreEqual(FctScale.SizeMax, top, 0.0001);
 
@@ -34,8 +34,8 @@ namespace EQLogParser
         Assert.AreEqual(saved, FctScale.ClampSize(saved), 0.0001, $"{saved} was rejected although it is inside the range");
       }
 
-      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.49));
-      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(1.51));
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.24));
+      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(1.76));
       Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.0001), "zero text would be invisible text");
       Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(-4));
       Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(9000));
@@ -54,9 +54,9 @@ namespace EQLogParser
       // the shipped middle is +10 %, stated once where the player would read it
       Assert.AreEqual(FctScale.CritSizePercentDefault, FctScale.PercentOfSize(FctScale.CritSizeDefault), "+10 % is what the dial shows at its default");
 
-      // one rule for both size dials: percent of the measured baseline, ±50 %, no separate crit arithmetic to drift out of sync
-      Assert.AreEqual(FctScale.SizeMin, FctScale.SizeFromPercent(-50), 0.0001);
-      Assert.AreEqual(FctScale.SizeMax, FctScale.SizeFromPercent(50), 0.0001, "same band as the normal dial by construction - it is the same function");
+      // one rule for both size dials: percent of the measured baseline, ±75 %, no separate crit arithmetic to drift out of sync
+      Assert.AreEqual(FctScale.SizeMin, FctScale.SizeFromPercent(-75), 0.0001);
+      Assert.AreEqual(FctScale.SizeMax, FctScale.SizeFromPercent(75), 0.0001, "same band as the normal dial by construction - it is the same function");
 
       var shipped = FctScale.SizeFromPercent(FctScale.CritSizePercentDefault);
       Assert.AreEqual(FctScale.CritSizeDefault, shipped, 0.0001, "the dial's +10 % and the shipped default are the same number");
@@ -217,12 +217,12 @@ namespace EQLogParser
     public void PercentOfSize_RoundTripsThroughTheSlider()
     {
       Assert.AreEqual(0, FctScale.PercentOfSize(1.0));
-      Assert.AreEqual(-50, FctScale.PercentOfSize(0.5));
-      Assert.AreEqual(50, FctScale.PercentOfSize(1.5));
+      Assert.AreEqual(-75, FctScale.PercentOfSize(0.25));
+      Assert.AreEqual(75, FctScale.PercentOfSize(1.75));
       Assert.AreEqual(10, FctScale.PercentOfSize(FctScale.SizeFromPercent(10)));
 
       // the slider snaps to 5 % steps: every step must survive the round trip exactly, or the readout lies about where you are
-      for (var percent = -50; percent <= 50; percent += 5)
+      for (var percent = -75; percent <= 75; percent += 5)
       {
         Assert.AreEqual(percent, FctScale.PercentOfSize(FctScale.SizeFromPercent(percent)), $"{percent}% round trip");
       }

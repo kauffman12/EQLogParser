@@ -75,8 +75,8 @@
         </Grid.RowDefinitions>
 
         <!-- The dials keep their meanings and lose their furniture: the row's label says which is which, and
-             double-click still returns a dial to the shipped value. All three run the same ±50 % rule around their own
-             default - two size dials for two classes of number, sized independently - and double-click finds each
+             double-click still returns a dial to the shipped value. The two size dials run ±75 % around their own
+             defaults (two classes of number, sized independently) and speed keeps ±50 % - and double-click finds each
              one's own middle (crit's is +10 %, not zero). -->
         <TextBlock Grid.Row="0" Text="speed" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                    ToolTip="how quickly a number shows and clears; applies to the ones after this (double-click resets)" />
@@ -98,7 +98,7 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="46" />
           </Grid.ColumnDefinitions>
-          <Slider x:Name="sizeSlider" Minimum="-50" Maximum="50" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
+          <Slider x:Name="sizeSlider" Minimum="-75" Maximum="75" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
                   SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
           <TextBlock x:Name="sizeValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />
@@ -111,7 +111,7 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="46" />
           </Grid.ColumnDefinitions>
-          <Slider x:Name="critSlider" Minimum="-50" Maximum="50" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
+          <Slider x:Name="critSlider" Minimum="-75" Maximum="75" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
                   SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
           <TextBlock x:Name="critValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />

@@ -8,7 +8,7 @@ namespace EQLogParser
    * That is also why these live here rather than being read at draw time: motion is a pure function of (hit, age), and a number whose size or timing
    * changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the class of bug that layout was built to avoid.
    *
-   * **All three dials are ±50 % and all can be parked by feel on their default**, which they were not for a while. Speed used to be a tempo multiplier
+   * **The two size dials are ±75 % and the speed dial ±50 %, and all can be parked by feel on their default**, which they were not for a while. Speed used to be a tempo multiplier
    * running -30 % to +90 %, because playing with the feature said the usable band sat faster than the measured baseline and did not extend nearly as far
    * toward slow as a symmetric dial implies. That is all still true; what changed is where the arithmetic happens. The middle is now the midpoint of
    * that band's two results - see TimeDefault - so the dial is centred, symmetric and reads the way a slider should, and the shape of the usable range
@@ -21,14 +21,14 @@ namespace EQLogParser
    * (`FctOverlaySpeed`), because "1.4" reads as faster and "0.7" reads as slower without having to think about reciprocals.
    *
    * As for how far the ranges go: everything about the layout - lane columns at fractions of the width, the vertical reserve a line of text needs, the
-   * adaptive lifetime under load - was measured at 1.0 and at 1x (see docs/DesignNotes.md). Past half again the size, damage and healing columns begin to
-   * overlap at ordinary window sizes; at the fast end of speed a number arrives and leaves before it is readable, which is what the floors in FctIngest
-   * are underneath for rather than the dial's own bounds.
+   * adaptive lifetime under load - was measured at 1.0 and at 1x (see docs/DesignNotes.md). Past one-and-a-half the size, damage and healing columns begin
+   * to press against each other at ordinary window sizes, so the last quarter of a size dial is for wide overlays; at the fast end of speed a number
+   * arrives and leaves before it is readable, which is what the floors in FctIngest are underneath for rather than the dial's own bounds.
    */
   internal static class FctScale
   {
-    public const double SizeMin = 0.5;
-    public const double SizeMax = 1.5;
+    public const double SizeMin = 0.25;
+    public const double SizeMax = 1.75;
     public const double SizeDefault = 1.0;
 
     /*
@@ -44,8 +44,8 @@ namespace EQLogParser
      * the crit class: a player making ordinary numbers readable should not have their exceptions swell unasked, and one dial per class is
      * the only promise a two-dial UI can actually keep.
      *
-     * Crit ships at +10 % - modest by design, since halo, pop, colour and draw order already announce the event; it can be pushed to +50 %
-     * or pulled to half-size for someone who wants crits QUIET, which is a real opinion now that the dial reaches it.
+     * Crit ships at +10 % - modest by design, since halo, pop, colour and draw order already announce the event; it can be pushed to +75 %
+     * or pulled to quarter-size for someone who wants crits QUIET, which is a real opinion now that the dial reaches it.
      */
     public const int CritSizePercentDefault = 10;
     public const double CritSizeDefault = 1.10;
@@ -79,7 +79,7 @@ namespace EQLogParser
      */
     public static double Text = SizeDefault;
 
-    /* The crit class's own size multiplier: same band as Text (both dials are percent of the measured baseline, ±50 %), its own shipped
+    /* The crit class's own size multiplier: same band as Text (both dials are percent of the measured baseline, ±75 %), its own shipped
        middle (+10 %) and its own rescue target - junk lands on THIS dial's default, never the text dial's. */
     public static double Crit = CritSizeDefault;
 
@@ -132,7 +132,7 @@ namespace EQLogParser
 
     public static double SpeedFromTime(double time) => !double.IsFinite(time) || time <= 0 ? SpeedDefault : ClampSpeed(1 / time);
 
-    /* The size dial's own readout: -50 % ... +50 % rather than 0.5 ... 1.5, because "bigger" is what the player is thinking in. */
+    /* The size dials' own readout: -75 % ... +75 % rather than 0.25 ... 1.75, because "bigger" is what the player is thinking in. */
     public static int PercentOfSize(double scale)
     {
       var clamped = ClampSize(scale);
