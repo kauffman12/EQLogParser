@@ -516,8 +516,14 @@ namespace EQLogParser
       EventsFrame?.Invoke(now);
 
       /* Idle and nothing to clear: skip the raster entirely. A wanted or running demo is never idle - it is animation, and animation
-         that is not pumped stands still, which is the difference between a preview and an empty window. */
-      if (_hits.Count == 0 && !_dirty && !_demoWanted && !_demo.Active)
+         that is not pumped stands still, which is the difference between a preview and an empty window.
+         Configure mode is never idle either. The lane guide is static, but it belongs to a window somebody is actively editing, and
+         the one repaint the mode flip asks for is one frame too few to trust: entering setup churns layout (resize bands appear, the
+         background changes, the panel is built), and the early-outs in OnRender clear _dirty even for frames that never drew - the
+         first entry ate its only guide frame exactly that way. Repainting while the panel is up costs a quiet ceiling of 60 rasters
+         a second of mostly-nothing, during the one mode somebody is watching, and buys that what is on screen always says what the
+         state is. */
+      if (_hits.Count == 0 && !_dirty && !_demoWanted && !_demo.Active && !_configureMode)
       {
         return;
       }
