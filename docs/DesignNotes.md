@@ -976,8 +976,9 @@ reads them. The two-word versions won over "incoming damage"/"outgoing damage" f
 is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped split spread puts healing in
 left 1 rising, damage in in left 2 sinking, damage out in right 1 rising — each category its own column on first sight — and leaves right 2 free, so the
 outgoing-damage column owns its whole half of the screen while the two left-hand categories share theirs in quarters. That is where split's label budget used to die (a name beside numbers had a quarter-lane minus the digits),
-and it shows in setup mode: while the configure loop runs, every booked lane is outlined with its own spelling — left 1, right 2 and the rest
-(`FctSkiaCanvas.DrawLaneGuide`) — under the demo numbers. An unbooked lane gets no outline because it has no rect left; that is the feature
+and it shows in setup mode: while configure mode holds, every booked lane is outlined with its own spelling — left 1, right 2 and the rest
+(`FctSkiaCanvas.DrawLaneGuide`) — under whatever the canvas draws there, sample-data numbers or not (the guide belongs to setup itself;
+sample data only puts numbers on it). An unbooked lane gets no outline because it has no rect left; that is the feature
 wearing a thin white line.
 
 The guide also taught the branch's hardest debugging lesson. Its outlines showed a second lane wall through the middle of

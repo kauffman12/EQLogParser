@@ -89,6 +89,11 @@ namespace EQLogParser
     private readonly FctDemo _demo = new();
     private bool _demoWanted;
 
+    /* Configure mode owns the canvas, and with it the lane guide: the guide belongs to setup itself, not to the demo that illustrates
+       it — a player laying out columns with sample data off still needs the map. The dirty flag makes the switch paint on the next
+       frame: leaving configure must erase the guide from a locked overlay, and entering it should not wait for the next live number. */
+    private bool _configureMode;
+
     private SKTypeface _boldTypeface, _regularTypeface;
     private SKMaskFilter _glowBlur;
 
@@ -366,6 +371,18 @@ namespace EQLogParser
       _dirty = true;
     }
 
+    /* The canvas's half of configure mode: while this holds, DrawLaneGuide runs whether or not the demo does. */
+    public void SetConfigure(bool configuring)
+    {
+      if (_configureMode == configuring)
+      {
+        return;
+      }
+
+      _configureMode = configuring;
+      _dirty = true;
+    }
+
     /*
      * Put the configure-mode loop back to its first cue without taking it away. What a control just changed should be visible now rather than when a
      * twelve second cycle next reaches the part where it shows, and this loop is the only thing in configure mode a player can look at. Only demo
@@ -419,7 +436,7 @@ namespace EQLogParser
       canvas.Scale((float)scale, (float)scale); // draw in logical coordinates
 
       /* Setup mode maps split's columns under everything else: a demo number sits on its guide rather than hiding behind it. */
-      if (_demoWanted || _demo.Active)
+      if (_configureMode)
       {
         DrawLaneGuide(canvas);
       }

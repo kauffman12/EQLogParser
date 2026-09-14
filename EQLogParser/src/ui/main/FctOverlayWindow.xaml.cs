@@ -164,12 +164,14 @@ namespace EQLogParser
       if (!locked)
       {
         _configureBounds = (Left, Top, Width, Height); // Cancel's home position: where this configure session found the window
+        _canvas.SetConfigure(true); // setup mode owns the canvas now, and with it the lane guide — sample data or no
         ApplyLock(false);
         Activate();
         return;
       }
 
       _configureBounds = null;
+      _canvas.SetConfigure(false); // leaving configure takes the guide with it: a locked overlay is numbers only
       Apply(_saved);
 
       /* A panel left open on a Cancel-shaped exit gets its knobs put back too, ready for next time. Silently: this is us
