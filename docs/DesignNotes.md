@@ -730,6 +730,13 @@ follows the overlay while it is dragged — unless somebody moved the panel on p
 until configure reopens; and hiding the overlay takes the panel out of sight with it. The sample-data checkbox came along
 too, still session-only and never written: it rides the state for exactly as long as configure mode lasts.
 
+POSITION is where numbers enter. Four boxes — height, left, top, width — edit the overlay's rectangle directly in
+virtual-screen coordinates, so a window can be placed exactly without pixel-hunting with the mouse; typing moves the
+window at once, and dragging or resizing it rewrites the boxes to match. Numbers and mouse are two hands on one
+rectangle: there is no separate applied geometry and no new keys — Save persists the live bounds the same way closing
+always did, and Cancel restores the rectangle snapshotted when setup opened, because abandoning a geometry edit should
+behave like abandoning a settings edit.
+
 ### The configure row says fountain and split now: the mode layer over the schemes
 
 The engine commit above made two words honest, and this one puts them on the row. The layout combo (halves/by type/bands)
@@ -1943,9 +1950,9 @@ Configure used to be a form painted on top of the thing it configured: pressing 
 preview instance whose face carried eleven controls, three dropdowns deep, with Save/Cancel/Close buttons that enabled
 themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
 but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
-took its job: three accordion sections (MAIN for rows/font/thin bars/percent, METER for reset/crit rate/class filter/
-hide names/streamer, COLORS for bar and highlight), Save and Cancel as the entire exit vocabulary, everything previewed
-live on the sample stage and nothing written to ini until Save.
+took its job: two accordion sections that each answer one question — STYLE (thin bars, font size, rows, then bar color
+and highlight) and OPTIONS (hide other players, show % damage, streamer mode, class filter, crit rate, reset) — Save and
+Cancel as the entire exit vocabulary, everything previewed live on the sample stage and nothing written to ini until Save.
 
 The staging rides a `DamageMeterConfigState` copy that `Load()`s with exactly the overlay constructor's guards, so
 setup always opens on what is on screen. The overlay grew three internal verbs — `PreviewMeterState` (apply without
