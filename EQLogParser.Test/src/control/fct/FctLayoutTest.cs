@@ -424,7 +424,7 @@ namespace EQLogParser
             {
               for (var s = 0; s <= 8; s++)
               {
-                var b = BlockOf(hit, hit.LifetimeMs * s / 8);
+                var b = FctProbe.BlockOf(hit, hit.LifetimeMs * s / 8);
                 Assert.IsTrue(b.Left > -0.5 && b.Right < size.W + 0.5 && b.Top > -0.5 && b.Bottom < size.H + 0.5,
                   $"{style} at {size.W:0}x{size.H:0} drew outside the window: {b}");
               }
@@ -486,7 +486,7 @@ namespace EQLogParser
           for (var s = 0; s <= 12; s++)
           {
             var ageB = shared * s / 12;
-            if (Intersects(BlockOf(hits[a], ageB + offset), BlockOf(hits[b], ageB)))
+            if (Intersects(FctProbe.BlockOf(hits[a], ageB + offset), FctProbe.BlockOf(hits[b], ageB)))
             {
               touched++;
               break;
@@ -499,15 +499,5 @@ namespace EQLogParser
     private static bool Intersects((double Left, double Top, double Right, double Bottom) a, (double Left, double Top, double Right, double Bottom) b) =>
       a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
 
-    /* Where the drawn block actually is at an age: the same maths the canvases draw with, centre-anchored like the text. */
-    private static (double Left, double Top, double Right, double Bottom) BlockOf(FctHitState hit, double ageMs)
-    {
-      var t = FctMotion.Progress(hit, ageMs);
-      var scale = FctMotion.ScaleOf(hit, ageMs);
-      var half = (hit.ValueWidth * scale) / 2.0;
-      var x = FctMotion.ArcedX(hit, t);
-
-      return (x - half, FctMotion.RaisedY(hit, t), x + half, FctMotion.RaisedY(hit, t) + (FctLayout.TextHeight(hit) * scale));
-    }
   }
 }
