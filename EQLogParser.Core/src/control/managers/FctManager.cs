@@ -1,7 +1,5 @@
-using log4net;
 using System;
 using System.Collections.Concurrent;
-using System.Reflection;
 using System.Threading;
 
 namespace EQLogParser
@@ -43,7 +41,6 @@ namespace EQLogParser
      */
     internal static FctManager Create()
     {
-      Log.Info("FCT-DBG manager Create");
       Instance?.Dispose();
       return Instance = new FctManager();
     }
@@ -63,31 +60,6 @@ namespace EQLogParser
      * volatile field rather than a property. */
     internal volatile bool Enabled;
 
-    /* FCT-DBG: temporary diagnostics for the re-enable bug; grep and strip. */
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private long _dbgDropMs;
-    private long _dbgFeedMs;
-
-    private void DbgDrop(string msg)
-    {
-      var now = Environment.TickCount64;
-      if (now - _dbgDropMs >= 2000)
-      {
-        _dbgDropMs = now;
-        Log.Info($"FCT-DBG {msg}");
-      }
-    }
-
-    private void DbgFeed(string msg)
-    {
-      var now = Environment.TickCount64;
-      if (now - _dbgFeedMs >= 2000)
-      {
-        _dbgFeedMs = now;
-        Log.Info($"FCT-DBG {msg}");
-      }
-    }
-
     internal int DroppedCount => Volatile.Read(ref _dropped);
 
     private FctManager()
@@ -101,7 +73,6 @@ namespace EQLogParser
      * live behind the new one. Unit tests dispose the singleton they swapped out. */
     public void Dispose()
     {
-      Log.Info("FCT-DBG manager Dispose");
       Enabled = false;
       DamageLineParser.EventsDamageProcessed -= HandleDamage;
       HealingLineParser.EventsHealProcessed -= HandleHeal;
@@ -144,7 +115,6 @@ namespace EQLogParser
     {
       if (!Enabled)
       {
-        DbgDrop($"damage ignored (manager disabled): {e.Record?.Attacker ?? "?"} -> {e.Record?.Defender ?? "?"}");
         return;
       }
 
@@ -166,7 +136,6 @@ namespace EQLogParser
       // FCT covers my character's fight only; anything else is noise
       if (!iAmAttacker && !iAmDefender)
       {
-        DbgDrop($"damage dropped (not mine): attacker={record.Attacker} defender={record.Defender} player={ConfigUtil.PlayerName}");
         return;
       }
 
@@ -207,7 +176,6 @@ namespace EQLogParser
         Special = LineModifiersParser.SpecialFor(record.ModifiersMask, record.SubType),
       });
 
-      DbgFeed($"damage accepted: lane={(iAmAttacker ? "dealt" : "taken")} total={record.Total} crit={crit} proc={proc}");
     }
 
     /*
@@ -224,7 +192,6 @@ namespace EQLogParser
     {
       if (!Enabled)
       {
-        DbgDrop("heal ignored (manager disabled)");
         return;
       }
 
@@ -304,7 +271,6 @@ namespace EQLogParser
     {
       if (!Enabled)
       {
-        DbgDrop("resist ignored (manager disabled)");
         return;
       }
 

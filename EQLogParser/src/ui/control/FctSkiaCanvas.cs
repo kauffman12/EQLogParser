@@ -1,4 +1,3 @@
-using log4net;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -6,7 +5,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
-using System.Reflection;
 using System.Windows.Media.Imaging;
 
 namespace EQLogParser
@@ -121,9 +119,6 @@ namespace EQLogParser
     private double _lastDpiCheckMs;
     private double _statFrameMsMax;
     private Stopwatch _clock;
-
-    /* FCT-DBG: temporary diagnostics for the re-enable bug; grep and strip. */
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
     private bool _dirty;
 
     /* Which render ticks get rastered, measured from tick spacing; shared with the vector backend. */
@@ -253,8 +248,6 @@ namespace EQLogParser
       {
         RestartDemo();
       }
-
-      Log.Info($"FCT-DBG gates applied: dealt={_ingest.ShowDealt} taken={_ingest.ShowTaken} heals={_ingest.ShowHeals} procs={_ingest.ShowProcs} threshold={Threshold} changed={changed}");
     }
 
     /*
@@ -281,7 +274,6 @@ namespace EQLogParser
     /* The host drains its feed from EventsFrame, which fires before the paint decision below. */
     public void Start()
     {
-      Log.Info($"FCT-DBG canvas Start size={ActualWidth:0}x{ActualHeight:0}");
       _clock = Stopwatch.StartNew();
       _statsWindowStartMs = 0;
       _pacer.Reset();
@@ -294,7 +286,6 @@ namespace EQLogParser
     {
       CompositionTarget.Rendering -= OnRendering;
       ReleaseAllResources();
-      Log.Info("FCT-DBG canvas Stop");
     }
 
     /*
@@ -311,7 +302,6 @@ namespace EQLogParser
     {
       if (_clock is null)
       {
-        Log.Info("FCT-DBG AddHit dropped (no clock)");
         return;
       }
 
@@ -381,8 +371,6 @@ namespace EQLogParser
 
       _configureMode = configuring;
       _dirty = true;
-      /* FCT-DBG: temporary diagnostics for the missing-on-first-entry guide; grep and strip. */
-      Log.Info($"FCT-DBG canvas SetConfigure={(configuring ? "ON" : "OFF")} clock={(_clock is null ? "none" : "running")} size={ActualWidth:0}x{ActualHeight:0}");
     }
 
     /*
@@ -423,14 +411,12 @@ namespace EQLogParser
       if (w < 50 || h < 50)
       {
         _dirty = false;
-        FctDbgSkip($"OnRender skipped: size {w}x{h} under the 50 px floor"); // FCT-DBG: this early-out eats _dirty without drawing
         return;
       }
 
       if (!EnsureSurface(w, h))
       {
         _dirty = false;
-        FctDbgSkip("OnRender skipped: surface allocation failed"); // FCT-DBG
         return;
       }
 
@@ -440,12 +426,9 @@ namespace EQLogParser
       canvas.Scale((float)scale, (float)scale); // draw in logical coordinates
 
       /* Setup mode maps split's columns under everything else: a demo number sits on its guide rather than hiding behind it. */
-      var guide = _configureMode ? DrawLaneGuide(canvas) : "locked: no guide";
-      /* FCT-DBG: the decision, logged only when it changes; a guide that was never mapped will say why here. */
-      if (guide != _lastGuideLog)
+      if (_configureMode)
       {
-        _lastGuideLog = guide;
-        Log.Info($"FCT-DBG OnRender guide: {guide}");
+        DrawLaneGuide(canvas);
       }
 
       // two passes: regular hits first, crits last — crits draw on top of everything
@@ -480,24 +463,6 @@ namespace EQLogParser
       Blit(dc, scale);
       _dirty = false;
     }
-
-    /* FCT-DBG: one line per second at most from a display-rate early-out. */
-    private long _lastDbgSkipMs;
-
-    private void FctDbgSkip(string message)
-    {
-      var now = Environment.TickCount64;
-      if (now - _lastDbgSkipMs < 1000)
-      {
-        return;
-      }
-
-      _lastDbgSkipMs = now;
-      Log.Info($"FCT-DBG {message}");
-    }
-
-    /* FCT-DBG: the guide's last verdict, for change-only logging. */
-    private string _lastGuideLog = "";
 
     private void OnRendering(object sender, EventArgs e)
     {
@@ -582,12 +547,12 @@ namespace EQLogParser
      * in fixed quarters. Lanes nobody books are not drawn: they have no rect left to outline, which is exactly the point (they
      * gave their space away). Bands has no columns and gets no map.
      */
-    private string DrawLaneGuide(SKCanvas canvas)
+    private void DrawLaneGuide(SKCanvas canvas)
     {
       var choice = _ingest.Layout;
       if (choice.Mode is not FctLayoutMode.ByType)
       {
-        return "skipped: bands mode has no lanes to map";
+        return;
       }
 
       var a = choice.HealLane;
@@ -595,7 +560,7 @@ namespace EQLogParser
       var c = choice.OutgoingDamageLane;
       if (a is FctRailLane.None && b is FctRailLane.None && c is FctRailLane.None)
       {
-        return "skipped: no lane is booked";
+        return;
       }
 
       var stage = choice.Stage(ActualWidth, ActualHeight);
@@ -637,8 +602,6 @@ namespace EQLogParser
         /* Bold: the token sits over whatever the numbers do, and the hairline face vanished into them. */
         canvas.DrawText(FctRailLanes.Token(lane), (float)(x + 6), (float)(tokenSize + 7), SKTextAlign.Left, GetFont(true, tokenSize), _laneGuidePaint);
       }
-
-      return $"mapped {((a is not FctRailLane.None) ? 1 : 0) + (b is not FctRailLane.None && b != a ? 1 : 0) + (c is not FctRailLane.None && c != a && c != b ? 1 : 0)} lane(s)";
     }
 
     /* The tokens ride the app's title typography (EQTitleSize = app font + 2) so the guide scales with the same font dial as
