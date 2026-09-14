@@ -1906,13 +1906,16 @@ sentence for it: "that's where you should place the NPC." And long labels made i
 budgets a label from spine to region wall, and when the wall was dead-centre, an inward-reaching `(Long Spell Name)`
 printed across the player's own target.
 
-Split halves tile the track minus a centre gutter (FctStage.CenterGutter, absolute — forty pixels after the first day's
-play asked for more air; it began at 20): left ends at (W−40)/2, right starts forty past it. Everything downstream derives from that one
+Split halves tile the track minus a centre gutter (absolute pixels — forty after the first day's play asked for more
+air; it began at 20): left ends at (W−G)/2, right starts G past it. The width is a dial since — the LAYOUT row
+`center gutter` (settings.ini `FctOverlayGutter`, 0–800 px), because the ultrawide crowd wanted the band wider and the
+wall-to-wall crowd wanted it closed; forty remains what an unset config draws, and every stage clamps its own ask to
+four fifths of its width, so a number chosen on an ultrawide still tiles honestly in a postage stamp. Everything downstream derives from that one
 measure, so the gutter cannot exist in geometry and not in labels: spines shift equally outward (right 1's slot sits a
 hair further from the seam, which is still "beside the middle, near the fight"), lane rects and their configure-mode
 outlines show the empty band, and label walls — which ARE region walls — now stop long words short of the centre
 instead of printing over it. Bands never asks; its protected region is the horizontal strip, not a column. Tests moved
-to gutter-aware expressions (Half/Seam computed from the constant) rather than new magic numbers, 1081/1081.
+to gutter-aware expressions (Half/Seam computed from the shipped default) rather than new magic numbers, 1081/1081.
 
 The same pass gave the demo switch a memory: SampleData saves to settings.ini like anything else, because "don't play
 sample numbers, I'm laying this out over my actual raid" was an answer that had to be re-given every session, which is

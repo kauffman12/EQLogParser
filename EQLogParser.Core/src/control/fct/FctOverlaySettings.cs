@@ -141,6 +141,19 @@ namespace EQLogParser
 
     public static void SaveThreshold(double value) => ConfigUtil.SetSetting(ThresholdKey, ClampThreshold(value));
 
+    /* The centre gutter in pixels: 0 closes the band, and the ceiling is generous on purpose — ultrawide players push
+     * it far. A window too small to pay for its gutter tiles anyway (FctStage keeps four fifths of the width as
+     * track), so one stored number survives every overlay instead of being rewritten per monitor. */
+    public const string GutterKey = "FctOverlayGutter";
+    public const double GutterMax = 800;
+
+    public static double ClampGutter(double value) =>
+      double.IsFinite(value) ? Math.Clamp(Math.Round(value), 0, GutterMax) : FctStage.CenterGutter;
+
+    public static double LoadGutter() => ClampGutter(ConfigUtil.GetSettingAsDouble(GutterKey, FctStage.CenterGutter));
+
+    public static void SaveGutter(double value) => ConfigUtil.SetSetting(GutterKey, ClampGutter(value));
+
     /* Pure for testability: finite and in range, or off — nonsense both lands on off. */
     internal static double ClampThreshold(double value) =>
       !double.IsFinite(value) || value <= 0 ? 0 : Math.Min(value, ThresholdMax);
@@ -257,6 +270,7 @@ namespace EQLogParser
           FctConfigState.DealtLaneDefault),
         DealtUp = dealtUp,
         Threshold = LoadThreshold(),
+        Gutter = LoadGutter(),
         LabelSide = LoadLabelSide(),
         TextScale = LoadTextScale(),
         CritScale = LoadCritScale(),
@@ -301,6 +315,7 @@ namespace EQLogParser
       ConfigUtil.SetSetting(IncomingDirectionKey, state.TakenUp ? "up" : "down");
       ConfigUtil.SetSetting(OutgoingDirectionKey, state.DealtUp ? "up" : "down");
       SaveThreshold(state.Threshold);
+      SaveGutter(state.Gutter);
       FctShowList.Save(state);
       SaveLabelSide(state.LabelSide);
       SaveTextScale(state.TextScale);

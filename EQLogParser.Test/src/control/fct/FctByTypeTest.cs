@@ -353,5 +353,47 @@ namespace EQLogParser
       Assert.AreEqual(heal!.SideMin, region.X, "the old row keeps the left wall it was born under");
       Assert.AreEqual(Math.Max(1.0, heal.SideMax - heal.SideMin), region.Width, "and the right one");
     }
+
+    /* The gutter is a dial now (the LAYOUT row writes FctConfigState.Gutter, which rides the layout choice): the shipped
+       40 still draws exactly what it always drew, every seam, rect and spine slides with the number, and a window too
+       small for the ask keeps its track instead of tiling air. */
+    [TestMethod]
+    public void AGutterDialMovesEveryColumnAndSpine()
+    {
+      var shipped = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left).Stage(Width, Height);
+      var wide = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, gutter: 120).Stage(Width, Height);
+
+      Assert.AreEqual(Seam, shipped.LaneRect(FctRailLane.Right1).X, 0.01, "the default still opens where it always did");
+
+      var half = (Width - 120) / 2;
+      Assert.AreEqual(half + 120, wide.LaneRect(FctRailLane.Right1).X, 0.01, "right 1 starts at the wider seam");
+      Assert.AreEqual(half, wide.LaneRect(FctRailLane.Left1).Width, 0.01, "both halves pay for the band equally");
+      Assert.IsTrue(wide.LaneSpine(FctRailLane.Right1) > shipped.LaneSpine(FctRailLane.Right1),
+        "the inward lane's spine slides outward with its seam");
+    }
+
+    /* A number chosen on an ultrawide travels to a window that cannot pay for it: the stage clamps the band to four
+       fifths of its own width, and the setting itself is left alone. */
+    [TestMethod]
+    public void AGutterWiderThanTheWindowKeepsTrack()
+    {
+      var starved = new FctLayoutChoice(FctLayoutMode.ByType, FctRegionSide.Left, gutter: 800).Stage(500, 400);
+
+      Assert.AreEqual(500 * 0.2 / 2, starved.LaneRect(FctRailLane.Right1).Width, 0.01,
+        "the halves share what the clamped gutter leaves behind");
+    }
+
+    /* The dial rides the configured layout - and the choice's equality sees it, because a moved gutter has to register
+       as a layout change for the canvas to re-tile rather than compare equal and skip the frame. */
+    [TestMethod]
+    public void AGutterRidesTheConfiguredLayout()
+    {
+      Assert.AreEqual(FctStage.CenterGutter, new FctConfigState { Fountain = false }.BuildLayout().Gutter, 0.01);
+
+      var dialled = new FctConfigState { Fountain = false, Gutter = 120 }.BuildLayout();
+      Assert.AreEqual(120, dialled.Gutter, 0.01);
+      Assert.IsFalse(dialled.Equals(new FctConfigState { Fountain = false }.BuildLayout()),
+        "a moved gutter is a changed layout");
+    }
   }
 }
