@@ -6,8 +6,8 @@ namespace EQLogParser
   /*
    * Resizing, which makes two promises.
    *
-   * The first is about sizes: a drag settles on one of the values the layout was measured at, and anywhere in between if the hand
-   * stops there, but never below what the layout can draw in. The second is about the numbers already in flight: motion is a pure
+   * The first is about sizes: a drag lands exactly where the hand stops it, clamped to what the layout can draw in and to the
+   * screen — no offered list, no magnet. The second is about the numbers already in flight: motion is a pure
    * function of (hit, age) with no canvas argument, so unless somebody revisits their geometry a resize leaves them drawing where
    * the old window used to be — probed at 980x640 shrunk to 620x400 that was 10 of 15 held numbers outside the overlay. FctResize
    * is that somebody, and the tests below are the difference between that measurement and zero.
@@ -18,13 +18,14 @@ namespace EQLogParser
 
     [TestInitialize]
     public void ResetAmbient() => FctAmbient.Reset();
-    /* Near an offered size it settles on it; between offers it stays exactly where the drag left it. */
+    /* Where the hand stops is where it lands, clamps aside. The first three rows are sizes the old magnet used to pull onto an
+       offered value — this pins that they now stay exactly as dragged. */
     [TestMethod]
-    [DataRow(808.0, 566.0, 800.0, 560.0)]
-    [DataRow(792.0, 632.0, 800.0, 640.0)]
-    [DataRow(724.0, 512.0, 720.0, 520.0)]
-    [DataRow(820.0, 540.0, 820.0, 540.0)]
-    public void ADragSettlesOnTheNearestOffer(double width, double height, double wantW, double wantH)
+    [DataRow(808.0, 566.0, 808.0, 566.0)]
+    [DataRow(792.0, 632.0, 792.0, 632.0)]
+    [DataRow(724.0, 512.0, 724.0, 512.0)]
+    [DataRow(1234.0, 888.0, 1234.0, 888.0)]
+    public void AFreeDragLandsExactlyWhereTheHandStops(double width, double height, double wantW, double wantH)
     {
       FctResize.Fit(width, height, 2560, 1440, out var fittedW, out var fittedH);
 
@@ -42,17 +43,6 @@ namespace EQLogParser
 
       FctResize.Fit(40000, 40000, 1280, 800, out var bigW, out var bigH);
       Assert.IsTrue(bigW <= 1280 && bigH <= 800, $"a drag past the screen came back {bigW}x{bigH}");
-    }
-
-    /* Snapping is per axis, so dragging one edge gets the magnet too — that is why an edge drag cannot land on a lopsided size
-     * just because the other axis happened to be mid-air. */
-    [TestMethod]
-    public void DraggingOneAxisStillSnaps()
-    {
-      FctResize.Fit(764, 540, 2560, 1440, out var fittedW, out var fittedH);
-
-      Assert.AreEqual(760, fittedW, 0.001, "the dragged axis ignored the offer beside it");
-      Assert.AreEqual(540, fittedH, 0.001, "the axis nobody touched moved");
     }
 
     /*

@@ -22,7 +22,7 @@ namespace EQLogParser
    * bands instead of drawing them across the protected middle strip.
    *
    * It is resizable without being resizeable: Windows gives a transparent, chromeless window no frame to grab, so a band along each
-   * edge drags the size and FctResize offers the sizes it settles on. Position and size persist together, and numbers already in
+   * edge drags the size freely, clamped by FctResize to what the layout can draw and to the screen. Position and size persist together, and numbers already in
    * flight move with the window rather than staying where the old one was (FctResize.Rescale, called by the canvas).
    *
    * There are two states, and only one of them is a window. **Locked** is how it always opens and how it is played with: no header,
@@ -69,9 +69,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     /*
-     * Resize drag state. The running size is kept unsnapped (_resizeFreeW/H) and snapped only when applied, which is what makes
-     * the offered sizes a magnet rather than a ratchet: leave the magnet's range and the drag continues from where it was rather
-     * than from where it settled. The anchored edge is the one being moved away from, so the far edge cannot creep during a long
+     * Resize drag state. The running size is kept unclamped (_resizeFreeW/H) and clamped only when applied, which is what lets a
+     * drag that pushes past the screen edge come straight back rather than ratcheting against the bound. The anchored edge is the one being moved away from, so the far edge cannot creep during a long
      * drag, and deltas are measured in device pixels then divided by the DPI scale because WPF gives DIPs while a moving window
      * makes window-relative positions shift under the pointer.
      */
@@ -782,7 +781,7 @@ namespace EQLogParser
       /* Bounded by the desktop rather than the primary monitor's work area: numbers spread across two displays are legitimate, and
          a window that grew past the primary border could not be shrunk from an edge nobody can reach. VirtualScreen* is in DIPs,
          which is what these properties are in; a true per-monitor bound would need Win32 monitor enumeration for a chromeless
-         window and buys nothing when the largest size offered is 980px. */
+         window; the virtual screen is every monitor at once, which is all one overlay can cover anyway. */
       FctResize.Fit(_resizeFreeW, _resizeFreeH, SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight, out var w, out var h);
 
       Width = w;

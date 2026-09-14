@@ -6,77 +6,29 @@ namespace EQLogParser
   /*
    * What happens when the overlay changes size.
    *
-   * Two separate jobs, in one file because they are one subject: which sizes a drag settles on, and what becomes of the numbers
-   * already in flight when the window moves to one of them.
-   *
-   * The offered sizes are a magnet, not a menu. Drag freely and the axes snap when they come near an offered value, so a precise
-   * drag can still land anywhere legal and a sloppy one lands somewhere sensible. They snap per axis rather than as whole presets:
-   * dragging a single edge gets the same help as dragging a corner, and a corner dragged near 800x560 settles exactly on it. The
-   * combinations in between are legal too — every size down to MinWidth/MinHeight keeps every style inside the window and out
-   * of the protected strip, which was probed at 980x640, 900x600, 700x520, 560x420, 460x360 and 420x300 rather than assumed.
-   *
-   * 980x640 is the size the layout was designed and measured at. The three smaller ones exist because that is wider than most
-   * people need over a HUD, and 720 is as narrow as the lane columns stay comfortably apart: in the shipped default one column owns each
-   * half of split, spines at 0.25 and 0.625 of the width (the containment floor takes over when the window gets smaller), so a wide crit
-   * keeps its gap to the neighbour until well under the offered minimum.
+   * A resize is free: the drag goes exactly where the hand stops it, clamped only to what the layout can draw in and to the
+   * screen. Every size down to MinWidth/MinHeight keeps every style inside the window and out of the protected strip, which was
+   * probed at 980x640, 900x600, 700x520, 560x420, 460x360 and 420x300 rather than assumed. (The overlay used to settle drags onto a
+   * short list of offered sizes; the magnet was deleted because it made resizing jump, and the setup panel's position fields can
+   * name any size exactly anyway.) The rest of this file is the harder half: what becomes of the numbers already in flight when
+   * the window moves.
    */
   internal static class FctResize
   {
-    /*
-     * The offered sizes start wide now, because the narrow end of the range spends the thing the overlay needs most: room beside a
-     * number for the name of whatever did it. At 980 in split a lane that owns its half gives a source line two to three hundred pixels
-     * after the digits and their mark (FctStage tiles the booked lanes), so cutting is a question of how long a name is rather than of
-     * how narrow the window is. At 1280 that same column carries a mob's whole name with room to spare, and the same width beside a
-     * crit's bigger digits still leaves room. The old sizes stay offered for anyone playing on a small screen or beside another window:
-     * the range grew at the top, it did not move.
-     *
-     * Nothing here is a maximum. Fit() clamps to the working area it is given, so a second monitor offers more and a netbook less; these
-     * are the sizes a corner drag snaps TO, and the largest of them is what a first run asks for (FctOverlayWindow's defaults) before that
-     * clamp. "720 is as narrow as lane columns stay comfortably apart" is still true — it is just no longer the widest thing on offer.
-     */
-    public static readonly double[] WidthSnaps = [1920, 1760, 1600, 1440, 1280, 1120, 980, 800, 760, 720];
-    public static readonly double[] HeightSnaps = [1080, 960, 900, 820, 720, 640, 560, 520];
-
     /* The smallest probed layout: at 420x300 every style still places every number inside the window and clear of the strip.
      * Smaller than this and a band is shallower than a line of text, which is not a layout, it is an overlap with extra steps. */
     public const double MinWidth = 420;
     public const double MinHeight = 300;
 
-    /* How near an offered size has to be to take the drag. The offered values are 40 apart at their closest, so 16 keeps a
-     * strip of free space between every pair — the magnet helps without taking the decision away. */
-    public const double SnapTolerance = 16;
-
     /*
-     * Clamp a proposed size to what the layout can use and to the screen, then let the offered sizes pull on it. Both axes are
-     * answered together because the caller clamps against one working area anyway; nothing here knows about WPF types so the
-     * arithmetic is testable without a window.
+     * Clamp a proposed size to what the layout can draw in and to the screen. Both axes are answered together because the caller
+     * clamps against one working area anyway; nothing here knows about WPF types so the arithmetic is testable without a window.
      */
     internal static void Fit(double width, double height, double maxWidth, double maxHeight,
       out double fittedWidth, out double fittedHeight)
     {
-      fittedWidth = Nearest(Math.Clamp(width, MinWidth, Math.Max(MinWidth, maxWidth)), WidthSnaps);
-      fittedHeight = Nearest(Math.Clamp(height, MinHeight, Math.Max(MinHeight, maxHeight)), HeightSnaps);
-    }
-
-    /* The offered value closest to a dragged size, or the dragged size itself when nothing is within tolerance. */
-    private static double Nearest(double value, double[] snaps)
-    {
-      var best = value;
-      var bestGap = SnapTolerance;
-
-      for (var i = 0; i < snaps.Length; i++)
-      {
-        var gap = Math.Abs(snaps[i] - value);
-        if (gap > bestGap)
-        {
-          continue;
-        }
-
-        bestGap = gap;
-        best = snaps[i];
-      }
-
-      return best;
+      fittedWidth = Math.Clamp(width, MinWidth, Math.Max(MinWidth, maxWidth));
+      fittedHeight = Math.Clamp(height, MinHeight, Math.Max(MinHeight, maxHeight));
     }
 
     /*

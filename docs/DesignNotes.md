@@ -1574,12 +1574,11 @@ header used to be the only draggable band, which meant hunting for twelve pixels
 aiming. Controls keep their own clicks because a combo or button handles the press before it bubbles, and locked removes the whole
 question by making the window click-through.
 
-What it settles on is a **magnet, not a menu** (`FctResize`): drag freely and each axis is pulled onto an offered value when it
-comes near — 1600/1440/1280/1120/980/800/760/720 across, 900/820/720/640/560/520 down (the range grew at the top rather than moving, so the small end is
-unchanged for anyone on a small screen) — and stays exactly where the hand stopped in between. Per-axis rather than whole
-presets, so dragging one edge gets the same help as a corner, and a corner near 800×560 lands on it. The floor is 420×300, the
-smallest size probed: every style still places every number inside the window and clear of the protected strip there, and below it
-a band is shallower than a line of text.
+A resize is **free** (`FctResize`): the drag lands exactly where the hand stops it, each axis clamped only to the screen and to
+420×300, the smallest size probed — every style still places every number inside the window and clear of the protected strip
+there, and below it a band is shallower than a line of text. It used to settle drags onto a short list of offered sizes (a "magnet,
+not a menu"); that was deleted because it made resizing jump, and the setup panel's position fields can name any size exactly
+anyway.
 
 The default started at 980×640, came down to **800×560** as what most people need over a HUD, went back up to 1280×720 when the source labels turned out
 to be the thing being paid for, and is now **not a size at all**: a first run asks for 65% × 60% of the desktop's work area, floored at that same
