@@ -6,7 +6,8 @@ namespace EQLogParser
 {
   /*
    * The two dials on the configure row. What matters here is not arithmetic but the three decisions that are invisible if somebody changes them: a text
-   * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the speed dial is
+   * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the size window's ends are
+   * pegged to looks rather than symmetry (-50 % to +110 % around 0.9, which TheSizeWindowIsPeggedToLooksNotRoundNumbers holds to the number); and the speed dial is
    * measured in percent of the time a number spends on screen, so +50 % has to mean half as long and not two thirds; and its middle is 0.877 of the
    * measured time rather than 1.0, which is a preference about how the feature feels and wants pinning as loudly as any constant.
    */
@@ -19,12 +20,13 @@ namespace EQLogParser
     [TestMethod]
     public void ClampSize_HoldsTheRangeAndRescuesJunk()
     {
-      Assert.AreEqual(1.0, FctScale.ClampSize(1.0), "the default survives");
+      Assert.AreEqual(FctScale.SizeDefault, FctScale.ClampSize(FctScale.SizeDefault), "the default survives");
 
-      /* Quarter to one and three quarters, or it is not plus or minus 75 %. Measured through the dial's own conversion rather than against the constants,
-         so this says something about the pair of them rather than restating a definition. */
-      var bottom = FctScale.SizeFromPercent(-75);
-      var top = FctScale.SizeFromPercent(75);
+      /* -50 % to +110 %, or the window is not the one the player's two looks set. Measured through the dial's own
+         conversion rather than against the constants, so this says something about the pair of them rather than
+         restating a definition. */
+      var bottom = FctScale.SizeFromPercent(FctScale.SizePercentMin);
+      var top = FctScale.SizeFromPercent(FctScale.SizePercentMax);
       Assert.AreEqual(FctScale.SizeMin, bottom, 0.0001);
       Assert.AreEqual(FctScale.SizeMax, top, 0.0001);
 
@@ -34,8 +36,8 @@ namespace EQLogParser
         Assert.AreEqual(saved, FctScale.ClampSize(saved), 0.0001, $"{saved} was rejected although it is inside the range");
       }
 
-      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.24));
-      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(1.76));
+      Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.39));
+      Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(2.01));
       Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(0.0001), "zero text would be invisible text");
       Assert.AreEqual(FctScale.SizeMin, FctScale.ClampSize(-4));
       Assert.AreEqual(FctScale.SizeMax, FctScale.ClampSize(9000));
@@ -54,9 +56,9 @@ namespace EQLogParser
       // the shipped middle is +10 %, stated once where the player would read it
       Assert.AreEqual(FctScale.CritSizePercentDefault, FctScale.PercentOfSize(FctScale.CritSizeDefault), "+10 % is what the dial shows at its default");
 
-      // one rule for both size dials: percent of the measured baseline, ±75 %, no separate crit arithmetic to drift out of sync
-      Assert.AreEqual(FctScale.SizeMin, FctScale.SizeFromPercent(-75), 0.0001);
-      Assert.AreEqual(FctScale.SizeMax, FctScale.SizeFromPercent(75), 0.0001, "same band as the normal dial by construction - it is the same function");
+      // one rule for both size dials: percent over the shipped middle across the same window, no separate crit arithmetic to drift out of sync
+      Assert.AreEqual(FctScale.SizeMin, FctScale.SizeFromPercent(FctScale.SizePercentMin), 0.0001);
+      Assert.AreEqual(FctScale.SizeMax, FctScale.SizeFromPercent(FctScale.SizePercentMax), 0.0001, "same band as the normal dial by construction - it is the same function");
 
       var shipped = FctScale.SizeFromPercent(FctScale.CritSizePercentDefault);
       Assert.AreEqual(FctScale.CritSizeDefault, shipped, 0.0001, "the dial's +10 % and the shipped default are the same number");
@@ -78,10 +80,11 @@ namespace EQLogParser
       try
       {
         FctScale.Text = FctScale.SizeFromPercent(-40);
+        var textWhere = FctScale.Text;
         Assert.AreNotEqual(FctScale.Text, FctScale.Crit, 0.0001, "moving the normal dial moved the crits with it");
 
         FctScale.Crit = FctScale.SizeFromPercent(50); // same conversion as the normal dial - which is exactly what independence has to survive
-        Assert.AreEqual(0.6, FctScale.Text, 0.0001, "moving the crit dial moved the ordinary numbers with it");
+        Assert.AreEqual(textWhere, FctScale.Text, 0.0001, "moving the crit dial moved the ordinary numbers with it");
       }
       finally
       {
@@ -216,16 +219,29 @@ namespace EQLogParser
     [TestMethod]
     public void PercentOfSize_RoundTripsThroughTheSlider()
     {
-      Assert.AreEqual(0, FctScale.PercentOfSize(1.0));
-      Assert.AreEqual(-75, FctScale.PercentOfSize(0.25));
-      Assert.AreEqual(75, FctScale.PercentOfSize(1.75));
+      Assert.AreEqual(0, FctScale.PercentOfSize(FctScale.SizeDefault));
+      Assert.AreEqual(-50, FctScale.PercentOfSize(0.4));
+      Assert.AreEqual(110, FctScale.PercentOfSize(2.0));
       Assert.AreEqual(10, FctScale.PercentOfSize(FctScale.SizeFromPercent(10)));
 
       // the slider snaps to 5 % steps: every step must survive the round trip exactly, or the readout lies about where you are
-      for (var percent = -75; percent <= 75; percent += 5)
+      for (var percent = FctScale.SizePercentMin; percent <= FctScale.SizePercentMax; percent += 5)
       {
         Assert.AreEqual(percent, FctScale.PercentOfSize(FctScale.SizeFromPercent(percent)), $"{percent}% round trip");
       }
+    }
+
+    /* The window is pinned to looks, not to round numbers: the floor draws what the old dial's -60 % drew, the ceiling
+       reaches the double the old +100 % could only name, and the text dial's normal landed a tenth under the tier
+       table because that is where shipped numbers looked right in game. The crit dial's +10 % therefore now draws
+       exactly where plain text used to - same multiplier as the old default, halo still its own. */
+    [TestMethod]
+    public void TheSizeWindowIsPeggedToLooksNotRoundNumbers()
+    {
+      Assert.AreEqual(0.9, FctScale.SizeDefault, 0.0001, "text normal is the look of the old -10 %");
+      Assert.AreEqual(0.4, FctScale.SizeMin, 0.0001, "the floor is the look of the old -60 %");
+      Assert.AreEqual(2.0, FctScale.SizeMax, 0.0001, "the ceiling is the look the old +100 % could only be named");
+      Assert.AreEqual(1.0, FctScale.CritSizeDefault, 0.0001, "crits ship where plain text used to: same multiplier, still obviously crits");
     }
   }
 }

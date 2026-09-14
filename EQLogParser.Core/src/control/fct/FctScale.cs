@@ -8,7 +8,11 @@ namespace EQLogParser
    * That is also why these live here rather than being read at draw time: motion is a pure function of (hit, age), and a number whose size or timing
    * changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the class of bug that layout was built to avoid.
    *
-   * **The two size dials are ±75 % and the speed dial ±50 %, and all can be parked by feel on their default**, which they were not for a while. Speed used to be a tempo multiplier
+   * **The two size dials run -50 % to +110 % and the speed dial ±50 %, and all can be parked by feel on their default**, which they were not for a while.
+   * The size window stopped being symmetric because its ends are set by looks, not by round numbers: the floor draws what the old ±75 dial's -60 % mark drew —
+   * as small as anybody actually plays it — and the ceiling reaches double the tier table, the +100 % the old dial could only ever name. The middle moved with
+   * them: text normal ships a tenth under the tier table because that is where shipped text looked right in game, so the crit dial's unchanged +10 % now draws
+   * exactly where plain numbers used to. Speed used to be a tempo multiplier
    * running -30 % to +90 %, because playing with the feature said the usable band sat faster than the measured baseline and did not extend nearly as far
    * toward slow as a symmetric dial implies. That is all still true; what changed is where the arithmetic happens. The middle is now the midpoint of
    * that band's two results - see TimeDefault - so the dial is centred, symmetric and reads the way a slider should, and the shape of the usable range
@@ -27,13 +31,19 @@ namespace EQLogParser
    */
   internal static class FctScale
   {
-    public const double SizeMin = 0.25;
-    public const double SizeMax = 1.75;
-    public const double SizeDefault = 1.0;
+    /* The reference the percentages speak against - what "normal" means on either dial, and what a double-click parks
+       the text slider on. It used to be the tier table's own 1.0; it came down a tenth because that is where shipped
+       text looked its best in game. The window hangs off it additively (SizeFromPercent below), its ends pegged to the
+       two looks the player asked for: 0.4x and 2.0x of the tier table, -50 % and +110 % from here. */
+    public const double SizeDefault = 0.9;
+    public const int SizePercentMin = -50;
+    public const int SizePercentMax = 110;
+    public const double SizeMin = SizeDefault + SizePercentMin / 100.0;
+    public const double SizeMax = SizeDefault + SizePercentMax / 100.0;
 
     /*
-     * Two size dials for two classes of number, sized independently under the SAME rule: each is "percent of the measured baseline,
-     * -50 % to +50 %", it just answers for different rows. TEXT SIZE covers every ordinary number (each in its lane's tier); CRIT SIZE covers the
+     * Two size dials for two classes of number, sized independently under the SAME rule: each is "percent over the shipped
+     * middle, -50 % to +110 %", it just answers for different rows. TEXT SIZE covers every ordinary number (each in its lane's tier); CRIT SIZE covers the
      * big class - crits and the marked special attacks - which share one size because they share one lane, one colour and one draw pass.
      *
      * Independent rather than one scaling the other, after two failed couplings. A fixed crit tier above every lane meant "0 %" still drew
@@ -44,11 +54,13 @@ namespace EQLogParser
      * the crit class: a player making ordinary numbers readable should not have their exceptions swell unasked, and one dial per class is
      * the only promise a two-dial UI can actually keep.
      *
-     * Crit ships at +10 % - modest by design, since halo, pop, colour and draw order already announce the event; it can be pushed to +75 %
-     * or pulled to quarter-size for someone who wants crits QUIET, which is a real opinion now that the dial reaches it.
+     * Crit ships at +10 % - modest by design, since halo, pop, colour and draw order already announce the event. The retune moved the reference under it
+     * rather than this number: +10 % over a lower normal draws exactly where plain text used to, so "barely bigger, still obviously crits" became the
+     * shipping answer instead of a dial position to hunt for. From here the class can still be pushed to double the tier table or pulled under ordinary
+     * numbers for someone who wants crits QUIET, which is a real opinion now that the dial reaches it.
      */
     public const int CritSizePercentDefault = 10;
-    public const double CritSizeDefault = 1.10;
+    public const double CritSizeDefault = 1.00;
 
     /* Both ends of the speed dial, in percent of the time a number spends on screen. + is less time, which is faster. */
     public const int SpeedPercentMin = -50;
@@ -79,7 +91,7 @@ namespace EQLogParser
      */
     public static double Text = SizeDefault;
 
-    /* The crit class's own size multiplier: same band as Text (both dials are percent of the measured baseline, ±75 %), its own shipped
+    /* The crit class's own size multiplier: same band as Text (both dials are percent over the shipped middle, -50 % to +110 %), its own shipped
        middle (+10 %) and its own rescue target - junk lands on THIS dial's default, never the text dial's. */
     public static double Crit = CritSizeDefault;
 

@@ -92,7 +92,7 @@ namespace EQLogParser
         var critHeal = ingest.Accept(_hits, FctLane.HealingReceived, 4_000, "Complete Heal", true, false, false, null, Width, Height, 20);
 
         Assert.AreEqual(FctStyle.DamageDealtFontSize * FctScale.CritSizeDefault, critDealt.ValueFontSize, 0.0001,
-          "+10 % means ten percent over a baseline normal number - size you can verify from the dial alone");
+          "the shipped crit draws at the tier table's own size since the retune moved the reference - size you can verify from the dial alone");
         Assert.AreEqual(critDealt.ValueFontSize, critHeal.ValueFontSize, 0.0001,
           "one class, one size: a heal crit shares the dealt crit's font as it shares its lane, halo and draw pass");
         Assert.IsTrue(critDealt.Blowout && !plain.Blowout, "and the effects that are NOT size still separate the classes");
@@ -101,7 +101,7 @@ namespace EQLogParser
         var plainBig = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", false, false, false, null, Width, Height, 30);
         var critStill = ingest.Accept(_hits, FctLane.DamageDealt, 901, "Flurry", true, false, false, null, Width, Height, 40);
 
-        Assert.AreEqual(FctStyle.DamageDealtFontSize * 1.4, plainBig.ValueFontSize, 0.0001, "the normal dial moved the normal numbers");
+        Assert.AreEqual(FctStyle.DamageDealtFontSize * (FctScale.SizeDefault + 0.4), plainBig.ValueFontSize, 0.0001, "the normal dial moved the normal numbers");
         Assert.AreEqual(critDealt.ValueFontSize, critStill.ValueFontSize, 0.0001,
           "and did not touch the crits: two classes, two dials, no hidden multiplication anywhere");
       }
