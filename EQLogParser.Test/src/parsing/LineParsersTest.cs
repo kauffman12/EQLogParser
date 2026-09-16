@@ -126,7 +126,7 @@ namespace EQLogParser
     public void Process_UnknownSpellName_RecordsCastWithAnUnknownStub()
     {
       var spell = $"Totally New Spell {Guid.NewGuid():N}";
-      Assert.IsNull(_dataStore.GetSpellByName(spell));
+      Assert.IsNull(_dataStore?.GetSpellByName(spell));
 
       var ok = CastLineParser.Process(Line($"You begin casting {spell}.", 10));
       Assert.IsTrue(ok);
