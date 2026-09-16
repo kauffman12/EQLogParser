@@ -6,10 +6,10 @@
 #define MyAppPublisher "Kizant"
 #define MyAppURL "https://github.com/kauffman12/EQLogParser"
 #define MyAppExeName "EQLogParser.exe"
-#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Release\net8.0-windows10.0.17763.0"
-;#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Debug\net8.0-windows10.0.17763.0"
+#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Release\net10.0-windows10.0.17763.0"
+;#define MyReleaseDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser\bin\Debug\net10.0-windows10.0.17763.0"
 #define MySrcDir "C:\Users\kauff\code\github\EQLogParser\EQLogParser"
-#define BackupUtilDir "C:\Users\kauff\code\github\EQLogParser\BackupUtil\bin\Release\net8.0-windows10.0.17763.0"
+#define BackupUtilDir "C:\Users\kauff\code\github\EQLogParser\BackupUtil\bin\Release\net10.0-windows10.0.17763.0"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -88,7 +88,6 @@ Source: "{#MyReleaseDir}\Microsoft.Extensions.Logging.Abstractions.dll"; DestDir
 Source: "{#MyReleaseDir}\Microsoft.Extensions.ObjectPool.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.Extensions.Options.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Microsoft.Extensions.Primitives.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\System.Diagnostics.DiagnosticSource.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 Source: "{#MyReleaseDir}\NAudio.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\NAudio.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -123,17 +122,16 @@ Source: "{#MyReleaseDir}\Syncfusion.SfProgressBar.WPF.dll"; DestDir: "{app}"; Fl
 Source: "{#MyReleaseDir}\Syncfusion.SfSkinManager.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.SfTreeView.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Shared.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\Syncfusion.Telemetry.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialDark.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialDarkCustom.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialLight.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Tools.WPF.Classic.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Tools.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\System.Private.ServiceModel.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\System.ServiceModel.Primitives.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\System.Drawing.Common.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WpfAnimatedGif.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\runtimes\win\lib\net8.0\System.Speech.dll"; DestDir: "{app}\runtimes\win\lib\net8.0"; Flags: ignoreversion
+Source: "{#MyReleaseDir}\runtimes\win\lib\net10.0\System.Speech.dll"; DestDir: "{app}\runtimes\win\lib\net10.0"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\runtimes\win-x64\native\libSkiaSharp.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
 
 ; The MSVC runtime that onnxruntime.dll imports, installed app-local (flat in {app}, not in a redist folder) so a
@@ -165,7 +163,11 @@ Type: files; Name: "{app}\LiveCharts.dll"
 Type: files; Name: "{app}\LiveCharts.Wpf.dll"
 Type: files; Name: "{app}\NumericUpDownLib.dll"
 Type: files; Name: "{app}\Syncfusion.SfRichTextBoxAdv.WPF.dll"
+Type: files; Name: "{app}\System.Diagnostics.DiagnosticSource.dll"
+Type: files; Name: "{app}\System.Private.ServiceModel.dll"
+Type: files; Name: "{app}\System.Drawing.Common.dll"
 Type: files; Name: "{app}\WPFTextBoxAutoComplete.dll"
+Type: files; Name: "{app}\runtimes\win\lib\net8.0\System.Speech.dll"
 Type: files; Name: "{app}\data\releasenotes.pdf"
 Type: files; Name: "{app}\data\triggerVariables.pdf"
 Type: files; Name: "{app}\data\triggerVariables.rtf"
@@ -220,7 +222,7 @@ procedure LabelLinkClick(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
-  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.30-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
+  ShellExec('open', 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.12-windows-x64-installer', '', '', SW_SHOW, ewNoWait, ErrorCode);
 end;
 
 function ShowDotNetDownloadPage: Boolean;
@@ -241,7 +243,7 @@ begin
   // Create an informational label
   InfoLabel := TLabel.Create(Form);
   InfoLabel.Parent := Form;
-  InfoLabel.Caption := 'EQLogParser requires .NET 8.0 x64 Desktop Runtime. Please install ' + #13#10 +
+  InfoLabel.Caption := 'EQLogParser requires .NET 10.0 x64 Desktop Runtime. Please install ' + #13#10 +
   'before continuing. A recent version can be found here:';
   InfoLabel.Font.Size := 9;
   InfoLabel.Top := ScaleY(10);
@@ -252,7 +254,7 @@ begin
   // Create a clickable label for the link
   LabelLink := TMemo.Create(Form);
   LabelLink.Parent := Form;
-  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.30-windows-x64-installer';
+  LabelLink.Text := 'https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.12-windows-x64-installer';
   LabelLink.Font.Style := [fsUnderline];
   LabelLink.Font.Color := clBlue;
   LabelLink.Font.Size := 8;
@@ -331,10 +333,10 @@ begin
   Patch := StrToIntDef(PatchStr, 0);
 
   // Check version validity
-  if (Major = 8) and (Minor > 0) then
+  if (Major = 10) and (Minor > 0) then
     Result := True;
 
-  if (Major = 8) and (Minor = 0) and (Patch >= 11) then
+  if (Major = 10) and (Minor = 0) and (Patch >= 0) then
     Result := True;
 end;
 
