@@ -17,6 +17,14 @@ namespace EQLogParser
       { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
+    /*
+     * Raised for every stored "X resisted Y's spell" record, alongside the store write. Hoisted-delegate null
+     * check like the damage parser's, so a build with no subscriber pays one branch, not an allocation; FCT is
+     * the only consumer and it gates itself on Enabled.
+     */
+    public static event Action<ResistEvent> EventsResistProcessed;
+    public static event Action<MezBreakRecord> EventsNewMezBreak;
+
     private static string _randomPlayer;
     private static long _lastLine = -1;
 
@@ -168,6 +176,12 @@ namespace EQLogParser
                     var record = new ResistRecord { Attacker = StringCache.GetOrAdd(attacker), Defender = StringCache.GetOrAdd(npc), Spell = StringCache.GetOrAdd(spell) };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
 
+                    var resistHandler = EventsResistProcessed;
+                    if (resistHandler is not null)
+                    {
+                      resistHandler(new ResistEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+                    }
+
                     // also update npc resist stats
                     if (EQDataStore.Instance.GetDetSpellByName(record.Spell) is { } spellData && spellData.Resist != SpellResist.Undefined)
                     {
@@ -230,7 +244,9 @@ namespace EQLogParser
                     awakened = TextUtils.CapitalizeFirst(awakened);
                     var breaker = ParserUtil.JoinWords(split, i + 1, split.Length - i - 1).TrimEnd('.');
                     breaker = TextUtils.CapitalizeFirst(breaker);
-                    RecordsStore.Instance.Add(new MezBreakRecord { Breaker = StringCache.GetOrAdd(breaker), Awakened = StringCache.GetOrAdd(awakened) }, lineData.BeginTime);
+                    var mezBreak = new MezBreakRecord { Breaker = StringCache.GetOrAdd(breaker), Awakened = StringCache.GetOrAdd(awakened) };
+                    RecordsStore.Instance.Add(mezBreak, lineData.BeginTime);
+                    EventsNewMezBreak?.Invoke(mezBreak);
                     handled = true;
                   }
                   else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i - 1]))

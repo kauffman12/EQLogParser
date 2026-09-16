@@ -18,6 +18,13 @@ namespace EQLogParser.Audio
    * A per player synthesizer is kept because creating one per callout is expensive, which means the object created
    * on the UI thread is used from whatever thread asks for audio; that pairing predates this class and Windows
    * speech objects tolerate it.
+   *
+   * Every OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) in this file is a runtime gate about the machine
+   * actually running us. The TFM only constrains compile-time API availability; it says nothing about the installed
+   * OS. Below Windows 10 this engine deliberately degrades instead of throwing: it marks itself unavailable or
+   * returns empty rather than touching APIs that do not exist there, and the app as a whole warns and keeps
+   * running (App.xaml.cs). Do not remove or "simplify" these checks on the grounds that the project already
+   * targets Windows 10 -- raising the TFM would not make them redundant.
    */
   internal sealed class WindowsTtsEngine : ITtsEngine
   {
@@ -121,6 +128,7 @@ namespace EQLogParser.Audio
         return;
       }
 
+      // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
       {
         MarkUnavailable("Windows speech needs Windows 10 or newer");
@@ -235,6 +243,7 @@ namespace EQLogParser.Audio
     {
       var list = new List<string>();
 
+      // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
       if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
       {
         foreach (var voice in _validVoices)
@@ -291,6 +300,7 @@ namespace EQLogParser.Audio
       }
     }
 
+    // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
     public string GetDefaultVoice() =>
       OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) && GetVoiceInfo(null) is VoiceInformation { } voiceInfo
         ? voiceInfo.DisplayName
@@ -342,6 +352,7 @@ namespace EQLogParser.Audio
           player.SapiSynth = CreateSapiSpeechSynthesizer(voice);
           player.Synth = null;
         }
+        // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
         else if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           player.Synth = CreateSpeechSynthesizer(voice);
@@ -489,6 +500,7 @@ namespace EQLogParser.Audio
 
       try
       {
+        // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           synth = new SpeechSynthesizer();
@@ -512,6 +524,7 @@ namespace EQLogParser.Audio
 
       try
       {
+        // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           synth = new System.Speech.Synthesis.SpeechSynthesizer();
@@ -531,6 +544,7 @@ namespace EQLogParser.Audio
 
     private VoiceInformation GetVoiceInfo(string name)
     {
+      // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240) || _validVoices.Count == 0)
       {
         return null;
@@ -589,6 +603,7 @@ namespace EQLogParser.Audio
     private static async Task<(byte[] pcm, int sampleRate)> SynthesizeTextToByteArrayAsync(string tts,
       SpeechSynthesizer synth)
     {
+      // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
       {
         return (null, 0);
@@ -655,6 +670,7 @@ namespace EQLogParser.Audio
     [DebuggerNonUserCode]
     private static async Task<bool> IsVoicePlayableAsync(SpeechSynthesizer synth, VoiceInformation voice)
     {
+      // Runtime OS gate (TFM is compile-time only) - do not remove; see class docs
       if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
       {
         return false;

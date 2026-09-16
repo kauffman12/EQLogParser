@@ -29,6 +29,7 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
+    private FctOverlayWindow _fctOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
     private PetMapping _currentEditMapping;
@@ -108,6 +109,9 @@ namespace EQLogParser
       // Damage Overlay
       enableDamageOverlayIcon.Visibility = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? Visibility.Visible : Visibility.Hidden;
       enableDamageOverlay.Header = ConfigUtil.IfSet("IsDamageOverlayEnabled") ? "Disable _Meter" : "Enable _Meter";
+
+      // FCT Overlay: same convention as the meter. Restored here so the menu is honest even when the overlay stays shut.
+      SetFctOverlayMenu(ConfigUtil.IfSet(FctOverlaySettings.EnabledKey), false);
 
       // Auto Monitor
       enableAutoMonitorIcon.Visibility = ConfigUtil.IfSet("AutoMonitor") ? Visibility.Visible : Visibility.Hidden;
@@ -235,6 +239,13 @@ namespace EQLogParser
         // listen for tab changes
         dockSite.ActiveWindowChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
         dockSite.DockStateChanged += (_, _) => SyncFusionUtil.DockSiteSaveActiveWindow(dockSite);
+
+        // the FCT overlay comes back showing if it was showing when the app closed (after the dock is up, so it
+        // never opens on top of a half-built main window)
+        if (ConfigUtil.IfSet(FctOverlaySettings.EnabledKey))
+        {
+          SetFctOverlayVisible(true);
+        }
       }
       catch (Exception e)
       {
@@ -371,6 +382,138 @@ namespace EQLogParser
     private void RestoreClick(object sender, RoutedEventArgs e) => MainActions.Restore();
     private void OpenCreateWavClick(object sender, RoutedEventArgs e) => new WavCreatorWindow().ShowDialog();
     private void OpenSoundsFolderClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("\"" + @"data\sounds" + "\"");
+
+    /* Live-record FCT overlay (real logs, monitor lines only) - see FctOverlayWindow. */
+    private void ToggleFctOverlayClick(object sender, RoutedEventArgs e) => SetFctOverlayVisible(fctOverlayIcon.Visibility != Visibility.Visible);
+
+    /*
+     * Show/hide the FCT overlay. Hiding instead of closing keeps the window (and its position) around, while
+     * the window stops its canvas and gates FctManager whenever it is invisible - an overlay nobody is looking
+     * at does no raster work and no parser-side event traffic.
+     */
+    private void SetFctOverlayVisible(bool show)
+    {
+      if (!show && _fctOverlay is null)
+      {
+        SetFctOverlayMenu(false, false);
+        return;
+      }
+
+      if (_fctOverlay is null)
+      {
+        _fctOverlay = new FctOverlayWindow();
+
+        /* Closing drops the reference so the next toggle builds a fresh one. The menu writes the enabled key and does not
+           run when the window closes itself (its own close button, alt+F4, an app shutdown), so this path has to clear it too:
+           left set, an overlay the player deliberately closed would reopen on the next launch. */
+        _fctOverlay.EventsClosed += () =>
+        {
+          _fctOverlay = null;
+          ConfigUtil.SetSetting(FctOverlaySettings.EnabledKey, false);
+          SetFctOverlayMenu(false, false);
+        };
+
+        // Save and Cancel change the state while the menu is looking the other way; the menu's Setup item is the same switch seen
+        // from the other side, so it follows the window rather than remembering what it was last asked to do
+        _fctOverlay.EventsLockChanged += locked => SetFctOverlayMenu(_fctOverlay?.IsVisible == true, !locked);
+      }
+
+      /* The first time this feature is switched on it opens on its own controls. Every one of these settings has a defensible default, but they are
+         this build's opinions, and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion exist
+         to be set — the demo loop shows all three inside a few seconds. Once anybody has pressed Save (FctOverlaySettings.IsConfigured) it opens as
+         usual; Cancel does not count, so the offer comes back next time rather than being forced on somebody who looked and decided. */
+      /* The overlay goes on screen BEFORE anything may unlock it — WPF refuses to make a window that has never been
+         shown anybody's Owner, and unlocking builds the settings window immediately. A setting-less first run drove
+         straight through here (configure offer → SetLocked(false) → EnsureSettings → Owner = this) with the overlay
+         still hidden, and the dispatcher ate an exception; showing a frame locked is nothing next to that. */
+      Log.Info($"FCT-DBG toggle show={show} window=re-show locked={_fctOverlay.Locked}");
+
+      if (show)
+      {
+        _fctOverlay.Show();
+      }
+      else
+      {
+        _fctOverlay.Hide();
+      }
+
+      if (show && !FctOverlaySettings.IsConfigured())
+      {
+        _fctOverlay.SetLocked(false);
+      }
+
+      SetFctOverlayMenu(show, !_fctOverlay.Locked);
+      ConfigUtil.SetSetting(FctOverlaySettings.EnabledKey, show);
+
+      // configuring wants the window foreground so its panel can be typed in; a locked one must never take focus from the game
+      if (show && !_fctOverlay.Locked)
+      {
+        _fctOverlay.Activate();
+      }
+    }
+
+    /* Asked to set up, or to stop: the overlay's lock state is the answer, so the menu never has to remember one of its own. */
+    private void ToggleConfigureFctOverlayClick(object sender, RoutedEventArgs e) => SetFctOverlayConfiguring(_fctOverlay is null || _fctOverlay.Locked);
+
+    /*
+     * View -> FCT Overlay -> Reset Position: the same three steps as the Damage Meter's, in the order this overlay needs. Closing
+     * first because a closing window writes where it was, which would restore what is about to be cleared; then forgetting the
+     * geometry; then rebuilding only if it was on screen, so resetting an overlay you are not using does not switch one on.
+     * Rebuilding rather than moving is the point — the shipped size and centring live in RestoreSettings, and a reset that only
+     * moved the current window would keep a size nobody can drag back from off-screen.
+     */
+    private void ResetFctOverlayClick(object sender, RoutedEventArgs e)
+    {
+      var wasShowing = _fctOverlay?.IsVisible == true;
+
+      _fctOverlay?.Close();
+      FctOverlayWindow.ForgetStoredGeometry();
+
+      if (wasShowing)
+      {
+        SetFctOverlayVisible(true);
+      }
+    }
+
+    /*
+     * Setup is the only way in. Locked means click-through (WS_EX_TRANSPARENT) with no header and no panel — numbers over EverQuest
+     * and nothing else — and it is where the overlay always opens and what Cancel and Save return you to: a state that outlived its
+     * session would turn an overlay into a click-eating rectangle the next time the game starts, so there is no setting for it.
+     * Asking from the menu is deliberate, because while locked the window takes no input at all, and this overlay lives mid-screen,
+     * where permanent settings furniture would fight the game.
+     */
+    private void SetFctOverlayConfiguring(bool configuring)
+    {
+      if (_fctOverlay is null)
+      {
+        if (!configuring)
+        {
+          SetFctOverlayMenu(false, false);
+          return;
+        }
+
+        // configuring a hidden overlay shows it first: an item that silently did nothing is a worse lie than one that pops up empty
+        SetFctOverlayVisible(true);
+      }
+
+      /* EventsLockChanged repaints the menu from the window's real state, including this call. */
+      _fctOverlay?.SetLocked(!configuring);
+    }
+
+    /*
+     * Menu wording and check marks in one place. These menus use an icon plus an Enable/Disable header rather than a checkable item
+     * — everything else here does, including the Damage Meter this submenu sits under — and Setup reads Finish Setup while the
+     * overlay has the mouse, because that is the item you come back to when you are done.
+     */
+    private void SetFctOverlayMenu(bool enabled, bool configuring)
+    {
+      fctOverlayIcon.Visibility = enabled ? Visibility.Visible : Visibility.Hidden;
+
+      // the short form once it is running: the menu is already called Floating Combat Text, and "Disable Floating Combat Text" is a sentence
+      fctOverlay.Header = enabled ? "Disable FCT" : "Enable _Floating Combat Text";
+      configureFctOverlay.Header = configuring ? "_Finish Setup" : "_Setup";
+    }
+
     private void ReportProblemClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault("http://github.com/kauffman12/EQLogParser/issues");
     private void ViewReleaseNotesClick(object sender, RoutedEventArgs e) => MainActions.OpenFileWithDefault(App.ReleaseNotesUrl);
     private async void MigrateNagDbClick(object sender, RoutedEventArgs e)

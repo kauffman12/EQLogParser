@@ -9,6 +9,7 @@ namespace EQLogParser
   {
     public static event Action<DamageProcessedEvent> EventsDamageProcessed;
     public static event Action<TauntEvent> EventsNewTaunt;
+    public static event Action<DeathEvent> EventsNewDeath;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Regex CheckEyeRegex = EyeRegex();
     private static readonly Dictionary<string, string> SpellTypeCache = [];
@@ -974,8 +975,12 @@ namespace EQLogParser
           {
             CheckSlainQueue(lineData.BeginTime);
 
-            var damageEvent = new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime };
-            EventsDamageProcessed?.Invoke(damageEvent);
+            // hoisted so the event object is not built per record when nothing is listening (FCT off)
+            var damageHandler = EventsDamageProcessed;
+            if (damageHandler is not null)
+            {
+              damageHandler(new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+            }
 
             if (record.Type == Labels.Dd)
             {
@@ -1049,6 +1054,7 @@ namespace EQLogParser
           }
 
           RecordsStore.Instance.Add(death, currentTime);
+          EventsNewDeath?.Invoke(new DeathEvent { Record = death, BeginTime = currentTime });
         }
       }
     }

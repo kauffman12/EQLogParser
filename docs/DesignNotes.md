@@ -483,3 +483,1497 @@ answered each name is visible twice over — in `scripts\MeasureLoadedAssemblies
 
 Whether that makes Bottles' `vcredist2022` dependency redundant is a separate question with a fresh-prefix test in front
 of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
+
+## Floating Combat Text
+
+`View → Floating Combat Text` shows the player's own combat numbers from live log records. The rendering choice is settled and recorded in
+`docs/NagFctReference.md` (SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale), and the loser has since been deleted rather
+than kept as a reference - see "Shared policy, one renderer" below. This section covers why the *plumbing* is shaped the way it is, because that is
+the part a later change is most likely to undo by accident.
+
+### One queue, drained on the render tick
+
+`FctManager` does not raise an event per record. It pushes `FctHitCommand`s onto a `ConcurrentQueue` and the
+overlay drains it from the canvas's `EventsFrame` callback — once per painted frame, at most 60 times a second.
+
+The earlier shape posted one dispatcher item per record, which is the worst of both worlds: a raid AoE window
+of ~200 hits/s became 200 cross-thread posts and 200 layout invalidations, and a UI stall replayed the whole
+burst seconds after it stopped mattering. Draining on the frame clock batches for free (the frame is the batch)
+and makes staleness cheap to reason about: anything older than `FctManager.MaxQueueAgeMs` is dropped and counted
+rather than drawn. A combat number that arrives half a second late describes a swing the player has already
+reacted to; showing it is worse than losing it, because it lies about what is on global right now.
+
+Two counters make overload visible instead of mysterious: `FctManager.DroppedCount` (queue lost the UI could not
+draw) and `FctSkiaCanvas.DroppedCount` on the canvas, which forwards the ingest's (hits the lane caps refused). The header shows their sum
+as "N dropped" only when it is non-zero, so a healthy overlay stays quiet.
+
+### Parsing costs nothing when nobody is looking
+
+`FctManager.Enabled` is a volatile flag gated at the top of both handlers, and it is set from the overlay's
+`IsVisibleChanged`. Hiding the overlay therefore stops the feed at the parser: no player-name comparisons, no
+pet-owner registry lookups, no command allocation. `DamageLineParser`/`HealingLineParser` additionally hoist
+their static event delegate before raising, so with no subscriber even the `*ProcessedEvent` wrapper is not
+allocated — FCT is the only reason those events exist, and it should not tax a user who never opens it.
+
+A window owns exactly one manager: `FctManager.Create()` on construction, `Dispose()` (which unsubscribes from
+both parsers) on close. Without that pairing a closed overlay keeps a live handler chain feeding a queue nobody
+drains, which is invisible until the next session shows yesterday's fight.
+
+### Shared policy, one renderer
+
+The two canvases used to carry near-copies of the same layout and motion code, and they drifted within days. That is why `FctHitState` is plain data
+and the decisions live in one place - and why there is now one renderer instead of two behind an interface. The second backend survived its own A/B
+verdict and stayed "for reference", during which the frame pump existed twice; when the configure-mode demo was added, `FctSkiaCanvas` learned to
+ask for frames on its behalf and `FctSimCanvas` did not, and the loop ran at about two frames a second - numbers frozen between cues, then jumping.
+Nothing was expensive; half the code that asks for drawing had never heard of the thing animating. A seam with one implementation is not a seam, it
+is a second copy of a rule:
+
+- `FctIngest` — fold a repeat into the number already showing that exact hit, spawn, take a full lane's slot from a less
+  significant number, or count a drop.
+- `FctLayout` — which band of the canvas a lane lives in, spawn position, travel, the protected middle.
+- `FctPlacement` — for travelling text, throwing that spawn several times and keeping the one whose flight least crosses the
+  numbers already in flight (§"Travelling numbers pick a gap to go through").
+- `FctMotion` — position, scale and opacity as pure functions of `(hit, age)`, plus the rule for the main line (one hit's
+  face value, plus how many identical hits it stands for).
+- `FctStyle` — lane → font size/color as `0xAARRGGBB` ints, so no renderer owns a palette copy.
+- `FctLifeController` — adaptive lifetime.
+
+What is left in `FctSkiaCanvas` is what genuinely belongs to a renderer: substrate resources (`SKFont`/`SKPaint`/halo sprites), the frame pump and
+the blit. That split is also what makes the animation unit-testable (`EQLogParser.Wpf.Test/src/ui/control/Fct*Test.cs`) without a window, dispatcher
+or GPU — worth keeping in mind before moving maths back into a canvas.
+
+`FctMotion.RefreshText` having the text rule is deliberate and fixes a real bug: zero-damage records (Dodge,
+Parry, Invulnerable) carry `Value == 0`, and a renderer that recomputed the numeric string each frame overwrote
+the label with "0" — which reads as a legal absorb rather than an obvious mistake. A hit with `FixedText` set now
+can only ever draw that text.
+
+**A fold counts, it never adds.** Folding is for EQ's habit of repeating exact values — every DoT tick, every fixed-damage
+proc — and what it produces is one number that says how many: `2,040 ×2`, `412 ×5`. The key is lane + side + proc-or-direct +
+periodic-or-direct + ability name + **the value as it is drawn**, so a fold can only ever combine hits the player cannot tell
+apart. Same-ability-but-different is not close enough: matching on lane alone once let an Immolation tick grow a number
+labelled "Spinning Attack", which is a wrong total wearing a true label, and summing identical hits was the same mistake at a
+smaller scale — 4,080 is an amount no hit landed for, it makes the player divide to find out what happened, and eight routine
+ticks wearing the face value of a big one is precisely the confusion the fold exists to remove.
+
+The lane cap decides who owns a slot rather than whether the information survives. The fold is tried before the cap and does
+not care about occupancy, so a stream of identical hits never consumes slots at all — 20 seconds of the same 900 at eleven a
+second measured two live numbers and zero drops. What cannot fold goes next to eviction: take the least significant number on
+screen, but only if the newcomer clearly outranks it, where significance is what a number *stands for* — face value times its
+count, with a proc discounted because one is subordinate by design. Only then is a drop counted. Healing direct casts are
+excluded from folding at every occupancy — players read heals one cast at a time, and two identical heals are still two
+casts of two different targets — which is why they need eviction: without it, "no folding" would mean "the thirteenth heal in
+a raid-wide panic is silently invisible", and the point of showing healing at all is that a missed one matters.
+
+### Raster at most 60 times a second, and never on a beat pattern
+
+`CompositionTarget.Rendering` fires at display refresh, so on a 144 Hz monitor an animated canvas would raster a
+full surface 144 times a second for text nobody can read faster. The cap lives in `FctFramePacer`, kept out of the canvas so the rule is testable
+against synthetic tick streams; the tick still fires `EventsFrame` (the simulation paces its record schedule off it) but the surface memset + draw +
+blit does not run. On an 800×560 overlay at 150% scaling, each skipped raster is ~2.3 MB of pixel work avoided.
+
+**The pump asks about every list that moves.** It invalidates while there is animated content, and the configure-mode demo is animated content that
+deliberately does not live in the canvas's own hit list - keeping it out is what protects the counters. A pump keyed on that one list repaints twice a
+second during configuring. `FctDemo.Animated` is the demo's answer to the question, and `Animated_DemandsAFrameForEveryFlight` counts frames rather
+than trusting intent: over 90 % of ticks across the busy part of a cycle must have something in flight.
+
+**The cap counts whole ticks, and that detail is the difference between smooth and juddery.** The first version asked
+"has `TargetFrameMs` (16.67 ms) elapsed since the last paint?" — a threshold tuned to 60 Hz sitting on top of a 60 Hz
+stream. Real frames arrive at 16.4, 16.9, 16.6…; whenever one lands a hair early it is skipped, the next frame is two
+refreshes later, and the cadence settles into an alternating one-frame/two-frames pattern. Positions are exact and the
+average fps looks perfect while the text visibly stutters, most on the display where the cap is not skipping at all in
+principle. `FctFramePacer` measures the refresh interval from the tick spacing itself (light EWMA, samples outside
+0.5–200 ms discarded so a tab-out or a GC pause cannot retune it) and then paints on a whole number of ticks nearest
+the target ratio: every tick at 60 Hz, every second at 120 Hz, every second at 144 Hz (72 fps, not the 48 that a time
+threshold produced), every fourth at 240 Hz. Never faster than the display, never a beat pattern, and it re-derives
+itself when the window moves to another monitor mid-fight.
+
+Because smoothness lives in the tail and not the mean, `FctSkiaCanvas` reports `MaxFrameMs` (worst frame in the stats
+window) alongside the average, plus `DisplayHz` so painted fps can be read against the real refresh rate: 72 fps under a
+144 Hz display is pacing, 60 fps under a 60 Hz display with a 40 ms max frame is overload. The simulation window prints
+both; the gameplay overlay deliberately does not, because a stats line that moves every second is a distraction in a pull.
+`FctFramePacerTest` feeds synthetic tick streams — including a jittered 60 Hz one, where it asserts the old time-threshold
+rule really did skip frames — so the cadence is pinned without a monitor.
+
+The destination bitmap and its copy buffer are allocated once per size and reused. Allocating a `WriteableBitmap`
+plus a fresh `byte[w*h*4]` every frame put ~5 MB/frame on the large-object heap and forced a new GPU texture
+upload each time instead of updating the existing one; both are now per-resize, not per-frame. The surface is
+explicitly `Bgra8888`/`Premul`, byte-identical to WPF's `Bgra32`, so `ReadPixels` is a memcpy with no conversion —
+and it fails closed (skip the frame) rather than blitting wrong bytes if Skia ever hands back another format.
+
+The remaining copy (surface → snapshot → pinned array → back buffer) is the known next step: `D3DImage` with a
+shared Skia surface would remove it. It is not taken here because it needs a real GPU to validate against, and
+three memcpys are not what limits this renderer today.
+
+### Two region schemes: bands and split
+
+The overlay cannot know where the player's target ring, cast bar or spell gems sit in the game window, so every scheme is
+a promise about what stays where. There are two of them, chosen on the configure row (`FctOverlayMode`), and both live on one
+geometry path: `FctStage` resolves (choice, canvas size) into the questions the layout actually asks — whose region is this,
+which way does it travel, and what do the style amplitudes measure against. Bands answers "the whole canvas, out up and in
+down"; split answers "one of four columns, each owned by whichever category booked it, each travelling the way that category
+was told".
+
+**Bands** keeps the original promise: a strip across the middle stays empty, mine rise above it, hits on me sink below it,
+and both travel *away* from the gap (`GapTopFrac`/`GapBottomFrac`). The history that got it there: the first scheme spent
+clearance horizontally — incoming lanes on the left half, outgoing on the right, a reserved centre column and a per-frame
+clamp keeping even a blowout crit off it. It worked for numbers and failed for everything else (left/right is a convention
+that has to be learned, with no analogue in EQ's own UI), so direction went vertical, which is how nearly every game with
+floating text does it. Three things came out of that for free:
+
+- The empty middle is empty **by construction** rather than by clamping traffic out of it. Diverging travel cannot
+  cross the gap it started outside.
+- Direction has two independent carriers (band and direction of motion) instead of one, so it survives a glance,
+  peripheral vision and a colorblind player.
+- The x axis stopped meaning *who* and went back to meaning *what*: damage sits toward the middle of its band, healing out
+  wide, crits and labels centered. Lane slots are still needed — overloading one axis with two meanings was the sin, not the
+  slots.
+
+**Split** is the columns: four of them (`FctRailLane`), named left 1, left 2, right 1, right 2 from where the player sits, with
+healing and the two damage kinds each booking one by setting. Why four and not two sides is a section of its own below ("Split
+counts its lanes"); what belongs here is that split is a *region* scheme and not an animation. `FctStage` answers "which column
+owns this lane", and everything downstream — spawn, travel, collision, the room a source line gets — measures against that
+column's rect rather than the canvas's, which is the same rule bands applies to its bands and the reason both schemes share one
+placement path.
+
+Because direction is the *who* carrier in bands, the lane and per-category direction controls belong to split: position says what
+a number is there, and each category's dial is free. The settings window shows those controls in split and hides them in bands — a
+setting with no effect is a control that should not be on screen. Nothing on the overlay itself explains which scheme is running:
+the arrows that once spelled it out in the panel ("heals ← to me →") were deleted, because the columns they described move live two
+inches away (see "Two dials and a short loop: what configuring is for").
+
+A third scheme lived here for a while: **halves**, the genre's two side-by-side areas — Mik's Scrolling Battle Text ships incoming
+left and outgoing right, both scrolling down with a parabola bow (fork `Placidina/MikScrollingBattleText`, `MSBTProfiles.lua`:
+classic master profile L175–196, retail L1640–1668, both `animationStyle = "Parabola"`, `direction = "Down"`). It bought one thing
+bands could not: position carries *who*, which frees direction to be a per-side setting. Split buys the same thing more precisely —
+a column says *what* as well as *who*, and three categories can be moved instead of two sides — so halves finished with no name in
+any menu, no ini word anyone types, and an engine mode whose only job was keeping `FctStage`, `FctPlacement` and `FctIngest`
+general enough for a shape nobody could select. It went, along with the burst-scoring placement search it existed to serve and the
+per-row congestion ladder that came with it: 605 lines removed. The geometry stays general (a stage is still "some regions, some
+directions") because that is what makes bands and split one code path rather than two.
+
+A settings.ini from that era carries `FctOverlayLayout` written as an enum name (`"halves"` / `"bytype"` / `"bands"`) by a build
+that never released. The key is not read any more — nothing shipped, so nothing migrates — and the mode row writes
+`FctOverlayMode`: `split`, or anything else, including absent, which is fountain. That is one boolean rather than a parse table
+because there are two modes and one of them is the opinion a first run should land on; a hand-typed word cannot reach the geometry
+as garbage when it can only ever resolve to those two. The lane and direction keys have one fallback each and it is the shipped one
+(`FctOverlaySettings`).
+
+A fountain's choreography — travel, then accelerate under gravity while shrinking — points *down* on its way out, and an
+incoming band is the last thing before the bottom of the screen. A literal fall there parks the number against its own
+band edge for half its life, which reads as stuck rather than as physics, so `FctIngest.AssignLifetime` **mirrors** it:
+`FallDist` is signed screen-relative (positive falls toward the bottom, negative back up toward the gap) and an incoming
+hit gets half its sink distance back on the way out. Both sides then have the same overshoot-and-settle
+shape in opposite signs, which is what "one animation, two directions" was supposed to mean, and the return cannot reach
+the protected strip because it is a fraction of travel already spent below it.
+
+The layout keeps its promises at any window size: a band that a short window would invert falls back to "inside the edges"
+instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
+100–240 px, across the whole motion and at crit scale.
+
+### The source label can sit left, below (shipped), or right of its amount
+
+`(slash)` — the little name under a number saying what made it — had exactly one seat: below, which is where this overlay
+has always drawn it. A settings row (`label`) now offers **left / below / right**, because Nag-style readers take number
+and name as one token and want them on one line. Two rules keep it from becoming a layout wobble:
+
+**The number never moves for its label.** `hit.X` is the amount's own center in every placement; inline labels hang off
+the measured edge of the value (baseline-shared, word-space gap), so a column of amounts keeps one visual spine whether
+the words live below, left, or right. That is why composition lives entirely in the draw pass: placement is read per
+frame, changing it repaints, and no number in flight is thrown away by a typography choice.
+
+**The measurement that makes it possible rides with the other one.** The label's width is measured when glyphs are
+rebuilt (which already measures the value for the travel clamp), not per frame — folds change the value's face, so both
+widths get recomputed together and stay honest. `FctOverlayLabelSide` persists it ("left"/"below"/"right", absent =
+below); it is typography rather than layout, so the row appears in both modes.
+
+### Configure mode moved out of the overlay into a settings window of its own
+
+**The panel speaks the app's language, literally.** Like every other window in the application it stamps itself with
+the active skin at construction (`ThemeConfig.SetCurrentTheme(this)` before `InitializeComponent`) — without that stamp
+its ComboBoxes and numeric spinner render as bare WPF instead of wearing the theme — and it re-stamps on
+`ThemeConfig.EventsThemeChanged`, unsubscribing when it closes since that static event outlives every listener. Brushes
+and `EQDescriptionSize` itself need no such care: they are application resources, and DynamicResource swaps them live.
+Its fonts come from the theme
+(`TextElement.FontSize = {DynamicResource EQDescriptionSize}` on the panel root — one inherited attribute, so the whole
+window shrinks and grows with the application's own font scale like every other surface); its category picker is the
+app's checkbox-in-a-dropdown combo (`ComboBoxItemTemplateSelector`, closing the dropdown commits, and the closed face
+counts: "3 categories Selected"); its threshold is the trigger grid's numeric `UpDown` (0…9,999,999, typed or spun, no
+ladder); and it has no close mark and no Esc — **Save and Cancel are labeled buttons, and clicking one of them is the
+only way in or out**, keyboard included. Leaving a configuration session is a decision with two visible names; a
+keystroke should not silently discard what a click was willing to name. Procs joined the category list as the fourth
+kind while that combo was being born.
+
+**The panel is ordered by how permanent things are, not by the order features were born.** Above the first hairline sit
+the always-applies — sliders first, then dropdowns, then number boxes (speed, text size, crit size, label, show, hide
+below); below the second hairline sit the layout decisions the mode actually obeys (mode, shape, and
+the three categories alphabetical: damage to me, heals, my damage). The threshold crossed into the permanent block on
+purpose: a threshold is a statement about numbers, not layout, and fountain filters with it too — hiding it there had
+been a UI politeness the engine never shared. The footer under the last hairline lost its legend arrows ("heals ← to me
+→") in favor of the live frame counter beside the sample-data checkbox: explaining columns with arrows in a panel whose
+overlay shows the columns moving live two inches away was explaining the weather through a diagram.
+
+Every control living on a strip inside the overlay worked until there were enough of them to care about the same pixels
+as the numbers they were previewing — in a small window the row wrapped straight into the demo it existed to show. The
+settings are now a second, owned window (`FctSettingsWindow`): fixed width, height hugged to content, a vertical property
+grid with each name beside its control, and the application's own theme rather than the overlay's translucent panel
+chrome. The overlay during configure is nothing but numbers; both windows stay over the game together because it is owned
+by the overlay and Topmost like it.
+
+The split keeps one source of truth by construction. A plain state object (`FctConfigState`) crosses the boundary in both
+directions: `LoadFrom` hands the panel what to display, every control change raises a fresh snapshot for the live preview,
+Save hands the final copy back as the only road to settings.ini, and Cancel asks the overlay to put everything back. The panel owns no canvas and no keys, which is what stops a second topmost
+window from becoming a second authority: `StagedState()` in the overlay is the single list of staged values, so
+"leaving without saving restores exactly this" cannot drift.
+
+Two small behaviors worth naming. The panel parks itself to the left of the overlay (right if the screen objects) and
+follows the overlay while it is dragged — unless somebody moved the panel on purpose, in which case its place is kept
+until configure reopens; and hiding the overlay takes the panel out of sight with it. The sample-data checkbox came along
+too, still session-only and never written: it rides the state for exactly as long as configure mode lasts.
+
+### The configure row says fountain and split now: the mode layer over the schemes
+
+The engine commit above made two words honest, and this one puts them on the row. The layout combo (halves/by type/bands)
+and the motion combo (hold/fountain/pulse/spray/parabola) are gone — retired rather than hidden, because a player should
+not meet the geometry vocabulary to choose between looks. What replaces them:
+
+**mode: fountain | split.** *Fountain* is the engine's bands geometry wearing spray motion — numbers pop near the middle
+and spew out and fall, which is the look every classic FCT draws with; its controls are a shape pick of **spray | freeze**
+— spray being what makes it a fountain, freeze the same bands drifting their numbers out and stopping instead — plus three
+direction dials, the show switches, size and speed. Healing's dial speaks in fountain too: **heals rise while damage
+sprays down** is the classic FCT look, and until this dial was honoured (in `FctStage.UpFor(hit)` and threaded through
+the bands factory) a fountain silently chained healing to the damage-in direction — the row that controls it was hidden
+whole, because hiding a lane pick had swept up the direction with it. A band gives heals no column, only travel, and
+travel is all the dial asks for. *Split* is the side columns (internally by type) with each category
+assigned its own **lane and direction** — damage in, damage out, heals, six picks over four columns, any of them sharing
+a lane — plus **shape: arc | line**, one rail machinery under both, with or without the bend. Split offers no
+rest state on purpose: a row parked part-way down a column is not a calmer queue, it is a broken chain, which is the
+one thing the column exists to prevent — so freeze belongs to fountain and nowhere else. Controls a mode does not
+obey collapse rather than sit disabled — in fountain that means the **lane pickers only**: every direction dial stays,
+because every mode has travel to answer for, and the threshold lives above the mode row entirely (it filters numbers,
+not layouts; hiding it there was retired with the minimal-UI era). The legend re-sentences itself from the staged
+choice either way. The shape row serves both modes with **two combos in one
+cell** rather than one list of illegal promises: WPF items cannot live in two lists, and a scheme should never show a
+motion it would only degrade, so each mode owns its list and the mode swap shows one.
+
+**settings.ini speaks the player's words.** `FctOverlayMode` ("fountain"/"split", absent = fountain — the mode that needs no explanation opens the first run) and
+`FctOverlayShape` ("arc"/"line"/"spray"/"freeze"; the retired "straight" spelling still reads, because it names the same
+rail — the older "parabola"/"hold" spellings do not read at all: they were never in a release, so an ini still carrying one
+resolves to its mode's own shape and nothing complains) name the mode;
+per-category keys carry the rest (`FctOverlayHealDirection`,
+`FctOverlayTakenDamageLane`, `FctOverlayDealtDamageLane` beside the existing direction keys; the older `…Side` spellings
+still parse, to the side's outer lane). The combos-era
+`FctOverlayLayout` key stops being read — nothing of this shipped, so nothing migrates — and an omitted direction still
+reaches the constructor as *null* so bands keeps its outward invariant without anybody having chosen it. Because the mode
+layer cannot express an illegal combination (fountain cannot store a rail), the load-time legality repair the combos era
+needed is gone too: there is nothing left to fix up. `FctOverlaySettings.ClampShape` is where that promise lives, so a
+stale key, a hand-edited ini or a half-built state resolves to the mode's own motion — fountain cannot even accidentally
+run a rail.
+
+**One word per shape, panel to engine.** The dropdown, settings.ini and the enum now agree: **arc**, **line**, **spray**,
+**freeze**. Carrying a player word and an engine word for the same shape meant a hand-edited ini said one thing while the
+combo showed another, and only one of them was checked on load. One exception survives on purpose: the panel saves and shows
+`line` while the engine says `Straight` (MSBT's name, and what the geometry tests assert). The style once labelled **settle**
+was renamed rather than relabelled — "hold", its old engine word, names a beat in an animation timeline and reads as a frozen
+UI; **freeze** states the thing a player has to predict: it travels, stops, and fades in place.
+
+Engine names stay where geometry carries tests: `FctLayoutMode.Bands`/`ByType` and `FctMotionStyle.Spray`/`Arc`/
+`Straight`/`Freeze`, and that is the whole list — a style that was tried and removed (pulse, with the cell grid built to place it) is described
+where its lesson is written down, below. "fountain" and "split" name UI states; "bands" and "by type" name the geometry under them.
+
+### Two simple modes need three engine facts: category columns, steerable bands, and a bow-less rail
+
+The configure experience is converging on two modes — **fountain** (numbers pop near the centre and spew out and fall;
+two direction dials, the show switches, size, speed; nothing else) and **split** (the side columns, with each category —
+healing, damage on me, my damage — assigned its own side *and* its own direction; shape chosen between **arc** and
+**straight** — since grown into arc | line). The modes are a settings slice; three engine facts had to
+exist first, and each says goodbye to an old shortcut:
+
+**Directions became per-category.** `FctLayoutChoice` gained `HealUp`, `IncomingDamageSide`, and `OutgoingDamageSide`:
+the side and the way a number travels now follow *what it is*, so healing can rise on the right while damage on the same
+column sinks. The cell-grid pool followed the resolved column rather than the bit that chose it — with three categories
+picking two columns, only the column itself identifies the territory a grid belongs to.
+
+**Bands reads its directions now.** Its outward scroll was hard-coded in `UpFor` — the strip invariant as an if-statement
+nobody could dial — which the fountain mode's two dials made wrong. The choice constructor distinguishes *omitted* from
+*stated* (`bool?`): omitted directions on bands still ARE in-sinks/out-rises, so every pre-existing behaviour and test is
+untouched, while a stated direction wins. "Direction is the who-carrier in bands" turned out to be a convention this
+project inherited from itself, not a law — the protected strip stays protected because travel and fall are measured from
+the band's own edges whatever sign they run at.
+
+**`Straight` is a rail style, not new choreography.** MSBT ships Straight next to Parabola, and it is exactly what it
+looks like: the same constant-speed scroll with the bow zeroed — shared entrance, one rate per lane, the column's braid
+braids included, because all of that keyed off travel and placement, never off the arc. `FctMotionStyles.IsRail` is now
+the only correct question ("does this ride a rail?"); naming one style in a branch would let the shapes drift apart
+silently. Braiding itself splits by shape though, because sideways means something different on each: an arc crowds
+into emergency columns beside its lane (bows sweep across them, so they read as part of the dance), while **a line
+steps INTO its travel** — a row denied the mouth enters one text line further along the same column. Sideways offsets on
+straight parked whole categories beside the lane permanently, which is exactly how misses and parries ended up in their
+own little column every fight (frequent enough to always be crowded) while resists sat centre (rare enough never to be).
+With a shared scroll rate the spawn-time gap locks for the whole flight, so crowded line rows read as one queue that
+entered slightly staggered. Sideways columns stay underneath as the valve for past-throughput storms — a clean second
+ column during a burst beats two numbers printed on each other, and no number is ever dropped — but they are no longer
+ where an ordinary fight parks its words. Bands degrades both rail styles to freeze exactly as it degraded the arc.
+
+### Category switches: what story an overlay tells
+
+A request that layout modes cannot answer — *"outgoing damage left, healing right, and just turn incoming damage off"* —
+is a content question, not a geometry one, and it splits the overlay's output into switchable categories: **my
+damage**, **damage to me**, **healing** — plus **procs**, whose own switch arrived later because a proc line can read as
+double-counting the swing that triggered it (`ShowProcs` is an extra opt-out on top of category: hiding my damage hides its
+procs too, and this one only ever removes more). The gate lives in `FctIngest.Accept` next to the threshold and reads
+the two bits spawn already computes (`heal`, `incoming`) — three comparisons and a proc test, zero new routing:
+
+```csharp
+if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt)) { FilteredCount++; return null; }
+```
+
+Three separations keep the two filters honest, and each has a test. **Identity before noise:** a category that is off is
+not even measured against the threshold, so a filtered hit never spends the hidden count's budget — `filtered` and
+`hidden` are different numbers for different choices, surfaced beside `dropped`. **Above the fold:** like the threshold,
+the gate sits before folding, so an invisible tick can never inflate a visible `×N`; a category that was off simply has
+no history when it returns. **Words follow their side:** the label exemptions that protect words from the *threshold* do
+not extend here — "Miss" belongs to whoever missed, and defense words (`Defensive` routes as incoming in
+`FctLayout.IsIncoming`) belong to the story of the spell that came in, so switching off `damage on me` also quiets the
+resists and blocks won against you. Off means **off**, down to zero visible categories if somebody wants that; nothing
+is lost silently while it is.
+
+**Each word stands alone.** The words with no number — miss, parry, dodge, block, riposte, resist, absorb,
+invulnerable: `FctManager`'s `IsDefensiveLabel` set plus Resist, which is everything the parser can write — collect a
+different complaint from the category one. It is never "fewer words"; it is *that* word: misses during a whiff storm,
+resists against the one spell that keeps failing its check. So the **show** combo grew to twelve checkboxes — the four
+categories and every word as its own — rather than gaining a second dropdown: words answer the same question the
+categories do ("what may draw"), and two dropdowns asking half of one question each is panel furniture with an opinion.
+The twelve sit **alphabetically**: the first arrangement was "fight order" (categories, quiet defensive words, the loud
+pair), but a dropdown is a lookup list, and ordering it by narrative turned finding a word into a memory test. The
+items are named fields so re-sorting never means rewriting twelve positional indices in two blocks.
+Same opt-out semantics (absent is shown; only an explicit 0 mutes, because a junk value must never eat somebody's
+"resist") and the same `filtered` accounting — a muted word visits `hidden` never, since the threshold's count is
+about numbers and these are not numbers. Three rules keep the layer small: words stay exempt from the threshold; the
+switches stack *under* the categories (defense words belong to "damage on me" still, and a word switch only ever
+removes more); and unknown text always draws — `WordShown` answers true for anything outside the eight, because a
+word these switches have never heard of is nobody's implicit opt-out. A word *is* its Labels constant, so the name-to-
+switch map lives with the switches (`FctIngest.WordShown`/`SetWordShown`) and the canvas forwards one method instead
+of wearing eight properties. The demo cycle shows all eight words once — a switch nobody can preview is a switch
+nobody finds — and that copy path also caught a stale promise: `FctDemo.Advance` had been copying threshold and three
+categories for pages of notes about "copies the switches", missing procs since the day they shipped. The word tests
+pin the copy now, procs included.
+
+The configure row was already full, so the checkboxes live behind one dropdown that names what is ON — "categories" on
+the closed face, counting what stays ("everything" in the default state; the common case must not look like a setting),
+all staged like every other control: Save writes, Cancel puts back.
+
+**The demo gate was never connected.** `FctDemo` runs a private `FctIngest` — that design is load-bearing, the loop must
+never touch real counters — but the same design meant the dial's threshold only ever reached the *real* feed: the demo
+spawned its script numbers through an ingest that had never been told about it, and the commit that shipped the ladder
+claimed the preview showed it. It did not; nothing pinned it either. `FctDemo.Advance` now takes the real ingest as a
+final `gates` parameter and copies threshold and switches every frame — the same per-frame-copy discipline that style
+and layout arrived at after "selecting pulse played hold" — and `TheConfigureDemoObeysTheSwitches` is the test that
+keeps that claim provable.
+
+### The show list: nine rows of numbers, and a side you can switch off
+
+Three categories turned out to be three switches too few and one question too many. The requests that arrived were not "less damage
+to me" — they were narrower than that and specific: **no crits** during a pull where every swing is a crit, **my pet** out of the picture
+during a parse, **heals but not the big green ones**, **spell noise off, keep my melee**. And the fourth request, "hide one side entirely",
+was being answered twice over: by a category switch *and* by sending that category's lane somewhere silly. So the show list is now **nine
+rows** — melee hits, melee crits, spell hits, spell crits, procs, pet melee, pet spells, healing, healing crits — beside the eight words it
+already carried, seventeen checkboxes in the same single alphabetical dropdown, and the closed face counts them as **"kinds"**.
+
+**One record, one row.** The rule that keeps seventeen switches from becoming seventeen ways to be confused: every number resolves to
+exactly one row, in one place (`FctManager.DamageRow`), while the parse still knows who fired it. Procs outrank everything — a proc is the
+event a player watches for and does not care whether it came off a swing or a spell, and muting "melee crits" must not be a way of seeing a
+proc that crit. Then the pet: its numbers are its own, which is the entire content of "get my pet out of my parse", and its crit stays inside
+its row rather than jumping to mine because crits pool on screen. Only then kind and crit: hits/crits, melee/spell. An ambiguous record would
+answer to two switches at once (mute one, still see it under the other), and an unassigned one would be a number nothing can hide — both read
+to a player as an overlay ignoring its own settings. Three tests hold the line: `FctShowListTest.EveryRowHasExactlyOneSwitch` (every `FctRow` but
+`Word` appears exactly once in the table, so a row added to the enum without a line in it cannot quietly become unhideable — that one lives in
+`EQLogParser.Wpf.Test`, which needs Windows to run), `FctFilterTest.EachRowAnswersForItselfAlone` (muting one row must leave its neighbour visible,
+which is what an implementation resolving several rows onto one switch fails) and `FctDemoTest.Script_CoversEverySwitchInTheShowList` (every row and
+word has a cue, so every switch can be seen working without a fight).
+
+**Which words those rows use, and why not MSBT's.** "Spell" means every non-melee kind the parser produces — direct damage, bane, damage
+shield, reverse DS, other damage — because that is EverQuest's own vocabulary and MSBT's "skill" is a World of Warcraft word that means
+something else here. A damage-over-time tick lands in the spell rows with everything else that did its damage slowly, crit ticks included:
+the eye cannot pick a tick out of a fold (`FctIngest` collapses identical hits into `×N`), so a switch for it alone would be a switch for
+something nobody can see. "Hits" means everything that did not crit, which is why each pair sits beside its own crit row in the table — read
+down and the sentence explains itself without a tooltip having to say "hits here excludes crits".
+
+**Words are not rows.** They carry `FctRow.Word`, meaning not row-gated, and keep the switch they have always had: their own text, because
+the complaint about words has never been "fewer words", it is *that* word. What changed is that they were made honest about being attacks:
+a word belongs to whoever did it (`FctManager` routes `Defensive` against incoming and `Missed` against outgoing), so a hidden side takes its
+words with it — hiding damage taken quiets the blocks and ripostes you caused, and hiding your damage quiets your own misses and resists. The
+direction gate still runs before the word gate, and the order is the whole meaning: AND of everything applicable, never one overriding another.
+
+**The side switches are gone; a lane can be `none`.** "damage in", "damage out" and the old parent "healing" checkbox left the dropdown,
+because split mode already carries three lane combos and a fourth answer to the same question was the duplication. A lane set to **none** hides
+that category entirely (`FctConfigState.OutgoingShown`/`IncomingShown`/`HealingShown`), which serves the sentence the categories were invented
+for — damage left, healing right, incoming gone — with one control per side instead of two that could contradict each other. Fountain has no
+columns to hand out, so it reads `none` as shown: nothing was placed anywhere to switch off, and the setting is written down untouched so going
+back to split restores exactly what was hidden. Geometry never sees the missing lane: `FctConfigState.Placed` parks a hidden category in its
+shipped column, since nothing spawns there to decide what it looks like — `FctIngest` stops it upstream, before folding, so a hidden row cannot
+inflate a visible `×N`, and it visits `filtered` rather than vanishing.
+
+**Healing is inbound only now.** The rows are "healing" and "healing crits", which is an honest pair only if both mean the same story: what
+lands on you. A heal you cast on someone else is dropped at the feed (`FctManager.HandleHeal`), because the overlay pictures your fight and you
+know what you cast — and a pet-targeted heal goes with it, since the pet has rows for its damage and none for what it gets healed by. The rule is
+a plain name comparison and stays that way: `HealingLineParser` already runs every name through `ParserUtil.ReplacePlayer`, which is what turns
+"You have been healed over time for 1063 hit points by Roar of the Lion" into a record carrying my character name, so a second pronoun list down
+in the feed would only be a second place to be wrong about who "you" is. That also makes the HoT case the interesting one — ticks arrive on me
+through the same rule as direct heals, with no branch of their own to get wrong.
+
+**No migration, deliberately.** `FctOverlayShowDealt/Taken/Heals` are not read and not translated; the new rows own new keys and default to
+shown. This is the first release of the row model, no shipped settings file has rows in it, and a translation layer would have had to invent a
+meaning for an old "healing off" that could mean either of two new rows — which is a coin flip wearing a compatibility hat. All seventeen are
+opt-outs (`FctShowList`, absent or junk means ON, so a corrupt value fails toward information rather than toward silence), and the table is the
+single source for label, ini key, row and word: the dropdown builds itself from it, the canvas applies gates through it, `LoadConfig`/`SaveConfig`
+walk it, which is what keeps a row from ever being added twice or half-added with a switch that saves under one name and reads under another.
+
+The **configure demo owes every switch a cue** (`Script_CoversEverySwitchInTheShowList`). A row with no sample is a switch that appears broken,
+and it gets tested in exactly the direction that hides nothing — the player mutes "pet melee" and watches for something to disappear — so the
+loop gained a pet swinging ("Claw") and casting ("Sonic Shock") beside mine, thirty-two events which is what the event ceiling is actually spent
+on. That rule is also the reason spell cues name their row explicitly: a cue whose row disagreed with what it looks like would make the switch
+seem broken in the one direction the player is checking.
+
+### By type: columns owned by category, directions sharing a rail
+
+The *heals left, damage right, mine up, theirs down* request is nearly MSBT's default geometry, and MSBT cannot actually
+serve it: a scroll area scrolls **one** way (the direction argument to `AnimationManager.Add`), so his users build this
+layout out of Add Scroll Area plus re-mapping heal events into the extra area. The layout asks two independent questions,
+and conflating them is what made it look impossible: **ownership** of a column and **travel** inside it (still each direction's own setting). `FctLayoutMode.ByType` therefore flips exactly one bit:
+
+```
+owner = mode is ByType ? hit.Heal : hit.Incoming     // FctStage.RegionFor(hit)
+```
+
+Because every region, territory and travel rule already reads through that one function, the mode came free: resize mapping,
+shape legality, and the lane's one-beat tempo all ask the stage, never the mode. `Heal` is captured at spawn the way `Incoming`
+was — same reason one layer up: a heal crit lands on `FctLane.Crit`, where the lane no longer says what it was. Ownership that
+ignores direction does introduce one genuine novelty: two categories in one column whose dials disagree. A shared lane *and* a
+shared direction is one queue by design (`FctConveyor.KeyOf` keys a lane by column plus travel sign), and two clocks sharing one
+region is what the settings refuse on load (`FctConfigState.ResolveLaneConflicts`) rather than draw head-on. The panel offers one
+lane picker and one direction dial per category, the shape row offers the bend or the line, and `FctByTypeTest` pins the ownership
+both ways, the traffic in a shared column (no losses, no crossings), and the rail running here as it runs anywhere.
+
+### Split counts its lanes: left 1, left 2, right 1, right 2
+
+Sides turned out to be half-lies. What a player sees on a split are COLUMNS, and what they ask for is "incoming in that
+column, heals in that one" — but with only halves to configure, placement kept inventing columns on its own: two categories
+sharing a side got woven into neighbouring sub-columns by the burst scorer (measured x = 200, 271, 343 inside one half),
+so the settings said *side* and the screen showed something else, and nobody could predict which column a number would
+use or why two categories refused to share one. `FctRailLane` makes the visible thing the configurable thing: four named
+columns; the lanes a category actually books **tile their half** — two claimants take it in quarters in screen order, one
+claimant takes the whole half, because a lane nobody books is air the number may use rather than a wall. Every category names the
+lane it travels down. Categories that name the **same** lane genuinely share it — identical region, identical queue, chained like any two hits
+of one category; categories that name different lanes can never touch each other's pixels, because a lane's territory is the span the
+tiling gives it and those spans are disjoint by construction. Directions stay per category: opposite ways
+in a shared lane means trains passing, which was always placement's puzzle to solve.
+
+Two things fall out for free. The old side spellings parse to a side's OUTER lane — and when that lane owns its whole half, as in the
+shipped default, its spine sits exactly where the half used to be centred, so stored configs land visually unchanged; and the
+panel's words finally match everyone's: **damage in** and **damage out**, not "damage to me" and "my damage", in the
+rows (before heals — the streams come first, the reacting category last), in the categories combo, everywhere a human
+reads them. The two-word versions won over "incoming damage"/"outgoing damage" for the same reason the rest of the row
+is lowercase: a settings label is read at a glance across a game window, and "damage in" says it in half the width. The shipped split spread puts healing in
+left 1 rising, damage in in left 2 sinking, damage out in right 1 rising — each category its own column on first sight — and leaves right 2 free, so the
+outgoing-damage column owns its whole half of the screen while the two left-hand categories share theirs in quarters. That is where split's label budget used to die (a name beside numbers had a quarter-lane minus the digits),
+and it shows in setup mode: while configure mode holds, every booked lane is outlined with its own spelling — left 1, right 2 and the rest
+(`FctSkiaCanvas.DrawLaneGuide`) — under whatever the canvas draws there, sample-data numbers or not (the guide belongs to setup itself;
+sample data only puts numbers on it). An unbooked lane gets no outline because it has no rect left; that is the feature
+wearing a thin white line.
+
+The guide also taught the branch's hardest debugging lesson. Its outlines showed a second lane wall through the middle of
+any half that a single category owned — a ghost line at exactly three quarters of the window width, reproducible only on the
+player's machine, invisible to every unit test because the arithmetic in `FctStage` was innocent: logs proved the stage handed
+out x=627 w=627 while the screen kept a wall at 940. Ten probe builds later (arithmetic stamp, pixel scan of the Skia surface,
+per-phase column snapshots, paint-state dump, and one whole frame smuggled out as a PNG) the pixels and the numbers were still
+contradictory until someone reread the draw call itself: `canvas.DrawRect(x, y, x + w, h, paint)` — and SkiaSharp's four-float
+overload means **(x, y, width, height)**. The guide had been passing right/bottom where the API read width/height; left2's box
+really was drawn from 313.5 across 627 px, its outline landing at ≈940 every frame. Every measurement was honest; only the
+delivery was illiterate. The calls now build explicit `SKRect`s, which are unambiguous by construction. The moral, priced at
+≈10 builds: when logs and pixels disagree, one of them is being read wrong — re-read the API signature before you re-read
+the algorithm, and never log your intent when you could log the call.
+
+The one promise lanes had to keep is that a lane moves as ONE thing. The first attempt shared a duration per side and
+still showed per-category speeds — bigger text reserves more road, so equal times meant unequal px/s (see *The rail's tempo*
+below); the rail runs to one scroll RATE now, measured identical for damage, procs, crits and
+words in both directions. Fountain stays the deliberate exception: there procs are small and quick (below), because a
+fountain is read as a whole — nothing in it is a scale you measure gaps against.
+
+### Four motion styles, and the one thing none of them may change
+
+The fountain began as a checkbox, which was honest while there were two choices and became a lie as soon as players
+wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **freeze** (travel away from the strip, stop,
+be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; split does not
+offer it at all, since parking mid-scroll breaks the chain a column is made of),
+**fountain** (overshoot, then fall; mirrored upward on the lower band), **spray** (a random cone out of the lane slot, then a
+short fall) and **arc** (a constant-speed scroll bowing out to a vertex at half height and back — MSBT's parabola, and the shape the scrolling-text genre
+ships as its own default, and split's default for the same reason; see below). A fifth style, **pulse**, lived here with a cell grid of its
+own; what it taught is kept further down. Where a hit goes, how it moves and how numbers stack are three
+orthogonal decisions, and cramming two of them into one boolean was how "fountain" came to mean several things at once.
+
+Three rules keep five styles from becoming five behaviours:
+
+- **Motion is presentation, never information.** Band (or half) and direction of travel still say who acted whichever
+  style is running, which is what makes "try each during the next pull" a safe thing to offer. The combo therefore applies
+  to hits spawned *after* the change rather than restyling what is already on screen.
+- **A hit keeps the style it was born with** (`FctHitState.Style`, snapshotted by `FctIngest.Accept`). If the renderer
+  read one live setting, switching fountain → freeze mid-flight would hand every arc in progress a different
+  velocity for its remaining frames. Snapshotting an enum per hit is what makes switching free.
+- **The protected middle stays clear by construction, for every style allowed in bands.** Rail styles do not run there at
+  all (they degrade to freeze, below), so the styles sharing the canvas with the strip are the ones measured against it; spray falls
+  back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; freeze
+  never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
+  the strip is behind it and the bottom edge is clamped. The rails live in split, where there is no strip to cross
+  because the regions do not overlap; if settings.ini forces one into bands anyway, `FctIngest` degrades it to freeze rather
+  than run it (a test sweeps each style across its whole curve asserting nothing enters the strip or leaves the window,
+  so a future sixth style has to pass the same bar).
+
+**The arc is split's default because it is what the genre ships.** MSBT's profiles are all of them
+`animationStyle = "Parabola"` (see *Two region schemes* for the citations): numbers scroll at constant speed and bow —
+x is a function of y². FCT keeps its tempo system and borrows the shape as MSBT actually writes it rather than as it
+reads in a still: `ScrollLeft/RightParabola…` computes `x = y²/4a` with **y measured from the area's mid-point**
+(`MSBTAnimationStyles.lua`), so the vertex is *mid-flight* — a number leaves its column straight up or down, bows out
+to the widest point at half height, and is back on the column by the time it fades. That symmetry is the semicircle
+chain in Mik's demos, each value tracing its neighbour's path; the monotonic outward drift this project shipped first
+(`x = X0 + Bow·t²`, vertex at spawn) never came back, and looked like nothing in the genre. The vertical run stays
+`y = Y0 − Rise·t` — linear, not eased, because easing it would leave the equation behind and draw a bend that only looks
+like the genre's curve — and with y linear the mid-point formula comes out as `x = X0 + Bow·4t(1−t)`. `Bow` is signed
+**away from the middle of the overlay** — the one direction a bow may go without reaching a neighbour's lane — and measures a share of that column's
+territory (`ArcBowFrac`, 34%): MSBT's own curve swings a full area width, text running off its area while still
+fading, and 34% is as far an arc as this overlay can keep inside the half — far enough to read as a sweeping curve,
+near enough that the widest crit draw still clears both walls at the vertex (`FctArcTest` pins containment for
+life, both sides, both directions). With right-aligned values (§ *The odometer*) the vertex needs the **whole** drawn
+width on the inward side, not half, and `AssignTravel` trims the formula to whatever the territory actually offers
+before the flight is scored — a clipped vertex would score one shape and draw another.
+
+Two consequences follow from "the shape only". The speed dial works unchanged: it stretches `MotionMs` and the lifetime
+and nothing about where the number ends, so a slower arc is the same curve drawn more slowly, which is what a tempo
+dial should do for a constant-speed motion (a test checks the endpoints agree to the bit at both dial extremes). And a
+resize maps `Bow` by the x factor exactly like `Sway`, so a number mid-scroll still ends in its new half. Legality lives in
+one place — `FctStage.DefaultMotion`: split → arc, bands → freeze — and the configure row enforces it twice over: the
+arc is never even offered in bands (each mode owns its shape list), and choosing bands while previewing an arc swaps the
+preview to that scheme's default instead of showing a motion ingest is about to degrade anyway. A first-time split user gets
+that default even though nothing was saved, because an absent key and a junk one land on the same arm of `LoadShape` — and here that is not a
+loss: both mean nobody chose, and both are answered by the scheme's own shape.
+
+Spray needed one constant that measurement forced: `SprayReachFactor`, roughly twice the depth of a band, with height
+capped at what the band offers. Given only the band's own travel budget (`usable * sin(theta)`), spray's horizontal
+coverage came out **identical to freeze's** — freeze already adds 12% of width in sideways sway plus a lane-slot jitter, so a shallow
+cone sat entirely inside noise that was already there. A reach longer than the band lets the wide angles of the cone
+actually move sideways while the steep ones simply top out against the clamp.
+
+Widening the cone then exposed the real reason spray and fountain looked alike: **both axes ran on one ease curve**. When x
+and y advance by the same fraction of their totals, every trajectory is a straight line from origin to apex — the fan
+existed only in where numbers ended up, never in how they got there, so mid-flight a wide spray was a slanted fountain.
+`FctMotion.LateralProgress` puts spray's sideways travel on an ease-out while its vertical keeps the smootherstep climb:
+shrapnel keeps moving sideways while gravity handles the vertical, so the path bends over into an arc by itself. It eases
+to zero slope at the apex instead of running linearly because a number that stops dead sideways at the moment it begins to
+fall has a kink you can see. Freeze and fountain deliberately keep one curve between them — a straight climb is what a thing
+with no gravity does. A test pins the difference rather than trusting the eye: freeze's drawn point never leaves the line
+between its origin and its apex, spray's must leave it by more than 20 px and be nearly spread out by the time it peaks.
+
+Two smaller changes went the same way. The cone opened from ±38° to ±49°, with `SprayMaxLateralFrac` moving from 0.30 to
+0.34 of width — that cap has to travel with the angle or every wide draw stops at the same wall and the fan comes out flat
+topped — and spray's choreography got its own tempo, `SprayMotionWindowMs` (1700 ms against fountain's 2000), because
+shared flight time was the other half of the resemblance: two 2 second arcs read as one effect whatever path they draw, and
+shrapnel is supposed to look quick. Measured at 980×640 with these numbers, spray covers 519 px of x mid-flight where freeze
+covers 246 and fountain 242.
+
+**What pulse taught, and what is left of it.** A fifth style lived here for a while: **pulse**, text that never travelled —
+it swelled where it appeared. It failed on measurement rather than on taste: free placement is fine for numbers that move, because each
+occupies a spot for a moment, but a number that stays is read for its whole life and two of them sharing a place is mush. Every combat log
+UI lands on the same answer — slot allocation — so pulse grew a fixed cell grid (one cell per hit, oldest taken when a block fills, procs in
+the outer row, rows filling centre-out), and that grid held up until the geometry around it was rebuilt: measured against the *canvas* rather
+than its own region, its outer columns collapsed onto one place — 4 overlapping numbers in 8. The lesson outlived the style, and it is the
+reason `FctStage` exists: **geometry depends on the region and the canvas size, never on the hit being placed**, and every rect a row may
+occupy is measured against the region it was assigned. Nothing translates any more without a reason; the reduced-motion reading that pulse
+served is served today by freeze, which travels once and then rests.
+
+What was deliberately **not** built is anchored-follow (a number tracking its own mob across the screen). EQ's log
+never contains actor positions, only names, so there is nothing to anchor to; that absence is the whole reason the
+design leans on bands and an empty strip instead of "numbers above your target".
+
+### Travelling numbers pick a gap to go through
+
+Choosing a lane slot and throwing a small random jitter at it — about an eighth of the band's depth, which is all the layout used
+to do — turned out not to be enough. Measured on a 980×640 overlay with a number arriving every 700 ms, **58% of fountain pairs**
+shared a spot somewhere in their overlapping lives; six held numbers in one band, **71% of pairs**. Two numbers climbing nearly
+the same path are unreadable for the whole flight, and they did it while most of the band around them sat empty. That is a
+legibility defect wearing the clothes of a polish item.
+
+So travelling text asks where it would actually go from a grid of legal launch points across its band, and keeps the one with the
+least crowding (`FctPlacement`). Three things keep this from becoming a second layout:
+
+- **Every candidate comes out of `FctLayout.Spawn`**, asked for an origin instead of a dice roll. The band, its reserve against
+  the protected strip and the window edges apply to a requested launch point exactly as they do to a random one, so no candidate
+  can sit somewhere the layout would forbid.
+- **Cost is measured along the flight, not at the origin**, because that is what the player watches: fountain text falls back
+  through the band it climbed, so two spawns that start apart can still collide on the way down. Samples are wall-clock aligned,
+  so an older number is compared at where it really is rather than at the same phase of its animation.
+- **The first candidate is the layout's own throw and pays nothing**, and the rest pay a small penalty for having searched plus a
+  graded one for drifting from where the lane puts things. An uncrowded overlay therefore draws exactly what the layout alone
+  would have drawn; the search is only paid for when it buys space.
+
+Probing is systematic rather than random, which took learning twice: twelve random throws at a crowded band found far less of the
+room that was there than walking the band does. The grid is three columns by six rows — six rows because that is about how many
+rows of text a band's depth allows, three columns because that is about how many numbers can sit side by side in one column — and
+every launch point is nudged off its lattice position afterwards so nothing marches in lockstep.
+
+Nothing is refused: if every launch point crowds, the least crowded is used anyway. Capacity belongs to the lane cap and the life
+shortener, and losing numbers belongs to nobody.
+
+Text that never moves does not come through here either: a row that rests does it in bands, after travelling once, and a row that holds a
+column is queued by `FctConveyor` instead of placed at all. The evidence for that split is old: the deleted left/right preset's "floating"
+checkbox was free-float placement with nothing moving, measured at **85% of pairs overlapping**.
+
+**Depth is free and sideways is not, so the two axes are searched differently, and that is a learned lesson too.** The first
+version widened both by the same factor — five times the layout's jitter — which is how a hit came to start at the far left border
+of the overlay and sway inland on the way up. The damage column sits at 0.42 of the width, so a ±0.45 throw went off the left edge,
+the clamp pinned it to the wall, and the search scored that wall as an empty gap: measured afterwards, numbers averaged 22% of the
+overlay away from their own column and 7% launched flush against an edge. Healing had the same trap waiting on the right. So depth
+is searched across the whole band, while sideways reach is measured **in widths of the number's own text** — the question "could a
+neighbour sit beside this one?" is about how wide the text is, not how wide the window is — and capped at 0.22 of the overlay
+width. Numbers now average 10–15% from their column, none start at an edge, and overlap is still cut by a factor of four to six.
+
+Final figures for the same measurement, on 980×640: three fountains 58% → **9.2%** of pairs colliding, six held numbers 71% →
+**16.5%**, eight spray numbers 40% → **~10%**, at about 1.5 µs per placement with a full lane live. Held numbers are the worst case
+because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
+and the life shortener are for, not what placement can solve.
+
+### The rail's tempo: one rate per column, stamped where the flight becomes final
+
+MSBT's display areas are rows, not positions: `MIN_VERTICAL_SPACING` is 8 px between them (its columns keep `MIN_HORIZONTAL_SPACING` = 10),
+and that is what people mean when they say the genre "feels tidy" where free-float FCT sprays. Most of the discipline costs no computation:
+every row in a lane shares one scroll rate, so two rows born half a second apart stay half a second of travel apart, on the same curve, for
+their whole lives — the scroll *is* the queue. Split buys that spacing at entry (`FctConveyor`, next section) instead of scoring it.
+
+The part that stayed behind from the scoring days is the **tempo law**, and it survived because it is what makes the queue provable. A rail
+row's life is pure travel — distance over the shared px-per-second — with no rest phase: *travel, then stop at the end of the travel, then fade
+in place* is harmless where numbers land wherever, and fatal for rows moving in single file, because every row ends at the same terminus and a
+column becomes a queue for a parking space. Motion spans the life, so nothing parks, and the fade arrives while the row is still moving.
+
+What a player's correction bought: sharing one *duration* per region is not sharing a speed. Rows of different font sizes travel only a few
+percent apart, so the theory looked sound, and it was measurably wrong on screen — 195.6 px/s for damage against 201.8 for words, side by side
+in neighbouring columns. A lane therefore shares a RATE, not a duration: each row's time is its own travel over the lane's px-per-second
+(`FctIngest.FinalizeRailTempo`), which keeps every chain property (a common rate is exactly what makes birth-time gaps permanent) and makes
+"they all move at the same speed" literally true. Because a row's real travel can be decided late — the pinned edge, a resize — the tempo is
+stamped as an estimate before anything is priced and restamped when the flight becomes final, including on resize: stretching the window buys a
+row more time, not more speed. The conveyor does the same arithmetic once per lane instead of once per row, which is precisely the difference
+between a convoy and a crowd.
+
+### Congestion: press the lane, wait at the mouth, then refuse and count
+
+The complaint arrived as typography, not arithmetic: at raid density a number lands on the *word* under the number above it. The reserve was
+never missing — `TextHeight` has always charged a source line under every labelled row — the problem was throughput: past a column's capacity
+the scorer knowingly accepts the least-bad overlap, and "least-bad" once meant 17 px of value box through somebody's label band. A reserve
+cannot conjure room; only speed or subtraction can. (The genre always knew: MSBT's areas *drop* text when they overflow — its throttle sat
+upstream, but the loss was always there.)
+
+Split answers it structurally now, and every rung is counted (`FctIngest.Accept`'s conveyor branch, `FctConveyor.Ramp`):
+
+1. **The lane presses its own clock.** A lane holds a certain number of rows at the dialled pace — its travel over the pitch it pays at entry —
+   and a lane carrying more than that runs faster, floored at `FctConveyor.PressFloor` (0.45) so even a jam stays readable and clears inside
+   about a second and a half instead of typing on after the fight stopped. Press belongs to the lane; it is copied onto each row for
+   observability (`FctHitState.RailPress`) and one row's acceleration is never another row's, because an odometer that changes speed mid-flight
+   is lying about where it is going.
+2. **Room is bought before the row is visible.** An arrival whose slot has not reached the mouth waits off-column — invisible, still folding
+   duplicates into whatever it will merge with — and the lane carries its turn to the front. Congestion in a column therefore shows up as delay
+   rather than as overlap.
+3. **A full backlog refuses, and says so.** Past `FctConveyor.BacklogCap` the lane cannot promise spacing at its fastest, so the arrival is turned
+   away and counted in `DroppedCount`. The loss is the design, so the loss is visible; identical ticks already folded, categories can be spread
+   over four columns, and the speed dial is a rate rather than a lifetime.
+
+What went with the deleted placement ladder: a birth-time accelerator stamped per row from how many neighbours happened to be on screen (once
+`RailPress` meant *this row's* crowd), one re-thread of a row that still covered a neighbour, and a depth-based "label fence" that charged a
+plunge through a word band more heavily than a side kiss between columns (`LabelBitten`, deleted with the fence). The fence went because a queue cannot plunge
+into itself, not because it failed: measured on a 200-event raid burst it took label bites 7 → 0 and value smears 193 → 1, paid for in counted
+drops — the number that justified making eviction visible in the first place. Placement still prices a deep overlap above a shallow one
+(the worst-overlap term in `FctPlacement.Cost`), which is what the scatter styles have to work with.
+
+### Split's rails are a conveyor: one clock per column, spacing bought at entry
+
+Split is not choreography, it is a ledger: whoever selects it wants to read the column top to bottom and miss nothing. That promise
+covers **both** rails the mode offers — the straight line, and the arc that ships there by default. The shape dial chooses the path up
+the column (a straight climb, or MSBT's bow that leaves the column at its widest point and returns); it does not choose whether the traffic
+is ordered, because a lane you are reading has to keep its spacing. Neither shape can therefore keep the promise by placing rows and giving each its own flight time, which is what the rail
+used to do. A row born into a crowd was given a shorter life than the row in front of it (the per-row accelerator the old placement stamped
+`RailPress` at birth), so it travelled faster, overtook the row ahead, and the two were drawn through each other for the rest of
+the trip — the same pixels at two speeds, which is why the report reads "some numbers move faster than others" rather than
+"overlapping". Repositioning did not help either: `FctPlacement` always answers with the least-bad slot, and a least-bad overlap
+survives the whole flight because nothing re-scores it afterwards.
+
+The genre solved this structurally instead of arithmetically. NAG's scroll areas never position a number at all —
+`.fct-content { display:flex; flex-direction:column }` (renderer.js) makes spacing exact by layout and the stack moves as one unit
+when a line arrives or leaves. MSBT queues rows into an area at one scroll rate with `MIN_VERTICAL_SPACING` between them. Neither
+tool overlaps two numbers to make room, neither speeds up one row on its own, and both let overflow leave the area rather than
+pile up. `FctConveyor` keeps that discipline and makes the loss honest — counted in `DroppedCount`, not clipped off a window edge.
+
+Three rules, and they are the whole design:
+
+1. **One clock per lane.** A lane owns a *phase* in pixels; every row on it sits at (phase − its own birth phase). The distance
+   between two rows is therefore whatever it was at entry, forever, nothing can overtake anything, and "the lane sped up" is one
+   number changing that moves everybody in the same frame. Position comes from the lane rather than from `ageMs`, which is also
+   what lets a congested lane finish a row in half the nominal time without that row blinking out early in mid-column.
+2. **Spacing is bought at entry, once.** A new row pays for its slot behind the last one enrolled: the **taller** of the two, rounded **up** to
+   whole pixels so a scrolling column cannot shimmer by a third of a pixel between frames, which reads as a fault even when every value moves at
+   exactly the right rate. Height is what `FctLayout.TextHeight` answers — a crit's own font, and a source line when the labels are drawn below (see
+   *what a row is* just below) — the same lesson the cell grid learned before it went. There is no line gap on top of that any more. `LaneGapPx` used
+   to add 10 px above the reserve (MSBT's own is 8) and the two together put roughly a fifth of the column in empty air, which is what made four ledger
+   columns scroll while they still had room for the fight: the reserve IS the gap now. It is 1.2 em of leading around glyphs that need about 1.05
+   (`TextHeightFactor`, shortened from the borrowed web value of 1.35), so two neighbours are separated by the slack inside their own boxes, which is real
+   and invisible; the halos that meet between them are translucent blooms brightening a seam rather than numbers hiding numbers. A class that swells on arrival
+   carries that size in its font, so the height it pays for is the height it draws (`FctLayout.TextHeight`). For the
+   uniform column a fight is mostly made of, "taller of the two" *is* one row height: exact line spacing, nothing thrown away.
+3. **Congestion scales the lane, never the row.** Load (on-column + waiting) against what the column can hold gives the lane's
+   accelerator — Little's law again, spent once per column instead of once per row, floored at `FctConveyor.PressFloor` so even a
+   full emergency still reads as text and clears inside about a second and a half. It ramps: fast to speed up (the traffic is
+   already here), five times slower to relax (the load signal is bursty, and a clock that snaps back replays the same burst as a
+   visible stutter), and it is slew-limited as well (`MaxPressStep`, three percent of pace per frame): a lane that lurches looks broken even
+   when its traffic is perfectly spaced, and since the queue behind the mouth holds arrivals anyway, a smooth pickup costs nothing but a
+   slightly later one.
+
+**What a row is tall enough to need.** Where the label sits decides what a row *is*, vertically. With `(source)` drawn under the amount it is
+a second line and must be paid for, or the next value walks into the word under the one above it; drawn beside the amount it shares that
+number's baseline, so the row is exactly as tall as its value and nothing else (`FctLayout.LabelSide`, stamped by the canvas when settings
+load). That is why choosing left or right in the label dropdown pulls every column on screen visibly tighter — and why rows with a source and
+rows without one then share one line pitch instead of alternating wide and narrow down the lane. Uniformity, here, is not cosmetics: it is what
+turns "about evenly spaced" into something a reader can scan.
+
+**A column's spine and its bend are decided for the widest row it can ever draw, not for the row that arrived.** `FctLayout.RailReserve` prices a rail
+against a crit-class number at its dial's size — six of the widest digit with a thousands comma, plus room for a special event's mark — and Spawn places the
+spine so that box fits *and* leaves `ArcBowFrac` of clear room on the side the column bows to; AssignTravel caps the bow by that same reserve rather than by
+the arriving number's own width. Both halves matter, and the second was a bug lived with for a long time: charged per arriving row, a wide crit spends the whole
+column on its own glyphs, finds no room left for an arc, and goes up the screen in a dead straight line while every row around it curves — the loudest number in
+the column being the only one without a shape. Deciding it once per column keeps the odometer honest too (a crit no longer slides inward to suit itself, which
+used to put fifteen pixels between two neighbours' right edges) and gives every row on a lane ONE path, which is what the spacing model has always assumed:
+identical bows cancel when the distance to the next row is measured.
+
+Every row on a lane enters at **one edge** and travels **one distance**, whatever class of number it is: a per-class start — a
+proc's inset from the spawn edge, a slack share off the flight, the depth jitter — spends part of a neighbour's gap before the
+first frame is drawn, and no later arithmetic buys it back. So `FctLayout` takes no inset and rails take no travel slack for a row
+the queue asked for (`Pin`), which is also why capacity per column is a single number rather than an average.
+
+Arrivals that cannot be shown yet **wait behind the mouth** at a negative distance: invisible (`FctMotion` draws nothing before
+the edge), still folding duplicates while they wait — so a DoT barrage costs one row already carrying its count instead of six
+queued ones, and folding happens *before* the queue is consulted, which is what stops "never miss anything" and "stay compact"
+from fighting. Past `BacklogCap` (12 waiting) the lane is genuinely full at its fastest and the next arrival is refused, counted;
+one column can therefore hold about 24 numbers (on it + queued) before anything is lost.
+
+**Legibility on this rail is measured in distance, not duration.** A row is at full strength for all but the last
+`ConveyorFadeOutFrac` of its own flight and fades over that slice alone — a fixed number of rail pixels whatever the lane's pace —
+with the first 24 px eased as an arrival rather than a pop. The crit's collapse shares that window, so a crit that queued for a
+moment cannot arrive already shrunk and dying in the middle of the column. Fading by age was the old cost: on a lane whose flight
+length congestion dictates, it made the tail of every number vanish while the number was still sitting in the middle of the
+screen, in the one mode chosen in order to read.
+
+**One train per column.** The queue is keyed by column *and* travel sign, so two categories pointed at the same column with the
+same direction are one queue on purpose (that is what "heals in my damage's column" means to a rail), while opposite directions
+through one queue are refused twice over: the settings panel cannot offer them (`FctConfigState.LaneAvailable` greys the choice,
+`ResolveLaneConflicts` re-homes a hand-written `settings.ini`, priority my damage → taken → heals), and the stage itself
+normalises direction for anything sharing a lane, so even a dial turned mid-fight cannot lay two trains over one set of pixels.
+Words ride their own side's queue — an attack that failed is a row of that column, not a separate queue to dodge around — drawn
+one point smaller (`FctStyle.WordSizeStepPt`).
+
+The arithmetic of a lane (640 px column, default dial ≈ 4.4 ms per pixel, ~50 px pitch): one row every ~219 ms at the configured
+tempo, so **≈ 4.5 rows/s per column**, rising to ≈ 10 rows/s at the floor; four columns is 18–40/s before anything is turned away.
+Steady solo traffic on one column — a swing every 1.2–1.9 s plus DoT ticks and words, ≈ 4 events/s — sits at or under capacity: no
+loss, backlog peaking at two rows, press dipping to ~0.75 for a moment and relaxing back. What *does* drop is a spike arriving
+faster than the column can physically separate at its fastest — more than about 24 rows landing in the same frames — which is the
+case MSBT answers by letting text leave the area, and this overlay answers with a counted number instead of silence. If that count
+moves: identical ticks already fold themselves, categories can be spread over the four columns, and the speed dial scales the whole
+lane (it is a rate, not a lifetime).
+
+Fountain, spray and freeze keep the scatter and its congestion ladder above — those styles are an event to watch,
+not a column to read, and `UseConveyor` deliberately restricts the queue to split's rails — arc and line alike, since the dial there
+chooses a path and not a discipline (bands degrade rails to freeze, so there is nothing to catch there). Read `FctConveyorTest` for the invariants as assertions: one rate per frame per lane, gaps that never
+change, no pair on a column ever closer than the taller of the two, folded-while-queued duplicates, ordered drain, counted refusal.
+
+### The odometer: values hang their right edge on the rail
+
+A column of centre-anchored numbers is a column whose ones digits jog: 950 centres its three glyphs where 12,040
+centres six, and spam reads as ragged confetti. Mik ships the answer as an option — per-area text alignment, and
+right-justify is what damage columns actually use — and this overlay ships it the same way everyone who uses MSBT
+ends up configuring it: **on, permanently, with no knob**. `FctMotion.ArcedX` interprets a travelling row's spine
+(`X0 + lateral`) as the value's **right edge**: every row in a lane keeps the same right edge at rest and under every
+fold's width change, and centres sit wherever their own widths put them — new digits extend the number, they do not
+shift it. The crit blowout's scale animation is the one exception, anchored at the **centre** rather than the rail:
+pinning the edge through an animated scale made a dying crit walk sideways toward its rail as it collapsed (up-and-
+RIGHT on a straight line, while every ordinary row rose straight), and the genre anchors pops at the text's centre for
+this reason. Since the blowout envelope never exceeds 1.0, a centred collapse can only tuck the drawn box further
+inside the rail — the flush edge survives every frame of it.
+
+
+The rail itself is placed for **the widest amount the lane can roll** (`FctLayout.RailReserve`: crit-class digits at
+the crit's own size, plus a mark's room) rather than for the row being spawned. A spine derived from each row's own
+width is not one spine: `9` would sit where `18.3m` cannot, and the column would move under every number that landed.
+The same reasoning excludes a row's *words* from the arithmetic — see the next section — and the reservation covers
+both rail shapes, not just the bowing one, because alignment does not care which path a number takes up its column.
+Where a region cannot offer a spine and a bend at once, containment wins and every row on that column bows equally
+less, which is a flatter curve rather than a broken one.
+
+The same discipline reads vertically, and it is stated here because the two axes differ on purpose: a row is anchored by its OWN
+height, so every row of a lane enters at one *edge* while their Y0 values legitimately differ. A crit starts lower and a short word
+starts higher, and both rest on the same line — measured at 632.00 for crit, ordinary hit, proc and word alike, with each row's
+travel plus its height equal to that same number. Height is meaning, so it is not flattened to make a field comparison convenient;
+what belongs to the lane is the mouth and the run. The tests assert edges rather than Y0, which is also a note on where an assertion
+is written: one aimed at the wrong field will report a fault in a layout that is correct, and this one did.
+
+The alignment is geometry, not a draw trick, because placement collision is geometry: `FctPlacement.Block` scores the
+same right-anchored box (`Block` scales its half-width around `ArcedX`'s centre, so scoring and drawing agree to the bit),
+the spawn clamp reserves its margin on the left, and the arc's bow budget measures the full hang (above). Two
+small costs were accepted with measurement: an artificially-over-capacity half grazes to ~30% of a block instead of
+25% (the label tests pin the new ceiling — right-alignment is worth half a column of squeeze), and deep-entry line
+rows price their sideways valve off full widths too. Words align like numbers ("miss", "resist"), so a lane reads as
+one flush ledger, labels included.
+
+### The row is wider than its number: labels measured, names trimmed to fit
+
+Every horizontal clamp in the overlay charged for the *digits*, which was true of the arrangement that existed when they were written — the
+label underneath, inside the reserve TextHeight already pays for. Making labels sit beside their amounts broke that quietly: DrawHit paints a
+second string at an offset out from the number, and nothing had ever measured it, so a "(Complete Heal)" reached past the column boundary into
+its neighbour. The genre cannot make that mistake. NAG's inline label is another span in the same flex line as its damage number
+(renderer.js), so the row grows to hold it and the layout moves everything else out of the way; MSBT stamps one text object per line, so a
+line is exactly as wide as what it stamped. Both reserve what they draw. Ours drew into room that had never been asked for.
+
+`FctLayout.BlockFromRail` is where the drawn block is defined, once: the value's box at the size it draws, the special-event glyph hanging outside its
+left edge, and the source label wherever the label side put it. Everything that tests a row against a wall charges these numbers — `Spawn`'s clamp,
+`ArcedX`'s per-frame clamp (the resize safety net, so it is the one that really matters), and the arc's bow budget. Reading the same block about the
+value's *centre* rather than its rail is a question only the tests still ask: row-against-row spacing went with the deleted stream, whose placement scorer
+was the last production caller of it, and the conveyor spaces a column by time rather than by measured width. The reach is deliberately asymmetric because
+the odometer above makes it so: with the rail being the value's *right* edge, a label on the left deepens a reach that side already had, while a label on the
+right opens one the row did not have at all. Each label side is translated on its own terms, and the case that matters most is the one
+that was got wrong first: a second line is centred under its **amount**, whose centre sits half a width left of the rail, so it overhangs the
+value's own edges by half the difference — not the rail's. Charging `words/2` against the rail instead asked a long spell name for 86 px of
+clearance and `"(Crush)"` for none, which is how a crit came to be drawn 46 px away from the hits under it, out of line with the column it was
+supposed to flush every number in. A centred word line is also charged against the column boundary but *not* against the spacing between rows,
+whose vertical reserve already covers it; charging it twice would make rows braid into neighbouring columns to dodge words that were never in
+their way.
+
+**Words never place the spine.** The rail a number hangs on comes from the widest amount the lane can roll (above), and a label — which belongs
+to its own row, while two rows in one column routinely carry different ones — gets whatever the spine leaves over. `FitSource` asks for that
+budget per side of the rail rather than as a total for the region, because that is where each label side draws: an inline label cannot borrow from
+the hand it is not drawn in, while a centred line may reach past its amount on either side. The measured consequence is worth choosing a setting
+on, at default fonts in a 1280 px overlay: about **twenty-three characters** of a name below the number against about **ten** beside it, since
+beside shares one line with the amount while below spends both halves of the column. Height runs the other way — 41 px a row beside, 66 px below —
+so inline columns hold roughly sixty percent more numbers at once. Neither arrangement is better; they trade the same pixels.
+
+A name that does not fit its column is shortened, and only then (`FctLayout.FitSource`). Two bounds do the work: `MaxSourceChars` — forty, which is as long
+as a name gets to be and nothing more (raised from thirty once the first-run size stopped being a guess at a small screen: a ceiling sitting below what the
+layout can pay for is one more way to cut a name that was in nobody's way) — and whatever width survives after the amount itself. Nothing is trimmed
+that fits, so the same name survives whole at a smaller font or in a wider window; nothing is cut below three letters, where an ellipsis would
+cost more than the name it replaces and "(...)" names nobody. Two more small things came out of the same complaint: a cut that lands on a space or a comma
+walks back to the last real character, because "(Champion of …)" reads as a typo rather than as an ending being withheld; and the space between an amount and
+its bracket came down from half a source font to a third (`LabelGapFrac`), prose spacing being wasteful between a number and a parenthetical that opens with
+a bracket to say where it starts. Two measurers take the same decision at different moments — an estimate at spawn,
+before any font exists, and the real glyphs in `RebuildGlyphs`, whose answer is what the player reads — and because the *full* source stays on
+the hit, the decision is re-taken whenever the room changes: a resize marks the text dirty (widen the window and a trimmed name comes back), and
+so does switching label side, since left, right and below leave different amounts of column behind.
+
+Seeding that estimate surfaced an ordering bug worth naming: `FctIngest` stamped `ValueWidth` *after* calling `Spawn`, so every number in the
+history of this overlay was placed against a zero-width block and only the per-frame draw clamp ever caught up — a candidate scored as occupying
+a tenth of the room it would actually take. The estimate now precedes placement, which is also the point at which the label's room exists.
+### Two states: numbers only, or configuring
+
+Locked is not a setting — it is what the overlay *is*. It opens locked, it is played with locked, and it has no header: while locked
+the controls row is hidden, the panel background and border are transparent, the resize bands are gone, and clicks pass through to
+EverQuest. What is on the screen is damage numbers and nothing else.
+
+That last part was a defect hiding inside a feature. The header (`FCT`, motion combo, a "lock (click-through)" checkbox, a
+sentence-long hint, stats) and a dark rounded panel used to paint in both states, over the middle of the game view — furniture nobody
+asked to look at while fighting, on a window whose whole job is to be out of the way. Making it numbers-only was not a cosmetics pass.
+The row that remains got read for clutter at the same time: the hint sentence and the `motion` label in front of a combo that can only
+be a motion combo are gone, and so is the checkbox — see below.
+
+**Configuration is entered deliberately from the app menu** (View → Floating Combat Text → Setup). Not from a button on the overlay: this
+window lives where the player is looking, and the Damage Meter gets away with an on-window toolbar because you park that in a corner.
+The hidden header keeps its height rather than collapsing, so entering configure mode cannot move a single number — the moment you are
+positioning them is precisely when the layout must not shift.
+
+**Save is what writes**, and **Cancel is the way out without writing**. Both sit at the right end of the configure row, stacked because there is no
+width to spare. Leaving without saving is a normal way to finish a look around — you came to see what the dials do, not to change them — and for a while
+the only way to do that was a sentence printed on the panel explaining the Esc key, which described the ordinary exit as the absence of an action. A
+button that says "Cancel" beside one that says "Save" removes the sentence and the reading — and then **Esc left too**: if the buttons are labeled,
+a key with no label on screen should not be a third exit, silent about whether it saved or discarded whatever was staged. Setup clicked again from the
+menu still backs out, and every one of those paths puts back whatever was
+saved before, because abandoning a configuration session is not the same gesture as approving one. The motion combo previews live (the next numbers use
+the new style) and writes nothing, so trying a style costs a click and un-trying it costs nothing.
+
+That replaces a "lock (click-through)" checkbox, which was never about locking. It was the only way out of configure mode wearing a
+side effect as its label, so the player who clicked it to finish got their mouse taken away and no way to notice they had also not
+saved anything. A button that says what happens is worth more than a toggle that guesses. Placement is the one thing saved without
+being asked: geometry is written when a drag or resize is released, because where you left the window is never ambiguous.
+
+Lock state is deliberately **not persisted**. A saved "unlocked" is a state that outlives the session it was meant for: next launch,
+the overlay is an invisible rectangle eating clicks over the game, and the player's only diagnosis is that the UI feels haunted. Same
+reasoning retired `FctOverlayLocked` outright rather than defaulting it to true — inert in existing settings.ini files, like every
+other retired key here.
+
+### Two dials and a short loop: what configuring is for
+
+A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries two
+dials — **size** and **speed** — the size ones ±75 % and speed ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
+is three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed underneath — **with its own percent sign**,
+because a bare 50 next to a slider reads like a count of something. That shape is about room. The row started as one line with each number read out
+beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout that grows sideways runs out of window at some
+width somebody chose — so the numbers moved below, where they cost nothing, and another dial can be added beside them. The marks carry the size rather
+than the labels because they are what you consult while a thumb is moving. Nothing gets a row to itself: the direction legend (`↑ yours ↓ on you`) sits
+on that same bottom line rather than underneath everything, which is why the header is about 60 px and not three bands of it. Everything wraps: a narrow
+overlay drops the speed dial under the size dial, never a button off the edge.
+
+**The second dial is speed, not time — it used to be called time, and it ran backwards.** A control labelled "time" whose right-hand end makes numbers
+appear and clear sooner is a control whose label fights the gesture, and that was reported by a player rather than noticed in review. So it says speed,
+bigger and faster at the right, and stores `FctOverlaySpeed`. What it is *measured in* is percent of how long a number stays up: **+50 % takes half as
+long on screen, −50 % lasts half again as long**, and the middle is nothing. Naming it speed and measuring it in time are two different things and both
+were needed — the name is for the gesture, the unit is for the eye, and the inversion lives in one function (`FctScale.TimeFromPercent`) so that nothing
+downstream holds a reciprocal in its head. `FctScale.Time` stays exactly what `FctIngest` has always multiplied: how long a number lives, travels and
+fades.
+
+**Both dials centre on their default now, and getting there moved the middle of this one.** It used to run −30 % to +90 % of a tempo — asymmetric because
+playing with the feature said the usable band sat faster than the measured baseline (twice as long on screen is unplayable; half again as fast was not
+enough) — and an asymmetric dial cannot be parked by feel. So the centre became the midpoint of that band's two *results*: numbers lived 1.24× as long at
+one end and 0.51× at the other, and halfway between those is `TimeDefault = 0.877` of the measured time — about 1.14× the tempo, which is all but the pace
+the dial had already settled on shipping at. ±50 % of that gives 0.44× at the fast end (past where the old dial stopped) and 1.32× at the slow (nowhere
+near the twice-as-long nobody can fight under). The shape of the usable band survived; it just moved out of two asymmetric ends and into one number.
+Re-scaling choreography, layout budgets and the adaptive controller to make that the new 1.0 would have been the same opinion with forty constants in it,
+plus re-measuring everything measured at 1.0.
+
+Size is ±75 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
+lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextHeight`, the adaptive lifetime under load. Past one-and-a-half in
+either direction that stops describing the feature comfortably: damage and healing columns begin to occupy each other at ordinary window sizes, so the last
+quarter of each dial is for wide overlays rather than a mistake. Values saved while the ceiling was lower stay legal, which is why opening it wider needed no
+migration.
+
+**Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Text size* sizes every ordinary number; *crit size* sizes the big
+class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both are percent of the measured
+baseline over the same ±75 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
+why it has no hidden parts. Version one kept a fixed 40 px crit tier above every lane: parked both dials mid and crits stood clearly bigger than normal hits, so
+the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the text dial* — honest parity at 0 %, but stacked:
+font × dial × the pop's 1.3 hold, and setting the crit slider to its floor still produced numbers thirty percent over the neighbors, because the multiplication was
+hiding in choreography no label mentioned. Both failures are the same failure — **a size that more than one control can reach is not a size you can set** — and the
+class rule closes it from both ends: each class has exactly one dial, and `FctStyle.ApplyTo` is where that dial meets the font, once, at birth. In particular the
+blowout no longer scales anything: it swells *in from below* full size (arrival reads as growth), rests at exactly 1.0, and
+collapses out through the tail — emphasis that cannot lie because it cannot multiply. What a 0 % crit keeps is everything that was never size: the halo, the orange,
+the top draw pass, the fold immunity; and pulled to its −75 % floor it is a quarter-size, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
+
+**Sample data has a checkbox, on by default.** The scripted loop is the reason configure mode teaches anything, but there is a second thing people do in
+configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples
+can be switched off next to the speed dial. It is a view aid for the session rather than a setting — nothing writes it, and setup opens with them back on,
+because the next time somebody opens this panel they almost certainly want to see what a dial does again.
+
+**"Threshold" is a number you type.** The label reads *threshold*, MSBT's own word (`damageThreshold`, off by default like theirs); it
+briefly shipped as "hide below", which described the effect but sat in a panel of nouns as a verb phrase and never matched what players
+call the thing. The gate stops drawing
+*damage numbers* at or below its value. It began as a six-rung combo — off, 250, 500, 1k, 2k, 5k — because a dropdown cannot offer
+eighty positions; the panel now carries the trigger grid's numeric spinner instead, and every whole number from zero to just under
+ten million is a legitimate opinion, so the ladder is gone and loading no longer snaps: a stored 300 means 300. Heals and the zero-damage words are exempt by design: they are information,
+not volume, and hiding the fact that you are being resisted because the number beside it happened to be small is exactly the surprise
+this control must not produce; crits are not exempt, because a small crit is still small noise. Nothing this hides goes quietly — the
+stats read `… · 37 hidden` beside the drop count when nonzero, one number per reason text does not appear: "dropped" is the
+overlay out of room, "hidden" is the player's own filter working. The gate sits at the top of `FctIngest.Accept`, before folding, so a
+hidden tick never inflates an `×N` count that nobody saw anyway. It persists as `FctOverlayThreshold`, and values outside zero…9,999,999
+come back **clamped**: a spinner can only promise the range it draws, because a filter that works while its control lies about it is
+two bugs for the price of one.
+
+Both are applied **where a number is born**, never while it is on screen: size in `FctStyle.ApplyTo`, speed in `FctIngest.AssignLifetime`. That is not
+tidiness — it is the reason dragging a dial cannot tug at text already in flight. Motion is a pure function of (hit, age), so a number whose size or
+timing changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the bug class layout exists to prevent. Two consequences
+worth stating: changing size leaves everything currently flying at the old size until it fades, and speed moves `LifetimeMs`, `MotionMs` **and**
+`FadeMs` together, because scaling only the lifetime leaves a number hanging in mid-air at the old animation speed, which reads as a stutter rather
+than as a slower overlay. Floors hold underneath — never below 900 ms of life or 200 ms of fade — so the fast end compounded on top of what
+`FctLifeController` does under raid load makes numbers quick rather than flickering.
+
+**A short scripted loop plays while configure mode is up**, because hovering a slider in a game overlay would otherwise mean waiting for combat
+to produce one of each type on demand:
+
+```csharp
+foreach (var hit in _demo.Hits)   // FctDemo: about twenty events over twelve seconds
+```
+
+Melee swings, a crit or two, a spell damage-over-time ticking the same amount three times so it folds into `412 ×3`, a proc, healing received
+(including a crit heal), a hit landing on you, and the zero-damage words — the things a player has to be able to tell apart, arriving in roughly
+the order a fight sends them. Still frames were built first and were wrong: five exhibits pinned to a board cannot show tempo at all, and the row
+looked like a diagram of the overlay instead of the overlay.
+
+It runs through a **private `FctIngest` into a private list**, not the overlay's. Same choreography — style, band, travel, folding, placement,
+adaptive lifetime — and the same text building, which is why dragging either dial shows up in the numbers as they land. Separate rather than
+shared because the real ingest owns the counters: folding a demo number into a live one, or counting a demo drop as lost data, would put the demo
+inside the data. `ActiveCount` and every loss counter stay honest, and a real number that arrives while configuring behaves exactly as it always
+has — drawn after the demo, so on top of it.
+
+The script's vocabulary is EverQuest's own, and that is a checked claim rather than an impression: melee verbs are the parser's
+(`StatsUtil.RegularMeleeTypes`, in the base form `FctManager.DisplaySource` prints — "Bite", not "Bites"), spell names appear in the shipped
+`data/spells.txt`, proc names in `data/procs.txt`, and the words are `Labels` constants so they cannot drift from what the parser assigns.
+Invented vocabulary — an early draft said "Backhand" — teaches a player to expect text that never appears. `FctDemoTest` asserts every name in the
+script against those files.
+
+Scheduling carries one promise: the last cue lands 7.15 s into a 12 s cycle, so every number has launched, travelled, held and faded before the
+loop restarts. A cycle that cleared live text at the seam would look like the overlay truncates fades, which reads as a bug in the feature rather than
+as a loop. The four quiet seconds at the end are also what makes it legible as a loop instead of as noise.
+
+Changing any control **restarts the loop from its first cue** (`FctSkiaCanvas.RestartDemo`), on release rather than while a thumb is still being
+dragged — restarting mid-drag would blank the very thing being watched, and waiting up to twelve seconds for a cycle to come round to the part where
+the change is visible is not an effect anybody can see. Only demo numbers are cleared; a real number that lands while configuring behaves as it always
+has, because configure mode never touches play.
+
+And like the controls, the demo starts with configure mode and stops with it — unlike static exhibits, an un-stopped loop keeps asking for frames,
+which a window you are fighting in should not spend.
+
+The panel is neutral and translucent: `#3A000000` — about 23 % black — with a hairline brighter than its own fill (`#99FFFFFF`) so the frame stays
+findable against snow or other bright ground, plus grey-white labels. It was blue steel (`#5C7A99` on `#0D131A`) over an 80 % black wall, then 45 %:
+the app's palette has no blue in it, so framed in steel blue the overlay read as somebody else's addon pasted on top, and either opacity hid exactly
+what the numbers are being positioned against. Configure mode is spent looking *through* this panel at the game, which is the reference for where a
+column of numbers should sit; the fill exists only to lift the labels off a bright background, so it is now barely there. While locked nothing at all is
+drawn behind the numbers. The numbers keep their colours; those are the vocabulary (§Colour answers "what", never "who") and only the furniture around
+them changed.
+
+Type on the configure row comes from the app's own font setting (`ThemeConfig.CurrentFontSize`, arriving in markup through `EQContentSize`) rather
+than from a size this window chose for itself, which was 12 px throughout — small print sitting over a game whose interface the player had already set
+to 13 pt or larger. Labels sit two steps above the base and the `-`/`+` marks seven, re-applied on each entry into configure mode so changing the font
+size in Settings needs no restart. The numbers themselves are deliberately *not* sized from the theme: they have their own scale (`FctStyle`), because
+combat text has to stay readable at a glance across a whole screen of HUD, and 13 pt of damage is illegible while 13 pt of menu text is correct.
+
+### Under View, beside the Damage Meter, behaving like it
+
+**The first time the feature is switched on, it opens on its controls.** Every default here is defensible and every one of them is this build's opinion,
+and an overlay that appears with numbers already moving keeps a player from learning that size, speed and motion are theirs to set. The demo loop shows
+all three within a couple of seconds, so enabling enters configure mode until somebody has pressed Save once — recorded as `FctOverlayConfigured`,
+written by Save alone. Cancel deliberately does *not* set it: backing out means "not today", and the offer comes back next time rather than a choice
+being forced on somebody who looked and decided. One trap lived exactly here, and deleting the `FctOverlay*` keys to re-test the first run walked
+straight into it: WPF refuses to make a window that has **never been shown** anybody's Owner, and unlock builds the settings window immediately —
+the offer used to fire before `Show()`, so a setting-less first enable died inside `EnsureSettings`. The ordering rule is now stated where it bites:
+show first, then unlock; and ownership of the panel is claimed at show-time via `PresentationSource.FromVisual` (WPF has no "has ever been shown" —
+`Hide` is as loadable as `Show` — and `ContentRendered` can lag `Show()`), so no entry path can repeat the crash.
+
+`View → Floating Combat Text` offers **Enable Floating Combat Text** (reading **Disable FCT** once running — the menu is already spelled out above, and an
+item that repeats it is a sentence), **Reset Position**, **Setup** — the same three shapes as `View → Damage Meter` two rows
+above it, using this app's convention for menu state (a check icon plus an Enable/Disable header, not a checkable item) because an
+overlay filed in a different menu with different mechanics is something players have to learn twice. Nothing FCT-related sits under
+Tools any more; the render simulation that used to live there is a development tool and starts from the command line (`/fctsim`), so a released
+build can still be measured where it misbehaves without shipping menu clutter. It took a backend argument while there were two renderers to compare.
+
+**Reset Position** closes the overlay, forgets `FctOverlayLeft/Top/Width/Height`, and rebuilds it only if it was on screen. Rebuilding
+rather than moving is deliberate: the shipped size and the centring live in one place (`RestoreSettings`), and a reset that merely
+carried the current window elsewhere would leave behind the stored size that caused the problem. The order matters too — a closing
+overlay writes where it was, so the forgetting has to happen after the close.
+
+Which connects to the reason a stored position is now validated at all. A chromeless, click-through window that lands off-screen —
+because the monitor it lived on was unplugged — is not an annoyance but a feature that silently stopped existing, with no title bar to
+drag it back by. So restored geometry must keep a quarter of its area on the desktop, the same rule `App` applies to the main window,
+measured in DIPs against `SystemParameters.VirtualScreen*` rather than `Screen.WorkingArea`, which is device pixels and drifts at any
+scaling that is not 100%. A negative `Left` — a display sitting left of primary, which the old check rejected as "unset" — is
+legitimate and passes. Resizing is bounded by the desktop for the same reason instead of by the primary monitor's work area.
+
+### Drag an edge to resize, and it lands on a size that works
+
+A transparent, chromeless window gets no resize frame from Windows, and the middle of the overlay belongs to the numbers — so the
+grip is a 12 px band along each edge: corners size both axes, edges size one. The bands are collapsed while locked, because a
+window whose clicks pass through to EverQuest must not offer anything to click, and the header's top inset was raised past them so
+no control sits where a drag for size starts.
+
+Moving it is not a treasure hunt either: while configuring, any press that no control and no resize band took moves the window. The
+header used to be the only draggable band, which meant hunting for twelve pixels of chrome while a number floated past where you were
+aiming. Controls keep their own clicks because a combo or button handles the press before it bubbles, and locked removes the whole
+question by making the window click-through.
+
+A resize is **free** (`FctResize`): the drag lands exactly where the hand stops it, each axis clamped only to the screen and to
+420×300, the smallest size probed — every style still places every number inside the window and clear of the protected strip
+there, and below it a band is shallower than a line of text. It used to settle drags onto a short list of offered sizes (a "magnet,
+not a menu"); that was deleted because it made resizing jump, and the setup panel's position fields can name any size exactly
+anyway.
+
+The default started at 980×640, came down to **800×560** as what most people need over a HUD, went back up to 1280×720 when the source labels turned out
+to be the thing being paid for, and is now **not a size at all**: a first run asks for 65% × 60% of the desktop's work area, floored at that same
+1280×720 - which on a common desktop IS the floor, with wider monitors scaling past it
+(`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. The shipped split spread books two categories on one side
+and one on the other, so the halves do not share the same room: the solo outgoing-damage column owns its whole half (lanes tile their half, above) — 640 px
+at the first-run width, past the label ceiling once its own number is out of the way, where a name's length rather than the window decides what gets cut,
+and more on wider monitors — while the two left-hand categories split their half in quarters, comfortable for the default below-label seat and modest
+for an inline one. Nothing else in the
+layout moves a name's length nearly that directly, so the one setting that really decides how
+much of the screen belongs to the game also decides how much of a name a player can read — and it should answer to the monitor rather than to a number
+chosen when the layout was new. The share stops short of the whole work area on purpose (raid frames and buff lines live on those edges, and an overlay
+that begins by covering everything teaches the player to shrink it), Fit() still clamps the request to what the desktop has, and a saved size always wins:
+a first-run guess is not something to keep coming back for. What the narrow sizes cost is measured and unchanged: worst-instant pair overlap
+size (worst-instant pair overlap): fountain 3-in-flight 7.5% → 6.7%, spray 8-in-flight 8.3% → 7.7% — free of charge — while **six
+numbers held at once goes 15.5% → 20.7%**. Held text is the one thing that cannot trade space for motion, so it pays for the narrower
+window; everything else does not.
+
+**Numbers already flying move with the window.** Motion is a pure function of `(hit, age)` with no canvas argument: bands, side
+bounds, travel and the pitch a lane pays are pixels baked at spawn, so a resize that touches nothing leaves them drawing where the old
+window used to be. Probed at 980×640 → 620×400: **10 of 15** held numbers drawn outside the overlay and 4 more sitting in the protected
+strip. It healed itself as hits expired, which is a way of being wrong politely, not a fix. So `FctResize.Rescale` maps them: free text by
+the ratio of each axis (a thrown number keeps its shape relative to the window it is thrown in), a queued row's tempo re-derived from its
+new flight (`FctIngest.FinalizeRailTempo`, which is why stretching a window buys a row more time rather than more speed), and bands plus
+column bounds are re-derived from the new size by the same function `Spawn` uses, never scaled approximately. Nowhere
+above is off-screen or in the strip any more, at 620×400, 1400×900 and at the floor.
+
+Fonts are deliberately not scaled: how big a number is drawn is a style decision, not a layout one. A smaller window therefore means
+less room per number, which is absorbed by the lane cap and the life shortener — the mechanism that already decides how many numbers
+fit — rather than by type nobody can read at arm's length.
+
+### Colour answers "what", never "who"
+
+`FctStyle` used to paint the successful-defence lane blue, which put direction on colour — and blue in particular
+reads as mana, arcane damage or a friendly nameplate to anyone arriving from another MMO, so it was a wrong sign on
+top of a redundant one. Nothing is blue now: yellow dealt / deep-orange crit / red taken / green heals, with crit's
+hue pushed *deeper* than dealt damage rather than brighter (at 1.3× scale plus the pop, a light orange and the yellow
+it must stand apart from converge). The zero-damage labels are hueless — all of them ONE pale now: the former trio
+(a defence that worked, my own whiff, an amber `Invulnerable`/`Absorb` shout) merged into a single `Words` colour, because
+at overlay distance the WORD already spells out which defence happened and the one ranking still worth encoding lives in
+SIZE — loud words keep their taller tier, they just no longer shout in gold. The source line went neutral grey for the
+same reason: it must not compete with a value colour for meaning.
+
+That table is advice now rather than law, because the hues moved in: the settings window's COLOR section holds seven
+pickers — **damage out, damage in, heals, crits, special, events** (the zero-damage words: block, miss, dodge, all of
+them one hue) **and labels**, named by what the number is rather than by engine vocabulary, and deliberately without
+per-row reset arrows: Cancel returns every hue, and the pickers keep their own recent-colour memory. The hues joined the
+engine's dial family as `FctPalette`, process globals seeded from these constants and applied by the same staged-settings
+path as sizes and speed, so the old promises ride unchanged: a picked colour wears the NEXT spawned number, mid-flight
+rows keep theirs, and only Save remembers (`FctOverlayColor*` keys, eight uppercase hex digits; `#` and a dropped alpha
+survive hand-editing, nonsense lands on shipped and never on the canvas). What stays unfree is small: the crit halo's
+warmth still follows `ColorWarms`, and per-word hues stay unoffered until the seven are ironed out.
+
+Healing values additionally wear a **leading plus** ("+9,409", "+12.5k ×3") — a fifth channel that costs one glyph. It
+exists for the readers colour is already failing: red/green separation is what roughly one man in twelve cannot do at a
+glance, and for them a heal in either band is otherwise readable only by position. The sign follows the value through a fold and survives crit pooling (`FctHitState.Heal` is captured from the producing
+lane, before a heal crit lands on `FctLane.Crit`, where its lane no longer says it was a heal).
+
+Lane capacity is two-layered on purpose: `FctLifeController.Capacity` (5–7) is the *target* the adaptive lifetime
+aims at, and `FctIngest`'s hard cap (12 per lane) is the backstop for burst windows. The backstop folds a repeat into a live
+number before it drops anything, so overload compresses the display instead of eating damage. The age rules are about
+readability now rather than correctness: a fold needs a target that is under 2.5 s old *and* has 40% of its life left, so a
+count never lands on something already fading out — which matters more than it sounds, because a number that gains a "×3" as
+its opacity drops reads as a glitch. Crits refuse to fold outright: each one is the event, and a crit number standing for
+several hits is misleading, so crit overload is the case where `DroppedCount` actually moves. `FctIngestTest` pins both
+halves — 40 identical hits into one lane leave every one of them counted on screen with zero drops, and none of the numbers
+any bigger than a single hit — and 20 crits into a capped crit lane report 8 counted drops.
+
+Folding used to follow NAG's median idea instead: `FctMedianTracker` kept a rolling window per lane and a direct hit under half
+the lane's median was treated as routine noise and poured into whatever live number shared its lane. That is gone, and it went
+with summation rather than alongside it — the median answered "when is it acceptable to add this amount to somebody else's
+number", and once a fold can only collapse identical values there is nothing left to permit. It also refused the case players
+actually ask about: two 2,040s sit *at* the median of a lane that deals 2,040s, so the repeat was shown as a second number
+while five identical DoT ticks merged happily. (`periodic` DoT/HoT ticks still always fold; healing never does.) Reintroducing
+a threshold means bringing the tracker back — see the counted-ignore-tier idea in `local/fct-implementation.md` §12 F4, which
+is where a median-relative cut belongs, because it discards on purpose and has to say so.
+
+### Text sizes, and the reserve they imply
+
+The first pass used web-scale type, and every tier went up by at least two points once it was looked at how it is
+actually read: across a game window, in peripheral vision, while moving (`FctStyle`: dealt 34 / taken 32 / healing 28 /
+crit 40 / labels 24 / smallest numeric tier 23). The *ratios* were sound from the start, so treat an absolute size as a
+presentation decision and a ratio as a design one.
+
+Bigger type also made an existing bug impossible to miss: `FctHitState.Y0` is the **top** of the value text, and layouts
+that reserved one em ran descenders and the entire source line off the bottom of the overlay — permanently, because
+incoming hits travel downwards and spend their last seconds against the bottom edge. Every vertical bound now reserves
+`FctLayout.TextHeight(hit)`: value height (`TextHeightFactor`), plus the source line's height when the hit carries one,
+and nothing else: no shipped style draws above its measured font (the crit class carries its size in the font and swells in from below), so
+this is a leading factor rather than a peak-scale envelope. It is a factor rather than measured glyph metrics for the same reason
+`EstimateTextWidth` exists: bands are computed at spawn, before any backend has built text. `FctLayoutTest`
+pins it in both region schemes, with a source line present and at crit scale.
+
+### Procs are subordinate by tempo and row, never by size
+
+A proc is not the number anybody aimed at: item and spell procs fire on their own schedule, several times a pull, arriving
+on top of the swing or cast whose timing the player is reading. The first answer was to shrink them — `ProcSizeFrac`, 0.78,
+turning 34 into about 27 — and looking at it again that was the wrong instrument. A smaller glyph says *this is less important
+information*, which is true of a DoT tick and false of a proc: the proc did real damage with its own name on it. What actually
+separates the two streams is **when and where**, not how big — so procs wear their lane's full size, and subordination is left
+to the two rules that read as urgency rather than as rank: a shorter tempo, and a different row.
+
+The split of size into two dials is what made the reduction visible for what it was. Once the panel asked for *text size* beside a new
+*crit size*, "0.78 × normal" became an answer to a question the player never asked — there is no proc dial, and could not be, so
+a hidden per-kind multiplier was a fourth dial in nobody's settings.
+
+Row does the separating that size used to claim: procs also start in a different row of
+their band: `FctLayout.ProcInsetFrac` (0.15) moves them further *out* from the protected strip — my procs higher up, procs
+landing on me lower down — so the two occupy different rows of the same band and the eye can ignore one while reading the
+other. Being a share of band depth it is clamped by the band ends, so a small overlay loses separation before it loses text;
+a test stacks every combination on a 420×300 canvas to keep that true.
+`FctMotion.ProcTimeFrac` (0.7) then shortens the **whole** tempo rather than only its tail - travel, hold and fade
+together - so a proc is gone shortly after the hit that provoked it instead of hanging there while that hit fades away.
+A choreographed style scales as a unit for the same reason: shortening its life without its motion would run the arc
+in slow motion. Where the style IS a shared rail though, the discount stops: on arc and straight a proc crosses at
+exactly its lane's beat, because there the common rate is the whole reading instrument and "same speed as the column"
+outweighs "gone sooner" - split mode treats a proc as an ordinary value (measured: one scroll rate for hits, procs and
+words alike, whatever the font). Fountain keeps the full tempo discount, which is where quick reads as spam exactly the way
+the log's own noise should.
+
+A crit proc still takes no tempo discount: `FctIngest.ApplyProcTempo` tests `Blowout`, because a proc crit is the biggest single
+number in the log and running the loudest event on the shortest clock would waste the pop. The old "no shrinking a crit proc"
+carve-out went with the size rule itself — there is nothing left to exempt — and the test that pinned it now asserts the plainer
+thing: a proc and an ordinary hit of the same lane are drawn at exactly the same size, font and source line alike.
+
+What makes this legitimate rather than a guess is that a proc is a **fact** about the record rather than an interpretation
+of it: `DamageLineParser` assigns `Labels.Proc` by looking the spell up in `data/procs.txt` (EQ's own proc list, loaded in
+`EQDataStore`), not from how a line happens to read. The flag travels on `FctHitCommand.Proc` because it cannot be
+recovered downstream - by the time a canvas sees a hit it has a number, a lane and an ability name, none of which say why
+the number exists. Same reason `Periodic` is carried as a flag instead of being guessed from a spell's name.
+
+The simulation streams include a proc stream which reuses the ordinary spell names on purpose: the same word appearing at
+two sizes side by side is what makes the treatment visible, rather than comparing a proc against some other ability.
+
+### Smoothing, where animated text actually costs
+
+- **Easing is smootherstep** (`6t⁵ − 15t⁴ + 10t³`) rather than ease-out-quad. Ease-out-quad leaves at full speed, which
+  is what made a number look thrown onto the screen; smootherstep has zero velocity *and* zero acceleration at both
+  ends, which is what "floated" means. The horizontal arc uses the same curve so the path cannot bend oddly mid-flight.
+- **Skia's antialias flag defaults to off in SkiaSharp 3**, and every paint in `FctSkiaCanvas` draws glyphs or the
+  blurred crit halo, so it is set explicitly: without it a 34 px number has staircase edges.
+- **`SKFont.Hinting = None`, `SKFont.Subpixel = true`.** Hinting reshapes a glyph according to which pixel rows it lands
+  on, so text that drifts a pixel per frame silently redraws its own outline every frame — the crawl people describe as
+  jitter even though the position maths is continuous. Without subpixel positioning Skia snaps each run to a whole
+  pixel, quantising exactly the motion `FctMotion` interpolated. Both settings are right for moving text and wrong for
+  a static document, so they are commented rather than obvious: do not tidy them back to defaults.
+- Pacing counts whole ticks instead of comparing elapsed time, for the reason given in "Raster at most 60 times a
+  second": at exactly 60 Hz the old threshold skipped frames on ordinary jitter and produced an alternating cadence.
+- **Both ends of the fade are eased.** A linear ramp changes slope abruptly at `fadeStart` — steady, then suddenly
+  dimming, then gone — and a linear start is a pop. The trade is a slightly steeper mid-fade, which reads as the text
+  holding up and then dissolving rather than draining away.
+- **A folded row changes its face only when something folds in.** The first design counted the total up, which meant
+  re-measuring glyphs every frame; letting the widening number widen `ValueWidth` too widened the clamp band `ArcedX` reads,
+  so the row drifted sideways as it climbed and looked unstable. Counting was dropped rather than pinned — a folded row shows
+  one face value plus a hit count (`FctText.FormatHit`'s `×N`, asked for by `FctIngest` when a duplicate arrives) — so the
+  width is measured once per visible change and nothing chases it.
+- **The crit halo is shaped like the text it glows behind.** Its sprite is rendered with the same `Hinting = None` as
+  the crisp pass; a hinted sprite under unhinted glyphs puts the bloom a fraction off the number.
+
+### The one grammatical rule on the source line
+
+`FctManager.DisplaySource` singularises the attack verb ("Crushes" → "Crush") for melee records **and** for the
+zero-damage evade lines, because `DamageLineParser` fills `SubType` from `"X tries to crush Y, but Y dodges!"` even
+though `Type` carries the label there. Miss that and the same swing reads "Crushes" beside DODGE and "Crush" under its
+number — invisible in a log file, obvious in peripheral vision. Nothing else is ever conjugated: every other `SubType`
+is a spell name, and proper nouns keep their letters (`Crown of Stars` is not `Crown of Star`).
+
+### Click-through and persistence
+
+In game the overlay must not eat clicks or take focus, so `FctOverlayWindow` runs layered plus
+`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` while locked — the same recipe as the timer, text and toolbar overlays: read
+the extended styles with `NativeMethods.GetWindowLongPtr`, set or clear the bits, write them back with
+`NativeMethods.SetWindowLong` through `GetWindowLongFields.GwlExstyle`. Transparency itself is declared once in XAML
+(`AllowsTransparency`) and WPF does not rewrite those bits afterwards, so they are applied on `SourceInitialized`
+and on each lock toggle instead of from a window hook — re-writing them per mouse message costs a syscall pair for
+every hover over the overlay and buys nothing observable. Geometry persists through `ConfigUtil`
+(`FctOverlayLeft/Top/Width/Height/Enabled`) — written when a drag or resize is released, not by Save, because where you left the window
+is never ambiguous — and the overlay reopens at startup, locked, if it was open on exit. Lock state itself is stored nowhere (see
+*Two states*). The presentation switches — motion style (`FctOverlayMotion`), the three dials (`FctOverlayTextScale` for normal text,
+`FctOverlayCritScale` for crits and marked events, `FctOverlaySpeed`; multipliers
+rather than percentages because the file is somewhere a person may look, and speed rather than duration because that is what its dial measures) and
+the hide-below threshold (`FctOverlayThreshold`, stored as the plain number it shows) —
+persist through `FctOverlaySettings` and are written **only by the Save button**, along with `FctOverlayConfigured`, the one-time mark that somebody has
+actually chosen. The old `FctOverlayTimeScale` is still read once, inverted, when the speed key is absent; it is never written again. They are read by
+the overlay and by the simulation window so a freeze run and a spray
+run differ in nothing but the thing being compared. Being presentation-only, these apply immediately and need neither a lock nor a re-parse —
+which is the exception that proves the rule above: data-shaped settings have to be re-read by everything, and these are read once when a number
+is built. `FctOverlayMotion` also reads the old
+`FctOverlayFountain` boolean when its own key is absent: an upgrade should keep the choreography somebody had already
+chosen instead of silently resetting them to freeze, and because writes only ever use the new key the legacy entry fades
+out on its own rather than needing a migration.
+
+`MainWindow` mirrors the configure state so menu and window never disagree, entering configure mode calls `Activate()` so dragging is live
+immediately, and asking to configure while the overlay is hidden shows it first rather than doing nothing silently. The menu item unticking ends
+configure mode the same way Cancel does — settings back the way they were, overlay still open.
+
+`NativeMethods` exposes exactly two style vocabulary sets — `ExtendedWindowStyles` and `GetWindowLongFields` — and
+neither has a `WS_EX_APPWINDOW` member nor a plain `GWL_STYLE` accessor. Overlay windows stay toolwindows in both
+lock states, which is also what keeps them out of Alt+Tab; anything wanting app-window behavior has to add the
+constant deliberately rather than assume it is there.
+
+### What is deliberately not here yet
+
+- Party-wide and other-players' heals: fed only when group configuration exists to scope them.
+- Resist percentages as data: the parser reports partial resists as reduced totals (which display correctly) and full immunity as
+  `Labels.Invulnerable`; there is no "resisted 75%" record to show, so nothing is invented. Full resist *lines* do now reach the overlay
+  as the word `Resist` — `MiscLineParser` already recognised and stored them (`Restless Tijoely resisted your Stormjolt Vortex Effect!`)
+  but nothing was listening; a new event carries the stored record to `FctManager`, which routes it exactly like a blocked punch — my
+  spell failed goes to the Missed lane, I resisted theirs to Defensive — because a punch that gets blocked and a spell that gets resisted
+  are the same piece of information wearing different grammar. The spell name rides along as the source line (the parser's "your pet's X"
+  quirk gets "pet's " stripped on the way); party mates' resists stay out, like the rest of the feed.
+- Per-character or per-lane configuration and a reduced-motion mode. Palette customization used to sit here too, on the
+  reasoning that colour is not load-bearing for reading the overlay — direction comes from region plus travel, and the two
+  classes that could be confused (my whiff vs a defence that worked) are separated by size and word, not hue. That
+  reasoning is exactly why the seven pickers shipped: if a restage can only cost comfort, it belongs to the player; the
+  one thing the colours tab did NOT relax is the separations themselves, which are carried by non-colour channels.
+- Real GPU presentation via `D3DImage` (see above).
+
+### The purple family: special attacks wear a glyph, not a bigger number
+
+Assassinate, headshot, slay undead, finishing blow, decapitation, mana burn and life burn are the seven
+moments in a fight where the log says *something happened beyond the number*. All of them are already in
+`HitRecord`'s modifier mask — except decapitation and the two burns, which arrive as spell names. Rather than the genre default of
+a bigger, brighter, differently-coloured number (which fights the odometer: a special that changes
+the width of a value is a special that breaks the column), each wears a small glyph hanging **outside**
+the value's right edge, and all seven share one colour. A family of seven colours would have turned the
+overlay into a rainbow and made the marks impossible to learn; one purple says "special" on its own,
+and the silhouette says which.
+
+- `LineModifiersParser.SpecialFor(mask, source)` resolves the mark once, Core-side, so the parser is
+  the only place that knows what assassinate looks like in a log line. Decapitation matches on the
+  spell name and can only be reached through the parser path — `FctManager`'s direct-damage build (a
+  resist with no underlying record) has a mask but no name, so it cannot produce one.
+- **The burns ride the name rule too**: *Mana Burn* (wizard) and *Life Burn* (necromancer) are logged as
+  ordinary spell damage, so a leading-name match beside Decapitation promotes them — every ranked variant
+  ("Mana Burn XX") rides the prefix, containment is not the match, and a name that merely contains the
+  spell stays plain. The demo cues wear their ranks for the same reason the rule does: it is what the log
+  line carries.
+- The glyph is **priced into the geometry, then excluded from alignment**: `FctHitState.IconAllowance`
+  is added wherever a row's sideways appetite is measured — the pop peak, the bow cap, the drawn half —
+  and is not part of `ArcedX`. That asymmetry is the whole trick: the number's right edge still lands on
+  the rail whether or not there is an axe beside it. A mark that nudged the digits sideways would have
+  been cheaper to implement and worse to read.
+- A mark is a member of the **big class** as far as presentation goes: written at the crit size dial's font **whether or not the log
+  also called it a crit**, and riding the blowout's size-independent effects — swell-in, halo, wider spray spread, top draw pass.
+  What it keeps from its birth lane is column and direction: an assassinate still scrolls in the damage-out column — big, on top,
+  purple.
+- The glyph itself is **punctuation, deliberately**: 48 % of the digit height with a two-pixel gap, because at the
+  first try it stood nearly as tall as the number with a six-pixel gutter and read as a caption beside the sentence
+  rather than an accent on it. Both are single constants in `FctStyle`; the geometry charges for them either way.
+- The arrow glyph is a **weapon, not a direction sign** — which took three render sessions to earn. The first headshot
+  was a triangle on a stick flying to the corner and read as UI furniture; players say *bow and arrow*, so a whole longbow
+  stood behind the shot next, and at the 16–18 px marks actually ship at, bow, string and arrow merged into one blob.
+  The diagonal quiver-flight icon collapsed into a checkmark, and so did the bow's second cameo: stood VERTICAL beside
+  a standing arrow it failed from a different angle for the same arithmetic — two objects side by side each get half a
+  silhouette, and half of 17 px is outlines eating the gap (the classical split-bow-around-the-shaft icon drew
+  beautifully at 150 px and collapsed into a wreath at 18). What survives: a rounded leaf-blade broadhead on a bare
+  shaft with two vanes swept back like real feathering — every part chunky enough to hold its shape in peripheral
+  vision, because at mark size an icon is a silhouette and nothing else (the bake-off rig rendered all of them beside
+  real `9,214`s to prove it). The first survivor flared its fletch to square shoulders wider than the head and read as
+  a trophy stand on a podium; the swept-vane redraw fixed the posture, and a slimmer redraw than that lost its strokes
+  at 16 px — "nicer" is allowed to mean thinner only down to the weight budget.
+- The burns' glyphs earned their shapes the same way, in the same rig. The **wizard hat** survives on a thick
+  brim and a bent tip — the straight triangle read as an arrowhead, then as party furniture — and its dark band
+  rides MID-CONE: drawn across the cone/brim joint it re-cut the silhouette into a horn on a pill. The **skeleton**
+  is what survived of "just draw a skeleton": anatomy at 16 px rendered as a lightbulb. A reduced bone figure — skull
+  mass, eyes, ribs as dark bands across one torso — read honestly enough but looked worse than the plain skull beside
+  real numbers, and the skull plainly belongs to the necromancer anyway. So **Life Burn owns the skull** and the
+  finishing blow moved to a **tombstone**: a broad arched slab on a flat ground footer — the footer is what keeps it
+  from reading as a round blob, since the stone has no eyes — with two dark engraving bars where the eyes would do
+  their work. Two eliminations got it there: a reaper scythe fused blade-and-haft into "a slash and a checkmark" at
+  shipped size, and a sword driven point-first was the assassinate dagger's own silhouette family. One glyph per
+  event again, which is how the set wanted to be drawn.
+- Marks **never fold**, in either direction. A marked row is out of folding as a target because it blows out like
+  a crit, and `FctIngest` also compares `Special` so an incoming mark cannot quietly fold into a plain row of the
+  same number. The alternative — an assassinate swallowed into `×3` on a plain Backstab, or two identical marks
+  collapsing to one count — is invisible data loss on exactly the events worth seeing.
+- Glyphs are vector paths on a 24-unit grid rather than PNG assets: they scale with both size dials,
+  need no new deployment files, and the cut-out details (ghost eyes, skull nose) can be forced to the
+  outline colour independently of the fill.
+
+### Accumulation: the knob we built, tried, and deleted
+
+The overlay has collapsed duplicate hits since the first ingest engine — one number reading "412 ×6" instead of six 412s,
+keyed to lane, side, kind, ability and *printed* value so the count is a fact. For a while this week it also had a switch:
+an "accumulation" checkbox (settings.ini `FctOverlayAccumulate`, default off) with the argument that compacting somebody's
+fight without asking was the wrong shape for a feature about what they see. Played for a day, the verdict came back the
+other way: nobody wants the second row of an identical hit. The knob is gone — checkbox, config field, ini key — and
+duplicate collapse is unconditional again, which is also what MSBT-class overlays ship. The dial for "I want to see less"
+already exists and is honest about it: that's THRESHOLD, and it counts what it hides.
+
+What the knob's short life did settle is two policy wideners the playtest actually wanted, kept after the switch died:
+
+- **Crits collapse onto crits.** They used to refuse folding outright, which meant a crit storm could only overflow into
+  the drop counter. Identical crits now stack honestly — every crit lives in a pool lane of its own, so plain numbers can
+  join a crit stack (or receive one) by construction, not by another key clause; a taken crit still never joins a dealt
+  one because whose-story was already in the key. The overload test survives as what real storms are: differing crits
+  (900, 1.2k, 1.4k…), which nothing on screen may take, counted when the cap bites.
+- **Words collapse too.** Four identical evasions are one fact said four times ("Miss ×2"), and a word carries no value,
+  so the face-value rule that protects numbers has nothing to guard — words fold where numbers need the printed-equality
+  clause. Numbers and words still never fold across kinds: two sorts of fact keep separate rows.
+- **Never summed.** The value on screen is always one real hit's; only the count moves. (Asked again during the knob's
+  trial whether players want literal totals — "642k" for two 321k hits — the answer was no: there's no need to literally
+  add numbers together, and an amount no single hit landed for is exactly what the original design refused. The row says
+  size-of-one and how-many, every claim on screen stays a fact.)
+
+Tests moved with the deletion: the opt-in lines came out of five files, `CritOverloadIsCountedBecauseCritsNeverAbsorb`
+became `…WhenTheCritsDiffer`, the crowded-lanes word cadence went from alternating to eight distinct words (alternating
+identical words now correctly collapse), and `FctAccumulationTest` lost its two door tests and kept the shape: duplicates
+print once with a count, face value frozen, crits only onto crits, words onto words, heals and marks never. 1081/1081.
+
+### The centre gutter: forty pixels reserved for what the player is looking at
+
+Split mode's halves used to meet exactly at the middle of the overlay, which put left 2's right edge and right 1's left
+edge — the two lanes a fight actually lives in — directly on top of the spot where the target frame sits. The user's
+sentence for it: "that's where you should place the NPC." And long labels made it worse rather than better: FitSource
+budgets a label from spine to region wall, and when the wall was dead-centre, an inward-reaching `(Long Spell Name)`
+printed across the player's own target.
+
+Split halves tile the track minus a centre gutter (FctStage.CenterGutter, absolute — forty pixels after the first day's
+play asked for more air; it began at 20): left ends at (W−40)/2, right starts forty past it. Everything downstream derives from that one
+measure, so the gutter cannot exist in geometry and not in labels: spines shift equally outward (right 1's slot sits a
+hair further from the seam, which is still "beside the middle, near the fight"), lane rects and their configure-mode
+outlines show the empty band, and label walls — which ARE region walls — now stop long words short of the centre
+instead of printing over it. Bands never asks; its protected region is the horizontal strip, not a column. Tests moved
+to gutter-aware expressions (Half/Seam computed from the constant) rather than new magic numbers, 1081/1081.
+
+The same pass gave the demo switch a memory: SampleData saves to settings.ini like anything else, because "don't play
+sample numbers, I'm laying this out over my actual raid" was an answer that had to be re-given every session, which is
+the definition of a setting wearing furniture's clothes.
+
+### The bow that ate the label: why a spell called "Desperate Renewal XIII Rk. II" shipped as "(Des)"
+
+The user's screenshot asked the question better than the code answered it: three lanes configured, right 2 freed, and
+the left-hand heal showing `+74k (Des)` with a visible acre of empty overlay between it and the neighbour's numbers.
+"Isn't there room for more of the label than we're displaying?" — measured, yes, and the culprit was not the label code.
+
+A diagnostic run at the screenshot's width said the true arithmetic: the rail parked at x=294 in a lane whose spine is
+168. Not jitter — the arc's **bow carve**. Spawn pre-paid for the outward bend by shoving the rail 126 px inward (the
+value box hangs left of the rail, and an outward vertex needs that room or it clips), which left every right-seated
+label `SideMax − rail = 33 px` of budget. The lane's air was all there; the name just wasn't allowed to spend it, and
+the floor cut produced a bare "(Des)" — three letters wearing no mark that anything was withheld. Two wrongs stacked:
+the shove broke the spine weld FctStage promises ("a lane's spine stays welded to its slot"), and the floor dropped the
+ellipsis precisely when the cut was most dishonest.
+
+Split lanes are private — there is no neighbour stream to dodge — so "outward" was demoted from law to preference and
+replaced by the **open hand**: a split column bows toward whichever side of its spine has more air (lane-decided, equal
+for every row), bands keeps the genre rule untouched. The rail holds its slot, the bend spends the leftover, and names
+inherit the lane: the diagnostic's heal row now draws "(Desperate Renewal XIII Rk. II)" whole at 147 px of label room,
+and where a lane truly cannot carry a name, the floor wears its mark too — "(Des…)", overshoot charged to SourceWidth so
+ArcedX tucks the rail back and the ellipsis never crosses a wall.
+
+Two pinned laws came out rewritten rather than broken, which is what measuring is for: `TheArcBowsToAVertex...` now
+asserts the vertex sits over the lane's open hand instead of "away from the middle", and `ANameFollowsTheRoomItHas`
+compares NAME lengths where it compared label lengths — "(Glo)" growing "(Glo…)" as a column narrows is the cut mark
+appearing, not the name growing. 1081/1081; the real question was the screenshot's, and the answer was "yes".
+
+## Damage meter setup window
+
+Configure used to be a form painted on top of the thing it configured: pressing the cog swapped the live meter for a
+preview instance whose face carried eleven controls, three dropdowns deep, with Save/Cancel/Close buttons that enabled
+themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
+but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
+took its job: three accordion sections (MAIN for rows/font/thin bars/percent, METER for reset/crit rate/class filter/
+hide names/streamer, COLORS for bar and highlight), Save and Cancel as the entire exit vocabulary, everything previewed
+live on the sample stage and nothing written to ini until Save.
+
+The staging rides a `DamageMeterConfigState` copy that `Load()`s with exactly the overlay constructor's guards, so
+setup always opens on what is on screen. The overlay grew three internal verbs — `PreviewMeterState` (apply without
+persisting), `CommitMeterState` (apply, persist the same ini keys the old panel wrote, hand back to the game) and
+`DiscardMeterSettings` (just end: MainWindow reopens a live meter that reads the untouched values back off disk, so
+discarding restores itself and no undo code exists). The `_current*` fields stopped being half-state/half-control —
+rows, font, mini bars, percent, streamer and both colors now have working-set fields the Update methods maintain, and
+the update tick reads those instead of asking a ComboBox that no longer exists.
+
+Two deliberate inherited oddities. Geometry stays out of the staged object: dragging and resizing the stage is the
+geometry editor, and Save captures whatever rectangle the stage ended on (the `heightRectangle` measuring line is all
+of the old panel that survives). And Save closes configure rather than lingering — the old form's three exit buttons
+enabled and disabled in a dance around each other; here every change is already visible two inches away on the stage,
+so "keep these" and "walk away" are enough words.
+
+Placement follows the companion conventions: the window docks right of the meter when the work area has room and left
+when it doesn't, clamps into the screen, moves by the stage's drag delta so a pairing the user chose survives being
+moved, and closes with its owner automatically because `Owner` says so. The bar pool rebuilds only when the row count
+actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
+reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
+
+## Combat event emitters
+
+The damage meter briefly carried an event ribbon under its target row; the UI was withdrawn (a feed wants its own
+surface and design, not leftovers bolted under a ranking list). What remains is only broadcasting: parsers fire
+`DamageLineParser.EventsNewDeath` and `MiscLineParser.EventsNewMezBreak` alongside the existing taunt event wherever
+those records already hit storage, and `DamageRibbon` (Core) keeps the tested wording rules - mez break names its
+breaker, players/pets killed read as a will or a plain death, named pets shorten to their personal name
+(`Puksu`, never `Sancus`s pet Puksu`), generic unnamed pets and mob deaths never speak, taunts land on success only,
+and `PlayerRegistry.IsVerifiedPlayer` answers the player question behind a settable seam. Nothing subscribes at
+startup; whoever builds the real feed takes it from there.

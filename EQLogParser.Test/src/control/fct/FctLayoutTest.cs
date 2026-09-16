@@ -1,0 +1,513 @@
+using System;
+
+namespace EQLogParser
+{
+  /*
+   * Layout is what keeps the overlay usable in game: text stays inside its region, out of the protected middle
+   * (EQ's own windows and the spell effects being looked at live there), and inside the canvas — at any window size,
+   * including one so small a clamp band would otherwise invert. Bands mode also pins direction to travel, which is
+   * the whole point of it: outgoing rises, incoming sinks, so nobody has to learn which side means what before the
+   * overlay is readable.
+   */
+  [TestClass]
+  public sealed class FctLayoutTest
+  {
+
+    [TestInitialize]
+    public void ResetAmbient() => FctAmbient.Reset();
+    private const double Width = 980;
+    private const double Height = 640;
+
+    /* FctLane is internal to the app and a public test method cannot take it as a parameter, so the rows carry
+     * names — nameof keeps them tied to the enum through a rename. */
+    [TestMethod]
+    [DataRow(nameof(FctLane.DamageTaken), true)]
+    [DataRow(nameof(FctLane.HealingReceived), true)]
+    [DataRow(nameof(FctLane.Defensive), true)]
+    [DataRow(nameof(FctLane.DamageDealt), false)]
+    [DataRow(nameof(FctLane.HealingDealt), false)]
+    [DataRow(nameof(FctLane.Missed), false)]
+    public void IncomingLanesAreTheOnesThatHappenToMe(string lane, bool incoming) =>
+      Assert.AreEqual(incoming, FctLayout.IsIncoming(Enum.Parse<FctLane>(lane)));
+
+    /* Direction is carried by the band plus the direction of travel: up for my hits, down for hits on me. */
+    [TestMethod]
+    public void OutgoingHitsRiseAndIncomingHitsSink()
+    {
+      var outgoing = Spawn(FctLane.DamageDealt, incoming: false, new Random(1));
+      var incoming = Spawn(FctLane.DamageTaken, incoming: true, new Random(1));
+
+      Assert.IsTrue(outgoing.Rise > 0, $"outgoing text must travel up (Rise {outgoing.Rise})");
+      Assert.IsTrue(incoming.Rise < 0, $"incoming text must travel down (Rise {incoming.Rise})");
+
+      Assert.IsTrue(outgoing.Y0 < Height * FctLayout.GapTopFrac, "outgoing hits must spawn above the protected strip");
+      Assert.IsTrue(incoming.Y0 >= (Height * FctLayout.GapBottomFrac) - 0.001, "incoming hits must spawn below it");
+    }
+
+    /* The protected strip has to stay empty for the whole life of a hit, not just at spawn — including at crit scale. */
+    [TestMethod]
+    public void TextNeverEntersTheProtectedStrip()
+    {
+      var rand = new Random(7);
+
+      for (var i = 0; i < 400; i++)
+      {
+        foreach (var incoming in new[] { true, false })
+        {
+          var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming);
+
+          for (var t = 0.0; t <= 1.0; t += 0.05)
+          {
+            var y = FctMotion.RaisedY(hit, t);
+            var bottom = y + FctLayout.TextHeight(hit); // y is the top of the value text
+
+            if (incoming)
+            {
+              Assert.IsTrue(y >= (Height * FctLayout.GapBottomFrac) - 0.001, $"incoming text entered the strip at t={t:0.00} (top {y})");
+            }
+            else
+            {
+              Assert.IsTrue(bottom <= (Height * FctLayout.GapTopFrac) + 0.001, $"outgoing text entered the strip at t={t:0.00} (bottom {bottom})");
+            }
+
+            Assert.IsTrue(y is >= 0 and < Height, $"text left the canvas at t={t:0.00} (y {y})");
+          }
+        }
+      }
+    }
+
+    /* A number must stay inside the window for its whole life, in both directions. */
+    [TestMethod]
+    public void SpawnAndTravelStayInsideTheCanvas()
+    {
+      var rand = new Random(20_260_714);
+
+      for (var i = 0; i < 500; i++)
+      {
+        foreach (var incoming in new[] { true, false })
+        {
+          var hit = Spawn(FctLane.DamageDealt, incoming, rand);
+
+          Assert.IsTrue(hit.X0 >= 0 && hit.X0 <= Width, $"spawn x {hit.X0} off canvas");
+          Assert.IsTrue(FctMotion.RaisedY(hit, 1.0) is >= 0 and < Height, $"travel end off canvas ({hit.Y0}, rise {hit.Rise})");
+        }
+      }
+    }
+
+    /* A tiny overlay must degrade instead of throwing: an inverted clamp band used to crash every frame. */
+    [TestMethod]
+    public void TinyCanvasesStillProduceADrawablePosition()
+    {
+      var rand = new Random(3);
+
+      foreach (var size in new[] { 100, 160, 240 })
+      {
+        foreach (var incoming in new[] { true, false })
+        {
+          var hit = Spawn(FctLane.DamageDealt, incoming, rand, size, size);
+          Assert.IsTrue(hit.SideMin <= hit.SideMax, $"x clamp band inverted at {size}px ({hit.SideMin}..{hit.SideMax})");
+          Assert.IsTrue(hit.BandMaxY > hit.BandMinY, $"y band inverted at {size}px ({hit.BandMinY}..{hit.BandMaxY})");
+
+          var x = FctMotion.ArcedX(hit, 0.5); // must not throw
+          var y = FctMotion.RaisedY(hit, 0.5);
+          Assert.IsTrue(x >= 0 && x <= size, $"x={x} outside a {size}px canvas");
+          Assert.IsTrue(y >= 0 && y <= size, $"y={y} outside a {size}px canvas");
+        }
+      }
+    }
+
+    [TestMethod]
+    public void CritsSpreadWiderThanNormalHits()
+    {
+      var rand = new Random(11);
+      var normalMax = 0.0;
+      var critMax = 0.0;
+
+      for (var i = 0; i < 300; i++)
+      {
+        normalMax = Math.Max(normalMax, Math.Abs(Spawn(FctLane.DamageDealt, incoming: false, rand).X0 - (Width * 0.42)));
+        critMax = Math.Max(critMax, Math.Abs(Spawn(FctLane.DamageDealt, incoming: false, rand, crit: true).X0 - (Width * 0.52)));
+      }
+
+      Assert.IsTrue(critMax > normalMax, "crits should occupy a wider band than ordinary damage");
+    }
+
+    /*
+     * The clip a player actually notices: the whole drawn block — value, descenders, the source line under it, all of
+     * it scaled up during a crit's pop — has to stay inside the window for the hit's entire life, not merely its anchor
+     * point. Incoming hits are the case that used to fail, because they travel downwards and spend their last seconds
+     * against the bottom edge with only one em of reserve.
+     */
+    [TestMethod]
+    public void DrawnBlockStaysInsideTheWindow()
+    {
+      var rand = new Random(4);
+
+      for (var i = 0; i < 300; i++)
+      {
+        foreach (var incoming in new[] { true, false })
+        {
+          var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, crit: incoming, source: "Crushing Blow");
+
+          for (var t = 0.0; t <= 1.0; t += 0.05)
+          {
+            var bottom = FctMotion.RaisedY(hit, t) + FctLayout.TextHeight(hit);
+            Assert.IsTrue(bottom <= Height - FctLayout.EdgePad + 0.001,
+              $"text clipped at the bottom edge at t={t:0.00} (bottom {bottom:0.#}, canvas {Height})");
+          }
+        }
+      }
+    }
+
+    /*
+
+    /*
+     * Procs belong to the fight but not to the number the player is reading, so they start in a different row of the
+     * band than the hits they arrived beside - mine further up, hits on me further down. Asserted two ways because the
+     * per-hit position also carries lane jitter: every proc clears the inset from the strip, and as a stream procs read
+     * further out than plain hits by roughly the inset itself.
+     */
+    [TestMethod]
+    public void ProcHitsStartInTheirOwnRowOfTheBand()
+    {
+      var rand = new Random(17);
+      double plainClearance = 0;
+      double procClearance = 0;
+      const int Rounds = 400;
+
+      for (var i = 0; i < Rounds; i++)
+      {
+        foreach (var incoming in new[] { false, true })
+        {
+          var lane = incoming ? FctLane.DamageTaken : FctLane.DamageDealt;
+
+          var plain = Spawn(lane, incoming, rand);
+          var proc = Spawn(lane, incoming, rand, proc: true);
+          var span = plain.BandMaxY - plain.BandMinY;
+
+          // distance from the band edge nearest the strip, which already carries the text reserve
+          var plainNear = incoming ? plain.Y0 - plain.BandMinY : plain.BandMaxY - plain.Y0;
+          var procNear = incoming ? proc.Y0 - proc.BandMinY : proc.BandMaxY - proc.Y0;
+
+          Assert.IsTrue(procNear >= span * FctLayout.ProcInsetFrac - 0.001,
+            $"proc started {procNear:0.#} px from the strip, want at least {span * FctLayout.ProcInsetFrac:0.#}");
+
+          plainClearance += plainNear;
+          procClearance += procNear;
+        }
+      }
+
+      var gap = (procClearance - plainClearance) / (Rounds * 2);
+      Assert.IsTrue(gap > 15, $"procs should read a clear row outside the direct hits, averaged {gap:0.#} px apart");
+    }
+
+    /* The inset is a share of band depth, so a small overlay is where it has to give way rather than push text off the
+     * screen - which is also where a shallow band has to cope with a spray aimed at a full cone. */
+    [TestMethod]
+    public void InsetsGiveWayOnATinyOverlay()
+    {
+      var rand = new Random(3);
+      const double TinyW = 420;
+      const double TinyH = 300;
+
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Spray })
+      {
+        foreach (var proc in new[] { false, true })
+        {
+          foreach (var incoming in new[] { false, true })
+          {
+            for (var i = 0; i < 50; i++)
+            {
+              var hit = Spawn(incoming ? FctLane.DamageTaken : FctLane.DamageDealt, incoming, rand, TinyW, TinyH,
+                source: "Crushing Blow", style: style, proc: proc);
+
+              Assert.IsTrue(hit.Y0 >= FctLayout.EdgePad - 0.001, $"text ran off the top ({hit.Y0:0.#})");
+              Assert.IsTrue(hit.Y0 + FctLayout.TextHeight(hit) <= TinyH - FctLayout.EdgePad + 0.001,
+                $"text ran off the bottom ({hit.Y0 + FctLayout.TextHeight(hit):0.#} of {TinyH})");
+            }
+          }
+        }
+      }
+    }
+
+    private static FctHitState Spawn(FctLane lane, bool incoming, Random rand, double w = Width, double h = Height, bool crit = false, string? source = null, FctMotionStyle style = FctMotionStyle.Freeze, bool proc = false)
+    {
+      // Source, style and proc must be set before layout runs: the vertical reserve, the travel and the band row are all
+      // derived from them, exactly as FctIngest does it
+      var hit = new FctHitState
+      {
+        Lane = crit ? FctLane.Crit : lane,
+        Incoming = incoming,
+        Style = style,
+        Proc = proc,
+        Source = source,
+        Value = 1234,
+      };
+
+      FctStyle.ApplyTo(hit, hit.Lane, minor: false);
+      FctLayout.Spawn(hit, w, h, rand);
+      return hit;
+    }
+
+    /* A below label belongs to the number above it, not the entry below: its baseline sits inside its own row and leans toward its value's baseline
+     * rather than toward where the next entry's number starts at the row's bottom edge. This was once inverted — the name sat almost on the next
+     * number — so each label read as belonging to the digits below it instead of above it. */
+    [TestMethod]
+    public void ABelowLabelLeansUnderItsOwnNumber()
+    {
+      foreach (var crit in new[] { false, true })
+      {
+        var hit = Spawn(FctLane.DamageDealt, incoming: false, new Random(3), source: "Hammer of Magic II", crit: crit);
+
+        var valueBase = hit.ValueFontSize * FctLayout.ValueBaselineFrac;
+        var labelBase = FctLayout.BelowLabelY(0.0, hit);
+        var rowBottom = FctLayout.TextHeight(hit);
+
+        Assert.IsTrue(labelBase > valueBase, $"label must sit under its number (crit {crit})");
+        Assert.IsTrue(labelBase < rowBottom, $"label must stay inside its own row (crit {crit})");
+        Assert.IsTrue(labelBase - valueBase < (rowBottom - labelBase) + valueBase,
+          $"label must lean toward its own number, not the next entry's (crit {crit}: step {labelBase - valueBase:0.#}, tail {(rowBottom - labelBase) + valueBase:0.#})");
+      }
+    }
+
+    // ---- placement: throwing text so it does not land on text already in flight (FctPlacement) ----
+    [TestMethod]
+    public void ThreeFountainsGetTheirOwnAir()
+    {
+      /*
+       * The complaint this exists for: three numbers climbing, two of them on top of each other while the band around them sat
+       * empty. Before the search, 58% of pairs on a 980x640 overlay shared a spot at some point in their overlapping lives;
+       * measured the same way now it is about 9%, so this fails on a regression rather than on noise.
+       */
+      var pairs = 0;
+      var touched = 0;
+
+      for (var seed = 1; seed <= 60; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
+        for (var i = 0; i < 3; i++)
+        {
+          ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 700.0);
+        }
+
+        CountOverlaps(hits, ref pairs, ref touched);
+      }
+
+      Assert.IsTrue(pairs > 0, "no overlapping lifetimes to measure");
+      Assert.IsTrue((double)touched / pairs < 0.15,
+        $"{touched} of {pairs} fountain pairs shared a spot; the band has room for three");
+    }
+
+    [TestMethod]
+    public void AQueueOfHeldNumbersUsesTheDepthOfTheBand()
+    {
+      /* Nothing travels to separate these, so where they were put is all there is: 71% of pairs collided before the search, and
+       * measured now it is about 17%. Held numbers are the worst case for this file — no flight to spread them out — and six of
+       * them in one band genuinely do not fit without touching, which is what the lane cap and the life shortener are for. */
+      var pairs = 0;
+      var touched = 0;
+
+      for (var seed = 1; seed <= 60; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Freeze, Layout = FctLayoutChoice.Bands };
+        for (var i = 0; i < 6; i++)
+        {
+          ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 17), "Flurry", false, false, false, null, 980, 640, i * 500.0);
+        }
+
+        CountOverlaps(hits, ref pairs, ref touched);
+      }
+
+      Assert.IsTrue((double)touched / pairs < 0.25,
+        $"{touched} of {pairs} held pairs shared a spot despite searching {FctPlacement.LateralSteps}x{FctPlacement.DepthSteps} launch points each");
+    }
+
+    /*
+     * The bug this pins: a hit appearing at the far left border of the overlay and swaying inland on the way up. Widening the
+     * search sideways with no thought for the column is what did it — damage's column sits at 0.42 of the width, so a throw wide
+     * enough to reach past it got clamped to the wall, and the search read that wall as an empty gap. Healing had the same trap
+     * on the right side, waiting for a wide enough overlay.
+     */
+    [TestMethod]
+    public void NothingStartsFlushAgainstTheWindowEdge()
+    {
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      {
+        for (var seed = 1; seed < 40; seed++)
+        {
+          var hits = new List<FctHitState>();
+          var ingest = new FctIngest(new Random(seed)) { Style = style, Layout = FctLayoutChoice.Bands };
+          for (var i = 0; i < 10; i++)
+          {
+            ingest.PruneExpired(hits, i * 260.0);
+
+            foreach (var lane in new[] { FctLane.DamageDealt, FctLane.HealingDealt, FctLane.DamageTaken, FctLane.HealingReceived })
+            {
+              var hit = ingest.Accept(hits, lane, 1000 + (i * 37), "Flurry", false, false, false, null, 980, 640, i * 260.0);
+              if (hit is null)
+              {
+                continue;
+              }
+
+              var x = FctMotion.ArcedX(hit, 0);
+              var half = hit.ValueWidth / 2.0;
+              Assert.IsTrue(x - half > FctLayout.EdgePad + 1,
+                $"{style} {lane} starts flush against the left edge: block left {(x - half):0.#}");
+              Assert.IsTrue(x + half < 980 - FctLayout.EdgePad - 1,
+                $"{style} {lane} starts flush against the right edge: block right {(x + half):0.#}");
+            }
+          }
+        }
+      }
+    }
+
+    [TestMethod]
+    public void NumbersStayInTheirColumn()
+    {
+      /* Sideways is not free space: the column is what separates damage from healing at a glance. So the bound is derived from
+       * the search's own knobs rather than picked — a number may sit no further from its column than the lateral reach allows,
+       * plus the jitter that keeps launch points off the lattice. Measured mean under fountain spam is ~15% of width; this
+       * assertion is what would fire if the search went looking across the overlay again, which is exactly the regression that
+       * shipped once already (see NothingStartsFlushAgainstTheWindowEdge). */
+      var limit = FctPlacement.LateralSearchMaxFrac * (1 + FctPlacement.LatticeJitter) + 0.01;
+      var sumAway = 0.0;
+      var count = 0;
+
+      for (var seed = 1; seed < 40; seed++)
+      {
+        var hits = new List<FctHitState>();
+        var ingest = new FctIngest(new Random(seed)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
+        var slot = FctLayout.LaneSlot(FctLane.DamageDealt, 980);
+
+        for (var i = 0; i < 12; i++)
+        {
+          ingest.PruneExpired(hits, i * 260.0);
+          var hit = ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 43), "Flurry", false, false, false, null, 980, 640, i * 260.0);
+          if (hit is null)
+          {
+            continue;
+          }
+
+          var away = Math.Abs(hit.X0 - slot) / 980;
+          sumAway += away;
+          count++;
+          Assert.IsTrue(away < limit,
+            $"a damage number sat {(away * 100):0.#}% of the overlay from its column; the search is allowed {(limit * 100):0}%");
+        }
+      }
+
+      Assert.IsTrue(sumAway / Math.Max(1, count) < 0.18,
+        $"damage numbers averaged {(sumAway / Math.Max(1, count) * 100):0.#}% of the overlay from their column; a column is not a scatter");
+    }
+
+    [TestMethod]
+    public void SearchingForRoomStillNeverPutsTextOffScreen()
+    {
+      // the search widens the throw sideways and away from the protected strip, so the old invariants have to be re-proved
+      foreach (var style in new[] { FctMotionStyle.Freeze, FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      {
+        foreach (var size in new[] { (W: 980.0, H: 640.0), (W: 1280.0, H: 300.0), (W: 700.0, H: 280.0) })
+        {
+          for (var seed = 1; seed < 40; seed++)
+          {
+            var hits = new List<FctHitState>();
+            var ingest = new FctIngest(new Random(seed)) { Style = style, Layout = FctLayoutChoice.Bands };
+            for (var i = 0; i < 6; i++)
+            {
+              ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 31), "Flurry", false, false, false, null, size.W, size.H, i * 400.0);
+              ingest.Accept(hits, FctLane.DamageTaken, 900 + (i * 29), "Claw", false, false, false, null, size.W, size.H, i * 400.0 + 200);
+            }
+
+            foreach (var hit in hits)
+            {
+              for (var s = 0; s <= 8; s++)
+              {
+                var b = BlockOf(hit, hit.LifetimeMs * s / 8);
+                Assert.IsTrue(b.Left > -0.5 && b.Right < size.W + 0.5 && b.Top > -0.5 && b.Bottom < size.H + 0.5,
+                  $"{style} at {size.W:0}x{size.H:0} drew outside the window: {b}");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    [TestMethod]
+    public void SearchingForRoomPlacesEverythingItIsGiven()
+    {
+      // no capacity gate in here: a crowded overlay may overlap, it may not lose a number
+      var hits = new List<FctHitState>();
+      var ingest = new FctIngest(new Random(7)) { Style = FctMotionStyle.Fountain, Layout = FctLayoutChoice.Bands };
+
+      var placed = 0;
+      for (var i = 0; i < 40; i++)
+      {
+        ingest.PruneExpired(hits, i * 300.0);
+        if (ingest.Accept(hits, FctLane.DamageDealt, 1000 + (i * 7), "Flurry", false, false, false, null, 980, 640, i * 300.0) is not null)
+        {
+          placed++;
+        }
+      }
+
+      Assert.AreEqual(40, placed);
+      Assert.AreEqual(0, ingest.DroppedCount);
+    }
+
+    [TestMethod]
+    public void TheFirstNumberGetsTheLanesOwnSpot()
+    {
+      /*
+       * With nothing to dodge there is nothing to measure: the hit that came in goes out again, geometry and all, so an
+       * uncrowded overlay draws exactly what FctLayout alone would have drawn.
+       */
+      var hit = Spawn(FctLane.DamageDealt, incoming: false, new Random(3), style: FctMotionStyle.Fountain);
+
+      Assert.AreSame(hit, FctPlacement.Place(hit, new List<FctHitState>(), Width, Height, new Random(4)));
+    }
+
+    /* Worst instant over the part of the two lives they share, which is what a player sees as one blob: the same measure the
+     * placement probe uses. */
+    private static void CountOverlaps(List<FctHitState> hits, ref int pairs, ref int touched)
+    {
+      for (var a = 0; a < hits.Count; a++)
+      {
+        for (var b = a + 1; b < hits.Count; b++)
+        {
+          var offset = hits[b].SpawnMs - hits[a].SpawnMs;
+          var shared = Math.Min(hits[a].LifetimeMs - offset, hits[b].LifetimeMs);
+          if (shared <= 0)
+          {
+            continue;   // never on screen together
+          }
+
+          pairs++;
+          for (var s = 0; s <= 12; s++)
+          {
+            var ageB = shared * s / 12;
+            if (Intersects(BlockOf(hits[a], ageB + offset), BlockOf(hits[b], ageB)))
+            {
+              touched++;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    private static bool Intersects((double Left, double Top, double Right, double Bottom) a, (double Left, double Top, double Right, double Bottom) b) =>
+      a.Left < b.Right && b.Left < a.Right && a.Top < b.Bottom && b.Top < a.Bottom;
+
+    /* Where the drawn block actually is at an age: the same maths the canvases draw with, centre-anchored like the text. */
+    private static (double Left, double Top, double Right, double Bottom) BlockOf(FctHitState hit, double ageMs)
+    {
+      var t = FctMotion.Progress(hit, ageMs);
+      var scale = FctMotion.ScaleOf(hit, ageMs);
+      var half = (hit.ValueWidth * scale) / 2.0;
+      var x = FctMotion.ArcedX(hit, t);
+
+      return (x - half, FctMotion.RaisedY(hit, t), x + half, FctMotion.RaisedY(hit, t) + (FctLayout.TextHeight(hit) * scale));
+    }
+  }
+}

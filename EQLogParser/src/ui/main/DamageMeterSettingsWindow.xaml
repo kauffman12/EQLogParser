@@ -1,0 +1,160 @@
+<Window x:Class="EQLogParser.DamageMeterSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+        xmlns:shared="clr-namespace:Syncfusion.Windows.Shared;assembly=Syncfusion.Shared.WPF"
+        xmlns:NumberFormat="clr-namespace:System.Globalization;assembly=mscorlib"
+        mc:Ignorable="d"
+        Title="Damage Meter Settings"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        AllowsTransparency="True"
+        Background="Transparent"
+        SizeToContent="Height"
+        Width="320"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display">
+  <!-- The damage meter's companion, twin of the FCT setup window: every control lives here while the meter itself is
+       nothing but bars. Configure mode replaces the running overlay with a sample-data stage; this window docks
+       beside it (right if there is room, left otherwise) and follows it while it is dragged. Every change previews on
+       the stage immediately and touches no ini file; Save commits and hands the meter back to the game, Cancel walks
+       away and the reopened meter reads the old values back off disk. The inline control panel that used to live on
+       the overlay itself is gone: a settings form drawn on top of the thing it configures was never the deal. -->
+  <Border Background="{DynamicResource ContentBackground}" BorderBrush="{DynamicResource ContentBackgroundAlt3}"
+          BorderThickness="1" CornerRadius="8" Padding="12,10,12,12"
+          TextElement.FontSize="{DynamicResource EQDescriptionSize}">
+    <StackPanel>
+
+      <!-- No close mark on purpose, same law as the FCT panel: Save and Cancel are the entire exit vocabulary. -->
+      <Grid x:Name="headerBar" Background="Transparent" Margin="-4,-2,-4,4" MouseLeftButtonDown="HeaderDrag">
+        <TextBlock Text="Damage Meter Setup" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
+      </Grid>
+
+      <syncfusion:SfAccordion Margin="0,4,0,0" SelectionMode="One" SelectedIndex="0">
+        <syncfusion:SfAccordionItem Header="STYLE">
+          <!-- how the meter looks: checkboxes, then choices in alphabetical order, then the color pickers -->
+          <StackPanel Margin="0,4,6,10">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="106" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+
+              <CheckBox x:Name="miniCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="thin bars"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="slim ranking bars: more names in the same room" />
+
+              <TextBlock Grid.Row="1" Text="font size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="text size on every row; the bars grow and shrink with it" />
+              <ComboBox x:Name="fontCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+                <ComboBoxItem Tag="10">10pt</ComboBoxItem>
+                <ComboBoxItem Tag="12">12pt</ComboBoxItem>
+                <ComboBoxItem Tag="14">14pt</ComboBoxItem>
+                <ComboBoxItem Tag="16">16pt</ComboBoxItem>
+              </ComboBox>
+
+              <TextBlock Grid.Row="2" Text="rows" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="how many ranked players the meter shows (1 to 10)" />
+              <syncfusion:UpDown x:Name="rowsUpDown" Grid.Row="2" Grid.Column="1" Margin="0,3" Padding="0,2" Value="5"
+                                 MinValue="1" MaxValue="10" BorderThickness="0" ApplyZeroColor="False"
+                                 ValueChanged="RowsChanged">
+                <syncfusion:UpDown.NumberFormatInfo>
+                  <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+                </syncfusion:UpDown.NumberFormatInfo>
+              </syncfusion:UpDown>
+
+              <TextBlock Grid.Row="3" Text="bar color" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="the colour of every ranking bar" />
+              <shared:ColorPicker x:Name="barColor" Grid.Row="3" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
+                                  SelectedColorChanged="ColourPicked" />
+
+              <TextBlock Grid.Row="4" Text="highlight" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="the colour your own row gets: name and bar stand out in it" />
+              <shared:ColorPicker x:Name="highlightColor" Grid.Row="4" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
+                                  SelectedColorChanged="ColourPicked" />
+            </Grid>
+          </StackPanel>
+        </syncfusion:SfAccordionItem>
+
+        <syncfusion:SfAccordionItem Header="OPTIONS">
+          <!-- how the meter behaves: checkboxes in alphabetical order, then the dropdowns in theirs -->
+          <StackPanel Margin="0,4,6,10">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="106" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+
+              <CheckBox x:Name="hideCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="mask every name but yours" />
+              <CheckBox x:Name="percentCheck" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5" Content="show % damage"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="each row's share of the damage dealt" />
+              <CheckBox x:Name="streamerCheck" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5" Content="streamer mode"
+                        Checked="ControlChanged" Unchecked="ControlChanged"
+                        ToolTip="the meter gets its own normal window so screen capture tools like OBS can grab it" />
+
+              <TextBlock Grid.Row="3" Text="class filter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="show only one class's numbers, or everyone" />
+              <ComboBox x:Name="classCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged" />
+
+              <TextBlock Grid.Row="4" Text="crit rate" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="show crit rate alongside the numbers: DoT crits, nuke crits or both; assumes max level and AAs" />
+              <ComboBox x:Name="critCombo" Grid.Row="4" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+                <ComboBoxItem>Crit% off</ComboBoxItem>
+                <ComboBoxItem>DoT Crit%</ComboBoxItem>
+                <ComboBoxItem>Nuke Crit%</ComboBoxItem>
+                <ComboBoxItem>Both Crit%</ComboBoxItem>
+              </ComboBox>
+
+              <TextBlock Grid.Row="5" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="choose 'on kill' for the meter to reset after NPCs are killed; otherwise it keeps counting until this long after the last hit" />
+              <ComboBox x:Name="resetCombo" Grid.Row="5" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+                <ComboBoxItem Tag="0">on kill</ComboBoxItem>
+                <ComboBoxItem Tag="3">3s</ComboBoxItem>
+                <ComboBoxItem Tag="5">5s</ComboBoxItem>
+                <ComboBoxItem Tag="10">10s</ComboBoxItem>
+                <ComboBoxItem Tag="20">20s</ComboBoxItem>
+                <ComboBoxItem Tag="30">30s</ComboBoxItem>
+                <ComboBoxItem Tag="40">40s</ComboBoxItem>
+                <ComboBoxItem Tag="50">50s</ComboBoxItem>
+                <ComboBoxItem Tag="60">60s</ComboBoxItem>
+                <ComboBoxItem Tag="90">90s</ComboBoxItem>
+              </ComboBox>
+            </Grid>
+          </StackPanel>
+        </syncfusion:SfAccordionItem>
+      </syncfusion:SfAccordion>
+
+      <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,6" />
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,2,0,0">
+        <Button x:Name="saveButton" Content="Save" MinWidth="84" Padding="10,3" Click="SaveClick"
+                ToolTip="keep these settings and go back to the fight" />
+        <Button x:Name="cancelButton" Content="Cancel" MinWidth="84" Padding="10,3" Margin="8,0,0,0" Click="CancelClick"
+                ToolTip="go back without keeping any of this" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

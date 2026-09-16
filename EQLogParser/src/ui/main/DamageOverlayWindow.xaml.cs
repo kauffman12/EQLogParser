@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -21,12 +21,7 @@ namespace EQLogParser
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
-    private readonly bool _ready;
     private Task _lastUpdateTask = Task.CompletedTask;
-    private double _savedHeight;
-    private double _savedWidth;
-    private double _savedTop = double.NaN;
-    private double _savedLeft;
     private long _lastTopTicks = long.MinValue;
     private int _savedFontSize;
     private int _savedMaxRows;
@@ -111,7 +106,6 @@ namespace EQLogParser
 
       var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
-      classList.ItemsSource = list;
 
       // selected class
       var selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
@@ -143,18 +137,17 @@ namespace EQLogParser
 
       // Streamer Mode
       _savedStreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
-      streamer.IsChecked = _savedStreamerMode;
+      _currentMaxRows = _savedMaxRows;
+      _currentStreamerMode = _savedStreamerMode;
 
       _currentShowDps = ConfigUtil.IfSetOrElse("OverlayShowingDps", true);
 
       _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, false, DispatcherPriority.DataBind);
-      _ready = true;
 
       if (preview)
       {
         _updateTimer.Stop();
         ResizeMode = ResizeMode.CanResizeWithGrip;
-        buttonsPanel.Visibility = Visibility.Visible;
         lineGrid.Visibility = Visibility.Visible;
         SetResourceReference(BorderBrushProperty, "PreviewBackgroundBrush");
         SetResourceReference(BackgroundProperty, "PreviewBackgroundBrush");
@@ -162,13 +155,12 @@ namespace EQLogParser
         damageContent.Visibility = Visibility.Visible;
         controlPanel.Visibility = Visibility.Visible;
         Visibility = Visibility.Visible;
-        SetMinHeight(true);
+        MinHeight = 40;
       }
       else
       {
-        SetMinHeight(false);
+        MinHeight = 0;
         ResizeMode = ResizeMode.NoResize;
-        buttonsPanel.Visibility = Visibility.Collapsed;
         lineGrid.Visibility = Visibility.Collapsed;
         controlPanel.Visibility = Visibility.Collapsed;
         BorderBrush = null;
@@ -177,6 +169,122 @@ namespace EQLogParser
         _updateTimer.Start();
       }
     }
+
+    // staged-config working set (mirrors _saved* until the setup window restages it) and its companion window
+    private DamageMeterSettingsWindow _meterSettings;
+    private int _currentFontSize = 12;
+    private bool _currentMiniBars;
+    private bool _currentShowDamagePercent;
+    private bool _currentStreamerMode;
+    private int _currentMaxRows = 5;
+    private string _currentProgressColor = "#FF1D397E";
+    private string _currentHighlightColor = "Gold";
+
+    // Staged configuration API for DamageMeterSettingsWindow: preview applies a whole state without touching the ini,
+    // commit previews then persists (the same keys the inline panel used to write), discard simply ends configure --
+    // MainWindow reopens a live meter that reads the untouched values back off disk, so discarding restores itself.
+    // Geometry is not staged: dragging and resizing the stage is the geometry editor, and commit captures whatever
+    // rectangle the stage ended on.
+
+    internal void PreviewMeterState(DamageMeterConfigState s)
+    {
+      // Only these three move the bottom edge; re-fitting on a color-picker stop would snap back a stage somebody
+      // resized by hand in between.
+      var refit = s.FontSize != _currentFontSize || s.MiniBars != _currentMiniBars || s.MaxRows != _currentMaxRows;
+
+      UpdateFontSize(s.FontSize);
+      UpdateDamageMode(s.DamageResetMode);
+      UpdateSelectedClass(s.SelectedClass);
+      UpdateHideOthers(s.HideOtherPlayers);
+      UpdateShowCritRate(s.CritRateDisplay);
+      _currentStreamerMode = s.StreamerMode;
+      UpdateShowDamagePercent(s.ShowDamagePercent);
+      UpdateMiniBars(s.MiniBars);
+      UpdateProgressBrush(s.ProgressColor);
+      UpdateHighlightBrush(s.HighlightColor);
+
+      // The bar pool rebuilds only when the row count actually moved: a color-picker drag would otherwise recreate
+      // and reseed every DamageBar on each intermediate stop.
+      if (s.MaxRows != _currentMaxRows)
+      {
+        UpdateMaxRows(s.MaxRows);
+      }
+
+      if (refit)
+      {
+        AdjustHeight();
+      }
+    }
+
+    // The stage hugs its content while configuring: rows, font size and thin bars all move the bottom edge, so each
+    // preview re-fits the window (dispatched behind layout, so it measures the NEW bar heights). Live meters never
+    // hear from it — their height is a saved setting and stays exactly where the player left it.
+    private void AdjustHeight()
+    {
+      if (!_preview)
+      {
+        return;
+      }
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        var needed = damageContent.ActualHeight + 8;
+        if (!needed.Equals(Height))
+        {
+          Height = needed;
+        }
+      }, DispatcherPriority.Background);
+    }
+
+    internal void CommitMeterState(DamageMeterConfigState s)
+    {
+      PreviewMeterState(s);
+
+      var calcHeight = GetOverlayHeight();
+      ConfigUtil.SetSetting("OverlayHeight", calcHeight);
+      ConfigUtil.SetSetting("OverlayWidth", Width);
+
+      ConfigUtil.SetSetting("OverlayTop", Top);
+      ConfigUtil.SetSetting("OverlayLeft", Left);
+
+      ConfigUtil.SetSetting("OverlayFontSize", (double)s.FontSize);
+      _savedFontSize = s.FontSize;
+
+      ConfigUtil.SetSetting("OverlayDamageMode", s.DamageResetMode);
+      _savedDamageMode = s.DamageResetMode;
+
+      ConfigUtil.SetSetting("OverlaySelectedClass", s.SelectedClass);
+      _savedSelectedClass = s.SelectedClass;
+
+      ConfigUtil.SetSetting("OverlayHideOtherPlayers", s.HideOtherPlayers);
+      _savedHideOthers = s.HideOtherPlayers;
+
+      ConfigUtil.SetSetting("OverlayEnableCritRate", s.CritRateDisplay);
+      _savedShowCritRate = s.CritRateDisplay;
+
+      ConfigUtil.SetSetting("OverlayMiniBars", s.MiniBars);
+      _savedMiniBars = s.MiniBars;
+
+      ConfigUtil.SetSetting("OverlayShowDamagePercent", s.ShowDamagePercent);
+      _savedShowDamagePercent = s.ShowDamagePercent;
+
+      ConfigUtil.SetSetting("OverlayStreamerMode", s.StreamerMode);
+      _savedStreamerMode = s.StreamerMode;
+
+      ConfigUtil.SetSetting("OverlayMaxRows", s.MaxRows);
+      _savedMaxRows = s.MaxRows;
+      _currentMaxRows = s.MaxRows;
+
+      ConfigUtil.SetSetting("OverlayRankColor", s.ProgressColor);
+      _savedProgressColor = s.ProgressColor;
+
+      ConfigUtil.SetSetting("OverlayHighlightColor", s.HighlightColor);
+      _savedHighlightColor = s.HighlightColor;
+
+      MainActions.CloseDamageOverlay(false);
+    }
+
+    internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false);
 
     private async void UpdateTimerTick(object sender, EventArgs e)
     {
@@ -189,7 +297,7 @@ namespace EQLogParser
 
       if (!_lastUpdateTask.IsCompleted) return;
 
-      var maxRows = maxRowsList.SelectedIndex + 1;
+      var maxRows = _currentMaxRows;
       DamageOverlayStats damageOverlayStats = null;
 
       _lastUpdateTask = Task.Run(() =>
@@ -410,113 +518,6 @@ namespace EQLogParser
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
 
-    private void SaveClick(object sender, RoutedEventArgs e)
-    {
-      var calcHeight = GetOverlayHeight();
-      ConfigUtil.SetSetting("OverlayHeight", calcHeight);
-      ConfigUtil.SetSetting("OverlayWidth", Width);
-      _savedHeight = calcHeight;
-      _savedWidth = Width;
-
-      ConfigUtil.SetSetting("OverlayTop", Top);
-      ConfigUtil.SetSetting("OverlayLeft", Left);
-      _savedTop = Top;
-      _savedLeft = Left;
-
-      if (Application.Current.Resources["DamageOverlayFontSize"] is double fontSize)
-      {
-        ConfigUtil.SetSetting("OverlayFontSize", fontSize);
-        _savedFontSize = (int)fontSize;
-      }
-
-      ConfigUtil.SetSetting("OverlayDamageMode", _currentDamageMode);
-      _savedDamageMode = _currentDamageMode;
-
-      ConfigUtil.SetSetting("OverlaySelectedClass", _currentSelectedClass);
-      _savedSelectedClass = _currentSelectedClass;
-
-      ConfigUtil.SetSetting("OverlayHideOtherPlayers", _currentHideOthers);
-      _savedHideOthers = _currentHideOthers;
-
-      ConfigUtil.SetSetting("OverlayEnableCritRate", _currentShowCritRate);
-      _savedShowCritRate = _currentShowCritRate;
-
-      ConfigUtil.SetSetting("OverlayMiniBars", miniBars.IsChecked == true);
-      _savedMiniBars = miniBars.IsChecked == true;
-
-      ConfigUtil.SetSetting("OverlayShowDamagePercent", showDamagePercent.IsChecked == true);
-      _savedShowDamagePercent = showDamagePercent.IsChecked == true;
-
-      ConfigUtil.SetSetting("OverlayStreamerMode", streamer.IsChecked == true);
-      _savedStreamerMode = streamer.IsChecked == true;
-
-      ConfigUtil.SetSetting("OverlayMaxRows", maxRowsList.SelectedIndex + 1);
-      _savedMaxRows = maxRowsList.SelectedIndex + 1;
-
-      ConfigUtil.SetSetting("OverlayRankColor", progressBrush.Color.ToString(CultureInfo.CurrentCulture));
-      _savedProgressColor = progressBrush.Color.ToString(CultureInfo.CurrentCulture);
-
-      ConfigUtil.SetSetting("OverlayHighlightColor", highlightBrush.Color.ToString(CultureInfo.CurrentCulture));
-      _savedHighlightColor = highlightBrush.Color.ToString(CultureInfo.CurrentCulture);
-
-      saveButton.IsEnabled = false;
-      cancelButton.IsEnabled = false;
-      closeButton.IsEnabled = true;
-    }
-
-    private void CancelClick(object sender, RoutedEventArgs e)
-    {
-      Height = _savedHeight;
-      Width = _savedWidth;
-      Top = _savedTop;
-      Left = _savedLeft;
-
-      if ((maxRowsList.SelectedIndex + 1) != _savedMaxRows)
-      {
-        UpdateMaxRows(_savedMaxRows);
-      }
-
-      _currentShowCritRate = _savedShowCritRate;
-      UpdateShowCritRate(_currentShowCritRate);
-
-      _currentHideOthers = _savedHideOthers;
-      UpdateHideOthers(_currentHideOthers);
-
-      _currentDamageMode = _savedDamageMode;
-      UpdateDamageMode(_currentDamageMode);
-
-      _currentSelectedClass = _savedSelectedClass;
-      UpdateSelectedClass(_currentSelectedClass);
-
-      UpdateFontSize(_savedFontSize);
-      UpdateMiniBars(_savedMiniBars);
-      UpdateShowDamagePercent(_savedShowDamagePercent);
-      streamer.IsChecked = _savedStreamerMode;
-
-      UpdateProgressBrush(_savedProgressColor);
-      UpdateHighlightBrush(_savedHighlightColor);
-
-      saveButton.IsEnabled = false;
-      cancelButton.IsEnabled = false;
-      closeButton.IsEnabled = true;
-    }
-
-    private void SetMinHeight(bool isFixed)
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (isFixed)
-        {
-          var pos = cancelButton.TransformToAncestor(this).Transform(new Point(0, 0));
-          Height = MinHeight = pos.Y + cancelButton.ActualHeight + 10;
-        }
-        else
-        {
-          MinHeight = 0;
-        }
-      }, DispatcherPriority.Background);
-    }
-
     private double GetOverlayHeight()
     {
       var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
@@ -526,20 +527,17 @@ namespace EQLogParser
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)
     {
       DragMove();
-
-      if (_preview)
-      {
-        DataChanged();
-      }
     }
 
     private void WindowContentRendered(object sender, EventArgs e)
     {
-      // delay to avoid WindowSize event from saving new values
-      _savedHeight = Height;
-      _savedWidth = Width;
-      _savedTop = Top;
-      _savedLeft = Left;
+      // the stage is laid out and parked where it will stay: only now does its companion panel exist, because docking
+      // reads the measured rectangle
+      if (_preview && _meterSettings is null)
+      {
+        _meterSettings = new DamageMeterSettingsWindow(this) { Owner = this };
+        _meterSettings.Show();
+      }
     }
 
     private void SetWindowSizes(double height, double width, double top, double left)
@@ -572,47 +570,9 @@ namespace EQLogParser
       }
     }
 
-    private void SelectedClassChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (classList.SelectedIndex != -1 && e.RemovedItems.Count > 0)
-      {
-        UpdateSelectedClass(classList.SelectedItem.ToString());
-        DataChanged();
-      }
-    }
-
     private void UpdateSelectedClass(string selectedClass)
     {
       _currentSelectedClass = selectedClass;
-      if (classList.SelectedItem?.ToString() != selectedClass)
-      {
-        classList.SelectedItem = selectedClass;
-      }
-    }
-
-    private void ShowPercentChecked(object sender, RoutedEventArgs e)
-    {
-      UpdateShowDamagePercent(showDamagePercent.IsChecked == true);
-      DataChanged();
-    }
-
-    private void StreamerChecked(object sender, RoutedEventArgs e)
-    {
-      DataChanged();
-    }
-
-    private void MiniBarsChecked(object sender, RoutedEventArgs e)
-    {
-      if (miniBars.IsChecked != null)
-      {
-        if ((Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() == "3" && miniBars.IsChecked is false) ||
-          (Application.Current.Resources["DamageOverlayBarHeight"]?.ToString() != "3" && miniBars.IsChecked is true))
-        {
-          UpdateMiniBars(miniBars.IsChecked is true);
-          DataChanged();
-          AdjustHeight();
-        }
-      }
     }
 
     private void UpdateShowDamagePercent(bool isChecked)
@@ -633,10 +593,7 @@ namespace EQLogParser
         }
       }
 
-      if (showDamagePercent.IsChecked != isChecked)
-      {
-        showDamagePercent.IsChecked = isChecked;
-      }
+      _currentShowDamagePercent = isChecked;
     }
 
     private void UpdateMiniBars(bool isChecked)
@@ -648,24 +605,13 @@ namespace EQLogParser
       }
       else
       {
-        if (fontList.SelectedValue is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out var value))
+        newHeight = _currentFontSize switch
         {
-          switch (value)
-          {
-            case 10:
-              newHeight = 19.0;
-              break;
-            case 12:
-              newHeight = 21.0;
-              break;
-            case 14:
-              newHeight = 22.0;
-              break;
-            case 16:
-              newHeight = 24.0;
-              break;
-          }
-        }
+          10 => 19.0,
+          12 => 21.0,
+          14 => 22.0,
+          _ => 24.0
+        };
       }
 
       Application.Current.Resources["DamageOverlayBarHeight"] = newHeight;
@@ -686,125 +632,34 @@ namespace EQLogParser
         }
       }
 
-      if (miniBars.IsChecked != isChecked)
-      {
-        miniBars.IsChecked = isChecked;
-      }
-    }
-
-    private void HideOthersChecked(object sender, RoutedEventArgs e)
-    {
-      if (hideOthers != null)
-      {
-        UpdateHideOthers(hideOthers.IsChecked == true);
-        DataChanged();
-      }
+      _currentMiniBars = isChecked;
     }
 
     private void UpdateHideOthers(bool isHideOthers)
     {
       _currentHideOthers = isHideOthers;
-
-      var selectedIndex = _currentHideOthers ? 1 : 0;
-      if (_currentHideOthers != hideOthers.IsChecked)
-      {
-        hideOthers.IsChecked = _currentHideOthers;
-      }
-    }
-
-    private void ShowCritRateChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (showCritRate.SelectedIndex != -1 && e.RemovedItems.Count > 0)
-      {
-        UpdateShowCritRate(showCritRate.SelectedIndex);
-        DataChanged();
-      }
     }
 
     private void UpdateShowCritRate(int show)
     {
       _currentShowCritRate = show;
-
-      var selectedIndex = show;
-      if (showCritRate.SelectedIndex != selectedIndex)
-      {
-        showCritRate.SelectedIndex = selectedIndex;
-      }
-    }
-
-    private void DamageModeChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (damageModeList.SelectedIndex != -1 && e.RemovedItems.Count > 0 &&
-        damageModeList.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out var value))
-      {
-        UpdateDamageMode(value);
-        DataChanged();
-      }
     }
 
     private void UpdateDamageMode(int damageMode)
     {
       _currentDamageMode = damageMode;
-      if (damageModeList.SelectedItem == null || (damageModeList.SelectedItem is ComboBoxItem selected && !selected.Tag.Equals(damageMode.ToString())))
-      {
-        foreach (var item in damageModeList.Items)
-        {
-          if (item is ComboBoxItem comboBoxItem && comboBoxItem.Tag.Equals(damageMode.ToString()))
-          {
-            damageModeList.SelectedItem = comboBoxItem;
-          }
-        }
-      }
-    }
-
-    private void MaxRowsChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (maxRowsList.SelectedIndex != -1 && e.RemovedItems.Count > 0)
-      {
-        UpdateMaxRows(maxRowsList.SelectedIndex + 1);
-        DataChanged();
-        AdjustHeight();
-      }
     }
 
     private void UpdateProgressBrush(string colorString)
     {
-      if (progressBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
-      {
-        progressBrush.Brush = UiUtil.GetBrush(colorString);
-        progressBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
-      }
-
+      _currentProgressColor = colorString;
       Application.Current.Resources["DamageOverlayProgressBrush"] = UiUtil.GetBrush(colorString);
-    }
-
-    private void SelectedProgressBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      if (progressBrush.Brush.ToString(CultureInfo.InvariantCulture) != progressBrush.Color.ToString(CultureInfo.InvariantCulture))
-      {
-        UpdateProgressBrush(progressBrush.Color.ToString(CultureInfo.InvariantCulture));
-        DataChanged();
-      }
     }
 
     private void UpdateHighlightBrush(string colorString)
     {
-      if (highlightBrush.Color.ToString(CultureInfo.InvariantCulture) != colorString)
-      {
-        highlightBrush.Brush = UiUtil.GetBrush(colorString);
-        highlightBrush.Color = (Color)ColorConverter.ConvertFromString(colorString)!;
-      }
-
+      _currentHighlightColor = colorString;
       Application.Current.Resources["DamageOverlayHighlightBrush"] = UiUtil.GetBrush(colorString);
-    }
-
-    private void SelectedHighlightBrush(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-      if (highlightBrush.Brush.ToString(CultureInfo.InvariantCulture) != highlightBrush.Color.ToString(CultureInfo.InvariantCulture))
-      {
-        UpdateHighlightBrush(highlightBrush.Color.ToString(CultureInfo.InvariantCulture));
-        DataChanged();
-      }
     }
 
     private void UpdateMaxRows(int maxRows)
@@ -839,28 +694,14 @@ namespace EQLogParser
         }
       }
 
-      var selectedIndex = maxRows - 1;
-      if (maxRowsList.SelectedIndex != selectedIndex)
-      {
-        maxRowsList.SelectedIndex = selectedIndex;
-      }
+      _currentMaxRows = maxRows;
 
-      UpdateShowDamagePercent(showDamagePercent.IsChecked == true);
-      UpdateMiniBars(miniBars.IsChecked == true);
+      UpdateShowDamagePercent(_currentShowDamagePercent);
+      UpdateMiniBars(_currentMiniBars);
 
       if (_preview)
       {
         LoadTestData();
-      }
-    }
-
-    private void FontSizeChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (fontList.SelectedValue is ComboBoxItem item && e.RemovedItems.Count > 0 && int.TryParse(item.Tag.ToString(), out var value))
-      {
-        UpdateFontSize(value);
-        DataChanged();
-        AdjustHeight();
       }
     }
 
@@ -885,32 +726,15 @@ namespace EQLogParser
 
       if (selectedIndex != -1)
       {
+        _currentFontSize = fontSize;
         Application.Current.Resources["DamageOverlayFontSize"] = (double)fontSize;
         UpdateColumnSizes(fontSize);
-
-        if (fontList.SelectedIndex != selectedIndex)
-        {
-          fontList.SelectedIndex = selectedIndex;
-        }
       }
 
-      UpdateMiniBars(miniBars.IsChecked == true);
+      UpdateMiniBars(_currentMiniBars);
 
       _toolbarWindow?.UpdateFontSize(fontSize);
       ScheduleToolbarPosition();
-    }
-
-    private void AdjustHeight()
-    {
-      Dispatcher.InvokeAsync(() =>
-      {
-        var needed = damageContent.ActualHeight + buttonsPanel.ActualHeight + 8;
-        if (!needed.Equals(Height))
-        {
-          Height = needed;
-          SetMinHeight(true);
-        }
-      }, DispatcherPriority.Background);
     }
 
     private void UpdateColumnSizes(int fontSize)
@@ -1037,14 +861,6 @@ namespace EQLogParser
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
-      if (_preview)
-      {
-        if ((!double.IsNaN(_savedTop) && _savedTop != Top) || (_savedWidth > 0 && _savedWidth != Width))
-        {
-          DataChanged();
-        }
-      }
-
       ScheduleToolbarPosition();
     }
 
@@ -1059,25 +875,6 @@ namespace EQLogParser
         _toolbarWindow.Owner = null;
         _toolbarWindow.Close();
         _toolbarWindow = null;
-      }
-    }
-
-    private void DataChanged()
-    {
-      // not initialized
-      if (saveButton != null && _ready)
-      {
-        if (!saveButton.IsEnabled)
-        {
-          saveButton.IsEnabled = true;
-          closeButton.IsEnabled = false;
-        }
-
-        if (!cancelButton.IsEnabled)
-        {
-          cancelButton.IsEnabled = true;
-          closeButton.IsEnabled = false;
-        }
       }
     }
 

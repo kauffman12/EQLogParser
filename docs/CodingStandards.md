@@ -178,6 +178,16 @@ var exportedId = tree.FindById(importedId) is null ? importedId : null; // null 
 - Decide the source property type early in a feature and stick with it; changing a property from `int` to `string` (or vice versa) mid-feature requires updating all switch/filter logic, converters, and binding references
 - If a `string` representation is needed for the UI, use a computed property or view model rather than changing the model type
 
+### Settings Window Organization
+Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) follow one house layout so muscle memory carries between them:
+- **Sections answer one question each.** An accordion section groups controls by intent — *how does it look* (`STYLE`), *what does it do* (`OPTIONS`) — not by control type or implementation. If adding a control needs "and also" to describe the section, the section is wrong.
+- **Group by control kind, smallest first.** Inside a section: checkboxes together at the top (they read as one-line toggles), then dropdowns and numeric choices, then the bulky controls (color pickers) last. Never scatter checkboxes between labelled rows.
+- **Alphabetical within each group.** Label order is alphabetical inside every control-kind group; readers scan for a word instead of remembering positions, and new controls land in an unambiguous slot.
+- **Row shape.** One `Grid` per section: fixed label column (106) + `*` control column, labels one short lowercase phrase (`thin bars`, `class filter`) with a plain-language `ToolTip`; checkboxes span both columns.
+- **Wording.** Accordion headers are caps (`STYLE`); the window title bar text and header strip are sentence case (`Damage Meter Setup`). Tooltips describe what the player gets, not what the flag is called.
+- **Exit vocabulary.** Save and Cancel only — no close mark, no Esc. Changes preview live on the target but persist only on Save (staged-config pattern; see DesignNotes), and a control that cannot preview yet must not silently commit either.
+- **Never draw controls onto the thing they configure.** The settings form lives in its own companion window; the overlay stays pure display.
+
 ## Performance Guidelines
 
 ### Collection Choices

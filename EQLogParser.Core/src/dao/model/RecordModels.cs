@@ -43,10 +43,32 @@ namespace EQLogParser
 
 
 
+  /* A parsed "X resisted Y's spell" line, raised by MiscLineParser for consumers that watch events rather than
+   * query the store (today: FCT). The record itself is already stored when the event fires. */
+  internal class ResistEvent
+  {
+    public ResistRecord Record { get; set; }
+    public double BeginTime { get; set; }
+
+    /* live tail line vs initial replay load — see LineData.IsMonitor */
+    public bool IsMonitor { get; set; }
+  }
+
   internal class DamageProcessedEvent
   {
     public DamageRecord Record { get; set; }
     public double BeginTime { get; set; }
+
+    /* live tail line vs initial replay load - see LineData.IsMonitor */
+    public bool IsMonitor { get; set; }
+  }
+
+  internal class HealProcessedEvent
+  {
+    public HealRecord Record { get; set; }
+    public double BeginTime { get; set; }
+
+    public bool IsMonitor { get; set; }
   }
 
 

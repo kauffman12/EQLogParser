@@ -57,6 +57,8 @@ namespace EQLogParser
         ExceptionUtil.GlobalLogError = Log.Error;
         ExceptionUtil.GlobalLogDebug = msg => Log.Debug(msg);
 
+        // Runtime OS gate: below Win10 we warn and keep running in degraded mode; the TFM target is
+        // compile-time only and does not bound the installed OS - do not remove or harden into an exit.
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 10240))
         {
           Log.Warn("Windows 10 (build 10240) or newer is required. Make sure you have Windows Compatibility mode turned OFF.");
@@ -148,12 +150,38 @@ namespace EQLogParser
         // preload trigger DB
         _ = TriggerStateDB.Instance;
         await ShowMain();
+
+        OpenFctSimulationFromCommandLine(e.Args);
       }
       catch (Exception ex)
       {
         Log.Error("CreateAppError", ex);
         _splash?.SetErrorState();
       }
+    }
+
+    /*
+     * The FCT performance harness is a measurement tool, not a feature: it runs 60 seconds of raid-pull load and closes itself. It has no menu
+     * entry because nothing about it is for a player, but a released build still has to be measurable on the machine where it misbehaves, so
+     * /fctsim opens it from an installed exe — no source tree, no Debug build. It used to take a backend argument to A/B two renderers; the WPF
+     * vector path lost that comparison and is gone, but an old command line still gets a run rather than dead-ending on a remembered switch.
+     */
+    private static void OpenFctSimulationFromCommandLine(string[] args)
+    {
+      var switchAt = Array.FindIndex(args, a => a.Equals("/fctsim", StringComparison.OrdinalIgnoreCase) || a.Equals("-fctsim", StringComparison.OrdinalIgnoreCase));
+
+      if (switchAt < 0)
+      {
+        return;
+      }
+
+      if (switchAt + 1 < args.Length && args[switchAt + 1].Equals("vector", StringComparison.OrdinalIgnoreCase))
+      {
+        Log.Warn("/fctsim vector: the WPF vector renderer lost the A/B run and was removed. Measuring the one renderer this ships with.");
+      }
+
+      Log.Info("Opening the FCT render simulation from the command line.");
+      new FctSimulationWindow().Show();
     }
 
     protected override async void OnExit(ExitEventArgs e)

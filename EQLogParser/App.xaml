@@ -321,23 +321,6 @@
       </StackPanel>
     </ControlTemplate>
 
-    <ControlTemplate x:Key="CustomDamageMeterCheckBoxTemplate" TargetType="CheckBox">
-      <StackPanel Orientation="Horizontal">
-        <CheckBox Margin="0,2,0,0"
-                  FocusVisualStyle="{x:Null}"
-                  IsChecked="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsChecked, Mode=TwoWay}"
-                  IsEnabled="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=IsEnabled, Mode=TwoWay}"
-                  Checked="DoNothing" Unchecked="DoNothing"
-                  VerticalContentAlignment="Stretch">
-          <CheckBox.LayoutTransform>
-            <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
-          </CheckBox.LayoutTransform>
-        </CheckBox>
-        <Label Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content, Mode=TwoWay}" 
-               VerticalContentAlignment="Center" Foreground="{DynamicResource EQDamageMeterCheckBoxForeground}"/>
-      </StackPanel>
-    </ControlTemplate>
-
     <DataTemplate x:Key="CurrencyTemplate">
       <fa:ImageAwesome x:Name="cellIcon" Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}" HorizontalAlignment="Center" Icon="Solid_MoneyBillWave" Foreground="#73b15d" />
     </DataTemplate>

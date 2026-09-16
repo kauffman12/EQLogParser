@@ -1,0 +1,66 @@
+<Window x:Class="EQLogParser.FctOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EQLogParser"
+        mc:Ignorable="d"
+        AllowsTransparency="True"
+        Background="#00000000"
+        ShowActivated="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        TextOptions.TextFormattingMode="Display"
+        Title="FCT Overlay"
+        WindowStartupLocation="CenterScreen"
+        Width="800"
+        Height="560"
+        MinWidth="420"
+        MinHeight="300"
+        UseLayoutRounding="True"
+        WindowStyle="None">
+  <!-- while configuring, any press that no control or resize band took moves the window; while locked rootBorder is not
+       hit-test visible, so there is nothing to press and clicks reach EverQuest -->
+  <Grid MouseLeftButtonDown="OverlayDrag">
+  <!-- the panel is configure-mode furniture: ApplyLock swaps its background and border to transparent while locked, so playing
+       shows numbers over EverQuest with nothing drawn behind them -->
+  <!-- About 23 % black, because configure mode is spent looking through this panel at the game: it is the reference you are positioning numbers
+       against, and every point of opacity hides more of it. The hairline stays brighter than the fill so the frame is still findable over snow or
+       other bright ground. ApplyLock makes both fully transparent while locked, so nothing at all is drawn during a fight. -->
+  <Border x:Name="rootBorder" CornerRadius="10" Background="#3A000000" BorderBrush="#99FFFFFF" BorderThickness="1">
+    <!-- No configure furniture in here any more: the settings live in their own window (FctSettingsWindow), so the
+         overlay is nothing but numbers — which is exactly what it should be while somebody judges numbers. The inset
+         clears the 12px resize bands so demo text never starts under a grip. -->
+    <Grid Margin="12">
+      <local:FctSkiaCanvas x:Name="fctCanvas" />
+    </Grid>
+  </Border>
+  <!--
+       Drag bands for resizing. A transparent, chromeless window gets no resize frame from Windows, and the middle of the overlay
+       belongs to the numbers, so the grip is a band along each edge: corners size both axes, edges size one. Sizes settle on the
+       values FctResize offers, which is why you cannot make it the wrong shape by accident. Collapsed while locked, because a
+       click-through window must not offer anything to click.
+  -->
+  <Grid x:Name="resizeLayer">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="12" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="12" />
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="12" />
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="12" />
+    </Grid.ColumnDefinitions>
+    <Rectangle Grid.Row="0" Grid.Column="0" Fill="Transparent" Cursor="SizeNWSE" Tag="tl" />
+    <Rectangle Grid.Row="0" Grid.Column="2" Fill="Transparent" Cursor="SizeNESW" Tag="tr" />
+    <Rectangle Grid.Row="2" Grid.Column="0" Fill="Transparent" Cursor="SizeNESW" Tag="bl" />
+    <Rectangle Grid.Row="2" Grid.Column="2" Fill="Transparent" Cursor="SizeNWSE" Tag="br" />
+    <Rectangle Grid.Row="0" Grid.Column="1" Fill="Transparent" Cursor="SizeNS" Tag="t" />
+    <Rectangle Grid.Row="2" Grid.Column="1" Fill="Transparent" Cursor="SizeNS" Tag="b" />
+    <Rectangle Grid.Column="0" Fill="Transparent" Cursor="SizeWE" Tag="l" />
+    <Rectangle Grid.Column="2" Fill="Transparent" Cursor="SizeWE" Tag="r" />
+  </Grid>
+  </Grid>
+</Window>

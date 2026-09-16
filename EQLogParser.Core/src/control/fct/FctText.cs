@@ -1,0 +1,66 @@
+using System;
+using System.Globalization;
+
+namespace EQLogParser
+{
+  /* Shared number formatting for FCT: every amount the overlay draws is built here, once at spawn. */
+  internal static class FctText
+  {
+    /*
+     * Formats a hit value the way NAG's toShorthandString does: 1,234 / 12.5k / 123k / 1.5m. Always
+     * invariant-culture: "12,5k" from a German locale is not what a combat number should read like.
+     */
+    internal static string FormatHitValue(double value)
+    {
+      var v = (long)Math.Round(value);
+      if (v < 10_000)
+      {
+        return v.ToString("N0", CultureInfo.InvariantCulture);
+      }
+
+      if (v < 100_000)
+      {
+        // rounding to one decimal carries at the top of the band (99,960 -> 100.0k), so drop the decimal there
+        var tenths = Math.Round(v / 1000.0, 1);
+        return Shorten(tenths < 100 ? tenths : Math.Round(v / 1000.0), "k");
+      }
+
+      if (v < 1_000_000)
+      {
+        // same carry one tier up: 999,500 must read 1m, not 1000k
+        var thousands = Math.Round(v / 1000.0);
+        return thousands < 1000 ? Shorten(thousands, "k") : Shorten(Math.Round(v / 1_000_000.0, 1), "m");
+      }
+
+      return Shorten(Math.Round(v / 1_000_000.0, 1), "m");
+    }
+
+    /*
+     * The main line of a value: the hit's own face amount, plus how many identical hits this one number stands for.
+     *
+     * Not a sum, deliberately. A merged 4,080 makes the player divide to find out what actually landed, and it lets eight
+     * routine ticks wear the face value of a big one — which is the mistake the fold policy exists to avoid. "2,040 ×2"
+     * answers both questions a glance can ask: how big was a hit like this, and did several happen.
+     */
+    /*
+     * Healing numbers wear a leading plus sign. The panel separates good news from bad with four channels - direction says who,
+     * colour says what, size says how big, x-band says which lane - and the sign is a fifth that costs one glyph: a reader whose
+     * eyes cannot separate green from red can still tell a heal from a crit on sight, in either band, without the colour at all.
+     * It is the value's face and travels with it (a fold reads "+412 ×3"), never the source line underneath.
+     */
+    internal static string FormatHit(double value, int mergeCount, bool heal = false) =>
+      (heal ? "+" : string.Empty) + (mergeCount > 1
+        ? $"{FormatHitValue(value)} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
+        : FormatHitValue(value));
+
+    /* The same count convention on a word: identical evasions stacked read "DODGE! ×2", which says more than either one did.
+     * A word carries no value, so there is nothing to total and no face-value rule to keep - the fold here only counts. */
+    internal static string FormatWord(string word, int mergeCount) =>
+      mergeCount > 1
+        ? $"{word} ×{mergeCount.ToString(CultureInfo.InvariantCulture)}"
+        : word;
+
+    /* "0.#" keeps 12k looking like 12k and 12.5k looking like 12.5k. */
+    private static string Shorten(double value, string suffix) => value.ToString("0.#", CultureInfo.InvariantCulture) + suffix;
+  }
+}

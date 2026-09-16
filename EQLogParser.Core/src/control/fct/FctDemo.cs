@@ -1,0 +1,268 @@
+using System;
+using System.Collections.Generic;
+
+namespace EQLogParser
+{
+  /*
+   * A short loop of numbers that plays while configure mode is up, so a size or style change can be seen moving without waiting for a
+   * fight to produce one of each type on demand. Thirty-two events over twelve seconds: melee swings from a two-digit graze up to a
+   * seven-figure nuke — every value shape the formatter can produce gets at least one cue, because the odometer is only convincing when its
+   * narrowest and widest columns scroll side by side — plus a crit or two, a damage-over-time tick repeated three times (the `412 ×3` fold),
+   * a proc, healing received from a HoT tick to a twenty-thousand-point crit heal, hits landing on you, the pet swinging and casting beside
+   * you, the zero-damage words, and all five special-attack marks. That is the vocabulary a player has to be able to tell apart, delivered in
+   * the order a fight would deliver it rather than as exhibits pinned to a board — and, as FctDemoTest checks, every row of the show list
+   * appears at least once, which is what makes each of those seventeen switches provable on screen in one pass rather than over a fight.
+   *
+   * The events run through a private FctIngest into a private list. Same choreography as play — style, band, travel, fold, placement,
+   * adaptive lifetime — and the same text building, which is the only reason what you see is what you get. It is a separate ingest
+   * rather than the overlay's real one because the real one owns the counters: folding a demo number into a live hit, or counting a
+   * demo drop as lost data, would put the demo inside the data. The list is drawn after the real numbers, and the only thing special about it is
+   * that it animates on its own account (Animated): the canvas pumps frames for its own numbers and has to be told these move too. A real number
+   * that arrives during configure mode behaves exactly as it always has, and appears on top of the demo.
+   *
+   * The vocabulary is EverQuest's own, taken from the files the parser itself reads: melee verbs are the ones in
+   * StatsUtil.RegularMeleeTypes in the base form FctManager.DisplaySource shows them ("Bite", not "Bites"); spell names come from
+   * data/spells.txt and proc names from data/procs.txt; the words are Labels constants so they cannot drift from what the parser
+   * assigns. Invented names would teach a player to expect text that never appears. FctDemoTest checks these claims against the
+   * shipped data files rather than trusting them.
+   */
+  internal sealed class FctDemo
+  {
+    /*
+     * One loop of the script. Twelve seconds with the last cue at 7 s: every number has room to launch, travel, hold and fade before
+     * the loop restarts, so a cycle never cuts one off mid-flight — and there is a beat of quiet at the end, which is what makes it
+     * readable as a loop rather than as noise.
+     */
+    public const double CycleMs = 12000;
+
+    /* How far the last cue sits from the end of the cycle: enough for the longest lifetime in play to finish inside the loop. */
+    internal const double TailMs = CycleMs - 7480;
+
+    /* One scheduled event. Same shape as the queue command a real log line becomes, which is deliberate: the demo feeds the ingest
+       nothing a parse could not have fed it. */
+    internal readonly struct Cue
+    {
+      public readonly double OffsetMs;
+      public readonly FctLane Lane;
+      public readonly double Value;
+      public readonly string Source;
+      public readonly bool Crit;
+      public readonly bool Periodic;
+      public readonly string ValueText;
+      public readonly bool Proc;
+      public readonly FctSpecial Special;
+
+      /* Which show-list row this number answers to (FctRow), because the sample data has to obey the panel's switches or it
+         is a preview that contradicts its own controls: mute "healing crits" and a healing crit has to leave the loop. Most
+         cues derive theirs from their own flags — a word has none, heals split on crit, damage defaults to melee — and the ones
+         the flags cannot tell (a spell, or anything a pet did) say so, since nothing would be worse than a cue whose row
+         disagrees with what it looks like: the switch would then seem broken in exactly the direction that hides nothing. */
+      public readonly FctRow Row;
+
+      internal Cue(double offsetMs, FctLane lane, double value = 0, string source = null, bool crit = false,
+        bool periodic = false, string valueText = null, bool proc = false, FctSpecial special = FctSpecial.None,
+        FctRow row = FctRow.Word, bool pet = false)
+      {
+        OffsetMs = offsetMs;
+        Lane = lane;
+        Value = value;
+        Source = source;
+        Crit = crit;
+        Periodic = periodic;
+        ValueText = valueText;
+        Proc = proc;
+        Special = special;
+        Row = row is not FctRow.Word ? row : DeriveRow(lane, crit, proc, pet);
+      }
+
+      /* The same rule FctManager applies to a parsed record (FctRow, DamageRow), reduced to what a cue knows about itself:
+         procs first, then the pet, then whether it crit — with melee as the default kind, which is why the spell cues name
+         theirs. A word stays FctRow.Word: its switch is chosen by its text (FctIngest.WordShown), never by a row. */
+      private static FctRow DeriveRow(FctLane lane, bool crit, bool proc, bool pet) => lane switch
+      {
+        FctLane.Defensive or FctLane.Missed => FctRow.Word,
+        FctLane.HealingReceived or FctLane.HealingDealt => crit ? FctRow.HealingCrits : FctRow.Healing,
+        _ => proc ? FctRow.Procs : pet ? FctRow.PetMelee : crit ? FctRow.MeleeCrits : FctRow.MeleeHits,
+      };
+    }
+
+    /* The script. Offsets are increasing: Advance walks it once per cycle, which is cheaper than searching and enough. */
+    public static readonly IReadOnlyList<Cue> Script = new List<Cue>
+    {
+      new Cue(0, FctLane.DamageDealt, 1140, "Slash"),
+
+      // the pet swinging beside me: my lane (it is my fight), its own row so it can be quieted without quieting me
+      new Cue(140, FctLane.DamageDealt, 388, "Claw", pet: true),
+      new Cue(280, FctLane.HealingReceived, 2480, "Complete Heal"),
+      new Cue(560, FctLane.DamageTaken, 612, "Bite"),
+      new Cue(760, FctLane.DamageDealt, 3418, "Crush", crit: true),
+      new Cue(1040, FctLane.Defensive, valueText: Labels.Dodge),
+
+      // three identical ticks, eight hundred ms apart: the fold needs to be seen happening, not described
+      /* Ticks are spell damage and live in the spell rows with everything else slow (FctRow): a row of their own would be a
+         switch for something nobody can pick out of a fold. */
+      new Cue(1280, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
+      new Cue(1640, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
+
+
+      // every word the switches can reach appears once per cycle (FctIngest's eight): mute one and the loop proves it
+      new Cue(2060, FctLane.Defensive, valueText: Labels.Block),
+      new Cue(2520, FctLane.Missed, valueText: Labels.Miss),
+      new Cue(2840, FctLane.DamageDealt, 412, "Venin", periodic: true, row: FctRow.SpellHits),
+
+      new Cue(3200, FctLane.HealingReceived, 3120, "Complete Heal", crit: true),
+      new Cue(3560, FctLane.Defensive, valueText: Labels.Parry),
+      new Cue(3900, FctLane.DamageTaken, 268, "Disease", periodic: true, row: FctRow.SpellHits),
+
+      // and the pet casting: which is why "pet spells" is a row apart from "pet melee" rather than one "pet" switch
+      new Cue(3980, FctLane.DamageDealt, 1620, "Sonic Shock", pet: true, row: FctRow.PetSpells),
+
+      // the marked events: the rare kind that earns a glyph, the purple hue and a crit's size (all five appear once per
+      // cycle, spread through it — a configure session should teach the whole family, and every loop replays the lesson)
+      new Cue(4080, FctLane.DamageDealt, 896805, "Decapitation XVIII", crit: true, special: FctSpecial.Decapitation,
+        row: FctRow.SpellCrits),
+
+      // an item or spell proc: its lane's full size, and gone sooner — tempo is what keeps procs off the picture, not small text
+      new Cue(4300, FctLane.DamageDealt, 1380, "Arcane Jolt", proc: true),
+
+      // the odometer's narrow extreme next to the decapitation's 896.8k: a graze that abbreviates to nothing
+      new Cue(4560, FctLane.DamageDealt, 47, "Punch"),
+
+
+      // the loud pair: wasted-cast warnings carry their own font size, so the cycle has to show them next to quiet words
+      new Cue(4900, FctLane.Defensive, valueText: Labels.Absorb),
+      // the wizard's burn: the mark rides its own size and purple whatever the log called this hit
+      new Cue(5080, FctLane.DamageDealt, 9340, "Mana Burn XX", special: FctSpecial.ManaBurn, row: FctRow.SpellHits),
+      new Cue(5260, FctLane.DamageDealt, 18240, "Backstab", crit: true, special: FctSpecial.Assassinate),
+      new Cue(5460, FctLane.DamageTaken, 1742, "Crush", crit: true),
+      new Cue(5700, FctLane.DamageDealt, 12470, "Slash", crit: true, special: FctSpecial.FinishingBlow),
+      new Cue(5900, FctLane.Defensive, valueText: Labels.Riposte),
+
+      // deliberately NOT a crit: the mark carries a crit's size on its own, and this cue is the proof of it
+      new Cue(6100, FctLane.DamageDealt, 10460, "Pierce", special: FctSpecial.Headshot),
+      new Cue(6450, FctLane.DamageDealt, 7310, "Crush", special: FctSpecial.SlayUndead),
+      new Cue(6560, FctLane.Defensive, valueText: Labels.Invulnerable),
+      new Cue(6700, FctLane.HealingReceived, 1080, "Complete Heal", periodic: true),
+      new Cue(6850, FctLane.HealingReceived, 24800, "Complete Heal", crit: true),
+      // the necromancer's burn
+      new Cue(7150, FctLane.DamageDealt, 21650, "Life Burn X", special: FctSpecial.LifeBurn, row: FctRow.SpellHits),
+
+      // the m band: what a big nuke looks like after the server rates did their thing
+      new Cue(7300, FctLane.DamageDealt, 1240000, "Flare", crit: true, row: FctRow.SpellCrits),
+
+      // my spell failed the way a punch gets blocked: the word lane for outgoing failures, same as Miss
+      new Cue(7480, FctLane.Missed, valueText: Labels.Resist),
+    };
+
+    /* Its own ingest on purpose: see the class comment. Nothing in here can reach the overlay's counters or its live numbers. */
+    private readonly FctIngest _ingest = new();
+    private readonly List<FctHitState> _hits = [];
+
+    private double _cycleStartMs;
+    private int _next;
+
+    public bool Active { get; private set; }
+
+    /* Drawn by the backend after the real hits, through the same per-hit draw path, aged from SpawnMs like any other number. */
+    public IReadOnlyList<FctHitState> Hits => _hits;
+
+    /*
+     * True while demo text is on screen and moving, which is how the render pump knows to keep asking for frames. The question has to be asked of
+     * the demo explicitly: a pump that invalidates only when it holds live real numbers repaints twice a second here - once when a cue fires, once
+     * when something expires - so numbers hang in place and then jump, which is a slideshow and not an animation. Asking whenever the demo is merely
+     * switched on is the opposite mistake: it would paint an empty canvas for the four quiet seconds at the end of every cycle.
+     */
+    public bool Animated => Active && _hits.Count > 0;
+
+    /* Begins (or restarts) a cycle. Live numbers already on screen stay live: restarting the loop is not a reason to blank the overlay. */
+    public void Start(double nowMs)
+    {
+      Active = true;
+      _cycleStartMs = nowMs;
+      _next = 0;
+    }
+
+    /*
+     * Spawns whatever is due, ages out whatever finished, and wraps the cycle. Returns whether anything changed, so a backend that
+     * only repaints on change knows to ask for a frame — the demo is animation, and animation that never sets the flag stands still.
+     *
+     * Wrapping resets the schedule and nothing else. Old numbers are deliberately left alone to finish their flights: clearing them
+     * at the seam would make every loop visibly truncate a fade, which looks like a bug in the overlay rather than like a loop.
+     *
+     * The motion style and the layout choice arrive as parameters of the frame rather than as things set once on the demo, and that is
+     * the whole lesson of this class: the loop runs its own FctIngest so it cannot touch the real counters, which also means it has its
+     * own copy of both. Set those copies from the outside and forgetting once is invisible - selecting a style played freeze, and the
+     * dropdown looked broken. Passed in beside the canvas size, there is nothing to remember, and neither can go stale between a control
+     * changing and a number spawning.
+     */
+    public bool Advance(double nowMs, double w, double h, FctMotionStyle style, FctLayoutChoice layout, Action<FctHitState> spawned,
+      Action<FctHitState> released, FctIngest gates = null)
+    {
+      if (!Active)
+      {
+        return false;
+      }
+
+      _ingest.Style = style;
+      _ingest.Layout = layout;
+
+      /* The gate settings ride along from the real ingest for the same reason style and layout do — this loop has its
+       * own ingest, so everything it must agree with arrives fresh every frame (FctIngest.CopyGatesFrom, which owns that
+       * list because it owns those fields). A demo that ignored the category switches would cheerfully spawn exactly what
+       * the player just asked not to see, and a preview that contradicts its controls is the bug this method's signature
+       * exists to prevent; it is optional only so the existing tests (which are about the script) need not invent a feed to
+       * borrow gates from. */
+      _ingest.CopyGatesFrom(gates);
+
+      var changed = false;
+      var elapsed = nowMs - _cycleStartMs;
+
+      if (elapsed >= CycleMs)
+      {
+        _cycleStartMs = nowMs;
+        _next = 0;
+        elapsed = 0;
+        changed = true;
+      }
+
+      while (_next < Script.Count && Script[_next].OffsetMs <= elapsed)
+      {
+        var cue = Script[_next++];
+
+        // the real path, including whatever folding or placement it decides: a demo that skipped those would be showing a rehearsal
+        var hit = _ingest.Accept(_hits, cue.Lane, cue.Value, cue.Source, cue.Crit, minor: false, cue.Periodic,
+          cue.ValueText, w, h, nowMs, cue.Proc, cue.Row, cue.Special, released);
+
+        if (hit is not null)
+        {
+          spawned?.Invoke(hit);
+          changed = true;
+        }
+      }
+
+      // a folded or dropped cue returns null: it still changed the picture (a count went up somewhere), so repaint anyway
+      if (_ingest.PruneExpired(_hits, nowMs, released) > 0)
+      {
+        changed = true;
+      }
+
+      return changed;
+    }
+
+    /* Takes the demo away: every number released to the backend's cache cleanup, exactly as an expired real hit would be. */
+    public void Clear(Action<FctHitState> released)
+    {
+      foreach (var hit in _hits)
+      {
+        released?.Invoke(hit);
+      }
+
+      _hits.Clear();
+      _next = 0;
+      Active = false;
+    }
+
+    /* A resize moves demo numbers the way it moves real ones — they were laid out against the old size and motion never revisits it. */
+    public void Rescale(double oldW, double oldH, double w, double h) => FctResize.Rescale(_hits, oldW, oldH, w, h);
+  }
+}

@@ -1,0 +1,393 @@
+namespace EQLogParser
+{
+  /*
+   * Which region scheme the overlay is using and where each side sits in it — the bands/by-type choice, which side
+   * incoming lives on, and which way each side travels. The player-facing half of this (names, defaults, settings.ini
+   * keys) lives in FctOverlaySettings; this file is the geometry the layout maths consumes, kept free of ConfigUtil for
+   * the same reason as everything else in fct/.
+   *
+   * Two schemes, which are the two words the settings panel speaks — fountain and split:
+   *
+   * bands — the original, and what "fountain" is: a band across the top for my numbers, one across the bottom for what
+   * lands on me, and a protected strip between them that stays empty by construction because both sides travel away from
+   * it. Direction is the "who" carrier there (out rises, in sinks), so the strip — not a column boundary — is what keeps
+   * the two reads apart.
+   *
+   * by type — "split": columns across the overlay whose side carries WHAT a number is rather than who it belongs to.
+   * Four named lanes (FctRailLane); the ones a category actually books tile their half of the width - two claimants
+   * get a quarter apiece, one claimant gets the whole half, because a lane nobody booked is air, not a wall — though what
+   * the freed air buys is label room, never a shifted column: a lane's spine stays welded to its own slot (SpineFor). Healing in
+   * one, either damage stream in another, and each category's travel dial still its own. That is the view a player asks for
+   * ("heals left, damage right, mine up, theirs down") and the one MSBT cannot serve from a single area — his areas
+   * scroll one way — so his users assemble it out of Add Scroll Area plus re-mapping the heal events
+   * (MSBTOptionsTabs.lua). Here it is one mode.
+   *
+   * One column carries one train. Categories may share a column — that is the point of lanes — but only in one direction,
+   * because two queues driving opposite ways through the same pixels cannot be spaced by anything except luck; the settings
+   * refuse the combination (FctConfigState.ResolveLaneConflicts) rather than letting the geometry discover it, and the
+   * column itself enforces the rest (FctConveyor).
+   *
+   * A third scheme lived here for a while — halves, the genre's two side-by-side areas, with one flight-scored stream per
+   * side. It came out: no control could select it, no settings value reached it, and every hour spent on its braided
+   * columns and congestion valves was an hour spent on geometry nobody could ask for. If it returns it gets written
+   * against the lane model rather than dug out of history.
+   *
+   * A stage is a value: (choice, canvas size) is all a number's region depends on, so asking twice with the same size
+   * answers the same thing, and a resize is a new stage rather than a mutation somebody has to schedule.
+   */
+  internal enum FctLayoutMode
+  {
+    /* Split: columns assigned by category. The name stayed after halves went because "by type" is what the
+     * ownership question actually is — healing here, damage there, whoever booked the lane. */
+    ByType,
+
+    Bands,
+  }
+
+  /* Which half of the overlay incoming numbers sit in. Outgoing always takes the other one. */
+  internal enum FctRegionSide
+  {
+    Left,
+    Right,
+  }
+
+  /*
+   * The settings-facing choice: mode, incoming's side, and each side's travel direction (up = rises). Stored as a
+   * struct rather than four loose properties so ingest holds one value the canvas can swap atomically, and so an
+   * equality check is how "did anything change" gets asked.
+   */
+  internal readonly struct FctLayoutChoice
+  {
+    public readonly FctLayoutMode Mode;
+    public readonly FctRegionSide IncomingSide;
+
+    /* By type only: which column healing owns. Everything else takes the other one. */
+    public readonly FctRegionSide HealSide;
+
+    /* By type: travel direction per side. Bands reads these too since the fountain's dials, but its shipped answers
+     * ARE the strip invariant. */
+    public readonly bool IncomingUp;
+    public readonly bool OutgoingUp;
+
+    /* By type per category: which column the two damage streams own. By type defaults them to the side opposite the
+     * healing — the classic heals | damage split — and either can be sent to join the other, or both anywhere else;
+     * other schemes do not read them. */
+    public readonly FctRegionSide IncomingDamageSide;
+    public readonly FctRegionSide OutgoingDamageSide;
+
+    /* By type per category: which way healing travels, whatever direction its damage shares a column with. */
+    public readonly bool HealUp;
+
+    /* By type per category: which of the four columns each category streams down (FctRailLane). Resolved at construction
+     * — when only a side was given, the side's OUTER lane sits where that half used to be centred — so the stage never
+     * asks which form the settings arrived in. */
+    public readonly FctRailLane HealLane;
+    public readonly FctRailLane IncomingDamageLane;
+    public readonly FctRailLane OutgoingDamageLane;
+
+    /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
+     * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while an
+     * omitted column direction is down - the player-facing shipped spread (FctConfigState) is what gives the columns
+     * their rising traffic. Tests that built a choice with bare positional bools keep the old answers explicitly; only
+     * omission changes meaning. */
+    public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
+      FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
+      FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+    {
+      var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
+
+      Mode = mode;
+      IncomingSide = incomingSide;
+      HealSide = healSide;
+      IncomingUp = incomingUp ?? false;
+      OutgoingUp = outgoingUp ?? mode is FctLayoutMode.Bands;
+      HealUp = healUp ?? false;
+      IncomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
+      OutgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
+        : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
+      HealLane = healLane ?? FctRailLanes.OfSide(HealSide);
+      IncomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(IncomingDamageSide);
+      OutgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(OutgoingDamageSide);
+    }
+
+    /*
+     * The original top/bottom scheme, and the engine's own default: it is what the product ships too (FctOverlaySettings
+     * reads fountain unless settings.ini says split), so an overlay that has not loaded anything yet and a test that does
+     * not name a scheme both get the two bands. Directions omitted on purpose: bands' own defaults ARE the strip invariant
+     * (in sinks, out rises), which is what every pre-existing bands test rides.
+     */
+    public static readonly FctLayoutChoice Bands = new(FctLayoutMode.Bands, FctRegionSide.Left);
+
+    public FctStage Stage(double w, double h) => Mode switch
+    {
+      FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
+      FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
+        HealLane, IncomingDamageLane, OutgoingDamageLane),
+      // The same rule the settings parse uses: junk draws the shipped scheme rather than reaching the geometry as garbage —
+      // and here "junk" can only be a value cast into existence, since every reader of FctLayoutMode produces one of the two.
+      _ => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
+    };
+  }
+
+  /* (choice, size) resolved to the questions the layout actually asks: whose region is this, which way does it travel. */
+  internal readonly struct FctStage
+  {
+    private readonly FctLayoutMode _mode;
+    private readonly bool _incomingUp;
+    private readonly bool _outgoingUp;
+    private readonly bool _healUp;
+    private readonly FctRegionSide _incomingDamageSide;
+    private readonly FctRegionSide _outgoingDamageSide;
+
+    // By type: the same question one level finer — which of the four columns each category streams down (FctRailLane).
+    // A hidden category carries None into the stage now rather than being parked in a column: the empty lane is the
+    // geometric fact that frees its share of the half, and nothing on that category's rows ever reaches geometry.
+    private readonly FctRailLane _healLane;
+    private readonly FctRailLane _incomingDamageLane;
+    private readonly FctRailLane _outgoingDamageLane;
+
+    // By type only: how many distinct lanes each half holds — the tiling question LaneRect answers in one lookup.
+    private readonly int _leftOccupied, _rightOccupied;
+
+    public FctLayoutMode Mode => _mode;
+    public double W { get; }
+    public double H { get; }
+
+    private FctStage(FctLayoutMode mode, FctRegionSide incomingSide, FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+    {
+      _mode = mode;
+      _incomingUp = incomingUp;
+      _outgoingUp = outgoingUp;
+      _healUp = healUp;
+      var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
+      _incomingDamageSide = incomingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal : incomingSide);
+      _outgoingDamageSide = outgoingDamageSide ?? (mode is FctLayoutMode.ByType ? oppositeHeal
+        : incomingSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left);
+      _healLane = healLane ?? FctRailLanes.OfSide(healSide);
+      _incomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(_incomingDamageSide);
+      _outgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(_outgoingDamageSide);
+
+      /* One train per column (FctConveyor): categories booked into the same lane travel together, or a single queue would be
+         asked to run two ways at once — which is every row in it landing on top of every other. The direction dials are per
+         category, so a settings file can ask for the impossible; my damage owns its column, incoming follows it, heals follow
+         whoever got there first. The panel refuses the combination too (FctConfigState.ResolveLaneConflicts), but the rule
+         belongs here at the layer that decides where numbers go, so a hand-written ini, a dial turned mid-fight and a test
+         harness all agree without anyone having to remember to check twice. */
+      if (_mode is FctLayoutMode.ByType)
+      {
+        /* None must not couple directions against itself: two hidden categories share no column, run no train, and have
+           no direction to reconcile. */
+        if (_incomingDamageLane is not FctRailLane.None && _incomingDamageLane == _outgoingDamageLane)
+        {
+          _incomingUp = _outgoingUp;
+        }
+
+        if (_healLane is not FctRailLane.None && _healLane == _outgoingDamageLane)
+        {
+          _healUp = _outgoingUp;
+        }
+        else if (_healLane is not FctRailLane.None && _healLane == _incomingDamageLane)
+        {
+          _healUp = _incomingUp;
+        }
+
+        /* How many distinct columns each half will tile (below): a shared lane is one train and counts once. */
+        _leftOccupied = Occupied(_healLane, _incomingDamageLane, _outgoingDamageLane, 0, 2);
+        _rightOccupied = Occupied(_healLane, _incomingDamageLane, _outgoingDamageLane, 2, 4);
+      }
+
+      W = w;
+      H = h;
+    }
+
+    /* Bands now carries directions like every other scheme — the fountain preset hands all three dials straight
+     * through, healing's included. The defaults stay the old strip invariant (in sinks, out rises; heals sink), so
+     * every caller that never mentions a direction draws exactly what bands has always drawn. */
+    internal static FctStage Bands(double w, double h, bool incomingUp = false, bool outgoingUp = true, bool healUp = false)
+      => new(FctLayoutMode.Bands, FctRegionSide.Left, FctRegionSide.Left, incomingUp, outgoingUp, w, h, healUp: healUp);
+
+    /* Lanes are the ownership question asked one level finer; callers that pass only sides get that side's OUTER lane,
+     * which - owning its half alone, as in the shipped default - centres where a side's numbers have always been centred. */
+    internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
+      bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+      => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h, healUp, incomingDamageSide, outgoingDamageSide,
+        healLane, incomingDamageLane, outgoingDamageLane);
+
+    /*
+     * The rect that owns a number's geometry — the only region question anything still asks.
+     *
+     * Bands: the whole canvas, because the bands inside it are FctLayout's business and the protected strip is kept clear
+     * by travel direction rather than by a boundary. Split: the LANE (FctRailLane), the span that lane owns under the
+     * half-tiling rule, which is what makes "my damage never lands in your heals' column" a fact instead of a scored
+     * preference. Two categories that booked the same lane share it as one queue (FctConveyor), so they are one train
+     * rather than two crowds.
+     *
+     * There used to be a second overload answering this in halves — whose side, not which column — because halves owned
+     * the half outright and had no lanes inside it. Nothing asks that question now, and a region that quietly meant
+     * something other than what a row is drawn inside is how a column's numbers came to disagree with their own spine.
+     */
+    public (double X, double Y, double Width, double Height) RegionFor(FctHitState hit)
+    {
+      if (_mode is not FctLayoutMode.ByType)
+      {
+        return (0, 0, W, H);
+      }
+
+      var lane = CategoryLane(hit);
+
+      /* A row still in flight when its category gave its column away keeps the walls it was born under until it scrolls
+         out: new numbers of that category never spawn at all (FctIngest stops them), so this answers for the old ones
+         alone, and their stamped sides are the only truth left about where they live. */
+      if (lane is FctRailLane.None)
+      {
+        return hit.SideMin > 0 ? (hit.SideMin, 0, Math.Max(1.0, hit.SideMax - hit.SideMin), H) : (0, 0, W, H);
+      }
+
+      return LaneRect(lane);
+    }
+
+    /* Which column a number's category owns: four named lanes, whose booked spans tile their half and hold it outright.
+     * Categories that choose the SAME lane share it as one queue — which is the point; categories that choose different
+     * lanes can never be woven into each other's pixels. (Before lanes existed by type answered this in halves and
+     * placement quietly invented sub-columns; see FctRailLane.) */
+    private FctRailLane CategoryLane(FctHitState hit) =>
+      hit.Heal ? _healLane : hit.Incoming ? _incomingDamageLane : _outgoingDamageLane;
+
+    /*
+     * Where a row's column STANDS — the x its numbers park on and its labels measure outward from. It is the lane slot's
+     * centre whatever the tiling hands out: players centre the overlay on their crosshair, so the fight happens at W/2 and a
+     * lane booked next to it (right 1) was put there to stay near the fight. Setting the neighbour to none must therefore buy
+     * the wider read that was its whole point — the freed quarter becomes label room behind the spine (FitSource budgets
+     * from X0 to the region walls) — not a column that slides away toward the screen edge, which is what anchoring on the
+     * region's centre did. A row whose category just lost its lane keeps the centre of the walls it was born under, matching
+     * RegionFor's own fallback. Bands resolves to the old answers: its defaults put one lane per half, at each half's centre.
+     */
+    internal double SpineFor(FctHitState hit)
+    {
+      var lane = CategoryLane(hit);
+
+      if (lane is FctRailLane.None)
+      {
+        var region = RegionFor(hit);
+        return region.X + (region.Width / 2);
+      }
+
+      return LaneSpine(lane);
+    }
+
+    /*
+     * Which of the four columns a number owns, as an index — what a conveyor names a lane by (FctConveyor). Bands has no
+     * columns to point at, answers -1, and the caller falls back to geometry.
+     */
+    internal int LaneIndexOf(FctHitState hit) =>
+      _mode is FctLayoutMode.ByType ? FctRailLanes.Index(CategoryLane(hit)) : -1;
+
+    /*
+     * The rect a lane owns under the tiling rule: two claimants in a half take it in quarters, in screen order; one
+     * claimant takes the whole half - the empty slot is air the number may use, not a wall. LaneRect is also where the
+     * configure-mode guide asks what to outline (FctSkiaCanvas). A lane that books no category is never asked for here:
+     * live rows' categories always own the lane they are drawn in, and the one exception — a row outliving its column's
+     * reclamation — is answered by RegionFor, not by this.
+     */
+    /* Which slot the lane would hold even in a full house, as a centre: the inner quarter's middle for left 2 / right 1,
+       the outer one's for left 1 / right 2. The half's freed air goes to the region (labels, sway and clamps all measure the
+       region), while this stays put — see SpineFor. */
+    /* The empty band split mode keeps out of the middle (px, absolute). It is where players park the target frame —
+       their own words: "that's where you should place the NPC" — and it earns its two decades a second way: a long
+       label that spills across the centre reads as belonging to whatever the player is looking at, which is never the
+       intent of a number streaming past it. The halves therefore tile the TRACK (the width minus the gutter), equally
+       and symmetrically: left ends at halfW, right starts at halfW + CenterGutter. Bands never asks — its protected
+       region is the horizontal strip, not a column. Absolute rather than scaled: forty pixels of target frame is the
+       same fact on any monitor, and the layout floors (FctResize) keep a canvas narrow enough to squeeze it out from ever
+       being drawn on. */
+    internal const double CenterGutter = 40;
+
+    /* Half of the track each side gets to tile. Every split-mode measure — spines, rects, the label walls they imply —
+       derives from this one number, so the gutter cannot exist in one and not another. */
+    private double LaneTrackHalf => (W - CenterGutter) / 2.0;
+
+    internal double LaneSpine(FctRailLane lane)
+    {
+      var i = FctRailLanes.Index(lane);
+      var halfW = LaneTrackHalf;
+
+      return (i < 2 ? 0.0 : halfW + CenterGutter) + ((i % 2) + 0.5) * (halfW / 2.0);
+    }
+
+    internal (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
+    {
+      var i = FctRailLanes.Index(lane);
+      var halfW = LaneTrackHalf;
+      var halfStart = i < 2 ? 0.0 : halfW + CenterGutter;
+
+      if ((i < 2 ? _leftOccupied : _rightOccupied) is 1)
+      {
+        return (halfStart, 0, halfW, H);
+      }
+
+      return (halfStart + (i % 2) * (halfW / 2.0), 0, halfW / 2.0, H);
+    }
+
+    /* How many distinct lanes among the three category assignments sit in [lo, hi): a shared lane counts once, None not at all. */
+    private static int Occupied(FctRailLane heal, FctRailLane incoming, FctRailLane outgoing, int lo, int hi)
+    {
+      var n = 0;
+
+      if (InHalf(heal, lo, hi))
+      {
+        n++;
+      }
+
+      if (InHalf(incoming, lo, hi) && incoming != heal)
+      {
+        n++;
+      }
+
+      if (InHalf(outgoing, lo, hi) && outgoing != heal && outgoing != incoming)
+      {
+        n++;
+      }
+
+      return n;
+
+      static bool InHalf(FctRailLane lane, int lo, int hi)
+      {
+        var i = FctRailLanes.Index(lane);
+        return i >= lo && i < hi;
+      }
+    }
+
+    /* Territory for a number: see RegionFor(hit). Bands measures amplitude against the whole canvas either way. */
+    public double TerritoryFor(FctHitState hit) => _mode is FctLayoutMode.Bands ? W : RegionFor(hit).Width;
+
+    /*
+     * The travel sign for a direction: +1 rises, -1 sinks. Both dials are read as given; the strip invariant bands ships
+     * with (out up, in down) is the values FctLayoutChoice.Bands arrives with, not a rule applied here — which is what lets
+     * the fountain's dials steer at all. Split's columns carry whatever directions were chosen per category, reconciled
+     * per lane in the constructor so one column never runs two ways.
+     */
+    public double UpFor(bool incoming) =>
+      incoming ? (_incomingUp ? 1 : -1) : (_outgoingUp ? 1 : -1);
+
+    /* The hit-aware answer: healing gets its own direction wherever the scheme has a heals dial — split (its own column,
+     * even when a damage stream shares it) and bands alike. A fountain therefore sprays heals UP while damage
+     * falls, or sinks them while everything else rises; the dial was always in the settings, this is where the mode
+     * stopped ignoring it. The question has to know what the number IS, not only who it belongs to. Every rail path
+     * asks this one. */
+    public double UpFor(FctHitState hit) => hit.Heal
+      ? _healUp ? 1 : -1
+      : UpFor(hit.Incoming);
+
+    /*
+     * What a scheme moves with when nothing explicit says otherwise: split ships with the genre's own default shape (the
+     * arc, whose bow is MSBT's, docs/DesignNotes.md), and bands keeps its quiet freeze. First-run configure uses this, and so
+     * does a layout change that would leave an illegal style selected.
+     */
+    public static FctMotionStyle DefaultMotion(FctLayoutMode mode)
+      => mode is FctLayoutMode.Bands ? FctMotionStyle.Freeze : FctMotionStyle.Arc;
+  }
+}

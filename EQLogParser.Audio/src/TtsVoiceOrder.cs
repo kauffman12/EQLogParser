@@ -16,6 +16,12 @@ namespace EQLogParser.Audio
    */
   internal static class TtsVoiceOrder
   {
+    /*
+     * Returns the very items it was handed, arranged in the order their labels read — never the labels themselves.
+     * Callers bind the result to a picker whose selection is saved, and storing "Nicole (US)" instead of af_nicole
+     * would be a setting no engine recognises on the next launch. Sorting is display only, which is easy to forget in
+     * an assertion: the expected list is written in ids even though the whole point is how the labels read.
+     */
     internal static List<string> ByLabel(IEnumerable<string> voices, Func<string, string> label) =>
       voices
         .OrderBy(voice => label(voice), StringComparer.OrdinalIgnoreCase)

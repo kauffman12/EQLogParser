@@ -1,3 +1,4 @@
+using System;
 using log4net;
 using System.Reflection;
 
@@ -6,6 +7,10 @@ namespace EQLogParser
   internal class HealingLineParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    /* Mirrors DamageLineParser.EventsDamageProcessed so the FCT feed (and anything else) can
+     * consume heals without re-parsing. Fires on the log reader thread, replay and live alike. */
+    public static event Action<HealProcessedEvent> EventsHealProcessed;
 
     private HealingLineParser()
     {
@@ -22,6 +27,14 @@ namespace EQLogParser
           HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
           RecordsStore.Instance.Add(record, lineData.BeginTime);
+
+          // hoisted so the event object is not built per heal when nothing is listening (FCT off)
+          var healHandler = EventsHealProcessed;
+          if (healHandler is not null)
+          {
+            healHandler(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+          }
+
           return true;
         }
       }
