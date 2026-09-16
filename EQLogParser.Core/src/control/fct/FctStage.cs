@@ -85,6 +85,11 @@ namespace EQLogParser
     public readonly FctRailLane IncomingDamageLane;
     public readonly FctRailLane OutgoingDamageLane;
 
+    /* Split only: how wide the empty middle band is (px, FctStage.CenterGutter being the shipped answer). It rides the
+     * choice because it answers the choice's own question — where the columns stand — and equality has to see it: a
+     * moved gutter re-tiles every rect, so the canvas must register the swap rather than skip an "equal" layout. */
+    public readonly double Gutter;
+
     /* Directions arrive nullable so "not given" can mean the scheme's own default instead of false: bands ships its
      * outward invariant (in sinks, out rises) and that is also what an omitted direction must produce there, while an
      * omitted column direction is down - the player-facing shipped spread (FctConfigState) is what gives the columns
@@ -93,7 +98,8 @@ namespace EQLogParser
     public FctLayoutChoice(FctLayoutMode mode, FctRegionSide incomingSide, bool? incomingUp = null, bool? outgoingUp = null,
       FctRegionSide healSide = FctRegionSide.Left, bool? healUp = null,
       FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
-      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null,
+      double gutter = FctStage.CenterGutter)
     {
       var oppositeHeal = healSide == FctRegionSide.Left ? FctRegionSide.Right : FctRegionSide.Left;
 
@@ -109,6 +115,7 @@ namespace EQLogParser
       HealLane = healLane ?? FctRailLanes.OfSide(HealSide);
       IncomingDamageLane = incomingDamageLane ?? FctRailLanes.OfSide(IncomingDamageSide);
       OutgoingDamageLane = outgoingDamageLane ?? FctRailLanes.OfSide(OutgoingDamageSide);
+      Gutter = gutter;
     }
 
     /*
@@ -123,7 +130,7 @@ namespace EQLogParser
     {
       FctLayoutMode.Bands => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
       FctLayoutMode.ByType => FctStage.ByType(HealSide, IncomingUp, OutgoingUp, w, h, HealUp, IncomingDamageSide, OutgoingDamageSide,
-        HealLane, IncomingDamageLane, OutgoingDamageLane),
+        HealLane, IncomingDamageLane, OutgoingDamageLane, Gutter),
       // The same rule the settings parse uses: junk draws the shipped scheme rather than reaching the geometry as garbage —
       // and here "junk" can only be a value cast into existence, since every reader of FctLayoutMode produces one of the two.
       _ => FctStage.Bands(w, h, IncomingUp, OutgoingUp, HealUp),
@@ -150,13 +157,17 @@ namespace EQLogParser
     // By type only: how many distinct lanes each half holds — the tiling question LaneRect answers in one lookup.
     private readonly int _leftOccupied, _rightOccupied;
 
+    // Split only: the empty middle band as THIS window can afford it (px) - the choice's ask, clamped at construction.
+    private readonly double _gutter;
+
     public FctLayoutMode Mode => _mode;
     public double W { get; }
     public double H { get; }
 
     private FctStage(FctLayoutMode mode, FctRegionSide incomingSide, FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
       bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
-      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null,
+      double gutter = CenterGutter)
     {
       _mode = mode;
       _incomingUp = incomingUp;
@@ -199,6 +210,11 @@ namespace EQLogParser
         _rightOccupied = Occupied(_healLane, _incomingDamageLane, _outgoingDamageLane, 2, 4);
       }
 
+      /* The dial can ask for more band than a window can pay for: the gutter may take at most four fifths of the
+         width, so there is always track left to tile. A number chosen on an ultrawide survives the trip to a small
+         window honestly - the setting keeps its value, this window draws what it can afford. */
+      _gutter = Math.Clamp(gutter, 0, Math.Max(0, w * 0.8));
+
       W = w;
       H = h;
     }
@@ -213,9 +229,10 @@ namespace EQLogParser
      * which - owning its half alone, as in the shipped default - centres where a side's numbers have always been centred. */
     internal static FctStage ByType(FctRegionSide healSide, bool incomingUp, bool outgoingUp, double w, double h,
       bool healUp = false, FctRegionSide? incomingDamageSide = null, FctRegionSide? outgoingDamageSide = null,
-      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null)
+      FctRailLane? healLane = null, FctRailLane? incomingDamageLane = null, FctRailLane? outgoingDamageLane = null,
+      double gutter = CenterGutter)
       => new(FctLayoutMode.ByType, FctRegionSide.Left, healSide, incomingUp, outgoingUp, w, h, healUp, incomingDamageSide, outgoingDamageSide,
-        healLane, incomingDamageLane, outgoingDamageLane);
+        healLane, incomingDamageLane, outgoingDamageLane, gutter);
 
     /*
      * The rect that owns a number's geometry — the only region question anything still asks.
@@ -302,27 +319,29 @@ namespace EQLogParser
        intent of a number streaming past it. The halves therefore tile the TRACK (the width minus the gutter), equally
        and symmetrically: left ends at halfW, right starts at halfW + CenterGutter. Bands never asks — its protected
        region is the horizontal strip, not a column. Absolute rather than scaled: forty pixels of target frame is the
-       same fact on any monitor, and the layout floors (FctResize) keep a canvas narrow enough to squeeze it out from ever
-       being drawn on. */
+       same fact on any monitor. Squeezing it out was once ruled out by the layout floors (FctResize) alone; now the
+       panel dials it (FctConfigState.Gutter, riding the layout choice) so a stage clamps its own ask instead — four
+       fifths of the width at most, the rest always left as track — and this constant is the DEFAULT: what an unset
+       settings.ini and a test that says nothing both get. */
     internal const double CenterGutter = 40;
 
     /* Half of the track each side gets to tile. Every split-mode measure — spines, rects, the label walls they imply —
        derives from this one number, so the gutter cannot exist in one and not another. */
-    private double LaneTrackHalf => (W - CenterGutter) / 2.0;
+    private double LaneTrackHalf => (W - _gutter) / 2.0;
 
     internal double LaneSpine(FctRailLane lane)
     {
       var i = FctRailLanes.Index(lane);
       var halfW = LaneTrackHalf;
 
-      return (i < 2 ? 0.0 : halfW + CenterGutter) + ((i % 2) + 0.5) * (halfW / 2.0);
+      return (i < 2 ? 0.0 : halfW + _gutter) + ((i % 2) + 0.5) * (halfW / 2.0);
     }
 
     internal (double X, double Y, double Width, double Height) LaneRect(FctRailLane lane)
     {
       var i = FctRailLanes.Index(lane);
       var halfW = LaneTrackHalf;
-      var halfStart = i < 2 ? 0.0 : halfW + CenterGutter;
+      var halfStart = i < 2 ? 0.0 : halfW + _gutter;
 
       if ((i < 2 ? _leftOccupied : _rightOccupied) is 1)
       {

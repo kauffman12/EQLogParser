@@ -98,7 +98,7 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="46" />
           </Grid.ColumnDefinitions>
-          <Slider x:Name="sizeSlider" Minimum="-75" Maximum="75" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
+          <Slider x:Name="sizeSlider" Minimum="-50" Maximum="110" Value="0" IsSnapToTickEnabled="True" TickFrequency="5"
                   SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
           <TextBlock x:Name="sizeValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />
@@ -111,7 +111,7 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="46" />
           </Grid.ColumnDefinitions>
-          <Slider x:Name="critSlider" Minimum="-75" Maximum="75" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
+          <Slider x:Name="critSlider" Minimum="-50" Maximum="110" Value="10" IsSnapToTickEnabled="True" TickFrequency="5"
                   SmallChange="5" LargeChange="10" VerticalAlignment="Center" ValueChanged="ScaleChanged" MouseLeftButtonUp="SliderReleased" />
           <TextBlock x:Name="critValue" Grid.Column="1" Text="—" VerticalAlignment="Center" HorizontalAlignment="Right"
                      Foreground="{DynamicResource ContentForegroundAlt}" />
@@ -157,6 +157,7 @@
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
@@ -238,6 +239,21 @@
             <ComboBoxItem Content="down" Tag="down" />
           </ComboBox>
         </StackPanel>
+
+        <!-- Split clears its middle with geometry and this is that geometry: the empty band, in pixels, that the
+             columns build either side of. The lane guide outlines the result live, so the number can be typed while
+             its effect is watched. A window too small for the ask keeps four fifths of its width as track (FctStage
+             clamps), so one saved number fits every overlay instead of being rewritten per monitor. Fountain has no
+             column geometry to clear, so the row waits. -->
+        <TextBlock x:Name="gutterTitle" Grid.Row="5" Text="center gutter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="the empty band kept out of the middle, where your target frame sits - split columns build either side of it. 0 closes it; a bigger number pushes the columns toward the edges. Fountain keeps its middle clear by direction alone, so this row only applies to split" />
+        <syncfusion:UpDown x:Name="gutterUpDown" Grid.Row="5" Grid.Column="1" Margin="0,3" Padding="0,2" Value="40"
+                           MinValue="0" MaxValue="800" BorderThickness="0" ApplyZeroColor="False"
+                           ValueChanged="GutterChanged">
+          <syncfusion:UpDown.NumberFormatInfo>
+            <NumberFormat:NumberFormatInfo NumberDecimalDigits="0" />
+          </syncfusion:UpDown.NumberFormatInfo>
+        </syncfusion:UpDown>
       </Grid>
         </StackPanel>
       </syncfusion:SfAccordionItem>

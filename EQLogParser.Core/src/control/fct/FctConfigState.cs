@@ -50,6 +50,11 @@ namespace EQLogParser
 
     public double Threshold;
 
+    /* Split only: the empty band kept out of the middle (px), where players park their target frame — the LAYOUT row's
+     * `center gutter`. Absolute pixels like the geometry it moves; FctStage clamps what a window cannot afford, and
+     * fountain never reads it: its middle is cleared by direction, not by a column boundary. */
+    public double Gutter = FctStage.CenterGutter;
+
     /* The nine show-list rows (FctShowList), keyed by row so adding one costs a line in that table rather than a field, a
      * load, a save, a dropdown item and two blocks of assignments. Every row defaults on; a row nobody stored reads as shown
      * (GetRow), which is the same promise FctIngest.RowShown makes about an unknown row and LoadShown makes about a missing
@@ -150,6 +155,7 @@ namespace EQLogParser
       DealtLane = DealtLane,
       DealtUp = DealtUp,
       Threshold = Threshold,
+      Gutter = Gutter,
       Rows = new Dictionary<FctRow, bool>(Rows),
       ShowMiss = ShowMiss,
       ShowParry = ShowParry,
@@ -266,7 +272,7 @@ namespace EQLogParser
             FctLayoutMode.ByType, FctRailLanes.SideOf(TakenLane), TakenUp, DealtUp,
             FctRailLanes.SideOf(HealLane), HealUp,
             FctRailLanes.SideOf(TakenLane), FctRailLanes.SideOf(DealtLane),
-            HealLane, TakenLane, DealtLane);
+            HealLane, TakenLane, DealtLane, gutter: Gutter);
     }
 
     /* The mode clamps the shape, not a branch that ignores it: fountain sprays or freezes, the columns scroll. A state

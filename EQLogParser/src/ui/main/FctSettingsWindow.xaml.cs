@@ -142,6 +142,7 @@ namespace EQLogParser
       }
       UpdateShowTitle();
       thresholdUpDown.Value = state.Threshold;
+      gutterUpDown.Value = state.Gutter;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
       sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
       critSlider.Value = FctScale.PercentOfSize(state.CritScale);
@@ -195,6 +196,7 @@ namespace EQLogParser
         DealtLane = FctRailLanes.Parse(ComboTag(dealtLaneCombo), Defaults.DealtLane),
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
+        Gutter = FctOverlaySettings.ClampGutter(gutterUpDown.Value ?? FctStage.CenterGutter),
         LabelSide = ComboTag(labelSideCombo) switch
         {
           "left" => FctLabelSide.Left,
@@ -269,6 +271,18 @@ namespace EQLogParser
     /* The trigger grid's numeric editor: Value follows both typing and the arrows, committing as it goes — which the
        preview design already assumes, since nothing is real until Save. */
     private void ThresholdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (_loading || !IsLoaded)
+      {
+        return;
+      }
+
+      PreviewChanged?.Invoke(Snapshot());
+    }
+
+    /* Same contract as every other control: the typed gutter previews staged — guide outlines and columns move live —
+       and nothing reaches settings.ini until Save. */
+    private void GutterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       if (_loading || !IsLoaded)
       {
@@ -376,6 +390,10 @@ namespace EQLogParser
          Hiding the whole heals row had quietly tied healing to the damage-in dial, which is not a sentence anybody
          meant to write when they moved "damage in". */
       takenLaneCombo.Visibility = dealtLaneCombo.Visibility = healLaneCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
+
+      /* The gutter IS split's geometry, so it steps off with the lane pickers: fountain clears its middle by sending
+         both sides away from it, and there is no band left to size. */
+      gutterTitle.Visibility = gutterUpDown.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /*

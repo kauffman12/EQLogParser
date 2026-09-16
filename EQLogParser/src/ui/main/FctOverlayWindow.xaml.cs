@@ -1,7 +1,5 @@
-using log4net;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -64,9 +62,6 @@ namespace EQLogParser
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
     private readonly FctManager _manager;
-
-    /* FCT-DBG: temporary diagnostics for the re-enable bug; grep and strip. */
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
     /*
      * Resize drag state. The running size is kept unclamped (_resizeFreeW/H) and clamped only when applied, which is what lets a
@@ -286,7 +281,6 @@ namespace EQLogParser
 
         RefreshDemo();
         _manager.Enabled = true;
-        Log.Info($"FCT-DBG visible=TRUE locked={_locked} size={ActualWidth:0}x{ActualHeight:0}");
       }
       else
       {
@@ -295,7 +289,6 @@ namespace EQLogParser
         _manager.Enabled = false;
         _canvas.Stop();
         _settings?.Hide(); // an overlay nobody sees takes its settings window out of sight with it
-        Log.Info("FCT-DBG visible=FALSE");
       }
     }
 
@@ -372,7 +365,6 @@ namespace EQLogParser
       _sampleData = _saved.SampleData;
       Apply(_saved);
 
-      Log.Info($"FCT-DBG overlay constructed: mode={(_saved.Fountain ? "fountain" : "split")} shape={_saved.Shape} heal={_saved.HealLane} taken={_saved.TakenLane} dealt={_saved.DealtLane} threshold={_saved.Threshold} sample={_sampleData}");
     }
 
     /*
@@ -642,7 +634,6 @@ namespace EQLogParser
       FctPalette.Apply(state);
       _canvas.ApplyGates(state);
 
-      Log.Info($"FCT-DBG Apply: mode={(state.Fountain ? "fountain" : "split")} motion={state.BuildMotion()} labelSide={state.LabelSide} outgoingShown={state.OutgoingShown} incomingShown={state.IncomingShown} healingShown={state.HealingShown} threshold={state.Threshold}");
     }
 
     /* What the panel displays when configure mode (re)opens: the staged values, because a cancelled preview was put back the
@@ -686,7 +677,6 @@ namespace EQLogParser
 
       SetLocked(true);
 
-      Log.Info("FCT-DBG settings saved (Apply ran via SetLocked)");
     }
 
     /*
@@ -852,7 +842,6 @@ namespace EQLogParser
       _canvas.EventsFrame -= OnCanvasFrame;
       _canvas.Stop();
 
-      Log.Info("FCT-DBG overlay Closed");
       SaveSettings();
       _manager.Dispose(); // unsubscribes the parsers: nothing may keep feeding a closed window
 

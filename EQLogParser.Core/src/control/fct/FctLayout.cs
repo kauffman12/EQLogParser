@@ -383,10 +383,16 @@ namespace EQLogParser
        * A split lane is private: there is no other stream to dodge, and "outward" turned out to be a demand rather than a direction — the
        * left-half rail shoved itself 126 px off its own spine (breaking FctStage.SpineFor's weld) to pre-pay for a bend that then starved
        * every right-seated name on the lane to "(Des)". In split the bow curves toward whichever hand of the lane is open, measured at the
-       * spine and equal for every row; the rail holds its slot and the bend spends the lane's leftover air instead of eating its label share. */
+       * spine and equal for every row; the rail holds its slot and the bend spends the lane's leftover air instead of eating its label share.
+       *
+       * The open hand is measured honestly against what a bend that way actually costs: the value box hangs LEFT of its rail, so a leftward bow
+       * pays for the hanging box TWICE - once at spawn (xLo below keeps RailReserve clear of the seam) and again in AssignTravel's cap, which
+       * trims every row's bow against the same reserve. Comparing the hands at ONE reserve was optimistic: it could hand the lane a leftward
+       * direction whose cap then collapsed to a few pixels, an arc in name only (the retuned crit dial shrinking RailReserve is what exposed
+       * the near-tie). Two reserves is the distance at which a leftward bow can genuinely pay for itself. */
       var bowOut = stage.Mode is FctLayoutMode.Bands
         ? (region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0)
-        : (region.X + region.Width - EdgePad - cx >= cx - region.X - EdgePad - RailReserve() ? 1.0 : -1.0);
+        : (region.X + region.Width - EdgePad - cx >= cx - region.X - EdgePad - 2 * RailReserve() ? 1.0 : -1.0);
 
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;

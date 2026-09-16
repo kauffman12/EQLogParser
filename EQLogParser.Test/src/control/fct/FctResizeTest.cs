@@ -67,7 +67,7 @@ namespace EQLogParser
         {
           for (var t = 0.0; t <= 1.0; t += 0.1)
           {
-            var block = BlockOf(hit, FctMotion.Progress(hit, t) * hit.LifetimeMs);
+            var block = FctProbe.BlockOf(hit, FctMotion.Progress(hit, t) * hit.LifetimeMs);
 
             Assert.IsTrue(block.Left > -1 && block.Right < size.Item1 + 1,
               $"{motions}: a number drawn {(block.Left):0.#}..{(block.Right):0.#} after a resize to {size.Item1:0}x{size.Item2:0}");
@@ -148,17 +148,5 @@ namespace EQLogParser
       return hits;
     }
 
-    /* What a hit covers on screen at one age: the drawn value's box, scaled the way the renderer scales it. A second copy of this
-     * exists in FctLayoutTest and FctMotionTest for the same reason — they are separate test classes and the geometry is four
-     * lines; sharing it would mean a test-only helper in production code. */
-    private static (double Left, double Top, double Right, double Bottom) BlockOf(FctHitState hit, double ageMs)
-    {
-      var t = FctMotion.Progress(hit, ageMs);
-      var scale = FctMotion.ScaleOf(hit, ageMs);
-      var half = (hit.ValueWidth * scale) / 2.0;
-      var x = FctMotion.ArcedX(hit, t);
-
-      return (x - half, FctMotion.RaisedY(hit, t), x + half, FctMotion.RaisedY(hit, t) + (FctLayout.TextHeight(hit) * scale));
-    }
   }
 }

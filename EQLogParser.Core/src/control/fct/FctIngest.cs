@@ -1,7 +1,5 @@
-using log4net;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace EQLogParser
 {
@@ -12,22 +10,6 @@ namespace EQLogParser
    */
   internal sealed class FctIngest
   {
-    /* FCT-DBG: temporary diagnostics for the re-enable bug; grep and strip. */
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-    private readonly Dictionary<string, long> _dbgLast = new();
-
-    private bool Dbg(string key, string msg)
-    {
-      var now = Environment.TickCount64;
-      if (now - (_dbgLast.TryGetValue(key, out var last) ? last : 0L) >= 2000)
-      {
-        _dbgLast[key] = now;
-        Log.Info($"FCT-DBG {msg}");
-        return true;
-      }
-
-      return false;
-    }
     /*
      * Hard ceiling of concurrent hits per lane. The adaptive lifetime already aims at
      * FctLifeController.Capacity (5-7); this is the backstop that stops a raid AoE stacking twenty
@@ -301,7 +283,6 @@ namespace EQLogParser
     {
       if (w < 100 || h < 100)
       {
-        Dbg("size", $"accept dropped (too small {w:0}x{h:0})");
         return null; // nothing sane can be laid out yet (window not measured)
       }
 
@@ -317,7 +298,6 @@ namespace EQLogParser
          proc" agreeing on one switch is the point. */
       if (!(heal ? ShowHeals : incoming ? ShowTaken : ShowDealt) || (proc && !ShowProcs))
       {
-        Dbg($"gate:{lane}", $"category gate: lane={lane} heal={heal} incoming={incoming} dealt={ShowDealt} taken={ShowTaken} heals={ShowHeals} proc={proc} procs={ShowProcs}");
         FilteredCount++;
         return null;
       }
@@ -328,7 +308,6 @@ namespace EQLogParser
          because hiding whose story it is hides what happened in it (FctRow). */
       if (!RowShown(row))
       {
-        Dbg($"row:{lane}", $"row gate: lane={lane} row={row}");
         FilteredCount++;
         return null;
       }
@@ -338,7 +317,6 @@ namespace EQLogParser
          deserves to be told the overlay stopped drawing things, not to wonder where the fight went. */
       if (fixedText is not null && !WordShown(fixedText))
       {
-        Dbg("word", $"word gate: lane={lane} word={fixedText}");
         FilteredCount++;
         return null;
       }
@@ -351,7 +329,6 @@ namespace EQLogParser
        */
       if (Threshold > 0 && fixedText is null && !heal && value < Threshold)
       {
-        Dbg("threshold", $"threshold hidden: lane={lane} value={value:0} threshold={Threshold:0}");
         HiddenCount++;
         return null;
       }
@@ -408,7 +385,6 @@ namespace EQLogParser
         var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
-          Dbg($"cap:{pooled}", $"lane cap drop: lane={pooled} value={value:0}");
           DroppedCount++;
           return null;
         }
@@ -468,7 +444,6 @@ namespace EQLogParser
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
-          Dbg($"enrol:{pooled}", $"conveyor rejected: lane={pooled} value={value:0}");
           DroppedCount++;
           return null;
         }
@@ -490,7 +465,6 @@ namespace EQLogParser
 
       FctMotion.RefreshText(hit);
       hits.Add(hit);
-      Dbg($"spawn:{hit.Lane}", $"spawn: lane={hit.Lane} value={value:0}");
       return hit;
     }
 

@@ -730,6 +730,13 @@ follows the overlay while it is dragged — unless somebody moved the panel on p
 until configure reopens; and hiding the overlay takes the panel out of sight with it. The sample-data checkbox came along
 too, still session-only and never written: it rides the state for exactly as long as configure mode lasts.
 
+POSITION is where numbers enter. Four boxes — height, left, top, width — edit the overlay's rectangle directly in
+virtual-screen coordinates, so a window can be placed exactly without pixel-hunting with the mouse; typing moves the
+window at once, and dragging or resizing it rewrites the boxes to match. Numbers and mouse are two hands on one
+rectangle: there is no separate applied geometry and no new keys — Save persists the live bounds the same way closing
+always did, and Cancel restores the rectangle snapshotted when setup opened, because abandoning a geometry edit should
+behave like abandoning a settings edit.
+
 ### The configure row says fountain and split now: the mode layer over the schemes
 
 The engine commit above made two words honest, and this one puts them on the row. The layout combo (halves/by type/bands)
@@ -1411,7 +1418,7 @@ other retired key here.
 ### Two dials and a short loop: what configuring is for
 
 A feature whose range a player cannot adjust has whatever opinion the implementer happened to hold, shipped as theirs. So the configure row carries two
-dials — **size** and **speed** — the size ones ±75 % and speed ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
+dials — **size** and **speed** — the size ones −50 % to +110 % and speed ±50 %, stepped at 5 %, so a setting is a place you can park rather than a value you have to hit by eye. Each dial
 is three lines of its own: what it is, the track with a bold `-` and `+` either end, and where it landed underneath — **with its own percent sign**,
 because a bare 50 next to a slider reads like a count of something. That shape is about room. The row started as one line with each number read out
 beside its track, which worked until it didn't: this panel is going to acquire more settings, and a layout that grows sideways runs out of window at some
@@ -1437,15 +1444,18 @@ near the twice-as-long nobody can fight under). The shape of the usable band sur
 Re-scaling choreography, layout budgets and the adaptive controller to make that the new 1.0 would have been the same opinion with forty constants in it,
 plus re-measuring everything measured at 1.0.
 
-Size is ±75 % around 1.0 for the same reason and needs no such work, because the type scale genuinely is centred on the size everything was measured at —
-lane columns as fractions of width, the vertical reserve a line of text needs `FctLayout.TextHeight`, the adaptive lifetime under load. Past one-and-a-half in
-either direction that stops describing the feature comfortably: damage and healing columns begin to occupy each other at ordinary window sizes, so the last
-quarter of each dial is for wide overlays rather than a mistake. Values saved while the ceiling was lower stay legal, which is why opening it wider needed no
-migration.
+Size runs −50 % to +110 %, and it stopped being symmetric because its ends are set by what they are for: the floor draws as small as anybody actually plays
+(what the old ±75 dial's −60 % mark drew) and the ceiling reaches double the tier table — the look the old dial could only name as +100 %. The middle moved
+too: text normal ships at 0.9 of the tier table, because that is where shipped numbers looked right in game; everything the layout measures (lane columns as
+fractions of width, the vertical reserve `FctLayout.TextHeight`, the adaptive lifetime) still scales from the same dial, so no constant had to move with it.
+Past about one-and-a-half times the tier table that stops describing the feature comfortably — damage and healing columns begin to occupy each other at
+ordinary window sizes — so the top of each dial is for wide overlays rather than a mistake. Settings store the multiplier itself, so values saved under any
+earlier window stay legal: re-pegging the dial needed no migration, only a re-centred readout.
 
 **Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Text size* sizes every ordinary number; *crit size* sizes the big
-class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both are percent of the measured
-baseline over the same ±75 % band, differing only in whose numbers they move and where their middles ship (0 %, +10 %). That is the whole rule, and the history is
+class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both speak percent over the
+same shipped middle across the same −50 %…+110 % band, differing only in whose numbers they move and where their middles ship (text at 0 %, crits at +10 % —
+which since the retune draws exactly where plain numbers stood before, a shipped crit barely a size louder and still obviously one). That is the whole rule, and the history is
 why it has no hidden parts. Version one kept a fixed 40 px crit tier above every lane: parked both dials mid and crits stood clearly bigger than normal hits, so
 the crit dial's zero described nothing anyone could see. Version two made the dial a *multiplier over the text dial* — honest parity at 0 %, but stacked:
 font × dial × the pop's 1.3 hold, and setting the crit slider to its floor still produced numbers thirty percent over the neighbors, because the multiplication was
@@ -1453,7 +1463,7 @@ hiding in choreography no label mentioned. Both failures are the same failure �
 class rule closes it from both ends: each class has exactly one dial, and `FctStyle.ApplyTo` is where that dial meets the font, once, at birth. In particular the
 blowout no longer scales anything: it swells *in from below* full size (arrival reads as growth), rests at exactly 1.0, and
 collapses out through the tail — emphasis that cannot lie because it cannot multiply. What a 0 % crit keeps is everything that was never size: the halo, the orange,
-the top draw pass, the fold immunity; and pulled to its −75 % floor it is a quarter-size, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
+the top draw pass, the fold immunity; and pulled to its floor it is two-fifths of the tier table, quiet, faintly absurd orange number, which is now an opinion the UI can actually express.
 
 **Sample data has a checkbox, on by default.** The scripted loop is the reason configure mode teaches anything, but there is a second thing people do in
 configure mode: position the overlay over a real fight, where example numbers are noise on top of the numbers they are trying to line up. So the examples
@@ -1899,13 +1909,16 @@ sentence for it: "that's where you should place the NPC." And long labels made i
 budgets a label from spine to region wall, and when the wall was dead-centre, an inward-reaching `(Long Spell Name)`
 printed across the player's own target.
 
-Split halves tile the track minus a centre gutter (FctStage.CenterGutter, absolute — forty pixels after the first day's
-play asked for more air; it began at 20): left ends at (W−40)/2, right starts forty past it. Everything downstream derives from that one
+Split halves tile the track minus a centre gutter (absolute pixels — forty after the first day's play asked for more
+air; it began at 20): left ends at (W−G)/2, right starts G past it. The width is a dial since — the LAYOUT row
+`center gutter` (settings.ini `FctOverlayGutter`, 0–800 px), because the ultrawide crowd wanted the band wider and the
+wall-to-wall crowd wanted it closed; forty remains what an unset config draws, and every stage clamps its own ask to
+four fifths of its width, so a number chosen on an ultrawide still tiles honestly in a postage stamp. Everything downstream derives from that one
 measure, so the gutter cannot exist in geometry and not in labels: spines shift equally outward (right 1's slot sits a
 hair further from the seam, which is still "beside the middle, near the fight"), lane rects and their configure-mode
 outlines show the empty band, and label walls — which ARE region walls — now stop long words short of the centre
 instead of printing over it. Bands never asks; its protected region is the horizontal strip, not a column. Tests moved
-to gutter-aware expressions (Half/Seam computed from the constant) rather than new magic numbers, 1081/1081.
+to gutter-aware expressions (Half/Seam computed from the shipped default) rather than new magic numbers, 1081/1081.
 
 The same pass gave the demo switch a memory: SampleData saves to settings.ini like anything else, because "don't play
 sample numbers, I'm laying this out over my actual raid" was an answer that had to be re-given every session, which is
@@ -1943,9 +1956,9 @@ Configure used to be a form painted on top of the thing it configured: pressing 
 preview instance whose face carried eleven controls, three dropdowns deep, with Save/Cancel/Close buttons that enabled
 themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
 but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
-took its job: three accordion sections (MAIN for rows/font/thin bars/percent, METER for reset/crit rate/class filter/
-hide names/streamer, COLORS for bar and highlight), Save and Cancel as the entire exit vocabulary, everything previewed
-live on the sample stage and nothing written to ini until Save.
+took its job: two accordion sections that each answer one question — STYLE (thin bars, font size, rows, then bar color
+and highlight) and OPTIONS (hide other players, show % damage, streamer mode, class filter, crit rate, reset) — Save and
+Cancel as the entire exit vocabulary, everything previewed live on the sample stage and nothing written to ini until Save.
 
 The staging rides a `DamageMeterConfigState` copy that `Load()`s with exactly the overlay constructor's guards, so
 setup always opens on what is on screen. The overlay grew three internal verbs — `PreviewMeterState` (apply without
