@@ -1,5 +1,6 @@
 using FontAwesome5;
 using log4net;
+using log4net.Appender;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.Tools.Controls;
@@ -654,6 +655,19 @@ namespace EQLogParser
       catch (Exception ex)
       {
         Log.Error(ex);
+      }
+    }
+
+    /// <summary>
+    /// Opens the application's own log file in the shell's default viewer. Called from the Help menu and from
+    /// the tray icon menu, the same way About is reached from both.
+    /// </summary>
+    internal static void ViewErrorLog()
+    {
+      var fileAppender = Log.Logger.Repository.GetAppenders().OfType<FileAppender>().FirstOrDefault(fa => !string.IsNullOrEmpty(fa.File));
+      if (fileAppender is not null)
+      {
+        OpenFileWithDefault("\"" + fileAppender.File + "\"");
       }
     }
 

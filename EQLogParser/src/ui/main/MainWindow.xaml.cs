@@ -1,6 +1,5 @@
 using FontAwesome5;
 using log4net;
-using log4net.Appender;
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.Tools.Controls;
@@ -820,14 +819,7 @@ namespace EQLogParser
       new MessageWindow("Window State will be reset after application restart.", Resource.RESET_WINDOW_STATE).ShowDialog();
     }
 
-    private void ViewErrorLogClick(object sender, RoutedEventArgs e)
-    {
-      var appender = Log.Logger.Repository.GetAppenders().FirstOrDefault();
-      if (appender is FileAppender fileAppender)
-      {
-        MainActions.OpenFileWithDefault("\"" + fileAppender.File + "\"");
-      }
-    }
+    private void ViewErrorLogClick(object sender, RoutedEventArgs e) => MainActions.ViewErrorLog();
 
     private void ToggleDamageOverlayClick(object sender, RoutedEventArgs e)
     {

@@ -43,6 +43,10 @@ namespace EQLogParser
       var aboutItem = new ToolStripMenuItem("About");
       aboutItem.Click += (s, e) => MainActions.OpenFileWithDefault($"{App.ParserHome}");
       notifyIcon.ContextMenuStrip.Items.Add(aboutItem);
+
+      var errorLogItem = new ToolStripMenuItem("View Error Log");
+      errorLogItem.Click += (s, e) => MainActions.ViewErrorLog();
+      notifyIcon.ContextMenuStrip.Items.Add(errorLogItem);
       notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
 
       var exitItem = new ToolStripMenuItem("Exit");
