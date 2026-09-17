@@ -70,7 +70,7 @@
     </DataTemplate>
 
     <ToolTip x:Key="AdpsHideMineToolTipTemplate">
-      <TextBlock Text="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common."
+      <TextBlock Text="Include spells that only have a message that the player sees.&#x0a;Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes&#x0a;it easier to compare spell that players have in common"
         FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryColor}" />
     </ToolTip>
 
@@ -342,7 +342,7 @@
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="6 = Staunch, 7 = Intensity, D = Dragon Glyph, G = Destruction Glyph, M = Mana Burn, L = Life Burn, S = Arcane Secrets" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderBestSecondTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second." />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
