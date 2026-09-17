@@ -58,7 +58,6 @@ for %%F in (
     "%RELEASE_DIR%\Syncfusion.Themes.MaterialDark.WPF.dll"
     "%RELEASE_DIR%\Syncfusion.Themes.MaterialDarkCustom.WPF.dll"
     "%RELEASE_DIR%\Syncfusion.Themes.MaterialLight.WPF.dll"
-    "%RELEASE_DIR%\Syncfusion.Tools.WPF.Classic.dll"
     "%RELEASE_DIR%\Syncfusion.Tools.WPF.dll"
     "%RELEASE_DIR%\System.ServiceModel.Primitives.dll"
     "%RELEASE_DIR%\WinRT.Runtime.dll"

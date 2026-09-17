@@ -126,7 +126,6 @@ Source: "{#MyReleaseDir}\Syncfusion.Telemetry.dll"; DestDir: "{app}"; Flags: ign
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialDark.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialDarkCustom.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Themes.MaterialLight.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyReleaseDir}\Syncfusion.Tools.WPF.Classic.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\Syncfusion.Tools.WPF.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\System.ServiceModel.Primitives.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyReleaseDir}\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -166,6 +165,7 @@ Type: files; Name: "{app}\Syncfusion.SfRichTextBoxAdv.WPF.dll"
 Type: files; Name: "{app}\System.Diagnostics.DiagnosticSource.dll"
 Type: files; Name: "{app}\System.Private.ServiceModel.dll"
 Type: files; Name: "{app}\System.Drawing.Common.dll"
+Type: files; Name: "{app}\Syncfusion.Tools.WPF.Classic.dll"
 Type: files; Name: "{app}\WPFTextBoxAutoComplete.dll"
 Type: files; Name: "{app}\runtimes\win\lib\net8.0\System.Speech.dll"
 Type: files; Name: "{app}\data\releasenotes.pdf"

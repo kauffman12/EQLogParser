@@ -91,7 +91,6 @@
 		<Reference Include="Syncfusion.SfRadialMenu.WPF" Version="34.2.8" />
 		<Reference Include="Syncfusion.SfProgressBar.WPF" Version="34.2.8" />
 		<Reference Include="Syncfusion.SfHubTile.WPF" Version="34.2.8" />
-		<Reference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
 		<Reference Include="Syncfusion.SfAccordion.WPF" Version="34.2.8" />
 		<Reference Include="Syncfusion.SfGridCommon.WPF" Version="34.2.8" />
 		<Reference Include="Syncfusion.SfTreeView.WPF" Version="34.2.8" />
@@ -182,7 +181,6 @@
     <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.Shared.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="34.2.8" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -682,10 +680,6 @@
 		<SubType>Designer</SubType>
 	</Page>
 	<Page Include="MSControl\ProgressBar.xaml">
-		<Generator>MSBuild:Compile</Generator>
-		<SubType>Designer</SubType>
-	</Page>
-	<Page Include="NotifyIcon\NotifyIcon.xaml">
 		<Generator>MSBuild:Compile</Generator>
 		<SubType>Designer</SubType>
 	</Page>

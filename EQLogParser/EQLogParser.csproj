@@ -206,11 +206,9 @@
     <PackageReference Include="Syncfusion.SfSkinManager.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.SfTreeView.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.Shared.WPF" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Shared.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="Syncfusion.Themes.MaterialDark.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.Themes.MaterialLight.WPF" Version="34.2.8" />
     <PackageReference Include="Syncfusion.Tools.WPF" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Tools.WPF.Classic" Version="22.2.5" />
     <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
   <ItemGroup>
