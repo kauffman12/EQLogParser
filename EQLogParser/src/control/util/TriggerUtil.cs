@@ -260,8 +260,6 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
     private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
     private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
-    private static readonly Regex ShareRegex = new(@"\{(" + ShareTrigger + "|" + ShareOverlay + @"):([^\{\}]+)\}", RegexOptions.Compiled |
-      RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     internal static Point CalculateDefaultTextOverlayPosition()
     {
@@ -1116,7 +1114,7 @@ namespace EQLogParser
 
     private static Match MatchQuickShare(string text)
     {
-      var match = ShareRegex.Match(text);
+      var match = ShareRegex().Match(text);
       if (match.Success && match.Groups.Count == 3)
       {
         return match;
@@ -1367,6 +1365,10 @@ namespace EQLogParser
         }
       }
     }
+
+    // quick share payload marker: {EQLPT:...} or {EQLPO:...}
+    [GeneratedRegex(@"\{(" + ShareTrigger + "|" + ShareOverlay + @"):([^\{\}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ShareRegex();
 
     [GeneratedRegex(@"<<(.*\.(wav|mp3))>>$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SoundFileTextRegex();

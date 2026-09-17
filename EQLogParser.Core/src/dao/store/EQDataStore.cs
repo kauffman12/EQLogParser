@@ -14,7 +14,7 @@ namespace EQLogParser
     public int GetHashCode(SpellData obj) => obj.NameAbbrv.GetHashCode();
   }
 
-  internal class EQDataStore : ILifecycle
+  internal partial class EQDataStore : ILifecycle
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -89,7 +89,9 @@ namespace EQLogParser
 
     // rank abbreviation
     private readonly HashSet<string> RankWords;
-    private readonly Regex RomanRegex = new(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // Roman rank suffix ("Rk. IV") -> source generated so the pattern is not JIT compiled on first use
+    [GeneratedRegex(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex RomanRegex();
 
     internal EQDataStore()
     {
@@ -122,7 +124,7 @@ namespace EQLogParser
       }
 
       _sortedClassList.AddRange(_classNames.Values);
-      _sortedClassList.Sort();
+      _sortedClassList.Sort(StringComparer.OrdinalIgnoreCase);
       _classListCount = _sortedClassList.Count;
 
       // Player title mapping for /who queries
@@ -205,7 +207,7 @@ namespace EQLogParser
       var itemSpellsCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
       foreach (var line in ConfigUtil.ReadList(@"data\itemspells.txt").Where(line => line.Length > 0 && line[0] != '#'))
       {
-        itemSpellsCache[string.Intern(line)] = true;
+        itemSpellsCache[StringCache.GetOrAddExact(line)] = true;
       }
 
       foreach (ref var spell in CollectionsMarshal.AsSpan(spellList))
@@ -319,17 +321,19 @@ namespace EQLogParser
       // If nothing removed → return original
       if (count == parts.Length)
       {
-        _spellAbbrvCache[spell] = spell;
-        return string.Intern(spell);
+        var unchanged = StringCache.GetOrAddExact(spell);
+        _spellAbbrvCache[spell] = unchanged;
+        return unchanged;
       }
 
       // Rebuild abbreviated name
       var result = string.Join(" ", parts, 0, count);
 
-      _spellAbbrvCache[spell] = result;
-      return string.Intern(result);
+      var abbreviated = StringCache.GetOrAddExact(result);
+      _spellAbbrvCache[spell] = abbreviated;
+      return abbreviated;
 
-      bool IsRoman(string s) => RomanRegex.IsMatch(s);
+      bool IsRoman(string s) => RomanRegex().IsMatch(s);
     }
 
 
@@ -340,9 +344,9 @@ namespace EQLogParser
         // unknown spell
         var spellData = new SpellData
         {
-          Id = string.Intern(spellName),
-          Name = string.Intern(spellName),
-          NameAbbrv = string.Intern(AbbreviateSpellName(spellName)),
+          Id = StringCache.GetOrAddExact(spellName),
+          Name = StringCache.GetOrAddExact(spellName),
+          NameAbbrv = StringCache.GetOrAddExact(AbbreviateSpellName(spellName)),
           IsUnknown = true
         };
         _unknownSpellDb[spellName] = spellData;
@@ -555,9 +559,9 @@ namespace EQLogParser
 
           spellData = new SpellData
           {
-            Id = string.Intern(data[0]),
-            Name = string.Intern(data[1]),
-            NameAbbrv = string.Intern(AbbreviateSpellName(data[1])),
+            Id = StringCache.GetOrAddExact(data[0]),
+            Name = StringCache.GetOrAddExact(data[1]),
+            NameAbbrv = StringCache.GetOrAddExact(AbbreviateSpellName(data[1])),
             Level = level,
             Duration = (ushort)duration,
             IsBeneficial = beneficial != 0,
@@ -572,9 +576,9 @@ namespace EQLogParser
             Mgb = data[13] == "1",
             Rank = byte.Parse(data[14], CultureInfo.InvariantCulture),
             HasAmbiguity = data[15] == "1" || data[16] == "1",
-            LandsOnYou = string.Intern(data[17]),
-            LandsOnOther = string.Intern(data[18]),
-            WearOff = string.Intern(data[19])
+            LandsOnYou = StringCache.GetOrAddExact(data[17]),
+            LandsOnOther = StringCache.GetOrAddExact(data[18]),
+            WearOff = StringCache.GetOrAddExact(data[19])
           };
         }
       }

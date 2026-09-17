@@ -24,6 +24,18 @@ namespace EQLogParser
     }
 
     /// <summary>
+    /// Returns the cached string if it exists, otherwise stores and returns it unchanged.
+    /// Use instead of <see cref="string.Intern"/> for values whose exact text is displayed
+    /// (spell names, npc names): deduplicated without the runtime's global intern lock and,
+    /// unlike interning, the strings are reclaimable when the cache is cleared.
+    /// </summary>
+    public static string GetOrAddExact(string s)
+    {
+      if (string.IsNullOrEmpty(s)) return s;
+      return _cache.GetOrAdd(s, s);
+    }
+
+    /// <summary>
     /// Clears all cached strings. Call when clearing active data.
     /// </summary>
     internal static void Clear() => _cache.Clear();

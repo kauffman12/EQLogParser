@@ -427,7 +427,7 @@ namespace EQLogParser
             combined.ExpandedStatsList.AddRange(expandedStats);
             combined.ExpandedStatsList.Sort(static (a, b) => b.Total.CompareTo(a.Total));
             combined.UniqueClasses.AddRange(uniqueClasses);
-            combined.UniqueClasses.Sort();
+            combined.UniqueClasses.Sort(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < combined.ExpandedStatsList.Count; i++)
             {

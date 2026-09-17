@@ -114,7 +114,7 @@ namespace EQLogParser
         long baseTotal = 0;
         string theClass = null;
         List<ColumnData> columns = [];
-        foreach (var stats in playerList.OrderBy(stats => stats.ClassName).ThenByDescending(stats => stats.Total))
+        foreach (var stats in playerList.OrderBy(stats => stats.ClassName, StringComparer.OrdinalIgnoreCase).ThenByDescending(stats => stats.Total))
         {
           var isFirst = false;
           var name = stats.OrigName;

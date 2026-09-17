@@ -289,7 +289,7 @@ namespace EQLogParser
             combined.FullTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle, combined.TotalTitle);
             combined.ShortTitle = StatsUtil.FormatTitle(combined.TargetTitle, combined.TimeTitle);
             combined.UniqueClasses.AddRange(uniqueClasses);
-            combined.UniqueClasses.Sort();
+            combined.UniqueClasses.Sort(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < combined.StatsList.Count; i++)
             {

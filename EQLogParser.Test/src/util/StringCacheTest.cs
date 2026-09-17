@@ -77,6 +77,36 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
+    public void GetOrAddExact_PreservesOriginalCasing()
+    {
+      // unlike GetOrAdd, exact text is kept as-is (spell names are displayed verbatim)
+      Assert.AreEqual("creeping Death", StringCache.GetOrAddExact("creeping Death"));
+    }
+
+    [TestMethod]
+    public void GetOrAddExact_EqualContent_ReturnsSameReference()
+    {
+      var a = StringCache.GetOrAddExact(new string("Fists of Fire".ToCharArray()));
+      var b = StringCache.GetOrAddExact(new string("Fists of Fire".ToCharArray()));
+      Assert.AreSame(a, b);
+    }
+
+    [TestMethod]
+    public void GetOrAddExact_NullAndEmpty_ReturnInput()
+    {
+      Assert.IsNull(StringCache.GetOrAddExact(null));
+      Assert.AreEqual("", StringCache.GetOrAddExact(""));
+    }
+
+    [TestMethod]
+    public void GetOrAddExact_KeepsCasingVariantsApart()
+    {
+      // ordinal keys: "spell" and "Spell" are separate entries, both exact
+      Assert.AreEqual("spell", StringCache.GetOrAddExact("spell"));
+      Assert.AreEqual("Spell", StringCache.GetOrAddExact("Spell"));
+    }
+
+    [TestMethod]
     public void Clear_RemovesAllCachedStrings()
     {
       var a = StringCache.GetOrAdd("hello");
