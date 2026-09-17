@@ -79,6 +79,15 @@ namespace EQLogParser
 
       showCombo.ItemsSource = _showItems;
 
+      /* Both size dials snap to the same list of positions: one per reachable percent, unevenly spaced so that 0 % — the dash — falls at the exact middle of
+         the track while the -50 % floor and the +110 % ceiling both stay within reach (FctScale.DialExtent). Setting Ticks also re-snaps whatever Value the
+         markup left behind, which is why the crit dial's shipped +10 % is parked right after it rather than in the XAML: a thumb sitting off centre with the
+         panel still closed would be the same lie in the other direction. All of this runs before the window is loaded, so none of it previews. */
+      var sizeTicks = new DoubleCollection(FctScale.SizeDialTicks());
+      sizeSlider.Ticks = sizeTicks;
+      critSlider.Ticks = sizeTicks;
+      critSlider.Value = FctScale.DialFromSizePercent(FctScale.CritSizePercentDefault);
+
       /* The position fields' reach is the virtual screen — every monitor at once, and negative left/top included, because a
          display left of or above the primary is legal geometry, not an error. Sizes floor at what the layout can draw in and
          cap at the desktop itself. Values arrive from the overlay through UpdateFromWindow; the XAML ships none, because there
@@ -144,8 +153,10 @@ namespace EQLogParser
       thresholdUpDown.Value = state.Threshold;
       gutterUpDown.Value = state.Gutter;
       SelectByTag(labelSideCombo, LabelName(state.LabelSide));
-      sizeSlider.Value = FctScale.PercentOfSize(state.TextScale);
-      critSlider.Value = FctScale.PercentOfSize(state.CritScale);
+      /* Percent is what a snapshot and settings.ini speak; the thumb speaks DialExtent, so every fill and every readout crosses through the same two
+         conversions. Crit goes through PercentOfSize too — one scale for both size dials, only their shipped middles differ. */
+      sizeSlider.Value = FctScale.DialFromSizePercent(FctScale.PercentOfSize(state.TextScale));
+      critSlider.Value = FctScale.DialFromSizePercent(FctScale.PercentOfSize(state.CritScale));
       speedSlider.Value = FctScale.PercentOfSpeed(state.Speed);
       sampleCheck.IsChecked = state.SampleData;
 
@@ -204,8 +215,8 @@ namespace EQLogParser
           "none" => FctLabelSide.None,
           _ => FctLabelSide.Below,
         },
-        TextScale = FctScale.SizeFromPercent((int)Math.Round(sizeSlider.Value)),
-        CritScale = FctScale.SizeFromPercent((int)Math.Round(critSlider.Value)), // same percent rule as the text dial; only its middle differs
+        TextScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(sizeSlider.Value)),
+        CritScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
         SampleData = sampleCheck.IsChecked == true,
         ColorDamageDealt = ToInt(dealtColor.Color),
@@ -330,11 +341,11 @@ namespace EQLogParser
       {
         if (sender == sizeSlider)
         {
-          sizeSlider.Value = 0;                                  // the text dial's middle is nothing
+          sizeSlider.Value = FctScale.DialFromSizePercent(0);      // the text dial's middle is nothing, and now sits where it looks like it should
         }
         else if (sender == critSlider)
         {
-          critSlider.Value = FctScale.CritSizePercentDefault;       // and the crit dial's is its shipped +10 %
+          critSlider.Value = FctScale.DialFromSizePercent(FctScale.CritSizePercentDefault); // and the crit dial's is its shipped +10 %, a step right of centre
         }
         else if (sender == speedSlider)
         {
@@ -433,8 +444,8 @@ namespace EQLogParser
 
     private void UpdateReadouts()
     {
-      sizeValue.Text = Signed((int)Math.Round(sizeSlider.Value));
-      critValue.Text = Signed((int)Math.Round(critSlider.Value));
+      sizeValue.Text = Signed(FctScale.SizePercentFromDial(sizeSlider.Value));
+      critValue.Text = Signed(FctScale.SizePercentFromDial(critSlider.Value));
       speedValue.Text = Signed((int)Math.Round(speedSlider.Value));
     }
 

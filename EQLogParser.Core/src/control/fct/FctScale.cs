@@ -8,9 +8,11 @@ namespace EQLogParser
    * That is also why these live here rather than being read at draw time: motion is a pure function of (hit, age), and a number whose size or timing
    * changed mid-flight would have to be re-measured, re-clamped and re-placed, which is the class of bug that layout was built to avoid.
    *
-   * **The two size dials run -50 % to +110 % and the speed dial ±50 %, and all can be parked by feel on their default**, which they were not for a while.
-   * The size window stopped being symmetric because its ends are set by looks, not by round numbers: the floor draws what the old ±75 dial's -60 % mark drew —
-   * as small as anybody actually plays it — and the ceiling reaches double the tier table, the +100 % the old dial could only ever name. The middle moved with
+   * **The two size dials reach -50 % to +110 % and the speed dial ±50 %, and every one of them parks its nothing — the readout's dash — at the exact middle of
+   * the track**, which they did not do for a while. The size window stopped being symmetric in PERCENT because its ends are set by looks, not by round numbers:
+   * the floor draws what the old ±75 dial's -60 % mark drew — as small as anybody actually plays it — and the ceiling reaches double the tier table, the +100 %
+   * the old dial could only ever name. What that costs is paid by the track instead (see DialExtent): a slider is read as two halves, so a neutral that sits a
+   * third of the way along it reads as a thumb left somewhere by accident, whatever the number beside it says. The middle moved with
    * them: text normal ships a tenth under the tier table because that is where shipped text looked right in game, so the crit dial's unchanged +10 % now draws
    * exactly where plain numbers used to. Speed used to be a tempo multiplier
    * running -30 % to +90 %, because playing with the feature said the usable band sat faster than the measured baseline and did not extend nearly as far
@@ -40,6 +42,9 @@ namespace EQLogParser
     public const int SizePercentMax = 110;
     public const double SizeMin = SizeDefault + SizePercentMin / 100.0;
     public const double SizeMax = SizeDefault + SizePercentMax / 100.0;
+
+    /* The step the size dials snap to, and therefore the step their readout moves in. */
+    public const int SizePercentStep = 5;
 
     /*
      * Two size dials for two classes of number, sized independently under the SAME rule: each is "percent over the shipped
@@ -144,7 +149,8 @@ namespace EQLogParser
 
     public static double SpeedFromTime(double time) => !double.IsFinite(time) || time <= 0 ? SpeedDefault : ClampSpeed(1 / time);
 
-    /* The size dials' own readout: -75 % ... +75 % rather than 0.25 ... 1.75, because "bigger" is what the player is thinking in. */
+    /* The size dials' own readout: percent over the shipped middle (-50 % ... +110 %, that is 0.4x ... 2.0x of the tier table) rather than the raw
+       multiplier, because "bigger" is what the player is thinking in, and rather than the thumb position, which speaks a third unit (DialExtent). */
     public static int PercentOfSize(double scale)
     {
       var clamped = ClampSize(scale);
@@ -153,5 +159,60 @@ namespace EQLogParser
     }
 
     public static double SizeFromPercent(int percent) => ClampSize(SizeDefault + (percent / 100.0));
+
+    /*
+     * The size dials' track, which is deliberately NOT their percent scale.
+     *
+     * A slider is read as two halves before it is read as a number: whatever sits at the middle of the track IS "nothing", to the eye that has not read the
+     * label yet. So both size dials run a symmetric -100 .. +100 with 0 % exactly in the middle, and each half carries however much percent it needs — the left
+     * SizePercentMin..0 (a 50-point climb out of the floor), the right 0..SizePercentMax (110 points up to double the tier table). Nothing about a percent
+     * changed: every value the old asymmetric track could name is still reachable, still means exactly the same multiplier, and still lands on the same 5 %
+     * grid; only the pixels-per-percent differ between the halves, with more room per percent on the side where sizes are close together and hardest to tell
+     * apart. The speed dial needs none of this: ±50 was already symmetric, which is why its dash never moved.
+     *
+     * What is given up is uniformity of travel — a full drag left covers 50 points of size, a full drag right 110. That is the trade for a centre that means
+     * what it looks like, and it is the side of the trade with the fewer pixels in it either way.
+     */
+    public const double DialExtent = 100;
+
+    /* Percent to thumb. The two halves scale independently, so 0 is the middle at any pair of ends. */
+    public static double DialFromSizePercent(int percent)
+    {
+      var clamped = Math.Clamp(percent, SizePercentMin, SizePercentMax);
+
+      return clamped >= 0 ? clamped * DialExtent / SizePercentMax : clamped * DialExtent / -SizePercentMin;
+    }
+
+    /* Thumb to percent, on the snapping grid: the readout and the stored value both speak in whole 5 % steps, so a thumb parked between two of them reports the
+       nearer one rather than inventing a third precision nobody can aim at. Not-a-number thumb (a hand-written XAML default gone wrong) is nothing. */
+    public static int SizePercentFromDial(double dial)
+    {
+      if (!double.IsFinite(dial))
+      {
+        return 0;
+      }
+
+      var travel = Math.Clamp(dial, -DialExtent, DialExtent) / DialExtent;
+      var percent = travel >= 0 ? travel * SizePercentMax : travel * -SizePercentMin;
+
+      return Math.Clamp((int)Math.Round(percent / SizePercentStep, MidpointRounding.AwayFromZero) * SizePercentStep, SizePercentMin, SizePercentMax);
+    }
+
+    /*
+     * The snap positions for a size dial's track, one per reachable percent. They are unevenly spaced — that is the whole point of the two halves above — so
+     * they cannot come from a TickFrequency and are handed to the Slider as a list. Being ticks, WPF snaps the drag to them, which keeps both dials stepping
+     * in 5 % moves like the ±75 dial they replaced did, and keeps a drag from raising one preview per pixel.
+     */
+    public static double[] SizeDialTicks()
+    {
+      var ticks = new double[(SizePercentMax - SizePercentMin) / SizePercentStep + 1];
+      var at = 0;
+      for (var percent = SizePercentMin; percent <= SizePercentMax; percent += SizePercentStep)
+      {
+        ticks[at++] = DialFromSizePercent(percent);
+      }
+
+      return ticks;
+    }
   }
 }

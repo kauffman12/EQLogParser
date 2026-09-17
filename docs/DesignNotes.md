@@ -1452,6 +1452,16 @@ Past about one-and-a-half times the tier table that stops describing the feature
 ordinary window sizes — so the top of each dial is for wide overlays rather than a mistake. Settings store the multiplier itself, so values saved under any
 earlier window stay legal: re-pegging the dial needed no migration, only a re-centred readout.
 
+**An asymmetric *percent* band still gets a symmetric *track*: every dash sits at the exact middle of its slider.** A −50 %…+110 % track put its nothing a
+third of the way along, and that read as a thumb left somewhere by accident whatever the number beside it said — a slider is seen as two halves before it is
+read as a value. So the two size dials run their own symmetric axis (`FctScale.DialExtent`, −100…+100) whose halves carry different amounts of percent: half
+the track climbs the 50 points down to the floor, half spends the same pixels on the 110 up to double the tier table. Nothing else moved — every percent stays
+reachable, still means the same multiplier, still lands on the 5 % grid (as unevenly-spaced snap positions, `FctScale.SizeDialTicks`, since one `TickFrequency`
+cannot express two halves) and settings.ini is untouched; only pixels-per-percent differ between the halves, with the roomier side being the way down, where
+sizes sit close together and are hardest to tell apart. The speed dial needed none of this: ±50 was already centred, which is why its dash never moved. Text's
+dash is also its shipped value; crit's dash means "a crit exactly as big as a plain hit", so the crit dial rests one step right of centre at +10 % — that row's
+default and its nothing are different places, and are now at least visibly one step apart rather than a third of a track.
+
 **Two size dials, two classes, one rule — after two couplings that each made a dial lie.** *Text size* sizes every ordinary number; *crit size* sizes the big
 class — crits and the marked special attacks — which shares one font because it already shares a lane, a colour and a draw pass. Both speak percent over the
 same shipped middle across the same −50 %…+110 % band, differing only in whose numbers they move and where their middles ship (text at 0 %, crits at +10 % —
