@@ -1,6 +1,6 @@
 # 2.4.0 | 09/18/26
 1. **.NET 10 Now Required**
-2. .NET 10 Performane improvements and fixes.
+2. .NET 10 Performance improvements and fixes.
 3. Added **Floating Combat Text** available under the **View** menu.
 4. Updated the **Damage Meter** setup menus.
 5. Upgraded to latest Syncfusion and other libraries.

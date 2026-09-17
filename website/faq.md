@@ -142,14 +142,14 @@
 
 # Linux Support
 
-EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Two things have to be inside the Wine prefix before that installer is worth running: the **.NET 8 Desktop Runtime** and the **Microsoft Visual C++ 2015-2022 redistributable** (`vcredist2022` in Bottles, `vcrun2022` in winetricks). The redistributable is new with 2.3.62: the downloadable speech engines run on Microsoft's ONNX runtime and Wine cannot satisfy it on its own.
+EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Two things have to be inside the Wine prefix before that installer is worth running: the **.NET 10 Desktop Runtime** and the **Microsoft Visual C++ 2015-2022 redistributable** (`dotnetdesktop10` and `vcredist2022` in Bottles, `dotnetdesktop10` and `vcrun2022` in winetricks). Version 2.4.0 moved from .NET 8 to .NET 10, so a prefix that already runs an older EQLogParser needs the .NET 10 Desktop Runtime added to it; the two runtimes sit side by side, so nothing else about the prefix has to change. The redistributable is new with 2.3.62: the downloadable speech engines run on Microsoft's ONNX runtime and Wine cannot satisfy it on its own.
 
 Two ways to get there: [with Bottles](#installing-with-bottles) or [with plain Wine](#installing-with-plain-wine).
 
 ## Installing with Bottles
 1. Create a **64-bit** bottle and install these dependencies into it from the bottle's Dependencies page:
     - **vcredist2022** — required for text to speech, without it Piper and Kokoro download their files and then stay silent (item 3 under Known Issues below)
-    - **dotnetdesktop8** — the .NET 8 Desktop Runtime EQLogParser runs on
+    - **dotnetdesktop10** — the .NET 10 Desktop Runtime EQLogParser runs on
     - **allfonts** — optional, completes the same set as the recipe EQLogParser publishes (`bottles/Games/eqlogparser.yml` in the GitHub project)
 2. Install with **Install → Run executable** and choose `EQLogParser-install-{version}.exe`, then launch `EQLogParser.exe` from `Program Files\EQLogParser`
 3. On first start nothing speaks until one engine is downloaded: Trigger Manager → **Tools** → **TTS Engine** → **Download** (Piper, about 682 MB, or Kokoro, about 228 MB). See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
@@ -157,7 +157,7 @@ Two ways to get there: [with Bottles](#installing-with-bottles) or [with plain W
 ## Installing with plain Wine
 1. Create a 64-bit prefix and put both prerequisites in it:
     - `WINEPREFIX=~/eqlogparser WINEARCH=win64 wineboot`
-    - `WINEPREFIX=~/eqlogparser winetricks vcrun2022 dotnetdesktop8`
+    - `WINEPREFIX=~/eqlogparser winetricks vcrun2022 dotnetdesktop10`
 2. Run the installer in that prefix: `WINEPREFIX=~/eqlogparser wine EQLogParser-install-{version}.exe`
 3. Launch it and download a speech engine the same way as above
 4. Only one Visual C++ package belongs in a prefix: **vcrun2022** covers everything from 2015 through 2022, so there is no reason to add 2015, 2017 or 2019 alongside it

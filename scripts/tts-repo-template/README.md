@@ -33,7 +33,7 @@ sign.cmd
 # here
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Inventory
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Sync `
-    -AppRelease C:\src\EQLogParser\EQLogParser\bin\Release\net8.0-windows10.0.17763.0
+    -AppRelease C:\src\EQLogParser\EQLogParser\bin\Release\net10.0-windows10.0.17763.0
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1
 ```
 

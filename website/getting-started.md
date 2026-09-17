@@ -18,7 +18,7 @@ At its core EQLogParser is a **parser** — open a character's log file and the 
 
 1. Visit the [Download page](download.html) and grab the latest installer.
 2. Run `EQLogParser-install-{version}.exe` as Administrator (required for log file access).
-3. If `.NET 8.0 Desktop Runtime` is not already installed, the installer will prompt you to install it — follow the on-screen instructions.
+3. If `.NET 10.0 Desktop Runtime` is not already installed, the installer will prompt you to install it — follow the on-screen instructions.
 4. After installation, launch EQLogParser from the Start menu or desktop shortcut.
 
 ## 2. Open Your First Log
@@ -105,7 +105,7 @@ If a restore fails partway through, your existing configuration is rolled back a
 
 - Read the full [Trigger Variables](documentation.html#trigger-variables) reference for pattern matching syntax
 - If your triggers speak text out loud and you're wondering which TTS engine to use, see [the TTS Engine options in the FAQ](faq.html#what-are-the-tts-engine-options-and-how-do-i-change-them)
-- On Linux or Wine? The standard installer works as-is, but the prefix needs the .NET 8 Desktop Runtime and the Visual C++ 2015-2022 redistributable (`vcredist2022`) first — the latter is required for any speech — see the [Linux notes in the FAQ](faq.html#linux-support)
+- On Linux or Wine? The standard installer works as-is, but the prefix needs the .NET 10 Desktop Runtime and the Visual C++ 2015-2022 redistributable (`vcredist2022`) first — the latter is required for any speech — see the [Linux notes in the FAQ](faq.html#linux-support)
 - Browse the [F.A.Q.](faq.html#f-a-q) for troubleshooting tips
 
 ---

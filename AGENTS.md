@@ -1,6 +1,6 @@
 # Project Rules & Guidelines
 
-You are an expert AI assistant tasked with maintaining this C#/WPF/.net 8.0 project.
+You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 project.
 
 ## Core Principles
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
