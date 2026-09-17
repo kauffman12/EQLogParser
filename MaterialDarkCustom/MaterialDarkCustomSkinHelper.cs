@@ -306,9 +306,6 @@ namespace Syncfusion.Themes.MaterialDarkCustom.WPF
         case "BusyIndicator":
           styles.Add(rootStylePath + "BusyIndicator/BusyIndicator.xaml");
           break;
-        case "NotifyIcon":
-          styles.Add(rootStylePath + "NotifyIcon/NotifyIcon.xaml");
-          break;
         case "DocumentContainer":
           styles.Add(rootStylePath + "DocumentContainer/DocumentContainer.xaml");
           break;
