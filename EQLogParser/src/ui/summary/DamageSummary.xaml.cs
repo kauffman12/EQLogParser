@@ -861,7 +861,11 @@ namespace EQLogParser
       if (name == "Damage")
       {
         var selected = GetSelectedStats();
-        var groups = dataGrid.SelectedItems.Cast<GroupEntry>().ToList();
+        // OfType, not Cast: GroupEntry derives from PlayerStats and the grid holds both, so a plain
+        // player row made Cast<GroupEntry> throw (InvalidCastException) every time the chart loaded
+        // outside Group View. Empty here means "no group rows selected", which is what FireChartEvent
+        // expects; the players themselves already arrive through GetSelectedStats().
+        var groups = dataGrid.SelectedItems.OfType<GroupEntry>().ToList();
         DamageStatsBuilder.Instance.FireChartEvent("UPDATE", selected, groups);
       }
     }
