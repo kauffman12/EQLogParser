@@ -48,7 +48,7 @@
       <CheckBox x:Name="includeArchive" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="False" Margin="0,0,8,1" Content="Include Archive"/>
     </StackPanel>
     <syncfusion:TabControlExt x:Name="tabControl" Grid.Row="2" Margin="0,4,0,0" TabClosed="TabClosed" PreviewSelectedItemChangedEvent="PreviewSelectedItemChangedEvent" AllowDragDrop="False" EnableLabelEdit="False" CloseMode="Hide" TabStripPlacement="Top" CloseButtonType="Individual" ShowTabItemContextMenu="False" TabListContextMenuOptions="None">
-      <syncfusion:TabItemExt x:Name="resultsTab" Background="{DynamicResource ContentBackgroundAlt2}" Header="Search Results" FontSize="{DynamicResource EQTitleSize}" CloseButtonState="Hidden" CanClose="False">
+      <syncfusion:TabItemExt x:Name="resultsTab" Header="Search Results" FontSize="{DynamicResource EQTitleSize}" CloseButtonState="Hidden" CanClose="False">
         <syncfusion:EditControl x:Name="logBox" PreviewKeyDown="LogPreviewKeyDown" PreviewMouseWheel="LogMouseWheel" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQLogFontFamily}" FontSize="{DynamicResource EQLogFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"
       DocumentLanguage="Text" AllowDragDrop="False" AllowDrop="False" EnableIntellisense="False" ShowFindAndReplace="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <syncfusion:EditControl.ContextMenu>
