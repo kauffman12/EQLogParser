@@ -20,7 +20,7 @@ namespace EQLogParser
 {
   /*
    * The four columns, plus `None`: "this category gets no column", which is how split mode says "do not show me that at
-   * all" now that the show list stopped carrying damage-in / damage-out switches (it lists nine rows instead, one per kind
+   * all" now that the show list stopped carrying damage-in / damage-out switches (it lists nine rows instead, one per type
    * of number, and a player hiding their outgoing damage hides it by giving it nowhere to go). Nothing is placed on None —
    * the gate in FctIngest stops those numbers before they reach geometry — and None's only geometric meaning is the
    * absence itself: an empty lane frees its share of the half to its neighbours (FctStage tiles the lanes that book).

@@ -884,7 +884,9 @@ to me" — they were narrower than that and specific: **no crits** during a pull
 during a parse, **heals but not the big green ones**, **spell noise off, keep my melee**. And the fourth request, "hide one side entirely",
 was being answered twice over: by a category switch *and* by sending that category's lane somewhere silly. So the show list is now **nine
 rows** — melee hits, melee crits, spell hits, spell crits, procs, pet melee, pet spells, healing, healing crits — beside the eight words it
-already carried, seventeen checkboxes in the same single alphabetical dropdown, and the closed face counts them as **"kinds"**.
+already carried, seventeen checkboxes in the same single alphabetical dropdown, and the closed face counts them as **"types" selected** —
+the noun every other multi-pick dropdown in the app already uses ("event types", "spell types", "types"), so FCT is not the one
+panel naming the same idea differently.
 
 **One record, one row.** The rule that keeps seventeen switches from becoming seventeen ways to be confused: every number resolves to
 exactly one row, in one place (`FctManager.DamageRow`), while the parse still knows who fired it. Procs outrank everything — a proc is the

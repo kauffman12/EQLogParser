@@ -52,7 +52,7 @@ namespace EQLogParser
     public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
 
     /*
-     * Which kinds of number the overlay draws at all (the gate in FctIngest). There used to be three keys here — my damage,
+     * Which types of number the overlay draws at all (the gate in FctIngest). There used to be three keys here — my damage,
      * damage on me, healing either direction — and they are gone: that question is now answered one level finer by the nine
      * show-list rows, whose keys live beside their labels in FctShowList, and "my side entirely" is answered by giving the
      * side no lane. Procs keeps its own key named here because it is the one row named before the rows existed; the rest of

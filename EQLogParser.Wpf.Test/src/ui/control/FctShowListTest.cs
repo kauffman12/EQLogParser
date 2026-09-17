@@ -221,7 +221,7 @@ namespace EQLogParser
       Assert.AreEqual(0, changed, "a fresh ingest already matches an all-on snapshot");
 
       /* The snapshot is what the canvas replays onto the gates (FctSkiaCanvas.ApplyGates), so a state that says everything off has to
-         silence every kind of number — including the words, whose switches are separate fields on the ingest. If any survived, the panel
+         silence every type of number — including the words, whose switches are separate fields on the ingest. If any survived, the panel
          would be showing "nothing selected" over an overlay that still drew it. */
       foreach (var entry in FctShowList.All)
       {
@@ -236,7 +236,7 @@ namespace EQLogParser
 
       Assert.IsNull(Probe(ingest, hits, FctRow.Word, Labels.Miss), "a word drew while every switch was off");
 
-      // and one switch back on draws exactly its own kind
+      // and one switch back on draws exactly its own type
       FctShowList.Rows.First(e => e.Row == FctRow.MeleeHits).ApplyTo(ingest, shown: true);
       Assert.IsNotNull(Probe(ingest, hits, FctRow.MeleeHits), "the snapshot's write never reached the gate");
       Assert.IsNull(Probe(ingest, hits, FctRow.SpellHits, nowMs: 60_000));
