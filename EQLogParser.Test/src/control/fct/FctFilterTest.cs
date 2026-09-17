@@ -191,7 +191,7 @@ namespace EQLogParser
       // Off, they do not render — and they are counted, never silently dropped.
       Assert.IsFalse(Proc(200, 1));
       Assert.AreEqual(1, hits.Count, "a proc nobody asked for stays out of the hit list");
-      Assert.AreEqual(1, ingest.FilteredCount, "filtered beside the other kinds somebody switched off");
+      Assert.AreEqual(1, ingest.FilteredCount, "filtered beside the other types somebody switched off");
 
       // Plain damage is none of this switch's business...
       Assert.IsNotNull(Take(ingest, hits, FctLane.DamageDealt, 300, now: 2));

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   /*
-   * Everything the settings panel's "show" dropdown offers, in one table: the nine kinds of number (FctRow) and
+   * Everything the settings panel's "show" dropdown offers, in one table: the nine types of number (FctRow) and
    * the eight event words, each with the settings.ini key and the label it prints. They share a table because they share a
    * control — the player's question is one question, "what may draw" — and because three separate things read each entry:
    * the overlay loading its gates at startup, the overlay writing them at Save, and this dropdown building itself. An entry
@@ -18,7 +18,7 @@ namespace EQLogParser
    * story about a fight, and finding a word in it was a memory test.
    *
    * The two exceptions worth stating, because they surprise people who met Mik's Scrolling Battle Text first: "spell" is
-   * every kind of non-melee damage the parser produces — Direct Damage, Bane, Damage Shield, Reverse DS, Other Damage — and
+   * every type of non-melee damage the parser produces — Direct Damage, Bane, Damage Shield, Reverse DS, Other Damage — and
    * a damage-over-time tick lands in the spell rows with everything else that did its damage slowly, crit ticks included.
    * Both follow from what the eye sees: a tick folds into its neighbours on screen (FctIngest), so a switch for it alone
    * would be a switch for something nobody can pick out of the picture. "hits" means everything that did not crit, which is

@@ -133,7 +133,7 @@
         </ComboBox>
 
         <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="what to draw, alphabetically: nine kinds of number and eight event words, each with its own switch. &quot;hits&quot; is everything that did not crit; &quot;spell&quot; is every non-melee kind, damage-over-time ticks included; &quot;pet&quot; is what your pet did, swinging or casting; healing is what lands on you. Words are attacks too, so a side you hid takes its words with it. Hidden kinds are counted; the log, meters and exports never change" />
+                   ToolTip="what to draw, alphabetically: nine types of number and eight event words, each with its own switch. &quot;hits&quot; is everything that did not crit; &quot;spell&quot; is every non-melee type, damage-over-time ticks included; &quot;pet&quot; is what your pet did, swinging or casting; healing is what lands on you. Words are attacks too, so a side you hid takes its words with it. Hidden types are counted; the log, meters and exports never change" />
         <ComboBox x:Name="showCombo" Grid.Row="4" Grid.Column="1" Margin="0,3"
                   ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
 

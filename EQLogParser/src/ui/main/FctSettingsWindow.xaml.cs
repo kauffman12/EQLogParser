@@ -331,8 +331,10 @@ namespace EQLogParser
       PreviewChanged?.Invoke(Snapshot());
     }
 
-    /* The combo's closed face counts what is on, in the app's own words — the same summariser the column pickers use. */
-    private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "kinds");
+    /* The combo's closed face counts what is on, in the app's own words — the same summariser the column pickers use, and
+       the same word every other multi-pick dropdown in the app already wears ("event types", "spell types", "types":
+       FCT saying "kinds" was a second name for one idea, and the first one nobody else in the program uses). */
+    private void UpdateShowTitle() => UiElementUtil.SetComboBoxTitle(showCombo, "types");
 
     /* Double-click returns a dial to the shipped middle; letting go of either restarts the demo cycle up top. */
     private void SliderReleased(object sender, MouseButtonEventArgs e)

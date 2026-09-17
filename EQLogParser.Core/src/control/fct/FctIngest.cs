@@ -291,7 +291,7 @@ namespace EQLogParser
       var heal = lane is FctLane.HealingDealt or FctLane.HealingReceived;
       var pooled = crit ? FctLane.Crit : lane;
 
-      /* The category gate, before even the threshold: whether this kind of number belongs on this overlay at all is a
+      /* The category gate, before even the threshold: whether this type of number belongs on this overlay at all is a
          question the player already answered, and a filtered hit should not so much as be measured against the dial.
          The proc clause stays beside the row gates on purpose: the row a proc answers to is FctRow.Procs, which reads this
          same switch, so this only ever catches a caller that named a proc without naming a row — and both spellings of "a
