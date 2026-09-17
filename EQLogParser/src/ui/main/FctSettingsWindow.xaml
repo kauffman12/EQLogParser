@@ -80,8 +80,8 @@
              independently) across a symmetric axis whose halves carry different amounts of it - see FctScale.DialExtent -
              so "no change" is where the eye expects it and not a third of the way along. Double-click finds each one's own
              shipped value: the text dial's IS its middle, the crit dial's rests a step right of it at +10 %. -->
-        <TextBlock Grid.Row="0" Text="speed" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how quickly a number shows and clears&#10;applies to the ones after this&#10;double-click resets" />
+        <TextBlock Grid.Row="0" Text="speed" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <Grid Grid.Row="0" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -93,8 +93,8 @@
                      Foreground="{DynamicResource ContentForegroundAlt}" />
         </Grid>
 
-        <TextBlock Grid.Row="1" Text="text size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big ordinary numbers are&#10;crits have their own dial below&#10;applies to the ones after this&#10;double-click resets" />
+        <TextBlock Grid.Row="1" Text="text size" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <Grid Grid.Row="1" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -109,8 +109,8 @@
                      Foreground="{DynamicResource ContentForegroundAlt}" />
         </Grid>
 
-        <TextBlock Grid.Row="2" Text="crit size" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how big crits and marked attacks are&#10;same scale as text size; 0 % draws a plain hit's size&#10;applies to the ones after this&#10;double-click resets" />
+        <TextBlock Grid.Row="2" Text="crit size" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <Grid Grid.Row="2" Grid.Column="1" Margin="0,5">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -123,8 +123,8 @@
                      Foreground="{DynamicResource ContentForegroundAlt}" />
         </Grid>
 
-        <TextBlock Grid.Row="3" Text="label" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="where the (source) name sits by its amount&#10;left / right put it inline, none hides names&#10;the number never moves; rows pack tighter&#10;names too long for the column are shortened" />
+        <TextBlock Grid.Row="3" Text="label" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <ComboBox x:Name="labelSideCombo" Grid.Row="3" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="left" Tag="left" />
           <ComboBoxItem Content="below" Tag="below" />
@@ -132,16 +132,17 @@
           <ComboBoxItem Content="none" Tag="none" />
         </ComboBox>
 
-        <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="what may draw: nine number types, eight words&#10;&quot;hits&quot; = non-crits · &quot;spell&quot; = non-melee · &quot;pet&quot; = pet&#10;hiding a side takes its words with it&#10;hidden numbers still count in the meters" />
+        <TextBlock Grid.Row="4" Text="show" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <ComboBox x:Name="showCombo" Grid.Row="4" Grid.Column="1" Margin="0,3"
                   ItemTemplateSelector="{StaticResource CheckSelector}" DropDownClosed="ShowDropDownClosed" />
 
         <!-- The trigger grid's numeric editor: type it or spin it, any whole number up to just under ten million.
              It lives among the always-applies now because the engine never treated it otherwise — a threshold is a
              statement about numbers, not about layout, and fountain filters with it too. -->
-        <TextBlock Grid.Row="5" Text="threshold" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="hide your damage at or under this value&#10;heals and words like Miss are never hidden&#10;hidden hits are counted, not lost · 0 is off" />
+        <TextBlock Grid.Row="5" Text="threshold" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}"
+                   ToolTip="Damage below this value will be hidden" />
         <syncfusion:UpDown x:Name="thresholdUpDown" Grid.Row="5" Grid.Column="1" Margin="0,3" Padding="0,2" Value="0"
                            MinValue="0" MaxValue="9999999" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="ThresholdChanged">
@@ -171,8 +172,8 @@
           <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="mode" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="fountain: numbers pop out of the middle and fall&#10;split: scrolling side columns, one per category" />
+        <TextBlock Grid.Row="0" Text="mode" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <ComboBox x:Name="modeCombo" Grid.Row="0" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="fountain" Tag="fountain" />
           <ComboBoxItem Content="split" Tag="split" />
@@ -181,8 +182,8 @@
         <!-- One shape row serves both modes, but the two modes pick from different lists: WPF items cannot live in two
              combos at once, so there are two combos sharing this cell and the mode swap shows one. The illegal shapes
              for a mode are never even choices in it - a scheme cannot store a motion it would only degrade. -->
-        <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how numbers move&#10;split scrolls to the far edge: arc bends, line does not&#10;fountain sprays and falls, or freezes in place" />
+        <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <ComboBox x:Name="shapeCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="arc" Tag="arc" />
           <ComboBoxItem Content="line" Tag="line" />
@@ -198,8 +199,8 @@
              placement can no longer invent a column that the settings did not offer. Fountain has no columns to hand
              out, so these rows shed their lane picks but keep their direction combos - including the heals row, whose
              dial a fountain honours: up means healing rises while damage sprays down. -->
-        <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage in" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which lane incoming damage uses, and which way it travels&#10;none hides it; the words about attacks on you go too" />
+        <TextBlock x:Name="takenTitle" Grid.Row="2" Text="damage in" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="takenLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
@@ -214,8 +215,8 @@
           </ComboBox>
         </StackPanel>
 
-        <TextBlock x:Name="dealtTitle" Grid.Row="3" Text="damage out" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which lane your damage uses, and which way it travels&#10;none hides it; the words about your misses go too" />
+        <TextBlock x:Name="dealtTitle" Grid.Row="3" Text="damage out" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="dealtLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
@@ -230,8 +231,8 @@
           </ComboBox>
         </StackPanel>
 
-        <TextBlock x:Name="healsTitle" Grid.Row="4" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="which way healing travels&#10;fountain shares the middle: up = heals rise, damage falls&#10;split also picks the lane; none hides healing" />
+        <TextBlock x:Name="healsTitle" Grid.Row="4" Text="heals" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <StackPanel x:Name="healsRow" Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
           <ComboBox x:Name="healLaneCombo" Width="84" SelectionChanged="ControlChanged">
             <ComboBoxItem Content="left 1" Tag="left1" />
@@ -251,8 +252,8 @@
              its effect is watched. A window too small for the ask keeps four fifths of its width as track (FctStage
              clamps), so one saved number fits every overlay instead of being rewritten per monitor. Fountain has no
              column geometry to clear, so the row waits. -->
-        <TextBlock x:Name="gutterTitle" Grid.Row="5" Text="center gutter" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the clear band down the middle, for your target frame&#10;0 closes it; a bigger number pushes columns outward&#10;split only — fountain clears its middle by direction" />
+        <TextBlock x:Name="gutterTitle" Grid.Row="5" Text="center gutter" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <syncfusion:UpDown x:Name="gutterUpDown" Grid.Row="5" Grid.Column="1" Margin="0,3" Padding="0,2" Value="40"
                            MinValue="0" MaxValue="800" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="GutterChanged">
@@ -280,38 +281,38 @@
               <RowDefinition Height="Auto" />
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="damage out" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="your outgoing damage numbers&#10;shipped yellow, the loudest class on screen" />
+        <TextBlock Grid.Row="0" Text="damage out" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="dealtColor" Grid.Row="0" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="1" Text="damage in" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="damage landing on you&#10;shipped red — it says 'what hit me' at a glance" />
+        <TextBlock Grid.Row="1" Text="damage in" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="takenColor" Grid.Row="1" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="2" Text="heals" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="healing numbers, both directions — shipped green" />
+        <TextBlock Grid.Row="2" Text="heals" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="healsColor" Grid.Row="2" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="3" Text="crits" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="your crits, in every lane&#10;shipped deep orange, away from dealt yellow" />
+        <TextBlock Grid.Row="3" Text="crits" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="critColor" Grid.Row="3" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="4" Text="special" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="marked special attacks: the number and its glyph&#10;assassinate, headshot, slay undead, finishing blow, decapitation&#10;shipped epic purple, outside every lane colour" />
+        <TextBlock Grid.Row="4" Text="special" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="specialColor" Grid.Row="4" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="5" Text="events" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the zero-damage event words, in one colour&#10;block, parry, riposte, resist, miss, dodge, absorb, invulnerable&#10;shipped pale grey; size ranks them, not hue" />
+        <TextBlock Grid.Row="5" Text="events" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="wordsColor" Grid.Row="5" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
-        <TextBlock Grid.Row="6" Text="labels" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the (source) names beside numbers&#10;shipped neutral grey so they never compete with a value&#10;nothing to colour while label says none" />
+        <TextBlock Grid.Row="6" Text="labels" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <shared:ColorPicker x:Name="labelsColor" Grid.Row="6" Grid.Column="1" Margin="0,2,0,2" VerticalAlignment="Center"
                             SelectedColorChanged="ColourPicked" />
 
@@ -336,8 +337,8 @@
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="height" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how tall the overlay window is&#10;the overlay resizes as you change it" />
+        <TextBlock Grid.Row="0" Text="height" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <syncfusion:UpDown x:Name="heightUpDown" Grid.Row="0" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="GeometryFieldChanged">
           <syncfusion:UpDown.NumberFormatInfo>
@@ -345,8 +346,8 @@
           </syncfusion:UpDown.NumberFormatInfo>
         </syncfusion:UpDown>
 
-        <TextBlock Grid.Row="1" Text="left" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the overlay's left edge, from the left of your desktop&#10;negative is a monitor left of the primary&#10;the overlay moves as you change it" />
+        <TextBlock Grid.Row="1" Text="left" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <syncfusion:UpDown x:Name="leftUpDown" Grid.Row="1" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="GeometryFieldChanged">
           <syncfusion:UpDown.NumberFormatInfo>
@@ -354,8 +355,8 @@
           </syncfusion:UpDown.NumberFormatInfo>
         </syncfusion:UpDown>
 
-        <TextBlock Grid.Row="2" Text="top" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="the overlay's top edge, from the top of your desktop&#10;the overlay moves as you change it" />
+        <TextBlock Grid.Row="2" Text="top" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <syncfusion:UpDown x:Name="topUpDown" Grid.Row="2" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="GeometryFieldChanged">
           <syncfusion:UpDown.NumberFormatInfo>
@@ -363,8 +364,8 @@
           </syncfusion:UpDown.NumberFormatInfo>
         </syncfusion:UpDown>
 
-        <TextBlock Grid.Row="3" Text="width" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
-                   ToolTip="how wide the overlay window is&#10;the overlay resizes as you change it" />
+        <TextBlock Grid.Row="3" Text="width" VerticalAlignment="Center"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
         <syncfusion:UpDown x:Name="widthUpDown" Grid.Row="3" Grid.Column="1" Margin="0,3" Padding="0,2" BorderThickness="0" ApplyZeroColor="False"
                            ValueChanged="GeometryFieldChanged">
           <syncfusion:UpDown.NumberFormatInfo>
@@ -383,17 +384,16 @@
            demo switch rather than on a line of its own. -->
       <Border BorderBrush="{DynamicResource ContentBackgroundAlt3}" BorderThickness="0,1,0,0" Margin="0,8,0,6" />
       <Grid>
-        <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center" HorizontalAlignment="Left" Checked="ControlChanged" Unchecked="ControlChanged"
-                  ToolTip="the demo numbers that play while configuring&#10;off sets this up over a real fight" />
+        <CheckBox x:Name="sampleCheck" Content="sample data" IsChecked="True" VerticalAlignment="Center"
+                  HorizontalAlignment="Left" Checked="ControlChanged" Unchecked="ControlChanged" />
         <TextBlock x:Name="statsText" VerticalAlignment="Center" HorizontalAlignment="Right" TextAlignment="Right" Opacity="0.65" TextWrapping="Wrap"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
       </Grid>
 
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-        <Button x:Name="saveButton" Content="Save" MinWidth="84" Padding="10,3" Click="SaveClick"
-                ToolTip="keep these settings and stop configuring" />
-        <Button x:Name="cancelButton" Content="Cancel" MinWidth="84" Padding="10,3" Margin="8,0,0,0" Click="CancelClick"
-                ToolTip="stop configuring without keeping any of this" />
+        <Button x:Name="saveButton" Content="Save" MinWidth="84" Padding="10,3" Click="SaveClick" />
+        <Button x:Name="cancelButton" Content="Cancel" MinWidth="84" Padding="10,3" Margin="8,0,0,0"
+                Click="CancelClick" />
       </StackPanel>
     </StackPanel>
   </Border>

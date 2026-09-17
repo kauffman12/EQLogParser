@@ -168,7 +168,7 @@
       <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
         <DockPanel Background="{DynamicResource ContentBackgroundAlt2}">
           <TextBlock Text="Manage Overlays" Margin="8,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-          <Button DockPanel.Dock="Right" Padding="8,0,8,0"  HorizontalAlignment="Right" Margin="0,2,8,4" Height="{DynamicResource EQButtonHeight}" Content="Hide Overlays" Click="HideOverlaysClick" ToolTip="Hide all Overlays until they receive new data. This does not remove existing text or timers." />
+          <Button DockPanel.Dock="Right" Padding="8,0,8,0"  HorizontalAlignment="Right" Margin="0,2,8,4" Height="{DynamicResource EQButtonHeight}" Content="Hide Overlays" Click="HideOverlaysClick" ToolTip="Hide all Overlays until they receive new data. This does not remove existing text or timers" />
         </DockPanel>
       </Border>
       <syncfusion:SfTreeView
