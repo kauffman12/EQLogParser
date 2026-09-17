@@ -10,8 +10,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\MeasureLoadedAssemblies.ps1
 #
 #   Optional:
-#     -ExePath "C:\...\EQLogParser\bin\Release\net8.0-windows10.0.17763.0\EQLogParser.exe"
-#     -ExePath "C:\...\BackupUtil\bin\Release\net8.0-windows10.0.17763.0\BackupUtil.exe"   # also covers BackupUtil
+#     -ExePath "C:\...\EQLogParser\bin\Release\net10.0-windows10.0.17763.0\EQLogParser.exe"
+#     -ExePath "C:\...\BackupUtil\bin\Release\net10.0-windows10.0.17763.0\BackupUtil.exe"   # also covers BackupUtil
 #
 # Run with 64-bit PowerShell (x64). If the app runs elevated, run this
 # elevated too or module enumeration will fail.
@@ -23,7 +23,7 @@
 #                   => candidates for removal from install/sign lists
 
 param(
-    [string]$ExePath = "$PSScriptRoot\..\EQLogParser\bin\Release\net8.0-windows10.0.17763.0\EQLogParser.exe",
+    [string]$ExePath = "$PSScriptRoot\..\EQLogParser\bin\Release\net10.0-windows10.0.17763.0\EQLogParser.exe",
     [string]$OutputFile = ""
 )
 
