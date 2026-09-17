@@ -7,7 +7,8 @@ namespace EQLogParser
   /*
    * The two dials on the configure row. What matters here is not arithmetic but the three decisions that are invisible if somebody changes them: a text
    * scale of zero draws nothing and a negative one puts numbers outside the canvas (both reachable by hand-editing settings.ini); the size window's ends are
-   * pegged to looks rather than symmetry (-50 % to +110 % around 0.9, which TheSizeWindowIsPeggedToLooksNotRoundNumbers holds to the number); and the speed dial is
+   * pegged to looks rather than symmetry (-50 % to +110 % around 0.9, which TheSizeWindowIsPeggedToLooksNotRoundNumbers holds to the number) while its track keeps its
+   * nothing at the exact middle of it, which is what TheSizeDialsParkTheirDashAtTheExactMiddle holds; and the speed dial is
    * measured in percent of the time a number spends on screen, so +50 % has to mean half as long and not two thirds; and its middle is 0.877 of the
    * measured time rather than 1.0, which is a preference about how the feature feels and wants pinning as loudly as any constant.
    */
@@ -235,6 +236,61 @@ namespace EQLogParser
        reaches the double the old +100 % could only name, and the text dial's normal landed a tenth under the tier
        table because that is where shipped numbers looked right in game. The crit dial's +10 % therefore now draws
        exactly where plain text used to - same multiplier as the old default, halo still its own. */
+    /*
+     * Every dash at the exact middle of its own track. The size window is not symmetric in percent (-50 to +110, because its ends are two looks), so the thumb
+     * cannot travel percent-linearly and still park nothing at the centre — the axis is two-piece instead. What this pins: the middle IS 0 %, both ends still
+     * reach their looks, a thumb between two marks reports the nearer one rather than a third precision nobody can aim at, and the snap list handed to the
+     * Slider is exactly those positions — monotonic, spanning the whole track, and holding the crit dial's shipped +10 % so the shipped thumb lands on a step.
+     */
+    [TestMethod]
+    public void TheSizeDialsParkTheirDashAtTheExactMiddle()
+    {
+      Assert.AreEqual(0, FctScale.SizePercentFromDial(0), "the middle of the track is nothing");
+      Assert.AreEqual(-FctScale.DialExtent, FctScale.DialFromSizePercent(FctScale.SizePercentMin), 0.0001, "the floor reaches the left end of the track");
+      Assert.AreEqual(FctScale.DialExtent, FctScale.DialFromSizePercent(FctScale.SizePercentMax), 0.0001, "and the ceiling the right end");
+
+      // both ends still draw the sizes they were pegged to, read back through the thumb rather than around it
+      Assert.AreEqual(FctScale.SizeMin, FctScale.SizeFromPercent(FctScale.SizePercentFromDial(-FctScale.DialExtent)), 0.0001);
+      Assert.AreEqual(FctScale.SizeMax, FctScale.SizeFromPercent(FctScale.SizePercentFromDial(FctScale.DialExtent)), 0.0001);
+
+      var previousThumb = double.MinValue;
+      for (var percent = FctScale.SizePercentMin; percent <= FctScale.SizePercentMax; percent += FctScale.SizePercentStep)
+      {
+        var thumb = FctScale.DialFromSizePercent(percent);
+        Assert.IsTrue(thumb > previousThumb, $"{percent}% sat left of the smaller setting before it");
+        Assert.AreEqual(percent, FctScale.SizePercentFromDial(thumb), $"{percent}% does not come back as where the thumb is");
+
+        /* A nudge either way off the mark still reports that mark — the right half carries 22 steps in the pixels the left half carries 10 in, so this is
+           where a sloppy mapping would show up as the readout stalling on one side and jumping on the other. */
+        Assert.AreEqual(percent, FctScale.SizePercentFromDial(thumb + 0.4), $"{percent}% lost its step to a nudge right");
+        Assert.AreEqual(percent, FctScale.SizePercentFromDial(thumb - 0.4), $"{percent}% lost its step to a nudge left");
+        previousThumb = thumb;
+      }
+
+      /* What the two-piece axis costs and buys, in pixels: each half owns half the track, so a percent is worth more than twice the travel on the way DOWN
+         as on the way up. That is deliberate — 0.4x against 0.5x is a harder call by eye than 1.9x against 2.0x, and it is the tight side that got the room. */
+      var down = FctScale.DialFromSizePercent(-45) - FctScale.DialFromSizePercent(FctScale.SizePercentMin);
+      var up = FctScale.DialFromSizePercent(FctScale.SizePercentStep) - FctScale.DialFromSizePercent(0);
+      Assert.IsTrue(down > up, $"a percent going down bought {down:0.00} of the track against {up:0.00} going up");
+
+      var ticks = FctScale.SizeDialTicks();
+      Assert.AreEqual((FctScale.SizePercentMax - FctScale.SizePercentMin) / FctScale.SizePercentStep + 1, ticks.Length, "one snap position per reachable percent");
+      Assert.AreEqual(-FctScale.DialExtent, ticks[0], 0.0001, "the list starts at the track's left end, or a drag cannot reach the floor");
+      Assert.AreEqual(FctScale.DialExtent, ticks[^1], 0.0001, "and ends at its right end");
+      for (var i = 1; i < ticks.Length; i++)
+      {
+        Assert.IsTrue(ticks[i] > ticks[i - 1], $"snap position {i} is not to the right of {i - 1}");
+      }
+
+      // the shipped crit sits on a step of the new axis, a little right of centre — double-click and LoadFrom both aim at it through this one function
+      var shipped = FctScale.DialFromSizePercent(FctScale.CritSizePercentDefault);
+      Assert.AreEqual(FctScale.CritSizePercentDefault, FctScale.SizePercentFromDial(shipped), "crit's +10 % is not a position the track can hold");
+      Assert.IsTrue(shipped > 0 && shipped < FctScale.DialExtent / 2, $"crit's shipped thumb sits at {shipped:0.0}, which is not a step right of centre");
+
+      Assert.AreEqual(0, FctScale.SizePercentFromDial(double.NaN), "a thumb that is nowhere reports nothing rather than junk");
+      Assert.AreEqual(FctScale.SizePercentMax, FctScale.SizePercentFromDial(9000), "and a thumb past the end reads as the end it was reaching for");
+    }
+
     [TestMethod]
     public void TheSizeWindowIsPeggedToLooksNotRoundNumbers()
     {
