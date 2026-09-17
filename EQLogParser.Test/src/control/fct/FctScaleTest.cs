@@ -291,13 +291,23 @@ namespace EQLogParser
       Assert.AreEqual(FctScale.SizePercentMax, FctScale.SizePercentFromDial(9000), "and a thumb past the end reads as the end it was reaching for");
     }
 
+    /*
+     * The looks themselves, stated as the numbers they draw rather than as the constants that hold them. That is deliberate: `Assert.AreEqual(0.9,
+     * FctScale.SizeDefault)` is four literals agreeing with themselves, which can never fail and is what MSTEST0032 complains about — an anchor nobody can
+     * move is not an anchor, it is a comment that lies when the number moves. So each look is read off something that COULD disagree: the multiplier the
+     * engine actually starts a session with (the dial as shipped, before any settings.ini or dial has had a say — FctAmbient hands these back to every test
+     * in this class), and the size the dial's own conversion produces at each end of its window. Move SizeDefault, either percent end, or the shipped
+     * multiplier and one of these four fails, which is the whole point of pinning a look.
+     */
     [TestMethod]
     public void TheSizeWindowIsPeggedToLooksNotRoundNumbers()
     {
-      Assert.AreEqual(0.9, FctScale.SizeDefault, 0.0001, "text normal is the look of the old -10 %");
-      Assert.AreEqual(0.4, FctScale.SizeMin, 0.0001, "the floor is the look of the old -60 %");
-      Assert.AreEqual(2.0, FctScale.SizeMax, 0.0001, "the ceiling is the look the old +100 % could only be named");
-      Assert.AreEqual(1.0, FctScale.CritSizeDefault, 0.0001, "crits ship where plain text used to: same multiplier, still obviously crits");
+      Assert.AreEqual(0.9, FctScale.Text, 0.0001, "text normal is the look of the old -10 %");
+      Assert.AreEqual(1.0, FctScale.Crit, 0.0001, "crits ship where plain text used to: same multiplier, still obviously crits");
+
+      // and the two ends of the window, measured through the dial's own conversion rather than read back out of the constants that define it
+      Assert.AreEqual(0.4, FctScale.SizeFromPercent(FctScale.SizePercentMin), 0.0001, "the floor is the look of the old -60 %");
+      Assert.AreEqual(2.0, FctScale.SizeFromPercent(FctScale.SizePercentMax), 0.0001, "the ceiling is the look the old +100 % could only be named");
     }
   }
 }
