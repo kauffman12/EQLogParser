@@ -1743,6 +1743,43 @@ several hits is misleading, so crit overload is the case where `DroppedCount` ac
 halves — 40 identical hits into one lane leave every one of them counted on screen with zero drops, and none of the numbers
 any bigger than a single hit — and 20 crits into a capped crit lane report 8 counted drops.
 
+**Time on screen belongs to the stream, not to the class.** Crits were exempt from the adaptive lifetime for as long as a crit was a rare event:
+`CritLifetimeMs`, a flat 2800 ms while everything around it compressed with load. That is not what EverQuest looks like any more — a raid-built
+toon crits most of what it deals, and in an old expansion the crits are so scarce that size and colour alone already single them out — so the
+exemption stopped being emphasis and became two overlays running on different clocks. Measured through `FctIngest` at 800 px tall, one damage
+stream, shipped speed dial, 35% of the hits critting; every figure is the median time a number was actually on screen, eviction included:
+
+| arrival cadence | ordinary number, before | crit, before | ordinary, now | crit, now |
+|---|---|---|---|---|
+| every 400 ms (calm) | 3072 ms | 2464 ms | 1760 ms | 2128 ms |
+| every 200 ms | 1328 ms | 2464 ms | 1760 ms | 2032 ms |
+| every 90 ms (raid) | 912 ms | 2464 ms | 1760 ms | 2032 ms |
+
+Before, the ratio between a crit and its neighbour swung from **0.80 to 2.70** depending on load — at calm tempo ordinary text outlived the crits,
+at raid tempo the crits outlived everything by nearly three times. Now it stays in **1.07–1.21** across every cadence and crit rate measured (the 85%-crit
+column set lands at 1.07–1.15), one rule for every class: `FctLifeController` decides
+by stream, and the badge keeps a 15% margin over its own stream (`FctIngest.CritLifeMargin`) as a congestion allowance — never more time in the calm
+case, since the baseline already outranks what the flat crit life was. What says "crit" is size, hue, halo and the top draw pass: the four things a
+player can point at on a screenshot. Path was never class-dependent (rails share one scroll rate for every row; fountain and spray buy their time from
+the choreography) and now neither is tempo. `FctScale.Time` stays the escape hatch — that is what the dial is for.
+
+Two consequences are load-bearing, both pinned in `FctIngestTest`. Occupancy is counted **by stream** (`LiveStreamCount`, keyed on
+`FctHitState.TrafficLane`, captured beside `Incoming` and `Heal` before pooling): counting by presentation class reports an empty damage column in the
+middle of a crit streak — every one of those numbers is pooled onto `FctLane.Crit` — and hands the calm-case lifetime to a screen that is already full.
+That is why ordinary text at 400 ms cadence came *down* by a third: the controller can finally see the traffic. And `FctLifeController.FloorMs`
+went **1000 → 2000**, because a floor that low bought headroom by making numbers unreadable at exactly the moment a raid asks for the most reading;
+folding repeats and evicting the least significant row are the tools for crowding. Measured at the heaviest case tried (90 ms cadence, 85% crits), the
+longer lives did not cost throughput — drops fell from 90 to 73 while landings rose from 133 to 150, because compressing time and dropping text were
+paying for the same thing. The floor is a pre-dial number:
+at the shipped `FctScale.Time` of 0.877 it reads as 1754 ms, and at the fastest setting the 900 ms `MinLifetimeMs` backstop takes over.
+
+The blowout's **collapse now runs on the hit's own fade** instead of a flat 700 ms (`CritScaleOutMs`, deleted), so size and opacity retire together: a big
+number never holds full size into its dim phase and never shrinks while still bright. The constant got both wrong at once, and specifically — at the 2800 ms
+crit life it was written for, whose fade works out at 614 ms, the shrink began **86 ms before the dimming**, so the last tenth of a second collapsed at full
+brightness; and because the window was fixed while every other blowout (a marked event, the same curve) lived on the lane's adaptive life, a special born into a
+jammed lane spent 700 ms of its 877 shrinking. The conveyor already keyed its collapse to the stretch of rail the fade spans; this is that rule on the clock the
+other styles use, which also means the swell-in (`CritScaleInMs`) and the deep 0.06 endpoint are the only crit-specific numbers left in the curve.
+
 Folding used to follow NAG's median idea instead: `FctMedianTracker` kept a rolling window per lane and a direct hit under half
 the lane's median was treated as routine noise and poured into whatever live number shared its lane. That is gone, and it went
 with summation rather than alongside it — the median answered "when is it acceptable to add this amount to somebody else's

@@ -316,6 +316,40 @@ namespace EQLogParser
     }
 
     /*
+     * The collapse runs on the hit's own fade clock. Two ways this can drift and both are pinned: a big number that holds full size into its dim
+     * phase shrinks while it is still one of the brightest things on screen (a pop turning into a blink), and one that collapses faster than its
+     * fade spends its last moments as a bright dot instead of a number. The window used to be a constant 700 ms of everybody's life, which at the
+     * short end was half the flight and at the long end a fifth — so the same crit animation was a different gesture depending on congestion. The
+     * conveyor already keyed its collapse to the stretch of rail the fade spans; this is that rule on the clock the other styles use.
+     */
+    [TestMethod]
+    public void ABlowoutShrinksOnTheClockItFadesOn()
+    {
+      foreach (var lifetime in new[] { 3500.0, 2000.0, 1400.0 })
+      {
+        var crit = NewHit(lifetime);
+        crit.Lane = FctLane.Crit;
+        crit.Blowout = true;                                  // what FctStyle stamps on the big class at birth
+        crit.FadeMs = Math.Clamp(lifetime * 0.25, 250, 1000);  // the share ingest stamps
+
+        Assert.AreEqual(1.0, FctMotion.ScaleOf(crit, lifetime - crit.FadeMs), 0.001,
+          $"full size until its own fade begins (life {lifetime:0} ms)");
+        Assert.IsTrue(FctMotion.ScaleOf(crit, lifetime - (crit.FadeMs / 2)) < 1.0,
+          $"shrinking with the fade rather than after it (life {lifetime:0} ms)");
+
+        for (var i = 1; i <= 20; i++)
+        {
+          var age = (lifetime - crit.FadeMs) + (crit.FadeMs * i / 20);
+          Assert.IsTrue(FctMotion.ScaleOf(crit, age) <= FctMotion.ScaleOf(crit, age - 1) + 0.0001,
+            $"the collapse never re-inflates (life {lifetime:0} ms, age {age:0})");
+        }
+
+        Assert.AreEqual(FctMotion.CritScaleEnd, FctMotion.ScaleOf(crit, lifetime), 0.001,
+          $"finished at the same instant its opacity is (life {lifetime:0} ms)");
+      }
+    }
+
+    /*
      * The scale animation must not STEER. ArcedX used to compensate for the frame's blowout so the right edge stayed
      * nailed to the rail through it — which meant a dying crit walked sideways toward its own rail as it collapsed,
      * and on a straight line that looked absurd: every ordinary row rose straight up while crits and marks veered off

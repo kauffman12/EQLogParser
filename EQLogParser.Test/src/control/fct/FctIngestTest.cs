@@ -644,6 +644,67 @@ namespace EQLogParser
     }
 
     /*
+     * ONE clock for the overlay. Crits used to be exempt from congestion and hold a fixed 2800 ms, which read well when a crit was one swing in
+     * ten and reads as two overlays when it is nine in ten — modern expansions crit almost constantly, so the exemption put the whole big class on
+     * a different clock from the numbers it sits among: measured at raid tempo through this same path, 2464 ms of crit against 912 ms of ordinary
+     * text, and at a calm tempo the ordinary numbers outlived the crits (3072 to 2464) because they had no exemption to lose. Both classes now go
+     * through the governor and the badge keeps only a margin over its own stream, so what says "crit" is size, colour, halo and draw order —
+     * exactly the halves a player can point at — while path and time belong to the stream. See FctIngest.AssignLifetime.
+     */
+    [TestMethod]
+    public void CritsAndOrdinaryNumbersShareOneClock()
+    {
+      var ingest = NewIngest();
+      var hits = new List<FctHitState>();
+      var critLives = new List<double>();
+      var plainLives = new List<double>();
+      var rnd = new Random(31);
+
+      // raid tempo, modern crit rate: 70 ms apart, 85% of it critting
+      for (var now = 0.0; now < 12_000; now += 70)
+      {
+        var crit = rnd.NextDouble() < 0.85;
+        var hit = ingest.Accept(hits, FctLane.DamageDealt, 400 + rnd.Next(1200), "Flurry", crit, false, false, null, Width, Height, now);
+        if (hit is not null)
+        {
+          (crit ? critLives : plainLives).Add(hit.LifetimeMs);
+        }
+      }
+
+      var critLife = Median(critLives);
+      var plainLife = Median(plainLives);
+      Assert.IsTrue(critLives.Count > 10 && plainLives.Count > 2, $"need both classes on screen to compare them, got {critLives.Count} and {plainLives.Count}");
+      Assert.IsTrue(critLife >= plainLife, $"a crit still clears a beat after its neighbours ({critLife:0} vs {plainLife:0})");
+      Assert.IsTrue(critLife <= plainLife * 1.3,
+        $"{critLife:0} ms of crit against {plainLife:0} ms of ordinary text is two overlays, not one (was 2464 vs 912)");
+    }
+
+    /* Congestion is asked about by STREAM and counted by stream. Counting occupancy by presentation class reports an empty damage column in the
+     * middle of a crit streak — every one of those numbers is pooled onto FctLane.Crit — and hands the calm-case lifetime to a screen that is
+     * already full, which is the same mis-measurement from the other side as the fixed crit life above. */
+    [TestMethod]
+    public void AStreamFullOfCritsIsNotTreatedAsEmpty()
+    {
+      var ingest = NewIngest();
+      var hits = new List<FctHitState>();
+
+      var first = ingest.Accept(hits, FctLane.DamageDealt, 1000, "Flurry", true, false, false, null, Width, Height, 0);
+
+      var latest = first;
+      for (var now = 90.0; now < 8_000; now += 90)
+      {
+        var hit = ingest.Accept(hits, FctLane.DamageDealt, 400 + ((int)now % 900), "Flurry", true, false, false, null, Width, Height, now);
+        if (hit is not null)
+        {
+          latest = hit;
+        }
+      }
+
+      Assert.IsTrue(latest.LifetimeMs < first.LifetimeMs * 0.75,
+        $"a column full of crits must shorten its own stream (first {first.LifetimeMs:0} ms, later {latest.LifetimeMs:0} ms)");
+    }
+
+    /*
      * A proc lands on top of the swing the player aimed, and items fire them constantly — so it runs a shorter life.
      * It does NOT run a smaller font: shrinking procs below their lane read as two weights of information rather than
      * two urgencies, and the tempo tier carries the subordination on its own. The size half of this test is pinned on
@@ -858,6 +919,14 @@ namespace EQLogParser
       }
 
       return total;
+    }
+
+    /* The middle of a set of measured lifetimes: these are read off a simulation, so the median is the honest centre and a single outlier from an
+       eviction cannot move it. */
+    private static double Median(List<double> values)
+    {
+      var sorted = values.OrderBy(v => v).ToList();
+      return sorted.Count == 0 ? 0 : sorted[sorted.Count / 2];
     }
 
     /* How many separate hits the visible numbers stand for. */

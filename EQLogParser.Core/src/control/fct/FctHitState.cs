@@ -9,6 +9,14 @@ namespace EQLogParser
   {
     public FctLane Lane;
 
+    /* The lane this number was produced on, before the crit badge pooled it onto FctLane.Crit — captured for the same reason as Heal below.
+     * Only one thing reads it: how long the number may stay (FctIngest.AssignLifetime). A modern raid crits most of what it deals, so the big
+     * class is a presentation class rather than a stream with its own traffic; the column a number travels in is what decides its reading time.
+     * ingest stamps it beside Incoming and Heal, its only writer; a hand-built fixture leaves it at the first lane, which costs that hit an
+     * estimate of somebody else's traffic and nothing more.
+     */
+    public FctLane TrafficLane;
+
     /* An item or spell proc rather than the attack or cast somebody aimed: reads a little smaller (FctStyle) and
      * leaves sooner (FctIngest.ApplyProcTempo). A crit proc is exempt from both — the pop already says it matters. */
     public bool Proc;

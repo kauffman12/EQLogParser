@@ -27,11 +27,16 @@ namespace EQLogParser
       Assert.AreEqual(3500.0, life.NextLifetime(FctLane.DamageDealt, liveCount: 0, nowMs: 21100));
     }
 
+    /* The crit badge is not a stream. FctLane.Crit exists so colour, halo and folding can pool the big numbers together; a modern raider crits
+     * most of what it deals, so a governor keyed to that class would be timing nearly the whole overlay while reporting every real column empty.
+     * Crits are timed by the column they came from (FctHitState.TrafficLane) and keep only a small margin over it: see
+     * FctIngest.CritsAndOrdinaryNumbersShareOneClock. 0 here means "not governed on this lane", which the caller resolves to the baseline. */
     [TestMethod]
-    public void CritsDoNotAdapt()
+    public void TheCritClassIsNotAStream()
     {
       var life = new FctLifeController();
 
+      Assert.AreEqual(0, FctLifeController.Capacity(FctLane.Crit));
       Assert.AreEqual(0, life.NextLifetime(FctLane.Crit, liveCount: 50, nowMs: 1000));
     }
 
@@ -50,9 +55,17 @@ namespace EQLogParser
       }
 
       var value = life.NextLifetime(FctLane.DamageDealt, liveCount: 2, nowMs: t + 100);
-      Assert.IsTrue(value is >= 1000 and < 3500, $"expected compression below the 3.5 s baseline, got {value}");
+      Assert.IsTrue(value is >= FctLifeController.FloorMs and < FctLifeController.BaselineMs,
+        $"expected compression below the {FctLifeController.BaselineMs:0} s baseline, got {value}");
     }
 
+    /*
+     * The floor is a legibility rule, not a headroom rule, and it is deliberately high. It was 1000 ms, which bought screen space by making numbers
+     * unreadable at exactly the moment a raid asks the player to read the most; folding identical hits and evicting the least significant row are the
+     * tools for crowding. And a low floor made the one exempt class dominate by comparison — crits fixed at 2800 ms against neighbours cut under a
+     * second reads as two overlays running on different clocks, not as emphasis inside one (see FctIngestTest.CritsAndOrdinaryNumbersShareOneClock).
+     * FctScale.Time remains the player's knob for a table that wants less time on screen.
+     */
     [TestMethod]
     public void AFullLaneGetsTheFloor()
     {
@@ -67,7 +80,8 @@ namespace EQLogParser
       }
 
       var value = life.NextLifetime(FctLane.DamageDealt, liveCount: (int)FctLifeController.Capacity(FctLane.DamageDealt), nowMs: t + 200);
-      Assert.AreEqual(1000.0, value);
+      Assert.AreEqual(FctLifeController.FloorMs, value);
+      Assert.IsTrue(value >= 2000, $"the most crowded lane still gets {value:0} ms to be read in");
     }
 
     [TestMethod]
@@ -76,9 +90,10 @@ namespace EQLogParser
       var life = new FctLifeController();
       life.NextLifetime(FctLane.HealingDealt, 0, 1000);
 
-      // one interval of 200 ms -> instant rate 5/s, EMA (alpha .25) -> 1.25/s; slack 5 - 3 = 2 -> 1600 ms
-      var value = life.NextLifetime(FctLane.HealingDealt, liveCount: 3, nowMs: 1200);
-      Assert.AreEqual(1600, value, 1);
+      // one interval of 250 ms -> instant rate 4/s, EMA (alpha .25) -> 1/s; slack 5 - 2 = 3 -> 3000 ms. Spaced above the floor
+      // on purpose: below it the clamp answers, and this test is about the arithmetic before the clamp.
+      var value = life.NextLifetime(FctLane.HealingDealt, liveCount: 2, nowMs: 1250);
+      Assert.AreEqual(3000, value, 1);
     }
 
     [TestMethod]

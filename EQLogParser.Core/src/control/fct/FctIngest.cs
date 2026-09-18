@@ -26,8 +26,9 @@ namespace EQLogParser
     private const double AbsorbWindowMs = 2500;
     private const double AbsorbMaxLifeFrac = 0.6;
 
-    /* Crits do not adapt (they must stay prominent) and do not absorb; this is their whole display time. */
-    private const double CritLifetimeMs = 2800;
+    /* The margin a crit keeps over its own stream when congestion shortens it: a bit more room to be read, because the number is bigger and
+     * carries a name, but the same rule and the same clock as the neighbours around it. See AssignLifetime. */
+    private const double CritLifeMargin = 1.15;
 
     /* What "as short as a number may get" means once the player has asked for a faster overlay (§FctScale): below this a hit
      * appears and disappears quicker than it can be read, which is a flicker blamed on the overlay rather than snappiness. */
@@ -396,6 +397,7 @@ namespace EQLogParser
       var hit = new FctHitState
       {
         Lane = pooled,
+        TrafficLane = lane,
         Proc = proc,
         Periodic = periodic,
         Special = special,
@@ -640,6 +642,24 @@ namespace EQLogParser
       return weakest is not null && weakestScore * EvictValueFactor <= incomingSignificance ? weakest : null;
     }
 
+    /* How many rows of a lane are on screen, counted by STREAM rather than by presentation class: at modern crit rates most of the numbers in
+       a damage column ARE crits, so counting FctLane.DamageDealt while its occupants sit pooled on FctLane.Crit would report an empty lane and
+       hand out the baseline lifetime to a column that is full. Folding, colour and territory still key off hit.Lane (crits stack with crits);
+       only traffic accounting asks this question, and only AssignLifetime uses it. */
+    private static int LiveStreamCount(List<FctHitState> hits, FctLane lane)
+    {
+      var live = 0;
+      for (var i = 0; i < hits.Count; i++)
+      {
+        if (hits[i].TrafficLane == lane)
+        {
+          live++;
+        }
+      }
+
+      return live;
+    }
+
     private void AssignLifetime(FctHitState hit, List<FctHitState> hits, FctStage stage, double now)
     {
       /*
@@ -690,8 +710,24 @@ namespace EQLogParser
         return;
       }
 
-      // adaptive display time (see FctLifeController); crits keep a fixed lifetime and stay prominent
-      hit.LifetimeMs = hit.Lane == FctLane.Crit ? CritLifetimeMs : _life.NextLifetime(hit.Lane, LiveCount(hits, hit.Lane), now);
+      /* Adaptive display time (see FctLifeController), ONE rule for every class: the stream decides, the crit badge only keeps a small margin.
+       *
+       * Crits used to be exempt — a fixed 2800 ms while congestion cut their neighbours to under a second — which was written when a crit was a
+       * rare event worth holding the screen for. In modern expansions a raider crits most of what it deals, so that exemption is not emphasis any
+       * more, it is two overlays running on different clocks: measured side by side at raid tempo, crits held 2464 ms while ordinary numbers got
+       * 912, and the pair never read as one fight. Size, colour, halo and draw order say what a crit is; the time it stays and the path it takes
+       * are the stream's business. The floor that the shared rule now clamps to was raised to meet them half way (FctLifeController.FloorMs), so
+       * this moved the ordinary numbers up far more than it moved crits down, and the player's speed dial still plays the whole tempo either way.
+       * The measurements and the table: docs/DesignNotes.md -> Floating Combat Text.
+       */
+      var stream = hit.TrafficLane;
+      var adaptive = _life.NextLifetime(stream, LiveStreamCount(hits, stream), now);
+      if (adaptive <= 0)
+      {
+        adaptive = FctLifeController.BaselineMs; // a lane outside the controller's model (no capacity) gets the calm-case time
+      }
+
+      hit.LifetimeMs = hit.Lane == FctLane.Crit ? Math.Min(FctLifeController.BaselineMs, adaptive * CritLifeMargin) : adaptive;
       hit.MotionMs = Math.Min(FctMotion.MotionWindowMs, hit.LifetimeMs);
       hit.FadeMs = Math.Clamp(hit.LifetimeMs * 0.25, 250, 1000); // fade is a share of the life, capped
       ApplyProcTempo(hit);

@@ -70,7 +70,10 @@ namespace EQLogParser
 
     /*
      * Crit blowout, restyled once crit SIZE became a dial: the number swells IN from just under full size over CritScaleInMs, rests at
-     * exactly the size its font says, then collapses away over the last CritScaleOutMs so it shrinks out instead of blinking off.
+     * exactly the size its font says, then collapses away over the tail its own fade spans, so it shrinks out instead of blinking off.
+     * The collapse is keyed to hit.FadeMs rather than to a fixed window: a big number must never hold full size into a dim phase nor shrink
+     * while still bright. A constant did both ends of that badly at once, and at the one lifetime it was written for — 2800 ms, whose fade works
+     * out at 614 ms — the 700 ms shrink began 86 ms BEFORE the dimming, so a crit spent its last tenth of a second collapsing at full brightness.
      *
      * The envelope never exceeds 1.0, and that is the whole point. Size belongs to FctStyle.ApplyTo and to nothing else: the big class is
      * written at its own font, so a pop that also scaled the number above 1 would be a second multiplication stacked on the player's dial -
@@ -80,7 +83,6 @@ namespace EQLogParser
      */
     public const double CritScaleInStart = 0.72;
     public const double CritScaleInMs = 90;
-    public const double CritScaleOutMs = 700;
     public const double CritScaleEnd = 0.06;
 
     public const double FadeInMs = 160;
@@ -265,7 +267,7 @@ namespace EQLogParser
     {
       if (hit.Blowout)
       {
-        return hit.OnConveyor ? ConveyorBlowoutScale(hit, ageMs) : BlowoutScale(ageMs, hit.LifetimeMs);
+        return hit.OnConveyor ? ConveyorBlowoutScale(hit, ageMs) : BlowoutScale(hit, ageMs);
       }
 
 
@@ -332,21 +334,23 @@ namespace EQLogParser
       hit.TextDirty = true;
     }
 
-    /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out. The rest is 1.0 rather than a hold
-       above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. */
-    private static double BlowoutScale(double ageMs, double lifetimeMs)
+    /* Swell in from CritScaleInStart, rest at exactly the size the font says (scale 1.0), collapse out over the fade. The rest is 1.0 rather
+       than a hold above it because this curve is emphasis only: how big the number IS was decided once, by its class and dial, at birth. A hit
+       with no fade of its own (a hand-built fixture, a style that never dims) collapses across its last frame instead of hanging at full size. */
+    private static double BlowoutScale(FctHitState hit, double ageMs)
     {
       if (ageMs < CritScaleInMs)
       {
         return CritScaleInStart + ((1.0 - CritScaleInStart) * (ageMs / CritScaleInMs));
       }
 
-      if (ageMs < lifetimeMs - CritScaleOutMs)
+      var fade = Math.Max(hit.FadeMs, 1.0);
+      if (ageMs < hit.LifetimeMs - fade)
       {
         return 1.0;
       }
 
-      var p = Math.Clamp((ageMs - (lifetimeMs - CritScaleOutMs)) / CritScaleOutMs, 0.0, 1.0);
+      var p = Math.Clamp((ageMs - (hit.LifetimeMs - fade)) / fade, 0.0, 1.0);
       return 1.0 - ((1.0 - CritScaleEnd) * p * p);
     }
 
