@@ -670,11 +670,12 @@ The layout keeps its promises at any window size: a band that a short window wou
 instead of throwing — an inverted clamp band used to crash every frame on a small overlay. `FctLayoutTest` pins it at
 100–240 px, across the whole motion and at crit scale.
 
-### The source label can sit left, below (shipped), or right of its amount
+### The source label ships hidden; below, left and right are the seats it takes when asked
 
 `(slash)` — the little name under a number saying what made it — had exactly one seat: below, which is where this overlay
-has always drawn it. A settings row (`label`) now offers **left / below / right**, because Nag-style readers take number
-and name as one token and want them on one line. Two rules keep it from becoming a layout wobble:
+drew names for years. A settings row (`label`) offers **left / below / right / none**, and **none ships**: the amount is
+the currency of this overlay and the name who caused it is opt-in. Nag-style readers take number
+and name as one token and want them on one line, which is what left and right are for. Two rules keep it from becoming a layout wobble:
 
 **The number never moves for its label.** `hit.X` is the amount's own center in every placement; inline labels hang off
 the measured edge of the value (baseline-shared, word-space gap), so a column of amounts keeps one visual spine whether
@@ -683,8 +684,15 @@ frame, changing it repaints, and no number in flight is thrown away by a typogra
 
 **The measurement that makes it possible rides with the other one.** The label's width is measured when glyphs are
 rebuilt (which already measures the value for the travel clamp), not per frame — folds change the value's face, so both
-widths get recomputed together and stay honest. `FctOverlayLabelSide` persists it ("left"/"below"/"right", absent =
-below); it is typography rather than layout, so the row appears in both modes.
+widths get recomputed together and stay honest. `FctOverlayLabelSide` persists it ("left"/"below"/"right"/"none", absent =
+none); it is typography rather than layout, so the row appears in both modes. The absent case is the one that changes hands:
+a `settings.ini` written before the row existed — or one whose owner never touched it — now opens silent, so anyone who liked
+the names under their numbers asks for them once.
+
+Both directions name every seat (`FctOverlaySettings.ShippedLabelSide` / `WordForLabelSide`) rather than letting a fall-through carry one
+of them. While "below" *was* that fall-through, absent and chosen were the same line of code, and moving the shipped answer would have
+overruled everybody who had picked it without their word ever being asked; `FctShippedLabelTest` pins absent → none and saved → chosen so
+the swap can only happen on purpose.
 
 ### Configure mode moved out of the overlay into a settings window of its own
 
@@ -1711,7 +1719,7 @@ to be the thing being paid for, and is now **not a size at all**: a first run as
 (`FctOverlayWindow.DefaultSize`). It stopped being a constant for arithmetic rather than taste. The shipped split spread books two categories on one side
 and one on the other, so the halves do not share the same room: the solo outgoing-damage column owns its whole half (lanes tile their half, above) — 640 px
 at the first-run width, past the label ceiling once its own number is out of the way, where a name's length rather than the window decides what gets cut,
-and more on wider monitors — while the two left-hand categories split their half in quarters, comfortable for the default below-label seat and modest
+and more on wider monitors — while the two left-hand categories split their half in quarters, comfortable for a below-label seat and modest
 for an inline one. Nothing else in the
 layout moves a name's length nearly that directly, so the one setting that really decides how
 much of the screen belongs to the game also decides how much of a name a player can read — and it should answer to the monitor rather than to a number

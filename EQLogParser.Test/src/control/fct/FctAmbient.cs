@@ -21,6 +21,6 @@ namespace EQLogParser
     }
 
     /* What the geometry uses before a canvas has stamped the setting — the same value the shipped overlay draws with. */
-    internal static FctLabelSide LabelSideDefault => FctLabelSide.Below;
+    internal static FctLabelSide LabelSideDefault => FctLabelSide.None;
   }
 }

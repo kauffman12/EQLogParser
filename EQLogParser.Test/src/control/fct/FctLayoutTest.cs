@@ -255,6 +255,9 @@ namespace EQLogParser
     [TestMethod]
     public void ABelowLabelLeansUnderItsOwnNumber()
     {
+      // None ships, so a test about the below seat has to seat it itself. Nothing to put back afterwards: FctAmbient.Reset hands every test in
+      // this class the shipped arrangement before it runs.
+      FctLayout.LabelSide = FctLabelSide.Below;
       foreach (var crit in new[] { false, true })
       {
         var hit = Spawn(FctLane.DamageDealt, incoming: false, new Random(3), source: "Hammer of Magic II", crit: crit);

@@ -224,10 +224,12 @@ namespace EQLogParser
       var side = FctLayout.LabelSide;
       try
       {
+        // Seated before the hit is built: at none a name is never measured at all (FitSource's early return), and this test charges the block a
+        // measured name makes. Which seat is in use stays the question the three cases below answer.
+        FctLayout.LabelSide = FctLabelSide.Right;
         var hit = Hit("Flurry", 100_000);
         var gap = FctLayout.LabelGap(hit);
 
-        FctLayout.LabelSide = FctLabelSide.Right;
         var right = FctLayout.BlockFromRail(hit, hit.SourceWidth);
         Assert.AreEqual(0.0, right.Left - (hit.ValueWidth + hit.IconAllowance), 1e-9, "the value's own box still hangs left of the rail");
         // measured from the rail, which IS the value's right edge: the words add their gap and themselves, and nothing else

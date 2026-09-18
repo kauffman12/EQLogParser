@@ -208,13 +208,9 @@ namespace EQLogParser
         DealtUp = ComboTag(outDirCombo) == "up",
         Threshold = Math.Clamp(Math.Round(thresholdUpDown.Value ?? 0d), 0, FctOverlaySettings.ThresholdMax),
         Gutter = FctOverlaySettings.ClampGutter(gutterUpDown.Value ?? FctStage.CenterGutter),
-        LabelSide = ComboTag(labelSideCombo) switch
-        {
-          "left" => FctLabelSide.Left,
-          "right" => FctLabelSide.Right,
-          "none" => FctLabelSide.None,
-          _ => FctLabelSide.Below,
-        },
+        /* One vocabulary for the seats: the combo's tags ARE the words settings.ini carries, so the panel reads through the same helper the file
+         * does — including "a combo with nothing picked yet", which is an unset value and gets the shipped seat, not a choice. */
+        LabelSide = FctOverlaySettings.ShippedLabelSide(ComboTag(labelSideCombo)),
         TextScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(sizeSlider.Value)),
         CritScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
@@ -453,14 +449,8 @@ namespace EQLogParser
 
     private static string Signed(int percent) => percent == 0 ? "—" : $"{percent:+0;-0}%";
 
-    private static string LabelName(FctLabelSide side) =>
-      side switch
-      {
-        FctLabelSide.Left => "left",
-        FctLabelSide.Right => "right",
-        FctLabelSide.None => "none",
-        _ => "below",
-      };
+    /* The seat's word, from the one place that knows them (FctOverlaySettings.WordForLabelSide) rather than a second copy free to drift. */
+    private static string LabelName(FctLabelSide side) => FctOverlaySettings.WordForLabelSide(side);
 
     private static string Up(bool up) => up ? "up" : "down";
 

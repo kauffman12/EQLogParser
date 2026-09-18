@@ -96,8 +96,12 @@ namespace EQLogParser
      * Horizontally it decides where the DRAWN BLOCK reaches — below, the words can overhang either side of their amount; left, they join
      * the value in hanging off the odometer rail; right, they open a reach on the side that had none. Both answers come from here, or the
      * engine spaces and clamps for an arrangement nobody drew.
+     *
+     * The shipped answer is None. The overlay's currency is the number; whose spell made it is something a player asks for, so a
+     * settings.ini with no FctOverlayLabelSide key means exactly what picking "none" in the panel means. It is also the cheap seat: with no
+     * second line to pay for, TextHeight prices a row at its number alone (LabelsBelow), so a fresh install packs tighter than an asked-for one.
      */
-    internal static FctLabelSide LabelSide = FctLabelSide.Below;
+    internal static FctLabelSide LabelSide = FctLabelSide.None;
 
     internal static bool LabelsBelow => LabelSide is FctLabelSide.Below;
 

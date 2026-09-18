@@ -28,10 +28,10 @@ namespace EQLogParser
 
     private const float GlowSigma = 5f;
 
-    /* Where "(source)" sits relative to its amount (FctLabelSide): the shipped Below is where this overlay has always
-       drawn it. Changing it repaints rather than restarts — placement is read by the draw pass, so the next frame of
+    /* Where "(source)" sits relative to its amount (FctLabelSide): none ships, so a canvas nobody has told draws numbers and
+       nothing else — names are opt-in. Changing it repaints rather than restarts — placement is read by the draw pass, so the next frame of
        every hit in flight already wears the new arrangement; no number in motion is thrown away by a typography choice. */
-    private FctLabelSide _labelSide = FctLabelSide.Below;
+    private FctLabelSide _labelSide = FctLabelSide.None;
 
     public FctLabelSide LabelSide
     {
@@ -657,7 +657,8 @@ namespace EQLogParser
       }
 
       // value: black outline pass, then colored fill pass; its x is the value's own center in every label placement,
-      // so amounts keep one spine whether the words hang below them (the shipped line) or inline left/right of them.
+      // so amounts keep one spine whether the words hang below them or inline left/right of them — and none at all is what ships, in which
+      // case there is no label to place and this block never runs.
       var valueBase = y + (hit.ValueFontSize * FctLayout.ValueBaselineFrac);
       DrawOutlinedText(canvas, hit.DisplayText, (float)x, (float)valueBase, hit.ValueFontSize, true, hit.ValueArgb, opacity);
 

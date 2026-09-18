@@ -46,7 +46,8 @@ namespace EQLogParser
     public const string IncomingDirectionKey = "FctOverlayIncomingDirection";
     public const string OutgoingDirectionKey = "FctOverlayOutgoingDirection";
 
-    /* Where the "(source)" label sits by its amount: left, below (the shipped line), or right. */
+    /* Where the "(source)" label sits by its amount: left, below, right — or none, which is what ships and what an absent key means
+     * (FctOverlaySettings.ShippedLabelSide). Save writes the word out even for none, so a first-run file starts carrying this key. */
     public const string LabelSideKey = "FctOverlayLabelSide";
     public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
     public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
@@ -377,27 +378,39 @@ namespace EQLogParser
 
     internal static FctMotionStyle LoadShapeFor(FctLayoutMode mode) => ClampShape(mode, LoadShape());
 
+    public static FctLabelSide LoadLabelSide() => ShippedLabelSide(ConfigUtil.GetSetting(LabelSideKey, null));
+
+    public static void SaveLabelSide(FctLabelSide side) => ConfigUtil.SetSetting(LabelSideKey, WordForLabelSide(side));
+
     /*
      * The parse helpers are pure on purpose: settings.ini speaks words and these are where junk gets a default, so a stray or
      * hand-edited value can never reach the geometry as garbage. All of them fall to the shipped choice's own value.
+     *
+     * The label seat's never-set policy lives in one pure place, the same shape as ShippedDirections, so what ships is pinned where it is
+     * written and testable without a file: no labels. The amount is what this overlay sells; whose spell made it is opt-in. So a key nobody
+     * wrote — or a hand-edited word nobody typed — draws numbers alone.
+     *
+     * Every arrangement that exists gets its own arm rather than the fall-through, in both directions. "below" used to BE the fall-through,
+     * which is exactly how a saved preference quietly stops existing the day the shipped answer moves: absent and chosen were the same line
+     * of code. The word "none" needs no arm, being where absent already lands.
      */
-    public static FctLabelSide LoadLabelSide() =>
-      ConfigUtil.GetSetting(LabelSideKey, null) switch
+    internal static FctLabelSide ShippedLabelSide(string raw) =>
+      raw switch
       {
         string s when string.Equals(s, "left", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Left,
+        string s when string.Equals(s, "below", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Below,
         string s when string.Equals(s, "right", StringComparison.OrdinalIgnoreCase) => FctLabelSide.Right,
-        string s when string.Equals(s, "none", StringComparison.OrdinalIgnoreCase) => FctLabelSide.None,
-        _ => FctLabelSide.Below,
+        _ => FctLabelSide.None,
       };
 
-    public static void SaveLabelSide(FctLabelSide side) =>
-      ConfigUtil.SetSetting(LabelSideKey, side switch
+    internal static string WordForLabelSide(FctLabelSide side) =>
+      side switch
       {
         FctLabelSide.Left => "left",
+        FctLabelSide.Below => "below",
         FctLabelSide.Right => "right",
-        FctLabelSide.None => "none",
-        _ => "below",
-      });
+        _ => "none",
+      };
 
     internal static bool ParseUp(string raw) =>
       string.Equals(raw, "up", StringComparison.OrdinalIgnoreCase);

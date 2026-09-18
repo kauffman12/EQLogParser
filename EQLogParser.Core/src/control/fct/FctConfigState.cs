@@ -119,8 +119,9 @@ namespace EQLogParser
       }
     }
 
-    /* Typography rather than layout, so it lives in both modes: where "(source)" sits by its amount. */
-    public FctLabelSide LabelSide = FctLabelSide.Below;
+    /* Typography rather than layout, so it lives in both modes: where "(source)" sits by its amount. Ships at none — no name is the
+     * answer a state gets when nobody has chosen one, and it matches the value the engine opens with (FctLayout.LabelSide). */
+    public FctLabelSide LabelSide = FctLabelSide.None;
 
     public double TextScale = FctScale.SizeDefault;
     public double CritScale = FctScale.CritSizeDefault;
