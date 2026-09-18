@@ -157,7 +157,7 @@
                this is the first place a player meets the feature, and "FCT" is an abbreviation carried from other clients. -->
           <MenuItem Header="_Floating Combat Text">
             <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Stream" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_CaretSquareUp"/>
             </MenuItem.Icon>
             <MenuItem x:Name="fctOverlay" Header="Enable _Floating Combat Text" Click="ToggleFctOverlayClick">
               <MenuItem.Icon>
