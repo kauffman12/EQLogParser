@@ -1210,7 +1210,7 @@ checkbox was free-float placement with nothing moving, measured at **85% of pair
 
 **Depth is free and sideways is not, so the two axes are searched differently, and that is a learned lesson too.** The first
 version widened both by the same factor — five times the layout's jitter — which is how a hit came to start at the far left border
-of the overlay and sway inland on the way up. The damage column sits at 0.42 of the width, so a ±0.45 throw went off the left edge,
+of the overlay and sway inland on the way up. The damage column sat at 0.42 of the width then, so a ±0.45 throw went off the left edge,
 the clamp pinned it to the wall, and the search scored that wall as an empty gap: measured afterwards, numbers averaged 22% of the
 overlay away from their own column and 7% launched flush against an edge. Healing had the same trap waiting on the right. So depth
 is searched across the whole band, while sideways reach is measured **in widths of the number's own text** — the question "could a
@@ -1221,6 +1221,35 @@ Final figures for the same measurement, on 980×640: three fountains 58% → **9
 **16.5%**, eight spray numbers 40% → **~10%**, at about 1.5 µs per placement with a full lane live. Held numbers are the worst case
 because nothing about them moves to help: six in one band genuinely do not fit without touching, and that remainder is what the cap
 and the life shortener are for, not what placement can solve.
+
+### The plume rises out of the middle, and the anchor pays for it
+
+Players looked at bands and said *the fountain is a little left of centre*, which was correct twice over. `FctLayout.LaneSlot` parked its columns at
+0.42 / 0.50 / 0.52 / 0.63 of the width — damage (both directions), words, crits, heals — a table left behind by the era when a SIDE of the window meant
+WHO. But bands says who by band: out rises, in sinks. Sideways is therefore not used for the person at all, only for the thing — damage, heal, word — and
+what that table actually did was stand the biggest stream off-centre and put its own crits a tenth of the width to the right of it, so a raid-built toon,
+which crits most of what it deals, drew two plumes instead of one. Half the complaint was left over after that: `X0` is the **right-align rail** everywhere
+in this engine (the odometer hangs a value's right edge on it), so a number sitting "on the middle line" still draws half a text to the left of it — 4.9 % of
+a 1600 px panel with the slot dead centre, measured.
+
+So bands centres the **box** and lets the rail pay (`FctLayout.ColumnCentre`, asked in one place so the layout's own throw and `FctPlacement`'s search cannot
+disagree about where a column's middle is), and split keeps the rail welded to the spine — there the rail IS what lines a column up, and numbers hanging off
+one spine in one file is precisely why a column reads as a single stream. Median drawn box centre, bands with the shipped spray, mixed stream at raid-ish
+cadence:
+
+| what | before, W=1600 | now | before, W=980 | now |
+|---|---|---|---|---|
+| ordinary damage out | −277 px | **+10 px** | −176 px | **−22 px** |
+| damage taken | −161 px | **−4 px** | −101 px | +5 px |
+| crits | +111 px | **0 px** | −5 px | 0 px |
+| words (miss, dodge) | −2 px | +42 px | −21 px | +35 px |
+| healing | +211 px | +187 px | +74 px | +124 px |
+
+Everything the eye follows now comes out of the middle within a few pixels, and the residual scatter in the last column is `FctPlacement` walking off to find
+room — the ±9 % launch jitter and the lateral reach, both measured from the slot, so re-centring the slot carried them without re-tuning a constant. Healing
+deliberately keeps its own column to the right of the plume: with who handled by band and colour by class, "these are the heals" is the one sentence sideways
+still has to carry on its own, and a glance must get it before reading does. `FctLayoutTest.ThePlumeRisesFromTheMiddleAndHealsKeepTheirColumn` pins both
+halves — the four slots on the middle line and the drawn box actually landing there, with heals still reading as their own stream.
 
 ### The rail's tempo: one rate per column, stamped where the flight becomes final
 

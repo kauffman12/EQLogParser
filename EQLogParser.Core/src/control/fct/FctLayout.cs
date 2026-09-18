@@ -294,18 +294,35 @@ namespace EQLogParser
 
 
     /*
-     * Where a lane's column sits across the overlay, in bands — the "what" carrier there: damage toward the middle of the
-     * band, healing out wide, crits and labels centred. Split has no use for them (its columns ARE the x assignment, and they
-     * come from FctStage.AnchoredCentre rather than from here), so its callers never ask. Kept in this class because Spawn and FctPlacement
-     * both need it, and a placement search that invented its own columns would be a second layout pretending not to be one.
+     * Where a lane's column sits across the overlay, in bands — the "what" carrier there, because bands says WHO by band and nothing else separates
+     * the categories sideways. Split has no use for it (its columns ARE the x assignment, and they come from FctStage.SpineFor rather than from here),
+     * so its callers never ask. Kept in this class because Spawn and FctPlacement both need it, and a placement search that invented its own columns
+     * would be a second layout pretending not to be one.
+     *
+     * Re-centred once the plume was measured instead of assumed: these were 0.42 / 0.50 / 0.52 / 0.63, a table left behind by the era when a SIDE of the
+     * window meant who. That arrangement parked both damage streams left of the middle with their crits a tenth of the width to the right of them, so at
+     * 1600 px ordinary damage drew 277 px off centre and a raid-built toon — which crits most of what it deals — read as two plumes instead of one. Now:
+     * one nozzle in the middle for everything a fight mostly produces, and healing keeps a column to the right, because "these are the heals" is the one
+     * sentence sideways still carries on its own. Nothing else had to move — the launch jitter and FctPlacement's lateral reach (priced in text widths,
+     * capped by LateralSearchMaxFrac) are both measured from the slot, so re-centring it carried the scatter along without re-tuning a constant.
      */
     public static double LaneSlot(FctLane lane, double w) => lane switch
     {
       FctLane.HealingDealt or FctLane.HealingReceived => w * 0.63,
-      FctLane.Crit => w * 0.52,
-      FctLane.Defensive or FctLane.Missed => w * 0.50,
-      _ => w * 0.42, // DamageDealt, DamageTaken
+      _ => w * 0.50, // DamageDealt, DamageTaken, Crit, Defensive, Missed: one plume out of the middle
     };
+
+    /* Which x the column puts a NUMBER at, as opposed to its rail. X0 is the right-align rail everywhere (FctMotion.ArcedX), so in bands a number left
+     * on its slot draws half a text to the left of it — measured 4.9% of a 1600 px panel with the slot dead on the middle line, which is what "the
+     * fountain sits left of centre" turned out to be, half of it legacy and half of it pure anchor. Bands throws a plume rather than setting type, so
+     * there the box is centred and the rail pays. Split keeps the rail on the spine: that rail IS what lines a column up, and numbers hanging off one
+     * spine in one file is exactly why a column reads as a single stream (FctStage.SpineFor welds it). One place asks the question, so the layout's own
+     * throw and FctPlacement's search can never disagree about where a column's middle is.
+     */
+    internal static double ColumnCentre(FctHitState hit, FctStage stage) =>
+      stage.Mode is FctLayoutMode.Bands
+        ? LaneSlot(hit.Lane, stage.W) + (hit.ValueWidth / 2.0)
+        : stage.SpineFor(hit);
 
     /*
      * Whether a lane is about something happening to me — the bottom band. Crit is deliberately not handled here: ingest
@@ -322,9 +339,8 @@ namespace EQLogParser
       string.IsNullOrEmpty(text) ? 0 : text.Length * (fontSize * 0.58);
 
     /*
-     * Direction is vertical, so x is only a lane slot: damage toward the middle of the overlay, healing out wide, crits
-     * and labels centred over their band. Both bands carry two categories each, which is why the x slots survived the move
-     * away from left/right — they stopped meaning who and now mean what.
+     * Direction is vertical, so x is only a lane slot (LaneSlot above) plus a jitter, and both bands carry two categories each — the x slots survived
+     * the move away from left/right because they stopped meaning who and now mean what.
      *
      * `origin` belongs to FctPlacement: an explicitly requested launch point instead of the layout's own throw, still run
      * through every clamp below and still given travel appropriate to where it ended up. Candidates go through this function so
@@ -346,15 +362,15 @@ namespace EQLogParser
 
       /* Split has no lane columns — a category owns its whole lane, and the lane's spine is its slot centre whether the
          neighbour is booked or has just freed the half for wider labels: spawn on the spine (bands keeps its lane slots). */
-      var cx = stage.Mode is not FctLayoutMode.Bands ? stage.SpineFor(hit) : LaneSlot(hit.Lane, stage.W);
+      var cx = ColumnCentre(hit, stage);
 
       hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
 
       /*
        * Clamped here as well as at draw time by FctMotion.ArcedX, which must hold anyway for a resize mid-flight. The reason to
        * do it here too is candour: two candidates that both end up pinned against a window edge are one position, scored as two
-       * they read as empty space — the damage column sits left of centre, so its wide draws went off the left edge first, and
-       * numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
+       * they read as empty space — a column sitting left of the middle (bands parked damage at 0.42 until the plume came back) sends its wide draws off
+       * the left edge first, and numbers started their flight from the screen border with a sway carrying them inland. That is where "why is that hit over
        * there" comes from. In split the walls are the lane's own edges, which is what keeps a column's numbers inside the
        * territory that was set aside for them.
        */

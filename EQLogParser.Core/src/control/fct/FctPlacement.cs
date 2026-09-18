@@ -57,10 +57,11 @@ namespace EQLogParser
      *
      * Depth is free and sideways is not, which is the whole reason this is a separate number. The first version of this file used
      * the same widening on both axes — five times the layout's jitter — and that is how a hit came to start at the far left border
-     * of the overlay and sway inland on the way up: the damage column sits at 0.42 of the width, so a ±0.45 throw went off the left
+     * of the overlay and sway inland on the way up: the damage column sat at 0.42 of the width then, so a ±0.45 throw went off the left
      * edge, the clamp pinned it to the wall, and the search scored that wall as empty space. Measured afterwards: numbers averaged
      * 22% of the overlay away from their own column, with 7% starting flush against an edge. The column is what tells damage and
-     * healing apart without reading a word, so sideways reach is priced in text widths and capped by LateralSearchMaxFrac.
+     * healing apart without reading a word — which is why this cap is measured from wherever LaneSlot puts the column, not from the
+     * window: re-centring the plume on the middle moved the column, and the reach went with it instead of having to be re-tuned.
      */
     public const double LateralSearchTexts = 1.9;
 
@@ -113,10 +114,11 @@ namespace EQLogParser
       var region = stage.RegionFor(hit);
 
       /* Sideways room in pixels, from the text: see LateralSearchTexts. Zero width (nothing measured yet) leaves the layout's
-       * own jitter in place rather than inventing a reach. The column centre is the lane slot in bands and the lane's own
-       * spine in split — welded to its slot, not to wherever a vacated neighbour pushed the region centre — and the
-       * canonical-x preference below does the job of keeping a stream centred on its side instead. */
-      var slot = stage.Mode is not FctLayoutMode.Bands ? stage.SpineFor(hit) : FctLayout.LaneSlot(hit.Lane, stage.W);
+       * own jitter in place rather than inventing a reach. The column centre is asked for in one place — FctLayout.ColumnCentre,
+       * the same question the layout's own throw answers — because a search centred half a text away from where numbers are put
+       * would spend its whole score walking back. In split that centre is the lane's spine, welded to its slot and not to wherever
+       * a vacated neighbour pushed the region centre; the canonical-x preference below keeps a stream centred on its side. */
+      var slot = FctLayout.ColumnCentre(hit, stage);
       var reach = Math.Min(stage.TerritoryFor(hit) * LateralSearchMaxFrac, hit.ValueWidth * LateralSearchTexts);
       var canonicalX = hit.X0;
       var canonicalY = hit.Y0;

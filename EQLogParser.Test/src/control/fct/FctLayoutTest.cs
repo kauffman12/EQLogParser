@@ -402,6 +402,61 @@ namespace EQLogParser
         $"damage numbers averaged {(sumAway / Math.Max(1, count) * 100):0.#}% of the overlay from their column; a column is not a scatter");
     }
 
+    /*
+     * Bands says WHO by band — out rises, in sinks — so sideways is the only channel left to say WHAT, and the middle line is where the eye waits for
+     * the plume. The slots used to be 0.42 / 0.50 / 0.52 / 0.63, an arrangement from the era when a side of the window meant who: measured on a 1600 px
+     * panel with the shipped fountain shape running, ordinary damage drew its box 277 px left of the middle while its own crits rose from a second
+     * nozzle 111 px right of it. At the crit rate a raid-built toon actually swings, that is not a plume with an accent on it, it is two plumes — and
+     * "the overlay is off-centre" is what players said. So everything a fight mostly produces shares ONE column on the middle line, and healing keeps a
+     * column of its own to the right because "these are the heals" is the one thing a glance must get without reading a word. The empirical half below
+     * measures the DRAWN BOX rather than the rail: X0 is a right-aligned rail (FctMotion.ArcedX), so centring the rail is what centres the number.
+     * See FctLayout.LaneSlot.
+     */
+    [TestMethod]
+    public void ThePlumeRisesFromTheMiddleAndHealsKeepTheirColumn()
+    {
+      const double w = 1600, h = 800;
+
+      Assert.AreEqual(w / 2, FctLayout.LaneSlot(FctLane.DamageDealt, w), 1e-9, "damage comes out of the middle of the panel");
+      Assert.AreEqual(w / 2, FctLayout.LaneSlot(FctLane.DamageTaken, w), 1e-9, "both damage streams: the band already says who, sideways need not");
+      Assert.AreEqual(w / 2, FctLayout.LaneSlot(FctLane.Crit, w), 1e-9, "a crit rises inside the plume it belongs to, not beside it");
+      Assert.AreEqual(w / 2, FctLayout.LaneSlot(FctLane.Missed, w), 1e-9, "words too: they are the same stream, read as text");
+
+      var heals = FctLayout.LaneSlot(FctLane.HealingDealt, w);
+      Assert.IsTrue(heals > w * 0.60, $"healing keeps a column to itself ({heals:0} px of {w:0}); sideways is the only WHAT channel bands has");
+
+      var ingest = new FctIngest(new Random(7)) { Layout = FctLayoutChoice.Bands, Style = FctMotionStyle.Spray };
+      var hits = new List<FctHitState>();
+      var damageCentres = new List<double>();
+      var healCentres = new List<double>();
+      var rnd = new Random(31);
+
+      for (var now = 0.0; now < 20_000; now += 130)
+      {
+        var isHeal = rnd.NextDouble() < 0.3;
+        var crit = !isHeal && rnd.NextDouble() < 0.4;
+        var hit = ingest.Accept(hits, isHeal ? FctLane.HealingDealt : FctLane.DamageDealt, 1000 + rnd.Next(900),
+          isHeal ? "Healing Wind" : "Flurry", crit, false, false, null, w, h, now);
+        if (hit is not null)
+        {
+          (isHeal ? healCentres : damageCentres).Add(hit.X0 - (hit.ValueWidth / 2.0));
+        }
+      }
+
+      var away = Math.Abs(Median(damageCentres) - (w / 2)) / w;
+      var healSide = (Median(healCentres) - (w / 2)) / w;
+      Assert.IsTrue(damageCentres.Count > 10 && healCentres.Count > 5, $"need traffic in both columns to judge this, got {damageCentres.Count} and {healCentres.Count}");
+      Assert.IsTrue(away < 0.04, $"the damage plume centres {(away * 100):0.#}% of the panel from its middle (it was 17% before the slots were re-centred)");
+      Assert.IsTrue(healSide > 0.06, $"heals have drifted onto the damage column: {(healSide * 100):0.#}% right of centre, needs to read as its own stream");
+    }
+
+    /* The middle of a measured set — these are read off a simulation, so the median is the honest centre of it. */
+    private static double Median(List<double> values)
+    {
+      var sorted = values.OrderBy(v => v).ToList();
+      return sorted.Count == 0 ? 0 : sorted[sorted.Count / 2];
+    }
+
     [TestMethod]
     public void SearchingForRoomStillNeverPutsTextOffScreen()
     {
