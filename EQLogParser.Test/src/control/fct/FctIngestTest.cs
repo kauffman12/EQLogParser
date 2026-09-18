@@ -483,8 +483,11 @@ namespace EQLogParser
 
       var outgoing = ingest.Accept(_hits, FctLane.DamageDealt, 900, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
 
-      Assert.AreEqual(Height * 0.28, outgoing.FallDist, 0.001, "the outgoing band keeps its literal gravity tail");
+      Assert.AreEqual(outgoing.Rise * FctMotion.FountainFallRiseRatio, outgoing.FallDist, 0.001,
+        "the depth belongs to the throw, not to the canvas: it falls as far as it was thrown up");
       Assert.IsTrue(FctMotion.RaisedY(outgoing, 1.0) > (outgoing.Y0 - outgoing.Rise), "outgoing fountain text comes back down");
+      Assert.AreEqual(outgoing.Y0, FctMotion.RaisedY(outgoing, 1.0), 0.001,
+        "and it lands on the line it was born on, which is why no clamp is needed to keep it out of the gap");
 
       for (var t = 0.0; t <= 1.0; t += 0.05)
       {
@@ -561,7 +564,8 @@ namespace EQLogParser
     }
 
     /*
-     * The two choreographed styles share one timing shape — life equals the motion window, fade spans exactly the fall —
+     * The two choreographed styles share one timing shape — life equals the motion window, and the fade covers the last
+     * FallFadeFrac of the descent rather than all of it —
      * while the two that stop and rest keep the adaptive lifetime. Getting this wrong is invisible in maths and obvious
      * on screen: a sprayed number whose life outlasts its travel sits still for a second in mid-air.
      */
@@ -577,7 +581,8 @@ namespace EQLogParser
 
         Assert.AreEqual(window, hit.LifetimeMs, $"{style} life must be its choreography");
         Assert.AreEqual(window, hit.MotionMs, $"{style} must not rest mid-flight");
-        Assert.AreEqual(window * FctMotion.FallPhaseFrac, hit.FadeMs, 0.001, $"{style} fades over its fall");
+        Assert.AreEqual(window * FctMotion.DescentFrac(hit) * FctMotion.FallFadeFrac, hit.FadeMs, 0.001,
+          $"{style} fades over part of its descent and not the whole of it — a faded-out fall is an invisible fall");
       }
 
       foreach (var style in new[] { FctMotionStyle.Freeze })
@@ -646,7 +651,52 @@ namespace EQLogParser
 
       Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.ProcTimeFrac, proc.LifetimeMs, 0.001);
       Assert.AreEqual(proc.LifetimeMs, proc.MotionMs, 0.001, "still one continuous motion, just quicker");
-      Assert.AreEqual(FctMotion.MotionWindowMs * FctMotion.ProcTimeFrac * FctMotion.FallPhaseFrac, proc.FadeMs, 0.001);
+      Assert.AreEqual(
+        FctMotion.MotionWindowMs * FctMotion.ProcTimeFrac * FctMotion.DescentFrac(proc) * FctMotion.FallFadeFrac,
+        proc.FadeMs, 0.001, "the fade scales with the flight it belongs to");
+    }
+
+    /*
+     * The lighting rule, measured rather than asserted as a constant. A fountain's whole argument is the arc, and the arc
+     * lives in the descent: the old rule faded across the entire fall, which — with the eased fade's own shape — left only
+     * about an eighth of the distance visible and all of it slow, so players saw a number reach the top of its climb and
+     * melt there. Most of the descent is now spent at full brightness, matching how GW2-SCT (last 20% of life) and NAG
+     * (last 23%) light their text, and this measures the outcome in pixels instead of trusting the arithmetic.
+     */
+    [TestMethod]
+    public void TheFountainStaysLitThroughMostOfItsFall()
+    {
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Fountain;
+
+      var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 1200, "Flurry", crit: false, minor: false, periodic: false, fixedText: null, Width, Height, 0);
+
+      var apex = FctMotion.ApexFraction(hit);
+      var top = FctMotion.RaisedY(hit, apex);
+      var fallen = 0.0;
+      var litFallen = 0.0;
+      for (var t = apex; t <= 1.0; t += 0.001)
+      {
+        var y = FctMotion.RaisedY(hit, t) - top;
+        if (y > fallen)
+        {
+          fallen = y;
+        }
+
+        if (FctMotion.FadeOpacity(hit, t * hit.MotionMs) >= 0.5 && y > litFallen)
+        {
+          litFallen = y;
+        }
+      }
+
+      Assert.IsTrue(fallen > 1.0, $"the fountain fell nowhere ({fallen:0.#} px)");
+      var share = litFallen / fallen;
+      Assert.IsTrue(share > 0.45,
+        $"only {share:P0} of the descent is above half brightness — the fall is happening in the dark again");
+
+      // and it is still moving when it goes out: the descent's second half must cover more road than its first
+      Assert.IsTrue(FctMotion.RaisedY(hit, 1.0) - FctMotion.RaisedY(hit, (apex + 1.0) / 2.0)
+        > FctMotion.RaisedY(hit, (apex + 1.0) / 2.0) - top, "a fall that covers less ground as it goes is not accelerating");
     }
 
     [TestMethod]

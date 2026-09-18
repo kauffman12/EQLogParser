@@ -643,8 +643,12 @@ namespace EQLogParser
     private void AssignLifetime(FctHitState hit, List<FctHitState> hits, FctStage stage, double now)
     {
       /*
-       * The choreographed styles (fountain, spray) share one shape: travel, then accelerate along a fall for the rest
-       * of life — no hold phase, and the fade spans exactly the fall. Both mirror that fall on the incoming band in
+       * The choreographed styles (fountain, spray) share one shape: one projectile — out of the spawn at speed, apex,
+       * then accelerating for the rest of life (FctMotion.TravelledY) — with no hold phase. The fade does NOT span the
+       * fall: it covers the last FallFadeFrac of it, which is the lighting rule every implementation with real users
+       * follows (GW2-SCT fades only its last 20% of life, NAG only 23%) and the single change that turns "hangs at the top
+       * and melts" into a visible arc — the descent's speed is the point of a fountain, and it cannot be the dim part.
+       * Both mirror that fall on the incoming band in
        * bands mode rather than dropping it: gravity points at the bottom of the screen, and their band is the last
        * thing before that edge, so a literal downward fall parks the number against its own bottom edge for half its
        * life, which reads as stuck rather than as physics. Falling back up toward the gap keeps the overshoot-and-settle
@@ -664,10 +668,14 @@ namespace EQLogParser
 
         hit.LifetimeMs = window;
         hit.MotionMs = window;
-        hit.FadeMs = window * FctMotion.FallPhaseFrac;
 
         // Rise is already assigned: layout runs before lifetime assignment. FctPlacement re-runs the same call on a trial origin.
         FctLayout.ApplyFall(hit, stage);
+
+        /* The fade is priced after the fall exists, because it is sized to the descent and the descent's share of life
+           depends on how deep it is: a = 1/(1+sqrt(k)) puts the apex of a full return-to-nozzle flight at exactly half,
+           so that fountain fades over its last quarter-life, while spray's shallower fall peaks later and fades sooner. */
+        hit.FadeMs = window * FctMotion.DescentFrac(hit) * FctMotion.FallFadeFrac;
         ApplyProcTempo(hit);
         ApplyPlayerTempo(hit);
         return;

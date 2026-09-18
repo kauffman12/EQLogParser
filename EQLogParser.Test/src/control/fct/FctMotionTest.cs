@@ -104,9 +104,9 @@ namespace EQLogParser
       hit.FallDist = 180;
 
       Assert.AreEqual(hit.Y0, FctMotion.RaisedY(hit, 0), 0.001);
-      Assert.AreEqual(hit.Y0 - hit.Rise, FctMotion.RaisedY(hit, 1.0 - FctMotion.FallPhaseFrac), 0.5);
+      Assert.AreEqual(hit.Y0 - hit.Rise, FctMotion.RaisedY(hit, FctMotion.ApexFraction(hit)), 0.5);
 
-      // the fall is the second half of life: it ends below the apex, and it accelerates
+      // it ends below the apex, and it accelerates all the way there
       var top = hit.Y0 - hit.Rise;
       var mid = FctMotion.RaisedY(hit, 0.85);
       Assert.IsTrue(mid > top, "fountain text must come back down");
@@ -130,31 +130,140 @@ namespace EQLogParser
       hit.Rise = -300;              // incoming hits travel downwards: Rise is negative
       hit.FallDist = -150;          // and half of it comes back up, screen-relative
 
-      var low = hit.Y0 - hit.Rise;  // deepest point, reached when the travel phase ends
-      Assert.AreEqual(low, FctMotion.RaisedY(hit, 1.0 - FctMotion.FallPhaseFrac), 0.5);
+      var low = hit.Y0 - hit.Rise;  // deepest point, reached at the apex of a flight that runs downward
+      Assert.AreEqual(low, FctMotion.RaisedY(hit, FctMotion.ApexFraction(hit)), 0.5);
       Assert.AreEqual(low + hit.FallDist, FctMotion.RaisedY(hit, 1.0), 0.001);
 
       var justAfter = FctMotion.RaisedY(hit, 0.70) - low;
       var muchLater = FctMotion.RaisedY(hit, 0.95) - low;
       Assert.IsTrue(muchLater < justAfter, "the mirrored fall accelerates upward; it does not drift");
-      Assert.IsTrue(FctMotion.ScaleOf(hit, hit.MotionMs) < 1.0, "a hit in its fall phase shrinks, either direction");
+
+      // and it collapses on the fade's clock: sized down at the end of a life that is nearly over
+      Assert.AreEqual(1.0, FctMotion.ScaleOf(hit, hit.LifetimeMs - hit.FadeMs), 0.001,
+        "a choreographed number keeps the size its font gave it right up until the fade begins");
+      Assert.IsTrue(FctMotion.ScaleOf(hit, hit.LifetimeMs) < 1.0, "a hit near the end of its life shrinks, either direction");
     }
 
-    /* The seam most arcs show: travel hands over to fall. Neither side may arrive or leave with speed, or the
-     * number visibly jerks at the exact moment it changes its mind about gravity. */
+    /*
+     * The apex is the only still point in a ballistic flight, and it must be a gentle one: the number brakes into it and
+     * leaves it without a jerk, or the moment it "changes its mind about gravity" is exactly the moment the eye catches a
+     * kink. Pinned alongside the other half of what makes this a throw rather than a lift — it must LEAVE at speed, and
+     * come back down moving. A curve that eases out of the spawn at zero velocity cannot do that: it parks at the top,
+     * which is how the fountain read as hanging and melting before it was made a projectile.
+     */
     [TestMethod]
-    public void TravelHandsOverToFallWithoutAJerk()
+    public void TheApexIsTheOnlyStillPointAndNothingJerksThroughIt()
     {
       var hit = NewHit();
       hit.FallDist = 180;
 
-      var seam = 1.0 - FctMotion.FallPhaseFrac;
+      var apex = FctMotion.ApexFraction(hit);
 
       double SpeedAt(double t) => (FctMotion.RaisedY(hit, t + 0.001) - FctMotion.RaisedY(hit, t - 0.001)) / 0.002;
 
-      // px per unit of life: mid-travel is over 1300 here, so these two say the ends really do brake and start gently
-      Assert.IsTrue(Math.Abs(SpeedAt(seam - 0.01)) < 60, $"still braking into the seam: {SpeedAt(seam - 0.01):0.#}");
-      Assert.IsTrue(Math.Abs(SpeedAt(seam + 0.01)) < 60, $"already launched out of the seam: {SpeedAt(seam + 0.01):0.#}");
+      // px per unit of life. The launch is over 1300: a fountain throws its numbers out.
+      Assert.IsTrue(Math.Abs(SpeedAt(0.002)) > 1000, $"a thrown number leaves at speed, was {SpeedAt(0.002):0.#}");
+      Assert.IsTrue(Math.Abs(SpeedAt(apex - 0.01)) < 60, $"still braking into the apex: {SpeedAt(apex - 0.01):0.#}");
+      Assert.IsTrue(Math.Abs(SpeedAt(apex + 0.01)) < 60, $"already launched out of the apex: {SpeedAt(apex + 0.01):0.#}");
+      /* Constant acceleration is what "one curve, not two eased halves" actually means, and it is measurable: speed grows
+         in proportion to time away from the apex (a parabola's central difference is its exact derivative), on both sides,
+         with equal magnitudes — which is continuity through zero without a probe that straddles the turn-around. Two eased
+         halves meet at zero speed too, but their acceleration reverses there, and the ratios below are where that shows. */
+      Assert.IsTrue(SpeedAt(apex - 0.08) < 0 && SpeedAt(apex + 0.08) > 0,
+        $"a fountain brakes into its apex and leaves it downward, was {SpeedAt(apex - 0.08):0.#} -> {SpeedAt(apex + 0.08):0.#}");
+
+      var nearUp = Math.Abs(SpeedAt(apex - 0.02));
+      var farUp = Math.Abs(SpeedAt(apex - 0.08));
+      var nearDown = Math.Abs(SpeedAt(apex + 0.02));
+      var farDown = Math.Abs(SpeedAt(apex + 0.08));
+      Assert.IsTrue(Math.Abs((farUp / nearUp) - 4.0) < 0.05, $"climb decelerates at one rate: {nearUp:0.#} -> {farUp:0.#}");
+      Assert.IsTrue(Math.Abs((farDown / nearDown) - 4.0) < 0.05, $"descent accelerates at one rate: {nearDown:0.#} -> {farDown:0.#}");
+      Assert.IsTrue(Math.Abs(farUp - farDown) < 0.05 * farUp, $"the apex flips the sign but not the acceleration: {farUp:0.#} vs {farDown:0.#}");
+
+      // monotone acceleration after the apex: equal slices of life, ever longer distances
+      var previous = FctMotion.RaisedY(hit, apex);
+      var step = (1.0 - apex) / 5.0;
+      double gained = 0.0;
+      for (var i = 1; i <= 5; i++)
+      {
+        var y = FctMotion.RaisedY(hit, apex + (step * i));
+        Assert.IsTrue((y - previous) > gained, "the descent decelerates: each equal slice must cover more road than the last");
+        gained = y - previous;
+        previous = y;
+      }
+    }
+
+    /*
+     * The two numbers a flight is built from are the climb and the return, so their relationship IS the shape. This is the
+     * closed form (apex at 1/(1+sqrt(k)), k being fall depth over climb) pinned at the three points that matter: a shallow
+     * fall peaks late and gives the climb the clock, an even one peaks at the half, and no fall at all means no descent.
+     * Getting this wrong is not a subtle visual difference — it moves every number in flight, including ones already on
+     * screen when the window is resized (FctResize scales Rise and FallDist by the same factor, so k survives).
+     */
+    [TestMethod]
+    public void TheApexSitsWhereBallisticsPutIt()
+    {
+      var hit = NewHit();
+      hit.Rise = 300;
+
+      hit.FallDist = 75;               // a quarter of the climb back down: the descent is a third of what the climb gets
+      Assert.AreEqual(1.0 / 1.5, FctMotion.ApexFraction(hit), 0.0001);
+      Assert.AreEqual(1.0 / 3.0, FctMotion.DescentFrac(hit), 0.0001);
+
+      hit.FallDist = 300;              // the whole way back: out and down are the same journey run twice
+      Assert.AreEqual(0.5, FctMotion.ApexFraction(hit), 0.0001);
+      Assert.AreEqual(hit.Y0, FctMotion.RaisedY(hit, 1.0), 0.001, "a full-return fountain ends on the line it was born on");
+
+      hit.FallDist = 0;                // not a choreographed flight at all: nothing descends
+      Assert.AreEqual(1.0, FctMotion.ApexFraction(hit), 0.0001);
+    }
+
+    /* A number with a fall but no climb is dropped, not thrown. ApexFraction has no peak to find and the flight must still
+     * move — a silent Y0 here is a number that sits in one place for its whole life and reads as a stuck overlay. */
+    [TestMethod]
+    public void ADroppedNumberStillFalls()
+    {
+      var hit = NewHit();
+      hit.Rise = 0;
+      hit.FallDist = 120;
+
+      Assert.AreEqual(1.0, FctMotion.ApexFraction(hit), 0.0001);
+      Assert.AreEqual(hit.Y0, FctMotion.RaisedY(hit, 0), 0.001);
+      Assert.AreEqual(hit.Y0 + 120, FctMotion.RaisedY(hit, 1.0), 0.001);
+      Assert.IsTrue(FctMotion.RaisedY(hit, 0.5) < hit.Y0 + 60, "it accelerates from rest rather than drifting at one rate");
+
+      var mirrored = NewHit();
+      mirrored.Rise = 0;
+      mirrored.FallDist = -120;        // the incoming band's mirror of the same drop: it runs back up
+      Assert.AreEqual(hit.Y0 - 120, FctMotion.RaisedY(mirrored, 1.0), 0.001);
+    }
+
+    /* Stretching the overlay must not re-shape a flight already in the air: FctResize multiplies Rise and FallDist by the
+     * same sy, so k — the only input the apex fraction has — is invariant, and the path in units of the climb is identical. */
+    [TestMethod]
+    public void ResizingTheCanvasRescalesTheFlightWithoutReShapingIt()
+    {
+      var hit = NewHit();
+      hit.Rise = 300;
+      hit.FallDist = 180;
+
+      var before = new double[11];
+      for (var i = 0; i <= 10; i++)
+      {
+        before[i] = (hit.Y0 - FctMotion.RaisedY(hit, i / 10.0)) / hit.Rise;
+      }
+
+      var apexBefore = FctMotion.ApexFraction(hit);
+      hit.Y0 *= 0.5;
+      hit.Rise *= 0.5;
+      hit.FallDist *= 0.5;             // exactly what FctResize does on a vertical drag
+
+      Assert.AreEqual(apexBefore, FctMotion.ApexFraction(hit), 0.0001, "the peak moved as a share of life when only the canvas did");
+      for (var i = 0; i <= 10; i++)
+      {
+        Assert.AreEqual(before[i], (hit.Y0 - FctMotion.RaisedY(hit, i / 10.0)) / hit.Rise, 0.0001,
+          $"the path changed shape at t={i / 10.0:0.#}");
+      }
     }
 
     /* Opacity must not change slope visibly at fadeStart and must reach zero by the end of life: a linear ramp is
@@ -264,7 +373,7 @@ namespace EQLogParser
        * And it must bend the useful way: most of the sideways travel spent before the climb ends, so the path flattens into
        * a fan at the top instead of arriving as a corner and dropping straight down.
        */
-      var apex = 1.0 - FctMotion.FallPhaseFrac;
+      var apex = FctMotion.ApexFraction(spray);
       var lateralAtApex = (At(spray, apex).X - spray.X0) / spray.Sway;
       Assert.IsTrue(lateralAtApex > 0.75, $"spray should be nearly spread out by the time it peaks ({lateralAtApex:0.##})");
     }

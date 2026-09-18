@@ -596,11 +596,17 @@ namespace EQLogParser
 
     /*
      * The sign follows the travel, which is how both schemes get the same shape: a number that rose gets its fall back down
-     * (screen-positive), one that sank gets it back up. In bands the outgoing rise falls a canvas-relative h*0.28 — the strip
-     * is behind it and the bottom edge is clamped — while every sink, in both schemes, bounces a fixed share of the distance
-     * it already spent: in split there is no strip on either side, so a literal screen-down fall at the bottom of a down-
-     * travelling lane would park against its own edge exactly as badly as it did in the old incoming band. Fountain and spray
-     * always carry a nonzero Rise (spawn and far end are distinct), which is what the sign is read from.
+     * (screen-positive), one that sank gets it back up. Every depth is now measured against the distance THAT number threw
+     * itself rather than against the canvas, for two reasons. It is what a projectile does — the return leg belongs to the
+     * throw, not to the window — and it makes the flight resize-invariant: FctResize scales Rise and FallDist by the same
+     * factor, so k, and with it the apex fraction FctMotion derives, is untouched by stretching the overlay. A canvas-relative
+     * depth could not say that; it moved the peak of every number in flight on a vertical drag.
+     *
+     * Bands outgoing takes the whole climb back (FountainFallRiseRatio): water comes down into its own basin, and the basin
+     * is the spawn line, which is inside the band. Every sink, in both schemes, bounces a fixed share of the distance it
+     * already spent instead: in split there is no strip on either side, so a literal screen-down fall at the bottom of a
+     * down-travelling lane would park against its own edge exactly as badly as it did in the old incoming band. Fountain and
+     * spray always carry a nonzero Rise (spawn and far end are distinct), which is what the sign is read from.
      */
     public static void ApplyFall(FctHitState hit, FctStage stage)
     {
@@ -613,7 +619,7 @@ namespace EQLogParser
       var depth = hit.Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * SprayFallFrac
         : stage.Mode is not FctLayoutMode.Bands || !rose
           ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
-          : stage.H * 0.28;
+          : Math.Abs(hit.Rise) * FctMotion.FountainFallRiseRatio;
 
       hit.FallDist = rose ? depth : -depth;
     }

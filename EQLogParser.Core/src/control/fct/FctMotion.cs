@@ -30,9 +30,36 @@ namespace EQLogParser
      */
     public const double SprayMotionWindowMs = 1700;
 
-    /* Fountain style: the fall spans the last fraction of life, shrinking as it goes. */
-    public const double FallPhaseFrac = 0.45;
+    /* How far the shrink-out takes a choreographed number by the time it is gone. It rides the fade window and not the
+       whole descent: size holds while the number can still be read, and collapses as it dims (see ScaleOf). */
     public const double FallScaleEnd = 0.55;
+
+    /*
+     * A fountain's fall depth against the height that same number climbed — k in the ballistic solve at ApexFraction.
+     * One is the physically honest answer (a thrown thing comes back to the line it left) and it is also the safe one:
+     * falling exactly as far as it rose ends the flight on the spawn point, which is inside the band by construction, so
+     * the clamp never bites and nothing can park against an edge. Above one would ask for water below its own nozzle — a
+     * clipped fall, then a number sitting still while it fades.
+     *
+     * This replaced a canvas-relative `H × 0.28`, which is where "the numbers don't really fall" came from: against the
+     * 0.47 H band that fall is barely over half the climb, so the number died well above where it was born and the return
+     * half of the throw was never drawn.
+     */
+    public const double FountainFallRiseRatio = 1.0;
+
+    /*
+     * How much of the DESCENT is spent fading, which is the same statement as how much of it is lit. The rule this
+     * replaced was "the fade spans exactly the fall", and that alone made a fountain look like it hung up and melted: the
+     * smootherstep fade leaves a number at 10% opacity a third of the way down, so of a 224 px descent only about 13%
+     * was ever visible, and the part that was visible was the slow part.
+     *
+     * Everything in the genre with real users lights the motion and fades the tail: GW2-SCT holds alpha at 1 until the
+     * last 20% of a message's life (src/ScrollArea.cpp, `fadeLength = 0.2f`), MSBT runs scroll and fade as two clocks
+     * (MSBTAnimationStyles.lua drives position by progress alone), and even NAG keeps opacity at 1.0 through its whole
+     * rise and spends only its last 23% reaching zero. Half the descent is that same rule, priced against a flight that
+     * now has a fall worth seeing.
+     */
+    public const double FallFadeFrac = 0.5;
 
     /*
      * How much of an incoming hit's sink distance it gets back on the way out, in bands mode where a literal downward
@@ -90,18 +117,50 @@ namespace EQLogParser
 
     /*
      * Freeze style: ease out along the hit's travel (up for outgoing, down for an incoming hit in bands mode, whose
-     * Rise is negative) and then hold. Fountain style: same travel, then fall over the last FallPhaseFrac of life
-     * (paired with shrink + fade by the caller). FallDist is signed the way Rise is: positive accelerates toward the
-     * bottom of the screen, negative back up toward the gap, which is how the incoming band gets a mirrored fountain
-     * instead of parking against its own bottom edge.
+     * Rise is negative) and then hold. Fountain and spray fly instead: one parabola through spawn, apex and end of life.
+     * FallDist is signed the way Rise is: positive accelerates toward the bottom of the screen, negative back up toward
+     * the gap, which is how the incoming band gets a mirrored fountain instead of parking against its own bottom edge.
      *
-     * Both halves are continuous in velocity: smootherstep arrives at zero speed and the ease-in tail leaves from
-     * zero, so the handoff at riseFrac has no kink to look at — the seam most arcs show.
+     * A projectile, not two eased halves stitched together at an apex. It leaves the spawn at its fastest — a fountain
+     * throws, and MSBT's 87 px/s and GW2-SCT's 90 px/s crawls are not the pace this overlay was measured at — decelerates
+     * at one constant rate to zero vertical speed at the apex, and accelerates on at that same rate for the rest of its
+     * life. The apex is therefore the only still point in it, which is what an apex is; and a number that fell as far as
+     * it rose is travelling downward at death exactly as fast as it left. Position, velocity and acceleration are all
+     * continuous end to end because there is one curve: the old climb-then-ease-in handoff had no velocity kink but
+     * reversed its acceleration in a single frame, which is why the descent read as starting from parked rather than as
+     * already having been falling.
      *
-     * The band clamp is what stops traffic entering the protected middle strip when the two disagree — a resize that
-     * moves the gap under a number already in flight, or a fall asked for more room than the band has.
+     * The band clamp still stands behind it for the cases where geometry and flight disagree — a resize that moves the
+     * gap under a number already in flight, or a fall asked for more room than the band has. At FountainFallRiseRatio 1
+     * neither can happen: the flight ends where it began.
      */
     public static double RaisedY(FctHitState hit, double t) => ClampedToBand(hit, TravelledY(hit, t));
+
+    /*
+     * Where in life the flight peaks, as a share of it — the closed form of the ballistic endpoint solve. With k the fall
+     * depth over the climb, requiring height(1) = Rise − Fall gives 1 − 2a = −(1 − k)a², whose root below one is
+     * a = 1/(1 + √k). Equal rise and fall peak at the half, because they are the same journey run twice; a shallow fall
+     * peaks late and leaves the climb most of the clock. Magnitudes only, which is why an outward fountain and its
+     * mirrored incoming twin get the same shape — the sign lives on Rise and FallDist, and reflecting a flight does not
+     * move its apex.
+     *
+     * Degenerate cases answer instead of dividing: with no climb there is nothing to peak at, so the whole life belongs to
+     * the fall and TravelledY's s never divides by an apex of zero.
+     */
+    public static double ApexFraction(FctHitState hit)
+    {
+      var climb = Math.Abs(hit.Rise);
+      if (climb <= 0.0 || double.IsNaN(climb))
+      {
+        return 1.0;
+      }
+
+      return 1.0 / (1.0 + Math.Sqrt(Math.Abs(hit.FallDist) / climb));
+    }
+
+    /* The share of life the descent owns — what FctIngest prices the fade against, since a fade is sized to the fall and
+       not to the whole flight. */
+    public static double DescentFrac(FctHitState hit) => 1.0 - ApexFraction(hit);
 
     private static double TravelledY(FctHitState hit, double t)
     {
@@ -113,14 +172,20 @@ namespace EQLogParser
         return hit.Y0 - (hit.Rise * v);
       }
 
-      const double riseFrac = 1.0 - FallPhaseFrac;
-      if (t < riseFrac)
+      /* One projectile for the whole flight. Height is v0·τ − ½g·τ²; pinning v0 and g to "peak at a·T" collapses it to
+         Rise·(2s − s²) in s = t/a, and height(1) then comes out as Rise·(1 − k) — rose Rise, fell Fall — precisely because
+         ApexFraction solved for the a that makes that true. Nothing is tuned per phase, so the shape cannot drift away
+         from physics: k is the only input this curve has. */
+      if (hit.Rise == 0.0)
       {
-        return hit.Y0 - (hit.Rise * Ease(t / riseFrac));
+        /* Dropped rather than thrown: with no climb there is no apex to peak at, so it accelerates away from rest along
+           the fall's own sign for the whole life. ApplyFall cannot make this — it derives depth from the climb — but a
+           hand-built hit or a resize that flattens one can, and the silent answer before was a number that did not move. */
+        return hit.Y0 + (hit.FallDist * t * t);
       }
 
-      var u = (t - riseFrac) / FallPhaseFrac;
-      return (hit.Y0 - hit.Rise) + (hit.FallDist * u * u); // ease-in: accelerate along the fall's own sign
+      var s = t / ApexFraction(hit);
+      return hit.Y0 - (hit.Rise * ((2 * s) - (s * s)));
     }
 
     /* A layout with no vertical limit leaves the band at 0..0; clamping against that would pin every hit to the
@@ -202,13 +267,16 @@ namespace EQLogParser
       }
 
 
-      if (hit.FallDist != 0.0)
+      /* Choreographed numbers shrink out rather than blink out, but on the FADE's clock and not the descent's: while a
+         number is bright it keeps the size its font was given, and it collapses as it dims. Measured against the whole
+         fall it competed with the motion for the same attention — a thing getting smaller reads as a thing standing still,
+         which was the other half of why the old fountain seemed to hang at the top of its climb. */
+      if (hit.FallDist != 0.0 && hit.FadeMs > 0.0)
       {
-        const double riseFrac = 1.0 - FallPhaseFrac;
-        var t = Progress(hit, ageMs);
-        if (t >= riseFrac)
+        var fadeStart = hit.LifetimeMs - hit.FadeMs;
+        if (ageMs > fadeStart)
         {
-          var u = (t - riseFrac) / FallPhaseFrac;
+          var u = Math.Clamp((ageMs - fadeStart) / hit.FadeMs, 0.0, 1.0);
           return 1.0 + ((FallScaleEnd - 1.0) * u);
         }
       }

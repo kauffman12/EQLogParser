@@ -1014,7 +1014,8 @@ The fountain began as a checkbox, which was honest while there were two choices 
 wanted text that stays put or fans out. `FctMotionStyle` is that axis now: **freeze** (travel away from the strip, stop,
 be read, fade — the default in bands, and the overlay's very first behaviour before styles existed at all; split does not
 offer it at all, since parking mid-scroll breaks the chain a column is made of),
-**fountain** (overshoot, then fall; mirrored upward on the lower band), **spray** (a random cone out of the lane slot, then a
+**fountain** (one ballistic flight: thrown out of the spawn at its fastest, apex at mid-life, back down to the line it was
+born on; mirrored upward on the lower band), **spray** (a random cone out of the lane slot, then a
 short fall) and **arc** (a constant-speed scroll bowing out to a vertex at half height and back — MSBT's parabola, and the shape the scrolling-text genre
 ships as its own default, and split's default for the same reason; see below). A fifth style, **pulse**, lived here with a cell grid of its
 own; what it taught is kept further down. Where a hit goes, how it moves and how numbers stack are three
@@ -1031,8 +1032,9 @@ Three rules keep five styles from becoming five behaviours:
 - **The protected middle stays clear by construction, for every style allowed in bands.** Rail styles do not run there at
   all (they degrade to freeze, below), so the styles sharing the canvas with the strip are the ones measured against it; spray falls
   back by a fixed share of the distance it already travelled (`SprayFallFrac`), mirrored upward on the lower band; freeze
-  never passes its clamp. Outgoing fountain is the one that still falls a share of *window* height — legitimate, since
-  the strip is behind it and the bottom edge is clamped. The rails live in split, where there is no strip to cross
+  never passes its clamp. Outgoing fountain falls the whole climb back (`FountainFallRiseRatio` = 1), which ends the flight
+  on its own spawn point — inside the band by construction, so the strip is safe because of where the fall *finishes*
+  rather than because the clamp caught it (a test still sweeps the curve and asserts the drawn box never enters the gap). The rails live in split, where there is no strip to cross
   because the regions do not overlap; if settings.ini forces one into bands anyway, `FctIngest` degrades it to freeze rather
   than run it (a test sweeps each style across its whole curve asserting nothing enters the strip or leaves the window,
   so a future sixth style has to pass the same bar).
@@ -1077,9 +1079,10 @@ existed only in where numbers ended up, never in how they got there, so mid-flig
 `FctMotion.LateralProgress` puts spray's sideways travel on an ease-out while its vertical keeps the smootherstep climb:
 shrapnel keeps moving sideways while gravity handles the vertical, so the path bends over into an arc by itself. It eases
 to zero slope at the apex instead of running linearly because a number that stops dead sideways at the moment it begins to
-fall has a kink you can see. Freeze and fountain deliberately keep one curve between them — a straight climb is what a thing
-with no gravity does. A test pins the difference rather than trusting the eye: freeze's drawn point never leaves the line
-between its origin and its apex, spray's must leave it by more than 20 px and be nearly spread out by the time it peaks.
+fall has a kink you can see. Freeze still keeps one curve on both axes — a straight climb is what a thing with no gravity
+does, and freeze claims no gravity at all. A test pins the difference rather than trusting the eye: freeze's drawn point never
+leaves the line between its origin and its apex, spray's must leave it by more than 20 px and be nearly spread out by the time
+it peaks.
 
 Two smaller changes went the same way. The cone opened from ±38° to ±49°, with `SprayMaxLateralFrac` moving from 0.30 to
 0.34 of width — that cap has to travel with the angle or every wide draw stops at the same wall and the fan comes out flat
@@ -1087,6 +1090,51 @@ topped — and spray's choreography got its own tempo, `SprayMotionWindowMs` (17
 shared flight time was the other half of the resemblance: two 2 second arcs read as one effect whatever path they draw, and
 shrapnel is supposed to look quick. Measured at 980×640 with these numbers, spray covers 519 px of x mid-flight where freeze
 covers 246 and fountain 242.
+
+### Fountain is a projectile now, and the fall is lit
+
+Players read the old fountain correctly and described it correctly: the numbers went up, started to fade, "but they don't
+really fall much". Measuring the flight at an 800 px canvas said why, and it was not the distance. The climb was 331 px
+against a `H × 0.28` = 224 px fall, which is a respectable 68% return — but the fade was set to span *exactly* the fall,
+and with the eased fade's own shape that left 13% of the descent visible at three-quarters brightness and 25% at half:
+29 px out of 224. Worse, that visible sliver was the slowest part of a curve that left its apex from a dead stop, ~250 px/s
+against a climb that peaked near 570. So the number spent its bright life climbing and its dim life starting to fall, which
+is not a fountain; it is a hang followed by a melt. Two changes, both of them about physics and light rather than tuning.
+
+**One parabola, no seam.** `FctMotion.TravelledY` now flies the choreographed styles as a single projectile:
+`height = Rise·(2s − s²)` in `s = t/a`, with the apex fraction `a = 1/(1 + √k)` solved from the two endpoints
+(`k` = fall depth over climb). Nothing is chosen per phase any more — `k` is the only input the curve has, so a shape that
+drifted away from ballistics would have to be re-derived rather than nudged. The flight leaves the spawn at its fastest and
+brakes at one constant rate through the apex — which is the *only* still point in it, which is what an apex is — and arrives
+moving downward as fast as it left, so the descent is already underway instead of starting from parked. Position, velocity and
+acceleration are continuous end to end because there is one expression; the eased climb plus ease-in fall had no velocity kink
+but reversed acceleration in a single frame. `a` comes out at exactly 0.5 for a full return, so nothing about where numbers
+peak moved: what changed is that they leave fast and keep going.
+
+**Every depth belongs to the throw, not the canvas.** The outgoing fall went from `H × 0.28` to the whole climb back
+(`FountainFallRiseRatio = 1`), spray keeps `SprayFallFrac = 0.4`, the mirrored incoming band keeps
+`IncomingFallsBackFrac = 0.5`, and all three are now measured against the distance *that number* threw itself. That is what
+a return leg is, and it buys invariance for free: `FctResize` scales `Rise` and `FallDist` by the same factor, so `k` — and
+with it the apex fraction — survives a vertical drag untouched, which a canvas-relative depth could not claim (stretching the
+window used to move the peak of every number already in the air).
+
+**The fall is lit.** `FallFadeFrac = 0.5`: the fade covers the last half of the descent instead of all of it, which puts
+the same rule on the books that every shipping implementation already runs — GW2-SCT holds alpha at 1 until the last 20% of a
+message's life (`src/ScrollArea.cpp`, `fadeLength = 0.2f`, at a constant `scrollSpeed` of 90 px/s), MSBT drives scroll and
+fade on separate clocks (`MSBTAnimationStyles.lua`: position is pure progress, `scrollTime = scrollHeight × 3/260`, i.e.
+~87 px/s), and even NAG holds opacity at 1.0 through its whole rise and spends only its last 23% reaching zero. Fading across
+a fall was the outlier; it just had three implementations in front of us that no one had compared against.
+
+Net effect, measured the same way at both canvas sizes (H=800 / H=500): fall depth 331/193 px, descent visible at ≥75%
+brightness **153/89 px where it was 29/18** — five times the arc seen — and at ≥50% brightness 186/109 px against 56/35. The
+number is moving at ~500 px/s while it is still half-lit, where before the same moment happened at ~250 px/s, and it leaves
+at ~660 px/s instead of at rest. The shrink moved onto the fade's clock too (`ScaleOf`): a number keeps the size its font was
+given while it can be read and collapses as it dims, because a thing getting smaller reads as a thing standing still, which
+was the other half of the melt.
+
+What is *not* Newtonian on purpose: fountain's sideways `Sway` still eases, so the drawn path is a gravity-correct vertical
+with a dragged sideways drift. Full ballistics on both axes is a one-line change to `LateralProgress`, and at ±12% of
+territory it is subtle enough that it should be judged in the configure preview before it is believed.
 
 **What pulse taught, and what is left of it.** A fifth style lived here for a while: **pulse**, text that never travelled —
 it swelled where it appeared. It failed on measurement rather than on taste: free placement is fine for numbers that move, because each
