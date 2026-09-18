@@ -60,12 +60,16 @@ namespace EQLogParser
     public const double SprayMaxLateralFrac = 0.34;
 
     /*
-     * How far gravity brings a sprayed number back after its apex, as a share of the height it actually reached — not
-     * of the canvas and not of the cone's speed. That choice is the invariant: falling less than it rose means no
-     * angle in the cone can return a number to the band edge it started from, so the protected strip stays clear by
-     * construction for every random draw rather than for the lucky ones.
+     * How far gravity brings a sprayed number back after its apex, as a share of the height that number actually reached —
+     * not of the canvas and not of the cone's speed. It is 1 because that is what a throw does: a fragment launched off the
+     * nozzle comes back to the height it left from, and the cone is in the launch angle, not in a shortened return. The
+     * older 0.4 read as shrapnel losing heart — measured at an 800 px canvas it gave spray a 119 px descent against the
+     * fountain's 259, so the style whose whole identity is flying outward was the one whose fall a player could barely see
+     * (55 lit px against fountain's 120). Keeping the ratio per style rather than folding it into the fountain's is what is
+     * left for tuning if the demo says the fan should hang shorter; the containment argument does not depend on it, because a
+     * full return ends on the spawn line, which is inside the band by construction for every angle in the cone.
      */
-    public const double SprayFallFrac = 0.4;
+    public const double SprayFallRiseRatio = 1.0;
 
     /*
      * How much vertical space a drawn hit needs below its anchor, as multiples of the font sizes involved: y is the
@@ -615,13 +619,15 @@ namespace EQLogParser
         return;
       }
 
+      /* One law, three ratios: each style decides how much of its own throw gravity is allowed to take back, and the sign
+         follows the travel so a sink's fall runs back up toward the gap instead of into its own edge. */
       var rose = hit.Rise >= 0;
-      var depth = hit.Style is FctMotionStyle.Spray ? Math.Abs(hit.Rise) * SprayFallFrac
+      var ratio = hit.Style is FctMotionStyle.Spray ? SprayFallRiseRatio
         : stage.Mode is not FctLayoutMode.Bands || !rose
-          ? Math.Abs(hit.Rise) * FctMotion.IncomingFallsBackFrac
-          : Math.Abs(hit.Rise) * FctMotion.FountainFallRiseRatio;
+          ? FctMotion.IncomingFallsBackFrac
+          : FctMotion.FountainFallRiseRatio;
 
-      hit.FallDist = rose ? depth : -depth;
+      hit.FallDist = (rose ? 1.0 : -1.0) * Math.Abs(hit.Rise) * ratio;
     }
 
     /* Keeps the band drawable: a window short enough to invert it degrades to the region's own edge pad rather than to a

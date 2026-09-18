@@ -242,21 +242,23 @@ namespace EQLogParser
     }
 
     /*
-     * How far along its sideways travel a hit is. Freeze and fountain share the vertical ease so x and y stay in proportion:
-     * a number climbs the straight line it appears to be on, which is what a thrown thing with no gravity looks like.
+     * How far along its sideways travel a hit is, and the rule is the same one the vertical runs on: a number that is
+     * airborne keeps its horizontal speed. The parabola a projectile draws comes from the vertical accelerating while the
+     * sideways run stays constant, so anything with a fall (fountain, spray) takes x linear in t.
      *
-     * Spray must not, and this was why spray and fountain were hard to tell apart. With both axes driven by one curve, every
-     * angle of the cone draws a straight line from origin to apex — the fan existed only in where numbers ended up, never in
-     * how they got there, so mid-flight a wide spray was a slanted fountain. Real shrapnel keeps its sideways speed while
-     * gravity takes the vertical away, so spray runs laterally on an ease-out: out first, then up, and the path bends over
-     * into an arc on its own. Easing to zero slope at the apex instead of running linearly matters too — something that
-     * stops dead sideways at the moment it begins to fall has a kink in it you can see.
+     * Spray used to run laterally on an ease-out instead, and when the vertical still eased that was the only thing that made
+     * a cone read as a cone at all — one curve on both axes draws a straight line from origin to apex, so mid-flight a wide
+     * spray was a slanted fountain. Now that the vertical really does accelerate, easing x spends the whole sideways distance
+     * before the descent begins: measured at an 800 px canvas the fan's outer numbers had already stopped moving across and
+     * fell straight down for the last 40% of their lives, and the widest point of the flight was its middle rather than its
+     * end. The "kink you can see" that the ease-out was defending against was a lateral that stops at the apex; a constant
+     * sideways velocity never stops, so there is nothing left to hide.
+     *
+     * Freeze claims no gravity on either axis, so it keeps one eased curve throughout: x and y stay in proportion and its
+     * drawn point never leaves the straight line between spawn and apex. Rails are not projectiles at all and answer for
+     * themselves.
      */
-    private static double LateralProgress(FctHitState hit, double t) =>
-      hit.Style is FctMotionStyle.Spray ? EaseOutQuad(t) : Ease(t);
-
-    /* Quadratic ease-out: fastest at the start, arriving at rest. */
-    private static double EaseOutQuad(double p) => p * (2 - p);
+    private static double LateralProgress(FctHitState hit, double t) => hit.FallDist != 0.0 ? t : Ease(t);
 
     /* Crit pop or the fall-phase shrink. 1 when neither applies. */
     public static double ScaleOf(FctHitState hit, double ageMs)

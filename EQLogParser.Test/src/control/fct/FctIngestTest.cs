@@ -472,8 +472,9 @@ namespace EQLogParser
       }
     }
 
-    /* The outgoing band keeps the literal fall: up, over, and down toward the strip (the clamp, not luck, is what
-     * keeps it out of the gap). Both sides of the mirror are pinned so a "cleanup" cannot silently delete one. */
+    /* The outgoing band's fall runs down toward the strip and stops on its own spawn line, so the gap stays clear because of
+     * where the flight finishes; the sweep below is what proves the sentence rather than the clamp catching it afterwards.
+     * Both sides of the mirror are pinned so a "cleanup" cannot silently delete one. */
     [TestMethod]
     public void FountainOnTheOutgoingBandFallsDownward()
     {
@@ -495,6 +496,42 @@ namespace EQLogParser
         Assert.IsTrue(y + FctLayout.TextHeight(outgoing) <= gapTop + 0.001,
           $"outgoing hit fell into the protected strip at t={t:0.00} (bottom {y + FctLayout.TextHeight(outgoing):0.#}, gap top {gapTop:0.#})");
       }
+    }
+
+    /*
+     * Spray obeys the fountain's law and differs only in where it is thrown. Its return used to be 0.4 of its own rise, which
+     * measured as a 119 px descent against fountain's 259 at an 800 px canvas — the style whose whole identity is flying
+     * outward had the least visible fall of any of them — and the reasoning attached to it ("falling less than it rose keeps
+     * the strip clear for every draw") was false in the same way for both styles: what keeps the strip clear is that a full
+     * return ends on the spawn line. The cone is random, so this sweeps many draws of one seeded ingest rather than trusting a
+     * single angle.
+     */
+    [TestMethod]
+    public void SprayFallsAsFarAsItThrew()
+    {
+      var gapTop = Height * FctLayout.GapTopFrac;
+      var ingest = NewIngest();
+      ingest.Style = FctMotionStyle.Spray;
+
+      var rises = new HashSet<double>();
+      for (var i = 0; i < 40; i++)
+      {
+        var hit = ingest.Accept(new List<FctHitState>(), FctLane.DamageDealt, 4200 + i, "Flurry", crit: false, minor: false,
+          periodic: false, fixedText: null, Width, Height, 0);
+
+        Assert.AreEqual(hit.Rise * FctLayout.SprayFallRiseRatio, hit.FallDist, 0.001,
+          "spray's return belongs to its own throw, not to the canvas");
+        Assert.AreEqual(hit.Y0, FctMotion.RaisedY(hit, 1.0), 0.001, "every angle comes back to the line it was born on");
+        rises.Add(Math.Round(hit.Rise, 3));
+
+        for (var t = 0.0; t <= 1.0; t += 0.05)
+        {
+          Assert.IsTrue(FctMotion.RaisedY(hit, t) + FctLayout.TextHeight(hit) <= gapTop + 0.001,
+            $"spray reached into the protected strip at t={t:0.00} on a {hit.Rise:0} px throw");
+        }
+      }
+
+      Assert.IsTrue(rises.Count > 3, $"the cone drew only {rises.Count} distinct throw heights in 40 draws; this swept one angle");
     }
 
     /*
@@ -550,8 +587,12 @@ namespace EQLogParser
         Assert.IsTrue(hit.Rise < 0, $"incoming spray must travel away from the gap, downward (Rise {hit.Rise:0.#})");
         Assert.IsTrue(hit.FallDist < 0, "and its fall must mirror back up toward the gap, not down to the window edge");
 
-        // the invariant that makes the mirror safe: it can never fall further than it sank
-        Assert.IsTrue(Math.Abs(hit.FallDist) < Math.Abs(hit.Rise), $"fell {hit.FallDist:0.#} after sinking {hit.Rise:0.#}");
+        /* The invariant that makes the mirror safe is not "less than it sank", it is "back to where it started": a full
+         * mirrored return tops out exactly on its spawn line, which sits inside the band, so no draw can reach the strip and
+         * none needs the clamp. A return deeper than the throw would.
+         */
+        Assert.AreEqual(Math.Abs(hit.Rise), Math.Abs(hit.FallDist), 0.001,
+          $"mirrored spray returned {hit.FallDist:0.#} after sinking {hit.Rise:0.#}");
 
         var lowest = hit.Y0 - hit.Rise;
         for (var t = 0.0; t <= 1.0; t += 0.05)

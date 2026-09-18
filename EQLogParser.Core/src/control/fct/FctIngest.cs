@@ -661,9 +661,9 @@ namespace EQLogParser
        */
       if (hit.Style is FctMotionStyle.Fountain or FctMotionStyle.Spray)
       {
-        // the choreography is the life: travel then fall, no hold phase, and the fade spans exactly the fall. Each style
-        // owns its tempo — spray runs shorter, because sharing fountain's flight time was half of why the two looked alike
-        // (and hit.Style, not the ingest's current one: a hit keeps the style it was born with)
+        // the choreography is the life: out of the spawn at speed, apex, fall, no hold phase. Each style owns its tempo —
+        // spray runs shorter, because sharing fountain's flight time was half of why the two looked alike. The switch reads
+        // hit.Style and not the ingest's current one, because a hit keeps the style it was born with.
         var window = hit.Style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
 
         hit.LifetimeMs = window;

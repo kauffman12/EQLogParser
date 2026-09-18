@@ -373,9 +373,16 @@ namespace EQLogParser
        * And it must bend the useful way: most of the sideways travel spent before the climb ends, so the path flattens into
        * a fan at the top instead of arriving as a corner and dropping straight down.
        */
+      /*
+       * And it must bend the way a throw bends. The old assertion here was that spray is "nearly spread out by the time it
+       * peaks", which was the right shape for an easing vertical and wrong for an accelerating one: spending all the sideways
+       * distance before the descent begins left the fan's outer numbers falling straight down, and put the widest point of the
+       * flight in its middle. A projectile's sideways run is constant, so its widest point is the end of the arc.
+       */
       var apex = FctMotion.ApexFraction(spray);
-      var lateralAtApex = (At(spray, apex).X - spray.X0) / spray.Sway;
-      Assert.IsTrue(lateralAtApex > 0.75, $"spray should be nearly spread out by the time it peaks ({lateralAtApex:0.##})");
+      var atApex = (At(spray, apex).X - spray.X0) / spray.Sway;
+      Assert.IsTrue(Math.Abs(atApex - apex) < 0.01,
+        $"spray's sideways run is not constant: {atApex:P0} of the way out at {apex:P0} of its life");
     }
 
     /* Perpendicular distance from the straight origin-to-apex path, in px: zero means the hit is flying in a line. */
@@ -399,6 +406,38 @@ namespace EQLogParser
        point instead of against the alignment. */
     private static (double X, double Y) At(FctHitState hit, double t) => (FctMotion.ArcedX(hit, t) + (hit.ValueWidth / 2.0), FctMotion.RaisedY(hit, t));
 
+    /*
+     * The horizontal half of the same law that made the fountain a projectile: nothing in flight accelerates sideways, so
+     * equal slices of life cover equal sideways distance, and the arc reaches its full Sway only as it dies. Freeze is the
+     * control — it claims no gravity on either axis, so its sideways travel eases along with its climb and is deliberately
+     * NOT uniform. Rail styles never reach this code (no fall), which is what keeps the conveyor's column still.
+     */
+    [TestMethod]
+    public void AirborneNumbersHoldTheirHorizontalSpeed()
+    {
+      foreach (var style in new[] { FctMotionStyle.Fountain, FctMotionStyle.Spray })
+      {
+        var hit = TraceHit(style);
+        hit.FallDist = 200;                    // airborne: this is what makes a number a projectile to LateralProgress
+
+        double Step(double from) => At(hit, from + 0.1).X - At(hit, from).X;
+        var first = Step(0.0);
+        for (var t = 0.1; t <= 0.85; t += 0.05)
+        {
+          Assert.IsTrue(Math.Abs(Step(t) - first) < 0.5,
+            $"{style} changed sideways speed at t={t:0.##}: {first:0.###} -> {Step(t):0.###}");
+        }
+
+        Assert.AreEqual(hit.X0 + hit.Sway, At(hit, 1.0).X, 0.001, $"{style} did not reach the full sway of its draw");
+      }
+
+      var freeze = TraceHit(FctMotionStyle.Freeze);
+      var freezeOpensWith = At(freeze, 0.1).X - freeze.X0;
+      var freezeMidFlight = At(freeze, 0.6).X - At(freeze, 0.5).X;
+      Assert.IsTrue(freezeOpensWith < (freezeMidFlight * 0.75),
+        $"freeze is supposed to glide, not launch: its first tenth covered {freezeOpensWith:0.#} against a mid-flight {freezeMidFlight:0.#}");
+    }
+
     /* A wide cone draw: well to one side as it climbs. Freeze gets no fall so its line stays a line. */
     private static FctHitState TraceHit(FctMotionStyle style)
     {
@@ -412,7 +451,7 @@ namespace EQLogParser
       hit.Y0 = 480;
       hit.Rise = 220;
       hit.Sway = 300;
-      hit.FallDist = style is FctMotionStyle.Spray ? 88 : 0;
+      hit.FallDist = style is FctMotionStyle.Spray ? (220 * FctLayout.SprayFallRiseRatio) : 0;
       hit.MotionMs = style is FctMotionStyle.Spray ? FctMotion.SprayMotionWindowMs : FctMotion.MotionWindowMs;
       return hit;
     }
