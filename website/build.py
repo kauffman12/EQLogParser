@@ -364,7 +364,7 @@ def wrap_docs_html(version: str, url: str, title: str, description: str, nav_hea
     </nav>
   </div>
   <footer class="site-footer">
-    <a href="policy.html">Privacy Policy</a> | © 2025 EQLogParser
+    <a href="policy.html">Privacy Policy</a> | © 2026 EQLogParser
   </footer>
   {THEME_SCRIPT}
 </body>
@@ -780,7 +780,7 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
             <h2>System Requirements</h2>
             <ul>
               <li><strong>Windows 10/11</strong> (64-bit only)</li>
-              <li><strong>.NET 8.0 Desktop Runtime</strong> — the installer will prompt you to install it if missing</li>
+              <li><strong>.NET 10.0 Desktop Runtime</strong> — the installer will prompt you to install it if missing</li>
               <li><strong>EverQuest</strong> — installed and configured with logging enabled</li>
               <li>Approximately 50 MB of disk space</li>
             </ul>
@@ -829,7 +829,7 @@ def build_download_page(version: str, url: str, nav_header_html: str) -> str:
   }})();
   </script>
   <footer class="site-footer">
-    <a href="policy.html">Privacy Policy</a> | © 2025 EQLogParser
+    <a href="policy.html">Privacy Policy</a> | © 2026 EQLogParser
   </footer>
   {THEME_SCRIPT}
 </body>
@@ -881,7 +881,7 @@ def build_404_page(version: str, nav_header_html: str) -> str:
     }}
   </script>
   <footer class="site-footer">
-    <a href="policy.html">Privacy Policy</a> | © 2025 EQLogParser
+    <a href="policy.html">Privacy Policy</a> | © 2026 EQLogParser
   </footer>
   {THEME_SCRIPT}
 </body>
