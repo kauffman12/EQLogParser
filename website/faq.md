@@ -161,7 +161,9 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 flatpak install flathub com.usebottles.bottles
 ```
 
-From there you can let the recipe this project publishes do the bottle for you, or make every choice yourself. Both end with the same two things inside the prefix — **.NET 10 Desktop Runtime** and the **Visual C++ 2015-2022 redistributable** — so neither route is more correct than the other.
+From there you can let a recipe this project publishes do the installing for you, or make every choice yourself. Both end with the same two things inside the prefix — **.NET 10 Desktop Runtime** and the **Visual C++ 2015-2022 redistributable** — so neither route is more correct than the other, and both start with the same kind of bottle: **64-bit**, and a plain Wine runner — **Caffe** on current Bottles, or the option simply called **Wine** on older ones. Leave Proton alone, it is meant for games.
+
+The runner choice only appears when the bottle type is **Custom**, which is why both routes below say to pick it.
 
 ### The easy way: `PERSONAL_INSTALLERS`
 
@@ -173,7 +175,7 @@ PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/ref
 
 Then, once Bottles is open:
 
-1. Click **Create a New Bottle** and name it. The recipe fills in what goes *inside* a bottle — it does not make one, and it cannot choose these for you — so use the same settings as the manual route below: type **Custom**, architecture **64-bit**, **Runner** to **Wine**. The architecture is not cosmetic: an installer declares its own, so a 32-bit bottle will not list EQLogParser at all.
+1. Click **Create a New Bottle** and name it. The recipe fills in what goes *inside* a bottle — it does not make one, and it cannot choose these for you — so use the same settings as the manual route below: type **Custom**, architecture **64-bit**, **Runner** **Caffe** (**Wine** on older Bottles). The architecture is not cosmetic: an installer declares its own, so a 32-bit bottle will not list EQLogParser at all.
 2. Open the bottle's **Install App** page (newer Bottles label it **Installers**) — **EQLogParser** is now in that list with its own icon, instead of you pointing at a file you downloaded.
 3. Press the installer's download button and Bottles runs the recipe end to end: it installs **vcredist2022**, **dotnetdesktop10** and **allfonts** into that bottle, downloads the installer named in the recipe, runs it, and adds EQLogParser to the bottle's program list so **Run App** launches it. Nothing else to pick.
     - Run it again whenever you want the version the recipe points at — Bottles never says a recipe changed
@@ -185,7 +187,7 @@ Then, once Bottles is open:
 
 Start Bottles however you normally do — no variable needed, because you are pointing it at the installer file yourself — and:
 
-1. Click **Create a New Bottle**. When prompted for the type, select **Custom**, make sure the architecture is **64-bit**, set the **Runner** to **Wine**, then click **Create** and wait for Bottles to finish setting up the environment.
+1. Click **Create a New Bottle**. When prompted for the type, select **Custom**, make sure the architecture is **64-bit**, and pick **Caffe** as the **Runner** (**Wine** on older Bottles — not Proton), then click **Create** and wait for Bottles to finish setting up the environment.
 2. Open the bottle's **Dependencies** page and install these:
     - **vcredist2022** — required for text to speech, without it Piper and Kokoro download their files and then stay silent (item 3 under Known Issues below)
     - **dotnetdesktop10** — the .NET 10 Desktop Runtime EQLogParser runs on
