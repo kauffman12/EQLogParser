@@ -173,16 +173,13 @@ PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/ref
 
 Then, once Bottles is open:
 
-1. Click **Create a New Bottle** — any name you like; the recipe asks for 64-bit.
-2. Press **Install App**. **EQLogParser** is now in the list of available apps with its own icon, rather than you having to point at a downloaded file.
-3. Confirm and Bottles runs the recipe end to end: it installs **vcredist2022**, **dotnetdesktop10** and **allfonts** into that bottle, downloads the installer named in the recipe, runs it, and registers `EQLogParser.exe` so **Run App** launches it. Nothing to pick, nothing to remember.
+1. Click **Create a New Bottle** and name it. The recipe fills in what goes *inside* a bottle — it does not make one, and it cannot choose these for you — so use the same settings as the manual route below: type **Custom**, architecture **64-bit**, **Runner** to **Wine**. The architecture is not cosmetic: an installer declares its own, so a 32-bit bottle will not list EQLogParser at all.
+2. Open the bottle's **Install App** page (newer Bottles label it **Installers**) — **EQLogParser** is now in that list with its own icon, instead of you pointing at a file you downloaded.
+3. Press the installer's download button and Bottles runs the recipe end to end: it installs **vcredist2022**, **dotnetdesktop10** and **allfonts** into that bottle, downloads the installer named in the recipe, runs it, and adds EQLogParser to the bottle's program list so **Run App** launches it. Nothing else to pick.
+    - Run it again whenever you want the version the recipe points at — Bottles never says a recipe changed
+    - The Flatpak build adds no desktop menu entry, so launch EQLogParser from inside Bottles
 
 > **Tip:** save that command as a shell script or a desktop shortcut. The variable has to be set on the Bottles process itself, so starting Bottles from your usual app menu will not list EQLogParser.
-
-Two things worth knowing about the recipe route:
-
-- What gets installed is whatever `bottles/Games/eqlogparser.yml` points at, installer version included — if Bottles offers an older release than the [download page](download.html), the recipe needs bumping, so open an Issue and tell us.
-- You can still open the bottle's **Dependencies** page afterwards and add or remove anything; the recipe is a starting point, not a lock.
 
 ### The manual way: build the bottle yourself
 
