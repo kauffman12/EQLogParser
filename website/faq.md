@@ -147,14 +147,60 @@ EQLogParser has supported Linux since version 2.2.66 with only minor issues, and
 Two ways to get there: [with Bottles](#installing-with-bottles) or [with plain Wine](#installing-with-plain-wine).
 
 ## Installing with Bottles
-1. Create a **64-bit** bottle and install these dependencies into it from the bottle's Dependencies page:
+
+Bottles is a Wine front-end: it keeps one prefix per program (a **bottle**) and installs what that program needs into it, so you never have to run `wine` by hand. Flatpak is the recommended way to get it, and both routes below start from the same install — run these in a terminal:
+
+```bash
+# Install Flatpak
+sudo apt install flatpak
+
+# Add the Flathub repository (where Bottles is hosted)
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+# Install Bottles
+flatpak install flathub com.usebottles.bottles
+```
+
+From there you can let the recipe this project publishes do the bottle for you, or make every choice yourself. Both end with the same two things inside the prefix — **.NET 10 Desktop Runtime** and the **Visual C++ 2015-2022 redistributable** — so neither route is more correct than the other.
+
+### The easy way: `PERSONAL_INSTALLERS`
+
+This project publishes a Bottles recipe at `bottles/Games/eqlogparser.yml` in the GitHub repository. It names EQLogParser's dependencies, the installer to download and where the executable lands, but Bottles knows nothing about it until you tell it where to look — that is what `PERSONAL_INSTALLERS` does:
+
+```bash
+PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/refs/heads/master/bottles flatpak run com.usebottles.bottles
+```
+
+Then, once Bottles is open:
+
+1. Click **Create a New Bottle** — any name you like; the recipe asks for 64-bit.
+2. Press **Install App**. **EQLogParser** is now in the list of available apps with its own icon, rather than you having to point at a downloaded file.
+3. Confirm and Bottles runs the recipe end to end: it installs **vcredist2022**, **dotnetdesktop10** and **allfonts** into that bottle, downloads the installer named in the recipe, runs it, and registers `EQLogParser.exe` so **Run App** launches it. Nothing to pick, nothing to remember.
+
+> **Tip:** save that command as a shell script or a desktop shortcut. The variable has to be set on the Bottles process itself, so starting Bottles from your usual app menu will not list EQLogParser.
+
+Two things worth knowing about the recipe route:
+
+- What gets installed is whatever `bottles/Games/eqlogparser.yml` points at, installer version included — if Bottles offers an older release than the [download page](download.html), the recipe needs bumping, so open an Issue and tell us.
+- You can still open the bottle's **Dependencies** page afterwards and add or remove anything; the recipe is a starting point, not a lock.
+
+### The manual way: build the bottle yourself
+
+Start Bottles however you normally do — no variable needed, because you are pointing it at the installer file yourself — and:
+
+1. Click **Create a New Bottle**. When prompted for the type, select **Custom**, make sure the architecture is **64-bit**, set the **Runner** to **Wine**, then click **Create** and wait for Bottles to finish setting up the environment.
+2. Open the bottle's **Dependencies** page and install these:
     - **vcredist2022** — required for text to speech, without it Piper and Kokoro download their files and then stay silent (item 3 under Known Issues below)
     - **dotnetdesktop10** — the .NET 10 Desktop Runtime EQLogParser runs on
-    - **allfonts** — optional, completes the same set as the recipe EQLogParser publishes (`bottles/Games/eqlogparser.yml` in the GitHub project)
-2. Install with **Install → Run executable** and choose `EQLogParser-install-{version}.exe`, then launch `EQLogParser.exe` from `Program Files\EQLogParser`
-3. On first start nothing speaks until one engine is downloaded: Trigger Manager → **Tools** → **TTS Engine** → **Download** (Piper, about 682 MB, or Kokoro, about 228 MB). See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
+    - **allfonts** — optional, the font set the published recipe installs
+3. Press **Install App → Run executable** and choose `EQLogParser-install-{version}.exe`, then launch `EQLogParser.exe` from `Program Files\EQLogParser`.
+
+Either way, on first start nothing speaks until one engine is downloaded: Trigger Manager → **Tools** → **TTS Engine** → **Download** (Piper, about 682 MB, or Kokoro, about 228 MB). See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
 
 ## Installing with plain Wine
+
+No Bottles and no Flatpak — just `wine` and `winetricks`, which is the route to take if you want to see every step or keep prefixes by hand:
+
 1. Create a 64-bit prefix and put both prerequisites in it:
     - `WINEPREFIX=~/eqlogparser WINEARCH=win64 wineboot`
     - `WINEPREFIX=~/eqlogparser winetricks vcrun2022 dotnetdesktop10`
