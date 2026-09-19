@@ -2,8 +2,9 @@
 1. **.NET 10 Now Required**
 2. .NET 10 Performance improvements and fixes.
 3. Added **Floating Combat Text** available under the **View** menu.
-4. Updated the **Damage Meter** setup menus.
-5. Upgraded to latest Syncfusion and other libraries.
+4. Added **View Error Log** to tray icon.
+5. Updated the **Damage Meter** setup menus.
+6. Upgraded to latest Syncfusion and other libraries.
 
 # 2.3.63 | 09/03/26
 1. Added **Dynamic Timer Name** option to Trigger Timers. This option decides whether **Trigger Variables** will be queried every time the timer updates or if those variables are only read and displayed once when the **Timer** is started.
