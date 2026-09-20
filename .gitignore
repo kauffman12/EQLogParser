@@ -7,8 +7,11 @@ tmp/
 
 # Local-only working documents (never commit)
 local/
+# sample EQ logs used as local perf/verification inputs (never commit)
+/eqlog_*.txt
 # local discussion docs — only the files already tracked under docs/ belong in git
 docs/batch-parsing-plan.md
+docs/combat-mirror-design.md
 docs/parsing-extraction-inventory.txt
 docs/parsing-code-utilities-inventory.txt
 docs/non-parsing-code-analysis.txt

@@ -43,6 +43,33 @@ namespace EQLogParser
 
     private static OldCritData _lastCrit;
 
+    // Headless/test observability: current slain-queue state.
+    internal static (int Count, double SlainTime) SlainState
+    {
+      get
+      {
+        lock (SlainQueue)
+        {
+          return (SlainQueue.Count, _slainTime);
+        }
+      }
+    }
+
+    // Resets the process-global parser state (slain queue, timing dials). For headless/test use:
+    // a fresh LogProcessor run must not inherit slain timestamps or crit carryover from an
+    // earlier run in the same process. The app never calls this.
+    internal static void ResetProcessState()
+    {
+      lock (SlainQueue)
+      {
+        SlainQueue.Clear();
+        _slainTime = double.NaN;
+      }
+      _previousAction = null;
+      _delayCritRecord = null;
+      _lastCrit = null;
+    }
+
     public static void CheckSlainQueue(double currentTime)
     {
       lock (SlainQueue)

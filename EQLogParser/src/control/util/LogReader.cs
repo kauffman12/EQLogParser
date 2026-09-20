@@ -422,10 +422,4 @@ namespace EQLogParser
     #endregion
   }
 
-  public readonly record struct LogReaderItem(string Line, double Ts, bool IsMonitor);
-
-  internal interface ILogProcessor : IDisposable
-  {
-    public void LinkTo(BlockingCollection<LogReaderItem> collection);
-  }
 }

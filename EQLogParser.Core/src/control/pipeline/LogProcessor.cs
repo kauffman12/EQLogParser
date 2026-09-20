@@ -6,23 +6,37 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
+  // The per-line parsing pipeline. Moved out of the WPF project (Phase 0) so headless runs can
+  // execute it in tests: chat archiving and quick-share triggering are injected as sinks instead
+  // of calling ChatDB / TriggerUtil directly. Everything else is byte-identical to the old
+  // EQLogParser/src/control/processors/LogProcessor.cs.
   internal class LogProcessor : ILogProcessor
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly string _fileName;
+    private readonly IChatSink _chatSink;
+    private readonly ITriggerHook _triggerHook;
     private long _lineCount;
     private Task _readTask;
     private volatile bool _isDisposed;
 
-    internal LogProcessor(string fileName)
+    internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook)
     {
       _fileName = fileName ?? string.Empty;
+      _chatSink = chatSink ?? throw new ArgumentNullException(nameof(chatSink));
+      _triggerHook = triggerHook ?? throw new ArgumentNullException(nameof(triggerHook));
     }
+
+    // The consuming task once LinkTo has run. Headless callers must wait for this to finish
+    // (full drain) before Dispose: Dispose sets _isDisposed, and the consumer stops at the next
+    // line it checks — destroying it early drops the tail of the stream. App usage is unaffected
+    // (LogReader keeps feeding long after LinkTo).
+    internal Task Completion => _readTask;
 
     public void LinkTo(BlockingCollection<LogReaderItem> collection)
     {
-      // start archive if enabled
-      ChatDB.Instance.Init();
+      // start archive if enabled (app side channel; no-op headless)
+      _chatSink.Init();
 
       _readTask = Task.Run(() =>
       {
@@ -55,11 +69,11 @@ namespace EQLogParser
       {
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
-        ChatDB.Instance.Add(chatType);
+        _chatSink.Add(chatType);
 
         if (!monitor)
         {
-          TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, false, TriggerStateDB.DefaultUser);
+          _triggerHook.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime);
         }
       }
       else

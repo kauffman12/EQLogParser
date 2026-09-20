@@ -1174,7 +1174,7 @@ namespace EQLogParser
             ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
             AppSettings.CurrentLogFile = theFile;
-            _eqLogReader = new LogReader(new LogProcessor(theFile), theFile, lastMins);
+            _eqLogReader = new LogReader(new LogProcessor(theFile, new ChatDbSink(), new TriggerHookAdapter()), theFile, lastMins);
             _ = _eqLogReader.StartAsync();
             UpdateLoadingProgress();
           }, DispatcherPriority.Render);
