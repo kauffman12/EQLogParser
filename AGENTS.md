@@ -9,6 +9,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
 
+## Build Environment (Linux, this machine)
+- .NET 10 SDK (10.0.4xx) lives in `~/.dotnet`; prepend it on every shell: `export PATH="$HOME/.dotnet:$PATH"`. The system's dotnet 8 will not satisfy `global.json` (`"10.0"`, `rollForward: latestPatch`).
+- Full solution on Linux: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true` (flag lets the WPF projects cross-compile; no source changes needed).
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (~1,120 tests, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only runs on Windows.
+
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
 - **FCT vocabulary is closed**: two region schemes (`Bands` = the panel's *fountain*, `ByType` = *split*) and four motion styles
