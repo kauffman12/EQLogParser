@@ -6,6 +6,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
 - **Git**: Commit with detailed messages, but **never push to remote**. Pushing is the user's call.
+- **Docs are local discussion**: most files under `docs/` are untracked working documents (see `.gitignore`). Never `git add`/commit new files there — only the ones already tracked (`git ls-files docs/`) belong in the repo.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
 

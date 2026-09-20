@@ -7,6 +7,13 @@ tmp/
 
 # Local-only working documents (never commit)
 local/
+# local discussion docs — only the files already tracked under docs/ belong in git
+docs/batch-parsing-plan.md
+docs/parsing-extraction-inventory.txt
+docs/parsing-code-utilities-inventory.txt
+docs/non-parsing-code-analysis.txt
+docs/WPF-Dependency-Analysis.md
+docs/wpf-best-practices.txt
 # pi-subagents session artifacts
 .pi-subagents/
 nag/
