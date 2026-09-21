@@ -118,6 +118,27 @@ namespace EQLogParser
     private double _pixelsPerDip = 1.0;
     private double _lastDpiCheckMs;
     private double _statFrameMsMax;
+
+    /*
+     * What OnRender spends: the transparent memset, every glyph pass and both copies. MaxFrameMs covers the pump only (prune, demo,
+     * DPI), so without these the expensive half of a frame was invisible from outside — and it is the half that grows with the
+     * overlay's pixel area rather than with how many numbers are on it, which is what makes "same fight, bigger window, worse" a
+     * question these numbers can answer and the pump's cannot.
+     */
+    private double _statPaintMsSum, _statPaintMsMax;
+    private int _statPaintCount;
+
+    /*
+     * Named spans and counters reported by the heartbeat (PerfCounters, UiBeatMonitor). The point is attribution, not profiling: when
+     * the watchdog says the UI thread stopped for a second and a half, these are the names it can print for "what was in there", and
+     * fct.paint is the one that decides whether the overlay was the cause of somebody else's freeze or its victim.
+     */
+    private static readonly int PumpId = PerfCounters.Register("fct.pump");
+    private static readonly int PaintId = PerfCounters.Register("fct.paint");
+    private static readonly int BakeId = PerfCounters.Register("fct.bake");
+    private static readonly int SurfaceId = PerfCounters.Register("fct.surface");
+    private static readonly int HitsId = PerfCounters.Register("fct.hits");
+
     private Stopwatch _clock;
     private bool _dirty;
 
@@ -182,6 +203,10 @@ namespace EQLogParser
 
     /* Worst frame in the current stats window: average frame time hides the spike that reads as a hitch. */
     public double MaxFrameMs { get; private set; }
+
+    /* The paint's average and worst over the same window as FPS — a different number from MaxFrameMs on purpose: see _statPaintMsSum. */
+    public double AvgPaintMs { get; private set; }
+    public double MaxPaintMs { get; private set; }
 
     /* What the monitor is actually running at, so a low fps can be told apart from a deliberate pacing cap. */
     public double DisplayHz => _pacer.DisplayHz;
@@ -395,7 +420,29 @@ namespace EQLogParser
       _dirty = true;
     }
 
+    /* Timed as one span, the two early-outs included: a paint that was asked for and could not run is still a frame the layout missed. */
     protected override void OnRender(DrawingContext dc)
+    {
+      var mark = PerfCounters.Begin(PaintId);
+
+      try
+      {
+        Paint(dc);
+      }
+      finally
+      {
+        var ms = PerfCounters.End(mark);
+        _statPaintMsSum += ms;
+        _statPaintCount++;
+
+        if (ms > _statPaintMsMax)
+        {
+          _statPaintMsMax = ms;
+        }
+      }
+    }
+
+    private void Paint(DrawingContext dc)
     {
       var now = _clock?.Elapsed.TotalMilliseconds ?? 0;
       var scale = _pixelsPerDip > 0 ? _pixelsPerDip : 1.0;
@@ -477,6 +524,9 @@ namespace EQLogParser
        * spacing, so measuring only the frames it likes would make it blind to exactly the displays it exists for. */
       var shouldPaint = _pacer.Tick(now);
 
+      /* Every tick, before the early-outs, so the level the heartbeat prints is current even while the overlay sits idle. */
+      PerfCounters.Gauge(HitsId, _hits.Count);
+
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
@@ -498,31 +548,42 @@ namespace EQLogParser
         return;
       }
 
-      var sw = Stopwatch.StartNew();
-      _pacer.Painted();
+      /*
+       * The pump is the work a render tick does that is not rasterizing; it gets its own name so a slow prune or demo step arrives in
+       * the heartbeat as itself instead of as an unexplained gap. try/finally because a pass left marked "running" by an exception
+       * would keep naming itself in every stall line after it, which is worse than not having measured it at all.
+       */
+      var mark = PerfCounters.Begin(PumpId);
 
-      if (now - _lastDpiCheckMs >= DpiCheckMs)
+      try
       {
-        _lastDpiCheckMs = now;
-        RefreshDpi();
-      }
+        _pacer.Painted();
 
-      if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+        if (now - _lastDpiCheckMs >= DpiCheckMs)
+        {
+          _lastDpiCheckMs = now;
+          RefreshDpi();
+        }
+
+        if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+        {
+          _dirty = true;
+        }
+
+        if (_demoWanted && !_demo.Active)
+        {
+          _demo.Start(now);
+        }
+
+        if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo, _ingest))
+        {
+          _dirty = true;
+        }
+      }
+      finally
       {
-        _dirty = true;
+        LastFrameMs = PerfCounters.End(mark);
       }
-
-      if (_demoWanted && !_demo.Active)
-      {
-        _demo.Start(now);
-      }
-
-      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo, _ingest))
-      {
-        _dirty = true;
-      }
-
-      LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
       /*
        * Animated content: a hit's position is a function of the clock, so any frame with live hits must repaint or the text stands still until the
@@ -800,6 +861,16 @@ namespace EQLogParser
       _bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
       _pixelCopy = new byte[w * h * 4];
       _pixelHandle = GCHandle.Alloc(_pixelCopy, GCHandleType.Pinned);
+
+      PerfCounters.Note(SurfaceId);
+
+      /*
+       * One line per reallocation — a resize or a DPI change, which is rare enough to print every time. It is the size of the frame's
+       * memset and of both copies stated in one place: on a 3840 x 2160 overlay that buffer is 33 MB touched every frame, three buffers
+       * counting toward the working set, and a plausible cause of a hitch nobody can otherwise see from the outside.
+       */
+      PerfJournal.Note($"FCT render surface {w} x {h} px, {(double)w * h * 4 / (1024 * 1024):0.0} MB copy buffer");
+
       return true;
     }
 
@@ -863,6 +934,10 @@ namespace EQLogParser
 
           entry = new HaloEntry { Image = surf.Snapshot(), Refs = 0, Pad = pad };
           _halos[key] = entry;
+
+          /* Counted, not timed: a bake is a blur of a label into its own surface, it happens once per distinct crit string rather
+             than per frame, and what matters about it is how many the fight asked for. */
+          PerfCounters.Note(BakeId);
         }
       }
 
@@ -1003,11 +1078,16 @@ namespace EQLogParser
         Fps = _statFrames / seconds;
         AvgFrameMs = _statFrames > 0 ? _statFrameMsSum / _statFrames : 0;
         MaxFrameMs = _statFrameMsMax;
+        AvgPaintMs = _statPaintCount > 0 ? _statPaintMsSum / _statPaintCount : 0;
+        MaxPaintMs = _statPaintMsMax;
         DrawsPerSec = (_statDrawsTotal - _statDrawsWindow) / seconds;
         _statsWindowStartMs = now;
         _statFrames = 0;
         _statFrameMsSum = 0;
         _statFrameMsMax = 0;
+        _statPaintMsSum = 0;
+        _statPaintMsMax = 0;
+        _statPaintCount = 0;
         _statDrawsWindow = _statDrawsTotal;
       }
 

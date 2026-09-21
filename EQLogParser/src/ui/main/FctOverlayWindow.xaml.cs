@@ -59,6 +59,16 @@ namespace EQLogParser
     private readonly FctSkiaCanvas _canvas;
     private readonly List<FctHitCommand> _pending = [];
 
+    /*
+     * What this window reports to the heartbeat (PerfCounters, UiBeatMonitor). "feed" is the drain plus everything the canvas does with
+     * what it drained — parse, gates, placement — which is where a raid burst lands if it costs more than a frame; "queue" and "drop"
+     * are the two ends of backpressure read together: a queue full while the overlay paints at 60 fps is a different problem from an
+     * empty queue behind a UI thread that stopped answering, and the log cannot tell those apart without both numbers on the page.
+     */
+    private static readonly int FeedId = PerfCounters.Register("fct.feed");
+    private static readonly int QueueId = PerfCounters.Register("fct.queue");
+    private static readonly int DropId = PerfCounters.Register("fct.drop");
+
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
     private readonly FctManager _manager;
@@ -265,6 +275,9 @@ namespace EQLogParser
        counted. An overlay nobody sees must not parse or raster either. */
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
+      /* Tells the watchdog which windows are up, because half of attributing a stall is knowing what could have caused it. */
+      UiBeatMonitor.NoteSurface("fct", (bool)e.NewValue);
+
       if ((bool)e.NewValue)
       {
         /* The clock starts before the feed opens. AddHit refuses hits while the canvas has no clock, so a manager enabled
@@ -436,14 +449,29 @@ namespace EQLogParser
      */
     private void OnCanvasFrame(double now)
     {
-      _manager.DrainTo(_pending);
-      foreach (var cmd in _pending)
-      {
-        _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
-          proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
-      }
+      /* Timed rather than counted: this is the one place per-record work happens on the UI thread, so its worst frame is the number
+         that says whether a burst of numbers was ever the reason the interface paused. try/finally for the same reason as every other
+         span here — a pass that ends in an exception would otherwise keep claiming the next stall. */
+      var mark = PerfCounters.Begin(FeedId);
 
-      _pending.Clear();
+      try
+      {
+        _manager.DrainTo(_pending);
+
+        foreach (var cmd in _pending)
+        {
+          _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
+            proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
+        }
+
+        _pending.Clear();
+      }
+      finally
+      {
+        PerfCounters.End(mark);
+        PerfCounters.Gauge(QueueId, _manager.PendingCount);
+        PerfCounters.Gauge(DropId, _canvas.DroppedCount + _manager.DroppedCount);
+      }
 
       if (now - _lastStatsMs < 500)
       {

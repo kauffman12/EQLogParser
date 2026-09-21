@@ -62,6 +62,13 @@ namespace EQLogParser
 
     internal int DroppedCount => Volatile.Read(ref _dropped);
 
+    /*
+     * How much is waiting to be drawn, published for the heartbeat (UiBeatMonitor). Read-only and approximate, exactly like the field
+     * behind it. It distinguishes the two ways "the numbers stopped" can go: a queue sitting at its ceiling means the log thread kept
+     * producing and the drain was the bottleneck, while an empty queue behind a stalled UI thread means the interface stopped asking.
+     */
+    internal int PendingCount => Volatile.Read(ref _pendingCount);
+
     private FctManager()
     {
       DamageLineParser.EventsDamageProcessed += HandleDamage;
