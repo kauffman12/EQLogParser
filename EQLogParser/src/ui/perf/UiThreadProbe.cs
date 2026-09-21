@@ -31,11 +31,14 @@ namespace EQLogParser
 
     private static readonly object _gate = new();
 
-    /* The thread being watched during the current episode, and what has been seen of it. */
-    private static Process _process;
-    private static ProcessThread _thread;
+    /* One reading of the watched thread. Every property is taken inside the reading, because they are all snapshots: a ProcessThread kept on
+     * past its Process answers with what it saw when it was built, which says nothing about now. */
+    private readonly record struct Observation(bool Found, bool Waiting, string Reason, long CpuMs);
+
+    /* What has been seen of the watched thread so far in this episode. */
     private static int _watchedId;
     private static long _cpuBaseMs;
+    private static long _cpuLastMs;
     private static int _waitSamples;
     private static int _runSamples;
 
@@ -74,14 +77,15 @@ namespace EQLogParser
       {
         _note = null;
         _watchedId = threadId;
-        _thread = FindThread(threadId);
 
-        if (_thread is null)
+        var first = Observe(threadId);
+        if (!first.Found)
         {
           _note = threadId <= 0 ? "no thread id was captured" : $"thread {threadId} is not in this process";
         }
 
-        _cpuBaseMs = _thread is null ? 0 : ElapsedMs(_thread);
+        _cpuBaseMs = first.CpuMs;
+        _cpuLastMs = first.CpuMs;
         _waitSamples = 0;
         _runSamples = 0;
         _reasons.Clear();
@@ -100,25 +104,24 @@ namespace EQLogParser
             return;
           }
 
-          /*
-           * Enumerated again for every sample rather than cached: a ProcessThread's properties are a snapshot taken when it was read, so the
-           * one held from the start of an episode would keep answering with the state the thread had back then — which is exactly not the
-           * question. Walking this process's own thread list costs microseconds, and only during an episode.
-           */
-          _thread = FindThread(threadId);
+          var observation = Observe(threadId);
 
-          if (_thread is null)
+          if (!observation.Found)
           {
+            /* Recorded rather than swallowed: the line still says what happened, and "a beat was missed and the thread could not be read" is a
+             * fact worth having on its own. Every other number in the episode stays.
+             */
+            _note = $"thread {threadId} is not in this process";
             return;
           }
 
-          if (_thread.ThreadState == System.Diagnostics.ThreadState.Wait)
+          _cpuLastMs = observation.CpuMs;
+
+          if (observation.Waiting)
           {
             _waitSamples++;
-
-            var reason = WaitReasonText(_thread);
-            _reasons.TryGetValue(reason, out var seen);
-            _reasons[reason] = seen + 1;
+            _reasons.TryGetValue(observation.Reason, out var seen);
+            _reasons[observation.Reason] = seen + 1;
           }
           else
           {
@@ -174,7 +177,7 @@ namespace EQLogParser
           builder.Append(" (").Append(DominantReason()).Append(')');
         }
 
-        var cpuMs = _thread is null ? 0 : ElapsedMs(_thread) - _cpuBaseMs;
+        var cpuMs = _cpuLastMs - _cpuBaseMs;
 
         return builder.Append(", cpu ").Append(cpuMs).Append(" ms").ToString();
       }
@@ -185,7 +188,6 @@ namespace EQLogParser
     {
       lock (_gate)
       {
-        _thread = null;
         _watchedId = 0;
         _waitSamples = 0;
         _runSamples = 0;
@@ -199,7 +201,7 @@ namespace EQLogParser
      * that can fail — capturing the id, and finding it in the process's own thread list — and a test has to be able to say which one broke
      * rather than observe the same blank twice.
      */
-    internal static bool IsWatchable(int threadId) => FindThread(threadId) is not null;
+    internal static bool IsWatchable(int threadId) => Observe(threadId).Found;
 
     private static string DominantReason()
     {
@@ -219,35 +221,45 @@ namespace EQLogParser
       return _reasons.Count == 1 ? best : $"{best} x{seen}";
     }
 
-    private static ProcessThread FindThread(int threadId)
+    /*
+     * One reading of the watched thread, taken under the lock and only while an episode is open or a test asks. Fresh Process, fresh thread
+     * list, every time — and that is a correctness matter rather than a style one: a Process hands back the threads as of the moment it was
+     * first read, so holding one makes every thread created since invisible. Measured before writing this: a worker started after the first
+     * look was absent from the cached list and present in a fresh one. Reading a state nobody asked about would be worse than reading none,
+     * and the cost is microseconds once per 200 ms of an episode.
+     */
+    private static Observation Observe(int threadId)
     {
       if (threadId <= 0)
       {
-        return null;
+        return new Observation(false, false, null, 0);
       }
 
       try
       {
-        /*
-         * Held rather than fetched per sample: a ProcessThread belongs to the Process it came from, so disposing that would leave the
-         * cached thread unreadable, and walking the thread list every 200 ms of an episode is the cost we are trying not to pay.
-         */
-        _process ??= Process.GetCurrentProcess();
+        using var process = Process.GetCurrentProcess();
 
-        foreach (ProcessThread candidate in _process.Threads)
+        foreach (ProcessThread candidate in process.Threads)
         {
-          if (candidate.Id == threadId)
+          if (candidate.Id != threadId)
           {
-            return candidate;
+            continue;
           }
+
+          var waiting = candidate.ThreadState == System.Diagnostics.ThreadState.Wait;
+          return new Observation(true, waiting, waiting ? WaitReasonText(candidate) : null, ElapsedMs(candidate));
         }
       }
-      catch (Exception)
+      catch (Exception ex)
       {
-        /* No access to the thread list: every episode reports n/a rather than nothing at all. */
+        /* Enumerating threads is unsupported on some platforms and throws instead of returning empty. The complaint names itself rather than
+         * claiming the thread had gone away: those two read differently, and one of them would be a bug in this file.
+         */
+        _note = $"reading the thread list failed: {ex.GetType().Name}";
+        return new Observation(false, false, null, 0);
       }
 
-      return null;
+      return new Observation(false, false, null, 0);
     }
 
     /*

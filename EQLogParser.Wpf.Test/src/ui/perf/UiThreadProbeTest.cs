@@ -50,6 +50,37 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
+    public void AThreadCreatedAfterTheFirstLookIsStillFound()
+    {
+      /*
+       * The probe reads a fresh Process for every observation, and this test is why it has to. The thread list a Process hands back is a snapshot
+       * of the moment it was first read, so holding one makes every thread created afterwards invisible — which is how the two episode tests below
+       * came back "n/a" while this one passed: their watched threads were started inside the test, after something else had already looked. That
+       * was measured on a scratch program before the fix went in: absent from a held Process, present in a fresh one.
+       */
+      Assert.IsTrue(UiThreadProbe.IsWatchable(UiThreadProbe.CaptureThreadId()), "the probe should find the thread running this test");
+
+      var started = new ManualResetEventSlim(false);
+      var release = new ManualResetEventSlim(false);
+      int newerId = 0;
+
+      var worker = new Thread(() =>
+      {
+        newerId = UiThreadProbe.CaptureThreadId();
+        started.Set();
+        release.Wait(2000);
+      }) { IsBackground = true };
+
+      worker.Start();
+      Assert.IsTrue(started.Wait(2000), "the worker thread should have reported its id");
+      Assert.IsTrue(UiThreadProbe.IsWatchable(newerId),
+        $"a thread made after the probe last looked should still be findable (newer id {newerId})");
+
+      release.Set();
+      worker.Join(2000);
+    }
+
+    [TestMethod]
     public void AThreadHeldBySomethingElseReadsAsBlocked()
     {
       var inside = new ManualResetEventSlim(false);

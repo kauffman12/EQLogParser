@@ -2300,6 +2300,14 @@ common case in a thread that flaps, not the exotic one, so the reason comes back
 could not be told apart from a probe that quietly stopped listening, so the line now names which half failed: no thread id captured, or an id
 this process's thread list does not contain. `TheProbeNamesTheThreadItIsStandingOn` checks those two halves separately for the same reason.
 
+A second trap in the same API, found by a test failing on Windows and passing here: **the thread list a `Process` hands back is a snapshot of
+the moment that object first read it**. Holding one Process to "avoid the cost" of fetching another makes every thread created afterwards
+invisible to it — a worker started five seconds later simply is not in the list, and reports as "not in this process" forever. Measured on a
+scratch program before changing anything: absent from the held Process, present after `Refresh()`, present in a fresh `GetCurrentProcess()`.
+So each observation takes a fresh Process, reads state, reason and CPU inside it, and keeps nothing; the cost is microseconds once per 200 ms
+of an episode, and `AThreadCreatedAfterTheFirstLookIsStillFound` is there to keep it that way. The symptoms of getting this wrong were exactly
+the misleading kind: the id was correct, the thread was alive and readable, and the only wrong answer came from the reader's own stale copy.
+
 The threshold that opens an episode is settable — `PerfStallMs` in `settings.ini`, default 1000 ms, floor 100 ms — because one second is the
 right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
 nothing of ours running: the same event as a multi-second stall at a fifth of the size, and easiest to catch while it is small. Nobody should
