@@ -52,6 +52,17 @@ namespace EQLogParser
     private static readonly int LineEvalId = PerfCounters.Register("trig.line", uiThread: false);
     private static readonly int LineTestsId = PerfCounters.Register("trig.tests", uiThread: false);
     private static readonly int ActiveTriggersId = PerfCounters.Register("trig.active", uiThread: false);
+
+    /*
+     * How many triggers every live processor is testing lines against, summed. There is one processor per watched log plus the tester, and a
+     * level written by whichever of them last rebuilt its set would print 0 for an idle character over the 608 that are actually running - which
+     * is exactly what it did (a soak showed trig.active=0 in windows whose trig.tests/trig.line ratio was 608). Each instance contributes its own
+     * count and takes it back on dispose, so the number on the heartbeat is the one a line pays.
+     */
+    private static int _activeTotal;
+
+    /* What this instance last contributed to that sum, so changing it is a delta rather than a guess. */
+    private int _reportedActive;
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
     // Source of truth for variable values — ConcurrentDictionary allows lock-free reads during text processing.
@@ -1422,7 +1433,8 @@ namespace EQLogParser
       }
 
       /* The set size belongs on the heartbeat: "4,227 enabled triggers" is the difference between a clean soak and somebody's freeze. */
-      PerfCounters.Gauge(ActiveTriggersId, activeTriggersById.Count);
+      Interlocked.Add(ref _activeTotal, activeTriggersById.Count - Interlocked.Exchange(ref _reportedActive, activeTriggersById.Count));
+      PerfCounters.Gauge(ActiveTriggersId, Volatile.Read(ref _activeTotal));
 
       if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") is false)
       {
@@ -1947,6 +1959,9 @@ namespace EQLogParser
       if (_isDisposed) return;
       _isDisposed = true;
       _ready = false;
+
+      /* Takes this processor's share out of the heartbeat's trig.active; a stopped matcher must not keep being counted as work. */
+      Interlocked.Add(ref _activeTotal, -Interlocked.Exchange(ref _reportedActive, 0));
       await StopTriggersAsync(true).ConfigureAwait(false);
 
       TriggerStateDB.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
