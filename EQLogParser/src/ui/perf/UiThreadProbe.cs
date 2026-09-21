@@ -39,6 +39,13 @@ namespace EQLogParser
     private static int _waitSamples;
     private static int _runSamples;
 
+    /*
+     * Why an episode could not be watched, when it could not. "n/a" on a stall line is two different complaints - the id was never
+     * captured, or the thread list does not contain it - and they mean different things to whoever reads it, so the reason is kept rather
+     * than flattened into the same three characters.
+     */
+    private static string _note;
+
     /* The reason most often seen while waiting: one wait dominates an episode, and a list of reasons would be read as uncertainty. */
     private static readonly Dictionary<string, int> _reasons = [];
 
@@ -52,9 +59,10 @@ namespace EQLogParser
       {
         return GetCurrentThreadId();
       }
-      catch (Exception)
+      catch (Exception ex)
       {
         /* A build or platform without it: the episodes report n/a instead, and every other number stays. */
+        _note = $"GetCurrentThreadId failed: {ex.GetType().Name}";
         return 0;
       }
     }
@@ -64,8 +72,15 @@ namespace EQLogParser
     {
       lock (_gate)
       {
+        _note = null;
         _watchedId = threadId;
         _thread = FindThread(threadId);
+
+        if (_thread is null)
+        {
+          _note = threadId <= 0 ? "no thread id was captured" : $"thread {threadId} is not in this process";
+        }
+
         _cpuBaseMs = _thread is null ? 0 : ElapsedMs(_thread);
         _waitSamples = 0;
         _runSamples = 0;
@@ -78,34 +93,45 @@ namespace EQLogParser
     {
       lock (_gate)
       {
-        if (threadId != _watchedId)
+        try
         {
-          return;
+          if (threadId != _watchedId)
+          {
+            return;
+          }
+
+          /*
+           * Enumerated again for every sample rather than cached: a ProcessThread's properties are a snapshot taken when it was read, so the
+           * one held from the start of an episode would keep answering with the state the thread had back then — which is exactly not the
+           * question. Walking this process's own thread list costs microseconds, and only during an episode.
+           */
+          _thread = FindThread(threadId);
+
+          if (_thread is null)
+          {
+            return;
+          }
+
+          if (_thread.ThreadState == System.Diagnostics.ThreadState.Wait)
+          {
+            _waitSamples++;
+
+            var reason = WaitReasonText(_thread);
+            _reasons.TryGetValue(reason, out var seen);
+            _reasons[reason] = seen + 1;
+          }
+          else
+          {
+            _runSamples++;
+          }
         }
-
-        /*
-         * Enumerated again for every sample rather than cached: a ProcessThread's properties are a snapshot taken when it was read, so the
-         * one held from the start of an episode would keep answering with the state the thread had back then — which is exactly not the
-         * question. Walking this process's own thread list costs microseconds, and only during an episode.
-         */
-        _thread = FindThread(threadId);
-
-        if (_thread is null)
+        catch (Exception ex)
         {
-          return;
-        }
-
-        if (_thread.ThreadState == System.Diagnostics.ThreadState.Wait)
-        {
-          _waitSamples++;
-
-          var reason = _thread.WaitReason.ToString();
-          _reasons.TryGetValue(reason, out var seen);
-          _reasons[reason] = seen + 1;
-        }
-        else
-        {
-          _runSamples++;
+          /*
+           * Never let this reach the watchdog's pool loop: its own handler stops the monitor when a poll throws, which would trade a
+           * measured stall for no stall detection at all. A sample is a diagnostic; losing one is cheaper than that.
+           */
+          _note = $"sampling failed: {ex.GetType().Name}";
         }
       }
     }
@@ -122,7 +148,7 @@ namespace EQLogParser
 
         if (samples == 0)
         {
-          return "ui thread: n/a";
+          return _note is null ? "ui thread: n/a" : $"ui thread: n/a ({_note})";
         }
 
         var builder = new StringBuilder();
@@ -163,9 +189,17 @@ namespace EQLogParser
         _watchedId = 0;
         _waitSamples = 0;
         _runSamples = 0;
+        _note = null;
         _reasons.Clear();
       }
     }
+
+    /*
+     * Whether this id names a thread of this process right now. Split out because a probe that reports nothing has two independent halves
+     * that can fail — capturing the id, and finding it in the process's own thread list — and a test has to be able to say which one broke
+     * rather than observe the same blank twice.
+     */
+    internal static bool IsWatchable(int threadId) => FindThread(threadId) is not null;
 
     private static string DominantReason()
     {
@@ -214,6 +248,24 @@ namespace EQLogParser
       }
 
       return null;
+    }
+
+    /*
+     * The reason for a wait, or "unknown". Read separately from the state because `ProcessThread` fetches each property on demand rather
+     * than from one snapshot: asking for `WaitReason` after the thread has woken throws InvalidOperationException — "only available if the
+     * ThreadState is Wait" — which is a race between two reads of the same object, and the common case rather than the exotic one when a
+     * thread is flapping. A sample that still says it waited is worth keeping; the name of the wait is not worth throwing over.
+     */
+    private static string WaitReasonText(ProcessThread thread)
+    {
+      try
+      {
+        return thread.WaitReason.ToString();
+      }
+      catch (Exception)
+      {
+        return "unknown";
+      }
     }
 
     private static long ElapsedMs(ProcessThread thread)

@@ -2290,9 +2290,15 @@ UI STALL closed: beat ran 46031 ms late (first seen at 1000 ms) | open fct+trigl
 ```
 
 Blocked with almost no CPU is a wait, and the hunt is a lock or a call into something outside us; running with wall-matching CPU is work,
-and the next step is an external trace (`dotnet-trace collect -p <pid>`) against code we will then know is hot. `n/a` means the thread could
-not be read, which is stated rather than guessed. Sampling only happens during an episode, and every call is guarded: a probe that threw
-while reporting a frozen interface would replace a symptom with a crash.
+and the next step is an external trace (`dotnet-trace collect -p <pid>`) against code we will then know is hot. Sampling only happens during
+an episode, and every call is guarded: a probe that threw while reporting a frozen interface would replace a symptom with a crash — the
+watchdog's own poll handler stops monitoring when a poll throws, which is the one outcome worse than an unmeasured stall.
+
+Two things learned by running this rather than reasoning about it. `ProcessThread` answers each property from a fresh query instead of one
+snapshot, so asking for `WaitReason` a moment after the thread wakes throws ("only available if the ThreadState is Wait") — that is the
+common case in a thread that flaps, not the exotic one, so the reason comes back `unknown` and the sample still counts. And `n/a` on its own
+could not be told apart from a probe that quietly stopped listening, so the line now names which half failed: no thread id captured, or an id
+this process's thread list does not contain. `TheProbeNamesTheThreadItIsStandingOn` checks those two halves separately for the same reason.
 
 The threshold that opens an episode is settable — `PerfStallMs` in `settings.ini`, default 1000 ms, floor 100 ms — because one second is the
 right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
