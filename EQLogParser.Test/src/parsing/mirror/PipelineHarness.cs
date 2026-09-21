@@ -59,7 +59,15 @@ internal static class PipelineHarness
         return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
     }
 
-    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror)
+    // onEvent observes every processed damage record from the test thread (same instant the
+    // pipeline sees it) — debugging hook for live-state inspection of the current pipeline.
+    public static MirrorRunResult RunFileWithMirror(string path, Action<DamageProcessedEvent> onEvent)
+    {
+        var (fights, nonTanking, derived, facts, timeline) = RunCore(path, withMirror: true, onEvent);
+        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
+    }
+
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
     {
         // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -72,11 +80,23 @@ internal static class PipelineHarness
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
 
+        // The registry is a process-lifetime singleton the parsers read for every name lookup;
+        // without this, verifications from earlier tests' logs leak into this run's routing
+        // (measured: the same real log compared as 4473 vs 4274 current fights across two runs).
+        // Same pattern LineParsersTest uses. In tests ConfigUtil.ServerName is empty, so Clear()
+        // does not Save() anything.
+        PlayerRegistry.Instance.Clear();
+
         // Pin the managers for the duration of this run and restore whatever preceded it: parser
         // statics (DamageLineParser.FightManager) and the default singleton are process-global and
-        // other test classes set/leak them. Note: singletons the parsers read for names
-        // (PlayerRegistry, ConfigUtil) still accumulate across runs — acceptable for Phase 0/1,
-        // revisit if comparisons show warm-state drift.
+        // other test classes set/leak them.
+        Action<DamageProcessedEvent>? observer = null;
+        if (onEvent is not null)
+        {
+            observer = e => onEvent(e);
+            DamageLineParser.EventsDamageProcessed += observer;
+        }
+
         var priorInstance = FightManager.Instance;
         var priorParserFm = DamageLineParser.FightManager;
         var fm = new FightManager();
@@ -147,13 +167,16 @@ internal static class PipelineHarness
 
         // Wait for a full drain before Dispose (which would otherwise race the consumer and drop
         // the tail). Also surfaces consumer exceptions that LogProcessor only logs in-app.
+        // Cap scales with file size: fixtures get 60 s, a 588 MB log gets ~20 — a hard failure
+        // here means the pipeline stalled, not that we ran out of patience.
+        var drainCap = TimeSpan.FromSeconds(Math.Max(60, new FileInfo(path).Length / (1024.0 * 1024) * 2));
         var completion = processor.Completion;
         if (completion is not null)
         {
             try
             {
-                if (!completion.Wait(TimeSpan.FromSeconds(60)))
-                    throw new TimeoutException($"pipeline did not drain within 60s ({path})");
+                if (!completion.Wait(drainCap))
+                    throw new TimeoutException($"pipeline did not drain within {drainCap.TotalSeconds:F0}s ({path})");
             }
             catch (AggregateException ae) when (ae.InnerException is not TimeoutException)
             {
@@ -174,13 +197,15 @@ internal static class PipelineHarness
         List<DerivedFight> derived = [];
         if (withMirror && facts is not null && timeline is not null)
         {
-            // Phase 1 bootstrap seed (Phase 2 rules replace this): the registry's own knowledge —
-            // player-side names with their evidence times, so ingest-time replay matches what
-            // IsPetOrPlayerOrMerc answered at each line.
+            // Identity evidence for the Phase 2 rules (and report context): the registry's own
+            // knowledge with evidence times. The replay itself reads the per-fact registry
+            // verdicts captured by the mirror — that is what IsPetOrPlayerOrMerc answered at
+            // each line.
             SeedIdentity(timeline, facts, firstTs, lastTs);
-            derived = FightDeriver.Derive(facts, timeline);
+            derived = FightDeriver.Derive(facts);
         }
 
+        if (observer is not null) DamageLineParser.EventsDamageProcessed -= observer;
         DamageLineParser.ResetProcessState();
         DamageLineParser.FightManager = priorParserFm;
         FightManager.Instance = priorInstance;

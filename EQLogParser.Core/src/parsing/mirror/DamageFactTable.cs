@@ -79,6 +79,15 @@ namespace EQLogParser.Mirror
     public const byte FlagAttackerIsSpell = 1;
     public const byte FlagOwnerInLine = 2;   // ownership evidence ("X`s pet", "Owner: X") present on the raw line
 
+    // What PlayerRegistry.IsPetOrPlayerOrMerc answered for this name at the instant the parser
+    // fired this event — captured by the mirror on the same thread, same instant as FightManager
+    // consumes it. This is a FACT (what the current pipeline saw), not a judgment: replaying the
+    // pipeline requires the same answers, and Phase 2 rules layer retroactive reclassification on
+    // top of them. Verified mid-log names therefore read player-side only from their evidence time
+    // onward — exactly like the live registry did.
+    public const byte FlagAttkPlayerSide = 4;
+    public const byte FlagDefPlayerSide = 8;
+
     // consumer-order sequence across BOTH fact streams — preserves within-second line order, which
     // the slain queue's flush-vs-enqueue decisions depend on
     public readonly int Seq;
@@ -109,6 +118,8 @@ namespace EQLogParser.Mirror
 
     public bool AttackerIsSpell => (Flags & FlagAttackerIsSpell) != 0;
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;
+    public bool AttackerPlayerSide => (Flags & FlagAttkPlayerSide) != 0;
+    public bool DefenderPlayerSide => (Flags & FlagDefPlayerSide) != 0;
   }
 
   // One "X was slain by Y!" / "X died." line.
@@ -128,12 +139,59 @@ namespace EQLogParser.Mirror
     }
   }
 
+  // A registry state change that the current pipeline consumes as a side effect. Captured in
+  // consumer order so a replay can apply it at exactly the point the live pipeline did — most
+  // importantly VerifiedPet, which makes FightManager.RemoveFight silently drop any active fight
+  // for that name (no Dead flag), the only way a fight closes without damage, expiry, or a slain
+  // line. The other kinds have no fight-side effect in today's pipeline; they are captured so
+  // Phase 2 rules can reason about when each name became (or stopped being) player-side.
+  internal readonly struct IdentityEvent
+  {
+    public const byte VerifiedPet = 1;
+    public const byte VerifiedPlayer = 2;
+    public const byte RemovedVerifiedPet = 3;
+    public const byte RemovedVerifiedPlayer = 4;
+
+    public readonly int Seq;
+    // Best-effort: the last BeginTime observed before this event fired (registry events carry no
+    // timestamp). Replay order is by Seq, never by this field.
+    public readonly long TimeS;
+    public readonly short NameIdx;
+    public readonly byte Kind;
+
+    public IdentityEvent(int seq, long timeS, short nameIdx, byte kind)
+    {
+      Seq = seq;
+      TimeS = timeS;
+      NameIdx = nameIdx;
+      Kind = kind;
+    }
+  }
+
+  // One taunt line. The current pipeline runs GetFight(npc) ?? Create(npc, t) on every taunt —
+  // a taunt can therefore open a fight that no damage line ever touches.
+  internal readonly struct TauntFact
+  {
+    public readonly int Seq;
+    public readonly long TimeS;   // dotnet-epoch seconds — see DeathFact.TimeS
+    public readonly short NpcIdx;
+
+    public TauntFact(int seq, long timeS, short npcIdx)
+    {
+      Seq = seq;
+      TimeS = timeS;
+      NpcIdx = npcIdx;
+    }
+  }
+
   // Storage contract for the fact tables (D2: in-RAM now, shaped so a chunked spill can be added
   // later without touching the mirror or the deriver).
   internal interface IFactTable
   {
     int FactCount { get; }
     int DeathCount { get; }
+    int IdentityEventCount { get; }
+    int TauntCount { get; }
     IReadOnlyList<string> InternedNames { get; }
     short InternName(string name);
     string NameOf(short idx);
@@ -141,8 +199,12 @@ namespace EQLogParser.Mirror
     string SubtypeOf(ushort idx);
     void AddFact(DamageFact fact);
     void AddDeath(DeathFact death);
+    void AddIdentity(IdentityEvent identity);
+    void AddTaunt(TauntFact taunt);
     ReadOnlySpan<DamageFact> Facts { get; }
     ReadOnlySpan<DeathFact> Deaths { get; }
+    ReadOnlySpan<IdentityEvent> IdentityEvents { get; }
+    ReadOnlySpan<TauntFact> Taunts { get; }
   }
 
   // In-RAM implementation: preallocated buffers (capacity estimated from file size by the caller),
@@ -156,6 +218,10 @@ namespace EQLogParser.Mirror
     private int _factCount;
     private DeathFact[] _deaths;
     private int _deathCount;
+    private IdentityEvent[] _identities;
+    private int _identityCount;
+    private TauntFact[] _taunts;
+    private int _tauntCount;
 
     private readonly List<string> _names = [];
     private readonly Dictionary<string, short> _nameMap = new(StringComparer.Ordinal);
@@ -166,14 +232,20 @@ namespace EQLogParser.Mirror
     {
       _facts = new DamageFact[initialCapacity];
       _deaths = new DeathFact[Math.Max(16, initialCapacity / 64)];
+      _identities = new IdentityEvent[256];   // registry changes are rare (verifications), not per-line
+      _taunts = new TauntFact[256];
     }
 
     public int FactCount => _factCount;
     public int DeathCount => _deathCount;
+    public int IdentityEventCount => _identityCount;
+    public int TauntCount => _tauntCount;
     public IReadOnlyList<string> InternedNames => _names;
 
     public ReadOnlySpan<DamageFact> Facts => _facts.AsSpan(0, _factCount);
     public ReadOnlySpan<DeathFact> Deaths => _deaths.AsSpan(0, _deathCount);
+    public ReadOnlySpan<IdentityEvent> IdentityEvents => _identities.AsSpan(0, _identityCount);
+    public ReadOnlySpan<TauntFact> Taunts => _taunts.AsSpan(0, _tauntCount);
 
     // Names are interned with ordinal exactness — the same keying the current pipeline uses for
     // fight map keys (ParserUtil normalization happens upstream in the parsers).
@@ -214,7 +286,22 @@ namespace EQLogParser.Mirror
       _deaths[_deathCount++] = death;
     }
 
+    public void AddIdentity(IdentityEvent identity)
+    {
+      if (_identityCount == _identities.Length) Array.Resize(ref _identities, _identities.Length * 2);
+      _identities[_identityCount++] = identity;
+    }
+
+    public void AddTaunt(TauntFact taunt)
+    {
+      if (_tauntCount == _taunts.Length) Array.Resize(ref _taunts, _taunts.Length * 2);
+      _taunts[_tauntCount++] = taunt;
+    }
+
     // Approximate in-RAM size of the fact buffers (for the D2 revisit trigger, ~512 MB).
-    public long EstimatedBytes => (long)_facts.Length * Marshal.SizeOf<DamageFact>() + (long)_deaths.Length * Marshal.SizeOf<DeathFact>();
+    public long EstimatedBytes => (long)_facts.Length * Marshal.SizeOf<DamageFact>()
+      + (long)_deaths.Length * Marshal.SizeOf<DeathFact>()
+      + (long)_identities.Length * Marshal.SizeOf<IdentityEvent>()
+      + (long)_taunts.Length * Marshal.SizeOf<TauntFact>();
   }
 }

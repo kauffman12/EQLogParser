@@ -71,10 +71,9 @@ public class MirrorComparisonTest
         var run = PipelineHarness.RunFileWithMirror(path);
         var withMirrorMs = sw.ElapsedMilliseconds;
 
-        var timeline = run.Timeline;
         var facts = run.Facts;
         sw.Restart();
-        _ = FightDeriver.Derive(facts, timeline);
+        _ = FightDeriver.Derive(facts);
         var deriveMs = sw.ElapsedMilliseconds;
 
         Console.WriteLine($"[perf] {Path.GetFileName(path)}: baseline={baselineMs}ms withMirror={withMirrorMs}ms derive={deriveMs}ms facts={facts.FactCount}");

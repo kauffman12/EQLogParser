@@ -4,12 +4,18 @@ namespace EQLogParser.Mirror
   // FightManager.HandleDamageProcessed. The decision logic (direction per record, fight creation,
   // expiry, slain flush) is a line-for-line replay of the current pipeline with two deliberate
   // swaps:
-  //   * PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name) -> timeline.IdentityAt(name, t)
-  //     (Phase 1 seeds this from verification events; Phase 2 rules make it retroactive)
+  //   * PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name) at ingest time -> the fact's own
+  //     AttackerPlayerSide/DefenderPlayerSide flags: the mirror captured exactly that call's
+  //     answer on the same thread at the same instant (a fact, not a judgment — verified
+  //     mid-log names read player-side only from their evidence time onward, like the live
+  //     registry did). Phase 2 rules will layer retroactive reclassification over this.
   //   * string-keyed per-second combo cache / spell cache -> index/struct keyed (no allocs)
   // Everything else — EQDataStore.IsKnownNpc, PlayerRegistry.IsPossiblePlayerName, the expiry and
   // slain-queue state machines — uses the same calls the current pipeline makes, so an identical
-  // fact stream with identical identity answers must produce identical fights.
+  // fact stream must produce identical fights.
+  //
+  // EntityTimeline / identity rules are not consulted here yet: Phase 2 wires them in as a
+  // retroactive overlay over the captured registry verdicts.
   internal static class FightDeriver
   {
     private const int MaxTimeout = FightManager.MaxTimeout;     // 60 s — hard fight expiry
@@ -18,7 +24,6 @@ namespace EQLogParser.Mirror
 
     internal sealed class DeriveContext
     {
-      public EntityTimeline Timeline;
       public IFactTable Facts;
       public Dictionary<short, DerivedFight> ActiveFights = [];
       public List<DerivedFight> Fights = [];
@@ -32,30 +37,50 @@ namespace EQLogParser.Mirror
       public int NonTankingSeq;
     }
 
-    // facts and deaths must be in consumer order (they are: appended by the mirror as events fire).
-    public static List<DerivedFight> Derive(IFactTable facts, EntityTimeline timeline)
+    // all four streams are in consumer order (Seq is a single counter assigned by the mirror at
+    // append time); a replay must apply them in exactly that order, so each step takes the lowest
+    // Seq among the stream heads.
+    public static List<DerivedFight> Derive(IFactTable facts)
     {
-      var ctx = new DeriveContext { Timeline = timeline, Facts = facts };
-      var span = facts.Facts;
+      var ctx = new DeriveContext { Facts = facts };
+      var damages = facts.Facts;
       var deaths = facts.Deaths;
-      var deathCursor = 0;
+      var identities = facts.IdentityEvents;
+      var taunts = facts.Taunts;
+      var d = 0;
+      var x = 0;
+      var id = 0;
+      var t2 = 0;
 
-      for (var i = 0; i < span.Length; i++)
+      while (d < damages.Length || x < deaths.Length || id < identities.Length || t2 < taunts.Length)
       {
-        // merge the death stream in exact line order (Seq is assigned by the mirror at append time)
-        while (deathCursor < deaths.Length && deaths[deathCursor].Seq < span[i].Seq)
+        // Seqs are unique (one shared counter), so exactly one stream head owns the minimum.
+        var minSeq = int.MaxValue;
+        if (d < damages.Length) minSeq = Math.Min(minSeq, damages[d].Seq);
+        if (x < deaths.Length) minSeq = Math.Min(minSeq, deaths[x].Seq);
+        if (id < identities.Length) minSeq = Math.Min(minSeq, identities[id].Seq);
+        if (t2 < taunts.Length) minSeq = Math.Min(minSeq, taunts[t2].Seq);
+
+        if (d < damages.Length && damages[d].Seq == minSeq)
         {
-          HandleDeath(deaths[deathCursor], ctx);
-          deathCursor++;
+          HandleDamageFact(in damages[d], d, ctx);
+          d++;
         }
-
-        HandleDamageFact(span[i], i, ctx);
-      }
-
-      while (deathCursor < deaths.Length)
-      {
-        HandleDeath(deaths[deathCursor], ctx);
-        deathCursor++;
+        else if (x < deaths.Length && deaths[x].Seq == minSeq)
+        {
+          HandleDeath(deaths[x], ctx);
+          x++;
+        }
+        else if (id < identities.Length && identities[id].Seq == minSeq)
+        {
+          HandleIdentity(identities[id], ctx);
+          id++;
+        }
+        else
+        {
+          HandleTaunt(taunts[t2], ctx);
+          t2++;
+        }
       }
 
       // end-of-log flush — in the app the next line's CheckSlainQueue does this; a finished fact
@@ -95,6 +120,31 @@ namespace EQLogParser.Mirror
       ctx.SlainTime = double.NaN;
     }
 
+    // mirrors FightManager's EventsNewVerifiedPet hook: RemoveFight drops the matching active
+    // fight WITHOUT setting Dead (the object survives in AllFights, dead=false) — the only way a
+    // current-pipeline fight closes without damage, expiry, or a slain line. The other kinds have
+    // no fight-side effect in today's pipeline; Phase 2 rules will consume them.
+    private static void HandleIdentity(in IdentityEvent identity, DeriveContext ctx)
+    {
+      if (identity.Kind == IdentityEvent.VerifiedPet)
+      {
+        ctx.ActiveFights.Remove(identity.NameIdx);
+      }
+    }
+
+    // Taunts have no replayed state effect: FightManager.HandleNewTaunt does GetFight(npc) ??
+    // Create(npc, t), but Create only constructs the object — it never inserts into
+    // _activeFights and never fires EventsNewFight, so for a name without an active fight the
+    // result is an orphan that absorbs one TauntBlock and dies. For an active fight the block is
+    // appended to its TauntBlocks, which feed no compared field and do not arm the expiry gate
+    // (DamageBlocks only). The fact is kept in the stream as evidence for Phase 2 rules.
+    private static void HandleTaunt(in TauntFact taunt, DeriveContext ctx)
+    {
+      // intentionally stateless — see comment above
+      _ = taunt;
+      _ = ctx;
+    }
+
     private static void HandleDamageFact(in DamageFact fact, int factIndex, DeriveContext ctx)
     {
       var t = (double)fact.TimeS;
@@ -117,7 +167,8 @@ namespace EQLogParser.Mirror
         if (t - ctx.LastProcessTime > RecentSpellTime) ctx.RecentSpells.Clear();
       }
 
-      var isAttackerPlayer = IsPlayerSide(ctx.Timeline, atkName, t) || atkName == Labels.Rs;
+      // mirrors FightManager: registry verdict at ingest time (the fact's flag) or the "Rs" label
+      var isAttackerPlayer = fact.AttackerPlayerSide || atkName == Labels.Rs;
       if (isAttackerPlayer && (fact.TypeId == LabelTypes.Dd || fact.TypeId == LabelTypes.Dot || fact.TypeId == LabelTypes.Proc) &&
         fact.SubIdx != DamageFactTable.NoSubtype)
       {
@@ -140,12 +191,14 @@ namespace EQLogParser.Mirror
         ctx.ComboCache[comboKey] = defender; // stored PRE-fix, exactly like the original
       }
 
-      // the AttackerIsSpell re-target fix (the current pipeline mutates record.Attacker to "Unknown");
-      // applies to this record only — the combo cache keeps the pre-fix decision
+      // the AttackerIsSpell re-target fix (the current pipeline mutates record.Attacker to
+      // "Unknown"): it re-queries the registry live — same thread/instant, so the fact's captured
+      // verdict is the identical answer. Applies to this record only; the combo cache keeps the
+      // pre-fix decision.
       var isUnkRewrite = false;
       if (fact.AttackerIsSpell && defender)
       {
-        defender = !IsPlayerSide(ctx.Timeline, defName, t);
+        defender = !fact.DefenderPlayerSide;
         if (defender) isUnkRewrite = true;
       }
 
@@ -218,12 +271,15 @@ namespace EQLogParser.Mirror
 
       if (string.Equals(atkName, defName, StringComparison.OrdinalIgnoreCase)) return false; // IsSelfAttack
 
-      var t = (double)fact.TimeS;
+      // NOTE: the original reads RecentSpellCache (written with SubType keys) with
+      // ContainsKey(record.Attacker) — reproduced exactly; it only hits when an attacker's name
+      // was previously recorded as a player spell's SubType.
       var isAttackerPlayerSpell = fact.AttackerIsSpell && ctx.RecentSpells.Contains(atkName);
       isAttackerPlayer = isAttackerPlayer || isAttackerPlayerSpell;
-      var isDefenderPlayer = IsPlayerSide(ctx.Timeline, defName, t);
+      var isDefenderPlayer = fact.DefenderPlayerSide;
       var isAttackerNpc = (!isAttackerPlayer && EQDataStore.Instance.IsKnownNpc(atkName)) || (fact.AttackerIsSpell && !isAttackerPlayerSpell);
-      var isDefenderNpc = (!isDefenderPlayer && EQDataStore.Instance.IsKnownNpc(defName)) || isAttackerPlayerSpell;
+      // the `|| isAttackerPlayer` term is original code (a player's target counts as NPC territory)
+      var isDefenderNpc = (!isDefenderPlayer && EQDataStore.Instance.IsKnownNpc(defName)) || isAttackerPlayerSpell || isAttackerPlayer;
 
       if (isAttackerPlayer && isDefenderPlayer) return false;
 
@@ -269,9 +325,6 @@ namespace EQLogParser.Mirror
 
       return true;
     }
-
-    private static bool IsPlayerSide(EntityTimeline timeline, string name, double t) =>
-      timeline.IdentityAt(name, t) is IdentityKind.Player or IdentityKind.Merc;
 
     // Phase 1 line-derived ownership (R5 input already stored as a flag on the fact): "X`s pet" /
     // "X`s warder" attacker names carry their owner in the name. Registry-gated owner lookups
