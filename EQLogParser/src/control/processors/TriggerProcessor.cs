@@ -40,6 +40,18 @@ namespace EQLogParser
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
+
+    /*
+     * What one log line costs to evaluate, measured on the trigger thread. This path was the one unmeasured suspect in a report of the
+     * numbers stopping: matching runs here, tens of thousands of times a second on a player with a large set (one imported set measures
+     * 4,227 enabled triggers, so a raid line is tested against every one of them), and it runs on a pool thread, which means it can eat a
+     * core without ever showing up as a UI stall. `trig.line` is the whole pass over one line including anything a fired trigger then did;
+     * `trig.tests` is how many patterns that pass asked for, so count times average is the matching bill and the difference is the actions.
+     * Neither may be named as the occupant of a stall — see the uiThread flag — and all three cost one timestamp pair per line.
+     */
+    private static readonly int LineEvalId = PerfCounters.Register("trig.line", uiThread: false);
+    private static readonly int LineTestsId = PerfCounters.Register("trig.tests", uiThread: false);
+    private static readonly int ActiveTriggersId = PerfCounters.Register("trig.active", uiThread: false);
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
     // Source of truth for variable values — ConcurrentDictionary allows lock-free reads during text processing.
@@ -305,6 +317,9 @@ namespace EQLogParser
       if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync().ConfigureAwait(false);
 
+      var evalMark = PerfCounters.Begin(LineEvalId);
+      PerfCounters.Note(LineTestsId, _activeTriggersById.Count);
+
       try
       {
         var beginTicks = DateTime.UtcNow.Ticks;
@@ -360,6 +375,7 @@ namespace EQLogParser
       }
       finally
       {
+        PerfCounters.End(evalMark);
         _previous = lineData;
         _activeTriggerSemaphore.Release();
       }
@@ -1404,6 +1420,9 @@ namespace EQLogParser
           }
         }
       }
+
+      /* The set size belongs on the heartbeat: "4,227 enabled triggers" is the difference between a clean soak and somebody's freeze. */
+      PerfCounters.Gauge(ActiveTriggersId, activeTriggersById.Count);
 
       if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") is false)
       {

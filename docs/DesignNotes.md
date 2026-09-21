@@ -2225,6 +2225,9 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
 | `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
 | `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
+| `trig.line` | span | evaluating one log line against every active trigger, on the trigger thread (**off the UI thread**) — count is lines, average is what a line costs |
+| `trig.tests` | count | patterns that pass asked for: multiplied out, this is the matching bill (an imported set of 4,227 enabled triggers tests every raid line against all of them) |
+| `trig.active` | level | how many triggers the processor currently holds active for a character — the number that separates a clean soak from somebody's freeze |
 
 `Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
 up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the
@@ -2320,8 +2323,8 @@ A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and f
 **no stall at all after the first eight seconds**: across 63 heartbeats the worst beat delay outside startup was 47 ms. The three episodes on
 record are all launch, and all of them read *running* with CPU close to their wall time, so they are our own slowness rather than a wait:
 `app.mainwindow` 3856 ms, `app.firstshow` 1749 ms, `app.voices` 1089 ms (enumerating voices), `app.triggerdb` 227 ms. Every instrumented pass
-held its shape while the raid streamed — `fct.paint` ~1.3 ms worst 30 ms, `trig.timerTick` ~36 a second at 0.1 ms, `ui.fightTable` 20 a second
-`ui.fightTable` once a second at ~1 ms (worst 18 ms) — and `trig.logReset` shows up nine to twenty times a window instead of the two it managed
+held its shape while the raid streamed — `fct.paint` ~1.3 ms worst 30 ms, `trig.timerTick` ~36 a second at 0.1 ms, `ui.fightTable` once a second
+at ~1 ms (worst 18 ms) — and `trig.logReset` shows up nine to twenty times a window instead of the two it managed
 when the log held 605 entries, at 0 ms: the frequency question from an earlier soak, answered by a counter that was already there.
 
 What that run did produce is a memory figure, and it is the one to compare against a machine that really does freeze. The replay allocated
