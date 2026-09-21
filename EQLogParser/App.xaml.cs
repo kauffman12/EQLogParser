@@ -140,6 +140,14 @@ namespace EQLogParser
         Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {Version}, OS: {osVersion.VersionString}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
 
+        /*
+         * The UI-thread watchdog, started before the voice load and the main window so the slow parts of startup are measured with
+         * everything else. It is the only thing that can attribute "the combat numbers stopped for a second": every window here draws
+         * on this one thread, so the freeze has to be caught at the thread and not in whichever window happened to notice. See
+         * UiBeatMonitor and docs/DesignNotes.md ("Instrumenting the UI thread").
+         */
+        UiBeatMonitor.Start(Dispatcher.CurrentDispatcher);
+
         var urlVersion = Version.Replace(".", "-");
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
 
@@ -186,6 +194,7 @@ namespace EQLogParser
 
     protected override async void OnExit(ExitEventArgs e)
     {
+      UiBeatMonitor.Stop();
       LifecycleManager.Shutdown();
       ChatDB.Instance.Stop();
       AudioManager.Instance.Dispose();
