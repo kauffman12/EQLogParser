@@ -2230,6 +2230,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `trig.active` | level | how many triggers the processor currently holds active for a character — the number that separates a clean soak from somebody's freeze |
 | `audio.synth` | span | turning text into samples, measured inside `EQLogParser.Audio` and reported through `AudioManager.PerfSink` because that assembly references no counter code (**off the UI thread**). This is where the engines differ: a neural model on one machine, SAPI or WinRT on the next, and the same build either way |
 | `audio.file` | span | reading and decoding a sound file for a player, including the cache miss that has to open it (**off the UI thread**) |
+| `ui.worldstop` | span | how late the watchdog's own pool timer ran behind its interval, recorded only past 500 ms — the one in-app figure that sees a stop-the-world, since the collection freezes the watchdog too (**off the UI thread**) |
 
 `Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
 up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the
@@ -2336,8 +2337,10 @@ machine is page-file territory, and paging reads as a freeze with almost no CPU:
 nor our code. Two limits on this measurement, stated plainly: the machine had memory to spare, and the runtime's pause counter (22.4 s over the
 run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — a `paused`
 reading is a lifetime share that dilutes toward zero, so read it against the allocation rate, not as this window's cost. GC is cleared for this
-run and no other. One plumbing note for the next collection: `dotnet-counters` recorded only `System.Runtime`, which puts the runtime's pauses on
-a timeline with nothing of ours on it; pass `-c System.Runtime,EQLogParser` to get the trigger spans beside them.
+run and no other. One correction, since this paragraph sent somebody chasing a flag that does not exist: there is no `EventSource` in this
+codebase — `PerfCounters` lives in-process and its only outlet is the heartbeat line — so `-c System.Runtime,EQLogParser` collects nothing of
+ours. The pairing that works is the app's own log beside `dotnet-counters -c System.Runtime --sample-interval 1`, matched by wall clock; and the
+heartbeat now carries the collector's pause itself, which is half of why that pairing was needed.
 
 Speech is on that timeline now too, because two players on one build can disagree about nearly everything except the log they leave behind, and
 audio was the widest gap of that kind. The engine is chosen at startup from which packs happen to exist, so one machine synthesizes through a local
@@ -2346,6 +2349,51 @@ the reasoning that the boring default needs no introduction. It names all three 
 the same clothes. `audio.synth` and `audio.file` arrive through a hook rather than a span: `EQLogParser.Audio` references no counter code and stays
 that way, so durations cross the boundary as numbers (`AudioManager.PerfSink` into `PerfCounters.Record`, which is `End` without the timestamps —
 a span cannot straddle an `await` inside another assembly).
+
+### The freeze the watchdog cannot see, and now can
+
+The run that was meant to settle the memory question settled something sharper first: the app watched a two second freeze go by and reported
+nothing. An outside collector (`dotnet-counters`, 1 s samples, `dotnet.gc.pause.time`) shows **2,292 ms of pause inside the single second at
+19:03:47** — while the heartbeat covering that window reads `beat delay max 0 ms`, `stalls 3` (all three from launch), `gc2 +1`, and heap
+falling 2,784 MB → 1,998 MB. A second one, 699 ms at 19:06:34, is the `dotnet-gcdump` suspending the process to walk the heap.
+
+The reason is structural rather than a bug in the watchdog: a full collection stops *every* managed thread, the pool timer that posts beats
+included. The beat that gets posted after the world resumes is punctual, so "beat delay" measures what the UI thread owed the interface and
+never whether the process existed during the gap. Anything that suspends a whole process — a blocking collection, a gcdump or trace start/stop,
+a debugger break — is invisible to a probe living inside it. Two numbers close that hole:
+
+- **`stopped N ms`** on every heartbeat: the window's own stop time, from `GC.GetTotalPauseDuration()`, which is cumulative and keeps no
+  appointment, so subtracting two readings recovers pauses no beat ever witnessed. The lifetime share stays on the line as `paused …% since start`
+  because it means something else.
+- **`ui.worldstop`** plus a `STOP-THE-WORLD …` warning: the watchdog now times the interval between its *own* callbacks. A gap of
+  `GapReportMs` (500 ms, two and a half polls) counts and maxes into that row; once it reaches the stall threshold it writes its own line,
+  attributed by `ClassifyGap` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for
+  2200 of the 2292 ms", or "no collection in that gap: stopped from outside the runtime (profiler or gcdump, power management, or no CPU for
+  anybody)". That second wording matters: a measurement freeze caused by our own tools must not arrive looking like our code.
+
+What the heap dump says, since 2 GB of it had been unexplained for three soaks: `dotnet-gcdump report` on a 320 MB capture (heap ~2.06 GB, 9.36 M
+objects sampled) puts it in the parsed fight records — `DamageRecord` 2.44 M instances / 186 MB, `HealRecord` 1.92 M / 117 MB, `IAction[]` 63 MB
+across 37,641 arrays, `SpellData[]` 44 MB, `ReceivedSpell` 679 k / 31 MB, `SpellCast` 551 k / 25 MB. About 484 MB of the sample is
+`EQLogParser.Core` types; **WPF and Syncfusion together are under 25 MB**, and nothing audio-related appears at all. So the resident gigabytes are
+the data the tabs draw, proportional to the log, not a UI leak — which also explains the pause: a full collection's cost scales with that heap, and
+launch pays for it in advance (minute one of this run spent **11.2 s** paused while the heap went 624 → 2,997 MB, ~280 ms at a time — a real share
+of a 54 second load). The levers are allocating less during the parse or telling the collector not to compact mid-replay
+(`GCSettings.LatencyMode = SustainedLowLatency`); neither is measured, so neither is done.
+
+The trigger path, from the same run at **608 active triggers** with logsim feeding ~2,350 lines/s: `trig.line` held `avg 0.10 ms` every single
+window for eleven minutes, worst 6–21 ms, with `trig.tests` at 19–30 M patterns per 20 s window — roughly 1.2 M pattern tests a second, about a
+quarter of one core. Linear in the set size, that is ~0.7 ms per line at their 4,227: a few percent of a core in a live raid at 60 lines/s, but
+**seven times the parse cost when a whole file is loaded or replayed**. That is a load-time and memory story, not a dropped-frame story, which is
+worth saying to a player who reports freezes while *opening* a log versus during a fight.
+
+And audio, on `Using windows-tts`: `audio.synth` at n=5–18 a window, **avg 0.7–2.9 ms, worst 9.5 ms**, no warm-up spike anywhere (the startup
+voice enumeration is the 213 ms figure, not a speak call), and no `audio.file` calls at all in eleven minutes. On this machine SAPI synthesis is
+not a freeze source. It is still unmeasured under a set that speaks as often as the imported one, so the hypothesis is unfalsified rather than dead.
+
+One instrument was lying, found only because two numbers disagreed: `trig.active` printed 608 on the first heartbeat and then **0 for ten minutes**
+in windows whose `trig.tests ÷ trig.line` was exactly 608. There is one `TriggerProcessor` per watched log plus the tester, and a level written by
+whichever of them last rebuilt its set prints an idle character's zero over the set that is actually running. It sums across live instances now and
+takes each share back on dispose.
 
 ### Reading a report
 
@@ -2363,8 +2411,9 @@ how long the thread was unavailable. Read them in order:
    thread and not who is chattiest. Each kind gets its own room on the line: with eight surfaces open the spans alone filled ten rows and
    every counter fell off, including the drop counters — the line has to carry what arrived and what was discarded during it, not just what
    ran.
-5. `gc2` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code; a stall
-   with no collections is somebody's loop.
+5. `gc2`, `stopped N ms` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code;
+   a stall with no collections is somebody's loop. And if a freeze is reported by neither the stall lines nor `beat delay`, look for
+   `ui.worldstop` / `STOP-THE-WORLD` before believing the run was clean: those are the ones where nothing inside the process could watch.
 6. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
 
 The session that followed, run specifically to have everything open at once — overlay, meter, text overlay, trigger log and four timer

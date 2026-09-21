@@ -125,6 +125,62 @@ namespace EQLogParser.Wpf.Test
     }
 
     /*
+     * A gap the collections cover is the collector, and it has to be named as such with the generation that did it: a gen2 collection is a
+     * memory-pressure problem while a gen0 is ordinary traffic, and the two are different fixes. This attribution exists because the watchdog
+     * cannot report a stop-the-world as a stall — the beat was never late, the whole process was frozen — so these words are the only trace of
+     * the freeze in the log (measured on a real soak: 2,292 ms stopped inside a window whose "beat delay max" read 0 ms).
+     */
+    [TestMethod]
+    public void AGapTheCollectorOwnsIsBlamedOnTheCollector()
+    {
+      var why = UiBeatMonitor.ClassifyGap(2292, 2200, 1, 0, 1);
+
+      StringAssert.Contains(why, "collector", "a gap the pause counter covers belongs to the collector");
+      StringAssert.Contains(why, "gen2", "the full collection is the one worth naming; gen0 traffic would read differently");
+      StringAssert.Contains(why, $"{2200:0}", "how much of the gap was actually accounted for, so a reader can see the remainder");
+    }
+
+    /* A gen0-only pause must not read as a full collection: it sends the reader looking for a memory problem that is not there. */
+    [TestMethod]
+    public void AYoungGenerationPauseSaysSo()
+    {
+      StringAssert.Contains(UiBeatMonitor.ClassifyGap(600, 580, 4, 0, 0), "gen0",
+        "a gap explained by young collections should not be dressed up as a full one");
+    }
+
+    /* Collections happened but do not explain the wait: say both, because the remainder is the part still looking for a name. */
+    [TestMethod]
+    public void CollectionsThatDoNotCoverTheGapSaySo()
+    {
+      var why = UiBeatMonitor.ClassifyGap(3000, 120, 2, 1, 0);
+
+      StringAssert.Contains(why, "3 collections", "the collections that did happen are still worth counting");
+      StringAssert.Contains(why, $"{3000:0}", "and the gap they failed to explain has to be stated with them");
+    }
+
+    /* No collection at all means something outside the runtime froze the process — a profiler or gcdump, power management, or no CPU. */
+    [TestMethod]
+    public void AGapWithNoCollectionIsNotBlamedOnTheCollector()
+    {
+      var why = UiBeatMonitor.ClassifyGap(1500, 0, 0, 0, 0);
+
+      StringAssert.Contains(why, "no collection", "an innocent collector must be able to say it was innocent");
+      StringAssert.Contains(why, "outside", "and point at what is left: a suspended process, sleep, or starvation");
+    }
+
+    /*
+     * The counters are read on the watchdog's pool thread from several places, so a delta can come back negative when two reads cross. A line
+     * that prints "-42 ms" costs the reader time on arithmetic instead of on the freeze, so the floor is zero.
+     */
+    [TestMethod]
+    public void BackwardsCounterReadsDoNotPrintANegative()
+    {
+      var why = UiBeatMonitor.ClassifyGap(900, -42, -1, -1, -1);
+
+      Assert.IsFalse(why.Contains("-"), $"attribution built from backwards reads should clamp to zero (actual: {why})");
+    }
+
+    /*
      * Queues one self-re-arming callback at ContextIdle: continuous queue work that stays below the beat priority on purpose, so this
      * measures "the interface had things to do" rather than "the interface was denied". A chain at Normal would starve a beat outright,
      * and the monitor calling that a stall would be correct.

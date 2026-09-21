@@ -16,7 +16,7 @@ namespace EQLogParser
    */
   internal static class PerfGc
   {
-    internal readonly record struct Reading(long AllocBytes, long HeapBytes, long WorkingSetBytes, int Gen0, int Gen1, int Gen2, double PausePercent);
+    internal readonly record struct Reading(long AllocBytes, long HeapBytes, long WorkingSetBytes, int Gen0, int Gen1, int Gen2, double PausePercent, double PauseMs);
 
     private const double BytesPerMb = 1024 * 1024.0;
 
@@ -34,13 +34,24 @@ namespace EQLogParser
           GC.CollectionCount(0),
           GC.CollectionCount(1),
           GC.CollectionCount(2),
-          info.PauseTimePercentage);
+          info.PauseTimePercentage,
+          GC.GetTotalPauseDuration().TotalMilliseconds);
       }
       catch (Exception)
       {
-        return new Reading(0, 0, 0, 0, 0, 0, 0);
+        return new Reading(0, 0, 0, 0, 0, 0, 0, 0);
       }
     }
+
+    /*
+     * How many milliseconds of a window the collector spent with every thread stopped, from the runtime's own cumulative total. This is
+     * the number that catches what the beat cannot see: a collection stops the beat monitor's timer along with everything else, so a beat
+     * posted after the world resumed is on time and the watchdog reports nothing (measured: 2,292 ms stopped at 19:03:47 with "beat delay
+     * max 0 ms" in the same window, and the only reason it was found at all is that a soak collector was running beside the app). The
+     * cumulative counter keeps no such appointment - it adds the pause up whether or not anybody was watching, so subtracting two readings
+     * says how much of the window was lost even when the window's beats were all punctual.
+     */
+    internal static double WindowPauseMs(in Reading from, in Reading to) => Math.Max(0, to.PauseMs - from.PauseMs);
 
     /*
      * The work done between two samples. Collection counts are differences - that is what a window means - while the heap and the
@@ -58,7 +69,7 @@ namespace EQLogParser
          one it is subtracted from, and a heartbeat that prints negative bytes spends the reader's time on our arithmetic. */
       var allocBytes = Math.Max(0, to.AllocBytes - from.AllocBytes);
 
-      return $"gc0 {Math.Max(0, to.Gen0 - from.Gen0)} gc1 {Math.Max(0, to.Gen1 - from.Gen1)} gc2 {Math.Max(0, to.Gen2 - from.Gen2)}" +
+      return $"gc0 {Math.Max(0, to.Gen0 - from.Gen0)} gc1 {Math.Max(0, to.Gen1 - from.Gen1)} gc2 {Math.Max(0, to.Gen2 - from.Gen2)} stopped {WindowPauseMs(from, to):0} ms" +
         $" | heap {to.HeapBytes / BytesPerMb:0} MB ws {to.WorkingSetBytes / BytesPerMb:0} MB" +
         $" alloc {(seconds <= 0 ? 0 : allocBytes / BytesPerMb / seconds):0.0} MB/s" +
         $" paused {to.PausePercent:0.##}% since start";

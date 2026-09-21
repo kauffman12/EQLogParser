@@ -37,8 +37,8 @@ namespace EQLogParser
     [TestMethod]
     public void CollectionCountsAreDeltasOverTheWindow()
     {
-      var from = new PerfGc.Reading(1000, 2048, 4096, 5, 2, 1, 3.0);
-      var to = new PerfGc.Reading(9000, 2048, 4096, 8, 2, 1, 7.5);
+      var from = new PerfGc.Reading(1000, 2048, 4096, 5, 2, 1, 3.0, 100);
+      var to = new PerfGc.Reading(9000, 2048, 4096, 8, 2, 1, 7.5, 380);
 
       var line = PerfGc.Format(from, to, 10);
       StringAssert.Contains(line, "gc0 3");
@@ -50,8 +50,8 @@ namespace EQLogParser
     [TestMethod]
     public void AllocationIsPrintedAsARate()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 0);
-      var to = new PerfGc.Reading(8L * 1024 * 1024, 0, 0, 0, 0, 0, 0);
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 0, 0);
+      var to = new PerfGc.Reading(8L * 1024 * 1024, 0, 0, 0, 0, 0, 0, 0);
 
       // Built the same way the code builds it, so a locale that writes decimals with a comma is not read as a failure.
       var expected = $"alloc {(8.0 * 1024 * 1024 / (1024 * 1024) / 10):0.0} MB/s";
@@ -66,8 +66,8 @@ namespace EQLogParser
     [TestMethod]
     public void ABackwardsReadingNeverPrintsANegativeRate()
     {
-      var from = new PerfGc.Reading(50L * 1024 * 1024, 0, 0, 0, 0, 0, 0);
-      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 0);
+      var from = new PerfGc.Reading(50L * 1024 * 1024, 0, 0, 0, 0, 0, 0, 800);
+      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 0, 40);
 
       Assert.IsFalse(PerfGc.Format(from, to, 10).Contains("-"), "no part of a heartbeat may read as negative bytes");
     }
@@ -79,11 +79,40 @@ namespace EQLogParser
     [TestMethod]
     public void ALifetimePauseFigureSaysItIsLifetime()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 3.0);
-      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 7.5);
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 3.0, 100);
+      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 7.5, 100);
 
       // Built the same way the code builds it, so a comma-decimal locale is not read as a failure.
       StringAssert.Contains(PerfGc.Format(from, to, 10), $" paused {(7.5):0.##}% since start");
+    }
+
+    /*
+     * The window's own stopped time, next to the collection deltas. This is the figure the beat monitor structurally cannot produce: a
+     * collection stops the watchdog's timer along with every other thread, so the beat posted after it is on time and the heartbeat reads
+     * "beat delay max 0 ms" through a two second freeze (measured: 2,292 ms stopped at 19:03:47 with the beats in that window punctual). The
+     * runtime's cumulative pause counter has no such appointment to keep, so the difference between two readings says how much of the window
+     * was lost no matter who was watching.
+     */
+    [TestMethod]
+    public void AWindowReportsTheTimeTheWorldWasStopped()
+    {
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 4.0, 1000);
+      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 1, 8.0, 3292);
+
+      StringAssert.Contains(PerfGc.Format(from, to, 20), $"stopped {2292:0} ms",
+        "a window that lost two seconds to the collector has to say so even when no beat was late");
+      Assert.AreEqual(2292, PerfGc.WindowPauseMs(from, to), 1, "the same figure stands on its own for attribution");
+    }
+
+    /* A window with no collection prints a zero rather than inheriting the lifetime total, which would accuse every window of everything. */
+    [TestMethod]
+    public void AWindowWithNoCollectionReportsNoStoppedTime()
+    {
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 8.0, 3292);
+      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 8.0, 3292);
+
+      StringAssert.Contains(PerfGc.Format(from, to, 20), $"stopped {0:0} ms", "an innocent window should read as innocent");
+      Assert.AreEqual(0, PerfGc.WindowPauseMs(to, from), 0, "a backwards pair is zero, not negative");
     }
 
     /* A window of zero seconds is reachable (two beats in the same millisecond) and must not become a divide-by-zero or infinity. */

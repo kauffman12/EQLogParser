@@ -45,6 +45,29 @@ namespace EQLogParser
     /* Longer than this and the machine was asleep or the process was frozen; that is not a hitch and must not be reported as one. */
     internal const long SleepGuardMs = 30_000;
 
+    /*
+     * A poll this late behind its own interval means the pool timer did not run when it was told to, which no beat can report: whatever
+     * stopped it stopped every managed thread in the process, including the one that posts beats. Two and a half times the poll interval, so
+     * an ordinary scheduling wobble stays silent; a whole-app freeze is what this is listening for, and those measure in hundreds of milliseconds.
+     */
+    internal const double GapReportMs = 500;
+
+    /* Two of these inside a second would be one event told twice, so the shout is throttled while every gap keeps being counted. */
+    private const long GapShoutMs = 5_000;
+
+    /*
+     * Where the process stopped as a row on the heartbeat: the count is how many times the world stopped in that window, the max is the
+     * length of the worst freeze. It measures the process rather than any thread, hence uiThread:false - and it is the only in-app number
+     * that sees a stop-the-world at all, because the collection freezes the watchdog's own timer: the beat posted afterwards is punctual, so
+     * "beat delay max" stays at 0 ms while the player watched two seconds of nothing (measured: a 2,292 ms gen2 pause inside a window whose
+     * beat delay read 0 ms, found only because a collector was running outside the app).
+     *
+     * Recorded through Record, which also raises the generic slow-pass warning for anything over its threshold - so a big stop writes two
+     * lines, one that says which span was slow and one that says who did it. Both are throttled; keeping them separate is cheaper than
+     * teaching the slow-pass rule to make an exception.
+     */
+    private static readonly int WorldStopId = PerfCounters.Register("ui.worldstop", uiThread: false);
+
     private static readonly object _gate = new();
     private static readonly List<string> _surfaces = [];
 
@@ -71,6 +94,18 @@ namespace EQLogParser
 
     private static long _windowStartMs;
     private static PerfGc.Reading _gcAtWindow;
+
+    /*
+     * Where the last poll ran, and what the collector had done by then. The interval between this timer's own callbacks is a measurement of
+     * the whole process rather than of the UI thread: see GapReportMs. The collector marks are read every poll because they are four field
+     * reads, and a watchdog that is expensive enough to be turned off has measured nothing.
+     */
+    private static long _lastPollMs;
+    private static double _pollPauseMs;
+    private static int _pollGen0;
+    private static int _pollGen1;
+    private static int _pollGen2;
+    private static long _lastShoutMs;
 
     /*
      * How many stalls have been detected since Start, and how bad they were. Counted at detection rather than on the closing beat, so an
@@ -116,6 +151,9 @@ namespace EQLogParser
       var now = Environment.TickCount64;
       _postedMs = now;
       _windowStartMs = now;
+      _lastPollMs = now;
+      _lastShoutMs = 0;
+      MarkCollector();
       _gcAtWindow = PerfGc.Sample();
 
       _timer = new Timer(Poll, null, pollMs, pollMs);
@@ -190,6 +228,22 @@ namespace EQLogParser
 
         var now = Environment.TickCount64;
 
+        /*
+         * The gap between this callback and the last one is taken before anything else, so it carries the delay rather than the cost of
+         * reporting it. Sleep-sized gaps are not reported at all: a laptop that was closed for an hour has not frozen.
+         */
+        var gap = now - _lastPollMs;
+        _lastPollMs = now;
+
+        if (gap >= GapReportMs && gap < SleepGuardMs)
+        {
+          NoteGap(gap, now);
+        }
+        else
+        {
+          MarkCollector();
+        }
+
         if (Volatile.Read(ref _inFlight) == 1)
         {
           var waited = now - Volatile.Read(ref _postedMs);
@@ -236,6 +290,64 @@ namespace EQLogParser
         Stop();
         PerfJournal.Note($"UI beat monitor stopped: {ex.Message}");
       }
+    }
+
+    /*
+     * Who stopped the world, in as many words as these four numbers can carry. The runtime's cumulative pause counter is the tie-breaker:
+     * it counts time the collector held every thread, so a gap that the collections do not explain was stopped by something outside the
+     * managed runtime - a profiler or gcdump suspending the process, power management, or a machine with no CPU left for anybody.
+     */
+    internal static string ClassifyGap(double gapMs, double pauseMs, int gen0, int gen1, int gen2)
+    {
+      var collections = Math.Max(0, gen0) + Math.Max(0, gen1) + Math.Max(0, gen2);
+
+      if (pauseMs >= gapMs * 0.5)
+      {
+        return $"collector ({(gen2 > 0 ? "gen2, the full collection" : gen1 > 0 ? "gen1" : "gen0")}), it held every thread for {Math.Max(0, pauseMs):0} of the {gapMs:0} ms";
+      }
+
+      return collections > 0
+        ? $"{collections} collection(s) account for only {Math.Max(0, pauseMs):0} of the {gapMs:0} ms - the rest is not the collector"
+        : $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, or no CPU for anybody)";
+    }
+
+    /* Remembers what the collector had done as of this poll, so the next gap can be attributed. Cheap enough to do every poll. */
+    private static void MarkCollector()
+    {
+      _pollGen0 = GC.CollectionCount(0);
+      _pollGen1 = GC.CollectionCount(1);
+      _pollGen2 = GC.CollectionCount(2);
+      _pollPauseMs = GC.GetTotalPauseDuration().TotalMilliseconds;
+    }
+
+    /*
+     * Says out loud that every thread in the process was stopped for a while, and by whom as far as it can be known. Recorded on every gap
+     * over GapReportMs - the count and the worst one then ride along on the heartbeat as ui.worldstop - and written as its own line once the
+     * gap reaches the stall threshold, because that is the event a player describes as "everything stopped" and it needs its own timestamp:
+     * the beat monitor cannot report it as a UI stall, since the beat was never late; the beat's own process was frozen with everything else.
+     */
+    private static void NoteGap(double gapMs, long now)
+    {
+      var gen0 = GC.CollectionCount(0);
+      var gen1 = GC.CollectionCount(1);
+      var gen2 = GC.CollectionCount(2);
+      var pauseMs = GC.GetTotalPauseDuration().TotalMilliseconds;
+
+      PerfCounters.Record(WorldStopId, gapMs);
+
+      if (gapMs >= _stallMs && now - Volatile.Read(ref _lastShoutMs) >= GapShoutMs)
+      {
+        Volatile.Write(ref _lastShoutMs, now);
+
+        /* The heap is read here rather than every poll: this line is the only thing that wants it, and it wants it to show what a full collection was asked to walk. */
+        PerfJournal.Stall($"STOP-THE-WORLD {gapMs:0} ms with no late beat | {ClassifyGap(gapMs, pauseMs - _pollPauseMs, gen0 - _pollGen0, gen1 - _pollGen1, gen2 - _pollGen2)}" +
+          $" | heap {PerfGc.Sample().HeapBytes / (1024 * 1024.0):0} MB | open {Surfaces()} | {RenderModeText()}");
+      }
+
+      _pollGen0 = gen0;
+      _pollGen1 = gen1;
+      _pollGen2 = gen2;
+      _pollPauseMs = pauseMs;
     }
 
     /* Runs on the UI thread — the fact that it ran at all is the measurement. */
