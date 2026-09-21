@@ -63,6 +63,13 @@ namespace EQLogParser
     internal int DroppedCount => Volatile.Read(ref _dropped);
 
     /*
+     * The same losses as counted perf entries so a night of "the overlay went quiet" leaves a line behind. Registered with uiThread: false —
+     * these increments happen on the parsing thread, and "in progress" means the UI thread was inside something (see PerfCounters.Register).
+     */
+    private static readonly int DropStaleId = PerfCounters.Register("fct.dropStale", uiThread: false);
+    private static readonly int DropCeilingId = PerfCounters.Register("fct.dropCeiling", uiThread: false);
+
+    /*
      * How much is waiting to be drawn, published for the heartbeat (UiBeatMonitor). Read-only and approximate, exactly like the field
      * behind it. It distinguishes the two ways "the numbers stopped" can go: a queue sitting at its ceiling means the log thread kept
      * producing and the drain was the bottleneck, while an empty queue behind a stalled UI thread means the interface stopped asking.
@@ -108,6 +115,7 @@ namespace EQLogParser
         if (now - command.EnqueueTick > MaxQueueAgeMs)
         {
           Interlocked.Increment(ref _dropped);
+          PerfCounters.Note(DropStaleId);
           continue;
         }
 
@@ -362,6 +370,7 @@ namespace EQLogParser
         }
 
         Interlocked.Increment(ref _dropped);
+        PerfCounters.Note(DropCeilingId);
         queued = Interlocked.Decrement(ref _pendingCount);
       }
     }

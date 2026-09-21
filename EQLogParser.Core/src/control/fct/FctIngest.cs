@@ -69,6 +69,15 @@ namespace EQLogParser
     public int DroppedCount { get; private set; }
 
     /*
+     * The same losses as counted perf entries. The overlay already gauges their sum as a lifetime level ("fct.drop"), which answers "does this
+     * build lose numbers at all" but not "which pull lost them", and the settings panel that shows DroppedCount is only read after somebody
+     * thinks to open it. Split by cause here: a lane with no slot is the stage too small for the fight, a refused conveyor enrol is the feed
+     * outrunning its mouth. Counts are per window, so an overload stands out in its own window instead of hiding inside a total.
+     */
+    private static readonly int DropLaneId = PerfCounters.Register("fct.dropLane");
+    private static readonly int DropConveyorId = PerfCounters.Register("fct.dropConveyor");
+
+    /*
      * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered in the settings panel. It is a
      * display filter applied at the gate, not a parser change: the log and every counter still see all of it. Zero (the
      * default) means off. Heals and zero-damage labels are exempt by design; see Accept.
@@ -387,6 +396,7 @@ namespace EQLogParser
         if (taken is null)
         {
           DroppedCount++;
+          PerfCounters.Note(DropLaneId);
           return null;
         }
 
@@ -447,6 +457,7 @@ namespace EQLogParser
         if (!_conveyor.Enrol(hit, stage, now))
         {
           DroppedCount++;
+          PerfCounters.Note(DropConveyorId);
           return null;
         }
 

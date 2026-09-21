@@ -197,7 +197,9 @@ namespace EQLogParser
       }
 
       entry.Kind = Kind.Counted;
-      entry.WindowCount += count;
+
+      /* Added atomically: a counted name may be written from the parsing thread while the heartbeat reads it on the UI thread. */
+      Interlocked.Add(ref entry.WindowCount, count);
       entry.WindowSeen = true;
     }
 
