@@ -31,6 +31,18 @@ namespace EQLogParser
     private FctOverlayWindow _fctOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
+
+    /*
+     * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). All three run on the UI thread and all
+     * three are quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
+     * antivirus scan away from a second), stats are recomputed when a fight changes, and an open chart takes a data-point update at
+     * whatever rate the parser produces them. A stall line that names one of these is a different conversation from one that names
+     * nothing.
+     */
+    private static readonly int SaveId = PerfCounters.Register("ui.configSave");
+    private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
+    private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
+
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
@@ -560,7 +572,9 @@ namespace EQLogParser
       // save once loaded but also if backup isnt trying to shutdown
       if (!_isStarting && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        ConfigUtil.Save();
+        /* Timed because it writes settings.ini to disk on the UI thread, once a half minute — which is close enough to "every so often"
+           to be worth ruling in or out by measurement rather than by argument. */
+        PerfCounters.Run(SaveId, ConfigUtil.Save);
       }
     }
 
@@ -568,7 +582,7 @@ namespace EQLogParser
     {
       if (!_isStarting)
       {
-        ComputeStats();
+        PerfCounters.Run(ComputeStatsId, ComputeStats);
         _computeStatsTimer.Stop();
       }
     }
@@ -641,11 +655,16 @@ namespace EQLogParser
 
     private void HandleChartUpdate(string key, DataPointEvent e)
     {
-      if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
-          value.Content is LineChart chart)
+      /* One span per data point rather than one counter: an open chart is the only other thing in this application that redraws
+         continuously during a fight, and how much a single update costs decides whether it can starve an overlay. */
+      PerfCounters.Run(ChartUpdateId, () =>
       {
-        chart.HandleUpdateEvent(e);
-      }
+        if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
+          value.Content is LineChart chart)
+        {
+          chart.HandleUpdateEvent(e);
+        }
+      });
     }
 
     internal void CheckComputeStats()

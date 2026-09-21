@@ -23,6 +23,14 @@ namespace EQLogParser
     private readonly List<TextBlock> _blockList;
     private readonly object _bufferLock = new();
     private readonly bool _streamerMode;
+
+    /*
+     * This overlay's span on the heartbeat (PerfCounters, UiBeatMonitor). It redraws on a 150 ms timer whether or not anything changed,
+     * rewriting TextBlocks inside an AllowsTransparency window — the kind of work that asks WPF to recomposite and can take the combat
+     * numbers down with it, so its cost belongs on the same log line as theirs.
+     */
+    private static readonly int RenderId = PerfCounters.Register("text.render");
+
     private TriggerNode _node;
     private Dictionary<string, Window> _previewWindows;
     private long _lastTopTimeStamp;
@@ -39,6 +47,10 @@ namespace EQLogParser
     {
       InitializeComponent();
       _node = node;
+
+      /* Named per trigger because several of these can be open at once, and the beat line should say which. */
+      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface($"text{_node.Id}", (bool)e.NewValue);
+
       _preview = previews != null;
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
@@ -126,8 +138,22 @@ namespace EQLogParser
               _lastTopTimeStamp = now;
             }
 
+            /* Timed around the redraw only: that is the part that could starve another window on this thread, while the rest of the tick
+               is a window-manager call and a deferred visibility change. */
+            var mark = PerfCounters.Begin(RenderId);
+            bool drew;
+
+            try
+            {
+              drew = Render(now);
+            }
+            finally
+            {
+              PerfCounters.End(mark);
+            }
+
             // if nothing rendered then stop and hide window
-            if (Render(now) is false)
+            if (drew is false)
             {
               // defer visibility change so layout can settle
               Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
