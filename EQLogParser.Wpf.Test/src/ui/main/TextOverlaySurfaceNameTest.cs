@@ -57,6 +57,19 @@ namespace EQLogParser.Wpf.Test
         "an unreadable title should still leave a name, not an empty one");
     }
 
+    /*
+     * The timer overlay labels itself by this same rule under its own prefix (TimerOverlayWindow), so the stall line says which kind of
+     * overlay was on screen while one rule keeps both lists shaped alike.
+     */
+    [TestMethod]
+    public void APrefixNamesTheKindWithoutChangingTheRule()
+    {
+      var name = TextOverlayWindow.SurfaceName(new TriggerNode { Name = "Nuke Ready", Id = NodeId }, "tmr");
+
+      Assert.AreEqual("tmr:NukeReady-29d9", name);
+      Assert.AreEqual("tmr:none", TextOverlayWindow.SurfaceName(null, "tmr"), "the prefix survives the fallback too");
+    }
+
     [TestMethod]
     public void ANullNodeIsNamedRatherThanThrowing()
     {

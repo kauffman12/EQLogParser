@@ -128,16 +128,19 @@ namespace EQLogParser
     /*
      * The overlay as a player knows it, made safe for a line that joins surfaces with + and fields with |. The first characters of the id
      * stay on so two overlays sharing a title are still two names, and a node with no readable title falls back to the id alone.
+     *
+     * The prefix is a parameter because the timer overlay labels itself by this same rule (TimerOverlayWindow), and a stall line has to
+     * say which kind of overlay was on screen — one naming rule between them, not two that drift.
      */
-    internal static string SurfaceName(TriggerNode node) =>
-      node is null ? "text:none" : SurfaceName(node.Name, node.Id);
+    internal static string SurfaceName(TriggerNode node, string prefix = "text") =>
+      node is null ? $"{prefix}:none" : SurfaceName(node.Name, node.Id, prefix);
 
-    private static string SurfaceName(string name, string id)
+    private static string SurfaceName(string name, string id, string prefix)
     {
       var title = string.Concat((name ?? string.Empty).Where(char.IsLetterOrDigit).Take(16));
       var shortId = id is { Length: > 4 } ? id[..4] : id;
 
-      return title.Length > 0 ? $"text:{title}-{shortId}" : $"text:{shortId}";
+      return title.Length > 0 ? $"{prefix}:{title}-{shortId}" : $"{prefix}:{shortId}";
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();

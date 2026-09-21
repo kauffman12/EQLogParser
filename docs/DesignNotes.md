@@ -2215,6 +2215,11 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
 | `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
 | `text.render` | span | one trigger text overlay redrawing its blocks |
+| `trig.timerTick`, `trig.timerBar` | span | the two UI-thread passes of a trigger timer overlay: rewriting every visible bar's text and progress from the 75 ms loop, and the pass that adds and collapses bars when what is firing changes |
+| `trig.timerBars` | level | `TimerBar` elements the overlay is holding, collapsed spares included — the divisor for the two spans above |
+| `trig.logGrid` | span | the refresh `TriggersLogView` asks its grid for; nearly free when the grid already sorts by time |
+| `trig.logReset` | count | whole-collection invalidations reaching that grid. Each one tells WPF nothing can be done incrementally, so a bound grid rebuilds and re-sorts itself whether or not anything asked |
+| `trig.logBatch`, `trig.logEntry` | count | trigger-log appends in the window and the entries inside them (**off the UI thread**): how often any bound grid must reload, and how many rows it has to sort |
 | `app.voices`, `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: voice load, trigger database, main window construction, trigger manager, first `Show` |
 | `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
@@ -2254,6 +2259,14 @@ Two consequences worth knowing before reading a startup log:
 The file dialog has its own name for a reason too. Whether a modal Win32 dialog starves the beat is a question about WPF's dispatcher, not a
 fact anybody should assert; `ui.pickfile` names it as the occupant if it does, and if it never appears in a stall line after a season of use
 then a dialog is provably not the freeze and nobody has to wonder again.
+
+The trigger paths were named next, because a measured session had eliminated everything that *was* instrumented — rasterizing at 1.3 ms a
+frame, the meter's rebuild at under a millisecond against eight hours of records, a 31 s log load that never delayed a beat by more than
+31 ms, GC costing 0.3 s per ten minutes at a 2 GB heap — and still had explained nothing. Two windows a player opens during a raid had no
+number against their names: the timer overlay, which redraws every visible bar from a 75 ms loop for as long as any timer is live inside an
+`AllowsTransparency` window; and the trigger log, which is bound to a live collection whose batches arrive as whole-collection `Reset`
+notifications. Both register in the `open …` field too (`tmr:<title>-<id>`, `triglog`), since "was that window up when the beat went
+unanswered?" is half the question and the heartbeat cannot answer what it cannot see.
 
 The `open …` field carries the same improvement: a text overlay used to register as `text` plus its database id, which produced lines like
 `open meter+fct+text29d9e8ff-ac7b-…` — true, and useless to read during a raid. It registers under the overlay's own title now, with the

@@ -16,6 +16,18 @@ namespace EQLogParser
   public partial class TimerOverlayWindow
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    /*
+     * This overlay's spans on the heartbeat (PerfCounters, UiBeatMonitor). The panel redraws from a 75 ms loop for as long as any timer is
+     * live, rewriting the text and progress of every bar in an AllowsTransparency window, and a second pass rebuilds the visual tree when
+     * what is firing changes. Both are UI-thread work of exactly the kind that can take the combat numbers down with it, so both belong on
+     * the log line where those numbers are reported — until now this window was the largest thing a player can open during a raid with no
+     * number against its name.
+     */
+    private static readonly int TimerBarId = PerfCounters.Register("trig.timerBar");
+    private static readonly int TimerTickId = PerfCounters.Register("trig.timerTick");
+    private static readonly int TimerBarsId = PerfCounters.Register("trig.timerBars");
+
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
@@ -51,6 +63,12 @@ namespace EQLogParser
       InitializeComponent();
 
       _node = node;
+
+      /* Reported as open while on screen, so a stall line saying "open fct+meter+tmr:…" is a different investigation from one where the
+         timers were never up. Named per trigger node because several of these can be open at once. */
+      var surface = TextOverlayWindow.SurfaceName(_node, "tmr");
+      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface(surface, (bool)e.NewValue);
+
       _preview = previews != null;
       _previewWindows = previews;
       title.SetResourceReference(TextBlock.TextProperty, "OverlayText-" + _node.Id);
@@ -659,92 +677,103 @@ namespace EQLogParser
 
     private async Task RenderTimerBarsAsync(List<TimerBarModel> models)
     {
-      await Dispatcher.InvokeAsync(() =>
+      await Dispatcher.InvokeAsync(() => PerfCounters.Run(TimerBarId, () => DrawTimerBars(models)));
+    }
+
+    /*
+     * The visual-tree pass, named so a span can wrap it: reuses, adds and collapses TimerBars until the panel matches what is firing.
+     * Reported as trig.timerBar, apart from trig.timerTick (which only moves bars that already exist), because this is the pass that
+     * changes the tree — and an AllowsTransparency window re-composites its whole surface when the tree changes. The gauge is the pool
+     * size including collapsed spares, so cost can be read per bar instead of in the abstract.
+     */
+    private void DrawTimerBars(List<TimerBarModel> models)
+    {
+      if (_newData)
       {
-        if (_newData)
+        Visibility = Visibility.Visible;
+        _newData = false;
+      }
+      else if (Visibility != Visibility.Visible)
+      {
+        return;
+      }
+
+      var childCount = content.Children.Count;
+      var count = 0;
+
+      foreach (var model in models)
+      {
+        if (model.IsRemoved)
         {
-          Visibility = Visibility.Visible;
-          _newData = false;
-        }
-        else if (Visibility != Visibility.Visible)
-        {
-          return;
-        }
-
-        var childCount = content.Children.Count;
-        var count = 0;
-
-        foreach (var model in models)
-        {
-          if (model.IsRemoved)
-          {
-            // Skip rendering removed timers
-            continue;
-          }
-
-          // dont render if turned off for cooldown overlays
-          if (_timerMode == 1 && ((model.State == TimerBar.State.Active && !_showActive) || (model.State == TimerBar.State.Idle && !_showIdle) ||
-            (model.State == TimerBar.State.Reset && !_showReset)))
-          {
-            continue;
-          }
-
-          TimerBar timerBar;
-          if (count < childCount)
-          {
-            timerBar = content.Children[count] as TimerBar;
-          }
-          else
-          {
-            timerBar = new TimerBar();
-            timerBar.Init(_node.Id);
-            content.Children.Add(timerBar);
-          }
-
-          // Update the TimerBar based on its state
-          UpdateTimerBarState(model.State, model.TimerData, timerBar);
-          timerBar.Update(model.DisplayName, model.TimeText, model.Progress, model.TimerData);
-
-          if (timerBar.Visibility != Visibility.Visible)
-          {
-            timerBar.Visibility = Visibility.Visible;
-          }
-
-          if (contentBorder.Visibility != Visibility.Visible)
-          {
-            contentBorder.Visibility = Visibility.Visible;
-          }
-
-          if (mainPanel.Visibility != Visibility.Visible)
-          {
-            mainPanel.Visibility = Visibility.Visible;
-          }
-
-          // Store the associated TimerBarModel in the Tag field
-          timerBar.Tag = model;
-          count++;
+          // Skip rendering removed timers
+          continue;
         }
 
-        // Collapse unused bars
-        var extraCount = 0;
-        while (count < childCount)
+        // dont render if turned off for cooldown overlays
+        if (_timerMode == 1 && ((model.State == TimerBar.State.Active && !_showActive) || (model.State == TimerBar.State.Idle && !_showIdle) ||
+          (model.State == TimerBar.State.Reset && !_showReset)))
         {
-          // remove some when we get too many
-          if (extraCount > 5)
-          {
-            content.Children.RemoveAt(count);
-            childCount--;
-            continue;
-          }
-          else if (content.Children[count] is TimerBar bar)
-          {
-            bar.Visibility = Visibility.Collapsed;
-            bar.Tag = null;
-            extraCount++;
-          }
-          count++;
+          continue;
         }
-      });
+
+        TimerBar timerBar;
+        if (count < childCount)
+        {
+          timerBar = content.Children[count] as TimerBar;
+        }
+        else
+        {
+          timerBar = new TimerBar();
+          timerBar.Init(_node.Id);
+          content.Children.Add(timerBar);
+        }
+
+        // Update the TimerBar based on its state
+        UpdateTimerBarState(model.State, model.TimerData, timerBar);
+        timerBar.Update(model.DisplayName, model.TimeText, model.Progress, model.TimerData);
+
+        if (timerBar.Visibility != Visibility.Visible)
+        {
+          timerBar.Visibility = Visibility.Visible;
+        }
+
+        if (contentBorder.Visibility != Visibility.Visible)
+        {
+          contentBorder.Visibility = Visibility.Visible;
+        }
+
+        if (mainPanel.Visibility != Visibility.Visible)
+        {
+          mainPanel.Visibility = Visibility.Visible;
+        }
+
+        // Store the associated TimerBarModel in the Tag field
+        timerBar.Tag = model;
+        count++;
+      }
+
+      // Collapse unused bars
+      var extraCount = 0;
+      while (count < childCount)
+      {
+        // remove some when we get too many
+        if (extraCount > 5)
+        {
+          content.Children.RemoveAt(count);
+          childCount--;
+          continue;
+        }
+        else if (content.Children[count] is TimerBar bar)
+        {
+          bar.Visibility = Visibility.Collapsed;
+          bar.Tag = null;
+          extraCount++;
+        }
+        count++;
+      }
+
+      /* The pool this overlay is carrying, so the two costs above can be read per bar rather than in the abstract. */
+      PerfCounters.Gauge(TimerBarsId, content.Children.Count);
     }
 
     private async Task ShortTickAsync()
@@ -763,74 +792,81 @@ namespace EQLogParser
         _renderSemaphore.Release();
       }
 
-      await Dispatcher.InvokeAsync(() =>
+      await Dispatcher.InvokeAsync(() => PerfCounters.Run(TimerTickId, () => DrawTimerTick(currentTicks, tempIdleList)));
+    }
+
+    /*
+     * The steady cost of the overlay, named so a span can wrap it: one pass over every visible bar rewriting its text and its progress,
+     * driven from a 75 ms loop for as long as any timer is live. Reported as trig.timerTick — this is the number that says what an open
+     * timer overlay costs a frame in a full raid.
+     */
+    private void DrawTimerTick(long currentTicks, TimerData[] tempIdleList)
+    {
+      if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
       {
-        if (_windowHndl != 0 && (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout))
-        {
-          NativeMethods.SetWindowTopMost(_windowHndl);
-          _lastTopTicks = currentTicks;
-        }
+        NativeMethods.SetWindowTopMost(_windowHndl);
+        _lastTopTicks = currentTicks;
+      }
 
-        foreach (var child in content.Children)
+      foreach (var child in content.Children)
+      {
+        if (child is TimerBar timerBar && timerBar.Visibility == Visibility.Visible)
         {
-          if (child is TimerBar timerBar && timerBar.Visibility == Visibility.Visible)
+          if (timerBar.Tag is not TimerBarModel model) continue;
+
+          var timerData = model.TimerData;
+          var type = timerData.TimerType;
+          var remainingTicks = timerData.EndTicks - currentTicks;
+          var maxDurationTicks = model.MaxDurationTicks;
+
+          if (_timerMode == 1 && timerData.ResetTicks > 0)
           {
-            if (timerBar.Tag is not TimerBarModel model) continue;
-
-            var timerData = model.TimerData;
-            var type = timerData.TimerType;
-            var remainingTicks = timerData.EndTicks - currentTicks;
-            var maxDurationTicks = model.MaxDurationTicks;
-
-            if (_timerMode == 1 && timerData.ResetTicks > 0)
+            if (remainingTicks > 0 && !tempIdleList.Contains(timerData))
             {
-              if (remainingTicks > 0 && !tempIdleList.Contains(timerData))
-              {
-                // Update the TimerBar based on its state
-                UpdateTimerBarState(TimerBar.State.Active, timerData, timerBar);
+              // Update the TimerBar based on its state
+              UpdateTimerBarState(TimerBar.State.Active, timerData, timerBar);
 
-                timerBar.Update(
-                  model.DisplayName,
-                  FormatTime(remainingTicks),
-                  CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
-                  timerData
-                );
-              }
-              else
-              {
-                // Reset phase
-                var remainingResetTicks = timerData.ResetTicks - currentTicks;
-                var state = remainingResetTicks > 0 ? TimerBar.State.Reset : TimerBar.State.Idle;
-
-                // Update the TimerBar based on its state
-                UpdateTimerBarState(state, timerData, timerBar);
-
-                timerBar.Update(
-                  model.DisplayName,
-                  remainingResetTicks > 0 ? FormatTime(remainingResetTicks) : FormatTime(timerData.DurationTicks),
-                  remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) :
-                  100.0, timerData
-                );
-              }
-            }
-            else if (remainingTicks >= 0)
-            {
-              // Update progress and time text for active timers
               timerBar.Update(
                 model.DisplayName,
-                timerData.TimerType switch
-                {
-                  2 => DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
-                  3 => FormatTime(timerData.DurationTicks - remainingTicks),
-                  _ => FormatTime(remainingTicks)
-                },
+                FormatTime(remainingTicks),
                 CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
                 timerData
               );
             }
+            else
+            {
+              // Reset phase
+              var remainingResetTicks = timerData.ResetTicks - currentTicks;
+              var state = remainingResetTicks > 0 ? TimerBar.State.Reset : TimerBar.State.Idle;
+
+              // Update the TimerBar based on its state
+              UpdateTimerBarState(state, timerData, timerBar);
+
+              timerBar.Update(
+                model.DisplayName,
+                remainingResetTicks > 0 ? FormatTime(remainingResetTicks) : FormatTime(timerData.DurationTicks),
+                remainingResetTicks > 0 ? 100.0 - CalcProgress(type, timerData.ResetDurationTicks, remainingResetTicks, long.MinValue) :
+                100.0, timerData
+              );
+            }
+          }
+          else if (remainingTicks >= 0)
+          {
+            // Update progress and time text for active timers
+            timerBar.Update(
+              model.DisplayName,
+              timerData.TimerType switch
+              {
+                2 => DateUtil.FormatTicks(remainingTicks, DateUtil.TimeFormat.SecondsMs),
+                3 => FormatTime(timerData.DurationTicks - remainingTicks),
+                _ => FormatTime(remainingTicks)
+              },
+              CalcProgress(type, timerData.DurationTicks, remainingTicks, maxDurationTicks),
+              timerData
+            );
           }
         }
-      });
+      }
     }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)

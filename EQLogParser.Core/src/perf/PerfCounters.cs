@@ -29,8 +29,12 @@ namespace EQLogParser
    */
   internal static class PerfCounters
   {
-    /* How many entries FormatWindow names; the slow ones first, because a heartbeat nobody reads answers nothing. */
-    private const int DefaultLimit = 8;
+    /*
+     * How many entries FormatWindow names; the slow ones first, because a heartbeat nobody reads answers nothing. Ten rather than eight:
+     * the trigger paths added a span and three counters each, and a window that displaces fct.dropConveyor from the line has traded away the
+     * one number we were already reading for one we are only starting to read. The tiers below keep durations ahead of counts either way.
+     */
+    private const int DefaultLimit = 10;
 
     /* Stopwatch.Frequency is a property, so this cannot be a constant; it is computed once at type init all the same. */
     private static readonly double TicksToMs = 1000.0 / Stopwatch.Frequency;
@@ -252,7 +256,7 @@ namespace EQLogParser
      * Sorted by milliseconds spent rather than by count because the question a heartbeat answers is "who has been holding the UI
      * thread", and a span that ran 900 times for 0.2 ms is not the answer while one run of 40 ms is. The weights are tiered so the
      * ordering is by kind first: spans above counters above levels, and within each kind by how much of the window it took. Without
-     * that separation a raid's halo bakes — a counter in the thousands — would crowd every duration off the eight rows, which is
+     * that separation a raid's halo bakes — a counter in the thousands — would crowd every duration off the named rows, which is
      * backwards: the durations are why the line exists. A span that never ran prints nothing, so an idle application's heartbeat stays
      * short even with every surface instrumented.
      */
