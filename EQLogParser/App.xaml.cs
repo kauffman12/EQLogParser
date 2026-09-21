@@ -162,8 +162,8 @@ namespace EQLogParser
          * The threshold is settable because one second is the wrong number for measuring. It is the right number for reporting - it is what
          * a player would call a freeze, and setting it lower would fill a raid log with passes nobody felt - but a measurement session wants
          * the band below it: a first full-surface run showed beat delays of 90 to 235 ms with none of our measured passes inside them, which
-         * is the same event as a multi-second stall at a fifth of the size and is where the evidence is easiest to catch. PerfStallMs=250 in
-         * settings.ini watches that band; anything under 100 ms only generates noise from ordinary frames, so it is not allowed.
+         * is the same event as a multi-second stall at a fifth of the size and is where the evidence is easiest to catch. PerfStallMs=200 in
+         * settings.txt watches that band; anything under 100 ms only generates noise from ordinary frames, so it is not allowed.
          */
         UiBeatMonitor.Start(Dispatcher.CurrentDispatcher,
           Math.Max(100, ConfigUtil.GetSettingAsDouble("PerfStallMs", UiBeatMonitor.DefaultStallMs)));

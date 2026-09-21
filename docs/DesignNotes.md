@@ -2156,7 +2156,7 @@ Reported often, impossible to reproduce on demand: the combat numbers stop for a
 without a restart. That shape is not a leak and not a crash — it is somebody occupying the application's one UI thread, and this
 application draws everything on that thread: the overlay's raster and blit (`FctSkiaCanvas.OnRender`), the damage meter's once-a-second
 bar rebuild (`DamageOverlayWindow`), every trigger text overlay (`TextOverlayWindow`, 150 ms per tick), Syncfusion grids
-(`FightTable`) and open charts, and the `settings.ini` write on the main window's half-minute timer. Any one of them holding the thread
+(`FightTable`) and open charts, and the `settings.txt` write on the main window's half-minute timer. Any one of them holding the thread
 stops all the others, so the report a player files always names whichever window they happened to be looking at. The instrumentation
 exists to answer the question the report cannot: whose second was it.
 
@@ -2223,7 +2223,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `app.voices`, `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: voice load, trigger database, main window construction, trigger manager, first `Show` |
 | `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
-| `ui.configSave` | span | `ConfigUtil.Save()` — writing settings.ini from the main window's half-minute timer |
+| `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
 | `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
 
 `Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
@@ -2308,7 +2308,7 @@ So each observation takes a fresh Process, reads state, reason and CPU inside it
 of an episode, and `AThreadCreatedAfterTheFirstLookIsStillFound` is there to keep it that way. The symptoms of getting this wrong were exactly
 the misleading kind: the id was correct, the thread was alive and readable, and the only wrong answer came from the reader's own stale copy.
 
-The threshold that opens an episode is settable — `PerfStallMs` in `settings.ini`, default 1000 ms, floor 100 ms — because one second is the
+The threshold that opens an episode is settable — `PerfStallMs` in `AppData\config\settings.txt`, default 1000 ms, floor 100 ms — because one second is the
 right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
 nothing of ours running: the same event as a multi-second stall at a fifth of the size, and easiest to catch while it is small. Nobody should
 run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
