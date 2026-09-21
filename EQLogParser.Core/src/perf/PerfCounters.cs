@@ -36,6 +36,14 @@ namespace EQLogParser
      */
     private const int DefaultLimit = 10;
 
+    /*
+     * How many counters share the line with those durations. They need a budget of their own rather than leftover room because with every
+     * surface instrumented the timed spans alone fill ten rows, and the first measured run did exactly that: eight windows printed spans
+     * while trig.logBatch and fct.dropConveyor - the two numbers that say what arrived and what was thrown away during them - never
+     * appeared at all. Four is enough for the counted names in use and keeps a burst of one from hiding the rest.
+     */
+    private const int CountedLimit = 4;
+
     /* Stopwatch.Frequency is a property, so this cannot be a constant; it is computed once at type init all the same. */
     private static readonly double TicksToMs = 1000.0 / Stopwatch.Frequency;
 
@@ -254,16 +262,22 @@ namespace EQLogParser
      * The window as one line, worst spans first, then counters, then levels; calling it closes the window.
      *
      * Sorted by milliseconds spent rather than by count because the question a heartbeat answers is "who has been holding the UI
-     * thread", and a span that ran 900 times for 0.2 ms is not the answer while one run of 40 ms is. The weights are tiered so the
-     * ordering is by kind first: spans above counters above levels, and within each kind by how much of the window it took. Without
-     * that separation a raid's halo bakes — a counter in the thousands — would crowd every duration off the named rows, which is
-     * backwards: the durations are why the line exists. A span that never ran prints nothing, so an idle application's heartbeat stays
-     * short even with every surface instrumented.
+     * thread", and a span that ran 900 times for 0.2 ms is not the answer while one run of 40 ms is. The three kinds are collected
+     * separately and printed in a fixed order — spans, counters, levels — each kind by how much of the window it took, because without
+     * that separation a raid's halo bakes (a counter in the thousands) would crowd every duration off the line, which is backwards: the
+     * durations are why the line exists.
+     *
+     * Each kind gets its own budget rather than sharing one, because with eight surfaces instrumented the spans alone fill ten rows and
+     * a shared cap printed them while dropping every counter — including the drop counters that explain a queue. What has to be readable
+     * together is the duration of a pass and what arrived during it. A span that never ran prints nothing, so an idle application's
+     * heartbeat stays short even with everything registered.
      */
     internal static string FormatWindow(int limit = DefaultLimit)
     {
       var table = _table;
-      var rows = new List<(string Text, double Weight)>();
+      var spans = new List<(string Text, double Weight)>();
+      var counts = new List<(string Text, double Weight)>();
+      var levels = new List<string>();
 
       for (var i = 0; i < table.Length; i++)
       {
@@ -277,31 +291,36 @@ namespace EQLogParser
         switch (entry.Kind)
         {
           case Kind.Timed when entry.WindowCount > 0:
-            rows.Add(($"{entry.Name} n={entry.WindowCount} avg {entry.WindowMs / entry.WindowCount:0.#} max {entry.WindowMaxMs:0.#} ms", 1e12 + entry.WindowMs));
+            spans.Add(($"{entry.Name} n={entry.WindowCount} avg {entry.WindowMs / entry.WindowCount:0.#} max {entry.WindowMaxMs:0.#} ms", entry.WindowMs));
             break;
 
           case Kind.Counted when entry.WindowCount > 0:
-            rows.Add(($"{entry.Name}×{entry.WindowCount}", 1e6 + entry.WindowCount));
+            counts.Add(($"{entry.Name}×{entry.WindowCount}", entry.WindowCount));
             break;
 
           case Kind.Gauge:
-            rows.Add(($"{entry.Name}={entry.Gauge:0.##}", 0.5));
+            levels.Add($"{entry.Name}={entry.Gauge:0.##}");
             break;
         }
       }
 
-      rows.Sort((a, b) => b.Weight.CompareTo(a.Weight));
+      spans.Sort((a, b) => b.Weight.CompareTo(a.Weight));
+      counts.Sort((a, b) => b.Weight.CompareTo(a.Weight));
 
       var builder = new StringBuilder();
 
-      for (var i = 0; i < rows.Count && i < limit; i++)
+      AppendRows(builder, spans, limit);
+      AppendRows(builder, counts, CountedLimit);
+
+      /* Levels are one token each and there are half a dozen of them, so all of them fit and none of them is worth dropping. */
+      foreach (var level in levels)
       {
         if (builder.Length > 0)
         {
           builder.Append(", ");
         }
 
-        builder.Append(rows[i].Text);
+        builder.Append(level);
       }
 
       foreach (var entry in table)
@@ -313,6 +332,20 @@ namespace EQLogParser
       }
 
       return builder.Length == 0 ? "quiet" : builder.ToString();
+    }
+
+    /* Appends up to `budget` of the heaviest rows, comma separated, onto the line built so far. */
+    private static void AppendRows(StringBuilder builder, List<(string Text, double Weight)> rows, int budget)
+    {
+      for (var i = 0; i < rows.Count && i < budget; i++)
+      {
+        if (builder.Length > 0)
+        {
+          builder.Append(", ");
+        }
+
+        builder.Append(rows[i].Text);
+      }
     }
 
     private static Entry Resolve(int id)

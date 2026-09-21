@@ -113,6 +113,33 @@ namespace EQLogParser
     }
 
     /*
+     * What the first measured run with eight surfaces open actually did: ten timed spans filled the line and every counter fell off it,
+     * including fct.dropConveyor and trig.logBatch — the numbers that say what arrived and what was thrown away while it arrived. The
+     * fix is a budget per kind rather than one shared cap, so this makes the crowded window permanent: spans at full occupancy, a counter
+     * and a level underneath, and both still printed.
+     */
+    [TestMethod]
+    public void AFullScreenOfSpansStillLeavesRoomForTheCounters()
+    {
+      for (var i = 0; i < 12; i++)
+      {
+        var span = PerfCounters.Register($"test.crowd{i}");
+        PerfCounters.End(PerfCounters.Begin(span));
+      }
+
+      var counter = PerfCounters.Register("test.drops");
+      var level = PerfCounters.Register("test.queue");
+      PerfCounters.Note(counter, 3);
+      PerfCounters.Gauge(level, 17);
+
+      var line = PerfCounters.FormatWindow();
+
+      StringAssert.Contains(line, "test.crowd0", "the spans should still be reported when there are more of them than the limit");
+      StringAssert.Contains(line, "test.drops×3", "a counter must not be crowded off the line by spans, whatever the span count");
+      StringAssert.Contains(line, "test.queue=17", "a level is read alongside the durations, not instead of them");
+    }
+
+    /*
      * The attribution itself. A stall line names whatever is inside a span at the moment the beat fails to arrive, so a closed span
      * must have taken its name out of circulation - and nesting has to put the outer name back rather than clear it, or the overlay's
      * feed would stop naming itself the first time it called something timed.
