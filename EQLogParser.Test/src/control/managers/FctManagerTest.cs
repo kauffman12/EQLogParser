@@ -22,8 +22,45 @@ namespace EQLogParser
       FctManager.Instance.Enabled = true;
     }
 
+    /* The watched name is a process global cached on first read, so it goes back to unset here rather than leaking into the next test. */
     [TestCleanup]
-    public void Teardown() => FctManager.Instance.Dispose();
+    public void Teardown()
+    {
+      FctManager.Instance.Dispose();
+      ConfigUtil.RemoveSetting("FctWatch");
+      FctManager.ResetWatchedPlayer();
+    }
+
+    /*
+     * FctWatch points the overlay at somebody else's fight — a caster watching her tank. Both halves matter: the watched character's numbers
+     * arrive, and the log's own character stops being special, or the screen would carry two people's combat at once.
+     */
+    [TestMethod]
+    public void TheOverlayFollowsTheWatchedPlayer()
+    {
+      ConfigUtil.SetSetting("FctWatch", " Tynon ");
+      FctManager.ResetWatchedPlayer();
+
+      Assert.AreEqual("Tynon", FctManager.Subject, "the name is trimmed before it identifies anybody");
+
+      FireDamage("Grom'rot", 1, defender: "Tynon");
+      Assert.AreEqual(1, Drain(), "damage landing on the watched character is this overlay's number");
+
+      FireHeal("TestPlayer", 2, healed: "Tynon");
+      Assert.AreEqual(1, Drain(), "a heal cast on the watched character is shown here too");
+
+      FireDamage("TestPlayer", 3);
+      Assert.AreEqual(0, Drain(), "the log's own character stops being special once somebody is watched");
+    }
+
+    /* Nothing watched means the character the log belongs to, which is what it has always been. */
+    [TestMethod]
+    public void WithNoWatchTheOverlayShowsTheLogsOwnCharacter()
+    {
+      FctManager.ResetWatchedPlayer();
+
+      Assert.AreEqual("TestPlayer", FctManager.Subject);
+    }
 
     [TestMethod]
     public void DropsFeedWhenNothingIsListening()
