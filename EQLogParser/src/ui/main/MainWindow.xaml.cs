@@ -43,6 +43,14 @@ namespace EQLogParser
     private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
     private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
 
+    /*
+     * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
+     * and switching logs is something a player does mid-raid; the dialog gets its own name because the question "does a modal Win32 dialog
+     * starve the beat?" has to be answered from evidence before anyone decides whether such a stall counts as one.
+     */
+    private static readonly int OpenLogId = PerfCounters.Register("ui.openlogfile");
+    private static readonly int PickFileId = PerfCounters.Register("ui.pickfile");
+
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
@@ -1132,6 +1140,7 @@ namespace EQLogParser
 
     private void OpenLogFile(string previousFile, int lastMins)
     {
+      var openMark = PerfCounters.Begin(OpenLogId);
       try
       {
         string theFile = null;
@@ -1154,7 +1163,9 @@ namespace EQLogParser
           // Show dialog and read result
           dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.gz;*.log"));
 
-          if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+          var picked = default(CommonFileDialogResult);
+          PerfCounters.Run(PickFileId, () => { picked = dialog.ShowDialog(); });
+          if (picked == CommonFileDialogResult.Ok)
           {
             theFile = dialog.FileName; // Get the selected file name
           }
@@ -1207,6 +1218,10 @@ namespace EQLogParser
         }
 
         Log.Error("Problem During Initialization", e);
+      }
+      finally
+      {
+        PerfCounters.End(openMark);
       }
     }
 

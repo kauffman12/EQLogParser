@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -48,8 +49,14 @@ namespace EQLogParser
       InitializeComponent();
       _node = node;
 
-      /* Named per trigger because several of these can be open at once, and the beat line should say which. */
-      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface($"text{_node.Id}", (bool)e.NewValue);
+      /*
+       * Named per trigger because several of these can be open at once, and the beat line has to say which. The name comes from the overlay
+       * as a player sees it rather than from its database id: a stall line reading "text29d9e8ff-ac7b-…" names nothing anybody recognises,
+       * and that id is what a reader would have to cross-reference in the trigger tree while the freeze is still on screen. Captured now
+       * because _node is replaced later by UpdateFields, which would strand the first name open forever.
+       */
+      var surface = SurfaceName(_node);
+      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface(surface, (bool)e.NewValue);
 
       _preview = previews != null;
       _previewWindows = previews;
@@ -116,6 +123,21 @@ namespace EQLogParser
         // stop on next render
         _buffer.Clear();
       }
+    }
+
+    /*
+     * The overlay as a player knows it, made safe for a line that joins surfaces with + and fields with |. The first characters of the id
+     * stay on so two overlays sharing a title are still two names, and a node with no readable title falls back to the id alone.
+     */
+    internal static string SurfaceName(TriggerNode node) =>
+      node is null ? "text:none" : SurfaceName(node.Name, node.Id);
+
+    private static string SurfaceName(string name, string id)
+    {
+      var title = string.Concat((name ?? string.Empty).Where(char.IsLetterOrDigit).Take(16));
+      var shortId = id is { Length: > 4 } ? id[..4] : id;
+
+      return title.Length > 0 ? $"text:{title}-{shortId}" : $"text:{shortId}";
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();

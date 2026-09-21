@@ -2215,6 +2215,9 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
 | `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
 | `text.render` | span | one trigger text overlay redrawing its blocks |
+| `app.voices`, `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: voice load, trigger database, main window construction, trigger manager, first `Show` |
+| `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
+| `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
 | `ui.configSave` | span | `ConfigUtil.Save()` — writing settings.ini from the main window's half-minute timer |
 | `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
 
@@ -2231,6 +2234,31 @@ the two copies into WPF, so the expensive half of an overlay frame — the half 
 numbers are on screen — was invisible from outside. `FctSkiaCanvas` now reports both, and the simulation header prints them side by side;
 `EnsureSurface` writes one line per reallocation, which is how a 3840 × 2160 overlay admitting to a 33 MB memset per frame reaches the log
 without anybody having to guess at the size.
+
+### Startup and log loading are phases, not windows
+
+Every name above, until this section, belonged to a window a player can see. The startup spans were added because the first measured session
+produced two stalls and attributed neither: `UI STALL closed: beat ran 2922 ms late | open none | in progress nothing`, then 1563 ms more a
+few seconds later. Both sat in code that had no name — the trigger database opened on the UI thread, the main window's XAML construction,
+the trigger manager starting, a log file being restored from the last session — and "nothing" is the one answer a stall line should never
+have to give about work this codebase does.
+
+Two consequences worth knowing before reading a startup log:
+
+- `app.firstshow` ends at the call that queues the first layout, not at the pixels. A stall naming `nothing` immediately after it closed is
+  the main window's first paint, which is framework work between operations; instrumenting the render pass itself is the next step if the
+  evidence says so rather than the guess being made now.
+- A span held open across an `await` (the voice load, the trigger manager) reads as running while the thread is idle at the await point. That
+  costs nothing here: a beat posted at `Render` runs the moment the thread is free, so if it was late, the thread really was inside that phase.
+
+The file dialog has its own name for a reason too. Whether a modal Win32 dialog starves the beat is a question about WPF's dispatcher, not a
+fact anybody should assert; `ui.pickfile` names it as the occupant if it does, and if it never appears in a stall line after a season of use
+then a dialog is provably not the freeze and nobody has to wonder again.
+
+The `open …` field carries the same improvement: a text overlay used to register as `text` plus its database id, which produced lines like
+`open meter+fct+text29d9e8ff-ac7b-…` — true, and useless to read during a raid. It registers under the overlay's own title now, with the
+first characters of the id kept so two overlays sharing a title stay two names (`TextOverlaySurfaceNameTest` holds that shape, including the
+separators: the title must not be able to write a `+` or a `|` into the line).
 
 ### Reading a report
 
