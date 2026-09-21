@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using EQLogParser.Mirror;
+
 namespace EQLogParser;
 
 // Headless runner for the current (per-line) pipeline: feeds a log file through LogProcessor
@@ -20,6 +22,15 @@ internal static class PipelineHarness
 
     internal sealed record RunResult(IReadOnlyList<Fight> Fights);
 
+    // Phase 1: the same run with the CombatMirror tap active and the derivation executed.
+    // Fights are creation-ordered (EventsNewFight only) — the natural pairing for the derived list.
+    internal sealed record MirrorRunResult(
+        IReadOnlyList<Fight> Fights,
+        IReadOnlyList<Fight> NonTankingFights,
+        IReadOnlyList<DerivedFight> DerivedFights,
+        DamageFactTable Facts,
+        EntityTimeline Timeline);
+
     // Side channels are inert in headless runs: no chat archive, no trigger evaluation.
     private sealed class NoOpSinks : IChatSink, ITriggerHook
     {
@@ -37,6 +48,18 @@ internal static class PipelineHarness
     }
 
     public static RunResult RunFile(string path)
+    {
+        var (fights, _, _, _, _) = RunCore(path, withMirror: false);
+        return new RunResult(fights);
+    }
+
+    public static MirrorRunResult RunFileWithMirror(string path)
+    {
+        var (fights, nonTanking, derived, facts, timeline) = RunCore(path, withMirror: true);
+        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
+    }
+
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror)
     {
         // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -61,6 +84,7 @@ internal static class PipelineHarness
         DamageLineParser.FightManager = fm;
 
         var fights = new List<Fight>();
+        var nonTanking = new List<Fight>();
         void Collect(Fight f)
         {
             lock (fights)
@@ -69,8 +93,30 @@ internal static class PipelineHarness
             }
         }
 
+        void CollectNonTanking(Fight f)
+        {
+            lock (nonTanking)
+            {
+                nonTanking.Add(f);
+            }
+        }
+
+        // EventsNewFight fires once per creation (TryAdd) — creation order, the pairing key for
+        // the derived list. The old RunResult also included the non-tanking events (duplicates),
+        // which the comparison must not do.
         fm.EventsNewFight += Collect;
-        fm.EventsNewNonTankingFight += Collect;
+        fm.EventsNewNonTankingFight += CollectNonTanking;
+
+        DamageFactTable? facts = null;
+        EntityTimeline? timeline = null;
+        CombatMirror? mirror = null;
+        if (withMirror)
+        {
+            facts = new DamageFactTable(100_000);
+            timeline = new EntityTimeline();
+            mirror = new CombatMirror(facts);
+            mirror.Start();
+        }
 
         using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
         using var processor = new LogProcessor(path, new NoOpSinks(), new NoOpSinks());
@@ -78,6 +124,7 @@ internal static class PipelineHarness
 
         const int batchSize = 5000;
         var batch = new List<LogReaderItem>(batchSize);
+        double firstTs = double.NaN;
         double lastTs = double.NaN;
         foreach (var line in File.ReadLines(path))
         {
@@ -85,6 +132,7 @@ internal static class PipelineHarness
             var dt = DateUtil.ParseStandardDate(line);
             if (dt == DateTime.MinValue) continue;
             var ts = DateUtil.ToDotNetSeconds(dt);
+            if (double.IsNaN(firstTs)) firstTs = ts;
             lastTs = ts;
             batch.Add(new LogReaderItem(line, ts, false));
             if (batch.Count >= batchSize)
@@ -121,6 +169,18 @@ internal static class PipelineHarness
             DamageLineParser.CheckSlainQueue(lastTs + 1);
         }
 
+        mirror?.Stop();
+
+        List<DerivedFight> derived = [];
+        if (withMirror && facts is not null && timeline is not null)
+        {
+            // Phase 1 bootstrap seed (Phase 2 rules replace this): the registry's own knowledge —
+            // player-side names with their evidence times, so ingest-time replay matches what
+            // IsPetOrPlayerOrMerc answered at each line.
+            SeedIdentity(timeline, facts, firstTs, lastTs);
+            derived = FightDeriver.Derive(facts, timeline);
+        }
+
         DamageLineParser.ResetProcessState();
         DamageLineParser.FightManager = priorParserFm;
         FightManager.Instance = priorInstance;
@@ -128,12 +188,54 @@ internal static class PipelineHarness
         processor.Dispose();
 
         List<Fight> snapshot;
+        List<Fight> nonTankingSnapshot;
         lock (fights)
         {
             snapshot = [.. fights];
+            nonTankingSnapshot = [.. nonTanking];
         }
 
-        return new RunResult(snapshot);
+        return (snapshot, nonTankingSnapshot, derived, facts ?? new DamageFactTable(1), timeline ?? new EntityTimeline());
+    }
+
+    // Registry end-state + evidence times as manual identity assignments. Strengths stay below the
+    // Phase 2 rule tiers so rule output overrides this seed when both are present (R10 > R2 > …).
+    private const int SeedStrengthVerified = 8;
+    private const int SeedStrengthYou = 10;
+
+    private static void SeedIdentity(EntityTimeline timeline, IFactTable facts, double logStartS, double logEndS)
+    {
+        var registry = PlayerRegistry.Instance;
+
+        foreach (var kv in registry.GetVerifiedPlayerTimes())
+        {
+            // evidence time inside this log -> ingest-replay; outside (persisted warm state or
+            // user-set "now") -> retroactive over the whole log, same as Contains at ingest time
+            var eff = !double.IsNaN(logStartS) && kv.Value >= logStartS && kv.Value <= logEndS ? kv.Value : double.NegativeInfinity;
+            timeline.SetIdentity(kv.Key, IdentityKind.Player, SeedStrengthVerified, "RegistrySeed", eff);
+        }
+
+        // pets carry no evidence time — retroactive (documented approximation: a pet verified
+        // mid-log is slightly earlier here than at ingest time in the current pipeline)
+        foreach (var pet in registry.GetVerifiedPets())
+        {
+            timeline.SetIdentity(pet, IdentityKind.Player, SeedStrengthVerified, "RegistrySeed", double.NegativeInfinity);
+        }
+
+        var player = ConfigUtil.PlayerName;
+        if (!string.IsNullOrEmpty(player))
+        {
+            timeline.SetIdentity(player, IdentityKind.Player, SeedStrengthYou, "You");
+        }
+
+        // mercs have no enumeration or times — check every name the facts touched, end-state only
+        foreach (var name in facts.InternedNames)
+        {
+            if (registry.IsMerc(name))
+            {
+                timeline.SetIdentity(name, IdentityKind.Merc, SeedStrengthVerified, "RegistrySeed", double.NegativeInfinity);
+            }
+        }
     }
 
     // Phase 0 milestone: dump current-pipeline fight state as JSON for eyeballing and, in Phase 1,

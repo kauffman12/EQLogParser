@@ -1006,7 +1006,7 @@ namespace EQLogParser
             var damageHandler = EventsDamageProcessed;
             if (damageHandler is not null)
             {
-              damageHandler(new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+              damageHandler(new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor, Action = lineData.Action });
             }
 
             if (record.Type == Labels.Dd)
