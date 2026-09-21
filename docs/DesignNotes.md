@@ -2314,6 +2314,26 @@ nothing of ours running: the same event as a multi-second stall at a fifth of th
 run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
 probe fire except on a freeze, and freezes are the rare half of this.
 
+### What a clean run looks like, because it is worth knowing one
+
+A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and four overlays open, the same raid log played twice — produced
+**no stall at all after the first eight seconds**: across 63 heartbeats the worst beat delay outside startup was 47 ms. The three episodes on
+record are all launch, and all of them read *running* with CPU close to their wall time, so they are our own slowness rather than a wait:
+`app.mainwindow` 3856 ms, `app.firstshow` 1749 ms, `app.voices` 1089 ms (enumerating voices), `app.triggerdb` 227 ms. Every instrumented pass
+held its shape while the raid streamed — `fct.paint` ~1.3 ms worst 30 ms, `trig.timerTick` ~36 a second at 0.1 ms, `ui.fightTable` 20 a second
+`ui.fightTable` once a second at ~1 ms (worst 18 ms) — and `trig.logReset` shows up nine to twenty times a window instead of the two it managed
+when the log held 605 entries, at 0 ms: the frequency question from an earlier soak, answered by a counter that was already there.
+
+What that run did produce is a memory figure, and it is the one to compare against a machine that really does freeze. The replay allocated
+66.9 GB, ran at 619–869 MB/s while parsing with 2,218 gen0 collections in its first minute, then **kept 2.7 GB of heap resident for the
+remaining nineteen minutes** at a flat 3.4 GB working set — not climbing, not released. A process sitting at 3.4 GB next to EverQuest on a 16 GB
+machine is page-file territory, and paging reads as a freeze with almost no CPU: the shape the probe calls *blocked*, caused by neither a lock
+nor our code. Two limits on this measurement, stated plainly: the machine had memory to spare, and the runtime's pause counter (22.4 s over the
+run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — a `paused`
+reading is a lifetime share that dilutes toward zero, so read it against the allocation rate, not as this window's cost. GC is cleared for this
+run and no other. One plumbing note for the next collection: `dotnet-counters` recorded only `System.Runtime`, which puts the runtime's pauses on
+a timeline with nothing of ours on it; pass `-c System.Runtime,EQLogParser` to get `trig.evalAll` and friends beside them.
+
 ### Reading a report
 
 `UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on

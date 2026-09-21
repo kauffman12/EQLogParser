@@ -72,6 +72,20 @@ namespace EQLogParser
       Assert.IsFalse(PerfGc.Format(from, to, 10).Contains("-"), "no part of a heartbeat may read as negative bytes");
     }
 
+    /*
+     * The pause figure is the runtime's lifetime share, not the window's, so it has to say so: a replay that spends its first minute at 18%
+     * and the next twenty at 0.9% prints 1.9% by the end, and a reader who took that for the window lets the collector off the hook.
+     */
+    [TestMethod]
+    public void ALifetimePauseFigureSaysItIsLifetime()
+    {
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 3.0);
+      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 7.5);
+
+      // Built the same way the code builds it, so a comma-decimal locale is not read as a failure.
+      StringAssert.Contains(PerfGc.Format(from, to, 10), $" paused {(7.5):0.##}% since start");
+    }
+
     /* A window of zero seconds is reachable (two beats in the same millisecond) and must not become a divide-by-zero or infinity. */
     [TestMethod]
     public void AWindowOfZeroSecondsStillPrintsALine()
