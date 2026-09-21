@@ -94,8 +94,34 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void TheReportSaysWhichSurfacesWereOpen()
     {
-      // Nothing registered: an overlay that never opened says so rather than leaving a blank field to puzzle over.
-      Assert.AreEqual("fct:none", UiBeatMonitor.Surfaces(), "unregistered surfaces should be named as absent");
+      try
+      {
+        // Nothing registered: an overlay that never opened says so, rather than leaving a blank field beside the stall line.
+        Assert.AreEqual("none", UiBeatMonitor.Surfaces(), "no open surface should read as none, not as nothing at all");
+
+        UiBeatMonitor.NoteSurface("fct", true);
+        Assert.AreEqual("fct", UiBeatMonitor.Surfaces(), "the overlay should name itself once open");
+
+        // The reason the field exists: "fct" and "fct+meter" are different suspects, so every open window has to appear.
+        UiBeatMonitor.NoteSurface("meter", true);
+        Assert.AreEqual("fct+meter", UiBeatMonitor.Surfaces(), "every open surface should be listed");
+
+        // Closing has to actually remove. A surface left listed after its window closed would point every later line at the wrong one.
+        UiBeatMonitor.NoteSurface("fct", false);
+        Assert.AreEqual("meter", UiBeatMonitor.Surfaces(), "a closed surface should drop out of the report");
+
+        // Re-registering an open surface must not list it twice: the overlay opens and closes windows repeatedly in a session.
+        UiBeatMonitor.NoteSurface("meter", true);
+        Assert.AreEqual("meter", UiBeatMonitor.Surfaces(), "opening an already-open surface should not duplicate it");
+
+        // Every line carries the render mode; which mode a machine picked is that machine's business, the field always being there is ours.
+        StringAssert.StartsWith(UiBeatMonitor.RenderModeText(), "render:", "the render mode field should always be present");
+      }
+      finally
+      {
+        UiBeatMonitor.NoteSurface("meter", false);
+        UiBeatMonitor.NoteSurface("fct", false);
+      }
     }
 
     /*
