@@ -20,6 +20,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another
   (a leaked speed dial was measured moving a row's spine 74 px — a real assertion failing on a machine that ran the same code).
+- **UI-thread instrumentation**: "the numbers froze for a second" is answered by `UiBeatMonitor` (app) over `PerfCounters`/`PerfGc`/
+  `PerfJournal` (`EQLogParser.Core/src/perf`), and every instrumented span is listed in docs/DesignNotes.md → "Instrumenting the UI
+  thread". A span takes its handle from one `Register` call in a field initializer (no name lookups, no locks in frame paths) and closes
+  in a `finally`: a pass left marked running by an exception keeps naming itself in every later stall line. `UiBeatMonitorTest` pumps a
+  real dispatcher with short thresholds and relies on `[assembly: DoNotParallelize]` like the notes above.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
 
 ## Post-Implementation Checklist

@@ -2149,3 +2149,96 @@ breaker, players/pets killed read as a will or a plain death, named pets shorten
 (`Puksu`, never `Sancus`s pet Puksu`), generic unnamed pets and mob deaths never speak, taunts land on success only,
 and `PlayerRegistry.IsVerifiedPlayer` answers the player question behind a settable seam. Nothing subscribes at
 startup; whoever builds the real feed takes it from there.
+
+## Instrumenting the UI thread
+
+Reported often, impossible to reproduce on demand: the combat numbers stop for a second or two in the middle of a raid, then carry on
+without a restart. That shape is not a leak and not a crash — it is somebody occupying the application's one UI thread, and this
+application draws everything on that thread: the overlay's raster and blit (`FctSkiaCanvas.OnRender`), the damage meter's once-a-second
+bar rebuild (`DamageOverlayWindow`), every trigger text overlay (`TextOverlayWindow`, 150 ms per tick), Syncfusion grids
+(`FightTable`) and open charts, and the `settings.ini` write on the main window's half-minute timer. Any one of them holding the thread
+stops all the others, so the report a player files always names whichever window they happened to be looking at. The instrumentation
+exists to answer the question the report cannot: whose second was it.
+
+It is deliberately not a profiler. A profiler answers once, on the machine running it, and never on the one where the hitch happened;
+this lives in the product, costs tens of nanoseconds per instrumented span, and leaves its evidence in a log file that is still there
+the next morning. (Deep profiling is still available from outside — `dotnet-counters monitor -p <pid>` for live GC and thread-pool
+numbers, PerfView or WPF ETW traces for frame-level detail — none of it required, and nothing here depends on it.)
+
+### One watchdog on the thread, not one per window
+
+`UiBeatMonitor` posts a beat to the dispatcher from a pool timer. A beat that has not run after `DefaultStallMs` means the UI thread is
+somewhere else for that long, and the line it writes says what was open and which named spans were inside at the time. Instrumenting
+only the overlay would have printed an innocent "my paint took 1.2 ms" beside every freeze, which is a report with no answer in it.
+
+Three decisions in that design are load-bearing:
+
+- **The beat goes out at `Render` priority.** Priorities below it starve during a window drag or resize — the classic
+  `DispatcherTimer` problem — and dragging an overlay is not the bug being hunted. It is also why a stall line naming
+  `in progress nothing` has a mundane reading: something outside this process's own work had the thread.
+- **Detection happens while the process is still stuck**, on the pool thread, and again when the beat finally arrives. If the UI thread
+  never comes back the log still holds everything known at the time; waiting only for the resumed beat loses exactly the worst case.
+- **Gaps longer than `SleepGuardMs` (30 s) are discarded.** A laptop lid is not a hitch, and reporting one trains the reader to ignore
+  the lines that matter.
+
+Heartbeats (one Info line every 20 s: window length, what was open, worst beat delay, render mode, GC deltas and allocation rate, and the
+cost table of instrumented spans) are written only while an instrumented surface is open. They exist to explain overlay stalls; a build
+with no overlay running has nothing to explain, and the log rolls over at a few megabytes with game-data errors sharing it — a heartbeat
+that pushes out last night's stall line is worse than no heartbeat.
+
+### What a name means, and where it comes from
+
+`PerfCounters` holds three shapes of entry under one reporting table: timed spans (`Begin`/`End`, count + average + worst), counters
+(`Note`, "how many") and levels (`Gauge`, "how much right now"). Names are lowercase dotted, prefixed by the surface they belong to, and
+the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` says which window ate the second. What exists today:
+
+| name | shape | what it covers |
+|---|---|---|
+| `fct.pump` | span | a render tick that is not rasterizing — prune, demo, DPI check (its duration is also published as `LastFrameMs`) |
+| `fct.paint` | span | a whole `OnRender`: clear, every glyph pass, both copies into WPF |
+| `fct.feed` | span | the overlay window draining its queue into the canvas — per-record work on the UI thread |
+| `fct.bake` | count | halo sprites baked this window (once per distinct crit string, not per frame) |
+| `fct.surface` | count | render-surface reallocations; each one also logs its size in megabytes |
+| `fct.hits`, `fct.queue`, `fct.drop` | level | live hits on the canvas, records waiting in `FctManager`, records discarded for backpressure |
+| `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
+| `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
+| `text.render` | span | one trigger text overlay redrawing its blocks |
+| `ui.configSave` | span | `ConfigUtil.Save()` — writing settings.ini from the main window's half-minute timer |
+| `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
+
+`Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
+up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the
+heartbeat while keeping its name out of "in progress": the meter's rebuild genuinely runs on a pool thread, and a stall line that blamed it
+would point at a window that was holding nothing.
+
+Values are best-effort: fields are plain writes rather than interlocked, two threads colliding on one counter loses a sample of a
+diagnostic and nothing else. Do not "fix" that with locking — an instrumented span that can block is worse than an unmeasured one.
+
+`fct.paint` exists because it did not: the canvas has always published pump time (prune, demo, DPI), which never included rasterizing or
+the two copies into WPF, so the expensive half of an overlay frame — the half that scales with pixel area rather than with how many
+numbers are on screen — was invisible from outside. `FctSkiaCanvas` now reports both, and the simulation header prints them side by side;
+`EnsureSurface` writes one line per reallocation, which is how a 3840 × 2160 overlay admitting to a 33 MB memset per frame reaches the log
+without anybody having to guess at the size.
+
+### Reading a report
+
+`UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on
+how long the thread was unavailable. Read them in order:
+
+1. `in progress …` — a span named there is the occupant, and the slow-pass warning for that same name (`slow UI pass meter.loadstats:
+   812 ms (threshold 150 ms)`) will usually already be in the log, because any span over `PerfJournal.SlowPassMs` (150 ms: nine frames at
+   60 Hz) complains on its own account, throttled to once per five seconds per name. A stall that names `nothing` is not a named span: it is
+   something outside the instrumented paths — the framework, another window nobody timed, or native code.
+2. `open …` — if the stall's window is not in that list, it is not the cause.
+3. The heartbeat's cost table — worst spans first, so one 40 ms pass outranks nine hundred 0.2 ms ones, since the question is who held the
+   thread and not who is chattiest.
+4. `gc2` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code; a stall
+   with no collections is somebody's loop.
+5. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
+
+### Instrumenting something new
+
+Register a handle in a field initializer, wrap the work in `Begin`/`End` inside a `finally`, and use `PerfCounters.Run` where a
+try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
+the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
+line that points at a span nobody can find in the docs is a dead end.
