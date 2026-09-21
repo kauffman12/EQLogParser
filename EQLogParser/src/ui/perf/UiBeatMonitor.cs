@@ -51,6 +51,9 @@ namespace EQLogParser
     private static Timer _timer;
     private static Dispatcher _dispatcher;
 
+    /* Which operating-system thread the interface lives on, so a stall episode can ask the kernel what it was doing. */
+    private static int _uiThreadId;
+
     /* A beat handed to the dispatcher and not yet run. */
     private static int _inFlight;
     private static long _postedMs;
@@ -106,6 +109,10 @@ namespace EQLogParser
       Interlocked.Exchange(ref _inFlight, 0);
       Interlocked.Exchange(ref _episodeOpen, 0);
 
+      /* Asked for here, while the caller is still known to be the UI thread; see UiThreadProbe for what it is used for. */
+      _uiThreadId = UiThreadProbe.CaptureThreadId();
+      UiThreadProbe.Reset();
+
       var now = Environment.TickCount64;
       _postedMs = now;
       _windowStartMs = now;
@@ -118,6 +125,7 @@ namespace EQLogParser
     {
       Interlocked.Exchange(ref _inFlight, 0);
       Interlocked.Exchange(ref _episodeOpen, 0);
+      UiThreadProbe.Reset();
 
       var timer = _timer;
       _timer = null;
@@ -198,8 +206,20 @@ namespace EQLogParser
             _episodeWaitedMs = waited;
             Interlocked.Increment(ref _stallCount);
 
+            UiThreadProbe.BeginEpisode(_uiThreadId);
+
             PerfJournal.Stall($"UI STALL (open): beat posted {waited:0} ms ago has not run | open {Surfaces()} | " +
               $"in progress {PerfCounters.RunningReport(now)} | {RenderModeText()}");
+          }
+
+          /*
+           * Watching the thread itself for as long as the episode lasts. Whether it is running or waiting is the half of the answer that no
+           * span can give, and it is only knowable while the stall is happening: by the time the late beat runs, the thread is by definition
+           * free again and its state says nothing about what held it.
+           */
+          if (Volatile.Read(ref _episodeOpen) == 1)
+          {
+            UiThreadProbe.SampleEpisode(_uiThreadId);
           }
 
           return;
@@ -237,7 +257,7 @@ namespace EQLogParser
         }
 
         PerfJournal.Stall($"UI STALL closed: beat ran {waited:0} ms late (first seen at {_episodeWaitedMs:0} ms) | " +
-          $"open {Surfaces()} | in progress {PerfCounters.RunningReport(now)}");
+          $"open {Surfaces()} | in progress {PerfCounters.RunningReport(now)} | {UiThreadProbe.EndEpisode()}");
       }
 
       if (waited > Volatile.Read(ref _beatDelayMaxMs))

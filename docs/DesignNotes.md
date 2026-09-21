@@ -2273,6 +2273,33 @@ The `open …` field carries the same improvement: a text overlay used to regist
 first characters of the id kept so two overlays sharing a title stay two names (`TextOverlaySurfaceNameTest` holds that shape, including the
 separators: the title must not be able to write a `+` or a `|` into the line).
 
+### Blocked or busy: what the thread was doing while nobody answered
+
+A stall line proves the thread did not run a beat for N milliseconds and, when it says `in progress nothing`, that none of our passes held
+it. That is as far as anything inside the process can go on its own, and it leaves two explanations pointing at different code. Either the
+thread was *running* — draining framework work nobody times here, layout, binding refresh, rasterizing a window — or it was *waiting*, held
+by something outside itself: a lock another thread owns, the render thread, a driver call. No span can separate them, because in the second
+case the span would have to surround code this codebase does not contain.
+
+The kernel already tracks the distinction per thread, so `UiThreadProbe` asks it. While an episode lasts the watchdog samples the UI
+thread's state on its own 200 ms cadence — `Run`, or `Wait` with a reason (`UserRequest`, `LpcReceive`, `EventPairPort`) — and the closing
+line carries the tally with the CPU actually burned:
+
+```
+UI STALL closed: beat ran 46031 ms late (first seen at 1000 ms) | open fct+triglog | in progress nothing | ui thread: blocked 229/230 samples waiting (UserRequest), cpu 40 ms
+```
+
+Blocked with almost no CPU is a wait, and the hunt is a lock or a call into something outside us; running with wall-matching CPU is work,
+and the next step is an external trace (`dotnet-trace collect -p <pid>`) against code we will then know is hot. `n/a` means the thread could
+not be read, which is stated rather than guessed. Sampling only happens during an episode, and every call is guarded: a probe that threw
+while reporting a frozen interface would replace a symptom with a crash.
+
+The threshold that opens an episode is settable — `PerfStallMs` in `settings.ini`, default 1000 ms, floor 100 ms — because one second is the
+right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
+nothing of ours running: the same event as a multi-second stall at a fifth of the size, and easiest to catch while it is small. Nobody should
+run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
+probe fire except on a freeze, and freezes are the rare half of this.
+
 ### Reading a report
 
 `UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on
@@ -2282,12 +2309,24 @@ how long the thread was unavailable. Read them in order:
    812 ms (threshold 150 ms)`) will usually already be in the log, because any span over `PerfJournal.SlowPassMs` (150 ms: nine frames at
    60 Hz) complains on its own account, throttled to once per five seconds per name. A stall that names `nothing` is not a named span: it is
    something outside the instrumented paths — the framework, another window nobody timed, or native code.
-2. `open …` — if the stall's window is not in that list, it is not the cause.
-3. The heartbeat's cost table — worst spans first, so one 40 ms pass outranks nine hundred 0.2 ms ones, since the question is who held the
-   thread and not who is chattiest.
-4. `gc2` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code; a stall
+2. `ui thread: blocked …` / `running …` — which of the two it was, since "nothing of ours ran" reads both ways. Blocked sends you looking
+   for a wait (a lock, the render thread, a driver); running sends you looking for a pass nobody timed, in a trace.
+3. `open …` — if the stall's window is not in that list, it is not the cause.
+4. The heartbeat's cost table — worst spans first, so one 40 ms pass outranks nine hundred 0.2 ms ones, since the question is who held the
+   thread and not who is chattiest. Each kind gets its own room on the line: with eight surfaces open the spans alone filled ten rows and
+   every counter fell off, including the drop counters — the line has to carry what arrived and what was discarded during it, not just what
+   ran.
+5. `gc2` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code; a stall
    with no collections is somebody's loop.
-5. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
+6. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
+
+The session that followed, run specifically to have everything open at once — overlay, meter, text overlay, trigger log and four timer
+overlays, with the live log file opened *while* two simulated clients were still writing to it — cleared the rest of the list, so none of it
+gets re-examined. Four timer overlays cost 31.5 passes a second averaging 0.08 ms and the trigger grid's refresh 0.4 a second averaging
+0.04 ms: a few milliseconds of UI time per second summed. The concurrent load allocated at up to 925 MB/s for 38 s and never delayed a beat
+by more than 31 ms, so loading costs memory rather than responsiveness — heap 0.3 GB to 2.4 GB and flat from then on, no leak with every
+surface open. After that the longest beat delay in nine and a half minutes was 31 ms. Whatever the reported freezes are, they are not any
+pass this code measures, which is why the probe above is the next instrument rather than another span.
 
 ### Instrumenting something new
 
