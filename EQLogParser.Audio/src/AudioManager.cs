@@ -8,6 +8,7 @@ using SoundTouch.Net.NAudioSupport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -26,6 +27,13 @@ namespace EQLogParser.Audio
   {
     public const string AudioCacheKey = "audio-cache:";
     public const string WindowsEngine = WindowsTtsEngine.EngineName;
+
+    /*
+     * Optional timing hook for a host that keeps its own counters. This assembly must stay measurable without knowing about the application's
+     * perf code - it references neither - so synthesis and file reads are reported here instead of wrapped in a span, on whatever thread did
+     * the work. Names are stable ("synth", "file"); the host decides what they are worth. Null means nobody is listening.
+     */
+    public static Action<string, double> PerfSink { get; set; }
     public const string PiperEngine = PiperTtsEngine.EngineName;
     public const string KokoroEngine = KokoroTtsEngine.EngineName;
     public event Action<bool> DeviceListChanged;
@@ -179,11 +187,12 @@ namespace EQLogParser.Audio
 
         _tts = engine;
 
-        // A milestone worth having in a bug report; Windows is the boring default, so stay quiet there.
-        if (engine.Name is KokoroEngine or PiperEngine)
-        {
-          Log.Info($"Using {engine.Name.ToLowerInvariant()}-tts");
-        }
+        /*
+         * Named for every engine, Windows included. This used to log only the neural engines on the reasoning that the boring default needs
+         * no announcement, which left a log line that meant two different things: "kokoro" and "nothing at all". Which engine is speaking is
+         * the first question in any report about speech stopping, and the Windows path is exactly where SAPI lives.
+         */
+        Log.Info($"Using {engine.Name.ToLowerInvariant()}-tts");
       });
     }
 
@@ -882,6 +891,7 @@ namespace EQLogParser.Audio
       {
         try
         {
+          var fileMark = Stopwatch.StartNew();
           var cacheKey = $"{AudioCacheKey}{Path.GetFullPath(filePath).ToLowerInvariant()}";
           var cachedAudio = await _cache.GetOrCreateAsync(cacheKey, async entry =>
           {
@@ -900,6 +910,8 @@ namespace EQLogParser.Audio
             entry.AbsoluteExpiration = DateTimeOffset.MinValue;
             return null;
           });
+
+          ReportPerf("file", fileMark.Elapsed.TotalMilliseconds);
 
           if (cachedAudio != null)
           {
@@ -921,6 +933,19 @@ namespace EQLogParser.Audio
     public void SpeakTtsAsync(string id, string tts, long priority, int rate, int playerVolume, int adjustedVolume) =>
       _ = SpeakTtsCoreAsync(id, tts, priority, rate, playerVolume, adjustedVolume);
 
+    /* Hands one measured span to the host's counters. A sink that throws must not take the speech it was reporting on with it. */
+    private static void ReportPerf(string name, double ms)
+    {
+      try
+      {
+        PerfSink?.Invoke(name, ms);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Audio timing sink failed", ex);
+      }
+    }
+
     private async Task SpeakTtsCoreAsync(string id, string tts, long priority, int rate, int playerVolume,
       int adjustedVolume)
     {
@@ -931,7 +956,9 @@ namespace EQLogParser.Audio
 
       try
       {
+        var synthMark = Stopwatch.StartNew();
         (var audio, var sample) = await SynthesizeForPlayerCachedAsync(id, tts).ConfigureAwait(false);
+        ReportPerf("synth", synthMark.Elapsed.TotalMilliseconds);
 
         if (audio is { Length: > 0 })
         {

@@ -2228,6 +2228,8 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `trig.line` | span | evaluating one log line against every active trigger, on the trigger thread (**off the UI thread**) — count is lines, average is what a line costs |
 | `trig.tests` | count | patterns that pass asked for: multiplied out, this is the matching bill (an imported set of 4,227 enabled triggers tests every raid line against all of them) |
 | `trig.active` | level | how many triggers the processor currently holds active for a character — the number that separates a clean soak from somebody's freeze |
+| `audio.synth` | span | turning text into samples, measured inside `EQLogParser.Audio` and reported through `AudioManager.PerfSink` because that assembly references no counter code (**off the UI thread**). This is where the engines differ: a neural model on one machine, SAPI or WinRT on the next, and the same build either way |
+| `audio.file` | span | reading and decoding a sound file for a player, including the cache miss that has to open it (**off the UI thread**) |
 
 `Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
 up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the
@@ -2335,7 +2337,15 @@ nor our code. Two limits on this measurement, stated plainly: the machine had me
 run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — a `paused`
 reading is a lifetime share that dilutes toward zero, so read it against the allocation rate, not as this window's cost. GC is cleared for this
 run and no other. One plumbing note for the next collection: `dotnet-counters` recorded only `System.Runtime`, which puts the runtime's pauses on
-a timeline with nothing of ours on it; pass `-c System.Runtime,EQLogParser` to get `trig.evalAll` and friends beside them.
+a timeline with nothing of ours on it; pass `-c System.Runtime,EQLogParser` to get the trigger spans beside them.
+
+Speech is on that timeline now too, because two players on one build can disagree about nearly everything except the log they leave behind, and
+audio was the widest gap of that kind. The engine is chosen at startup from which packs happen to exist, so one machine synthesizes through a local
+neural model and the next through SAPI or WinRT while both print nothing about it — the announcement used to fire only for the neural engines, on
+the reasoning that the boring default needs no introduction. It names all three now, since "kokoro" and silence were two different facts wearing
+the same clothes. `audio.synth` and `audio.file` arrive through a hook rather than a span: `EQLogParser.Audio` references no counter code and stays
+that way, so durations cross the boundary as numbers (`AudioManager.PerfSink` into `PerfCounters.Record`, which is `End` without the timestamps —
+a span cannot straddle an `await` inside another assembly).
 
 ### Reading a report
 

@@ -183,6 +183,38 @@ namespace EQLogParser
       return ms;
     }
 
+    /*
+     * Records a duration that was measured somewhere a span cannot be wrapped: the audio engine times its own synthesis on a thread inside
+     * another assembly, and a Begin/End pair cannot straddle an await in a library that knows nothing about this one. Same accounting as End,
+     * without the timestamps - which means the caller owns the clock, and a negative duration (a clock read out of order) is dropped rather
+     * than printed.
+     */
+    internal static void Record(int id, double ms)
+    {
+      var entry = Resolve(id);
+
+      if (entry is null || ms < 0)
+      {
+        return;
+      }
+
+      entry.Kind = Kind.Timed;
+      entry.WindowSeen = true;
+      entry.WindowCount++;
+      entry.WindowMs += ms;
+
+      if (ms > entry.WindowMaxMs)
+      {
+        entry.WindowMaxMs = ms;
+      }
+
+      /* The same slow-pass rule End applies, so a two second synthesis complains whether it was timed here or there. */
+      if (ms >= PerfJournal.SlowPassMs)
+      {
+        PerfJournal.SlowPass(entry.Name, ms);
+      }
+    }
+
     /* Runs work inside a timed span. Convenient where a try/finally would swallow a line; allocates one delegate, so use Begin/End in a frame path. */
     internal static void Run(int id, Action work)
     {

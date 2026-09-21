@@ -203,6 +203,35 @@ namespace EQLogParser
       Assert.IsTrue(PerfCounters.End(mark) > 0, "registering off the UI thread costs the measurement, not just the attribution");
     }
 
+    /*
+     * A duration measured in another assembly (the audio engine times its own synthesis) has no Begin/End pair to close, so Record takes the
+     * number as given. It still has to land in the same table as everything else: count, average and worst, because "synthesis is slow on this
+     * machine" is a claim about all three.
+     */
+    [TestMethod]
+    public void ADurationRecordedFromOutsideStillJoinsTheTable()
+    {
+      var id = PerfCounters.Register("test.recorded", uiThread: false);
+
+      PerfCounters.Record(id, 4);
+      PerfCounters.Record(id, 20);
+
+      var line = PerfCounters.FormatWindow();
+      StringAssert.Contains(line, "test.recorded n=2", $"both recordings must count: {line}");
+      StringAssert.Contains(line, "max 20", $"the worst of them is the number a reader acts on: {line}");
+    }
+
+    /* A clock read out of order gives a negative duration; printing it would put a minus sign in a heartbeat and cost the reader the hour. */
+    [TestMethod]
+    public void ANegativeRecordedDurationIsDropped()
+    {
+      var id = PerfCounters.Register("test.negative", uiThread: false);
+
+      PerfCounters.Record(id, -3);
+
+      Assert.AreEqual("quiet", PerfCounters.FormatWindow(), "a duration below zero is not a measurement");
+    }
+
     /* A handler that runs late every second gets one line about it, but a different span is not allowed to inherit that silence. */
     [TestMethod]
     public void TheSameSpanCannotWarnTwiceInsideItsThrottleWindow()

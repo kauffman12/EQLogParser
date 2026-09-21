@@ -41,6 +41,16 @@ namespace EQLogParser
      * and the first Show. They are registered as fields so a span can be opened before the phase it measures and closed after it throws.
      */
     private static readonly int VoicesId = PerfCounters.Register("app.voices");
+
+    /*
+     * Speech costs are measured inside EQLogParser.Audio, which references no counter code at all, so they arrive through AudioManager.PerfSink
+     * rather than a span. Both are off the UI thread by design - synthesis was moved off it precisely because a neural voice froze the window -
+     * and they are here to answer the other question: how long does this machine's engine take per callout, and is the SAPI path slower than the
+     * neural one. A soak on kokoro reads differently from the same soak on Windows voices, which is the difference between two players on the
+     * same build where only one of them freezes.
+     */
+    private static readonly int SynthId = PerfCounters.Register("audio.synth", uiThread: false);
+    private static readonly int AudioFileId = PerfCounters.Register("audio.file", uiThread: false);
     private static readonly int TriggerDbId = PerfCounters.Register("app.triggerdb");
     private static readonly int MainWindowId = PerfCounters.Register("app.mainwindow");
     private static readonly int TriggerMgrId = PerfCounters.Register("app.triggmgr");
@@ -174,6 +184,13 @@ namespace EQLogParser
         MainActions.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
 
         /* The voice load is the first thing on this thread with real work in it, and a model load can take seconds. */
+        AudioManager.PerfSink = (name, ms) => PerfCounters.Record(name switch
+        {
+          "synth" => SynthId,
+          "file" => AudioFileId,
+          _ => -1
+        }, ms);
+
         var voicesMark = PerfCounters.Begin(VoicesId);
         try
         {
