@@ -70,6 +70,11 @@ namespace EQLogParser
       CenterOnScreen();
       _canvas.EventsFrame += OnSimFrame;
       _canvas.Start();
+
+      /* Registered as a surface so the watchdog writes its periodic UI perf lines during a harness run: heartbeats are held back while no
+         instrumented window is up, and a 60 second pull with nothing in the log but stall lines loses the context around them - GC deltas,
+         allocation rate, the cost table - which is most of what a long soak is for. */
+      UiBeatMonitor.NoteSurface("fctsim", true);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -77,6 +82,7 @@ namespace EQLogParser
       if (!_closed)
       {
         _closed = true;
+        UiBeatMonitor.NoteSurface("fctsim", false);
         _canvas.EventsFrame -= OnSimFrame;
         _canvas.Stop();
       }
