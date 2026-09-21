@@ -24,7 +24,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `PerfJournal` (`EQLogParser.Core/src/perf`), and every instrumented span is listed in docs/DesignNotes.md → "Instrumenting the UI
   thread". A span takes its handle from one `Register` call in a field initializer (no name lookups, no locks in frame paths) and closes
   in a `finally`: a pass left marked running by an exception keeps naming itself in every later stall line. `UiBeatMonitorTest` pumps a
-  real dispatcher with short thresholds and relies on `[assembly: DoNotParallelize]` like the notes above.
+  real dispatcher with short thresholds and relies on `[assembly: DoNotParallelize]` like the notes above, and the priorities it queues at
+  are load-bearing — beats go out at `Render` (WPF's 7), so a test's pump check belongs between that and the work under test, never at
+  `Normal` (9), or it wins the race against the late beat and the stall goes unmeasured. Numbers and reasoning: docs/DesignNotes.md.
+- **Namespaces**: the WPF app compiles every source into the flat `namespace EQLogParser` whatever folder it lives in, while
+  `EQLogParser.Core` matches folders (`EQLogParser.perf`). Tests reach app internals through `using EQLogParser;` (`InternalsVisibleTo` is
+  already granted to both test assemblies); declaring `EQLogParser.ui.perf` in a new app file breaks that.
+- **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
+  tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
 
 ## Post-Implementation Checklist

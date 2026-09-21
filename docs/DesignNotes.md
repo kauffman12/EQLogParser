@@ -2171,15 +2171,27 @@ numbers, PerfView or WPF ETW traces for frame-level detail — none of it requir
 somewhere else for that long, and the line it writes says what was open and which named spans were inside at the time. Instrumenting
 only the overlay would have printed an innocent "my paint took 1.2 ms" beside every freeze, which is a report with no answer in it.
 
-Three decisions in that design are load-bearing:
+Four decisions in that design are load-bearing:
 
-- **The beat goes out at `Render` priority.** Priorities below it starve during a window drag or resize — the classic
-  `DispatcherTimer` problem — and dragging an overlay is not the bug being hunted. It is also why a stall line naming
-  `in progress nothing` has a mundane reading: something outside this process's own work had the thread.
+- **The beat goes out at `Render` priority**, which is 7 on the scale WPF actually uses — `Send` 10, `Normal` 9, `DataBind` 8, `Render` 7,
+  `Background` 4 (where a `DispatcherTimer` fires by default), `ContextIdle` 3. That is above the band which starves while a window is being
+  dragged or resized, so dragging an overlay does not read as a stall, and below ordinary queued work, so a late beat's number includes time
+  spent behind work the player was also waiting for. It is also why a stall line naming `in progress nothing` has a mundane reading:
+  something outside this process's own work had the thread.
+- **A stall is counted where it is detected**, on the pool thread, not on the beat that closes it. The episode a process never recovers from
+  is precisely the one with no closing beat, and a counter that only moves when things get well again reports a clean session for the worst
+  freeze of the night.
 - **Detection happens while the process is still stuck**, on the pool thread, and again when the beat finally arrives. If the UI thread
   never comes back the log still holds everything known at the time; waiting only for the resumed beat loses exactly the worst case.
 - **Gaps longer than `SleepGuardMs` (30 s) are discarded.** A laptop lid is not a hitch, and reporting one trains the reader to ignore
   the lines that matter.
+
+Those priority numbers are also what make `UiBeatMonitorTest` work, and they were got wrong the first time. The test ends its message loop
+by re-posting a budget check; queued at `Normal`, that check won against the `Render` beat when a blocked sleep finished — the loop returned
+before the beat that measures the stall ever ran, and the blocked-dispatcher test reported nothing while the watchdog was working correctly.
+So work queued by a test sits below `Render` (`ContextIdle` for the busy chain) and the pump's own check between them, which is the only
+arrangement where both the beats and the end of pumping are guaranteed their turn. The numbers above read off the reference assembly rather
+than from memory for that reason.
 
 Heartbeats (one Info line every 20 s: window length, what was open, worst beat delay, render mode, GC deltas and allocation rate, and the
 cost table of instrumented spans) are written only while an instrumented surface is open. They exist to explain overlay stalls; a build
