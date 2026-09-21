@@ -20,10 +20,12 @@ namespace EQLogParser
    *
    * Two properties are worth keeping in mind when changing this:
    *
-   *   The beat is posted at Render priority. Priorities below it starve during a window drag or resize (the classic DispatcherTimer
-   *   problem), and an overlay that is being dragged is not the bug — so dragging must not look like a stall if it can be avoided.
-   *   Dragging the game window in exclusive fullscreen can still starve everything; if a stall line ever coincides with a drag, that
-   *   is what happened, and the line says so by naming no pass at all ("in progress: nothing").
+   *   The beat is posted at Render priority — 7 on a scale where DispatcherTimer's default Background is 4 and ordinary work is Normal 9.
+   *   That puts it above the band which starves while a window is being dragged or resized (the classic DispatcherTimer problem), so
+   *   dragging an overlay does not look like a stall; an overlay under the cursor is not the bug being hunted. It stays below Normal on
+   *   purpose: the delay in a beat line then includes time spent behind work the player was also waiting for, and the monitor never
+   *   reports more than the thread actually owed the interface. Dragging the game window in exclusive fullscreen can still starve
+   *   everything; if a stall line ever coincides with a drag, that is what happened, and the line says so by naming no pass at all.
    *
    *   Detection happens on a pool thread, before the process is well again. If the UI thread never comes back, the log still holds
    *   the "open" line with everything that was known while it was stuck; waiting only for the resumed beat would lose exactly the
@@ -62,14 +64,27 @@ namespace EQLogParser
     private static double _lastStallMs;
     private static double _worstStallMs;
     private static double _beatDelayMaxMs;
+    private static int _beatCount;
 
     private static long _windowStartMs;
     private static PerfGc.Reading _gcAtWindow;
 
-    /* How many stalls have been reported since Start, and how bad they were — what the watchdog tests assert on. */
+    /*
+     * How many stalls have been detected since Start, and how bad they were. Counted at detection rather than on the closing beat, so an
+     * episode whose process never comes back still counts: it is the one that was reported and never explained. Durations are the other
+     * half, and can only be filled in by the late beat — an episode the process did not survive leaves them at zero.
+     */
     internal static int StallCount => Volatile.Read(ref _stallCount);
     internal static double LastStallMs => Volatile.Read(ref _lastStallMs);
     internal static double WorstStallMs => Volatile.Read(ref _worstStallMs);
+
+    /*
+     * Whether a watch is running, and how many beats have landed since it started. The count exists for the tests: "no stalls were
+     * reported" only means something when beats were actually arriving, and without it a watchdog that never got going would look
+     * exactly like a healthy interface.
+     */
+    internal static bool IsRunning => Volatile.Read(ref _timer) is not null;
+    internal static int BeatCount => Volatile.Read(ref _beatCount);
 
     /*
      * Begins watching. Called once from App.OnStartup, after logging is configured, with the dispatcher that owns the UI; the
@@ -87,6 +102,7 @@ namespace EQLogParser
       Volatile.Write(ref _worstStallMs, 0);
       Volatile.Write(ref _beatDelayMaxMs, 0);
       Volatile.Write(ref _stallCount, 0);
+      Volatile.Write(ref _beatCount, 0);
       Interlocked.Exchange(ref _inFlight, 0);
       Interlocked.Exchange(ref _episodeOpen, 0);
 
@@ -180,6 +196,7 @@ namespace EQLogParser
           if (waited >= _stallMs && Interlocked.CompareExchange(ref _episodeOpen, 1, 0) == 0)
           {
             _episodeWaitedMs = waited;
+            Interlocked.Increment(ref _stallCount);
 
             PerfJournal.Stall($"UI STALL (open): beat posted {waited:0} ms ago has not run | open {Surfaces()} | " +
               $"in progress {PerfCounters.RunningReport(now)} | {RenderModeText()}");
@@ -207,11 +224,12 @@ namespace EQLogParser
       var now = Environment.TickCount64;
       var waited = now - Volatile.Read(ref _postedMs);
       Interlocked.Exchange(ref _inFlight, 0);
+      Interlocked.Increment(ref _beatCount);
 
+      // The count went up when the episode was detected; this is where its length becomes knowable.
       if (Interlocked.CompareExchange(ref _episodeOpen, 0, 1) == 1)
       {
         Volatile.Write(ref _lastStallMs, waited);
-        Interlocked.Increment(ref _stallCount);
 
         if (waited > Volatile.Read(ref _worstStallMs))
         {
