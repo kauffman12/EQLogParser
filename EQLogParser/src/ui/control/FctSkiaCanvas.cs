@@ -608,7 +608,9 @@ namespace EQLogParser
      * in fixed quarters. Lanes nobody books are not drawn: they have no rect left to outline, which is exactly the point (they
      * gave their space away). Bands has no columns and gets no map.
      */
-    private void DrawLaneGuide(SKCanvas canvas)
+    /* Internal rather than private so a test can drive the guide straight onto an SKCanvas: reaching it through OnRender needs WPF
+       layout, a surface and a window, which is more machinery than the one line this guards. */
+    internal void DrawLaneGuide(SKCanvas canvas)
     {
       var choice = _ingest.Layout;
       if (choice.Mode is not FctLayoutMode.ByType)
@@ -623,6 +625,15 @@ namespace EQLogParser
       {
         return;
       }
+
+      /*
+       * The paints drawn with arrive with the first number, and configure mode arrives before that: an overlay opened unlocked puts its
+       * guide on a canvas that has never measured a glyph, so Configure() received a null SKPaint and threw inside WPF's layout pass -
+       * caught by the dispatcher, written to disk as a stack trace, and thrown again on the next resize. Three of those in 140 ms was how
+       * it announced itself in a player-visible log. Resources are cheap and idempotent; the invariant is that paints exist before anything
+       * is drawn with them, which is what Configure's non-nullable signature already claims.
+       */
+      EnsureSkiaResources();
 
       var stage = choice.Stage(ActualWidth, ActualHeight);
 
