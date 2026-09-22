@@ -210,6 +210,55 @@ namespace EQLogParserTest
       Assert.AreEqual("[10,80]", Describe(range.TimeSegments));
     }
 
+    /*
+     * The union itself, computed the obvious way, at the size where Add used to cost the most. Added by halving search rather than by walking the list
+     * from zero, so the order spans arrive in must not matter one bit - which is exactly what an insert-position off-by-one would show up as, and this
+     * is the guard for it (the side-by-side harness that proved the change is not part of the build).
+     */
+    [TestMethod]
+    public void ManyOutOfOrderAddsProduceExactlyTheBruteForceUnion()
+    {
+      var rng = new Random(90210);
+
+      for (var trial = 0; trial < 25; trial++)
+      {
+        var added = new List<TimeSegment>();
+        var range = new TimeRange();
+
+        for (var i = 0; i < 400; i++)
+        {
+          var begin = rng.Next(0, 20_000);
+          var end = begin + rng.Next(0, 30);
+          added.Add(new TimeSegment(begin, end));
+          range.Add(new TimeSegment(begin, end));
+        }
+
+        var want = new List<(double Begin, double End)>();
+
+        foreach (var span in added.OrderBy(a => a.BeginTime))
+        {
+          if (want.Count > 0 && span.BeginTime <= want[^1].End)
+          {
+            want[^1] = (want[^1].Begin, Math.Max(want[^1].End, span.EndTime));
+          }
+          else
+          {
+            want.Add((span.BeginTime, span.EndTime));
+          }
+        }
+
+        Assert.AreEqual(want.Count, range.TimeSegments.Count, $"trial {trial}: span count after {added.Count} adds");
+
+        for (var i = 0; i < want.Count; i++)
+        {
+          Assert.AreEqual(want[i].Begin, range.TimeSegments[i].BeginTime, $"trial {trial}, span {i} begins wrong: {Describe(added)}");
+          Assert.AreEqual(want[i].End, range.TimeSegments[i].EndTime, $"trial {trial}, span {i} ends wrong: {Describe(added)}");
+        }
+
+        AssertAgainstModel(range, added, $"trial {trial}: {added.Count} adds in random order");
+      }
+    }
+
     /* The random sweep: meaning and invariants after every single add, against a model that shares no code with the class. */
     [TestMethod]
     public void RandomAddsMatchTheModelAfterEverySingleAdd()

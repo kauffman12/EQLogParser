@@ -2406,19 +2406,33 @@ long log into one range per name (spans stay separate — fights are minutes apa
 `FightTable` and `EQLogViewer` over all fights, by `DamageOverlayStatsBuilder`'s `allTime` plus one range per name, and by `StatsUtil` inside loops
 over names and sub-stats.
 
-**The fix that makes both cheap** was prototyped and proved before being proposed. A bridged run's length is additive — total = Σ span lengths +
-Σ (`gap − 1`) over consecutive pairs closer than `Offset` — so an insert only disturbs the links at its own neighbourhood: keep a running length-sum
-and a running bridge-bonus, find the place by binary search on `EndTime`, and `GetTotal()` costs O(1) with no allocation, no list walk and no mutation.
-Measured against the same streams: 4.1× on the LineChart pattern, **5× / 30× / 67×** on the three stats shapes above, totals agreeing at every step.
-The prototype's own bugs are the argument for differential testing rather than review: it shipped a self-link when appending past the end (bonus −1,
-totals low by one) and double-removed a link when a merge swallowed a neighbour (totals low by 5), then silently kept counting a pair that had stopped
-being adjacent after an insert between them (totals *high* by 4). Each was found by shrinking the failing history to three adds.
+**Shipped: `Add` finds its place by halving instead of walking from zero.** The spans are sorted and disjoint, so `EndTime` rises along with
+`BeginTime`, and "which span could this merge with" is a binary search (`FirstSpanReaching`) rather than up to *n* iterations of six predicates. From
+there it is two facts: widen the found span, then swallow the ones on its right in one pass and drop them with a single `RemoveRange`. Six ordered
+predicates reduce to two questions, and six helpers (`CollapseLeft`, `CollapseRight`, `IsSurrounding`, `IsWithin`, `IsLeftOf`, `IsRightOf`) went away
+rather than being wrapped. The `Equals` short-circuit is gone because merging with a span of identical bounds *is* the same nothing, done by arithmetic.
+Nothing collapses left any more - the span before the found index ends before our begin by definition, and a disjoint list cannot touch a span we only
+widen rightward - which is the one place the old code could recurse and this one cannot.
 
-Two changes are on the table, and they carry different risk. Making `Add` binary-searched with local collapses changes no observable behaviour at all:
-same spans, same totals, same bridging-on-read. Adding the incremental total additionally stops `GetTotal()` from rewriting the segment list — provably
-the same *numbers* (see the outer-bounds argument above), but a different `TimeSegments` shape for anyone who inspects it after a read, which is
-`LineChart.UpdateRemaining` (`TimeSegments.Last().BeginTime`, fed back into `Add`) and anything that indexes spans. In the chart case the leak is
-harmless — the span read there only ever *widens* what gets added — but 15 call sites share this class, so that one is a decision rather than an edit.
+Measured on the shape above (40 names, one range each, every fight of the log folded in): **2.4 to 0.5 ms at 50 fights, 24.7 to 0.6 ms at 200,
+165.9 to 1.7 ms at 800 - 100x**. `GetTotal()` was not touched, nor its bridging, nor anything else in the class.
+
+Correctness was demonstrated rather than argued, twice over. The previous implementation is frozen in `local/timerange-lab/OldTimeRange.cs` and both run
+side by side in `local/timerange-lab` (`-- equivA`, `-- equivBig`): **1.9M ops** with the *whole segment list* compared after every add - in order, out of
+order, exact duplicates, touching endpoints, single-second points, inverted spans, nulls, and reads interleaved at random - plus **300k adds into ranges
+of about 2,000 spans**, the size where walking from zero hurt. Zero differences in lists or totals. And because that harness is not part of the build, the
+guard that ships is `TimeRangeSpecTest.ManyOutOfOrderAddsProduceExactlyTheBruteForceUnion`, which builds 400 randomly placed spans per trial and compares
+every span of the result against a union computed the obvious way.
+
+**Not shipped: making `GetTotal()` O(1) by carrying the total around.** Worth knowing because it is where the next speed-up lives, and it was prototyped.
+A bridged run's length is additive - total = sum of span lengths + sum of (`gap - 1`) over consecutive pairs closer than `Offset` - so an insert only
+disturbs the links at its own neighbourhood: keep a running length-sum and a running bridge-bonus and the answer needs no list walk, no allocation, and no
+mutation. The prototype agreed with the live class and with an independent model on 200,712 out-of-order adds. Its own bugs are the argument for
+differential testing over review: it counted a self-link when appending past the end (one second short), removed a link twice when a merge swallowed a
+neighbour (five seconds short), and kept counting a pair that stopped being adjacent after an insert landed between them (four seconds *long*) - each
+found by shrinking the failing history to three adds. Shipping it changes one observable thing beyond speed: `GetTotal()` would stop rewriting the segment
+list. The *numbers* are provably unaffected (closing a silence moves no outer bound), but `LineChart.UpdateRemaining` reads `TimeSegments.Last().BeginTime`
+back into an `Add`, and 15 call sites share this class, so it is a decision rather than an edit.
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
