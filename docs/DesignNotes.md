@@ -2215,6 +2215,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `fct.dropLive` | level | how much of `fct.drop` was refused **while the canvas was still being handed frames** — text that could have been read. The number that decides whether a drop count is a bug report or a browser sitting on the overlay |
 | `fct.dropQueued` | level | the part of `fct.drop` that never left `FctManager`'s queue (age-out and cap). A level for the same reason as the two beside it: the per-window `fct.dropStale`/`fct.dropCeiling` counters can be displaced off the line, and an absent counter proves nothing |
 | `fct.backlog` | level | the deepest a lane's arrival queue has been all session (`FctConveyor.PeakWaiting`, a lifetime high-water). Read against `BacklogCap` (12), it says whether more room is the fix or the losses came from elsewhere |
+| `fct.dropMax`, `fct.dropCrit` | level | the largest number ever refused, and how many refusals were crits. A count cannot say whether anything was missed — a saturated rail turns away its newest arrival whatever that is — so these say what the losses cost. `FctOverlayWindow` prints the same worst figure in the overlay's own stats row |
 | `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
 | `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
 | `text.render` | span | one trigger text overlay redrawing its blocks |
@@ -2266,6 +2267,15 @@ reason a rewrite of the render pump got proposed and withdrawn in one conversati
 `fct.dropQueued` what the rails refused, of which `fct.dropLive` is the part that happened under a running pump — text somebody could have read. If that last
 figure climbs while somebody is watching, `fct.backlog` picks the fix off the page: parked at 12, the rail was too short for that fight (more queue, or shorter
 rows); well below it, these losses came from somewhere else.
+
+A follow-up session is what those levels were for, and it settled the diagnosis while leaving the judgement open: 572 refusals, `fct.dropLive` at **572**
+(every one with the canvas painting, ~57 fps), `fct.dropQueued` at **0** across eleven minutes, and `fct.backlog` pinned at **12 from the first second of
+combat to the last**. That is a rail running with no slack whatsoever — roughly one arrival refused per second, indefinitely — reported by a player who watched
+the overlay the whole time and saw nothing wrong. Both statements are correct: a refused row never appears, so saturation has no visible signature, and "it
+seemed fine" is not evidence of anything. Those zeroes also buried the other theory this log had already produced — the queue never starved and the compositor
+was never missing, and without `fct.dropLive` on the page a rewrite of the render pump would have been written against a mechanism the measurement rules out.
+What saturation costs is the remaining question, and it is a question about size rather than count: a hundred white swings refused a minute is what every
+overlay does and what the melee filters exist for, while one big cast refused every few minutes is a rail that needs room.
 
 ### Startup and log loading are phases, not windows
 

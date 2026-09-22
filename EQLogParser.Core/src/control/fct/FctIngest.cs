@@ -76,6 +76,15 @@ namespace EQLogParser
      */
     public int DroppedLiveCount { get; private set; }
 
+    /*
+     * What the refusals cost, because "572 numbers lost" cannot say whether anything was missed: a rail that is saturated throws away its newest
+     * arrival whatever it is, so a session of white swings and one that keeps losing a 40k nuke look identical in the count. MaxDroppedValue is the
+     * largest face value ever refused and DroppedCritCount how many refusals were crits — together they separate "the flood is bigger than the rail"
+     * (fix: fewer arrivals, or more room) from "the rail lost things worth reading" (fix: the rail). Both lifetime figures, read beside fct.backlog.
+     */
+    public double MaxDroppedValue { get; private set; }
+    public int DroppedCritCount { get; private set; }
+
     /* How recently a composition tick has to have arrived for its moment to count as "painting". A dial, so a test can make freshness instant. */
     internal int PumpFreshMs = 250;
 
@@ -409,7 +418,7 @@ namespace EQLogParser
         var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
-          CountDrop(DropLaneId);
+          CountDrop(DropLaneId, value, crit);
           return null;
         }
 
@@ -469,7 +478,7 @@ namespace EQLogParser
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
-          CountDrop(DropConveyorId);
+          CountDrop(DropConveyorId, value, crit);
           return null;
         }
 
@@ -552,10 +561,20 @@ namespace EQLogParser
      * One place a refusal is accounted for, whichever door turned the number away: the lifetime total the settings panel shows, the
      * per-window counter the heartbeat names, and — when the host was painting — the half of the total that could have been seen.
      */
-    private void CountDrop(int counterId)
+    private void CountDrop(int counterId, double value, bool crit)
     {
       DroppedCount++;
       PerfCounters.Note(counterId);
+
+      if (value > MaxDroppedValue)
+      {
+        MaxDroppedValue = value;
+      }
+
+      if (crit)
+      {
+        DroppedCritCount++;
+      }
 
       var pumpedAt = Volatile.Read(ref _lastPumpMs);
       if (pumpedAt != 0 && Environment.TickCount64 - pumpedAt <= PumpFreshMs)

@@ -290,10 +290,39 @@ namespace EQLogParser
     }
 
     /*
+     * What a refusal cost, which is the figure that says whether saturation matters. A rail turns its newest arrival away whatever it is — taking a
+     * slot off a visible row for an invisible one is the one thing it will not do — so the count of losses cannot separate a flood of white swings
+     * from a lost big cast, and only one of those two is worth changing anything for.
+     */
+    [TestMethod]
+    public void RefusalsRememberTheBiggestNumberTheyTook()
+    {
+      var railHits = new List<FctHitState>();
+      var rail = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+
+      /* Ascending values on a rail: the queue fills after its first few, and every arrival after that — each bigger than anything it kept — is refused. */
+      Storm(rail, railHits, 0, 40, pump: true);
+
+      Assert.IsTrue(rail.DroppedCount > 0, "the queue has to overflow for the level to mean anything");
+      Assert.AreEqual(900 + 39 * 250, rail.MaxDroppedValue, 0.001, "the biggest refusal is recorded, not merely the biggest arrival");
+      Assert.AreEqual(rail.DroppedCount, rail.DroppedCritCount, "this storm is all crits, so every loss counts as one");
+
+      /* Same mechanism under plain hits: the worst-loss figure still fills in, and nothing inflates the crit count. The two numbers answer
+         different questions — "how bad was the worst thing lost" and "how often did it cost something worth noticing". */
+      var plainHits = new List<FctHitState>();
+      var plain = NewIngest();
+      Storm(plain, plainHits, 0, 40, pump: true, crit: false);
+
+      Assert.IsTrue(plain.DroppedCount > 0, "the scatter cap overflowed too");
+      Assert.IsTrue(plain.MaxDroppedValue > 0, "and it knows how big the worst of them was");
+      Assert.AreEqual(0, plain.DroppedCritCount, "none of which were crits");
+    }
+
+    /*
      * One lane, one source, values that never fold into each other, arriving 60 ms apart — faster than any rail can display them, which is why
      * forty-eight land a lane on its cap and leave most of them refused. `first` lets one storm continue on an ingest another pass already filled.
      */
-    private static void Storm(FctIngest ingest, List<FctHitState> hits, int first, int count, bool pump)
+    private static void Storm(FctIngest ingest, List<FctHitState> hits, int first, int count, bool pump, bool crit = true)
     {
       for (var i = 0; i < count; i++)
       {
@@ -303,7 +332,7 @@ namespace EQLogParser
         }
 
         var n = first + i;
-        ingest.Accept(hits, FctLane.DamageDealt, 900 + n * 250, "Flurry", crit: true, minor: false, periodic: false,
+        ingest.Accept(hits, FctLane.DamageDealt, 900 + n * 250, "Flurry", crit: crit, minor: false, periodic: false,
           fixedText: null, Width, Height, n * 60);
       }
     }

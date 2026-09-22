@@ -220,6 +220,10 @@ namespace EQLogParser
     /* Deepest a lane's arrival queue has been all session, so a refusal can be told from a cap that was barely touched. */
     public int PeakBacklog => _ingest.PeakBacklog;
 
+    /* The largest number ever refused, and how many refusals were crits: what the losses cost, not just how many there were. */
+    public double MaxDroppedValue => _ingest.MaxDroppedValue;
+    public int DroppedCritCount => _ingest.DroppedCritCount;
+
     /* How many numbers the "hide under" filter has taken off screen; shown beside the drop count, because a filter
      * doing its job and a bug swallowing numbers should never look the same from outside. */
     public int HiddenCount => _ingest.HiddenCount;

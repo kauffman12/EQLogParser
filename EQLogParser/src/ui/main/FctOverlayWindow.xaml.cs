@@ -77,6 +77,8 @@ namespace EQLogParser
     private static readonly int DropLiveId = PerfCounters.Register("fct.dropLive");
     private static readonly int DropQueuedId = PerfCounters.Register("fct.dropQueued");
     private static readonly int BacklogId = PerfCounters.Register("fct.backlog");
+    private static readonly int DropMaxId = PerfCounters.Register("fct.dropMax");
+    private static readonly int DropCritId = PerfCounters.Register("fct.dropCrit");
 
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
@@ -483,6 +485,8 @@ namespace EQLogParser
         PerfCounters.Gauge(DropLiveId, _canvas.DroppedLiveCount);
         PerfCounters.Gauge(DropQueuedId, _manager.DroppedCount);
         PerfCounters.Gauge(BacklogId, _canvas.PeakBacklog);
+        PerfCounters.Gauge(DropMaxId, _canvas.MaxDroppedValue);
+        PerfCounters.Gauge(DropCritId, _canvas.DroppedCritCount);
       }
 
       if (now - _lastStatsMs < 500)
@@ -506,7 +510,13 @@ namespace EQLogParser
       var stats = $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live";
       if (dropped > 0)
       {
+        /* The size of the biggest loss rides beside the count because the count alone cannot say whether anything was missed: a saturated rail
+           refuses its newest arrival whatever that is, so a hundred white swings and one lost 40k nuke both read "100 dropped". */
         stats += $" · {dropped} dropped";
+        if (_canvas.MaxDroppedValue > 0)
+        {
+          stats += $" · {FctText.FormatHitValue(_canvas.MaxDroppedValue)} worst";
+        }
       }
 
       if (hidden > 0)
