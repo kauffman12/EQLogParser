@@ -2643,6 +2643,23 @@ leaving compaction permanently on would slow the collections the runtime picks f
 
 ### Reading a report
 
+One real line, every twenty seconds while an instrumented window is open, taken from the end of a 69 minute session:
+
+```
+UI perf 20 s | open fct+tmr:CooldownOverlay-413c | beat delay max 0 ms, stalls 3 worst 2297 ms | render:auto |
+gc0 1 gc1 0 gc2 0 stopped 5 ms | heap 202 MB ws 554 MB alloc 0.6 MB/s paused 0.32% since start |
+trig.timerTick n=220 avg 0.1 max 0.4 ms, trig.timerBar n=45 avg 0.1 max 0.1 ms, fct.feed n=1492 avg 0 max 0 ms,
+ui.fightTable n=20 avg 0 max 0 ms, trig.logBatch×1, trig.logEntry×1, fct.queue=0, fct.drop=567, fct.hits=0, trig.timerBars=11
+```
+
+Wrapped here for the page; it is one line in the log, and the surface name carries a window hash. Everything up to `render:auto` is the watchdog: which
+windows were open, how late the last beat's callback actually was, how many stalls the process has ever detected, and whether WPF fell back to software
+rendering. The `gc …` clause is the window's own collector figures — one gen0 in twenty seconds, nothing stopped, the quiet case — and `paused` is the one lifetime
+figure on the line. Quoted exactly as that build wrote it: it reads 0.32% where summing this file's own `stopped` column gives 35.48 s over 4,166 s of life,
+which is why that figure is computed here now (0.85% for this moment) and why both it and the stall counters carry a `since start` label this transcript
+predates. The tail is `PerfCounters.FormatWindow()`: per-span counts and times for the window, then the gauges — and `fct.hits=0` with `fct.feed n=1492` is
+worth pausing on, because it says the overlay pumped 1,492 times in twenty seconds and had nothing alive to draw.
+
 `UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on
 how long the thread was unavailable. Read them in order:
 
