@@ -102,10 +102,14 @@ namespace EQLogParser
       var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 1000);
       var to = new PerfGc.Reading(0, 0, 0, 0, 0, 1, 3292);
 
-      Assert.AreEqual(11.46, PerfGc.PausePercent(PerfGc.WindowPauseMs(from, to), 20_000), 0.01,
+      Assert.AreEqual(11.46, PerfGc.PausePercent(PerfGc.WindowPauseMs(from, to), TimeSpan.FromSeconds(20)), 0.01,
         "2.292 s stopped inside 20 s is 11.46%, the same pause the window column reports");
-      Assert.AreEqual(0, PerfGc.PausePercent(500, 0), 0, "a window of no length reports no opinion");
-      Assert.IsTrue(double.IsFinite(PerfGc.PausePercent(0, 0)), "and never a NaN for a beat that closed in the same millisecond");
+
+      // The unit trap itself: half a second of pause in one second of wall is 50%, not 5% and not 500%.
+      Assert.AreEqual(50, PerfGc.PausePercent(500, TimeSpan.FromSeconds(1)), 0.001,
+        "the first argument is milliseconds and the second is a stretch of time; a bare number here cost a field run its only usable figure");
+      Assert.AreEqual(0, PerfGc.PausePercent(500, TimeSpan.Zero), 0, "a window of no length reports no opinion");
+      Assert.IsTrue(double.IsFinite(PerfGc.PausePercent(0, TimeSpan.Zero)), "and never a NaN for a beat that closed in the same millisecond");
     }
 
     /*

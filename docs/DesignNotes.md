@@ -2535,6 +2535,15 @@ a debugger break — is invisible to a probe living inside it. Two numbers close
   Both halves are summed outside the "is a surface open" test — beats are suppressed while the overlays are closed but the monitor's window keeps closing,
   so those minutes enter numerator and denominator together — and neither is zeroed when a log loads, because a ratio that rewinds on every file open is how an
   hour of collector work disappears from its own log.
+
+  **And the replacement was wrong on its first run, by exactly 1000.** The next capture came back `paused 3956.6% since start`, easing down to `345.36%` over
+  twelve minutes: the numerator was milliseconds and the denominator was the window length in seconds — a value already sitting in scope for the rest of that
+  line — so it computed `pauseMs / seconds`. Summing that same file's figures gives 2,421 ms stopped over 720 s = **0.336%**, which is printed/1000 to four
+  digits. The shape is the lesson rather than the arithmetic: a percentage that decays smoothly as uptime grows is a denominator in the wrong unit, not a
+  collector calming down, and few things look more believable in a log than a number falling monotonically. The span is a `TimeSpan` now, so the wrong unit does
+  not compile; `PausePercent` deliberately does not clamp at 100, because a figure above 100% is the evidence and clamping throws it away; and
+  `TheLifetimeSpanAdvancesWithRealTime` asserts that the span gains roughly as much time as actually passed — which needs the beat length to be a parameter of
+  `Start`, since a test cannot wait twenty seconds for a window to close.
 - **`ui.worldstop`** plus a `STOP-THE-WORLD …` warning: the watchdog now times the interval between its *own* callbacks. A gap of
   `GapReportMs` (500 ms, two and a half polls) counts and maxes into that row; once it reaches the stall threshold it writes its own line,
   attributed by `PerfGap.Classify` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for

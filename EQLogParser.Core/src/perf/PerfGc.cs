@@ -126,8 +126,12 @@ namespace EQLogParser
         $" alloc {(seconds <= 0 ? 0 : allocBytes / BytesPerMb / seconds):0.0} MB/s";
     }
 
-    /*Milliseconds of collector pause over milliseconds of wall, as a percentage - the arithmetic behind "paused N%", which needs a span to divide by and
-     * therefore belongs to whoever is holding one. A zero or negative span is zero rather than NaN: an unmeasured window has no opinion about the pause.*/
-    internal static double PausePercent(double pauseMs, double spanMs) => spanMs <= 0 ? 0 : pauseMs / spanMs * 100;
+    /*Milliseconds of collector pause over a stretch of wall, as a percentage - the arithmetic behind "paused N%", which needs a span to divide by and
+     * therefore belongs to whoever is holding one. The span is a TimeSpan on purpose: this takes milliseconds in its first argument, and every version of
+     * "just pass the number you have" between those two has ended with a percentage off by a thousand. A zero or negative span is zero rather than NaN - an
+     * unmeasured window has no opinion about the pause - and nothing here clamps to 100, because a figure over 100% is the evidence that someone divided by
+     * the wrong thing, and a clamp would throw away the only clue.*/
+    internal static double PausePercent(double pauseMs, TimeSpan span) =>
+      span <= TimeSpan.Zero ? 0 : pauseMs / span.TotalMilliseconds * 100;
   }
 }

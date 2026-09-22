@@ -86,6 +86,10 @@ namespace EQLogParser
     private static long _episodeWaitedMs;
 
     private static double _stallMs = DefaultStallMs;
+
+    /* How much real time a heartbeat covers. A parameter of Start for the same reason the thresholds are ones: a test that wants to see a window close
+     * should not have to sit through twenty seconds of it, and this is the dial that decides whether the lifetime figures advance at all. */
+    private static double _beatSeconds = BeatSeconds;
     private static int _stallCount;
     private static double _lastStallMs;
     private static double _worstStallMs;
@@ -103,9 +107,18 @@ namespace EQLogParser
      * disagree, and both keep counting while heartbeats are suppressed - numerator and denominator together, so a closed-overlay stretch dilutes nothing.
      * Deliberately not zeroed by Start()/Reset(): a load is not the start of the process, and a ratio that rewinds every time a file opens is how an hour of
      * collector work disappears from its own log.
+     *
+     * The span is a TimeSpan rather than a double, and that is not decoration. The first version of this kept both halves in milliseconds - except that the
+     * window's length was already lying about in seconds for the rest of the line, so the seconds went into a parameter named spanMs and the first field run
+     * of this figure printed `paused 3956.6% since start`, decaying to `paused 345.36%` as uptime grew: exactly 1000x the truth (2,421 ms of pause over 720 s
+     * is 0.336%, and printed/1000 was 0.3360%). A doubled argument carrying a unit in its name can be passed the wrong one and compiles; a TimeSpan cannot.
      */
     private static double _lifetimePauseMs;
-    private static double _lifetimeSpanMs;
+    private static TimeSpan _lifetimeSpan;
+
+    /* How long the windows that closed so far add up to, and what share of them the collector held. Read by the heartbeat line and by tests. */
+    internal static TimeSpan LifetimeSpan => _lifetimeSpan;
+    internal static double LifetimePausePercent => PerfGc.PausePercent(_lifetimePauseMs, _lifetimeSpan);
 
     /*
      * Where the last poll ran, and what the collector had done by then. The interval between this timer's own callbacks is a measurement of
@@ -146,12 +159,13 @@ namespace EQLogParser
      * thresholds are parameters so a test can wait 300 ms instead of a second and a half. Starting again replaces the previous run
      * and clears the counters, which keeps each measurement's stall count its own.
      */
-    internal static void Start(Dispatcher dispatcher, double stallMs = DefaultStallMs, int pollMs = DefaultPollMs)
+    internal static void Start(Dispatcher dispatcher, double stallMs = DefaultStallMs, int pollMs = DefaultPollMs, double beatSeconds = BeatSeconds)
     {
       Stop();
 
       _dispatcher = dispatcher;
       _stallMs = stallMs;
+      _beatSeconds = beatSeconds;
 
       Volatile.Write(ref _lastStallMs, 0);
       Volatile.Write(ref _worstStallMs, 0);
@@ -383,9 +397,12 @@ namespace EQLogParser
         Volatile.Write(ref _beatDelayMaxMs, waited);
       }
 
-      var seconds = (now - _windowStartMs) / 1000.0;
+      /* One subtraction, in the unit the window is kept in, and the seconds derived from it: the two halves of the lifetime ratio below are both built here
+       * so that neither can be fed a number belonging to the other side of the division. */
+      var spanMs = now - _windowStartMs;
+      var seconds = spanMs / 1000.0;
 
-      if (seconds < BeatSeconds)
+      if (seconds < _beatSeconds)
       {
         return;
       }
@@ -393,7 +410,7 @@ namespace EQLogParser
       var gc = PerfGc.Sample();
 
       _lifetimePauseMs += PerfGc.WindowPauseMs(_gcAtWindow, gc);
-      _lifetimeSpanMs += seconds;
+      _lifetimeSpan += TimeSpan.FromMilliseconds(spanMs);
 
       /* Heartbeats are written only while one of the instrumented surfaces is open: they exist to explain overlay stalls. */
       if (Surfaces() != "none")
@@ -401,7 +418,7 @@ namespace EQLogParser
         PerfJournal.Beat($"UI perf {seconds:0} s | open {Surfaces()} | beat delay max {Volatile.Read(ref _beatDelayMaxMs):0} ms, " +
           $"stalls {_stallCount} worst {Volatile.Read(ref _worstStallMs):0} ms since start | {RenderModeText()} | " +
           $"{PerfGc.Format(_gcAtWindow, gc, seconds)} | " +
-          $"paused {PerfGc.PausePercent(_lifetimePauseMs, _lifetimeSpanMs):0.##}% since start | {PerfCounters.FormatWindow()}");
+          $"paused {LifetimePausePercent:0.###}% since start | {PerfCounters.FormatWindow()}");
       }
 
       _gcAtWindow = gc;

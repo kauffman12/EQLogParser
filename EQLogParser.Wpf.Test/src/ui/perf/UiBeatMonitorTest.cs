@@ -150,6 +150,36 @@ namespace EQLogParser.Wpf.Test
     }
 
     /*
+     * The two halves of the heartbeat's "paused N% since start": pause milliseconds over a stretch of wall. They were both plain numbers once, the
+     * window's length already sat in seconds for the rest of that line, and the first field run of the figure printed `paused 3956.6% since start`,
+     * decaying smoothly to 345% as uptime grew — which is the exact shape of a correct denominator in the wrong unit, and 1000x is what it was
+     * (2,421 ms stopped over 720 s is 0.336%). So this asserts the clock rather than the division: the span must gain about as much time as actually
+     * passed, whatever the collector chose to do meanwhile. Windows are asked for at 200 ms so a one second pump closes several; without that dial the
+     * span never moves in a test and this file cannot see the bug at all.
+     */
+    [TestMethod]
+    public void TheLifetimeSpanAdvancesWithRealTime()
+    {
+      var dispatcher = Dispatcher.CurrentDispatcher;
+      UiBeatMonitor.Start(dispatcher, StallMs, PollMs, 0.2);
+
+      var before = UiBeatMonitor.LifetimeSpan;
+      var wall = Stopwatch.StartNew();
+      PumpFor(dispatcher, 1100);
+      wall.Stop();
+
+      var gained = UiBeatMonitor.LifetimeSpan - before;
+      Assert.IsTrue(gained >= TimeSpan.FromMilliseconds(wall.ElapsedMilliseconds * 0.5),
+        $"{wall.ElapsedMilliseconds:0} ms of pumping advanced the measured span by {gained.TotalMilliseconds:0} ms — a denominator off in its unit");
+      Assert.IsTrue(gained <= wall.Elapsed + TimeSpan.FromSeconds(1),
+        $"the span gained {gained.TotalMilliseconds:0} ms out of {wall.ElapsedMilliseconds:0} ms that existed: more time than there was");
+
+      // A share of wall time cannot pass 100%, and the shipped version of this bug read 345% on a machine that was almost idle.
+      var percent = UiBeatMonitor.LifetimePausePercent;
+      Assert.IsTrue(percent >= 0 && percent <= 100, $"paused {percent:0.###}% is not a share of anything");
+    }
+
+    /*
      * Pumps this thread's dispatcher for a wall-clock budget and no longer, by re-posting a check at Background priority — below the beats,
      * above whatever a test queues. A frame is ended from inside its own callback, which is the documented way; none of this depends on
      * Dispatcher.Run or on its shutdown semantics.
