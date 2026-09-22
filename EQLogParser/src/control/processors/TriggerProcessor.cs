@@ -41,6 +41,9 @@ namespace EQLogParser
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
 
+    /* Last log per trigger id of a clamped duration, so the warning is once a minute per trigger rather than once a match. */
+    private static readonly ConcurrentDictionary<string, long> ClampedDurationLogMs = [];
+
     /*
      * What one log line costs to evaluate, measured on the trigger thread. This path was the one unmeasured suspect in a report of the
      * numbers stopping: matching runs here, tens of thousands of times a second on a player with a large set (one imported set measures
@@ -932,15 +935,31 @@ namespace EQLogParser
         TriggerAgainOption = trigger.TriggerAgainOption,
       };
 
-      newTimerData.DurationSeconds = trigger.DurationSeconds;
-      if (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)
+      /*
+       * The duration is clamped where it enters, because from here on it is arithmetic. Its length comes either from the number in the trigger config
+       * or, for the timer types that allow it, from a TS capture group (dynamicDuration out of TriggerUtil.CheckOptions, via DateUtil's
+       * SimpleTimeToSeconds which answers in uint seconds), and the only test on either was "> 0". Two things go wrong past that. Task.Delay takes an
+       * int of milliseconds and the cast saturates instead of throwing — measured: a capture of "999999999" makes the task whose whole job is removing
+       * this bar sleep for 24.8 days, so the row sits at 0:00 for the rest of the session and keeps the render loop alive with it. And a value around
+       * 1e12 wraps begin + TPS*seconds into the PAST, which draws nothing (remaining is guarded >= 0) and, in standard-time mode, becomes the divisor
+       * that flattens every other bar's progress. ClampDuration reduces both to "a day at most"; NeedsClamping says out loud which trigger asked
+       * (once a minute each, since this path runs on every matching line). TimerLifecycle holds the numbers and the reasoning.
+       */
+      var requestedDuration = wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0
+        ? dynamicDuration
+        : trigger.DurationSeconds;
+      if (TimerLifecycle.NeedsClamping(requestedDuration))
       {
-        newTimerData.DurationSeconds = dynamicDuration;
+        LogClampedDuration(wrapper, requestedDuration);
       }
 
-      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerSecond * newTimerData.DurationSeconds);
+      newTimerData.DurationSeconds = TimerLifecycle.ClampDuration(requestedDuration);
+
+      newTimerData.EndTicks = TimerLifecycle.EndTicks(beginTicks, newTimerData.DurationSeconds);
       newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
-      newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ? beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
+      newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0
+        ? TimerLifecycle.ResetTicks(beginTicks, trigger.ResetDurationSeconds)
+        : 0;
       newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
 
       if (wrapper.HasRepeatedTimer)
@@ -974,7 +993,7 @@ namespace EQLogParser
         {
           try
           {
-            await Task.Delay((int)diff * 1000, warningToken);
+            await Task.Delay(TimerLifecycle.DelayMs(diff), warningToken);
           }
           catch (OperationCanceledException)
           {
@@ -1101,7 +1120,9 @@ namespace EQLogParser
       {
         try
         {
-          await Task.Delay((int)(data2.DurationSeconds * 1000), token);
+          // The removal task. DelayMs rather than a cast: this one detached task is the ONLY thing that takes an ordinary timer off
+          // the overlay, so a duration that saturates the cast (or throws on a negative) leaves the row on screen permanently.
+          await Task.Delay(TimerLifecycle.DelayMs(data2.DurationSeconds), token);
         }
         catch (OperationCanceledException)
         {
@@ -1190,6 +1211,25 @@ namespace EQLogParser
           }
         }
       });
+    }
+
+    /*
+     * Says once a minute per trigger that its countdown length was not usable as offered. This runs on every match, and a trigger fed a
+     * nonsense duration from a capture fires on every line that matches it, so an unthrottled warning would become the log; a minute is
+     * short enough to find in the file and long enough not to bury anything. The line is the difference between "my timer vanished" and a
+     * player being told their trigger's TS capture parsed to a hundred million seconds, which is what one of those looks like.
+     */
+    private void LogClampedDuration(TriggerWrapper wrapper, double requested)
+    {
+      var nowMs = Environment.TickCount64;
+      if (nowMs - ClampedDurationLogMs.GetValueOrDefault(wrapper.Id) < 60_000)
+      {
+        return;
+      }
+
+      ClampedDurationLogMs[wrapper.Id] = nowMs;
+      Log.Warn($"Timer duration is not usable for trigger '{wrapper.Name}' ({requested:0.###}s): " +
+        $"using at most {TimerLifecycle.MaxDurationSeconds:0}s so the timer can still be removed");
     }
 
     private async Task AddTextAsync(Trigger trigger, string text)
