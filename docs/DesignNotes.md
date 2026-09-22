@@ -2472,7 +2472,7 @@ a debugger break — is invisible to a probe living inside it. Two numbers close
   because it means something else.
 - **`ui.worldstop`** plus a `STOP-THE-WORLD …` warning: the watchdog now times the interval between its *own* callbacks. A gap of
   `GapReportMs` (500 ms, two and a half polls) counts and maxes into that row; once it reaches the stall threshold it writes its own line,
-  attributed by `ClassifyGap` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for
+  attributed by `PerfGap.Classify` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for
   2200 of the 2292 ms", or "no collection in that gap: stopped from outside the runtime (profiler or gcdump, power management, or no CPU for
   anybody)". That second wording matters: a measurement freeze caused by our own tools must not arrive looking like our code.
 
@@ -2505,10 +2505,15 @@ One of those sentences shipped broken, in a way worth recording because it is no
 the assertion nobody on that machine could run. Wording tests for app-side code live in `EQLogParser.Wpf.Test`, which *builds* everywhere but whose
 tests need Windows; "the suite passes" meant 1,168 tests in a different assembly and said nothing about these.
 
-The message now reads as a sentence ("1 collection accounts", "3 collections account"), which is what the test wanted. The durable point is where
-the test belongs: `ClassifyGap` is four numbers, arithmetic and an interpolated string with no WPF in it anywhere, so it could live in
-`EQLogParser.Core/src/perf` beside `PerfGc` — where the runnable-everywhere suite would have caught this on the day. Pure classifiers and formatters
-go there; only the beat loop, the dispatcher hand-off and the thread probe have to stay on the Windows side.
+The message now reads as a sentence ("1 collection accounts", "3 collections account"), which is what the test wanted. The durable fix is where it
+lives: the classifier moved to `EQLogParser.Core/src/perf/PerfGap.cs` as `PerfGap.Classify`, taking its four numbers as arguments exactly as before,
+and its wording tests to `EQLogParser.Test/src/perf/PerfGapTest.cs` — ten of them, in 25 ms, on every machine that runs the suite rather than on one with
+a Windows desktop runtime. It was worth more than the typo fix: the half-the-gap threshold is now pinned so changing that ratio has to be a decision,
+and two tests hold the floor on negative counter deltas, one of them on the branch whose sentence contains a hyphen anyway.
+
+The rule this leaves behind: **pure classifiers and formatters go in Core, where they can be tested; only things that need a dispatcher, a window or
+a thread probe belong to the Windows-only assembly.** A test that cannot run on the machine making the change is not a guard rail — it is the reason
+the change ships.
 
 ### Asking the collector for memory back at chosen moments
 

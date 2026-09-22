@@ -292,31 +292,6 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * Who stopped the world, in as many words as these four numbers can carry. The runtime's cumulative pause counter is the tie-breaker:
-     * it counts time the collector held every thread, so a gap that the collections do not explain was stopped by something outside the
-     * managed runtime - a profiler or gcdump suspending the process, power management, or a machine with no CPU left for anybody.
-     */
-    internal static string ClassifyGap(double gapMs, double pauseMs, int gen0, int gen1, int gen2)
-    {
-      var collections = Math.Max(0, gen0) + Math.Max(0, gen1) + Math.Max(0, gen2);
-
-      if (pauseMs >= gapMs * 0.5)
-      {
-        return $"collector ({(gen2 > 0 ? "gen2, the full collection" : gen1 > 0 ? "gen1" : "gen0")}), it held every thread for {Math.Max(0, pauseMs):0} of the {gapMs:0} ms";
-      }
-
-      if (collections == 0)
-      {
-        return $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, or no CPU for anybody)";
-      }
-
-      /* One sentence rather than a template with a parenthetical in it: "1 collection accounts", "3 collections account". */
-      var said = collections == 1 ? "collection accounts" : "collections account";
-
-      return $"{collections} {said} for only {Math.Max(0, pauseMs):0} of the {gapMs:0} ms - the rest is not the collector";
-    }
-
     /* Remembers what the collector had done as of this poll, so the next gap can be attributed. Cheap enough to do every poll. */
     private static void MarkCollector()
     {
@@ -346,7 +321,7 @@ namespace EQLogParser
         Volatile.Write(ref _lastShoutMs, now);
 
         /* The heap is read here rather than every poll: this line is the only thing that wants it, and it wants it to show what a full collection was asked to walk. */
-        PerfJournal.Stall($"STOP-THE-WORLD {gapMs:0} ms with no late beat | {ClassifyGap(gapMs, pauseMs - _pollPauseMs, gen0 - _pollGen0, gen1 - _pollGen1, gen2 - _pollGen2)}" +
+        PerfJournal.Stall($"STOP-THE-WORLD {gapMs:0} ms with no late beat | {PerfGap.Classify(gapMs, pauseMs - _pollPauseMs, gen0 - _pollGen0, gen1 - _pollGen1, gen2 - _pollGen2)}" +
           $" | heap {PerfGc.Sample().HeapBytes / (1024 * 1024.0):0} MB | open {Surfaces()} | {RenderModeText()}");
       }
 
