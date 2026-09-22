@@ -188,6 +188,59 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
+    public void GetId_PastAPageBoundary_StillResolves()
+    {
+      // names live in fixed pages (see StringCache.GetName); an id on the far side of a boundary has to
+      // read back exactly like one in the first page, including after many boundaries
+      const int Count = 2600;
+      var names = Enumerable.Range(0, Count).Select(static i => $"pcx symbol {i}").ToArray();
+      var ids = names.Select(StringCache.GetId).ToArray();
+
+      CollectionAssert.AllItemsAreUnique(ids);
+      for (var i = 0; i < Count; i++)
+      {
+        Assert.AreEqual(names[i], StringCache.GetName(ids[i]), $"symbol {i} lost its name");
+      }
+    }
+
+    [TestMethod]
+    public void GetName_WhileIdsAreBeingAdded_NeverLosesAName()
+    {
+      // the real shape of this at runtime: the UI thread resolves names out of records while a parser
+      // thread registers thousands more. An id already handed out has to read back, from another thread,
+      // at any moment — including the instant a new page appears.
+      const string Name = "pcx established name";
+      var id = StringCache.GetId(Name);
+      var stop = false;
+      var failures = 0;
+
+      var reader = Task.Run(() =>
+      {
+        while (!Volatile.Read(ref stop))
+        {
+          if (!ReferenceEquals(StringCache.GetName(id), Name))
+          {
+            Interlocked.Increment(ref failures);
+          }
+        }
+      });
+
+      var writers = Enumerable.Range(0, 4).Select((_, slot) => Task.Run(() =>
+      {
+        for (var i = 0; i < 2000; i++)
+        {
+          StringCache.GetId($"pcx churn {slot}-{i}");
+        }
+      })).ToArray();
+
+      Task.WaitAll(writers);
+      Volatile.Write(ref stop, true);
+      reader.Wait(TimeSpan.FromSeconds(10));
+
+      Assert.AreEqual(0, failures);
+    }
+
+    [TestMethod]
     public void GetOrAdd_ThreadSafety_MultipleThreadsDedupCorrectly()
     {
       var tasks = new List<Task>();

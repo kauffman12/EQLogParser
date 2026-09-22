@@ -2473,6 +2473,12 @@ Two invariants hold this up and both are load-bearing:
 - **ids are never reused and never cleared.** `StringCache.Clear()` still drops the dedup dictionary, but the id tables outlive it: records
   already stored carry ids, and letting names go mid-session would silently rename them. The cost is bounded by however many distinct names and
   spells the process ever sees, which on two raid nights is four digits.
+- **resolving a name takes no lock.** A read used to be a field load and is now an index into state the parser thread appends to, on the UI thread,
+  inside loops over millions of records — so `StringCache` keeps names in fixed pages rather than one growing list. Growth allocates a fresh page and
+  reveals it by publishing a longer directory in one write; nothing is ever moved, so a reader either sees a name or sees nothing, never a list
+  half-grown underneath it. Putting a `List<string>` here would have worked on paper through the happens-before of whoever published the record and
+  would have been the worst kind of thing to rely on: correct until some later caller stores a record somewhere unsynchronized. The parse of the file
+  above ran the same in nine seconds either way, so the pages cost nothing to keep.
 
 **What is still on this road.** Records being small is step one; the layout step is storing a fight's hits in flat arrays instead of a
 `List<IAction>` of heap objects, which would take the damage side from ~140 MB to something like 60-80 MB and let the `_damageCache` dictionary
