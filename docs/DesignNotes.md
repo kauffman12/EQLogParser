@@ -2495,8 +2495,10 @@ What that run did produce is a memory figure, and it is the one to compare again
 remaining nineteen minutes** at a flat 3.4 GB working set — not climbing, not released. A process sitting at 3.4 GB next to EverQuest on a 16 GB
 machine is page-file territory, and paging reads as a freeze with almost no CPU: the shape the probe calls *blocked*, caused by neither a lock
 nor our code. Two limits on this measurement, stated plainly: the machine had memory to spare, and the runtime's pause counter (22.4 s over the
-run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — a `paused`
-reading is a lifetime share that dilutes toward zero, so read it against the allocation rate, not as this window's cost. GC is cleared for this
+run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — and the `paused`
+reading printed in that transcript was the runtime's `PauseTimePercentage`, which this note went on to describe wrongly for a while as "a lifetime share that
+dilutes toward zero". It is not a lifetime share; see below, where the figure is built here instead. Read it against the allocation rate either way, never as
+this window's cost. GC is cleared for this
 run and no other. One correction, since this paragraph sent somebody chasing a flag that does not exist: there is no `EventSource` in this
 codebase — `PerfCounters` lives in-process and its only outlet is the heartbeat line — so `-c System.Runtime,EQLogParser` collects nothing of
 ours. The pairing that works is the app's own log beside `dotnet-counters -c System.Runtime --sample-interval 1`, matched by wall clock; and the
@@ -2523,8 +2525,16 @@ never whether the process existed during the gap. Anything that suspends a whole
 a debugger break — is invisible to a probe living inside it. Two numbers close that hole:
 
 - **`stopped N ms`** on every heartbeat: the window's own stop time, from `GC.GetTotalPauseDuration()`, which is cumulative and keeps no
-  appointment, so subtracting two readings recovers pauses no beat ever witnessed. The lifetime share stays on the line as `paused …% since start`
-  because it means something else.
+  appointment, so subtracting two readings recovers pauses no beat ever witnessed.
+- **`paused N% since start`** on the same line, which used to be `GC.GetGCMemoryInfo().PauseTimePercentage` and is now the sum of those same window figures
+  over the time they cover. The runtime's number was removed because two measurements of one thing disagreed on one line: over a 69 minute run it held exactly
+  `5.15%` across three heartbeats spanning 46 quiet minutes, one of which reports 762 ms of collector stop inside it — it is a snapshot as of whichever
+  collection the runtime last reported rather than a running total, so between collections it is not a stale measurement, it is no measurement at all — and
+  where it did speak it read `0.32%` against 35.5 s of pause across 4,166 s of life, which is 0.85% by the arithmetic of its own neighbouring column: a factor
+  of 2.7 between two numbers one clause apart. A reader cannot use a figure beside another that contradicts it, and the one we add up cannot contradict itself.
+  Both halves are summed outside the "is a surface open" test — beats are suppressed while the overlays are closed but the monitor's window keeps closing,
+  so those minutes enter numerator and denominator together — and neither is zeroed when a log loads, because a ratio that rewinds on every file open is how an
+  hour of collector work disappears from its own log.
 - **`ui.worldstop`** plus a `STOP-THE-WORLD …` warning: the watchdog now times the interval between its *own* callbacks. A gap of
   `GapReportMs` (500 ms, two and a half polls) counts and maxes into that row; once it reaches the stall threshold it writes its own line,
   attributed by `PerfGap.Classify` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for
@@ -2676,7 +2686,26 @@ When the thing being measured is a pipeline rather than a pass — several steps
 rather than registering half a dozen spans by hand: it names them as a set, keeps them sequential, prints the phase breakdown with the sizes,
 and hands its line back to the caller instead of only logging it, because a rule nobody can assert is a rule that quietly changes.
 
-## What a loaded raid costs in memory
+### Taking the instruments back out
+
+This much measuring was borrowed to answer specific questions, and none of it is what the application is for. When the questions stop arriving, delete it as one
+pass rather than letting it age into scenery — a heartbeat nobody reads still costs a `GC.GetGCMemoryInfo()` every twenty seconds and still teaches a new
+reader that this is how the codebase writes logs.
+
+What goes, in the order that leaves the tree compiling:
+
+1. The instrumented spans: every `PerfCounters.Register` in a field initialiser and its `Begin`/`End`/`Record`/`Note`/`Gauge` calls in frame paths —
+   `trig.*`, `meter.*`, `chart.*`, `fct.*`, `audio.synth`, `ui.fightTable`. These are the hundreds of lines, and they are the reason the frame code reads
+   harder than it does.
+2. `EQLogParser.Core/src/perf/PerfCounters.cs`, `PerfGc.cs`, `PerfGap.cs`, `PerfBreakdown.cs`, and `EQLogParser/src/ui/perf/UiBeatMonitor.cs` plus its thread
+   probe, with the tests beside them (`PerfCountersTest`, `PerfGcTest`, `PerfGapTest`, `PerfBreakdownTest`, `UiBeatMonitorTest` and the Wpf beat/gap tests).
+   The wording assertions go with the sentences they pin — do not keep them as a museum.
+3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at three chosen moments), so `PerfJournal` stays alive for its
+   one line — move that to the ordinary logger if deleting `PerfJournal` with the rest. Likewise `FctFramePacer` paces the display and `FctIngest`'s
+   drop counters answer "did the overlay have room", which is a product decision, not a measurement.
+4. What stays as knowledge: this section, the heap dump, and the two sentences worth remembering from the whole exercise — that a stop-the-world stops the
+   watchdog so `beat delay` cannot see it, and that allocation during a parse (not rendering) is what stops this interface.
+
 
 Everything below was measured against `local/eqlog_Kizant_xegony-09-03-26.txt`: 10,015,348 lines, two full raid nights plus some solo
 killing, which is about what a heavy player loads in one sitting. Instance sizes came from filling an array with half a million records and

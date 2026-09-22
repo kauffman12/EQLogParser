@@ -38,8 +38,8 @@ namespace EQLogParser
     [TestMethod]
     public void CollectionCountsAreDeltasOverTheWindow()
     {
-      var from = new PerfGc.Reading(1000, 2048, 4096, 5, 2, 1, 3.0, 100);
-      var to = new PerfGc.Reading(9000, 2048, 4096, 8, 2, 1, 7.5, 380);
+      var from = new PerfGc.Reading(1000, 2048, 4096, 5, 2, 1, 100);
+      var to = new PerfGc.Reading(9000, 2048, 4096, 8, 2, 1, 380);
 
       var line = PerfGc.Format(from, to, 10);
       StringAssert.Contains(line, "gc0 3");
@@ -51,8 +51,8 @@ namespace EQLogParser
     [TestMethod]
     public void AllocationIsPrintedAsARate()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 0, 0);
-      var to = new PerfGc.Reading(8L * 1024 * 1024, 0, 0, 0, 0, 0, 0, 0);
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 0);
+      var to = new PerfGc.Reading(8L * 1024 * 1024, 0, 0, 0, 0, 0, 0);
 
       // Built the same way the code builds it, so a locale that writes decimals with a comma is not read as a failure.
       var expected = $"alloc {(8.0 * 1024 * 1024 / (1024 * 1024) / 10):0.0} MB/s";
@@ -67,24 +67,45 @@ namespace EQLogParser
     [TestMethod]
     public void ABackwardsReadingNeverPrintsANegativeRate()
     {
-      var from = new PerfGc.Reading(50L * 1024 * 1024, 0, 0, 0, 0, 0, 0, 800);
-      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 0, 40);
+      var from = new PerfGc.Reading(50L * 1024 * 1024, 0, 0, 0, 0, 0, 800);
+      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 40);
 
       Assert.IsFalse(PerfGc.Format(from, to, 10).Contains("-"), "no part of a heartbeat may read as negative bytes");
     }
 
     /*
-     * The pause figure is the runtime's lifetime share, not the window's, so it has to say so: a replay that spends its first minute at 18%
-     * and the next twenty at 0.9% prints 1.9% by the end, and a reader who took that for the window lets the collector off the hook.
+     * The runtime's own PauseTimePercentage is not printed anywhere, and this is the guard that keeps it out. It reached the heartbeat as
+     * "paused N% since start" and was neither half of that. Over a 69 minute run it sat at exactly 5.15% across three heartbeats spanning 46 quiet minutes,
+     * one of which reports 762 ms of collector stop inside it — it is a snapshot as of whichever collection the runtime last reported, not a running total —
+     * and where it did speak it contradicted the `stopped` column of its own line by up to 2.7x: 0.32% against 35.5 s of pause measured across 4,166 s of
+     * life, which is 0.85%. A line may print one ratio between two quantities; it may not print two. The percentage the beat shows is built by PausePercent
+     * below, out of the same cumulative counter as `stopped`, so the pair cannot disagree.
      */
     [TestMethod]
-    public void ALifetimePauseFigureSaysItIsLifetime()
+    public void TheRuntimePausePercentageDoesNotReachTheLine()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 3.0, 100);
-      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 7.5, 100);
+      var from = new PerfGc.Reading(0, 2048, 4096, 0, 0, 0, 100);
+      var to = new PerfGc.Reading(9000, 2048, 4096, 3, 0, 1, 380);
 
-      // Built the same way the code builds it, so a comma-decimal locale is not read as a failure.
-      StringAssert.Contains(PerfGc.Format(from, to, 10), $" paused {(7.5):0.##}% since start");
+      Assert.IsFalse(PerfGc.Format(from, to, 20).Contains("paused", StringComparison.OrdinalIgnoreCase),
+        "Format prints window figures only; a lifetime ratio needs a span its caller is holding, so it is built outside");
+    }
+
+    /*
+     * The arithmetic behind "paused N% since start". Two things matter: an unmeasured span has no opinion (zero, never NaN or infinity — a NaN in a log
+     * line reads as a broken instrument), and the numerator is expected to come from WindowPauseMs, which is what makes the lifetime figure and the per
+     * window `stopped` column two views of one counter instead of two arguments.
+     */
+    [TestMethod]
+    public void APausePercentIsPauseOverSpanAndSilentWithoutASpan()
+    {
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 1000);
+      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 1, 3292);
+
+      Assert.AreEqual(11.46, PerfGc.PausePercent(PerfGc.WindowPauseMs(from, to), 20_000), 0.01,
+        "2.292 s stopped inside 20 s is 11.46%, the same pause the window column reports");
+      Assert.AreEqual(0, PerfGc.PausePercent(500, 0), 0, "a window of no length reports no opinion");
+      Assert.IsTrue(double.IsFinite(PerfGc.PausePercent(0, 0)), "and never a NaN for a beat that closed in the same millisecond");
     }
 
     /*
@@ -97,8 +118,8 @@ namespace EQLogParser
     [TestMethod]
     public void AWindowReportsTheTimeTheWorldWasStopped()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 4.0, 1000);
-      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 1, 8.0, 3292);
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 1000);
+      var to = new PerfGc.Reading(0, 0, 0, 0, 0, 1, 3292);
 
       StringAssert.Contains(PerfGc.Format(from, to, 20), $"stopped {2292:0} ms",
         "a window that lost two seconds to the collector has to say so even when no beat was late");
@@ -109,8 +130,8 @@ namespace EQLogParser
     [TestMethod]
     public void AWindowWithNoCollectionReportsNoStoppedTime()
     {
-      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 8.0, 3292);
-      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 8.0, 3292);
+      var from = new PerfGc.Reading(0, 0, 0, 0, 0, 0, 3292);
+      var to = new PerfGc.Reading(1024, 0, 0, 0, 0, 0, 3292);
 
       StringAssert.Contains(PerfGc.Format(from, to, 20), $"stopped {0:0} ms", "an innocent window should read as innocent");
       Assert.AreEqual(0, PerfGc.WindowPauseMs(to, from), 0, "a backwards pair is zero, not negative");

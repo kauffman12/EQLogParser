@@ -96,6 +96,18 @@ namespace EQLogParser
     private static PerfGc.Reading _gcAtWindow;
 
     /*
+     * Both halves of the "paused N% since start" figure, kept here instead of asked of the runtime. GC.GetGCMemoryInfo().PauseTimePercentage was that
+     * number once and is not one: it is a snapshot as of the last collection the runtime reported - it held exactly 5.15% across three heartbeats spanning 46 minutes, one of which
+     * reports 762 ms of collector stop inside it - and it
+     * contradicted the `stopped` column of its own line by up to 2.7x. Adding the same cumulative counter the window figures use means the two can no longer
+     * disagree, and both keep counting while heartbeats are suppressed - numerator and denominator together, so a closed-overlay stretch dilutes nothing.
+     * Deliberately not zeroed by Start()/Reset(): a load is not the start of the process, and a ratio that rewinds every time a file opens is how an hour of
+     * collector work disappears from its own log.
+     */
+    private static double _lifetimePauseMs;
+    private static double _lifetimeSpanMs;
+
+    /*
      * Where the last poll ran, and what the collector had done by then. The interval between this timer's own callbacks is a measurement of
      * the whole process rather than of the UI thread: see GapReportMs. The collector marks are read every poll because they are four field
      * reads, and a watchdog that is expensive enough to be turned off has measured nothing.
@@ -111,6 +123,11 @@ namespace EQLogParser
      * How many stalls have been detected since Start, and how bad they were. Counted at detection rather than on the closing beat, so an
      * episode whose process never comes back still counts: it is the one that was reported and never explained. Durations are the other
      * half, and can only be filled in by the late beat — an episode the process did not survive leaves them at zero.
+     *
+     * Both are levels, while everything else on the heartbeat line beside them is a window, so the line says "since start" - an hour of an idle
+     * interface otherwise reads as "stalls 3 worst 2297 ms" for ten windows running and sends the reader after stalls that ended before the last log
+     * was opened. The figure is not even monotonic, because Start() zeroes it: loading a file rewinds it, which is why a number here wants the date on
+     * the line above it rather than a comparison with the previous heartbeat.
      */
     internal static int StallCount => Volatile.Read(ref _stallCount);
     internal static double LastStallMs => Volatile.Read(ref _lastStallMs);
@@ -375,12 +392,16 @@ namespace EQLogParser
 
       var gc = PerfGc.Sample();
 
+      _lifetimePauseMs += PerfGc.WindowPauseMs(_gcAtWindow, gc);
+      _lifetimeSpanMs += seconds;
+
       /* Heartbeats are written only while one of the instrumented surfaces is open: they exist to explain overlay stalls. */
       if (Surfaces() != "none")
       {
         PerfJournal.Beat($"UI perf {seconds:0} s | open {Surfaces()} | beat delay max {Volatile.Read(ref _beatDelayMaxMs):0} ms, " +
-          $"stalls {_stallCount} worst {Volatile.Read(ref _worstStallMs):0} ms | {RenderModeText()} | " +
-          $"{PerfGc.Format(_gcAtWindow, gc, seconds)} | {PerfCounters.FormatWindow()}");
+          $"stalls {_stallCount} worst {Volatile.Read(ref _worstStallMs):0} ms since start | {RenderModeText()} | " +
+          $"{PerfGc.Format(_gcAtWindow, gc, seconds)} | " +
+          $"paused {PerfGc.PausePercent(_lifetimePauseMs, _lifetimeSpanMs):0.##}% since start | {PerfCounters.FormatWindow()}");
       }
 
       _gcAtWindow = gc;

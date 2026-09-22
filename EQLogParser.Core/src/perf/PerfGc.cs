@@ -16,7 +16,7 @@ namespace EQLogParser
    */
   internal static class PerfGc
   {
-    internal readonly record struct Reading(long AllocBytes, long HeapBytes, long WorkingSetBytes, int Gen0, int Gen1, int Gen2, double PausePercent, double PauseMs);
+    internal readonly record struct Reading(long AllocBytes, long HeapBytes, long WorkingSetBytes, int Gen0, int Gen1, int Gen2, double PauseMs);
 
     /*
      * A blocking collection we asked for ourselves, written down by the code that asked.
@@ -68,12 +68,11 @@ namespace EQLogParser
           GC.CollectionCount(0),
           GC.CollectionCount(1),
           GC.CollectionCount(2),
-          info.PauseTimePercentage,
           GC.GetTotalPauseDuration().TotalMilliseconds);
       }
       catch (Exception)
       {
-        return new Reading(0, 0, 0, 0, 0, 0, 0, 0);
+        return new Reading(0, 0, 0, 0, 0, 0, 0);
       }
     }
 
@@ -107,12 +106,14 @@ namespace EQLogParser
     /*
      * The work done between two samples. Collection counts are differences - that is what a window means - while the heap and the
      * working set are levels, and allocation is a rate because a megabyte per second of garbage is the thing that predicts the next
-     * collection rather than the byte count itself. The pause figure is the runtime's own share of run time spent stopped, which is a
-     * lifetime level and printed as one, with the label on it because everything beside it is a window: managed code cannot get per-collection
-     * timings without registering an event listener, and that is not a price worth paying for a tidier number in a log line - the collection
-     * deltas next to the allocation rate are what tell memory pressure from somebody's loop, which is the question the line exists to answer.
-     * Read it as dilution: a soak that reports 1.9% since start while the allocation rate sits at 800 MB/s says the worst of the collector is
-     * behind the line, not that the window was cheap. (Measured on a 21 minute replay: 22.4 s of pause total, 10.7 s of it in the first minute.)
+     * collection rather than the byte count itself.
+     *
+     * There is deliberately no percentage here. `GC.GetGCMemoryInfo().PauseTimePercentage` used to print as "paused N% since start", and both halves of
+     * that turned out to be false on a 69 minute run read against its own windows: it is a snapshot as of whichever collection the runtime last reported rather
+     * than a running total: it sat at exactly `5.15%` across three heartbeats spanning 46 quiet minutes, one of which reports 762 ms of collector stop inside it, and where it did speak it disagreed with the summed
+     * `stopped` figures on this same line by up to 2.7x (0.32% against 35.5 s of pause in 4,166 s of life = 0.85%) - two numbers one clause apart telling
+     * a reader two different stories about the same hour. A lifetime ratio is worth printing, so the beat monitor builds one out of the same cumulative
+     * counter as `stopped`, which makes the pair agree by construction; see PausePercent below.
      */
     internal static string Format(in Reading from, in Reading to, double seconds)
     {
@@ -122,8 +123,11 @@ namespace EQLogParser
 
       return $"gc0 {Math.Max(0, to.Gen0 - from.Gen0)} gc1 {Math.Max(0, to.Gen1 - from.Gen1)} gc2 {Math.Max(0, to.Gen2 - from.Gen2)} stopped {WindowPauseMs(from, to):0} ms" +
         $" | heap {to.HeapBytes / BytesPerMb:0} MB ws {to.WorkingSetBytes / BytesPerMb:0} MB" +
-        $" alloc {(seconds <= 0 ? 0 : allocBytes / BytesPerMb / seconds):0.0} MB/s" +
-        $" paused {to.PausePercent:0.##}% since start";
+        $" alloc {(seconds <= 0 ? 0 : allocBytes / BytesPerMb / seconds):0.0} MB/s";
     }
+
+    /*Milliseconds of collector pause over milliseconds of wall, as a percentage - the arithmetic behind "paused N%", which needs a span to divide by and
+     * therefore belongs to whoever is holding one. A zero or negative span is zero rather than NaN: an unmeasured window has no opinion about the pause.*/
+    internal static double PausePercent(double pauseMs, double spanMs) => spanMs <= 0 ? 0 : pauseMs / spanMs * 100;
   }
 }
