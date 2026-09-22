@@ -69,13 +69,19 @@ namespace EQLogParser
      */
     public int PeakWaiting { get; private set; }
 
-    /* The floor a pressed column's rhythm is taken to, as a share of the shipped flight time: 45%, which is about 0.87 s for an
-       800 px column at ScrollMsPerPx 4.6 against the 1.9 s of the unpressed rate — traffic moving quickly rather than a blur.
+    /* The floor a pressed column's rhythm is taken to, as a share of the shipped flight time: 38%, about 0.72 s for an 800 px
+       column at ScrollMsPerPx 4.6 against the 1.9 s of the unpressed rate — traffic moving quickly rather than a blur.
        It came off the congestion ladder this conveyor replaced, where the same number capped how far ONE row could speed itself
        up; the same floor now caps how far a WHOLE lane can, because press here is bought by shortening every life on the column
        at once. Past it the lane has no knob left and turns new arrivals away (Enrol's door, behind BacklogCap), which is why a
-       flood shows up as DroppedCount instead of as an unreadable column. */
-    public const double PressFloor = 0.45;
+       flood shows up as DroppedCount instead of as an unreadable column.
+       It was 45% until a session was measured with nothing left to give: eleven minutes with the queue pinned at BacklogCap and
+       572 arrivals refused, every one of them refused while the canvas was painting (fct.dropLive = fct.drop). At 45% the column
+       was already losing numbers while it still had accelerator in hand (see Ramp: the load signal clips long before this floor),
+       so two things had to change together — the lane now spends what it has, and what it has got goes deeper. 38% is still text
+       rather than a blur; nothing about either change is felt in a calm fight, because press only leaves 1.0 when traffic asks.
+       If a jammed column now reads too fast, this is the number to move back, and fct.drop says whether anything was lost by doing so. */
+    public const double PressFloor = 0.38;
 
     /*
      * How fast a lane may change its mind about speed, per millisecond of elapsed time. Speeding up is nearly immediate:
@@ -268,12 +274,19 @@ namespace EQLogParser
      * N/M times faster than nominal, and no more. Below capacity the answer is 1.0 and the rail keeps the tempo the player
      * dialled; past it the whole lane drives toward PressFloor, which still reads as text rather than a blur and
      * clears the region inside about a second and a half, so an overlay stops typing shortly after a fight does.
+     *
+     * The ratio stops working exactly where it is most needed, and that was measured rather than argued. The load signal is what
+     * the lane has GOT, and a lane that turns arrivals away cannot be told how much more it was asked for: a session whose column
+     * held about twenty rows with the queue shut at BacklogCap (12) reports 32/20, asks for 0.63, and sits there — accelerator half
+     * in hand, door shut, one number refused every second for eleven minutes. So a full queue is read as what it actually is, a
+     * clipped signal: demand at least as bad as the ratio can express, which means all the way to the floor. The slew limit still
+     * applies, so this is a hard push and not a lurch, and it unwinds by the slow ramp the moment the queue drains.
      */
     private static void Ramp(Lane lane)
     {
       var capacity = Math.Max(1, (int)((lane.Travel + LaneGapPx) / Math.Max(1.0, lane.Pitch)));
       var wanted = Math.Clamp((lane.OnScreen + lane.Waiting) / (double)capacity, 1.0, 1.0 / PressFloor);
-      var target = 1.0 / wanted;
+      var target = lane.Waiting >= BacklogCap ? PressFloor : 1.0 / wanted;
 
       var gap = target - lane.Press;
       if (Math.Abs(gap) <= RampDeadBandFrac * lane.Press)

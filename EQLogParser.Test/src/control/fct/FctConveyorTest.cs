@@ -663,6 +663,54 @@ namespace EQLogParser
       Assert.IsTrue(slowestPress < 0.90, $"a lane this busy should have sped up at all, lowest press {slowestPress:0.###}");
     }
 
+    /* How far a column goes when it is saturated for good, rather than for one AoE. The session this was written for ran with its
+       queue pinned at BacklogCap for eleven minutes and lost 572 arrivals, every one refused while the canvas was painting — which
+       is only fixable by the lane moving faster, because a lane at the floor has no other knob left. So the floor is measured here,
+       not assumed: a flood held long enough must drive the pace all the way down to it, and the floor itself sits below the 45% that
+       session was drowning in. Both halves matter: a lane that never reaches its floor leaves throughput unusable, and a floor nobody
+       lowered after the measurement leaves the numbers lost. */
+    [TestMethod]
+    public void ASaturatedColumnRunsAtTheFloorOfItsTravel()
+    {
+      Assert.IsTrue(FctConveyor.PressFloor < 0.45,
+        $"a measured session saturated with the lane held at {FctConveyor.PressFloor:0.###}, below the 0.45 it used to stop at");
+
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+      var msPerPx = FctMotion.ArcScrollMsPerPx * FctScale.Time;
+
+      var head = (FctHitState?)null;
+      var slowestPress = 1.0;
+
+      // one arrival every frame for four seconds: a feed the column cannot separate even when pressed, which is the state the
+      // floor exists to survive rather than the brief burst the ramp test above covers
+      for (var frame = 1; frame <= 250; frame++)
+      {
+        var now = frame * 16.0;
+        Swing(ingest, hits, 400 + frame, now - 8);
+
+        var before = head?.ConveyorQ ?? 0.0;
+        Frame(ingest, hits, now);
+
+        if (head is null || !hits.Contains(head) || head.ConveyorQ >= head.ConveyorTravel)
+        {
+          head = Visible(hits).OrderByDescending(h => h.ConveyorQ).FirstOrDefault();
+          continue;
+        }
+
+        var step = head.ConveyorQ - before;
+        if (step > 0.0)
+        {
+          slowestPress = Math.Min(slowestPress, FctConveyor.FrameMs / (msPerPx * step));
+        }
+      }
+
+      Assert.IsTrue(slowestPress <= FctConveyor.PressFloor * 1.05,
+        $"a column this busy should have run its accelerator to the floor: fastest press {slowestPress:0.###}, floor {FctConveyor.PressFloor:0.###}");
+      Assert.IsTrue(slowestPress >= FctConveyor.PressFloor - 0.02,
+        $"the floor is a floor, not a suggestion: {slowestPress:0.###}");
+    }
+
     /* The pace is the player's dial and nothing else — the one number a "too fast / too slow" complaint is about. Half the speed
        is measured here as less than half the ground per frame (the lane relaxes a little more as its load estimate falls, which is
        why the assertion has slack rather than an exact halving). */

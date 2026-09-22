@@ -1291,10 +1291,19 @@ upstream, but the loss was always there.)
 Split answers it structurally now, and every rung is counted (`FctIngest.Accept`'s conveyor branch, `FctConveyor.Ramp`):
 
 1. **The lane presses its own clock.** A lane holds a certain number of rows at the dialled pace — its travel over the pitch it pays at entry —
-   and a lane carrying more than that runs faster, floored at `FctConveyor.PressFloor` (0.45) so even a jam stays readable and clears inside
-   about a second and a half instead of typing on after the fight stopped. Press belongs to the lane; it is copied onto each row for
+   and a lane carrying more than that runs faster, floored at `FctConveyor.PressFloor` (0.38) so even a jam stays readable and clears inside
+   about a second instead of typing on after the fight stopped. Press belongs to the lane; it is copied onto each row for
    observability (`FctHitState.RailPress`) and one row's acceleration is never another row's, because an odometer that changes speed mid-flight
    is lying about where it is going.
+
+   Two numbers here come from one measured session (`fct.drop: 572` spread over eleven minutes of fighting, `fct.dropLive = fct.drop`, queue shut at
+   `BacklogCap`) and neither was arrived at by argument. First, **a full queue is a clipped signal, not a mild one** (`FctConveyor.Ramp`): the ratio
+   reads what the lane *has*, so a column of about twenty rows holding twelve more asked for 0.63 and sat there with half its accelerator in hand while
+   the door stayed shut and a number was refused every second — which is why `Waiting >= BacklogCap` now drives straight to the floor instead of through
+   the ratio (`ASaturatedColumnRunsAtTheFloorOfItsTravel` fails at press 0.55 without that rule, and passes at 0.38 with it). Second, **the floor came
+   down from 0.45**, because a lane should not be spending an accelerator it measured as unusable while numbers are being lost; both changes are invisible
+   in a calm fight (press leaves 1.0 only under load) and both are one constant to walk back if a jammed column now reads too quick — `fct.drop` is the
+   number that says whether walking it back costs anything.
 2. **Room is bought before the row is visible.** An arrival whose slot has not reached the mouth waits off-column — invisible, still folding
    duplicates into whatever it will merge with — and the lane carries its turn to the front. Congestion in a column therefore shows up as delay
    rather than as overlap.
