@@ -2344,6 +2344,21 @@ It cost nothing else, which is worth knowing how to read: `FireChartEvent` is th
 `_lastStatsEvent = genEvent` and `EventsGenerationStatus`, so the meter, the grids and the stored results all completed — a frozen chart with a
 healthy damage table is the signature of a subscriber that threw, not of a builder that failed.
 
+### One queued UPDATE is worth nothing next to a newer one
+
+A measured redraw cost 1,635 ms walking 4.66M records, and a data point event asks for a full redraw — so a burst of events is N full walks,
+and the overlay paint shares that thread with them. `MainWindow.QueueChartUpdate` therefore keeps one queue per chart and merges what it can:
+an UPDATE still waiting for a redraw that has not run yet is *replaced* by the newer one, because the newer event carries everything the older
+one carried plus whatever arrived since, and both rebuild the same chart from scratch. `CLEAR` and `SELECT` are not mergeable — a `SELECT`
+plots from state an earlier event built, a `CLEAR` empties it — so those keep their place in the queue.
+
+Two counters make the merge readable instead of invisible: `chart.backlog` counts a request that found one still waiting for its chart, and
+`chart.coalesce` counts what actually got dropped. Read together they separate "too many redraws were asked for" from "each redraw is too
+slow": backlog climbing while coalesce stays at zero means the queue holds events that each genuinely needed their own pass.
+
+The queue is keyed by the icon control rather than by the window name because the name comes from `icon.Tag`, and a control's properties belong
+to the UI thread — see the cross-thread story above. A reference crosses threads fine, which is all a dictionary key needs.
+
 ### Blocked or busy: what the thread was doing while nobody answered
 
 A stall line proves the thread did not run a beat for N milliseconds and, when it says `in progress nothing`, that none of our passes held
