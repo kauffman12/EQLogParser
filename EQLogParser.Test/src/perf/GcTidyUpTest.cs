@@ -28,6 +28,11 @@ namespace EQLogParser
       var line = GcTidyUp.TidyNow("unit test");
 
       StringAssert.StartsWith(line, "gc.tidy unit test");
+
+      /* The tidy also has to leave itself on the register: a gap classified while it runs cannot see it in the GC counters, and would blame the machine. */
+      var stop = PerfGc.ReadStop();
+      Assert.AreEqual("unit test", stop.Reason, $"the collection that just ran should be nameable as ours (register said '{stop.Reason}')");
+      Assert.IsTrue(stop.Finished, "a finished tidy carries a duration so the gap line can quote how much of itself it was");
       StringAssert.Contains(line, "heap ");
       StringAssert.Contains(line, "working set ");
       StringAssert.Contains(line, "gen2 +");

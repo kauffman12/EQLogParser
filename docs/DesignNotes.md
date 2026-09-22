@@ -2531,6 +2531,17 @@ a debugger break — is invisible to a probe living inside it. Two numbers close
   2200 of the 2292 ms", or "no collection in that gap: stopped from outside the runtime (profiler or gcdump, power management, or no CPU for
   anybody)". That second wording matters: a measurement freeze caused by our own tools must not arrive looking like our code.
 
+**…except it did, in that sentence's own favour.** The counters can be late. A blocking collection publishes its count and its pause *after* the runtime lets
+the other threads run again, so a gap classified inside that window reads "no collection happened": at **11:53:34** a `gc.tidy log loaded` that had held every
+thread for **794 ms** printed in the same millisecond as `STOP-THE-WORLD 969 ms … profiler or gcdump, power management, or no CPU for anybody`. No arithmetic
+over cumulative counters could have caught that — but the code calling `GC.Collect` knows what it is doing, so it writes it down: `PerfGc.NoteStopStart(reason)`
+before the call and `NoteStopEnd()` after (`IntentionalStop`, readable *while* the collection runs, which is exactly when a gap gets classified around it), and
+`UiBeatMonitor` asks only whether that stop overlaps the gap before handing it to `PerfGap.Classify`, which puts ours ahead of the counters: "our own gc.tidy
+(log loaded) held every thread in that gap: 794 of the 969 ms, timed by the code that asked for it; the pause counter agrees" — or "the counters had not caught
+up with it", which is the case that shipped blameless before. A stop still in flight says "still running as this line was written" rather than quoting a
+duration nobody measured. An unexplained gap keeps its external suspects and now names its own weakness too ("…or a collection whose count the runtime had not
+published when this line was read"), because somebody hunting a profiler deserves to know which way the doubt falls.
+
 What the heap dump says, since 2 GB of it had been unexplained for three soaks: `dotnet-gcdump report` on a 320 MB capture (heap ~2.06 GB, 9.36 M
 objects sampled) puts it in the parsed fight records — `DamageRecord` 2.44 M instances / 186 MB, `HealRecord` 1.92 M / 117 MB, `IAction[]` 63 MB
 across 37,641 arrays, `SpellData[]` 44 MB, `ReceivedSpell` 679 k / 31 MB, `SpellCast` 551 k / 25 MB. About 484 MB of the sample is
@@ -2626,7 +2637,8 @@ how long the thread was unavailable. Read them in order:
    ran.
 5. `gc2`, `stopped N ms` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code;
    a stall with no collections is somebody's loop. And if a freeze is reported by neither the stall lines nor `beat delay`, look for
-   `ui.worldstop` / `STOP-THE-WORLD` before believing the run was clean: those are the ones where nothing inside the process could watch.
+   `ui.worldstop` / `STOP-THE-WORLD` before believing the run was clean: those are the ones where nothing inside the process could watch — unless the line
+   says `our own gc.tidy`, which means we stopped it ourselves and the counters were merely late.
 6. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
 
 The session that followed, run specifically to have everything open at once — overlay, meter, text overlay, trigger log and four timer

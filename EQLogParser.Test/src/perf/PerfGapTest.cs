@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
@@ -113,6 +114,58 @@ namespace EQLogParser
       StringAssert.Contains(why, "1 collection accounts", "while still counting the collection that did happen");
     }
 
+    /*
+     * The case a log line got wrong. A tidy collection we asked for ourselves runs on a pool thread, and the runtime publishes its count and its pause
+     * after the other threads are already running again - so a gap classified in between saw "no collection" and blamed the machine. Measured, same
+     * millisecond: `gc.tidy log loaded: … gen2 +1, stopped 794 ms` beside `STOP-THE-WORLD 969 ms … profiler or gcdump, power management, or no CPU for
+     * anybody`. The code that called GC.Collect knows what it did, so it says so, and that sentence outranks the arithmetic.
+     */
+    [TestMethod]
+    public void AStopWeAskedForIsNamedAsOursAndNotBlamedOnTheMachine()
+    {
+      var why = PerfGap.Classify(969, 0, 0, 0, 0, "log loaded", 794);
+
+      StringAssert.Contains(why, "gc.tidy", "ours has to read as ours");
+      StringAssert.Contains(why, "log loaded", "and carry the reason the tidy was asked for, which is the part that explains it");
+      StringAssert.Contains(why, "794", "timed by the code that ran it, beside the gap it was inside");
+      Assert.IsFalse(why.Contains("outside", StringComparison.Ordinal), $"the machine must not be blamed for our own collection (actual: {why})");
+      Assert.IsFalse(why.Contains("profiler", StringComparison.Ordinal), $"no profiler hunt on a sentence about our own tidy (actual: {why})");
+    }
+
+    /* Ours outranks the arithmetic even when the counters also cover the gap: "gen2" says memory pressure, "gc.tidy (log loaded)" says a moment we chose. */
+    [TestMethod]
+    public void AStopWeAskedForIsNamedEvenWhenTheCountersAgree()
+    {
+      var why = PerfGap.Classify(2292, 2200, 1, 0, 1, "log loaded", 2210);
+
+      StringAssert.Contains(why, "gc.tidy", "the counters agreeing is confirmation, not a reason to leave the cause unnamed");
+      StringAssert.Contains(why, "pause counter agrees", "and the reader should know both sources point the same way");
+    }
+
+    /* A tidy still running when the line is written has no duration yet. Say that instead of printing an invented number, or a negative one. */
+    [TestMethod]
+    public void ATidyStillRunningSaysItIsStillRunning()
+    {
+      var why = PerfGap.Classify(1200, 0, 0, 0, 0, "log loaded", double.NaN);
+
+      StringAssert.Contains(why, "still", "a collection in flight is a different fact from a finished one");
+      StringAssert.Contains(why, "gc.tidy", "and it is still ours either way");
+      Assert.IsFalse(why.Contains("-") || why.Contains("NaN"), $"no invented or negative number for a duration not measured yet (actual: {why})");
+    }
+
+    /*
+     * When nothing was seen at all the sentence still points outside the runtime - but it now admits the counters can be late, because that is exactly how
+     * the line above got believed for a run in which our own gen2 was the answer. A reader should hunt the profiler knowing which way the doubt falls.
+     */
+    [TestMethod]
+    public void AnInnocentCollectorSaysTheCountersMightHaveBeenLate()
+    {
+      var why = PerfGap.Classify(1500, 0, 0, 0, 0);
+
+      StringAssert.Contains(why, "outside", "the machine is still what is left when the collector is clear");
+      StringAssert.Contains(why, "publish", $"and the known way this sentence can be wrong belongs in it (actual: {why})");
+    }
+
     /* Log lines get grepped and pasted into spreadsheets: milliseconds print as whole numbers, with no ".0" to strip. */
     [TestMethod]
     public void MillisecondsPrintAsWholeNumbers()
@@ -121,6 +174,13 @@ namespace EQLogParser
 
       StringAssert.Contains(why, "2200 of the 2293 ms", "rounded to whole milliseconds, which is as fine as these numbers are trustworthy");
       Assert.IsFalse(why.Contains(".", StringComparison.Ordinal), $"a decimal point in a millisecond field costs a grep (actual: {why})");
+
+      var ours = PerfGap.Classify(969.6, 0, 0, 0, 0, "log loaded", 794.4);
+
+      StringAssert.Contains(ours, "794 of the 970 ms", "the sentence about our own collection rounds the same way");
+
+      /* The label gc.tidy carries a dot of its own, so "no periods" is the wrong rule here: what must not appear is a digit, a point, a digit. */
+      Assert.IsFalse(Regex.IsMatch(ours, @"\d\.\d"), $"a decimal fraction in a millisecond field costs a grep (actual: {ours})");
     }
   }
 }

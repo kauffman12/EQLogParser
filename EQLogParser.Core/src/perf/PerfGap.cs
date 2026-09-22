@@ -19,10 +19,23 @@ namespace EQLogParser
      * gapMs is how long nothing ran; pauseMs is how much of it the collector admits to holding every thread for; gen0/1/2 are collection
      * counts over the same span. Each number arrives as a delta between two samples, so any of them can come back negative when two reads
      * cross on different threads - hence the floors.
+     *
+     * ourStopReason and ourStopMs come from PerfGc's register rather than from the collector: a blocking collection we asked for ourselves, and how long
+     * it took by its own stopwatch (NaN while it is still running). It outranks the arithmetic below because the code that called GC.Collect does not have
+     * to wait for a counter to be published to know what froze the process - which is the difference between naming a moment we chose and sending the reader
+     * off to look for a profiler.
      */
-    internal static string Classify(double gapMs, double pauseMs, int gen0, int gen1, int gen2)
+    internal static string Classify(double gapMs, double pauseMs, int gen0, int gen1, int gen2, string ourStopReason = null, double ourStopMs = double.NaN)
     {
       var collections = Math.Max(0, gen0) + Math.Max(0, gen1) + Math.Max(0, gen2);
+
+      if (ourStopReason is not null)
+      {
+        return double.IsNaN(ourStopMs) || ourStopMs < 0
+          ? $"our own gc.tidy ({ourStopReason}) is collecting through this gap of {gapMs:0} ms, still running as this line was written"
+          : $"our own gc.tidy ({ourStopReason}) held every thread in that gap: {Math.Max(0, ourStopMs):0} of the {gapMs:0} ms, timed by the code that asked for it" +
+            (pauseMs >= gapMs * 0.5 ? "; the pause counter agrees" : "; the counters had not caught up with it");
+      }
 
       if (pauseMs >= gapMs * 0.5)
       {
@@ -31,7 +44,7 @@ namespace EQLogParser
 
       if (collections == 0)
       {
-        return $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, or no CPU for anybody)";
+        return $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, no CPU for anybody, or a collection whose count the runtime had not published when this line was read)";
       }
 
       /* One sentence rather than a template with a parenthetical in it: "1 collection accounts", "3 collections account". */

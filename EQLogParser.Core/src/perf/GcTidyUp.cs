@@ -128,6 +128,13 @@ namespace EQLogParser
       var before = PerfGc.Sample();
       var watch = Stopwatch.StartNew();
 
+      /*
+       * Announced before the call, not after it: a beat gap caused by this collection is classified while the collection runs, and the runtime publishes
+       * the count and the pause only once every thread is going again. Without this note the watchdog reads "no collection in that gap" and blames a
+       * profiler - which is what happened at 11:53:34, this line's own gen2 printing 794 ms stopped in the same millisecond.
+       */
+      PerfGc.NoteStopStart(reason);
+
       try
       {
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
@@ -139,6 +146,7 @@ namespace EQLogParser
       }
       finally
       {
+        PerfGc.NoteStopEnd();
         Volatile.Write(ref _lastTidyMs, Environment.TickCount64);
         Interlocked.Increment(ref _tidyCount);
       }

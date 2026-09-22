@@ -320,8 +320,16 @@ namespace EQLogParser
       {
         Volatile.Write(ref _lastShoutMs, now);
 
+        /*
+         * Asked before the counters are believed. A blocking collection we asked for is published late, so a gap that is entirely ours can arrive as "no
+         * collection in that gap" and blame the machine; only a stop overlapping this gap counts, and the register is read here rather than every poll
+         * because this line is its only reader.
+         */
+        var ours = PerfGc.ReadStop();
+        var ourStopReason = ours.Overlaps(now - (long)gapMs, now) ? ours.Reason : null;
+
         /* The heap is read here rather than every poll: this line is the only thing that wants it, and it wants it to show what a full collection was asked to walk. */
-        PerfJournal.Stall($"STOP-THE-WORLD {gapMs:0} ms with no late beat | {PerfGap.Classify(gapMs, pauseMs - _pollPauseMs, gen0 - _pollGen0, gen1 - _pollGen1, gen2 - _pollGen2)}" +
+        PerfJournal.Stall($"STOP-THE-WORLD {gapMs:0} ms with no late beat | {PerfGap.Classify(gapMs, pauseMs - _pollPauseMs, gen0 - _pollGen0, gen1 - _pollGen1, gen2 - _pollGen2, ourStopReason, ours.WallMs)}" +
           $" | heap {PerfGc.Sample().HeapBytes / (1024 * 1024.0):0} MB | open {Surfaces()} | {RenderModeText()}");
       }
 

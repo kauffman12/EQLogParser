@@ -18,7 +18,41 @@ namespace EQLogParser
   {
     internal readonly record struct Reading(long AllocBytes, long HeapBytes, long WorkingSetBytes, int Gen0, int Gen1, int Gen2, double PausePercent, double PauseMs);
 
+    /*
+     * A blocking collection we asked for ourselves, written down by the code that asked.
+     *
+     * The watchdog cannot catch these by diffing counters. The runtime publishes a collection's count and its pause once the other threads are running
+     * again, so a gap classified inside that window reads "no collection happened" - measured, same millisecond: `gc.tidy log loaded: … gen2 +1, stopped
+     * 794 ms` beside `STOP-THE-WORLD 969 ms … profiler or gcdump, power management, or no CPU for anybody`. Whoever calls GC.Collect knows what it did,
+     * which is one fact the counters do not deliver in time, so it notes the stop here and the gap line reads it.
+     */
+    internal readonly struct IntentionalStop {
+      internal readonly string Reason;   // null: nothing has ever been noted, and an empty register explains nothing
+      internal readonly long StartMs;
+      internal readonly long EndMs;      // 0 while the collection is still running
+
+      internal IntentionalStop(string reason, long startMs, long endMs)
+      {
+        Reason = reason;
+        StartMs = startMs;
+        EndMs = endMs;
+      }
+
+      internal bool Finished => EndMs != 0;
+
+      /* NaN while in flight: a collection that has not stopped has no duration, and the sentence says so rather than inventing one. */
+      internal double WallMs => Finished ? EndMs - StartMs : double.NaN;
+
+      /* Does this bear on a gap between two clock readings? One still running does; a finished one only if it ended after the gap opened. */
+      internal bool Overlaps(long fromMs, long toMs) =>
+        Reason is not null && StartMs <= toMs && (!Finished || EndMs >= fromMs);
+    }
+
     private const double BytesPerMb = 1024 * 1024.0;
+
+    private static string _stopReason;
+    private static long _stopStartMs;
+    private static long _stopEndMs;
 
     /* Reads the collector. A failure leaves a zeroed reading, which prints as silence rather than as an error. */
     internal static Reading Sample()
@@ -44,7 +78,24 @@ namespace EQLogParser
     }
 
     /*
-     * How many milliseconds of a window the collector spent with every thread stopped, from the runtime's own cumulative total. This is
+     * "We are about to stop the world on purpose", written before the call rather than after it, because the gap it causes is attributed while the
+     * collection is still running. One tidy is in flight at a time - GcTidyUp holds its own flag - so these three fields never have two writers to tell
+     * apart, and a reader that straddles a start sees last tidy's reason beside this one's in-flight mark: a cosmetic mix-up in one log sentence, on a
+     * path that runs when a load finishes rather than in a frame.
+     */
+    internal static void NoteStopStart(string reason)
+    {
+      Volatile.Write(ref _stopStartMs, Environment.TickCount64);
+      Volatile.Write(ref _stopEndMs, 0L);
+      Volatile.Write(ref _stopReason, reason);
+    }
+
+    internal static void NoteStopEnd() => Volatile.Write(ref _stopEndMs, Environment.TickCount64);
+
+    internal static IntentionalStop ReadStop() =>
+      new(Volatile.Read(ref _stopReason), Volatile.Read(ref _stopStartMs), Volatile.Read(ref _stopEndMs));
+
+    /* How many milliseconds of a window the collector spent with every thread stopped, from the runtime's own cumulative total. This is
      * the number that catches what the beat cannot see: a collection stops the beat monitor's timer along with everything else, so a beat
      * posted after the world resumed is on time and the watchdog reports nothing (measured: 2,292 ms stopped at 19:03:47 with "beat delay
      * max 0 ms" in the same window, and the only reason it was found at all is that a soak collector was running beside the app). The

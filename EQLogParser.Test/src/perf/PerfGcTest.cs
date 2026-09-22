@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace EQLogParser
@@ -124,6 +125,42 @@ namespace EQLogParser
 
       StringAssert.Contains(line, $"alloc {(0.0):0.0} MB/s");
       Assert.IsFalse(line.Contains("Infinity") || line.Contains("NaN"), $"unmeasurable window produced {line}");
+    }
+
+    /*
+     * The register a blocking collection writes to, so the watchdog can name ours without catching it in a counter. It cannot: the runtime publishes a
+     * collection's count and pause after the other threads are running again, which is how a `gc.tidy` that stopped the world for 794 ms sat beside a
+     * STOP-THE-WORLD line blaming a profiler at the same millisecond. Whatever asked for the collection knows, so it writes that down here - readable while
+     * the collection runs, since that is exactly when a gap gets classified around it.
+     */
+    [TestMethod]
+    public void AStopWeAskForIsReadableWhileItRuns()
+    {
+      var now = Environment.TickCount64;
+
+      PerfGc.NoteStopStart("register test");
+      var inFlight = PerfGc.ReadStop();
+
+      Assert.AreEqual("register test", inFlight.Reason, "the reason rides along, because 'log loaded' explains a freeze in a way 'gen2' does not");
+      Assert.IsFalse(inFlight.Finished, "a collection still running has no duration yet and must not claim one");
+      Assert.IsTrue(inFlight.Overlaps(now - 5000, now), "a collection running now overlaps a gap that ends now");
+
+      PerfGc.NoteStopEnd();
+      var done = PerfGc.ReadStop();
+
+      Assert.IsTrue(done.Finished, "closing the note is what gives it a duration");
+      Assert.IsTrue(done.WallMs >= 0 && done.WallMs < 60_000, $"a start-and-stop pair measures something small, not {done.WallMs} ms");
+      Assert.IsFalse(done.Overlaps(now + 100_000, now + 200_000), "a stop in the past must not explain a gap in the future");
+    }
+
+    /* An empty register explains nothing at any width: an ordinary gap has to keep the attribution the counters support. */
+    [TestMethod]
+    public void AStopNobodyAskedForExplainsNothing()
+    {
+      var none = default(PerfGc.IntentionalStop);
+
+      Assert.IsNull(none.Reason, "nothing noted reads as nothing noted");
+      Assert.IsFalse(none.Overlaps(0, long.MaxValue), "an empty register must not match a gap of any width");
     }
   }
 }
