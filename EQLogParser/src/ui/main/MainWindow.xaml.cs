@@ -1067,6 +1067,11 @@ namespace EQLogParser
               OpenDamageOverlayIfEnabled(true, false);
               FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
             }, DispatcherPriority.DataBind);
+
+            // The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
+            // expensive for the collector. Asked for after the overlays have allocated their steady state, and collected on a pool thread,
+            // so the UI thread never sits inside a stop-the-world holding its own work.
+            GcTidyUp.Request("log loaded");
           }
           else
           {

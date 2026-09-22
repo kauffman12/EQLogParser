@@ -2395,6 +2395,44 @@ in windows whose `trig.tests ÷ trig.line` was exactly 608. There is one `Trigge
 whichever of them last rebuilt its set prints an idle character's zero over the set that is actually running. It sums across live instances now and
 takes each share back on dispose.
 
+### Asking the collector for memory back at chosen moments
+
+No GC setting was changed, because measuring them found nothing left to change. A 10,015,348-line replay with records retained the way the app
+retains them (4.80 M damage events → 2.53 M distinct, 2.67 M heals → 627 k distinct, ~600 MB peak), watched by a thread pumping at 16 ms and
+reporting every wake that arrived late:
+
+| configuration | wall | gen0/gen1/gen2 | peak RSS | wakes ≥25 ms late |
+|---|---|---|---|---|
+| shipping default (workstation) | 7,942 ms | 828 / 202 / 6 | 611 MB | none |
+| `Concurrent=false` (runtime then reports latency mode `Batch`) | 8,303 ms | 776 / 210 / 7 | 589 MB | 2 (137, 89 ms) |
+| `Concurrent=true` | 7,779 ms | 827 / 200 / 6 | 618 MB | none |
+| Server GC | 8,083 ms | 98 / 38 / 13 | **916 MB** | none |
+| `SustainedLowLatency` | 7,983 ms | 828 / 204 / 6 | 610 MB | none |
+
+The default *is* concurrent background collection — the first and third rows are the same run twice over — and turning concurrency off is the
+only thing in the matrix that made the pump arrive late. "More aggressive" has no headroom either: 828 gen0 collections in 7.9 s is one every
+9.6 ms and not one of them was noticeable. Server GC buys the same interface for 50% more memory, so it does not ship.
+
+What is left is *when*, which the runtime cannot know and this program can: `GcTidyUp.Request` asks for one full, compacting collection at three
+moments a player is not asking the interface for anything — a log file finished loading (`MainWindow.UpdateLoadingProgress`), the fight list was
+cleared (`FightTable.ClearClick`, where the record cache and every parsed event drop together), and a stats rebuild finished (all three builders,
+after their locks rather than inside them). Two rules make it safe. **A request never collects on the caller's thread**: it waits 1.5 s (`SettleMs`)
+so the trigger's own layout finishes, then collects on a pool thread. **And it is rate-limited** to one per `MinIntervalMs` (60 s), counted in
+`SuppressedCount`, because flapping a time filter five times is ordinary and five forced compactions would be worse than none — which is also why
+there is no timer here, since every forced collection promotes young survivors and a storm makes the heap bigger and the next unasked-for
+collection longer.
+
+The cost, measured rather than assumed: an aggressive compacting pass on a ~4.8 GB heap stopped every thread for **3,065 ms**, which is roughly
+what a raid-session heap will pay, in a moment chosen to hurt nobody. That the pass reclaims anything was shown in a quiet process — 100 MB of
+released large arrays taking the heap from 30 MB to 5 — and cannot be asserted inside a test run, where `HeapSizeBytes` is dominated by unrelated
+live data (a suite at 4.8 GB swallowed the signal entirely). Every tidy writes one line so the claim stays checkable:
+`gc.tidy log loaded: heap 2901 to 742 MB, working set 3120 to 905 MB, gen2 +1, stopped 812 ms, wall 813 ms`.
+
+Two details that are decisions rather than accidents. There is deliberately **no "is a fight active" guard**: a loaded file leaves its last fight
+marked active until further log lines arrive to expire it, so such a guard would quietly veto the most useful trigger, and the interval bounds what
+the stats trigger can cost anyway. And `LargeObjectHeapCompactionMode.CompactOnce` is set on every pass because the runtime clears it afterwards —
+leaving compaction permanently on would slow the collections the runtime picks for itself, which a test now refuses to let happen silently.
+
 ### Reading a report
 
 `UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on

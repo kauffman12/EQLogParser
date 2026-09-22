@@ -170,7 +170,13 @@ namespace EQLogParser
     private void EventsRemovedFight(string name) => RemoveFight(name);
     private void EventsNewFight(Fight fight) => ProcessFight(fight);
     private void EventsNewNonTankingFight(Fight fight) => ProcessNonTankingFight(fight);
-    private void ClearClick(object sender, RoutedEventArgs e) => FightManager.Instance.Clear();
+    private void ClearClick(object sender, RoutedEventArgs e)
+    {
+      FightManager.Instance.Clear();
+
+      // The record cache and every parsed event drop together here, which is the most the collector has ever had to hand back in one go.
+      GcTidyUp.Request("fight list cleared");
+    }
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void EventsThemeChanged(string _)
