@@ -12,6 +12,15 @@ namespace EQLogParser
      * consume heals without re-parsing. Fires on the log reader thread, replay and live alike. */
     public static event Action<HealProcessedEvent> EventsHealProcessed;
 
+    /* A raid restates the same heal over and over — on a two night log, three quarters of the heal lines
+     * repeat one already seen. HealRecord is equal by value, so a repeat costs a slot in the store instead
+     * of another object, and the objects stay alive as long as the loaded log does: this is what keeps on
+     * the order of 200 MB of them out of it. Sharing an instance means sharing it with the FCT feed and the
+     * store both, which heals tolerate because nothing writes to a heal after it is handed out — unlike
+     * damage, where HandleDamageProcessed rewrites record.Attacker some hundred lines after its own cache
+     * lookup, changing every earlier event that shared the instance and moving a live dictionary key. */
+    private static readonly Dictionary<HealRecord, HealRecord> _healCache = [];
+
     private HealingLineParser()
     {
 
@@ -26,6 +35,7 @@ namespace EQLogParser
         if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1 &&
           HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
+          record = GetCachedHealRecord(record);
           RecordsStore.Instance.Add(record, lineData.BeginTime);
 
           // hoisted so the event object is not built per heal when nothing is listening (FCT off)
@@ -56,6 +66,22 @@ namespace EQLogParser
       }
 
       return false;
+    }
+
+    /// <summary>Drops the shared heal instances. Called when the manager clears active data.</summary>
+    internal static void ClearCaches() => _healCache.Clear();
+
+    // Exact repeats of a heal collapse onto one instance; two heals that differ in any stored field at all
+    // — target, spell, amount, overage, modifiers — stay separate records.
+    private static HealRecord GetCachedHealRecord(HealRecord incoming)
+    {
+      if (_healCache.TryGetValue(incoming, out var cached))
+      {
+        return cached;
+      }
+
+      _healCache[incoming] = incoming;
+      return incoming;
     }
 
     private static HealRecord HandleHealed(string part, int optional, double beginTime)

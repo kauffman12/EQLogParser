@@ -124,6 +124,70 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
+    public void GetId_NullAndEmpty_AreZero()
+    {
+      // 0 is reserved for "no name stored", which is how an unset record field keeps reading null
+      Assert.AreEqual(0, StringCache.GetId(null));
+      Assert.AreEqual(0, StringCache.GetId(""));
+      Assert.IsNull(StringCache.GetName(0));
+    }
+
+    [TestMethod]
+    public void GetId_SameString_ReturnsSameId()
+    {
+      var a = StringCache.GetId(new string("Fllint".ToCharArray()));
+      var b = StringCache.GetId(new string("Fllint".ToCharArray()));
+      Assert.AreEqual(a, b);
+      Assert.AreEqual("Fllint", StringCache.GetName(a));
+
+      // one instance per id: two equal names written from different copies read back as the same string,
+      // which is what code comparing resolved names still relies on
+      Assert.AreSame(StringCache.GetName(a), StringCache.GetName(b));
+    }
+
+    [TestMethod]
+    public void GetId_KeepsCasingVariantsApart()
+    {
+      // ids are matched ordinally, so they partition names exactly as the string references did
+      var lower = StringCache.GetId("spell");
+      var upper = StringCache.GetId("Spell");
+      Assert.AreNotEqual(lower, upper);
+      Assert.AreEqual("spell", StringCache.GetName(lower));
+      Assert.AreEqual("Spell", StringCache.GetName(upper));
+    }
+
+    [TestMethod]
+    public void GetId_IdsSurviveClear()
+    {
+      // records keep ids for the life of a log; dropping the text cache may not rename them
+      var id = StringCache.GetId("Vexing Malice");
+      StringCache.Clear();
+      Assert.AreEqual(id, StringCache.GetId("Vexing Malice"));
+      Assert.AreEqual("Vexing Malice", StringCache.GetName(id));
+    }
+
+    [TestMethod]
+    public void GetName_UnknownId_ReturnsNull()
+    {
+      Assert.IsNull(StringCache.GetName(-1));
+      Assert.IsNull(StringCache.GetName(int.MaxValue));
+    }
+
+    [TestMethod]
+    public void GetId_ThreadSafety_EveryThreadSeesOneId()
+    {
+      var ids = new System.Collections.Concurrent.ConcurrentBag<int>();
+      var tasks = new List<Task>();
+      for (var i = 0; i < 50; i++)
+      {
+        tasks.Add(Task.Run(() => ids.Add(StringCache.GetId("shared symbol"))));
+      }
+
+      Task.WaitAll(tasks.ToArray());
+      Assert.AreEqual(1, ids.Distinct().Count());
+    }
+
+    [TestMethod]
     public void GetOrAdd_ThreadSafety_MultipleThreadsDedupCorrectly()
     {
       var tasks = new List<Task>();

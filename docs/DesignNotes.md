@@ -2430,3 +2430,55 @@ Register a handle in a field initializer, wrap the work in `Begin`/`End` inside 
 try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
 the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
 line that points at a span nobody can find in the docs is a dead end.
+
+## What a loaded raid costs in memory
+
+Everything below was measured against `local/eqlog_Kizant_xegony-09-03-26.txt`: 10,015,348 lines, two full raid nights plus some solo
+killing, which is about what a heavy player loads in one sitting. Instance sizes came from filling an array with half a million records and
+reading `GC.GetTotalAllocatedBytes`; the counts came from feeding the file through `DamageLineParser` and `HealingLineParser`.
+
+| | events produced | distinct by value | repeats |
+|---|---|---|---|
+| damage | 4,799,101 | 2,530,156 | 47.3% |
+| heal | 2,670,820 | 626,506 | 76.5% |
+
+The whole file uses **1,002 distinct names and types**. That is the number that decides what a record should look like: four or five name
+fields per event, drawn from a thousand values, do not want to be references.
+
+**Repeats.** Damage already collapses onto one instance per distinct value in `FightManager.GetCachedDamageRecord`, which keeps 2.27M objects
+off the heap for that file. Heals had nothing of the sort — three quarters of a night's heal lines restate a heal already seen and each one
+reached the store as its own object until `HealingLineParser` grew the same cache. A heal is worth caching harder than a damage event because
+it repeats more often, and `HealRecord` is now equal by value in the same way `DamageRecord` is; both compare the stored ids, so hashing one
+costs four integer compares instead of six string walks.
+
+**Names are ids.** `HitRecord`, `HealRecord` and `DamageRecord` store a `StringCache` id per name (four bytes) where they used to store a
+reference (eight), which is most of the difference below; the text they stand for was already shared by interning, so the pointers were the
+only thing the record owned.
+
+| | before | now |
+|---|---|---|
+| `DamageRecord` | 88 B | 56 B |
+| `HealRecord` | 72 B | 48 B |
+
+Together with the heal cache that is roughly **240 MB of a ~500 MB record footprint** for the file above, and about 2.7M fewer live objects
+for the collector to walk — which matters more than the bytes, since pause length tracks the graph it has to mark.
+
+Two invariants hold this up and both are load-bearing:
+
+- **ids are assigned ordinally.** `StringCache.GetId` matches exactly, so ids partition names precisely the way references did — `"spell"` and
+  `"Spell"` stay two symbols. Whatever normalization a caller wanted before still happens where it happened (`GetOrAdd` title-cases damage
+  names in `GetCachedDamageRecord`, and heals call it themselves). What that interning now decides is *spelling*: a record hands back the text
+  that was stored, so grids, exports and the log viewers see what they saw before. It is no longer what makes repeats cheap to keep — the value
+  lookup above does that — which means the damage cache could one day be judged on its own merits without renaming anything.
+- **ids are never reused and never cleared.** `StringCache.Clear()` still drops the dedup dictionary, but the id tables outlive it: records
+  already stored carry ids, and letting names go mid-session would silently rename them. The cost is bounded by however many distinct names and
+  spells the process ever sees, which on two raid nights is four digits.
+
+**What is still on this road.** Records being small is step one; the layout step is storing a fight's hits in flat arrays instead of a
+`List<IAction>` of heap objects, which would take the damage side from ~140 MB to something like 60-80 MB and let the `_damageCache` dictionary
+(order of 100 MB of entries at 2.5M keys) go away entirely, since a repeat stored inline costs bytes rather than an object. It is blocked on one
+thing worth knowing before anyone starts: `StatsUtil.UpdateStats(PlayerSubStats, HitRecord, …)` and `LineModifiersParser.UpdateStats` are shared
+by damage *and* heals, so a struct-per-hit representation either forks that stat logic in two or materializes records again on every summary
+rebuild — and the summary rebuilds every few seconds during a fight. The two ways past it are to hoist that logic onto the fields themselves (an
+interface over "a hit", with rows implementing it by index rather than by identity) or to give heals their own row shape and let each keep its own
+copy of the rules. Either is a branch of its own; measure with `stopped` and `gc2` before believing any claim about it.

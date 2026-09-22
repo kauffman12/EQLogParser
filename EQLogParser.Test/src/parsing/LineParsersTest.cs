@@ -57,6 +57,41 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void Process_RepeatedHeal_SharesOneRecordInstance()
+    {
+      // three quarters of a raid night's heal lines restate a heal already seen; the repeat has to cost
+      // a slot in the store rather than another object, or the log keeps 2.7M of them alive per sitting
+      const string Text = "Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.";
+      HealingLineParser.Process(Line(Text, 5));
+      HealingLineParser.Process(Line(Text, 6));
+
+      var heals = RecordsStore.Instance.GetAllHeals().ToList();
+      Assert.AreEqual(2, heals.Count);
+      Assert.AreSame(heals[0].Item2, heals[1].Item2);
+    }
+
+    [TestMethod]
+    public void Process_HealDifferingInAnyField_KeepsSeparateRecords()
+    {
+      HealingLineParser.Process(Line("Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.", 5));
+      HealingLineParser.Process(Line("Fllint healed Foob for 11821 hit points by Blessing of the Ancients III.", 6));
+      HealingLineParser.Process(Line("Fllint healed Foob for 11820 hit points by Cure of the Dead III.", 7));
+
+      var heals = RecordsStore.Instance.GetAllHeals().Select(h => h.Item2).ToList();
+      Assert.AreEqual(3, heals.Count);
+      Assert.AreEqual(3, heals.Distinct().Count());
+    }
+
+    [TestMethod]
+    public void Process_HealSpellName_RoundTripsThroughTheIdStore()
+    {
+      // a record keeps an id per name (HitRecord), so what comes back has to be the exact text the parser
+      // settled on — here StringCache.GetOrAdd's title casing, unchanged from before records held ids
+      HealingLineParser.Process(Line("Zezil healed Zezil for 100 hit points by healing MEND.", 5));
+      Assert.AreEqual("Healing MEND", RecordsStore.Instance.GetAllHeals().Single().Item2.SubType);
+    }
+
+    [TestMethod]
     public void Process_OverTimeHeal_MarkedAsHot()
     {
       var ok = HealingLineParser.Process(Line("Snowzz healed Malkatar over time for 8211 hit points by Roar of the Lion 6.", 5));
