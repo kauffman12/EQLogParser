@@ -2369,20 +2369,56 @@ them into one program against `EQLogParser.Core`, feeds both walkers the same sy
 point in all four series plus the pet map. Identical output on 1M records / 73k points, at 945.6 ms → 847.7 ms (**1.12×**); identical on a
 gap-heavy stream at **1.00×**. Keeping a change like this because it is *cleaner* would be guesswork — the harness is what says whether it paid.
 
-### The quadratic hiding in a chart redraw: `TimeRange.GetTotal()`
+### TimeRange: what it means, whether it is correct, and where its time actually goes
 
-The gap-heavy shape above is the interesting result: 60k records produced 95k plotted points and barely changed speed, because that cost lives
-somewhere else. Scaling it says where — 20k / 40k / 80k records cost 146 / 370 / 1,477 ms, which is four times the time for twice the data. The
-culprit is `TimeRange.GetTotal()`, called once per inserted point: it is not a getter. It scans every segment of the range looking for pairs
-within `Offset` (6) seconds of each other, **merges them by calling `Add`** — each merge another linear walk with collapses — and only then sums.
-So it mutates while measuring, allocates its `additional` list, and grows with the number of segments a name has accumulated, which is exactly
-what "select all fights across a long log" maximizes. This is why selecting every fight on a big file pauses out of proportion to its record
-count.
+`TimeRange` is the activity model behind every "was this player here" question: all the log ever says is that something happened at an exact second,
+so spans are laid down as `[begin,end]`, merged when they overlap or touch, and `GetTotal()` answers "how long was this one active". Its `Offset` of 6
+closes silences shorter than that — two attacks six seconds apart read as one continuous engagement, **including the silent seconds between them**
+(`[0,0] + [6,6]` totals 7), while seven seconds apart totals 2. That fudge is the point of the class, not an accident: a player who pauses between
+casts was still in the fight.
 
-It cannot simply be cached or skipped: the merge it performs is load-bearing, since `UpdateRemaining` reads `TimeSegments.Last()` and the segment
-list shapes the points that get plotted, and other consumers (`Timeline`, `GenerateStatsOptions.AllRanges`) share the class. Making the
-normalization explicit — normalize once per name after the walk instead of as a side effect of measuring it — is the shape of a fix, and it wants
-the same before/after harness treatment rather than a confident edit.
+**The answers are right.** `EQLogParser.Test/src/util/TimeRangeSpecTest.cs` tests meaning rather than API shape against a brute-force model written
+two different ways (a `HashSet` of active seconds; spans joined across short silences, transitively), including adds arriving out of order — which is
+what happens when fight ranges get merged into raid ranges or rebuilt by `FilterTimeRange`. A scratch harness (`local/timerange-lab/`, not committed)
+pushed harder: 200,712 adds at absolute random positions with `GetTotal()` read after every one, comparing the live class against both an independent
+model and a prototype. Zero disagreements. Two things that looked like bugs are not: the bridging pass in `GetTotal()` reaches the full transitive
+closure in one pass (verified, not assumed), and **how often you read the range cannot change its total** — closing a silence merges a run's *outer*
+bounds only, so materialising a bridge early moves no endpoint a later `Add` could have reached. That independence is pinned by two tests.
+
+**Four sharp edges are real**, all asserted as-they-behave in that file so a fix fails loudly instead of moving numbers quietly: the single-segment
+constructor bypasses both guards `Add` has (an inverted span gets in and makes the total *negative*, which then flows out as `TotalSeconds` into every
+per-second number; `null` gets in and detonates later as a `NullReferenceException`, as does `new TimeRange((List<TimeSegment>)null)`); that same
+constructor stores the caller's `TimeSegment` while the list constructor copies, so a caller moving its own object moves the range (11 seconds becomes
+891); `GetTotal()` on an empty range returns 0 and the app divides by totals in about ten places — 5,000 damage over no seconds does not throw, it
+saturates to `long.MaxValue`, a chart spike tall enough to flatten everything else; and `TimeCheck(line, start, range, out exceeds)` throws on an
+empty range via `TimeSegments.Last()`, which is fine only because its single caller (`MainActions`' save-selected-fights) checks `Count > 0` first —
+that check is load bearing and undocumented.
+
+**My earlier blame was wrong.** I wrote that the superlinear chart redraw (20k / 40k / 80k records → 146 / 370 / 1,477 ms) was `GetTotal()`, called once
+per inserted point. Measured directly on a LineChart-shaped stream — 400k records, five plotted names, ~6k fight boundaries, 193,745 real
+`Add`+`GetTotal` pairs — the whole thing costs **46.5 ms** in the current class. Because `Aggregate` adds `[previousCrossing, now]` every time, each
+name's spans chain into **one span** and stay there: a list of one is walked for free, so `GetTotal()` runs about 0.2 µs. The remaining superlinearity
+lives somewhere else in the walk and is still unexplained.
+
+What *is* quadratic is **`Add`**: a linear scan from index 0 to find its place, then `List.Insert` shifting everything after it. Fold every fight of a
+long log into one range per name (spans stay separate — fights are minutes apart) and the cost climbs with the square: for 40 names carrying
+50 / 200 / 800 fight spans apiece, building the ranges takes **3.7 / 21.5 / 166.5 ms**, of which the totals are under 1.5 ms. That is the shape used by
+`FightTable` and `EQLogViewer` over all fights, by `DamageOverlayStatsBuilder`'s `allTime` plus one range per name, and by `StatsUtil` inside loops
+over names and sub-stats.
+
+**The fix that makes both cheap** was prototyped and proved before being proposed. A bridged run's length is additive — total = Σ span lengths +
+Σ (`gap − 1`) over consecutive pairs closer than `Offset` — so an insert only disturbs the links at its own neighbourhood: keep a running length-sum
+and a running bridge-bonus, find the place by binary search on `EndTime`, and `GetTotal()` costs O(1) with no allocation, no list walk and no mutation.
+Measured against the same streams: 4.1× on the LineChart pattern, **5× / 30× / 67×** on the three stats shapes above, totals agreeing at every step.
+The prototype's own bugs are the argument for differential testing rather than review: it shipped a self-link when appending past the end (bonus −1,
+totals low by one) and double-removed a link when a merge swallowed a neighbour (totals low by 5), then silently kept counting a pair that had stopped
+being adjacent after an insert between them (totals *high* by 4). Each was found by shrinking the failing history to three adds.
+
+Two changes are on the table, and they carry different risk. Making `Add` binary-searched with local collapses changes no observable behaviour at all:
+same spans, same totals, same bridging-on-read. Adding the incremental total additionally stops `GetTotal()` from rewriting the segment list — provably
+the same *numbers* (see the outer-bounds argument above), but a different `TimeSegments` shape for anyone who inspects it after a read, which is
+`LineChart.UpdateRemaining` (`TimeSegments.Last().BeginTime`, fed back into `Add`) and anything that indexes spans. In the chart case the leak is
+harmless — the span read there only ever *widens* what gets added — but 15 call sites share this class, so that one is a decision rather than an edit.
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
