@@ -68,6 +68,37 @@ namespace EQLogParser
       return seen;
     }
 
+    /*
+     * The heartbeat's "fct.backlog" reading, which is what makes a drop count actionable instead of alarming: a peak parked at the cap says the queue
+     * was the limit and more room (or a shorter row) is the fix, while a peak nowhere near it says the losses came from somewhere else. It is a lifetime
+     * high-water because the question gets asked long after the pull, and a frame has to run for it to exist — waiting is counted where the lane clock runs.
+     */
+    [TestMethod]
+    public void PeakBacklogHoldsTheDeepestQueueAcrossTheWholeShow()
+    {
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+
+      Assert.AreEqual(0, ingest.PeakBacklog, "no frame has run, so nothing has been measured");
+
+      for (var i = 0; i < FctConveyor.BacklogCap + 4; i++)
+      {
+        Swing(ingest, hits, 200 + i, 0);
+      }
+
+      Frame(ingest, hits, 1);
+      var deepest = ingest.PeakBacklog;
+      Assert.IsTrue(deepest >= FctConveyor.BacklogCap - 1, $"a burst that filled the rail is reported as the queue it made: {deepest}");
+
+      /* Let the column run out entirely. The level stays where the burst left it, which is the whole point: tomorrow's reader asks about last night's raid. */
+      for (var now = 2.0; now < 6000; now += 50)
+      {
+        Frame(ingest, hits, now);
+      }
+
+      Assert.AreEqual(deepest, ingest.PeakBacklog, "high-water does not follow the queue back down");
+    }
+
     /* How far every visible row travelled across one frame. One column, one number: that is the invariant under test. */
     private static List<double> Step(FctIngest ingest, List<FctHitState> hits, double from, double to)
     {

@@ -2211,7 +2211,10 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `fct.feed` | span | the overlay window draining its queue into the canvas — per-record work on the UI thread |
 | `fct.bake` | count | halo sprites baked this window (once per distinct crit string, not per frame) |
 | `fct.surface` | count | render-surface reallocations; each one also logs its size in megabytes |
-| `fct.hits`, `fct.queue`, `fct.drop` | level | live hits on the canvas, records waiting in `FctManager`, records discarded for backpressure |
+| `fct.hits`, `fct.queue`, `fct.drop` | level | live hits on the canvas, records waiting in `FctManager`, and the lifetime sum of everything the overlay turned away (canvas refusals plus queue discards added together) |
+| `fct.dropLive` | level | how much of `fct.drop` was refused **while the canvas was still being handed frames** — text that could have been read. The number that decides whether a drop count is a bug report or a browser sitting on the overlay |
+| `fct.dropQueued` | level | the part of `fct.drop` that never left `FctManager`'s queue (age-out and cap). A level for the same reason as the two beside it: the per-window `fct.dropStale`/`fct.dropCeiling` counters can be displaced off the line, and an absent counter proves nothing |
+| `fct.backlog` | level | the deepest a lane's arrival queue has been all session (`FctConveyor.PeakWaiting`, a lifetime high-water). Read against `BacklogCap` (12), it says whether more room is the fix or the losses came from elsewhere |
 | `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
 | `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
 | `text.render` | span | one trigger text overlay redrawing its blocks |
@@ -2251,6 +2254,18 @@ the two copies into WPF, so the expensive half of an overlay frame — the half 
 numbers are on screen — was invisible from outside. `FctSkiaCanvas` now reports both, and the simulation header prints them side by side;
 `EnsureSurface` writes one line per reallocation, which is how a 3840 × 2160 overlay admitting to a 33 MB memset per frame reaches the log
 without anybody having to guess at the size.
+
+**A nonzero drop count is the normal state of an overlay, which is why its accounting is levels.** An overlay refuses a number rather than draw it on top of
+another — every combat-text overlay does, and `FctConveyor.BacklogCap` (12) is where ours says no — and it refuses with identical arithmetic whether or not
+anybody can see the window, so "564 drops" on its own is neither a bug nor an all-clear. What it takes to read one is: was anybody positioned to see the
+number (`fct.dropLive`), did anything die on the way rather than at the rail (`fct.dropQueued`), and how full was the queue that said no (`fct.backlog`).
+Those three are levels because of what the counter budget does to a diagnosis: over an eleven-minute session with a browser partly covering the overlay, the
+per-window cause counters were **absent from nine of its thirty-three heartbeats** — four counted names share a line, and `fct.dropConveyor`, `trig.logBatch`,
+`trig.logEntry` and `trig.tests` filled it nearly every time. A cause split that cannot be *absent* without meaning nothing is not a cause split, and it was the
+reason a rewrite of the render pump got proposed and withdrawn in one conversation. The arithmetic now closes on one line: `fct.drop` is the sum, minus
+`fct.dropQueued` what the rails refused, of which `fct.dropLive` is the part that happened under a running pump — text somebody could have read. If that last
+figure climbs while somebody is watching, `fct.backlog` picks the fix off the page: parked at 12, the rail was too short for that fight (more queue, or shorter
+rows); well below it, these losses came from somewhere else.
 
 ### Startup and log loading are phases, not windows
 

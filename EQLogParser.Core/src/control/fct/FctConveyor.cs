@@ -61,6 +61,14 @@ namespace EQLogParser
        a queue the player will never see. What the queue costs is lateness, and lateness is cheap next to a lost number. */
     public const int BacklogCap = 12;
 
+    /*
+     * The deepest a lane's queue has been all session, read by the heartbeat as "fct.backlog". It says how much room a refusal
+     * needed: at BacklogCap the door is shut and the number is lost, so a peak of exactly 12 means the cap was the limit and
+     * raising it (or shortening row lifetime) is what would have taken the traffic, while a peak of 4 with refusals elsewhere
+     * says the queue was not the problem. Lifetime high-water on purpose — a tuning question is asked long after the pull.
+     */
+    public int PeakWaiting { get; private set; }
+
     /* The floor a pressed column's rhythm is taken to, as a share of the shipped flight time: 45%, which is about 0.87 s for an
        800 px column at ScrollMsPerPx 4.6 against the 1.9 s of the unpressed rate — traffic moving quickly rather than a blur.
        It came off the congestion ladder this conveyor replaced, where the same number capped how far ONE row could speed itself
@@ -190,6 +198,11 @@ namespace EQLogParser
 
       foreach (var lane in _lanes.Values)
       {
+        if (lane.Waiting > PeakWaiting)
+        {
+          PeakWaiting = lane.Waiting;
+        }
+
         Ramp(lane);
       }
     }

@@ -64,10 +64,19 @@ namespace EQLogParser
      * what it drained — parse, gates, placement — which is where a raid burst lands if it costs more than a frame; "queue" and "drop"
      * are the two ends of backpressure read together: a queue full while the overlay paints at 60 fps is a different problem from an
      * empty queue behind a UI thread that stopped answering, and the log cannot tell those apart without both numbers on the page.
+     *
+     * "droplive", "dropqueued" and "backlog" say what those losses mean, because a nonzero drop count on its own looks like a bug and usually is not one:
+     * an overlay refuses a number rather than draw it on top of another, and refuses while covered by a browser cost nothing but the allocation. "droplive"
+     * is the part refused with frames arriving (text somebody could have read), "dropqueued" is the part that never left FctManager's queue, and "backlog"
+     * is how close a lane's queue came to the cap that refused it — which is what decides between more room and looking elsewhere. All three are levels on
+     * purpose: the per-window cause counters share four slots with the trigger counts, and in a measured session they were pushed off nine windows in thirty-three.
      */
     private static readonly int FeedId = PerfCounters.Register("fct.feed");
     private static readonly int QueueId = PerfCounters.Register("fct.queue");
     private static readonly int DropId = PerfCounters.Register("fct.drop");
+    private static readonly int DropLiveId = PerfCounters.Register("fct.dropLive");
+    private static readonly int DropQueuedId = PerfCounters.Register("fct.dropQueued");
+    private static readonly int BacklogId = PerfCounters.Register("fct.backlog");
 
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
@@ -471,6 +480,9 @@ namespace EQLogParser
         PerfCounters.End(mark);
         PerfCounters.Gauge(QueueId, _manager.PendingCount);
         PerfCounters.Gauge(DropId, _canvas.DroppedCount + _manager.DroppedCount);
+        PerfCounters.Gauge(DropLiveId, _canvas.DroppedLiveCount);
+        PerfCounters.Gauge(DropQueuedId, _manager.DroppedCount);
+        PerfCounters.Gauge(BacklogId, _canvas.PeakBacklog);
       }
 
       if (now - _lastStatsMs < 500)

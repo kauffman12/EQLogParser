@@ -214,6 +214,12 @@ namespace EQLogParser
     public double DrawsPerSec { get; private set; }
     public int DroppedCount => _ingest.DroppedCount;
 
+    /* The half of those losses that happened while this canvas was still getting frames, i.e. text a viewer could have seen. */
+    public int DroppedLiveCount => _ingest.DroppedLiveCount;
+
+    /* Deepest a lane's arrival queue has been all session, so a refusal can be told from a cap that was barely touched. */
+    public int PeakBacklog => _ingest.PeakBacklog;
+
     /* How many numbers the "hide under" filter has taken off screen; shown beside the drop count, because a filter
      * doing its job and a bug swallowing numbers should never look the same from outside. */
     public int HiddenCount => _ingest.HiddenCount;
@@ -526,6 +532,10 @@ namespace EQLogParser
 
       /* Every tick, before the early-outs, so the level the heartbeat prints is current even while the overlay sits idle. */
       PerfCounters.Gauge(HitsId, _hits.Count);
+
+      /* Same reason: a refusal in the ingest has to be able to ask whether frames were arriving when it happened, and a tick that
+         painted nothing is still proof the compositor was handing this window work. */
+      _ingest.NotePump();
 
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
