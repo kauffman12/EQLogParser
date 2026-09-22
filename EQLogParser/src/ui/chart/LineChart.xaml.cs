@@ -2,11 +2,13 @@ using log4net;
 using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -23,6 +25,54 @@ namespace EQLogParser
       { Labels.Invulnerable, true },
       { Labels.Miss, true }
     };
+
+    /*
+     * One redraw of a chart costs as much as the log it is drawing, and which half of it to fix was guesswork: "chart.update n=9 avg 410
+     * max 1693 ms" on the heartbeat says a redraw is expensive and nothing about why. So an update is timed in phases (see PerfBreakdown),
+     * each phase also a span of its own on the heartbeat, and a redraw over SlowUpdateMs writes one line that lists the phases next to the
+     * sizes that explain them. The phases never nest - Reset() is called after each phase closes rather than from inside one - because a
+     * pass accounts for its phases in order.
+     *
+     * Which leaves one stretch of an update deliberately without a phase: AutoSelectViewOption, the few lines that move the view dropdown. It
+     * belongs to no step of the pipeline, and if a pass's total beats the sum of its phases by something worth noticing, that is where the
+     * remainder is - along with whatever a nested redraw it triggers spends under pick/series/refresh (see chart.plots versus chart.updates).
+     */
+    private const int PhaseClear = 0;
+    private const int PhaseWalk = 1;
+    private const int PhaseRolling = 2;
+    private const int PhasePick = 3;
+    private const int PhaseReset = 4;
+    private const int PhaseSeries = 5;
+    private const int PhaseRefresh = 6;
+
+    /* A redraw over this much of a second is worth a line; a healthy one with the top five players takes tens of milliseconds. */
+    private const double SlowUpdateMs = 300;
+
+    private static readonly PerfBreakdown UpdateTrace = new("chart.update",
+      "chart.clear", "chart.walk", "chart.rolling", "chart.pick", "chart.reset", "chart.series", "chart.refresh");
+
+    /* Data points arriving versus redraws actually performed: twice as many plots as updates is a cascade, and that number says so. */
+    private static readonly int UpdatesId = PerfCounters.Register("chart.updates");
+    private static readonly int PlotsId = PerfCounters.Register("chart.plots");
+
+    /* What a redraw was asked to draw - the sizes behind the milliseconds. */
+    private static readonly int RecordsId = PerfCounters.Register("chart.records");
+    private static readonly int LinesId = PerfCounters.Register("chart.lines");
+    private static readonly int PointsId = PerfCounters.Register("chart.points");
+
+    /*
+     * Time the chart control took with our series after we handed it over: posted at ContextIdle, which sits below WPF's layout and render
+     * priorities, so the gap is everything the framework did with the chart (and anything else queued behind it) between the assignment and
+     * the thread going quiet. A refresh of 2 ms next to a rendergap of 900 ms means the cost is Syncfusion's, not ours.
+     */
+    private static readonly int RenderGapId = PerfCounters.Register("chart.rendergap");
+
+    /* The pass being timed on this chart, null while nothing is measuring a redraw of it. */
+    private PerfBreakdown.Pass _trace;
+    private int _traceWalked;
+    private int _tracePlots;
+    private int _plotLines;
+    private int _plotPoints;
 
     private readonly Dictionary<string, List<DataPoint>> _playerPetValues = [];
     private readonly Dictionary<string, List<DataPoint>> _playerValues = [];
@@ -73,33 +123,74 @@ namespace EQLogParser
 
     internal void Clear()
     {
+      var trace = _trace;
+      trace?.Open(PhaseClear);
+
       _playerPetValues.Clear();
       _playerValues.Clear();
       _petValues.Clear();
       _raidValues.Clear();
       _hasPets.Clear();
       _selectedGroups = null;
+
+      trace?.Close();
+
+      /* Emptying the chart control is timed apart from emptying our dictionaries: it is the one part of clearing that reaches Syncfusion. */
       Reset();
     }
 
     internal void HandleUpdateEvent(DataPointEvent e)
     {
-      switch (e.Action)
+      PerfCounters.Note(UpdatesId);
+
+      var trace = UpdateTrace.NewPass();
+      var outer = _trace;
+      var action = e.Action;
+
+      _trace = trace;
+      _traceWalked = 0;
+      _tracePlots = 0;
+      _plotLines = 0;
+      _plotPoints = 0;
+
+      try
       {
-        case "CLEAR":
-          Clear();
-          break;
-        case "UPDATE":
-          Clear();
-          _selectedGroups = e.SelectedGroups;
-          AutoSelectViewOption(e.SelectedGroups, e.Selected);
-          AddDataPoints(e.Iterator, e.Selected);
-          break;
-        case "SELECT":
-          _selectedGroups = e.SelectedGroups;
-          AutoSelectViewOption(e.SelectedGroups, e.Selected);
-          PlotSelected(e.Selected);
-          break;
+        switch (action)
+        {
+          case "CLEAR":
+            Clear();
+            break;
+          case "UPDATE":
+            Clear();
+            _selectedGroups = e.SelectedGroups;
+            AutoSelectViewOption(e.SelectedGroups, e.Selected);
+            AddDataPoints(e.Iterator, e.Selected);
+            break;
+          case "SELECT":
+            _selectedGroups = e.SelectedGroups;
+            AutoSelectViewOption(e.SelectedGroups, e.Selected);
+            PlotSelected(e.Selected);
+            break;
+        }
+      }
+      finally
+      {
+        /*
+         * The sizes go on the line because "chart.refresh 1,289 ms" is only diagnostic next to "…for 7 lines and 84,000 points": the first
+         * says where, the second says whether the answer is to draw less or to build it somewhere else.
+         */
+        _trace = outer;
+
+        if (outer is null)
+        {
+          trace.Complete(SlowUpdateMs,
+            $"{GetType().Name} {action} | walked {_traceWalked} records -> {_plotLines} lines, {_plotPoints} points | plots {_tracePlots}");
+        }
+        else
+        {
+          /* Nested inside a pass someone else owns (a chart updating while another redraw is open): close ours, judge theirs. */
+          trace.Abort();
+        }
       }
     }
 
@@ -131,6 +222,11 @@ namespace EQLogParser
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
     {
+      var trace = _trace;
+      var walked = 0;
+
+      trace?.Open(PhaseWalk);
+
       var diffs = new Dictionary<string, double>();
       var lastTimes = new Dictionary<string, double>();
       var timeRanges = new Dictionary<string, TimeRange>();
@@ -200,7 +296,13 @@ namespace EQLogParser
         lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
         lastTimes[raidName] = dataPoint.CurrentTime;
         lastTimes[totalName] = dataPoint.CurrentTime;
+        walked++;
       }
+
+      PerfCounters.Gauge(RecordsId, walked);
+
+      /* The 5 second rolling window is its own phase because it walks every point a second time, and that is a different thing to fix. */
+      trace?.Open(PhaseRolling);
 
       UpdateRemaining(_raidValues, needRaidAccounting, lastTimes, timeRanges);
       UpdateRemaining(_playerPetValues, needTotalAccounting, lastTimes, timeRanges);
@@ -211,6 +313,10 @@ namespace EQLogParser
       PopulateRolling(_playerPetValues);
       PopulateRolling(_playerValues);
       PopulateRolling(_petValues);
+
+      trace?.Close();
+
+      _traceWalked = walked;
 
       Plot(selected);
     }
@@ -246,9 +352,42 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * A redraw asked for by a dropdown, a top-count change or a player selection has no data event to hide inside, so it opens a pass of its
+     * own. Either way the same phase names are used, which is what makes "the chart is slow" answerable no matter what was just clicked.
+     */
     private void Plot(List<PlayerStats> selected = null)
     {
+      var outer = _trace;
+      var owned = outer is null ? UpdateTrace.NewPass() : null;
+      var trace = owned ?? outer;
+
+      _trace = trace;
+      PerfCounters.Note(PlotsId);
+
+      if (owned is null)
+      {
+        _tracePlots++;
+      }
+
+      try
+      {
+        DrawChart(selected, trace);
+      }
+      finally
+      {
+        /* Closing here rather than at the end of the body: a redraw that throws has to stop naming itself in "in progress" like any other. */
+        trace.Close();
+        _trace = outer;
+
+        owned?.Complete(SlowUpdateMs, $"redraw without data event | {_plotLines} lines, {_plotPoints} points");
+      }
+    }
+
+    private void DrawChart(List<PlayerStats> selected, PerfBreakdown.Pass trace)
+    {
       _lastSelected = selected;
+      trace?.Open(PhasePick);
 
       Dictionary<string, List<DataPoint>> workingData;
 
@@ -334,9 +473,40 @@ namespace EQLogParser
       topCountList.Visibility = (selected == null || selected.Count == 0) && selectedName != Labels.ByGroupOption
         ? Visibility.Visible : Visibility.Collapsed;
 
+      trace?.Open(PhaseReset);
       Reset();
+      trace?.Close();
+
       titleLabel.Content = label;
-      sfLineChart.Series = BuildCollection(sortedValues);
+
+      trace?.Open(PhaseSeries);
+      var series = BuildCollection(sortedValues);
+
+      /* Handing the control a whole new collection is the one line in this file that is not ours, so it is timed on its own. */
+      trace?.Open(PhaseRefresh);
+      sfLineChart.Series = series;
+      trace?.Close();
+
+      WatchRenderGap();
+    }
+
+    /*
+     * Posts a callback at ContextIdle, which sits under WPF's layout and render priorities: the gap between posting it and running it is what
+     * the framework took with the chart we just handed over. Deliberately coarse - it also counts whatever else queued up behind it, and the
+     * beat lines already say how loaded that queue was - which is why it is reported beside our phases instead of inside their sum, and why a
+     * two millisecond refresh next to a 900 ms gap points at the chart control rather than at this file.
+     */
+    private void WatchRenderGap()
+    {
+      if (Dispatcher is not { HasShutdownStarted: false } dispatcher)
+      {
+        return;
+      }
+
+      var posted = Stopwatch.GetTimestamp();
+
+      dispatcher.BeginInvoke(new Action(() => PerfCounters.Record(RenderGapId,
+        (Stopwatch.GetTimestamp() - posted) * 1000d / Stopwatch.Frequency)), DispatcherPriority.ContextIdle);
     }
 
     /// <summary>
@@ -401,8 +571,13 @@ namespace EQLogParser
           break;
       }
 
+      /* What the control was asked to draw, since line count and point count are what its own work scales with. */
+      var points = 0;
+
       foreach (var value in CollectionsMarshal.AsSpan(sortedValues))
       {
+        points += value.Count;
+
         var name = value.First().Name;
         name = ((_currentViewOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
         var series = new FastLineSeries
@@ -416,6 +591,11 @@ namespace EQLogParser
 
         collection.Add(series);
       }
+
+      _plotLines = collection.Count;
+      _plotPoints = points;
+      PerfCounters.Gauge(LinesId, _plotLines);
+      PerfCounters.Gauge(PointsId, _plotPoints);
 
       return collection;
     }

@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,6 +43,10 @@ namespace EQLogParser
     private static readonly int SaveId = PerfCounters.Register("ui.configSave");
     private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
     private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
+
+    /* How many times a redraw request arrived while one was already waiting to run; see QueueChartUpdate. */
+    private static readonly int ChartBacklogId = PerfCounters.Register("chart.backlog");
+    private int _chartUpdatesWaiting;
 
     /*
      * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
@@ -236,9 +241,9 @@ namespace EQLogParser
           }
         }
 
-        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
-        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
-        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
+        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon.Tag as string, data);
+        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon.Tag as string, data);
+        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(tankingChartIcon.Tag as string, data);
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
@@ -659,6 +664,27 @@ namespace EQLogParser
     private async void CreateBackupClick(object sender, RoutedEventArgs e)
     {
       await MainActions.CreateBackupAsync();
+    }
+
+    /*
+     * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue full
+     * redraws behind each other - three builders can ask for three. Counting how often a request found one already waiting is the only way to
+     * see that shape afterwards: it is what one merged redraw would take away, and nothing else in the log distinguishes "each redraw is too
+     * slow" from "too many redraws were asked for".
+     */
+    private void QueueChartUpdate(string key, DataPointEvent e)
+    {
+      if (Interlocked.Increment(ref _chartUpdatesWaiting) > 1)
+      {
+        PerfCounters.Note(ChartBacklogId);
+      }
+
+      /* The count is released by the redraw itself; a callback the dispatcher never ran means the application was closing anyway. */
+      Dispatcher.InvokeAsync(() =>
+      {
+        Interlocked.Decrement(ref _chartUpdatesWaiting);
+        HandleChartUpdate(key, e);
+      });
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)

@@ -2225,6 +2225,12 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
 | `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
 | `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
+| `chart.clear`, `chart.walk`, `chart.rolling`, `chart.pick`, `chart.reset`, `chart.series`, `chart.refresh` | span | the phases inside one line-chart redraw — emptying the aggregates, walking the records, the 5 s rolling window, choosing which lines to show, emptying the chart control, building its series, handing them over. See *A chart redraw is phases too* |
+| `chart.rendergap` | span | what the framework took with the chart after the series were handed to it: a callback posted at `ContextIdle`, so the gap is layout and render (and anything else queued behind it), which is work outside this codebase |
+| `chart.column` | span | one page of the players-vs-top-performer chart, which is hand-made WPF elements — a rectangle, labels and a tooltip per column — rebuilt on a 250 ms timer while that window is open |
+| `chart.updates`, `chart.plots` | count | data point events arriving versus redraws actually performed; `plots` at twice `updates` is a cascade (a view option changing re-plots before the data even arrives) |
+| `chart.backlog` | count | redraw requests that arrived while one was already waiting on the dispatcher — the shape one merged redraw would remove |
+| `chart.records`, `chart.lines`, `chart.points` | level | what a redraw was asked to draw: records walked, lines built, data points handed to the control |
 | `trig.line` | span | evaluating one log line against every active trigger, on the trigger thread (**off the UI thread**) — count is lines, average is what a line costs |
 | `trig.tests` | count | patterns that pass asked for: multiplied out, this is the matching bill (an imported set of 4,227 enabled triggers tests every raid line against all of them) |
 | `trig.active` | level | how many triggers every live `TriggerProcessor` is testing lines against, summed (one processor per watched log plus the tester; whichever one wrote last used to print an idle character's 0 over the 608 that were running) — the number that separates a clean soak from somebody's freeze |
@@ -2278,6 +2284,51 @@ The `open …` field carries the same improvement: a text overlay used to regist
 `open meter+fct+text29d9e8ff-ac7b-…` — true, and useless to read during a raid. It registers under the overlay's own title now, with the
 first characters of the id kept so two overlays sharing a title stay two names (`TextOverlaySurfaceNameTest` holds that shape, including the
 separators: the title must not be able to write a `+` or a `|` into the line).
+
+### A chart redraw is phases too
+
+The heartbeat that led here said `chart.update n=9 avg 410 max 1693 ms`: nine redraws of an open chart in a twenty second window, one of them
+second and a half long, which is a player staring at a chart that will not change while their combat numbers are stopped. That name is the whole
+pipeline though — empty the aggregates, walk every record, roll a 5 s window over them, pick the top lines, clear the control, build series,
+hand them over — and only one or two of those steps can be the expensive one. Averaging them together measures nothing useful: the fix for a slow
+record walk (build it on a pool thread) is the opposite of the fix for a slow control (draw fewer lines), and picking between them by guessing
+buys the wrong refactor.
+
+So `PerfBreakdown` registers each phase as its own span — the heartbeat keeps averaging them all session, which is a stronger statement than any
+single redraw's line — and writes one line for a pass over 300 ms with the phases beside the sizes that explain them:
+
+```
+chart.update 1694 ms | DamageChart UPDATE | walked 41233 records -> 7 lines, 84000 points | plots 2 | chart.clear 0.4 ms chart.walk 310 ms … chart.refresh 1289 ms | budget 300 ms
+```
+
+Three things about it are deliberate:
+
+- **Phases never nest; opening one closes the one before it.** A phase abandoned by an exception would keep naming itself in `in progress` for
+  the rest of the session (the same hazard `PerfCounters` warns about), and a caller's `finally` calling `Complete`/`Abort` clears whatever is
+  open. `APhaseNobodyClosedStopsNamingItself` holds that, and `APhaseOpenedTwiceAddsUp` holds the other half: one redraw that plots twice must
+  add its two runs into one phase rather than showing only the last and accounting for less than the total.
+- **A redraw asked for by a dropdown or a selection opens a pass of its own**, under the same phase names, so "the chart is slow" is answerable
+  whatever the player just clicked and not only when a data point arrives.
+- **`chart.rendergap` measures the part that is not ours.** Right after `sfLineChart.Series = series` a callback goes out at `ContextIdle`, which
+  sits below WPF's layout and render priorities; the time until it runs is what the framework did with the chart. It is coarse on purpose — it
+  also counts anything else queued behind, and the beat lines already say how loaded that queue was — which is why it is reported beside the
+  phases rather than inside their sum. A `chart.refresh` of 2 ms next to a `chart.rendergap` of 900 ms says the cost is the control's, and this
+  file should stop looking for it in itself.
+- Lines are throttled to one per five seconds per breakdown, with what was swallowed counted and printed on the next one, because a redraw that is
+  slow three times a second is one solved problem and three hundred lines hides the next thing. Throttling costs no measurement: the spans record
+  whether or not a sentence came out (`ASecondSlowPassIsSuppressedAndCounted` asserts both halves).
+
+What is already visible by reading the code, and is what these phases exist to confirm or kill: one `UPDATE` empties the chart control twice and
+then replaces it — `Clear()` ends in `Series.Clear()`, `Plot()` ends in `Reset()` which is `Series.Clear()` again, then a fresh collection is
+assigned — so three full invalidations of a Syncfusion chart per data point event, every one of them landing on the UI thread. Whether those three
+cost 3 ms or 1,300 ms is precisely what `chart.reset` and `chart.refresh` are now instrumented to say.
+
+The three builders each raise their own event and `MainWindow.QueueChartUpdate` dispatches a redraw per event, so a rebuild storm queues redraws
+back to back; `chart.backlog` counts how often a request found one already waiting. That is the number that decides between "make a redraw
+cheaper" and "ask for fewer of them", which is a decision nobody should make without it.
+
+No field numbers exist yet — this instrument ships before its own measurement, which is the order that keeps the reading honest rather than the
+reading chosen.
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
@@ -2468,6 +2519,10 @@ Register a handle in a field initializer, wrap the work in `Begin`/`End` inside 
 try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
 the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
 line that points at a span nobody can find in the docs is a dead end.
+
+When the thing being measured is a pipeline rather than a pass — several steps whose split decides which one to fix — use `PerfBreakdown`
+rather than registering half a dozen spans by hand: it names them as a set, keeps them sequential, prints the phase breakdown with the sizes,
+and hands its line back to the caller instead of only logging it, because a rule nobody can assert is a rule that quietly changes.
 
 ## What a loaded raid costs in memory
 
