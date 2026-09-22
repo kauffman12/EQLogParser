@@ -78,7 +78,13 @@ namespace EQLogParser
     private readonly Dictionary<string, List<DataPoint>> _playerValues = [];
     private readonly Dictionary<string, List<DataPoint>> _petValues = [];
     private readonly Dictionary<string, List<DataPoint>> _raidValues = [];
-    private readonly Dictionary<string, Dictionary<string, byte>> _hasPets = [];
+    /* Which pet names belong to which player, used only as a set - the byte it used to carry was never read. */
+    private readonly Dictionary<string, HashSet<string>> _hasPets = [];
+
+    /* "player +Pets" is a pure function of the player name, and this loop asked for it millions of times per redraw; see AddDataPoints. */
+    private const string PetTotalSuffix = " +Pets";
+    private string _petTotalKey;
+    private string _petTotalName;
     private string _currentChoice;
     private string _currentViewOption;
     private int _currentTopCount = 5;
@@ -227,7 +233,7 @@ namespace EQLogParser
 
       trace?.Open(PhaseWalk);
 
-      var diffs = new Dictionary<string, double>();
+      const string raidName = "Raid";
       var lastTimes = new Dictionary<string, double>();
       var timeRanges = new Dictionary<string, TimeRange>();
       var petData = new Dictionary<string, DataPoint>();
@@ -241,13 +247,31 @@ namespace EQLogParser
 
       foreach (var dataPoint in recordIterator)
       {
-        const string raidName = "Raid";
         var playerName = dataPoint.PlayerName ?? dataPoint.Name;
-        var totalName = playerName + " +Pets";
 
-        UpdateTimes(dataPoint.Name, dataPoint, diffs, lastTimes);
-        UpdateTimes(raidName, dataPoint, diffs, lastTimes);
-        UpdateTimes(totalName, dataPoint, diffs, lastTimes);
+        /* Rebuilt only when the name changes rather than allocated per record: a redraw of a big parse made 4.66M of these strings, and the GC
+           cost is charged to the whole application, not just to this walk. */
+        if (_petTotalKey != playerName)
+        {
+          _petTotalKey = playerName;
+          _petTotalName = playerName + PetTotalSuffix;
+        }
+
+        var totalName = _petTotalName;
+
+        /*
+         * Every series is measured against the previous record carrying its own name, and the three names this loop cares about are known right
+         * here, so their last time and gap are read once. Aggregate used to look both up again by name for each of the four series, which is how
+         * a walk that only sums numbers was spending its time hashing strings: eleven dictionary probes per record where three carry information.
+         */
+        var raidDiff = lastTimes.TryGetValue(raidName, out var raidLast) ? dataPoint.CurrentTime - raidLast : 0;
+        var totalDiff = lastTimes.TryGetValue(totalName, out var totalLast) ? dataPoint.CurrentTime - totalLast : 0;
+        var oneDiff = lastTimes.TryGetValue(dataPoint.Name, out var oneLast) ? dataPoint.CurrentTime - oneLast : 0;
+
+        /* Tested once for the record instead of once per series: two bit tests and a string lookup that four series were each repeating. */
+        var isCrit = LineModifiersParser.IsCrit(dataPoint.ModifiersMask);
+        var isTwincast = LineModifiersParser.IsTwincast(dataPoint.ModifiersMask);
+        var isHit = !MissTypes.ContainsKey(dataPoint.Type);
 
         if (!raidData.TryGetValue(raidName, out var raidAggregate))
         {
@@ -255,7 +279,7 @@ namespace EQLogParser
           raidData[raidName] = raidAggregate;
         }
 
-        Aggregate(_raidValues, needRaidAccounting, dataPoint, raidAggregate, lastTimes, timeRanges, diffs);
+        Aggregate(_raidValues, needRaidAccounting, dataPoint, raidAggregate, timeRanges, raidLast, raidDiff, isCrit, isTwincast, isHit);
 
         if (!totalPlayerData.TryGetValue(totalName, out var totalAggregate))
         {
@@ -263,7 +287,7 @@ namespace EQLogParser
           totalPlayerData[totalName] = totalAggregate;
         }
 
-        Aggregate(_playerPetValues, needTotalAccounting, dataPoint, totalAggregate, lastTimes, timeRanges, diffs);
+        Aggregate(_playerPetValues, needTotalAccounting, dataPoint, totalAggregate, timeRanges, totalLast, totalDiff, isCrit, isTwincast, isHit);
 
         if (dataPoint.PlayerName == null)
         {
@@ -273,7 +297,7 @@ namespace EQLogParser
             playerData[dataPoint.Name] = aggregate;
           }
 
-          Aggregate(_playerValues, needPlayerAccounting, dataPoint, aggregate, lastTimes, timeRanges, diffs);
+          Aggregate(_playerValues, needPlayerAccounting, dataPoint, aggregate, timeRanges, oneLast, oneDiff, isCrit, isTwincast, isHit);
         }
         else if (dataPoint.PlayerName != null)
         {
@@ -283,14 +307,14 @@ namespace EQLogParser
             _hasPets[totalName] = value;
           }
 
-          value[dataPoint.Name] = 1;
+          value.Add(dataPoint.Name);
           if (!petData.TryGetValue(dataPoint.Name, out var petAggregate))
           {
             petAggregate = new DataPoint { Name = dataPoint.Name, PlayerName = playerName };
             petData[dataPoint.Name] = petAggregate;
           }
 
-          Aggregate(_petValues, needPetAccounting, dataPoint, petAggregate, lastTimes, timeRanges, diffs);
+          Aggregate(_petValues, needPetAccounting, dataPoint, petAggregate, timeRanges, oneLast, oneDiff, isCrit, isTwincast, isHit);
         }
 
         lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
@@ -448,7 +472,7 @@ namespace EQLogParser
           if (selectedName == Labels.PetPlayerOption)
           {
             pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
-            names.FirstOrDefault(name => _hasPets[first.Name].ContainsKey(name)) != null);
+            names.FirstOrDefault(name => _hasPets[first.Name].Contains(name)) != null);
           }
           else if (selectedName == Labels.PlayerOption)
           {
@@ -744,31 +768,21 @@ namespace EQLogParser
       }
     }
 
-    private static void UpdateTimes(string name, DataPoint dataPoint, Dictionary<string, double> diffs, Dictionary<string, double> lastTimes)
-    {
-      if (lastTimes.TryGetValue(name, out var lastTime))
-      {
-        diffs[name] = dataPoint.CurrentTime - lastTime;
-      }
-      else
-      {
-        diffs[name] = 0;
-      }
-    }
-
+    /*
+     * lastTime and diff arrive as arguments instead of being looked up from dictionaries by aggregate.Name: the caller knows the name it is
+     * folding this record into and has already read both, so looking them up again here only cost hashing. isCrit, isTwincast and isHit arrive
+     * the same way - one test per record rather than one per series. Same values in, same values out; see DesignNotes for what it measured.
+     */
     private static void Aggregate(Dictionary<string, List<DataPoint>> theValues,
       Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate,
-      Dictionary<string, double> lastTimes, Dictionary<string, TimeRange> timeRanges, Dictionary<string, double> diffs)
+      Dictionary<string, TimeRange> timeRanges, double lastTime, double diff, bool isCrit, bool isTwincast, bool isHit)
     {
-      lastTimes.TryGetValue(aggregate.Name, out var lastTime);
-
       if (!timeRanges.TryGetValue(aggregate.Name, out var value))
       {
         value = new TimeRange(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
         timeRanges[aggregate.Name] = value;
       }
 
-      var diff = diffs[aggregate.Name];
       if (diff > FightManager.FightTimeout)
       {
         value.Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
@@ -808,16 +822,16 @@ namespace EQLogParser
       }
 
       aggregate.CurrentTime = dataPoint.CurrentTime;
-      aggregate.CritsPerSecond += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.TcPerSecond += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.CritsPerSecond += isCrit ? (uint)1 : 0;
+      aggregate.TcPerSecond += isTwincast ? (uint)1 : 0;
       aggregate.AttemptsPerSecond += 1;
-      aggregate.HitsPerSecond += MissTypes.ContainsKey(dataPoint.Type) ? 0 : 1;
+      aggregate.HitsPerSecond += isHit ? 1 : 0;
       aggregate.TotalPerSecond += dataPoint.Total;
       aggregate.Total += dataPoint.Total;
       aggregate.FightTotal += dataPoint.Total;
       aggregate.FightHits += 1;
-      aggregate.FightCritHits += LineModifiersParser.IsCrit(dataPoint.ModifiersMask) ? (uint)1 : 0;
-      aggregate.FightTcHits += LineModifiersParser.IsTwincast(dataPoint.ModifiersMask) ? (uint)1 : 0;
+      aggregate.FightCritHits += isCrit ? (uint)1 : 0;
+      aggregate.FightTcHits += isTwincast ? (uint)1 : 0;
     }
 
     private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,

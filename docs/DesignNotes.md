@@ -2359,6 +2359,36 @@ slow": backlog climbing while coalesce stays at zero means the queue holds event
 The queue is keyed by the icon control rather than by the window name because the name comes from `icon.Tag`, and a control's properties belong
 to the UI thread — see the cross-thread story above. A reference crosses threads fine, which is all a dictionary key needs.
 
+### What the walk spends its time on, proven without Windows
+
+The walk kept asking for the same information it had already read: `diffs` was a whole dictionary written three times per record and re-read by
+each of the four series; `Aggregate` looked up that *and* `lastTimes` again by name; two modifier bit tests and a miss lookup ran once per series
+instead of once per record; and `playerName + " +Pets"` allocated a fresh string for every one of those 4.66M records — a cost charged to the
+whole application's collector, not just to this loop. Those lookups are now read once in the caller and passed as arguments, the tests run once,
+and the `+Pets` name is memoized per run of records. `_hasPets` became a set of names because the byte its inner dictionary carried was never
+read.
+
+That is a change to arithmetic inside a UI control that no Linux-runnable test can reach, so it was checked by *executing both versions side by
+side* rather than by review: `local/walk-equiv/` (not committed) slices the walk out of `git show HEAD:…` and out of the working tree, compiles
+them into one program against `EQLogParser.Core`, feeds both walkers the same synthetic stream, and reflects over every property of every plotted
+point in all four series plus the pet map. Identical output on 1M records / 73k points, at 945.6 ms → 847.7 ms (**1.12×**); identical on a
+gap-heavy stream at **1.00×**. Keeping a change like this because it is *cleaner* would be guesswork — the harness is what says whether it paid.
+
+### The quadratic hiding in a chart redraw: `TimeRange.GetTotal()`
+
+The gap-heavy shape above is the interesting result: 60k records produced 95k plotted points and barely changed speed, because that cost lives
+somewhere else. Scaling it says where — 20k / 40k / 80k records cost 146 / 370 / 1,477 ms, which is four times the time for twice the data. The
+culprit is `TimeRange.GetTotal()`, called once per inserted point: it is not a getter. It scans every segment of the range looking for pairs
+within `Offset` (6) seconds of each other, **merges them by calling `Add`** — each merge another linear walk with collapses — and only then sums.
+So it mutates while measuring, allocates its `additional` list, and grows with the number of segments a name has accumulated, which is exactly
+what "select all fights across a long log" maximizes. This is why selecting every fight on a big file pauses out of proportion to its record
+count.
+
+It cannot simply be cached or skipped: the merge it performs is load-bearing, since `UpdateRemaining` reads `TimeSegments.Last()` and the segment
+list shapes the points that get plotted, and other consumers (`Timeline`, `GenerateStatsOptions.AllRanges`) share the class. Making the
+normalization explicit — normalize once per name after the walk instead of as a side effect of measuring it — is the shape of a fix, and it wants
+the same before/after harness treatment rather than a confident edit.
+
 ### Blocked or busy: what the thread was doing while nobody answered
 
 A stall line proves the thread did not run a beat for N milliseconds and, when it says `in progress nothing`, that none of our passes held
