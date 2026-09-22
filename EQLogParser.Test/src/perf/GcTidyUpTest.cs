@@ -12,11 +12,21 @@ namespace EQLogParser
    * with it), and it must not happen six times because the player fiddled with a filter (every forced collection promotes young survivors,
    * so a tidy storm makes the heap bigger and the next unasked-for collection longer). Hence a settle delay onto a pool thread, an interval,
    * and counters that let both be asserted instead of eyeballed in a log.
+   *
+   * The waits here are deliberately awkward, because two failures used to read as one. A single wait on `TidyCount == n && Idle` cannot tell "the collection is
+   * slow" from "it finished and never handed the slot back", and the first is this machine compacting whatever the rest of the suite left allocated - five
+   * seconds was measured insufficient on Windows, on exactly the two tests that throttle requests. So each half waits and fails separately, quoting the counts,
+   * whether the slot is claimed and how big the heap was: the numbers that decide whether to look at this file or at the machine.
    */
   [TestClass]
   public sealed class GcTidyUpTest
   {
-    private const int WaitBudgetMs = 5000;
+    /*
+     * Generous on purpose. These tests force a full compacting collection in a test host whose heap is whatever the suite has been parsing, and that is the
+     * slowest thing in the run: five seconds timed out on a Windows box on the two request-throttle tests while passing here. A budget is not an assertion - a
+     * tidy that needs 15 s still passes, one that never releases its slot fails, and the message says which.
+     */
+    private const int WaitBudgetMs = 30_000;
 
     [TestInitialize]
     public void ClearTheCounters() => GcTidyUp.Reset();
@@ -78,7 +88,8 @@ namespace EQLogParser
       Assert.IsTrue(started.Elapsed.TotalMilliseconds < 100, $"the request blocked for {started.Elapsed.TotalMilliseconds:0} ms waiting on the collector");
 
       // The collection belongs to a pool thread now; let it finish so the counters mean what the next assertion takes them for.
-      Assert.IsTrue(WaitFor(() => GcTidyUp.TidyCount == 1 && GcTidyUp.Idle), "the requested tidy never finished");
+      WaitForCollection(1);
+      WaitForIdle();
     }
 
     /*
@@ -89,7 +100,8 @@ namespace EQLogParser
     public void TheSecondRequestInsideTheIntervalIsSwallowed()
     {
       Assert.IsTrue(GcTidyUp.Request("first", 0, 60_000));
-      Assert.IsTrue(WaitFor(() => GcTidyUp.TidyCount == 1 && GcTidyUp.Idle), "the first tidy never finished");
+      WaitForCollection(1);
+      WaitForIdle();
 
       Assert.IsFalse(GcTidyUp.Request("second", 0, 60_000), "a second tidy inside the interval should be refused");
       Assert.AreEqual(1, GcTidyUp.SuppressedCount, "what was swallowed is counted, not silently dropped");
@@ -111,7 +123,8 @@ namespace EQLogParser
       });
 
       Assert.AreEqual(1, accepted, $"eight simultaneous requests produced {accepted} collections");
-      Assert.IsTrue(WaitFor(() => GcTidyUp.TidyCount == 1 && GcTidyUp.Idle), "the one accepted tidy never finished");
+      WaitForCollection(1);
+      WaitForIdle();
       Assert.AreEqual(7, GcTidyUp.SuppressedCount);
     }
 
@@ -120,9 +133,11 @@ namespace EQLogParser
     public void TidiesResumeAfterTheInterval()
     {
       Assert.IsTrue(GcTidyUp.Request("one", 0, 0));
-      Assert.IsTrue(WaitFor(() => GcTidyUp.TidyCount == 1 && GcTidyUp.Idle));
+      WaitForCollection(1);
+      WaitForIdle();
       Assert.IsTrue(GcTidyUp.Request("two", 0, 0), "an expired interval should accept again");
-      Assert.IsTrue(WaitFor(() => GcTidyUp.TidyCount == 2 && GcTidyUp.Idle));
+      WaitForCollection(2);
+      WaitForIdle();
       Assert.AreEqual(0, GcTidyUp.SuppressedCount);
     }
 
@@ -141,7 +156,45 @@ namespace EQLogParser
         "a tidy that leaves the runtime compacting every future collection is a tax nobody agreed to");
     }
 
-    private static bool WaitFor(Func<bool> condition)
+    /*
+     * A request whose moment got reset away must not collect later. This is the ghost that made this class order-dependent: a stats builder finishing its work
+     * asks for a tidy 1.5 s hence, the next test wipes the counters and takes the slot, and the stale request turns up mid-assertion to stop the world on behalf
+     * of state that no longer exists - it can even take the slot back. Asked for, reset during its settle delay, then given every chance to run: no collection
+     * may arrive from it, while the request made after the reset goes ahead normally.
+     */
+    [TestMethod]
+    public void ARequestStaleByTheTimeItWakesDoesNotCollect()
+    {
+      Assert.IsTrue(GcTidyUp.Request("stale", 150, 60_000));
+
+      GcTidyUp.Reset();
+
+      Assert.IsTrue(GcTidyUp.Request("current", 0, 60_000), "a reset hands the slot to whoever asks next, not to the request that was settling");
+      WaitForCollection(1);
+      WaitForIdle();
+
+      Thread.Sleep(400);
+
+      Assert.AreEqual(1, GcTidyUp.TidyCount, $"a request retired by Reset collected on its own schedule ({GcTidyUp.TidyCount} collections)");
+    }
+
+    /* "The collection we asked for never happened." Counted as reached once the expected number have run, so a straggler cannot make the count walk past it. */
+    private static void WaitForCollection(int expected)
+    {
+      Assert.IsTrue(WaitUntil(() => GcTidyUp.TidyCount >= expected),
+        $"no collection after {WaitBudgetMs} ms: count {GcTidyUp.TidyCount} of {expected}, suppressed {GcTidyUp.SuppressedCount}, " +
+        $"slot idle {GcTidyUp.Idle}, heap {PerfGc.Sample().HeapBytes / (1024.0 * 1024):0} MB - a big heap means this machine is slow, not this code");
+    }
+
+    /* "It happened and never handed the slot back", which is the bug: every later request would be refused forever by a tidy that stopped answering. */
+    private static void WaitForIdle()
+    {
+      Assert.IsTrue(WaitUntil(() => GcTidyUp.Idle),
+        $"a tidy is still holding the slot after {WaitBudgetMs} ms, so every request after it is refused forever: " +
+        $"{GcTidyUp.TidyCount} collected, heap {PerfGc.Sample().HeapBytes / (1024.0 * 1024):0} MB");
+    }
+
+    private static bool WaitUntil(Func<bool> condition)
     {
       var deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * WaitBudgetMs / 1000;
 

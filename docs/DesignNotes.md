@@ -2614,6 +2614,18 @@ released large arrays taking the heap from 30 MB to 5 — and cannot be asserted
 live data (a suite at 4.8 GB swallowed the signal entirely). Every tidy writes one line so the claim stays checkable:
 `gc.tidy log loaded: heap 2901 to 742 MB, working set 3120 to 905 MB, gen2 +1, stopped 812 ms, wall 813 ms`.
 
+A request expires, because the settle delay makes it a promise about a moment that can go away. `Reset()` bumps an epoch, and a task still settling when that
+happens stands down instead of collecting: the slot was handed to whoever reset, so collecting would stop the world on behalf of state nobody is waiting for any
+more — and it would also take back a slot that belongs to somebody else now. Proven rather than assumed: with the guard removed, a request retired by `Reset()`
+still ran its collection (two collections where one was asked for). This is what made `GcTidyUpTest` order-dependent — a stats builder finishing its work asks
+for a tidy 1.5 s hence, and in a suite that runs sequentially that timer goes off inside whichever test comes next.
+
+Same file, the tests' own waits: they used to be one condition, `TidyCount == n && Idle`, which cannot distinguish "this machine is slow at compacting" from
+"the tidy finished and never released its slot" — the second is a real bug (every later request refused forever), the first is arithmetic, since one pass costs
+**3,065 ms** on a 4.8 GB heap and a test host's heap is whatever the rest of the suite has been parsing. Five seconds was measured insufficient on Windows for
+the two throttle tests while passing on Linux, so each half now waits and fails separately with a generous budget, quoting counts, whether the slot is claimed
+and how big the heap was.
+
 Two details that are decisions rather than accidents. There is deliberately **no "is a fight active" guard**: a loaded file leaves its last fight
 marked active until further log lines arrive to expire it, so such a guard would quietly veto the most useful trigger, and the interval bounds what
 the stats trigger can cost anyway. And `LargeObjectHeapCompactionMode.CompactOnce` is set on every pass because the runtime clears it afterwards —

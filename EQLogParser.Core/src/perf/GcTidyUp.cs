@@ -50,6 +50,7 @@ namespace EQLogParser
     private static int _suppressedCount;
     private static int _inFlight;
     private static long _lastTidyMs;
+    private static int _epoch;
 
     /* Collections performed, for tests and for a heartbeat that wants to know whether the tidy ever ran at all. */
     internal static int TidyCount => Volatile.Read(ref _tidyCount);
@@ -63,9 +64,15 @@ namespace EQLogParser
      */
     internal static bool Idle => Volatile.Read(ref _inFlight) == 0;
 
-    /* Back to a virgin state; the collector itself is untouched, so this only resets counters. */
+    /*
+     * Back to a virgin state; the collector itself is untouched, so this only resets counters - except that it also retires every request still settling.
+     * Reset takes the in-flight slot away from whoever held it, so a request that had not collected yet would be collecting on behalf of a state that no
+     * longer exists: in the application that is a stop-the-world nobody is waiting for any more, and in a test run it lands inside the next class's
+     * assertions - which is how an earlier StatsBuildersTest build, still sitting out its settle delay, ended up tidying in the middle of GcTidyUpTest.
+     */
     internal static void Reset()
     {
+      Interlocked.Increment(ref _epoch);
       Volatile.Write(ref _tidyCount, 0);
       Volatile.Write(ref _suppressedCount, 0);
       Volatile.Write(ref _inFlight, 0);
@@ -94,6 +101,8 @@ namespace EQLogParser
         return false;
       }
 
+      var epoch = Volatile.Read(ref _epoch);
+
       _ = Task.Run(async () =>
       {
         try
@@ -101,6 +110,12 @@ namespace EQLogParser
           if (settleMs > 0)
           {
             await Task.Delay(TimeSpan.FromMilliseconds(settleMs)).ConfigureAwait(false);
+          }
+
+          /* Stale by the time it woke: Reset() gave the slot to somebody else while this was settling, so the moment it was asked for is gone. */
+          if (Volatile.Read(ref _epoch) != epoch)
+          {
+            return;
           }
 
           TidyNow(reason);
@@ -111,7 +126,12 @@ namespace EQLogParser
         }
         finally
         {
-          Volatile.Write(ref _inFlight, 0);
+          /* Releasing is only this request's to do while it still owns the slot; after a Reset the slot belongs to whoever reset, and clearing it here
+             would let a second collection start beside one already running. */
+          if (Volatile.Read(ref _epoch) == epoch)
+          {
+            Volatile.Write(ref _inFlight, 0);
+          }
         }
       });
 
