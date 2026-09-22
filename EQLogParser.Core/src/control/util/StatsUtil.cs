@@ -1,5 +1,7 @@
+using log4net;
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -15,6 +17,8 @@ namespace EQLogParser
     internal static readonly CompositeFormat SpecialFormat = CompositeFormat.Parse("{0} {{{1}}}");
     internal const int SpecialOffset = 15;
     internal const int DeathOffset = 15;
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>
     {
@@ -181,6 +185,17 @@ namespace EQLogParser
 
           removeFromStart -= range.Total;
         }
+      }
+
+      /*
+       * This walk spends span lengths to buy "the last N seconds", and a span's length now includes the short silences Add welds into it. So N means what
+       * TotalSeconds means rather than N raw seconds of activity, which is the one visible consequence of moving the tick rule (docs/DesignNotes.md ->
+       * "TimeRange: the tick rule lives in Add"). Logged so a before/after run on the same log can be diffed without opening two windows.
+       */
+      if (Log.IsDebugEnabled)
+      {
+        Log.Debug($"Stats window: asked min {options.MinSeconds} max {options.MaxSeconds} -> {startTime:0.###} .. {stopTime:0.###}; " +
+                  $"{raidTotals.Ranges.TimeSegments.Count} spans, {raidTotals.Ranges.GetTotal():0.###} counted seconds (raw extent {raidTotals.MaxTime - raidTotals.MinTime:0.###})");
       }
     }
 
@@ -746,7 +761,9 @@ namespace EQLogParser
         {
           if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && (double.IsNaN(maxTime) || segment.EndTime <= maxTime))
           {
-            result.Add(segment);
+            // A copy, not the caller's object. Add() welds what it is given, and the span handed over would keep widening in this list's merges - which
+            // would be quietly worse since the tick rule moved into Add, because a weld now reaches a few seconds further than an overlap did.
+            result.Add(new TimeSegment(segment.BeginTime, segment.EndTime));
           }
           else if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && maxTime >= segment.BeginTime)
           {

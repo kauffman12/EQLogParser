@@ -10,27 +10,20 @@ namespace EQLogParser
     private const int Offset = 6;
     public List<TimeSegment> TimeSegments { get; } = [];
 
+    /*
+     * The seconds covered, short silences included. Reads only: the rule that fills a silence lives in Add, so asking for a number no longer rewrites the
+     * list it is asked of. See docs/DesignNotes.md -> "TimeRange: the tick rule lives in Add."
+     */
     public double GetTotal()
     {
-      var additional = new List<TimeSegment>();
+      var total = 0d;
 
-      for (var i = 0; i < TimeSegments.Count; i++)
+      foreach (var segment in CollectionsMarshal.AsSpan(TimeSegments))
       {
-        if (i + 1 is var next && next < TimeSegments.Count)
-        {
-          if (TimeSegments[i].EndTime + Offset >= TimeSegments[next].BeginTime)
-          {
-            additional.Add(new TimeSegment(TimeSegments[i].EndTime, TimeSegments[next].BeginTime));
-          }
-        }
+        total += segment.Total;
       }
 
-      foreach (var segment in CollectionsMarshal.AsSpan(additional))
-      {
-        Add(segment);
-      }
-
-      return TimeSegments.Sum(segment => segment.Total);
+      return total;
     }
 
     public void Add(List<TimeSegment> collection)
@@ -78,28 +71,34 @@ namespace EQLogParser
      *
      * The loop this replaces asked six questions per span in a fixed order (identical, surrounds us, our begin inside, our end inside, strictly left,
      * strictly right). Reduced to the two above they agree on every input, including the awkward ones: an exact duplicate widens nothing and adds
-     * nothing; a span contained in another changes no bound; touching at a single second merges, one second of daylight does not; a null or an inverted
-     * span is dropped before anything is read. The equality check is gone rather than moved - merging with a span that has the same bounds is the same
-     * nothing, done by the arithmetic instead of by name.
+     * nothing; a span contained in another changes no bound; a null or an inverted span is dropped before anything is read. How close counts as touching is
+     * the tick rule at the bottom of this comment: runs merge across up to 5 seconds of dead air, and 6 seconds of daylight keeps them apart. The equality
+     * check is gone rather than moved - merging with a span that has the same bounds is the same nothing, done by the arithmetic instead of by name.
      *
-     * Nothing collapses to the left, which is worth stating because the old code called CollapseLeft: the span before the found index ends before our
-     * begin (that is why it was skipped), and the list is disjoint, so it cannot touch a span we are about to widen rightward.
+     * Nothing collapses to the left, which is worth stating because the old code called CollapseLeft: the span before the found index ends more than Offset
+     * before our begin (that is why the search skipped it), and runs are disjoint, so it cannot touch a span we are about to widen rightward.
      *
-     * Behaviour is unchanged by construction and was checked that way rather than by reading: the previous implementation is frozen in
-     * local/timerange-lab/OldTimeRange.cs and both run side by side over 1.9M random adds - in order, out of order, duplicates, touching endpoints,
-     * points, inverted and null - with the whole segment list compared after every single add. Zero differences. Meaning is pinned in
-     * EQLogParser.Test's TimeRangeSpecTest.
+     * The search rewrite changed behaviour by none of that, which was checked rather than read: the implementation before it is frozen in
+     * local/timerange-lab/OldTimeRange.cs and both ran side by side over 1.9M random adds - in order, out of order, duplicates, touching endpoints,
+     * points, inverted and null - with the whole segment list compared after every single add. Zero differences at that point. The tick rule below is the one
+     * change since, made deliberately, and it moves lists and no numbers: -- equivA in that lab is red by design now (310k shape disagreements, 0 totals),
+     * and -- equivB is the comparison to trust. Meaning is pinned in EQLogParser.Test's TimeRangeSpecTest.
      *
-     * What did change is the cost. Walking from span zero made building "this player's activity over every fight" grow with the square of the fight
-     * count: 40 names x 800 fight spans took 166 ms, and now takes 1.7 ms. GetTotal() is untouched, including its bridging of short silences.
+     * What the search changed is the cost. Walking from span zero made building "this player's activity over every fight" grow with the square of the fight
+     * count: 40 names x 800 fight spans took 166 ms, and now takes 2.6 ms.
+     *
+     * This is also where the tick rule lives: a span landing within Offset of an existing run joins it, so the list is kept in the shape GetTotal() used to
+     * reach only by inserting bridge spans of its own. Every span reaches this method - the List overload, the copy constructor and Add(TimeRange) all come
+     * through here - which is what makes "runs are always more than Offset apart" safe to rely on. Building a list by touching TimeSegments directly skips
+     * that, and would leave silences nobody counted.
      */
     public void Add(TimeSegment segment)
     {
       if (segment is not null && segment.BeginTime <= segment.EndTime)
       {
-        var index = FirstSpanReaching(segment.BeginTime);
+        var index = FirstSpanReaching(segment.BeginTime - Offset);
 
-        if (index < TimeSegments.Count && segment.EndTime >= TimeSegments[index].BeginTime)
+        if (index < TimeSegments.Count && segment.EndTime + Offset >= TimeSegments[index].BeginTime)
         {
           var target = TimeSegments[index];
           target.BeginTime = Math.Min(target.BeginTime, segment.BeginTime);
@@ -108,7 +107,7 @@ namespace EQLogParser
           /* Widening this span may now reach the next one, and the next. Swallow them in one pass and drop them in one RemoveRange. */
           var last = index;
 
-          while (last + 1 < TimeSegments.Count && TimeSegments[last + 1].BeginTime <= target.EndTime)
+          while (last + 1 < TimeSegments.Count && TimeSegments[last + 1].BeginTime <= target.EndTime + Offset)
           {
             target.EndTime = Math.Max(target.EndTime, TimeSegments[last + 1].EndTime);
             last++;

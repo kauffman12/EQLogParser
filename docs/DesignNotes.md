@@ -2421,8 +2421,9 @@ Correctness was demonstrated rather than argued, twice over. The previous implem
 side by side in `local/timerange-lab` (`-- equivA`, `-- equivBig`): **1.9M ops** with the *whole segment list* compared after every add - in order, out of
 order, exact duplicates, touching endpoints, single-second points, inverted spans, nulls, and reads interleaved at random - plus **300k adds into ranges
 of about 2,000 spans**, the size where walking from zero hurt. Zero differences in lists or totals. And because that harness is not part of the build, the
-guard that ships is `TimeRangeSpecTest.ManyOutOfOrderAddsProduceExactlyTheBruteForceUnion`, which builds 400 randomly placed spans per trial and compares
-every span of the result against a union computed the obvious way.
+guard that ships is `TimeRangeSpecTest.ManyOutOfOrderAddsProduceExactlyTheBruteForceRuns`, which builds 400 randomly placed spans per trial and compares
+every span of the result against a run list computed the obvious way. (It was `...BruteForceUnion` until the tick rule moved into `Add`; see "TimeRange: the
+tick rule lives in Add" below.)
 
 **Not shipped: making `GetTotal()` O(1) by carrying the total around.** Worth knowing because it is where the next speed-up lives, and it was prototyped.
 A bridged run's length is additive - total = sum of span lengths + sum of (`gap - 1`) over consecutive pairs closer than `Offset` - so an insert only
@@ -2434,6 +2435,9 @@ found by shrinking the failing history to three adds. Shipping it changes one ob
 list. The *numbers* are provably unaffected (closing a silence moves no outer bound), but `LineChart.UpdateRemaining` reads `TimeSegments.Last().BeginTime`
 back into an `Add`, and 15 call sites share this class, so it is a decision rather than an edit. (Superseded on the mutation half: the thing that made a
 non-mutating read unsafe was an external segment removal in `DamageSummary`, and that cache is gone - see "TimeRange: merging copies, adding adopts" below.)
+The counter itself is still not shipped, and the reason is staleness rather than speed: `TimeSegment`'s bounds are public setters and `TimeSegments` is a
+public list, so any cached sum can be quietly invalidated by a caller the class cannot see. `GetTotal()` sums instead - no allocation, no mutation, about
+0.1 ms for five asks on an 800-span range - which is most of the win with none of the ways to be wrong.
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
@@ -2741,11 +2745,63 @@ rule fills **up to 5 seconds of actual dead air, inclusive at 5** (measured: gap
 five 3-second spans with 4 s between each report 31 s from 15 real ones. Constant since the initial import, no comment on it; neighbouring conventions are
 `SpellCountBuilder.DmgOffset = 5` and `StatsUtil.SpecialOffset/DeathOffset = 15`.
 
-**Open: folding that rule into `Add` so reads stop writing.** Prototyped in `local/timerange-lab/FastRange.cs` (`bridgeGap`) and measured against the live
-class over **95,389 accepted adds**: totals differed 0 *and* the welded lists differed 0 - applying a "within 6 s" closure at insert reaches exactly the
-list that read-time bridging reaches, so `GetTotal()` becomes a running counter (0.5 ms for five asks → 0.0) and shape stops depending on who asked first.
-`GetTotal()` is idempotent today (ask1 = ask2 over ~160k asks), so there is no compounding bug to preserve. Two things I got wrong on the way and fixed by
-measurement: my first fuzz reported a 14% mismatch, which was the harness feeding the two structures different inputs (an "inverted" span with
-`begin == end` is a legal one-second point that `Add` accepts); and I flagged the per-span consumers as a risk when they are provably unaffected -
-`SpellCountBuilder` queries `[begin-30, end+15]` and `StatsUtil` ±15, and two spans within 6 s already have overlapping query windows (6 <= 45, 6 <= 30), so
-welding them cannot change what those loops ask for. What remains before shipping it is a buff-count diff on a real log, not more reasoning.
+**Open at the time: folding that rule into `Add` so reads stop writing.** Prototyped in `local/timerange-lab/FastRange.cs` (`bridgeGap`) and measured against
+the live class over **95,389 accepted adds**: totals differed 0 *and* the welded lists differed 0 - applying a "within 6 s" closure at insert reaches exactly
+the list that read-time bridging reaches, and shape stops depending on who asked first. `GetTotal()` is idempotent today (ask1 = ask2 over ~160k asks), so
+there is no compounding bug to preserve. Two things I got wrong on the way and fixed by measurement: my first fuzz reported a 14% mismatch, which was the
+harness feeding the two structures different inputs (an "inverted" span with `begin == end` is a legal one-second point that `Add` accepts); and I flagged
+the per-span consumers as a risk when they are provably unaffected - `SpellCountBuilder` queries `[begin-30, end+15]` and `StatsUtil` ±15, and two spans
+within 6 s already have overlapping query windows (6 <= 45, 6 <= 30), so welding them cannot change what those loops ask for.
+
+### TimeRange: the tick rule lives in Add
+
+**Shipped.** `Add` welds a span that lands within `Offset = 6` of an existing run - the search starts at "first span whose `EndTime` reaches `begin - Offset`",
+the overlap test carries `+ Offset`, and the rightward swallow does too. `GetTotal()` is now a sum over the spans: no bridge list, no `Add` called from a
+getter, no rewrite of the thing it was asked about. The invariant is *runs in a range are always more than `Offset` apart*, and `Add` is the only door -
+the `List` overload, both constructors and `Add(TimeRange)` all come through it.
+
+Proven three ways rather than by review, in `local/timerange-lab` (`-- equivB`, not part of the build): **162,447 accepted adds** across four input shapes
+(in order, out of order, single-second points, endpoints touching, inverted spans, nulls), with the frozen `OldTimeRange` read after every add, the live
+class, and an independent model computed from the added spans themselves:
+
+```
+  totals disagreed with old      : 0            (and the same counter covers the independent model: all three always agree)
+  live list != old's post-read   : 0            <- the shape the rule-at-insert produces is exactly the shape a bridging read produced
+  invariant broken in live       : 0            <- sorted, disjoint, every pair more than a tick apart
+  live list != old's UNREAD list : 120,708      (74.3% of steps - the intended change: silences are welded from the start)
+```
+
+The consequence nobody can see in those numbers is the good one. `StatsUtil.UpdateMinMaxTimes` buys "the last N seconds" by walking spans and spending their
+lengths, and it was spending *raw* lengths while `TotalSeconds` reported *bridged* ones - the two definitions of a second disagreeing inside one filter.
+Synthetic hour of bursts, asked for the last 600 seconds:
+
+| quiet stretches | window the old walk returned | what the meter reported for it | after |
+|---|---|---|---|
+| up to 4 s | started at 2,849 | **753 s** for a 600 s filter | starts at 3,001, **601 s** |
+| up to 8 s | started at 2,704 | **894 s** | 2,884, **714 s** |
+| up to 11 s | started at 2,511 | **1,080 s** | 2,701, **890 s** |
+
+So the "last N seconds"/"first N seconds" filters now hand back what they were asked for instead of up to 80% more, and a filtered select's `TotalSeconds`
+agrees with the number in its own name. Cost moved the same way as the search did: 40 names x 800 fight spans build **25.4 → 2.6 ms**, five totals
+**6.4 → 0.1 ms**, same answer; 200,000 casting ticks three seconds apart now sit in **one span** from the first insert instead of waiting for a read.
+
+**What changed meaning** (the honest list, since this is the part a diff cannot show):
+- `TimeSegments` is welded *always*, so membership tests change side: `TimeCheck(line, ...)` - which decides whether a clicked line falls in a player's
+  activity - now says yes inside a ≤ 5 s silence whether or not anybody asked for a number first. Previously the answer depended on call order, which is the
+  hidden bug in the question.
+- Two spec tests pinned the old behaviour and were replaced, not deleted: `GetTotalBridgesTheSegmentListAsASideEffectOfBeingRead` became
+  `AddingWithinATickWeldsTheRunAtInsert` + `ReadingTheTotalLeavesTheListAlone`, and the brute-force run model in
+  `ManyOutOfOrderAddsProduceExactlyTheBruteForceRuns` now folds short silences because `Add` does. Those were the only 2 failures in 1,209 tests when the rule
+  moved; both were assertions about mechanism. `AssertSortedAndDisjoint` gained the gap rule, so every sweep in that file proves the invariant for free, and
+  `ExactlyATickOfSilenceWeldsAndOneSecondMoreDoesNot` pins the boundary (6 welds, 7 does not).
+- The lab's older comparison `-- equivA` is **red by design** now: 310,086 whole-list disagreements over 1.92M ops, **0** in totals, every one of them a pair
+  of runs ≤ 6 s apart welded early. `-- equivB` is the authoritative comparison from here on.
+- `StatsUtil.FilterTimeRange` copies the spans it clips instead of handing the caller's own `TimeSegment` objects to `Add`, which welds what it is given -
+  adoption was already a leak and the rule made it reach further. Guarded by `MergedTimeRangesTest.FilteringARangeNeverEditsTheSource`.
+- Hand-built lists are now a shape the class cannot produce. `TimeSegments` is public, so a caller appending directly (three test fixtures did) skips the
+  rule and gets a total that misses the silences their own data implies; all three go through `Add` now. Production code never bypassed it - the only
+  `.TimeSegments.Add(` in the tree was already `TimeRange.Add`.
+
+**Auditing it on a real log**: `StatsUtil` logs one Debug line per windowed build, which is where before/after runs can be compared without opening two
+windows - `Stats window: asked min 0 max 300 -> 12345 .. 12645; 7 spans, 300.0 counted seconds (raw extent 412)`. On the old build the counted seconds exceed
+the requested maximum; on this one they land on it. Everything else in the two builds should be letter-identical.

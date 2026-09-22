@@ -54,7 +54,7 @@ namespace EQLogParser
     {
       var fight = MakeFight(player, 60);
       var options = new GenerateStatsOptions { AllRanges = new TimeRange() };
-      options.AllRanges.TimeSegments.Add(new TimeSegment(0, 60));
+      options.AllRanges.Add(new TimeSegment(0, 60));
       options.Npcs.Add(fight);
 
       DamageStatsBuilder.Instance.BuildTotalStats(options);

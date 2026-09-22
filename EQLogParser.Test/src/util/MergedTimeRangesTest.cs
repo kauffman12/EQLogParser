@@ -187,5 +187,25 @@ namespace EQLogParserTest
       Assert.AreEqual(31d, merged.GetTotal());
       Assert.AreEqual(31d, source.GetTotal(), "the SOURCE reports the merged total - it handed over its own objects");
     }
+
+    /* ---- StatsUtil.FilterTimeRange: the other place a range gets built out of somebody else's spans, and the one that no longer does ---- */
+
+    [TestMethod]
+    public void FilteringARangeNeverEditsTheSource()
+    {
+      var source = new TimeRange();
+      source.Add(new TimeSegment(100, 110));
+      source.Add(new TimeSegment(140, 150));
+
+      var before = Pairs(source);
+      var beforeTotal = source.GetTotal();
+
+      // a window that keeps the first run whole and cuts the second one in half
+      var filtered = StatsUtil.FilterTimeRange(source, 0, 145);
+
+      Assert.AreEqual(17d, filtered.GetTotal(), "11 seconds whole, plus the 6 kept of the second run");
+      CollectionAssert.AreEqual(before, Pairs(source), "filtering handed the source's own TimeSegment objects to the new range, and Add welds what it is given");
+      Assert.AreEqual(beforeTotal, source.GetTotal(), "the unfiltered range still reports its own seconds after somebody filtered a copy of it");
+    }
   }
 }

@@ -90,6 +90,12 @@ namespace EQLogParserTest
         var previous = range.TimeSegments[i - 1];
         Assert.IsTrue(previous.BeginTime <= segment.BeginTime, $"{because}: list is not sorted by BeginTime");
         Assert.IsTrue(previous.EndTime < segment.BeginTime, $"{because}: spans [{previous.BeginTime},{previous.EndTime}] and [{segment.BeginTime},{segment.EndTime}] overlap but were not merged");
+
+        /*
+         * And more than a tick apart: since the bridging rule lives in Add rather than in GetTotal(), "no two runs sit within Offset seconds of each other"
+         * is a property of the list at all times, not only after somebody asked for a number. Checked here so every sweep in this file proves it.
+         */
+        Assert.IsTrue(segment.BeginTime - previous.EndTime > Offset, $"{because}: runs [{previous.BeginTime},{previous.EndTime}] and [{segment.BeginTime},{segment.EndTime}] are {(segment.BeginTime - previous.EndTime):0.###} seconds apart, inside the tick, so they were never meant to be two runs");
       }
     }
 
@@ -216,7 +222,7 @@ namespace EQLogParserTest
      * is the guard for it (the side-by-side harness that proved the change is not part of the build).
      */
     [TestMethod]
-    public void ManyOutOfOrderAddsProduceExactlyTheBruteForceUnion()
+    public void ManyOutOfOrderAddsProduceExactlyTheBruteForceRuns()
     {
       var rng = new Random(90210);
 
@@ -233,11 +239,17 @@ namespace EQLogParserTest
           range.Add(new TimeSegment(begin, end));
         }
 
+        /*
+         * The brute force run list, and it joins across short silences because Add does now - the tick rule moved from GetTotal() to Add, so the list is
+         * kept in the shape a bridging read used to put it into. Before that move this model collapsed only true overlaps and matched the class exactly;
+         * the two failures when the rule moved were these tests and GetTotalBridgesTheSegmentListAsASideEffectOfBeingRead, both of which pinned the old
+         * meaning rather than finding a bug. See docs/DesignNotes.md -> "TimeRange: the tick rule lives in Add".
+         */
         var want = new List<(double Begin, double End)>();
 
         foreach (var span in added.OrderBy(a => a.BeginTime))
         {
-          if (want.Count > 0 && span.BeginTime <= want[^1].End)
+          if (want.Count > 0 && span.BeginTime - want[^1].End <= Offset)
           {
             want[^1] = (want[^1].Begin, Math.Max(want[^1].End, span.EndTime));
           }
@@ -292,22 +304,68 @@ namespace EQLogParserTest
     }
 
     /*
-     * Reading the answer rewrites the question. GetTotal() closes short silences by ADDING segments to its own list, so after a read the list is not
-     * the one you filled. LineChart's UpdateRemaining reads TimeSegments.Last().BeginTime and feeds it straight back into Add, which is how a read can
-     * reach a later write - so a GetTotal() that stops mutating has to be a decision made with this test open, not a surprise in a diff.
+     * Used to read: "reading the answer rewrites the question" - GetTotal() closed short silences by ADDING spans to its own list, so the list you walked
+     * depended on whether anybody had asked for a number yet. LineChart's UpdateRemaining reads TimeSegments.Last().BeginTime and feeds it straight back
+     * into Add, which is how a read reached a later write. That test was replaced, not deleted: the bridging now happens in Add, so the run is welded at
+     * insert and the read has nothing left to do.
      */
     [TestMethod]
-    public void GetTotalBridgesTheSegmentListAsASideEffectOfBeingRead()
+    public void AddingWithinATickWeldsTheRunAtInsert()
     {
       var range = new TimeRange();
       range.Add(new TimeSegment(0, 10));
       range.Add(new TimeSegment(14, 20));
-      Assert.AreEqual("[0,10] [14,20]", Describe(range.TimeSegments));
 
-      range.GetTotal();
-
+      // welded before anyone asks: four seconds of silence is inside the tick, so this was never two runs
       Assert.AreEqual("[0,20]", Describe(range.TimeSegments));
-      Assert.AreEqual(0, range.TimeSegments[^1].BeginTime);
+      Assert.AreEqual(21, range.GetTotal());
+
+      // and a silence wider than the tick stays a silence
+      range.Add(new TimeSegment(27, 30));
+      Assert.AreEqual("[0,20] [27,30]", Describe(range.TimeSegments));
+      Assert.AreEqual(25, range.GetTotal());
+    }
+
+    /* The tick boundary, pinned: six seconds of silence is inside the rule, seven is outside it. Same edge GetTotal() used to apply when read. */
+    [TestMethod]
+    public void ExactlyATickOfSilenceWeldsAndOneSecondMoreDoesNot()
+    {
+      var inside = new TimeRange();
+      inside.Add(new TimeSegment(0, 0));
+      inside.Add(new TimeSegment(6, 6));
+      Assert.AreEqual("[0,6]", Describe(inside.TimeSegments));
+      Assert.AreEqual(7, inside.GetTotal());
+
+      var outside = new TimeRange();
+      outside.Add(new TimeSegment(0, 0));
+      outside.Add(new TimeSegment(7, 7));
+      Assert.AreEqual("[0,0] [7,7]", Describe(outside.TimeSegments));
+      Assert.AreEqual(2, outside.GetTotal());
+    }
+
+    /* The read is a read. Nothing about the list moves, so walking it after a total is the same walk as before one. */
+    [TestMethod]
+    public void ReadingTheTotalLeavesTheListAlone()
+    {
+      var range = new TimeRange();
+      range.Add(new TimeSegment(0, 10));
+      range.Add(new TimeSegment(30, 40));
+      range.Add(new TimeSegment(90, 95));
+
+      var before = Describe(range.TimeSegments);
+      var spans = range.TimeSegments.ToArray();
+
+      for (var i = 0; i < 3; i++)
+      {
+        Assert.AreEqual(28, range.GetTotal(), $"read {i} changed the answer");
+        Assert.AreEqual(before, Describe(range.TimeSegments), $"read {i} changed the list");
+
+        for (var s = 0; s < spans.Length; s++)
+        {
+          Assert.AreEqual(spans[s].BeginTime, range.TimeSegments[s].BeginTime, $"read {i} moved span {s}");
+          Assert.AreEqual(spans[s].EndTime, range.TimeSegments[s].EndTime, $"read {i} widened span {s}");
+        }
+      }
     }
 
     /* Two reads must not disagree, or keep growing the answer. */

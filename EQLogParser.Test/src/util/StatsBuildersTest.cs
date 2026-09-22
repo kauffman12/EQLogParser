@@ -61,7 +61,8 @@ namespace EQLogParser
       var range = new TimeRange();
       foreach (var (begin, end) in segments)
       {
-        range.TimeSegments.Add(new TimeSegment(begin, end));
+        // through Add, not onto the list: Add owns the tick rule, so a hand-built list would be a shape the class never produces
+        range.Add(new TimeSegment(begin, end));
       }
 
       return range;
