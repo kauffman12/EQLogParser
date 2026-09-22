@@ -85,6 +85,14 @@ namespace EQLogParser
     public double MaxDroppedValue { get; private set; }
     public int DroppedCritCount { get; private set; }
 
+    /*
+     * The worst refusal named, because a number alone could not be acted on. A measured session put fct.dropMax at 3.2 million — no cast in this game
+     * does that, so the number was either a parse gone wrong or a lane fed something it should not be, and neither answer lives in an integer. This is
+     * the ability (or word) beside the largest face value ever refused, kept for one log line (FctOverlayWindow) to print. It changes only when the
+     * maximum advances, so printing it whenever it changes cannot fill a log.
+     */
+    public string WorstDropText { get; private set; } = "";
+
     /* How recently a composition tick has to have arrived for its moment to count as "painting". A dial, so a test can make freshness instant. */
     internal int PumpFreshMs = 250;
 
@@ -418,7 +426,7 @@ namespace EQLogParser
         var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
-          CountDrop(DropLaneId, value, crit);
+          CountDrop(DropLaneId, value, crit, fixedText ?? source);
           return null;
         }
 
@@ -478,7 +486,7 @@ namespace EQLogParser
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
-          CountDrop(DropConveyorId, value, crit);
+          CountDrop(DropConveyorId, value, crit, fixedText ?? source);
           return null;
         }
 
@@ -561,7 +569,7 @@ namespace EQLogParser
      * One place a refusal is accounted for, whichever door turned the number away: the lifetime total the settings panel shows, the
      * per-window counter the heartbeat names, and — when the host was painting — the half of the total that could have been seen.
      */
-    private void CountDrop(int counterId, double value, bool crit)
+    private void CountDrop(int counterId, double value, bool crit, string name)
     {
       DroppedCount++;
       PerfCounters.Note(counterId);
@@ -569,6 +577,7 @@ namespace EQLogParser
       if (value > MaxDroppedValue)
       {
         MaxDroppedValue = value;
+        WorstDropText = $"{name} {(long)value}{(crit ? " crit" : "")}";
       }
 
       if (crit)

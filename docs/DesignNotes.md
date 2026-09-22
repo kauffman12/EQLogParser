@@ -2225,6 +2225,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `fct.dropQueued` | level | the part of `fct.drop` that never left `FctManager`'s queue (age-out and cap). A level for the same reason as the two beside it: the per-window `fct.dropStale`/`fct.dropCeiling` counters can be displaced off the line, and an absent counter proves nothing |
 | `fct.backlog` | level | the deepest a lane's arrival queue has been all session (`FctConveyor.PeakWaiting`, a lifetime high-water). Read against `BacklogCap` (12), it says whether more room is the fix or the losses came from elsewhere |
 | `fct.dropMax`, `fct.dropCrit` | level | the largest number ever refused, and how many refusals were crits. A count cannot say whether anything was missed — a saturated rail turns away its newest arrival whatever that is — so these say what the losses cost. `FctOverlayWindow` prints the same worst figure in the overlay's own stats row |
+| *(log line)* `FCT refused its largest number yet: Flurry 3200300 crit` | once per advance, 5 s gate | the same refusal **named**. A bare integer cannot be chased down: a face value no spell in this game produces is either a line parsed into a number it should not be, or a lane fed the wrong figure, and the ability name is which. `FctIngest.WorstDropText`, printed by `FctOverlayWindow.OnCanvasFrame` |
 | `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
 | `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
 | `text.render` | span | one trigger text overlay redrawing its blocks |
@@ -2283,6 +2284,13 @@ combat to the last**. That is a rail running with no slack whatsoever — roughl
 the overlay the whole time and saw nothing wrong. Both statements are correct: a refused row never appears, so saturation has no visible signature, and "it
 seemed fine" is not evidence of anything. Those zeroes also buried the other theory this log had already produced — the queue never starved and the compositor
 was never missing, and without `fct.dropLive` on the page a rewrite of the render pump would have been written against a mechanism the measurement rules out.
+
+The run with those fields filled in said more than the question it was asked. Refusals carried on at the same rate (~560 per ten minutes, `fct.dropQueued`
+still 0, `fct.backlog` still reaching the cap), so spending the accelerator was neither the whole cause nor the whole cure — and `fct.dropMax` came back at
+**3,200,300**, with `fct.dropCrit` at **306 of 564**. Two findings sit in those numbers and neither is about tempo. More than half of what the rail throws
+away is crits, which is the half a player is reading; and something is arriving on a damage lane with a value no cast in this game does, which is why the
+worst refusal now names itself rather than leaving an integer to be argued about — and why that chase leaves the overlay behind, since the same parse feeds
+the damage tables.
 What saturation costs is the remaining question, and it is a question about size rather than count: a hundred white swings refused a minute is what every
 overlay does and what the melee filters exist for, while one big cast refused every few minutes is a rail that needs room.
 

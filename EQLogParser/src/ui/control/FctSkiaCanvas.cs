@@ -224,6 +224,9 @@ namespace EQLogParser
     public double MaxDroppedValue => _ingest.MaxDroppedValue;
     public int DroppedCritCount => _ingest.DroppedCritCount;
 
+    /* The ability beside that largest value — the difference between "the rail is too small" and "something is feeding it junk". */
+    public string WorstDropText => _ingest.WorstDropText;
+
     /* How many numbers the "hide under" filter has taken off screen; shown beside the drop count, because a filter
      * doing its job and a bug swallowing numbers should never look the same from outside. */
     public int HiddenCount => _ingest.HiddenCount;

@@ -318,6 +318,50 @@ namespace EQLogParser
       Assert.AreEqual(0, plain.DroppedCritCount, "none of which were crits");
     }
 
+    /* What a refusal cost, named. The session that motivated fct.dropMax printed 3.2 million, which is not a number any cast in this game does, and an
+       integer cannot be chased down — the ability beside it can be. So the worst refusal carries the name of what was refused, and it has to be the worst
+       of them: a counter that names some number thrown away while a larger one went unremarked answers the question with a coincidence. And the number it
+       names must genuinely have been refused, not merely been seen — otherwise the log line would let a parse bug off by pointing at a row that displayed
+       perfectly. */
+    [TestMethod]
+    public void TheWorstRefusalIsNamedByWhatItWas()
+    {
+      var rail = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+      var hits = new List<FctHitState>();
+      var shown = new HashSet<long>();
+
+      // distinct values so nothing folds, arriving far faster than the column can separate them
+      for (var i = 0; i < 120; i++)
+      {
+        rail.NotePump();
+        var value = 900 + i * 250;
+        if (rail.Accept(hits, FctLane.DamageDealt, value, "Flurry", crit: false, minor: false, periodic: false,
+              fixedText: null, Width, Height, i * 60.0) is not null)
+        {
+          shown.Add(value);
+        }
+      }
+
+      Assert.IsTrue(rail.DroppedCount > 0, "a feed this fast should have been refused somewhere");
+      Assert.IsTrue(rail.WorstDropText.StartsWith("Flurry "),
+        $"the worst refusal should name the ability it was: {rail.WorstDropText}");
+      var named = long.Parse(rail.WorstDropText.Split(' ')[1]);
+      Assert.AreEqual((long)rail.MaxDroppedValue, named, "the name belongs to the largest refusal, not to any refusal");
+      Assert.IsFalse(shown.Contains(named), $"{named} was shown on screen, so naming it as a loss would be a lie");
+
+      // and a refused crit says so: over half of a measured session's losses were crits, which is the part worth reading
+      var crits = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+      var critHits = new List<FctHitState>();
+      for (var i = 0; i < 120; i++)
+      {
+        crits.NotePump();
+        crits.Accept(critHits, FctLane.DamageDealt, 900 + i * 250, "Spike of Fury", crit: true, minor: false, periodic: false,
+          fixedText: null, Width, Height, i * 60.0);
+      }
+
+      Assert.IsTrue(crits.WorstDropText.EndsWith(" crit"), $"a refused crit should say so: {crits.WorstDropText}");
+    }
+
     /*
      * One lane, one source, values that never fold into each other, arriving 60 ms apart — faster than any rail can display them, which is why
      * forty-eight land a lane on its cap and leave most of them refused. `first` lets one storm continue on an ingest another pass already filled.

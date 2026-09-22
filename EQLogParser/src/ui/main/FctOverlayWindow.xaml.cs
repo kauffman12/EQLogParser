@@ -80,6 +80,10 @@ namespace EQLogParser
     private static readonly int DropMaxId = PerfCounters.Register("fct.dropMax");
     private static readonly int DropCritId = PerfCounters.Register("fct.dropCrit");
 
+    /* The last refused-record the overlay named in the log, and when. See OnCanvasFrame. */
+    private string _lastWorstDrop = "";
+    private double _lastWorstDropMs;
+
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
     private readonly FctManager _manager;
@@ -487,6 +491,20 @@ namespace EQLogParser
         PerfCounters.Gauge(BacklogId, _canvas.PeakBacklog);
         PerfCounters.Gauge(DropMaxId, _canvas.MaxDroppedValue);
         PerfCounters.Gauge(DropCritId, _canvas.DroppedCritCount);
+      }
+
+      /*
+       * Say what the biggest refusal actually was, saying it no more than once per advance. A measured session printed fct.dropMax: 3200300,
+       * and an integer that large cannot be acted on — no cast in this game does that damage, so either a line is parsed into a number it should not
+       * be or some lane is being fed the wrong figure, and which one it is lives in the ability name rather than the value. The text changes only when
+       * the session record falls; the seconds gate keeps a stream of ever-larger junk from turning the log into itself.
+       */
+      var worstDrop = _canvas.WorstDropText;
+      if (worstDrop.Length > 0 && worstDrop != _lastWorstDrop && now - _lastWorstDropMs > 5000)
+      {
+        _lastWorstDrop = worstDrop;
+        _lastWorstDropMs = now;
+        PerfJournal.Note($"FCT refused its largest number yet: {worstDrop}");
       }
 
       if (now - _lastStatsMs < 500)
