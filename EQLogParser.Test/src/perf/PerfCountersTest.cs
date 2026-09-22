@@ -236,9 +236,19 @@ namespace EQLogParser
     [TestMethod]
     public void TheSameSpanCannotWarnTwiceInsideItsThrottleWindow()
     {
-      Assert.IsTrue(PerfJournal.SlowPass("test.throttle", PerfJournal.SlowPassMs + 40), "the first warning must be written");
-      Assert.IsFalse(PerfJournal.SlowPass("test.throttle", PerfJournal.SlowPassMs + 40), "a repeating span is one line, not a log per frame");
-      Assert.IsTrue(PerfJournal.SlowPass("test.otherSpan", PerfJournal.SlowPassMs + 40), "throttling is per span name");
+      // The journal is off unless someone asks for it (PerfJournalTest), so this test has to ask — and give it back.
+      var was = PerfJournal.Enabled;
+      PerfJournal.Enabled = true;
+      try
+      {
+        Assert.IsTrue(PerfJournal.SlowPass("test.throttle", PerfJournal.SlowPassMs + 40), "the first warning must be written");
+        Assert.IsFalse(PerfJournal.SlowPass("test.throttle", PerfJournal.SlowPassMs + 40), "a repeating span is one line, not a log per frame");
+        Assert.IsTrue(PerfJournal.SlowPass("test.otherSpan", PerfJournal.SlowPassMs + 40), "throttling is per span name");
+      }
+      finally
+      {
+        PerfJournal.Enabled = was;
+      }
     }
   }
 }

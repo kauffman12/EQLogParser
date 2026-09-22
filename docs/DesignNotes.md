@@ -2205,7 +2205,26 @@ than from memory for that reason.
 Heartbeats (one Info line every 20 s: window length, what was open, worst beat delay, render mode, GC deltas and allocation rate, and the
 cost table of instrumented spans) are written only while an instrumented surface is open. They exist to explain overlay stalls; a build
 with no overlay running has nothing to explain, and the log rolls over at a few megabytes with game-data errors sharing it — a heartbeat
-that pushes out last night's stall line is worse than no heartbeat.
+that pushes out last night's stall line is worse than no heartbeat. Even that is opt-in now: see "Off unless asked" below.
+
+### Off unless asked (`PerfReport`)
+
+Everything the instruments say leaves through **`PerfJournal`**, and `PerfJournal.Enabled` is the door. Normal use leaves it shut — `PerfReport=True` in
+`AppData\config\settings.txt` opens it, and `Debug` implies it — because the cheapest thing the watchdog does is cost 90 log lines an hour saying nothing is
+wrong, and a player's complaint has to share that file with them. When the answer is off, `App` does not start `UiBeatMonitor` at all: a watchdog with nowhere to
+report is only the timer it posts on, plus a `GC.GetGCMemoryInfo()`/pause-delta poll every twenty seconds.
+
+The switch controls **speech, not measurement**. `PerfCounters` still counts (interlocked adds on paths that were already touching those fields), and `GcTidyUp`
+still hands memory back at its three chosen moments because that is a feature rather than an instrument. Two consequences worth knowing before reading a log:
+
+```
+UI perf reporting on: beat every 20 s, stall threshold 1000 ms
+```
+
+- That line is the first thing written when the instruments are on, so silence in someone's log means either "watched and clean" or "nobody was looking", and only
+  their `settings.txt` says which. Ask for it before asking about a missing stall line.
+- Nothing is throttled while the journal is closed, so the first offender after it opens is reported immediately rather than waiting out a silence that accumulated
+  unread (`PerfJournalTest` pins both halves of that, along with `Enabled`'s default).
 
 ### What a name means, and where it comes from
 
@@ -2766,8 +2785,9 @@ What goes, in the order that leaves the tree compiling:
    `trig.*`, `meter.*`, `chart.*`, `fct.*`, `audio.synth`, `ui.fightTable`. These are the hundreds of lines, and they are the reason the frame code reads
    harder than it does.
 2. `EQLogParser.Core/src/perf/PerfCounters.cs`, `PerfGc.cs`, `PerfGap.cs`, `PerfBreakdown.cs`, and `EQLogParser/src/ui/perf/UiBeatMonitor.cs` plus its thread
-   probe, with the tests beside them (`PerfCountersTest`, `PerfGcTest`, `PerfGapTest`, `PerfBreakdownTest`, `UiBeatMonitorTest` and the Wpf beat/gap tests).
-   The wording assertions go with the sentences they pin — do not keep them as a museum.
+   probe, with the tests beside them (`PerfCountersTest`, `PerfGcTest`, `PerfGapTest`, `PerfBreakdownTest`, `PerfJournalTest`, `UiBeatMonitorTest` and the Wpf
+   beat/gap tests), the `PerfJournal.Enabled` gate and the `PerfReport` read in `App`. The wording assertions go with the sentences they pin — do not keep them as
+   a museum.
 3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at three chosen moments), so `PerfJournal` stays alive for its
    one line — move that to the ordinary logger if deleting `PerfJournal` with the rest. Likewise `FctFramePacer` paces the display and `FctIngest`'s
    drop counters answer "did the overlay have room", which is a product decision, not a measurement.

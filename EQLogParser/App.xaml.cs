@@ -174,9 +174,19 @@ namespace EQLogParser
          * the band below it: a first full-surface run showed beat delays of 90 to 235 ms with none of our measured passes inside them, which
          * is the same event as a multi-second stall at a fifth of the size and is where the evidence is easiest to catch. PerfStallMs=200 in
          * settings.txt watches that band; anything under 100 ms only generates noise from ordinary frames, so it is not allowed.
+         *
+         * The whole thing is opt-in (`PerfReport=True`, or `Debug`, which implies it) because its cheapest line is one per 20 seconds of
+         * uptime: played straight it writes 90 lines an hour saying nothing is wrong, in a file that also carries game-data errors and rolls
+         * over. Off is the normal case, so the monitor is not started at all rather than started and silenced - and when it IS on, this is the
+         * line that says so, so a reader knows whether the silence in a log means "instrumented and clean" or "nobody was looking".
          */
-        UiBeatMonitor.Start(Dispatcher.CurrentDispatcher,
-          Math.Max(100, ConfigUtil.GetSettingAsDouble("PerfStallMs", UiBeatMonitor.DefaultStallMs)));
+        var stallMs = Math.Max(100, ConfigUtil.GetSettingAsDouble("PerfStallMs", UiBeatMonitor.DefaultStallMs));
+        PerfJournal.Enabled = ConfigUtil.IfSet("Debug") || ConfigUtil.IfSetOrElse("PerfReport", false);
+        if (PerfJournal.Enabled)
+        {
+          PerfJournal.Note($"UI perf reporting on: beat every {UiBeatMonitor.BeatSeconds:0} s, stall threshold {stallMs:0} ms");
+          UiBeatMonitor.Start(Dispatcher.CurrentDispatcher, stallMs);
+        }
 
         var urlVersion = Version.Replace(".", "-");
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
