@@ -2432,7 +2432,8 @@ differential testing over review: it counted a self-link when appending past the
 neighbour (five seconds short), and kept counting a pair that stopped being adjacent after an insert landed between them (four seconds *long*) - each
 found by shrinking the failing history to three adds. Shipping it changes one observable thing beyond speed: `GetTotal()` would stop rewriting the segment
 list. The *numbers* are provably unaffected (closing a silence moves no outer bound), but `LineChart.UpdateRemaining` reads `TimeSegments.Last().BeginTime`
-back into an `Add`, and 15 call sites share this class, so it is a decision rather than an edit.
+back into an `Add`, and 15 call sites share this class, so it is a decision rather than an edit. (Superseded on the mutation half: the thing that made a
+non-mutating read unsafe was an external segment removal in `DamageSummary`, and that cache is gone - see "TimeRange: merging copies, adding adopts" below.)
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
@@ -2704,3 +2705,47 @@ by damage *and* heals, so a struct-per-hit representation either forks that stat
 rebuild — and the summary rebuilds every few seconds during a fight. The two ways past it are to hoist that logic onto the fields themselves (an
 interface over "a hit", with rows implementing it by index rather than by identity) or to give heals their own row shape and let each keep its own
 copy of the rules. Either is a branch of its own; measure with `stopped` and `gc2` before believing any claim about it.
+### TimeRange: merging copies, adding adopts
+
+Two rules live in this class and only one of them was ever written down. **`Add(List<TimeSegment>)` adopts**: the segments handed to it become part of
+the list, and the next overlapping `Add` welds them *in place* (`BeginTime`/`EndTime` are public setters). **`new TimeRange(segments)` copies.** The two
+look alike and behave differently, so the safe rule is: anything merging a range it does not own uses `Add(TimeRange)`, added here for exactly that
+reason - it copies one segment at a time.
+
+The leak was not hypothetical. Computing a group's uptime rewrote the players it summarised: `DamageSummary` collected `stats.Ranges.TimeSegments`
+*references* into a per-group cache, then merged that cache into a throwaway range and asked for a total - which welded span objects still owned by live
+players. Reproduced in minutes with today's API before any fix was written (a test that has since gone: three spans for A, B sitting on A's weld point,
+sum the group, and A's own spans had changed length).
+
+**Shipped: a group derives its seconds from its members.** `StatsUtil.MergeMemberRanges(members)` unions each member's `Ranges` into a fresh range by
+copying, and `BuildGroupedPlayers` calls it on every pass. That deletes the cache (`GroupEntry.TimeSegments`), the collection that filled it, and the one
+external removal in the tree:
+
+```csharp
+oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));   // gone
+```
+
+That line was a hand-patched cache update, needed only because moving a player between groups takes an incremental path that skips
+`InitializeGroupTracking`. It depended on `List.Contains`, which for `TimeSegment` is **reference** equality - the class declares `Equals(TimeSegment)` but
+implements neither `IEquatable<TimeSegment>` nor `Object.Equals`/`GetHashCode` - so it worked only while the exact objects survived in the player's list.
+Removals from a segment list happen inside `Add` (`RemoveRange`), and one reachable-by-inspection path replaces a player's ranges with value copies
+(`DamageStatsBuilder`: `stats.Ranges = new TimeRange(range.TimeSegments)`); if that ran between collecting and removing, `Contains` would match nothing and
+the old group would keep 100% of the departed player's uptime. Whether it does run in that order was never traced, because it no longer matters: there is
+no snapshot to invalidate. Guards: `EQLogParser.Test/src/util/MergedTimeRangesTest.cs` - union covers every member, overlapping members count once (which is
+why a group cannot sum its members' `TotalSeconds`), order independence, rebuild-twice stability, and the aliasing guard that fails if `MergeMemberRanges`
+or `Add(TimeRange)` is switched back to adoption. Verified to bite: reintroducing adoption fails 3 of the 11.
+
+**The tick rule, stated.** `GetTotal()` treats silence as activity: a bridge span is inserted for every pair closer than `Offset = 6`, which is why asking
+for a total mutates the list. Because `TimeSegment.Total` is `End - Begin + 1`, the unit is off by one from wall clock: gap 1 means *no* silence, so the
+rule fills **up to 5 seconds of actual dead air, inclusive at 5** (measured: gap 6 → 21 s reported; gap 7 → 15 s reported). Chains compound without limit -
+five 3-second spans with 4 s between each report 31 s from 15 real ones. Constant since the initial import, no comment on it; neighbouring conventions are
+`SpellCountBuilder.DmgOffset = 5` and `StatsUtil.SpecialOffset/DeathOffset = 15`.
+
+**Open: folding that rule into `Add` so reads stop writing.** Prototyped in `local/timerange-lab/FastRange.cs` (`bridgeGap`) and measured against the live
+class over **95,389 accepted adds**: totals differed 0 *and* the welded lists differed 0 - applying a "within 6 s" closure at insert reaches exactly the
+list that read-time bridging reaches, so `GetTotal()` becomes a running counter (0.5 ms for five asks → 0.0) and shape stops depending on who asked first.
+`GetTotal()` is idempotent today (ask1 = ask2 over ~160k asks), so there is no compounding bug to preserve. Two things I got wrong on the way and fixed by
+measurement: my first fuzz reported a 14% mismatch, which was the harness feeding the two structures different inputs (an "inverted" span with
+`begin == end` is a legal one-second point that `Add` accepts); and I flagged the per-span consumers as a risk when they are provably unaffected -
+`SpellCountBuilder` queries `[begin-30, end+15]` and `StatsUtil` ±15, and two spans within 6 s already have overlapping query windows (6 <= 45, 6 <= 30), so
+welding them cannot change what those loops ask for. What remains before shipping it is a buff-count diff on a real log, not more reasoning.

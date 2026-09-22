@@ -713,6 +713,28 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The seconds during which any of these players was active - a group's uptime, and anything else that wants the union of several ranges. It is
+     * meant to be called on every pass over the members: adding or removing a player needs no bookkeeping because nothing is cached.
+     *
+     * MergeMemberRanges copies each member's spans into the result (TimeRange.Add(TimeRange)) so computing a group total cannot lengthen the spans of
+     * the players it summarises. It unions rather than sums: two players fighting in the same second are one second of activity.
+     */
+    internal static TimeRange MergeMemberRanges(IEnumerable<PlayerStats> members)
+    {
+      var union = new TimeRange();
+
+      if (members != null)
+      {
+        foreach (var member in members)
+        {
+          union.Add(member?.Ranges);
+        }
+      }
+
+      return union;
+    }
+
     internal static TimeRange FilterTimeRange(TimeRange range, double minTime, double maxTime)
     {
       TimeRange result;

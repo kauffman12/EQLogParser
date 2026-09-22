@@ -44,6 +44,22 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Merges another range's seconds in without taking ownership of them. The List overload adopts whatever it is handed - those segment objects become
+     * part of this list and get welded where something overlaps them - so summing one range rewrites the spans another caller is still holding.
+     * Copying costs one small allocation per segment. See docs/DesignNotes.md -> "TimeRange: merging copies, adding adopts."
+     */
+    public void Add(TimeRange range)
+    {
+      if (range != null)
+      {
+        foreach (var segment in CollectionsMarshal.AsSpan(range.TimeSegments))
+        {
+          Add(new TimeSegment(segment.BeginTime, segment.EndTime));
+        }
+      }
+    }
+
     public TimeRange() { }
 
     public TimeRange(TimeSegment segment)
