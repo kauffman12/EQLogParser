@@ -2327,6 +2327,16 @@ The three builders each raise their own event and `MainWindow.QueueChartUpdate` 
 back to back; `chart.backlog` counts how often a request found one already waiting. That is the number that decides between "make a redraw
 cheaper" and "ask for fewer of them", which is a decision nobody should make without it.
 
+The number arrived, and it retired an idea. Across a session that opened the tanking and damage charts and selected every fight - 4.66M records
+walked, redraws of 1,369 ms - `chart.backlog` never fired once: requests came about 1.3 s apart and each one drew before the next arrived
+(`chart.updates×17` against `chart.plots×16`). Redraws do not queue behind each other in normal use, so the merge-queued-UPDATEs change that shipped
+on the strength of the measurement above had nothing to merge, and was reverted rather than kept as unearned complexity. Keep `chart.backlog`:
+zero is a result worth still seeing.
+
+What that session did say about cost: `chart.rendergap` - Syncfusion laying out what we handed it, measured at `ContextIdle` - averages 84-96 ms on
+ordinary redraws against our own 18-25 ms in `chart.update`, and ran 1,737 ms after a select-all walk of 1,341 ms. A select-all view hands over
+36,163 points across five lines for a chart about 1,700 px wide, so the remaining lever is drawing fewer points, not asking for fewer redraws.
+
 The first run of this caught two things, one of them a bug this commit itself shipped.
 
 `chart.column` came back at `n=2 avg 0.3 max 0.6 ms`: the players-vs-top-performer page costs about nothing, so that blind spot is closed and
@@ -2343,21 +2353,6 @@ reads `Tag` in the callback: handing a reference between threads is fine, touchi
 It cost nothing else, which is worth knowing how to read: `FireChartEvent` is the last statement in each builder's try block, after
 `_lastStatsEvent = genEvent` and `EventsGenerationStatus`, so the meter, the grids and the stored results all completed — a frozen chart with a
 healthy damage table is the signature of a subscriber that threw, not of a builder that failed.
-
-### One queued UPDATE is worth nothing next to a newer one
-
-A measured redraw cost 1,635 ms walking 4.66M records, and a data point event asks for a full redraw — so a burst of events is N full walks,
-and the overlay paint shares that thread with them. `MainWindow.QueueChartUpdate` therefore keeps one queue per chart and merges what it can:
-an UPDATE still waiting for a redraw that has not run yet is *replaced* by the newer one, because the newer event carries everything the older
-one carried plus whatever arrived since, and both rebuild the same chart from scratch. `CLEAR` and `SELECT` are not mergeable — a `SELECT`
-plots from state an earlier event built, a `CLEAR` empties it — so those keep their place in the queue.
-
-Two counters make the merge readable instead of invisible: `chart.backlog` counts a request that found one still waiting for its chart, and
-`chart.coalesce` counts what actually got dropped. Read together they separate "too many redraws were asked for" from "each redraw is too
-slow": backlog climbing while coalesce stays at zero means the queue holds events that each genuinely needed their own pass.
-
-The queue is keyed by the icon control rather than by the window name because the name comes from `icon.Tag`, and a control's properties belong
-to the UI thread — see the cross-thread story above. A reference crosses threads fine, which is all a dictionary key needs.
 
 ### What the walk spends its time on, proven without Windows
 

@@ -44,15 +44,9 @@ namespace EQLogParser
     private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
     private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
 
-    /* How many times a redraw request arrived while one was already waiting for the same chart; see QueueChartUpdate. */
+    /* How many times a redraw request arrived while one was already waiting to run; see QueueChartUpdate. */
     private static readonly int ChartBacklogId = PerfCounters.Register("chart.backlog");
-
-    /* How many UPDATEs were thrown away because a newer one took their place before the redraw ever ran; see QueueChartUpdate. */
-    private static readonly int ChartCoalesceId = PerfCounters.Register("chart.coalesce");
-
-    /* One queue per chart, filled from the builders' threads and emptied on the UI thread; see QueueChartUpdate. */
-    private readonly Dictionary<FrameworkElement, PendingChartUpdates> _pendingChartUpdates = [];
-    private readonly object _chartQueueGate = new();
+    private int _chartUpdatesWaiting;
 
     /*
      * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
@@ -674,102 +668,30 @@ namespace EQLogParser
 
     /*
      * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue full
-     * redraws behind each other - three builders can ask for three, and a measured redraw of a big parse costs 1,635 ms walking 4.66M records.
-     * A queued UPDATE is worth nothing next to a newer one: it rebuilds the same chart from whatever the builder holds at the moment its event
-     * fires, and the newer one holds everything the older one held plus what arrived since. So an UPDATE waiting for a redraw that has not run
-     * is replaced rather than queued behind it, and a burst costs one walk instead of N.
-     *
-     * CLEAR and SELECT are not mergeable - a SELECT plots from state an earlier event built, a CLEAR empties it - so those keep their place in
-     * the queue, and `chart.backlog` counts any request that found one waiting while `chart.coalesce` counts only what actually got merged.
-     * Read the two together: backlog climbing without coalescing means the queue holds events that each genuinely needed their own pass.
+     * redraws behind each other - three builders can ask for three. Counting how often a request found one already waiting is the only way to
+     * see that shape afterwards: it is what one merged redraw would take away, and nothing else in the log distinguishes "each redraw is too
+     * slow" from "too many redraws were asked for".
      */
     /*
-     * The icon is handed over as an object and its Tag is read in RunPendingChartUpdates, not here. Reading a property of that control from
-     * this thread throws - `InvalidOperationException: the calling thread cannot access this object` - because the event arrives on a stats
-     * builder's thread, and this shape is not incidental: the lambdas that used to sit here wrapped the whole `icon.Tag as string` expression
-     * inside InvokeAsync precisely so the read happened on the UI thread. The icon works as the queue key because handing a reference between
-     * threads is safe, its properties are not, and nothing here reads one.
+     * The icon is handed over as an object and its Tag is read inside the dispatched callback, not here. Reading a property of that control
+     * from this thread throws - `InvalidOperationException: the calling thread cannot access this object` - because the event arrives on a
+     * stats builder's thread, and this shape is not incidental: the lambdas that used to sit here wrapped the whole `icon.Tag as string`
+     * expression inside InvokeAsync precisely so the read happened on the UI thread. Measuring how many redraws queue up cannot be allowed to
+     * move a property read across threads to do it.
      */
     private void QueueChartUpdate(FrameworkElement icon, DataPointEvent e)
     {
-      var post = false;
-
-      lock (_chartQueueGate)
+      if (Interlocked.Increment(ref _chartUpdatesWaiting) > 1)
       {
-        if (!_pendingChartUpdates.TryGetValue(icon, out var pending))
-        {
-          pending = new PendingChartUpdates();
-          _pendingChartUpdates[icon] = pending;
-        }
-
-        if (pending.Events.Count > 0)
-        {
-          PerfCounters.Note(ChartBacklogId);
-        }
-
-        if (e.Action == "UPDATE" && pending.Events.Count > 0 && pending.Events[^1].Action == "UPDATE")
-        {
-          pending.Events[^1] = e;
-          PerfCounters.Note(ChartCoalesceId);
-        }
-        else
-        {
-          pending.Events.Add(e);
-        }
-
-        post = !pending.Posted;
-        pending.Posted = true;
+        PerfCounters.Note(ChartBacklogId);
       }
 
-      /* One callback per chart at a time: it drains everything queued up to the moment it runs, and arrivals after that post the next one. */
-      if (post)
+      /* The count is released by the redraw itself; a callback the dispatcher never ran means the application was closing anyway. */
+      Dispatcher.InvokeAsync(() =>
       {
-        Dispatcher.InvokeAsync(() => RunPendingChartUpdates(icon));
-      }
-    }
-
-    private void RunPendingChartUpdates(FrameworkElement icon)
-    {
-      List<DataPointEvent> events;
-
-      lock (_chartQueueGate)
-      {
-        if (!_pendingChartUpdates.TryGetValue(icon, out var pending))
-        {
-          return;
-        }
-
-        pending.Posted = false;
-        if (pending.Events.Count == 0)
-        {
-          return;
-        }
-
-        events = pending.Events;
-        pending.Events = [];
-      }
-
-      if (icon.Tag is not string key)
-      {
-        return;
-      }
-
-      foreach (var data in events)
-      {
-        /*
-         * Each event used to be its own dispatcher callback, so one throwing cost nothing to the others; sharing a callback means saying that
-         * out loud. A chart that cannot draw is a log entry, not a reason to lose the redraws behind it or take the application down - which is
-         * how the builders already treat a subscriber that throws.
-         */
-        try
-        {
-          HandleChartUpdate(key, data);
-        }
-        catch (Exception ex)
-        {
-          Log.Error(ex);
-        }
-      }
+        Interlocked.Decrement(ref _chartUpdatesWaiting);
+        HandleChartUpdate(icon.Tag as string, e);
+      });
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)
@@ -784,16 +706,6 @@ namespace EQLogParser
           chart.HandleUpdateEvent(e);
         }
       });
-    }
-
-    /*
-     * Everything here is guarded by _chartQueueGate. `Posted` says a dispatcher callback is already coming for this chart, which is what keeps
-     * the queue from needing anything cleverer than a list.
-     */
-    private sealed class PendingChartUpdates
-    {
-      internal List<DataPointEvent> Events = [];
-      internal bool Posted;
     }
 
     internal void CheckComputeStats()
