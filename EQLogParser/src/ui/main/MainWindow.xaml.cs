@@ -241,9 +241,9 @@ namespace EQLogParser
           }
         }
 
-        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon.Tag as string, data);
-        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon.Tag as string, data);
-        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(tankingChartIcon.Tag as string, data);
+        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon, data);
+        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon, data);
+        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(tankingChartIcon, data);
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
@@ -672,7 +672,14 @@ namespace EQLogParser
      * see that shape afterwards: it is what one merged redraw would take away, and nothing else in the log distinguishes "each redraw is too
      * slow" from "too many redraws were asked for".
      */
-    private void QueueChartUpdate(string key, DataPointEvent e)
+    /*
+     * The icon is handed over as an object and its Tag is read inside the dispatched callback, not here. Reading a property of that control
+     * from this thread throws - `InvalidOperationException: the calling thread cannot access this object` - because the event arrives on a
+     * stats builder's thread, and this shape is not incidental: the lambdas that used to sit here wrapped the whole `icon.Tag as string`
+     * expression inside InvokeAsync precisely so the read happened on the UI thread. Measuring how many redraws queue up cannot be allowed to
+     * move a property read across threads to do it.
+     */
+    private void QueueChartUpdate(FrameworkElement icon, DataPointEvent e)
     {
       if (Interlocked.Increment(ref _chartUpdatesWaiting) > 1)
       {
@@ -683,7 +690,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         Interlocked.Decrement(ref _chartUpdatesWaiting);
-        HandleChartUpdate(key, e);
+        HandleChartUpdate(icon.Tag as string, e);
       });
     }
 

@@ -2327,8 +2327,22 @@ The three builders each raise their own event and `MainWindow.QueueChartUpdate` 
 back to back; `chart.backlog` counts how often a request found one already waiting. That is the number that decides between "make a redraw
 cheaper" and "ask for fewer of them", which is a decision nobody should make without it.
 
-No field numbers exist yet — this instrument ships before its own measurement, which is the order that keeps the reading honest rather than the
-reading chosen.
+The first run of this caught two things, one of them a bug this commit itself shipped.
+
+`chart.column` came back at `n=2 avg 0.3 max 0.6 ms`: the players-vs-top-performer page costs about nothing, so that blind spot is closed and
+can stop being wondered about.
+
+And the chart phases printed **nothing at all**, because counting the backlog had moved a property read across threads. The three subscriptions
+used to read `data => Dispatcher.InvokeAsync(() => HandleChartUpdate(icon.Tag as string, data))`, which evaluates `icon.Tag` *inside* the
+dispatched callback, on the UI thread — not an accident of style. Writing `data => QueueChartUpdate(icon.Tag as string, data)` evaluates it on
+whatever thread the stats builder reached, and a `FrameworkElement` answers that with `InvalidOperationException: the calling thread cannot
+access this object because a different thread owns it`, thrown inside `FireChartEvent`, logged by whichever builder was holding it — 27 stack
+traces — with the result that no chart ever received an event, so there was no redraw left to measure. The fix passes the icon as an object and
+reads `Tag` in the callback: handing a reference between threads is fine, touching its properties is not.
+
+It cost nothing else, which is worth knowing how to read: `FireChartEvent` is the last statement in each builder's try block, after
+`_lastStatsEvent = genEvent` and `EventsGenerationStatus`, so the meter, the grids and the stored results all completed — a frozen chart with a
+healthy damage table is the signature of a subscriber that threw, not of a builder that failed.
 
 ### Blocked or busy: what the thread was doing while nobody answered
 
@@ -2519,6 +2533,10 @@ Register a handle in a field initializer, wrap the work in `Begin`/`End` inside 
 try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
 the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
 line that points at a span nobody can find in the docs is a dead end.
+
+An event raised by a builder arrives on that builder's thread, so anything measured there must not read a property of a UI element before
+handing work to the dispatcher. Pass the element over and read it inside the callback; the reference crosses threads safely, its properties do
+not.
 
 When the thing being measured is a pipeline rather than a pass — several steps whose split decides which one to fix — use `PerfBreakdown`
 rather than registering half a dozen spans by hand: it names them as a set, keeps them sequential, prints the phase breakdown with the sizes,
