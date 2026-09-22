@@ -28,21 +28,6 @@ namespace EQLogParser
     private static readonly int TimerTickId = PerfCounters.Register("trig.timerTick");
     private static readonly int TimerBarsId = PerfCounters.Register("trig.timerBars");
 
-    /*
-     * Bars the overlay had to reap for itself, i.e. rows whose owner never sent the stop that was supposed to take them away. Zero is the
-     * healthy number: every removal then came from the timer's own scheduled end or an "end early" line, which is the design. Anything else
-     * says a lifecycle hole is open — a saturated delay (clamped now), a stop lost against a closing dispatcher, a stop routed to a window the
-     * trigger stopped using — and each one is also named in the log by ReapForgottenRows. Reported as trig.timerStale.
-     */
-    private static readonly int TimerStaleId = PerfCounters.Register("trig.timerStale", uiThread: false);
-
-    /*
-     * Rows refused at the door because their stop had already been spent before they arrived — the same lost-removal class as trig.timerStale, caught one
-     * step earlier so the bar never appears. Under a burst this is the common one: three lines matching one trigger, and the second message's "restart"
-     * cancels the first row while that row's insert is still waiting on the render semaphore.
-     */
-    private static readonly int TimerLateAddId = PerfCounters.Register("trig.timerLateAdd", uiThread: false);
-
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
@@ -56,12 +41,6 @@ namespace EQLogParser
     private long _savedLeft = long.MaxValue;
     private long _lastActiveTicks = long.MinValue;
     private long _lastTopTicks = long.MinValue;
-
-    /* When each trigger last had a stale bar named in the log, so a broken trigger says once a minute and not thirteen times a second. */
-    private readonly Dictionary<string, long> _staleLogMs = [];
-
-    /* When this overlay last complained about a row that arrived after its own stop — same throttle, one per window. */
-    private long _lateLogMs;
     private int _tickCounter;
     private nint _windowHndl;
     private volatile bool _isClosed;
@@ -142,13 +121,8 @@ namespace EQLogParser
       try
       {
         /*
-         * Do not insert a row its owner has already given up on. Start is fire-and-forget and Stop waits on this same semaphore, so nothing anywhere
-         * keeps Add before Stop, and a Stop only removes what is already in the list: one that arrives first vanishes. Two ways that happens — a short
-         * countdown whose removal task wakes while its own row is still queued (a quarter-second timer is enough on a busy machine), and the "restart
-         * timer" option, where the second of three messages in one batch cancels the first row and stops it before that first insert has landed. What
-         * used to arrive either way was a row past its end, which produces no model (the display guards on remaining >= 0), so nothing could ever take it
-         * away, and whatever the bar last showed — for these, "0:00" — stayed up for the rest of the session. Canceled is set before any Stop is
-         * dispatched in every cancellation path, which is what makes it safe to believe here.
+         * Do not insert a row its owner has already given up on: Start is fire-and-forget while Stop waits on this same semaphore, so nothing keeps Add before
+         * Stop, and a Stop that arrives first removes nothing — see TimerLifecycle.AcceptsRow for how that happens and what a row like this used to leave on screen.
          */
         if (TimerLifecycle.AcceptsRow(timerData.EndTicks, timerData.DurationTicks, timerData.Canceled, DateTime.UtcNow.Ticks))
         {
@@ -190,9 +164,9 @@ namespace EQLogParser
         _renderSemaphore.Release();
       }
 
+      // Refused at the door: nothing to draw, and nothing that could ever have been taken away.
       if (!accepted)
       {
-        NoteLateTimer(timerData);
         return;
       }
 
@@ -377,63 +351,40 @@ namespace EQLogParser
       return Math.Clamp(p, 0.0, 100.0);
     }
 
-    /*
-     * A row that turned up after its own stop was already spent, and so was dropped at the door rather than added as a bar nothing would remove.
-     * Counted always (trig.timerLateAdd: zero is healthy, see ReapForgottenRows for the case that arrives too late to be refused), named once a
-     * minute per window because a trigger that does this does it on every burst.
-     */
-    private void NoteLateTimer(TimerData timerData)
-    {
-      PerfCounters.Note(TimerLateAddId);
-
-      var nowMs = Environment.TickCount64;
-      if (nowMs - _lateLogMs < 60_000)
-      {
-        return;
-      }
-
-      _lateLogMs = nowMs;
-      Log.Warn($"Timer row for '{GetDisplayName(timerData)}' (trigger {timerData.TriggerId}) arrived after its own " +
-        $"{(timerData.Canceled ? "cancel" : "expiry")}; dropped instead of adding a bar nothing could remove");
-    }
-
     /* The configured idle timeout in ticks, or IdleNever when none is set (the shipped "leave it up" default). */
     private long IdleTimeoutTicks =>
       _idleTimeoutSeconds > 0 ? _idleTimeoutSeconds * TimeSpan.TicksPerSecond : TimerLifecycle.IdleNever;
 
     /*
-     * Drop the rows whose owner never came for them, and say so once a minute per trigger. This is the only reaper that can see them: their
-     * scheduled removal is what usually takes a bar away (TriggerProcessor's detached delay), and when that sleep saturated, when the stop was
-     * posted against a closing dispatcher, or when it went to a window the trigger no longer uses, nothing else in the program would ever offer
-     * the row for deletion again. Called under the render lock from the long tick; see the note there for why the rules live in Core.
+     * Take back the rows their owners forgot about, both lists at once, under the render lock. The scheduled removal (TriggerProcessor's detached delay) or an
+     * "end early" line is what normally clears a bar; where that sleep was too long to wake in time, where a stop was posted against a closing dispatcher, or
+     * where it went to a window the trigger no longer uses, nothing else would ever offer the row for deletion again. The rules are TimerLifecycle's — see the
+     * call site in the render loop for why that means they are testable without a window.
      */
     private void ReapForgottenRows(long nowTicks)
     {
-      if (_timerList.Count == 0)
+      for (var i = _timerList.Count - 1; i >= 0; i--)
       {
-        return;
+        if (!TimerLifecycle.RetainRow(_timerList[i].EndTicks, nowTicks))
+        {
+          _timerList.RemoveAt(i);
+        }
       }
 
-      foreach (var timerData in _timerList.ToArray())
+      /*
+       * Idle rows age per row, not per overlay: the rule at the foot of the render loop clears them only once every live timer has gone, which in a raid — where
+       * something is always counting down — is never. "Stopped being live" is the later of the countdown and the reset that follows it. With no idle timeout
+       * configured, IdleTimeoutTicks is IdleNever and the shipped "idle forever" still stands.
+       */
+      var idleTimeout = IdleTimeoutTicks;
+      for (var i = _idleTimerList.Count - 1; i >= 0; i--)
       {
-        if (TimerLifecycle.RetainRow(timerData.EndTicks, nowTicks))
+        var idle = _idleTimerList[i];
+        var idleSince = idle.ResetTicks > 0 ? Math.Max(idle.ResetTicks, idle.EndTicks) : idle.EndTicks;
+        if (!TimerLifecycle.RetainIdleRow(idleSince, nowTicks, idleTimeout))
         {
-          continue;
+          _idleTimerList.RemoveAt(i);
         }
-
-        _timerList.Remove(timerData);
-        PerfCounters.Note(TimerStaleId);
-
-        var lastLog = _staleLogMs.TryGetValue(timerData.TriggerId ?? "", out var ms) ? ms : 0L;
-        if (nowTicks / TimeSpan.TicksPerMillisecond - lastLog < 60_000)
-        {
-          continue;
-        }
-
-        _staleLogMs[timerData.TriggerId ?? ""] = nowTicks / TimeSpan.TicksPerMillisecond;
-        Log.Warn($"Timer overlay removed a bar its trigger never stopped: '{GetDisplayName(timerData)}' " +
-          $"(trigger {timerData.TriggerId}) ended {TimerLifecycle.StaleSeconds(timerData.EndTicks, nowTicks):0}s ago, " +
-          $"type {timerData.TimerType}, mode {_timerMode}");
       }
     }
 
@@ -482,17 +433,11 @@ namespace EQLogParser
           var removeList = models.Where(m => m.IsRemoved && !m.IsCooldown).ToList();
 
           /*
-           * Reaping, in one place and on the row's own clock rather than on what its owner chose to do about it. Two holes close here.
-           *
-           * The removal above can only see rows that produced a model, and rows stop producing models as soon as their remaining time goes
-           * negative — so a bar which was hidden by "hide duplicates" at the moment it expired, or whose end frame fell between two long
-           * ticks, is never offered for removal again. It also keeps the loop alive: the render loop stops only when the list is empty, so one
-           * forgotten row means an overlay that never idles and never hides. Cooldown rows are worse still, because they deliberately report
-           * IsRemoved = false forever — anything their owner loses is on screen until the process ends.
-           *
-           * So every long tick asks TimerLifecycle whether each row should still exist (TimerLifecycle.RetainRow, which is where the grace and
-           * the idle-timeout rules live) and drops the ones whose answer is no, naming them in the log. The grace keeps the design intact: an
-           * owner that stops its own timers still always wins, because nothing is reaped until well past its end.
+           * The removal above can only see rows that produced a model this pass, and rows stop producing models as soon as their remaining time goes negative —
+           * so a bar hidden by "hide duplicates" as it expired, or whose last frame fell between two long ticks, is never offered for deletion again, and one
+           * forgotten row keeps the loop (and the window) alive forever. Cooldown rows report IsRemoved = false deliberately, so anything their owner loses would
+           * stay until the process ends. Hence the reaper, every long tick, on the row's own clock; the grace inside it keeps the design intact, because an owner
+           * that stops its own timers always gets there first.
            */
           await _renderSemaphore.WaitAsync();
 
@@ -505,36 +450,6 @@ namespace EQLogParser
             }
 
             ReapForgottenRows(DateTime.UtcNow.Ticks);
-          }
-          finally
-          {
-            _renderSemaphore.Release();
-          }
-        }
-
-        /*
-         * Idle rows age per row, not per overlay. The shipped rule (below, at the foot of this loop) clears the idle list only once every
-         * live timer has gone AND an idle timeout is configured, which in a raid — where something is always counting down — means greyed
-         * bars pile up for the whole night and none of them ever leave. Each row now dies idleTimeout after it stopped being live; with no
-         * timeout configured the shipped "idle forever" still stands, so nobody's configured behaviour changes except that lost rows go.
-         */
-        if (_idleTimerList.Count > 0)
-        {
-          var idleNow = DateTime.UtcNow.Ticks;
-          var idleTimeout = IdleTimeoutTicks;
-          await _renderSemaphore.WaitAsync();
-
-          try
-          {
-            foreach (var idle in _idleTimerList.ToArray())
-            {
-              // "Stopped being live" is whichever stamp came later: the countdown, or the reset that follows it.
-              var idleSince = idle.ResetTicks > 0 ? Math.Max(idle.ResetTicks, idle.EndTicks) : idle.EndTicks;
-              if (!TimerLifecycle.RetainIdleRow(idleSince, idleNow, idleTimeout))
-              {
-                _idleTimerList.Remove(idle);
-              }
-            }
           }
           finally
           {

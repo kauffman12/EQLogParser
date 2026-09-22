@@ -41,9 +41,6 @@ namespace EQLogParser
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
 
-    /* Last log per trigger id of an unusable duration, so those warnings are once a minute per trigger rather than once a match. */
-    private static readonly ConcurrentDictionary<string, long> ClampedDurationLogMs = [];
-    private static readonly ConcurrentDictionary<string, long> EmptyDurationLogMs = [];
 
     /*
      * What one log line costs to evaluate, measured on the trigger thread. This path was the one unmeasured suspect in a report of the
@@ -937,22 +934,14 @@ namespace EQLogParser
       };
 
       /*
-       * The duration is clamped where it enters, because from here on it is arithmetic. Its length comes either from the number in the trigger config
-       * or, for the timer types that allow it, from a TS capture group (dynamicDuration out of TriggerUtil.CheckOptions, via DateUtil's
-       * SimpleTimeToSeconds which answers in uint seconds), and the only test on either was "> 0". Two things go wrong past that. Task.Delay takes an
-       * int of milliseconds and the cast saturates instead of throwing — measured: a capture of "999999999" makes the task whose whole job is removing
-       * this bar sleep for 24.8 days, so the row sits at 0:00 for the rest of the session and keeps the render loop alive with it. And a value around
-       * 1e12 wraps begin + TPS*seconds into the PAST, which draws nothing (remaining is guarded >= 0) and, in standard-time mode, becomes the divisor
-       * that flattens every other bar's progress. ClampDuration reduces both to "a day at most"; NeedsClamping says out loud which trigger asked
-       * (once a minute each, since this path runs on every matching line). TimerLifecycle holds the numbers and the reasoning.
+       * Clamp the duration where it enters, because from here on it is arithmetic. Its length comes from the trigger config or, for the timer types that allow
+       * it, from a TS capture (DateUtil.SimpleTimeToSeconds, which answers in uint seconds), and the only test on either was "> 0" — past which the removal
+       * delay saturates its int cast (measured: a 24.8 day sleep for the task whose only job is removing this bar) and a big enough value wraps EndTicks into
+       * the past. TimerLifecycle holds the numbers, the ceiling and the measurements.
        */
       var requestedDuration = wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0
         ? dynamicDuration
         : trigger.DurationSeconds;
-      if (TimerLifecycle.NeedsClamping(requestedDuration))
-      {
-        LogClampedDuration(wrapper, requestedDuration);
-      }
 
       newTimerData.DurationSeconds = TimerLifecycle.ClampDuration(requestedDuration);
 
@@ -1112,21 +1101,15 @@ namespace EQLogParser
       }
 
       /*
-       * Ask an overlay to show a countdown only when there is one. A duration that came out unusable (an empty duration field, or a dynamic capture that did
-       * not parse) leaves the row with no length, and the display cannot draw "nothing": DateUtil.FormatTicks answers the same string for zero as for every
-       * negative value ("00:00"), so in "show reset" mode — where the cooldown/idle text is FormatTime(DurationTicks) with IsRemoved false by design — such a
-       * row is a greyed 00:00 bar that never leaves. That is the report of a timer "appearing at 0:00" for a spell that lasts two minutes: there was never a
-       * countdown to draw. Everything else about the trigger still happens as before — the row stays in the trigger's own list, and the end actions (speak,
-       * display text, trigger log, repeat) run from the task below, none of which depend on a bar being painted.
+       * Ask an overlay to show a countdown only when there is one. A row with no length cannot be drawn as "nothing" — FormatTicks answers 00:00 for zero as it
+       * does for any negative — and in show-reset mode that 00:00 is the cooldown text itself, with IsRemoved false by design, so it never leaves. The trigger
+       * still does everything else it was asked to: the row stays in its own list, and the end actions below (speak, display text, trigger log, repeat) run the
+       * same whether or not a bar is painted.
        */
       if (newTimerData.DurationSeconds > 0)
       {
         // true for add
         await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
-      }
-      else
-      {
-        LogEmptyDuration(wrapper);
       }
 
       var data2 = newTimerData;
@@ -1227,42 +1210,6 @@ namespace EQLogParser
           }
         }
       });
-    }
-
-    /*
-     * Says once a minute per trigger that its countdown length was not usable as offered. This runs on every match, and a trigger fed a
-     * nonsense duration from a capture fires on every line that matches it, so an unthrottled warning would become the log; a minute is
-     * short enough to find in the file and long enough not to bury anything. The line is the difference between "my timer vanished" and a
-     * player being told their trigger's TS capture parsed to a hundred million seconds, which is what one of those looks like.
-     */
-    private void LogClampedDuration(TriggerWrapper wrapper, double requested)
-    {
-      var nowMs = Environment.TickCount64;
-      if (nowMs - ClampedDurationLogMs.GetValueOrDefault(wrapper.Id) < 60_000)
-      {
-        return;
-      }
-
-      ClampedDurationLogMs[wrapper.Id] = nowMs;
-      Log.Warn($"Timer duration is not usable for trigger '{wrapper.Name}' ({requested:0.###}s): " +
-        $"using at most {TimerLifecycle.MaxDurationSeconds:0}s so the timer can still be removed");
-    }
-
-    /*
-     * The other shape of the same complaint: a timer trigger with nothing in its duration. Worth saying out loud, because the trigger looks like it is working
-     * — it speaks, it logs, its end fires — while the overlay has no countdown to show; and before such a row was refused at the door, what it showed instead
-     * was "00:00", which in cooldown mode meant forever.
-     */
-    private void LogEmptyDuration(TriggerWrapper wrapper)
-    {
-      var nowMs = Environment.TickCount64;
-      if (nowMs - EmptyDurationLogMs.GetValueOrDefault(wrapper.Id) < 60_000)
-      {
-        return;
-      }
-
-      EmptyDurationLogMs[wrapper.Id] = nowMs;
-      Log.Warn($"Timer trigger '{wrapper.Name}' has no duration, so no countdown is shown for it");
     }
 
     private async Task AddTextAsync(Trigger trigger, string text)

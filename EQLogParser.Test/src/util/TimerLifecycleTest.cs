@@ -29,13 +29,10 @@ namespace EQLogParser
       foreach (var junk in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity, -1d, -0.5d })
       {
         Assert.AreEqual(0, TimerLifecycle.ClampDuration(junk), $"{junk} is not a duration");
-        Assert.IsTrue(TimerLifecycle.NeedsClamping(junk), $"{junk} must be reported as clamped");
       }
 
-      // Zero is not clamped, it is simply nothing, and the warning exists for the misconfigured trigger rather than for a timer
-      // that legitimately has no time left to show.
+      // Zero is not a clamped value, it is simply nothing — and a row with no length is refused by AcceptsRow rather than drawn.
       Assert.AreEqual(0, TimerLifecycle.ClampDuration(0d));
-      Assert.IsFalse(TimerLifecycle.NeedsClamping(0d), "nothing asked for is not a misconfiguration");
     }
 
     [TestMethod]
@@ -46,7 +43,6 @@ namespace EQLogParser
       foreach (var huge in new[] { 86_401d, 1e6d, 999_999_999d, 4_294_967_295d, 1e12d, double.MaxValue })
       {
         Assert.AreEqual(TimerLifecycle.MaxDurationSeconds, TimerLifecycle.ClampDuration(huge), $"{huge:0} must be cut to the ceiling");
-        Assert.IsTrue(TimerLifecycle.NeedsClamping(huge), $"{huge:0} must be reported as clamped");
       }
     }
 
@@ -57,7 +53,6 @@ namespace EQLogParser
       foreach (var real in new[] { 0.001d, 1.5d, 90d, 1253d, 15653d, TimerLifecycle.MaxDurationSeconds })
       {
         Assert.AreEqual(real, TimerLifecycle.ClampDuration(real), 1e-9, $"{real:0.###} must survive untouched");
-        Assert.IsFalse(TimerLifecycle.NeedsClamping(real), $"{real:0.###} must not be logged as clamped");
       }
     }
 
@@ -220,7 +215,7 @@ namespace EQLogParser
         Assert.IsTrue(TimerLifecycle.RetainRow(end, end + TimerLifecycle.ReapGraceTicks), $"'{capture}' was reaped while its owner still had the right of way");
 
         worstDelayMs = Math.Max(worstDelayMs, delayMs);
-        if (TimerLifecycle.NeedsClamping(offered))
+        if (duration != offered)
         {
           clamped.Add(capture);
         }

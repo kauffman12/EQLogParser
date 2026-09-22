@@ -35,15 +35,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Namespaces**: the WPF app compiles every source into the flat `namespace EQLogParser` whatever folder it lives in, while
   `EQLogParser.Core` matches folders (`EQLogParser.perf`). Tests reach app internals through `using EQLogParser;` (`InternalsVisibleTo` is
   already granted to both test assemblies); declaring `EQLogParser.ui.perf` in a new app file breaks that.
-- **Timer bars: the lifecycle rules live in Core.** A countdown's length comes from the config box or a `TS:` capture (`DateUtil.SimpleTimeToSeconds`,
-  which answers in *uint* seconds), so it reaches the app unbounded; durations go through `TimerLifecycle.ClampDuration` at creation and every stamp/delay
-  through that class, because an unclamped value saturates `Task.Delay`'s int-ms cast (measured: a 24.8-day sleep for the task whose only job is removing
-  the bar) or wraps `EndTicks` into the past. `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and asserts every row
-  is ever removable — keep that green rather than moving the math back into `TimerOverlayWindow`. `trig.timerLateAdd` (rows refused because their stop
-  arrived first — Start/Stop are fire-and-forget on the same semaphore, so `AcceptsRow` must stay) and `trig.timerStale` (rows the overlay reaped for
-  itself) both count zero when healthy. A row with **no length** is refused too (`AcceptsRow` takes `durationTicks`): `DateUtil.FormatTicks` prints `00:00` for
-  zero *and* for every negative value, and show-reset mode draws its cooldown text straight from `DurationTicks`, so an empty duration field is a greyed `00:00`
-  that never leaves — that is what "a timer appeared at 0:00" was. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
+- **Timer bars: the lifecycle rules live in Core.** A countdown's length comes from the config box or a `TS:` capture (`DateUtil.SimpleTimeToSeconds` answers in
+  *uint* seconds), so it arrives unbounded; durations go through `TimerLifecycle.ClampDuration` and every stamp/delay through that class, because an unclamped value
+  saturates `Task.Delay`'s int-ms cast (measured: a 24.8-day sleep for the task whose only job is removing the bar) or wraps `EndTicks` into the past. A row is also
+  refused at the door when it has no future — cancelled, lengthless (`FormatTicks` prints `00:00` for zero *and* negatives, which in show-reset mode is a greyed bar
+  forever), or already past end + grace — because Start/Stop are fire-and-forget on the same semaphore and nothing keeps Add before Stop. The overlay reaps what its
+  owner forgot (`ReapForgottenRows`, 2 s grace) and the render loop's `_isRendering` is cleared in a `finally`, since a latched flag freezes the window permanently.
+  `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and the 720 service orders of a three-message burst — keep that green
+  rather than moving the math back into `TimerOverlayWindow`. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
