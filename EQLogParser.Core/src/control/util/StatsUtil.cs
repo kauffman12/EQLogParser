@@ -190,13 +190,9 @@ namespace EQLogParser
       /*
        * This walk spends span lengths to buy "the last N seconds", and a span's length now includes the short silences Add welds into it. So N means what
        * TotalSeconds means rather than N raw seconds of activity, which is the one visible consequence of moving the tick rule (docs/DesignNotes.md ->
-       * "TimeRange: the tick rule lives in Add"). Logged so a before/after run on the same log can be diffed without opening two windows.
+       * "TimeRange: the tick rule lives in Add"). Nothing is logged about it: a Debug line here could only be read by a build someone had already
+       * reconfigured, and the behaviour it was checking is pinned by MergedTimeRangesTest instead.
        */
-      if (Log.IsDebugEnabled)
-      {
-        Log.Debug($"Stats window: asked min {options.MinSeconds} max {options.MaxSeconds} -> {startTime:0.###} .. {stopTime:0.###}; " +
-                  $"{raidTotals.Ranges.TimeSegments.Count} spans, {raidTotals.Ranges.GetTotal():0.###} counted seconds (raw extent {raidTotals.MaxTime - raidTotals.MinTime:0.###})");
-      }
     }
 
     internal static void UpdateRaidTimeRanges(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
