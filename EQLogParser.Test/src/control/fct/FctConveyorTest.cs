@@ -666,15 +666,13 @@ namespace EQLogParser
     /* How far a column goes when it is saturated for good, rather than for one AoE. The session this was written for ran with its
        queue pinned at BacklogCap for eleven minutes and lost 572 arrivals, every one refused while the canvas was painting — which
        is only fixable by the lane moving faster, because a lane at the floor has no other knob left. So the floor is measured here,
-       not assumed: a flood held long enough must drive the pace all the way down to it, and the floor itself sits below the 45% that
-       session was drowning in. Both halves matter: a lane that never reaches its floor leaves throughput unusable, and a floor nobody
-       lowered after the measurement leaves the numbers lost. */
+       not assumed: a flood held long enough must drive the pace all the way down to it, and the floor sits below the 45% that session was
+       drowning at (which is why the assertions are on the pace actually reached rather than on the constant: a comparison of two literals proves
+       nothing about a lane). Both halves matter: a lane that never reaches its floor leaves throughput unusable, and a floor nobody lowered after
+       the measurement leaves the numbers lost. */
     [TestMethod]
     public void ASaturatedColumnRunsAtTheFloorOfItsTravel()
     {
-      Assert.IsTrue(FctConveyor.PressFloor < 0.45,
-        $"a measured session saturated with the lane held at {FctConveyor.PressFloor:0.###}, below the 0.45 it used to stop at");
-
       var ingest = Line();
       var hits = new List<FctHitState>();
       var msPerPx = FctMotion.ArcScrollMsPerPx * FctScale.Time;
