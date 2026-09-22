@@ -306,9 +306,15 @@ namespace EQLogParser
         return $"collector ({(gen2 > 0 ? "gen2, the full collection" : gen1 > 0 ? "gen1" : "gen0")}), it held every thread for {Math.Max(0, pauseMs):0} of the {gapMs:0} ms";
       }
 
-      return collections > 0
-        ? $"{collections} collection(s) account for only {Math.Max(0, pauseMs):0} of the {gapMs:0} ms - the rest is not the collector"
-        : $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, or no CPU for anybody)";
+      if (collections == 0)
+      {
+        return $"no collection in that gap: {gapMs:0} ms stopped from outside the runtime (profiler or gcdump, power management, or no CPU for anybody)";
+      }
+
+      /* One sentence rather than a template with a parenthetical in it: "1 collection accounts", "3 collections account". */
+      var said = collections == 1 ? "collection accounts" : "collections account";
+
+      return $"{collections} {said} for only {Math.Max(0, pauseMs):0} of the {gapMs:0} ms - the rest is not the collector";
     }
 
     /* Remembers what the collector had done as of this poll, so the next gap can be attributed. Cheap enough to do every poll. */

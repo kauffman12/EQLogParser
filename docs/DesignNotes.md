@@ -2500,6 +2500,16 @@ in windows whose `trig.tests ÷ trig.line` was exactly 608. There is one `Trigge
 whichever of them last rebuilt its set prints an idle character's zero over the set that is actually running. It sums across live instances now and
 takes each share back on dispose.
 
+One of those sentences shipped broken, in a way worth recording because it is not really about pluralization. `UiBeatMonitor.ClassifyGap` built
+`"{collections} collection(s) account for only …"` while its test asserted `"3 collections"`, and both went in the same commit — so what failed was
+the assertion nobody on that machine could run. Wording tests for app-side code live in `EQLogParser.Wpf.Test`, which *builds* everywhere but whose
+tests need Windows; "the suite passes" meant 1,168 tests in a different assembly and said nothing about these.
+
+The message now reads as a sentence ("1 collection accounts", "3 collections account"), which is what the test wanted. The durable point is where
+the test belongs: `ClassifyGap` is four numbers, arithmetic and an interpolated string with no WPF in it anywhere, so it could live in
+`EQLogParser.Core/src/perf` beside `PerfGc` — where the runnable-everywhere suite would have caught this on the day. Pure classifiers and formatters
+go there; only the beat loop, the dispatcher hand-off and the thread probe have to stay on the Windows side.
+
 ### Asking the collector for memory back at chosen moments
 
 No GC setting was changed, because measuring them found nothing left to change. A 10,015,348-line replay with records retained the way the app
