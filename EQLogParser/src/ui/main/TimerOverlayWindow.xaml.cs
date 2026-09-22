@@ -36,6 +36,13 @@ namespace EQLogParser
      */
     private static readonly int TimerStaleId = PerfCounters.Register("trig.timerStale", uiThread: false);
 
+    /*
+     * Rows refused at the door because their stop had already been spent before they arrived — the same lost-removal class as trig.timerStale, caught one
+     * step earlier so the bar never appears. Under a burst this is the common one: three lines matching one trigger, and the second message's "restart"
+     * cancels the first row while that row's insert is still waiting on the render semaphore.
+     */
+    private static readonly int TimerLateAddId = PerfCounters.Register("trig.timerLateAdd", uiThread: false);
+
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
@@ -52,6 +59,9 @@ namespace EQLogParser
 
     /* When each trigger last had a stale bar named in the log, so a broken trigger says once a minute and not thirteen times a second. */
     private readonly Dictionary<string, long> _staleLogMs = [];
+
+    /* When this overlay last complained about a row that arrived after its own stop — same throttle, one per window. */
+    private long _lateLogMs;
     private int _tickCounter;
     private nint _windowHndl;
     private volatile bool _isClosed;
@@ -124,41 +134,66 @@ namespace EQLogParser
         return;
 
       var startLoop = false;
+      var armedLoop = false;
+      var accepted = false;
+
       await _renderSemaphore.WaitAsync().ConfigureAwait(false);
+
       try
       {
-        _timerList.Add(timerData);
-        _newData = true;
-
-        if (timerData.TimerType == 2)
+        /*
+         * Do not insert a row its owner has already given up on. Start is fire-and-forget and Stop waits on this same semaphore, so nothing anywhere
+         * keeps Add before Stop, and a Stop only removes what is already in the list: one that arrives first vanishes. Two ways that happens — a short
+         * countdown whose removal task wakes while its own row is still queued (a quarter-second timer is enough on a busy machine), and the "restart
+         * timer" option, where the second of three messages in one batch cancels the first row and stops it before that first insert has landed. What
+         * used to arrive either way was a row past its end, which produces no model (the display guards on remaining >= 0), so nothing could ever take it
+         * away, and whatever the bar last showed — for these, "0:00" — stayed up for the rest of the session. Canceled is set before any Stop is
+         * dispatched in every cancellation path, which is what makes it safe to believe here.
+         */
+        if (TimerLifecycle.AcceptsRow(timerData.EndTicks, timerData.Canceled, DateTime.UtcNow.Ticks))
         {
-          _newShortTickData = true;
-        }
+          accepted = true;
+          _timerList.Add(timerData);
+          _newData = true;
 
-        if (!_isRendering)
-        {
-          _isRendering = true;
-          startLoop = true; // decide under the lock
+          if (timerData.TimerType == 2)
+          {
+            _newShortTickData = true;
+          }
+
+          if (!_isRendering)
+          {
+            _isRendering = true;
+            armedLoop = true;
+            startLoop = true; // decide under the lock
+          }
         }
       }
       catch (Exception ex)
       {
         Log.Debug("Error starting timer", ex);
+
+        // Take back only what this call may have put in. _isRendering is left alone unless this call was the one that set it: clearing a loop that other
+        // rows are still using is how a failed add used to freeze the whole overlay.
         _timerList.Remove(timerData);
-        _newData = false;
-        _newShortTickData = false;
-        _isRendering = false;
+
+        if (armedLoop)
+        {
+          _isRendering = false;
+          startLoop = false;
+        }
+
+        accepted = false;
+      }
+      finally
+      {
         _renderSemaphore.Release();
-        return;
       }
 
-      try
+      if (!accepted)
       {
-        _renderSemaphore.Release();
-      }
-      catch
-      {
-        // ignore release errors
+        NoteLateTimer(timerData);
+        return;
       }
 
       if (startLoop)
@@ -340,6 +375,26 @@ namespace EQLogParser
 
       if (double.IsNaN(p) || double.IsInfinity(p)) return 0.0;
       return Math.Clamp(p, 0.0, 100.0);
+    }
+
+    /*
+     * A row that turned up after its own stop was already spent, and so was dropped at the door rather than added as a bar nothing would remove.
+     * Counted always (trig.timerLateAdd: zero is healthy, see ReapForgottenRows for the case that arrives too late to be refused), named once a
+     * minute per window because a trigger that does this does it on every burst.
+     */
+    private void NoteLateTimer(TimerData timerData)
+    {
+      PerfCounters.Note(TimerLateAddId);
+
+      var nowMs = Environment.TickCount64;
+      if (nowMs - _lateLogMs < 60_000)
+      {
+        return;
+      }
+
+      _lateLogMs = nowMs;
+      Log.Warn($"Timer row for '{GetDisplayName(timerData)}' (trigger {timerData.TriggerId}) arrived after its own " +
+        $"{(timerData.Canceled ? "cancel" : "expiry")}; dropped instead of adding a bar nothing could remove");
     }
 
     /* The configured idle timeout in ticks, or IdleNever when none is set (the shipped "leave it up" default). */

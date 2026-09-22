@@ -120,6 +120,21 @@ namespace EQLogParser
       endTicks == long.MaxValue || nowTicks <= endTicks + ReapGraceTicks;
 
     /*
+     * May this row be put on the overlay at all? Same clock as RetainRow, plus one condition that only matters on the way in: a row whose owner has
+     * already given up on it must not be inserted.
+     *
+     * This is the ordering bug under a burst. Start is fire-and-forget (TriggerOverlayManager posts it and moves on) and Stop takes the overlay's render
+     * semaphore, so nothing anywhere keeps Add before Stop — and a Stop only removes what is already in the list, so one that arrives first is simply
+     * lost. Two ways that happens: a short countdown whose removal task wakes while its own row is still queued behind a semaphore wait (a quarter-second
+     * timer is enough on a busy machine), and the "restart timer" option, where the SECOND message cancels the first row — cancel plus stop run together,
+     * three lines in one batch being exactly the traffic that loses it. Either way the insert then lands a row whose end has passed, which produces no
+     * model at all (the display guards on remaining >= 0), so nothing can ever take it away, and whatever the bar last showed — for these, "0:00" — sits
+     * there for the rest of the session. Canceled is set before any Stop is dispatched, in every cancellation path, so seeing it here means the row has no
+     * future owner.
+     */
+    internal static bool AcceptsRow(long endTicks, bool canceled, long nowTicks) => !canceled && RetainRow(endTicks, nowTicks);
+
+    /*
      * Rows parked in the overlay's idle list — the greyed "this is on cooldown" placeholders a player asked for. They age per row, from the
      * moment they stopped being live (whichever of their two stamps is later: the countdown, or the reset that follows it), instead of only
      * when every other timer on the overlay has finished, which is how the shipped code does it and why a raid with something always running

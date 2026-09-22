@@ -252,6 +252,120 @@ namespace EQLogParser
     }
 
     /*
+     * The burst case: one trigger hit by three messages in the same batch with "restart" set, each new message cancelling the row before it. Add is
+     * fire-and-forget and both add and stop queue on the overlay's render semaphore, which does not promise to serve them in the order they were posted, so
+     * every service order is a candidate reality. Enumerated for all six operations (A1 S1 A2 S2 A3 S3): with the check at the door every order ends with an
+     * empty list, and the same enumeration under the shipped unconditional insert strands a row in most of them — which is what "stuck at 0:00, never
+     * removed" looked like from the outside.
+     */
+    [TestMethod]
+    public void ThreeMessagesAtOnceNeverLeaveARowBehind()
+    {
+      // A "quick time" trigger: short enough that the removal task can wake while its own row is still queued behind a semaphore wait.
+      var ends = new[]
+      {
+        TimerLifecycle.EndTicks(Begin, 0.4d),
+        TimerLifecycle.EndTicks(Begin + Tps / 10, 0.4d),
+        TimerLifecycle.EndTicks(Begin + 2 * Tps / 10, 0.4d),
+      };
+
+      // All three stops have been issued by the time the overlay gets around to serving any of this.
+      var now = Begin + Tps;
+      var strandedWithoutTheCheck = 0;
+
+      for (var rank = 0; rank < 720; rank++)
+      {
+        var order = NthPermutation(6, rank);
+        var trail = new StringBuilder("service order: ");
+        var list = new List<int>(3);
+        var oldList = new List<int>(3);
+        var canceled = new bool[3];
+
+        for (var step = 0; step < order.Length; step++)
+        {
+          var op = order[step];
+          var row = op / 2;
+          trail.Append(op % 2 == 0 ? $"add{row} " : $"stop{row} ");
+
+          if (op % 2 == 0)
+          {
+            // The window's StartTimerAsync, with the check at the door.
+            if (TimerLifecycle.AcceptsRow(ends[row], canceled[row], now))
+            {
+              list.Add(row);
+            }
+
+            // ...and without it, which is how this shipped.
+            oldList.Add(row);
+          }
+          else
+          {
+            // StopTimerAsync: it cancels, and removes whatever is in the list at that moment. Nothing it does can reach a row that has not arrived.
+            canceled[row] = true;
+            list.Remove(row);
+            oldList.Remove(row);
+          }
+        }
+
+        Assert.AreEqual(0, list.Count, $"a cancelled row survived this interleaving — {trail}");
+
+        if (oldList.Count > 0)
+        {
+          strandedWithoutTheCheck++;
+        }
+      }
+
+      Assert.IsTrue(strandedWithoutTheCheck > 500,
+        $"expected most service orders to have stranded a row before the check, got {strandedWithoutTheCheck}");
+    }
+
+    /* The rank-th permutation of 0..count-1, so the enumeration above is deterministic and every ordering gets its turn. */
+    private static int[] NthPermutation(int count, int rank)
+    {
+      var pool = new List<int>(count);
+      for (var i = 0; i < count; i++)
+      {
+        pool.Add(i);
+      }
+
+      var result = new int[count];
+      var remaining = rank;
+
+      for (var slot = 0; slot < count; slot++)
+      {
+        var block = 1;
+        for (var f = pool.Count - 1; f > 0; f--)
+        {
+          block *= f;
+        }
+
+        var index = remaining / block;
+        remaining %= block;
+        result[slot] = pool[index];
+        pool.RemoveAt(index);
+      }
+
+      return result;
+    }
+
+    [TestMethod]
+    public void ARowThatArrivesAfterItsOwnStopIsRefused()
+    {
+      var quick = TimerLifecycle.EndTicks(Begin, 0.4d);
+
+      // Cancelled: its owner is finished with it, and the stop that would have removed it has already been spent.
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, true, Begin), "a cancelled row must not be inserted just because nothing stopped it");
+
+      // Not cancelled but already past its end plus the grace: same fate, nothing could take it away afterwards.
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, false, quick + TimerLifecycle.ReapGraceTicks + 1));
+
+      // And the ordinary cases must keep working — a slow dispatcher may not cost a player their timer.
+      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, false, Begin));
+      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, false, quick + TimerLifecycle.ReapGraceTicks / 2),
+        "a row that arrives late but still inside its own grace is drawn, not refused");
+    }
+
+    /*
      * Same question under a raid: thousands of rows, hostile durations, random starts, and one row in four whose owner never sends the stop that
      * was supposed to take it away (a lost dispatch, a stop routed to another window, a saturated sleep). Every one of them must be reapable, none
      * may be reaped early, and the whole overlay must empty. This is the case that used to be unbounded: with a saturated removal task the answer was

@@ -2231,6 +2231,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `text.render` | span | one trigger text overlay redrawing its blocks |
 | `trig.timerTick`, `trig.timerBar` | span | the two UI-thread passes of a trigger timer overlay: rewriting every visible bar's text and progress from the 75 ms loop, and the pass that adds and collapses bars when what is firing changes |
 | `trig.timerBars` | level | `TimerBar` elements the overlay is holding, collapsed spares included — the divisor for the two spans above |
+| `trig.timerLateAdd` | total | timer rows refused at the door because their own stop had already been spent — the burst/restart race, and any short countdown that woke before its row was served. Zero is healthy; see "Timer overlays: how a bar gets taken away" |
 | `trig.timerStale` | total | bars the timer overlay had to reap for itself, i.e. rows whose trigger never sent the stop that was supposed to remove them. Zero is healthy; each one also names itself in the log — see "Timer overlays: how a bar gets taken away" |
 | `trig.logGrid` | span | the refresh `TriggersLogView` asks its grid for; nearly free when the grid already sorts by time |
 | `trig.logReset` | count | whole-collection invalidations reaching that grid. Each one tells WPF nothing can be done incrementally, so a bound grid rebuilds and re-sorts itself whether or not anything asked |
@@ -2965,6 +2966,16 @@ divisor for every other bar's progress, flattening the whole overlay.
   rows stop producing models the moment their remaining time goes negative (so one hidden by "hide duplicates" at the wrong instant, or whose last frame
   fell between long ticks, was never offered for removal again), and cooldown rows report `IsRemoved = false` forever by design. The grace
   (`ReapGraceTicks`, 2 s) keeps the design intact — an owner that stops its own timers always wins, and the `0:00` frame still gets painted.
+- **A stop that arrives before its row is no longer swallowed.** `UpdateTimerAsync` posts Start and Stop as fire-and-forget onto the same render
+  semaphore, which does not promise FIFO, and `StopTimerAsync` can only remove what is already in the list. So an Add served after its own Stop landed a
+  row nothing would ever take away — and because the display guards on `remaining >= 0`, a row past its end produces no model at all, so it is not even
+  offered to the removal path; the bar simply keeps whatever it last painted, which for these was `"0:00"`. Two ways to lose that race: a short countdown
+  whose removal task wakes while its own Add is still queued (a quarter-second timer on a busy machine), and the **"restart timer" option under a burst** —
+  three lines matching one trigger in the same batch, where message two cancels message one's row (`CleanupTimerData` then Stop, always in that order)
+  while that row's insert is still waiting. `ThreeMessagesAtOnceNeverLeaveARowBehind` enumerates all 720 service orders of `A1 S1 A2 S2 A3 S3`: **630 of
+  them stranded a row as shipped, none do now.** StartTimerAsync consults `TimerLifecycle.AcceptsRow` (cancelled, or already past end + grace) and drops
+  such a row at the door, counting it as `trig.timerLateAdd` and naming one per window per minute. Note this is the same root symptom as the reaper above,
+  caught one step earlier: the reaper is the backstop, the refusal is the fix.
 - Idle (greyed cooldown) rows age per row from when they stopped being live, not only once *every* timer on the overlay has finished, which is the shipped
   rule and why a raid — where something is always counting down — accumulated them all night. With no idle timeout configured, "idle forever" still stands.
 

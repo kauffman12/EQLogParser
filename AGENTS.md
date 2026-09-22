@@ -39,8 +39,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   which answers in *uint* seconds), so it reaches the app unbounded; durations go through `TimerLifecycle.ClampDuration` at creation and every stamp/delay
   through that class, because an unclamped value saturates `Task.Delay`'s int-ms cast (measured: a 24.8-day sleep for the task whose only job is removing
   the bar) or wraps `EndTicks` into the past. `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and asserts every row
-  is ever removable — keep that green rather than moving the math back into `TimerOverlayWindow`. `trig.timerStale` counts rows the overlay reaped for itself;
-  zero is healthy. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
+  is ever removable — keep that green rather than moving the math back into `TimerOverlayWindow`. `trig.timerLateAdd` (rows refused because their stop
+  arrived first — Start/Stop are fire-and-forget on the same semaphore, so `AcceptsRow` must stay) and `trig.timerStale` (rows the overlay reaped for
+  itself) both count zero when healthy. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
