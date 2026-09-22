@@ -28,6 +28,14 @@ namespace EQLogParser
     private static readonly int TimerTickId = PerfCounters.Register("trig.timerTick");
     private static readonly int TimerBarsId = PerfCounters.Register("trig.timerBars");
 
+    /*
+     * Bars the overlay had to reap for itself, i.e. rows whose owner never sent the stop that was supposed to take them away. Zero is the
+     * healthy number: every removal then came from the timer's own scheduled end or an "end early" line, which is the design. Anything else
+     * says a lifecycle hole is open — a saturated delay (clamped now), a stop lost against a closing dispatcher, a stop routed to a window the
+     * trigger stopped using — and each one is also named in the log by ReapForgottenRows. Reported as trig.timerStale.
+     */
+    private static readonly int TimerStaleId = PerfCounters.Register("trig.timerStale", uiThread: false);
+
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
@@ -41,6 +49,9 @@ namespace EQLogParser
     private long _savedLeft = long.MaxValue;
     private long _lastActiveTicks = long.MinValue;
     private long _lastTopTicks = long.MinValue;
+
+    /* When each trigger last had a stale bar named in the log, so a broken trigger says once a minute and not thirteen times a second. */
+    private readonly Dictionary<string, long> _staleLogMs = [];
     private int _tickCounter;
     private nint _windowHndl;
     private volatile bool _isClosed;
@@ -331,9 +342,74 @@ namespace EQLogParser
       return Math.Clamp(p, 0.0, 100.0);
     }
 
+    /* The configured idle timeout in ticks, or IdleNever when none is set (the shipped "leave it up" default). */
+    private long IdleTimeoutTicks =>
+      _idleTimeoutSeconds > 0 ? _idleTimeoutSeconds * TimeSpan.TicksPerSecond : TimerLifecycle.IdleNever;
+
+    /*
+     * Drop the rows whose owner never came for them, and say so once a minute per trigger. This is the only reaper that can see them: their
+     * scheduled removal is what usually takes a bar away (TriggerProcessor's detached delay), and when that sleep saturated, when the stop was
+     * posted against a closing dispatcher, or when it went to a window the trigger no longer uses, nothing else in the program would ever offer
+     * the row for deletion again. Called under the render lock from the long tick; see the note there for why the rules live in Core.
+     */
+    private void ReapForgottenRows(long nowTicks)
+    {
+      if (_timerList.Count == 0)
+      {
+        return;
+      }
+
+      foreach (var timerData in _timerList.ToArray())
+      {
+        if (TimerLifecycle.RetainRow(timerData.EndTicks, nowTicks))
+        {
+          continue;
+        }
+
+        _timerList.Remove(timerData);
+        PerfCounters.Note(TimerStaleId);
+
+        var lastLog = _staleLogMs.TryGetValue(timerData.TriggerId ?? "", out var ms) ? ms : 0L;
+        if (nowTicks / TimeSpan.TicksPerMillisecond - lastLog < 60_000)
+        {
+          continue;
+        }
+
+        _staleLogMs[timerData.TriggerId ?? ""] = nowTicks / TimeSpan.TicksPerMillisecond;
+        Log.Warn($"Timer overlay removed a bar its trigger never stopped: '{GetDisplayName(timerData)}' " +
+          $"(trigger {timerData.TriggerId}) ended {TimerLifecycle.StaleSeconds(timerData.EndTicks, nowTicks):0}s ago, " +
+          $"type {timerData.TimerType}, mode {_timerMode}");
+      }
+    }
+
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
+    /*
+     * The loop is wrapped rather than run directly, because the wrapper is what keeps a single fault from being permanent. If this method
+     * faults anywhere below — inside a render, or against a dispatcher that is being torn down — _isRendering is left true while no loop is
+     * running, and that combination never recovers: StartTimerAsync starts a loop only `if (!_isRendering)`, so every timer added afterwards
+     * goes into the list and is never painted, never ticked and never removed, and the overlay sits on screen holding whatever its last frame
+     * showed. For a bar caught at its end that frame reads 0:00, indefinitely. Clearing the flag in a finally makes the next timer re-arm the
+     * loop instead of joining a dead one, and logging says which render died rather than leaving it to the player to notice.
+     */
     private async Task StartRenderingAsync()
+    {
+      try
+      {
+        await RenderTimerLoopAsync();
+      }
+      catch (Exception ex)
+      {
+        Log.Warn("timer overlay render loop failed; the next timer restarts it", ex);
+      }
+      finally
+      {
+        _isRendering = false;
+        _tickCounter = 0;
+      }
+    }
+
+    private async Task RenderTimerLoopAsync()
     {
       while (_isRendering)
       {
@@ -349,22 +425,65 @@ namespace EQLogParser
           await RenderTimerBarsAsync(models);
 
           var removeList = models.Where(m => m.IsRemoved && !m.IsCooldown).ToList();
-          if (removeList.Count > 0)
-          {
-            await _renderSemaphore.WaitAsync();
 
-            try
+          /*
+           * Reaping, in one place and on the row's own clock rather than on what its owner chose to do about it. Two holes close here.
+           *
+           * The removal above can only see rows that produced a model, and rows stop producing models as soon as their remaining time goes
+           * negative — so a bar which was hidden by "hide duplicates" at the moment it expired, or whose end frame fell between two long
+           * ticks, is never offered for removal again. It also keeps the loop alive: the render loop stops only when the list is empty, so one
+           * forgotten row means an overlay that never idles and never hides. Cooldown rows are worse still, because they deliberately report
+           * IsRemoved = false forever — anything their owner loses is on screen until the process ends.
+           *
+           * So every long tick asks TimerLifecycle whether each row should still exist (TimerLifecycle.RetainRow, which is where the grace and
+           * the idle-timeout rules live) and drops the ones whose answer is no, naming them in the log. The grace keeps the design intact: an
+           * owner that stops its own timers still always wins, because nothing is reaped until well past its end.
+           */
+          await _renderSemaphore.WaitAsync();
+
+          try
+          {
+            // Remove expired non-cooldown timers
+            foreach (var model in removeList)
             {
-              // Remove expired non-cooldown timers
-              foreach (var model in removeList)
+              _timerList.Remove(model.TimerData);
+            }
+
+            ReapForgottenRows(DateTime.UtcNow.Ticks);
+          }
+          finally
+          {
+            _renderSemaphore.Release();
+          }
+        }
+
+        /*
+         * Idle rows age per row, not per overlay. The shipped rule (below, at the foot of this loop) clears the idle list only once every
+         * live timer has gone AND an idle timeout is configured, which in a raid — where something is always counting down — means greyed
+         * bars pile up for the whole night and none of them ever leave. Each row now dies idleTimeout after it stopped being live; with no
+         * timeout configured the shipped "idle forever" still stands, so nobody's configured behaviour changes except that lost rows go.
+         */
+        if (_idleTimerList.Count > 0)
+        {
+          var idleNow = DateTime.UtcNow.Ticks;
+          var idleTimeout = IdleTimeoutTicks;
+          await _renderSemaphore.WaitAsync();
+
+          try
+          {
+            foreach (var idle in _idleTimerList.ToArray())
+            {
+              // "Stopped being live" is whichever stamp came later: the countdown, or the reset that follows it.
+              var idleSince = idle.ResetTicks > 0 ? Math.Max(idle.ResetTicks, idle.EndTicks) : idle.EndTicks;
+              if (!TimerLifecycle.RetainIdleRow(idleSince, idleNow, idleTimeout))
               {
-                _timerList.Remove(model.TimerData);
+                _idleTimerList.Remove(idle);
               }
             }
-            finally
-            {
-              _renderSemaphore.Release();
-            }
+          }
+          finally
+          {
+            _renderSemaphore.Release();
           }
         }
         else
