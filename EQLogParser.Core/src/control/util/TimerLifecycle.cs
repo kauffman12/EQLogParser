@@ -131,8 +131,19 @@ namespace EQLogParser
      * model at all (the display guards on remaining >= 0), so nothing can ever take it away, and whatever the bar last showed — for these, "0:00" — sits
      * there for the rest of the session. Canceled is set before any Stop is dispatched, in every cancellation path, so seeing it here means the row has no
      * future owner.
+     *
+     * The row also needs something to count. A timer whose length came out unusable (an empty duration field, or a dynamic capture that did not parse) ends
+     * up with DurationTicks of 0 — and the display has no way of drawing "nothing": measured against the real formatter, DateUtil.FormatTicks answers the
+     * same string for zero and for every negative value,
+     *
+     *   +120s -> "02:00"      0 -> "00:00"      -1s -> "00:00"      -100s -> "00:00"
+     *
+     * In the normal mode that is merely wrong for one frame; in "show reset" mode it is permanent, because the cooldown/idle text is FormatTime(DurationTicks)
+     * with IsRemoved = false by design — an immortal greyed "00:00" under a spell that was supposed to read two minutes. That display stays as it is (a
+     * cooldown placeholder genuinely has no time left to show); what goes is the row that has no length to begin with.
      */
-    internal static bool AcceptsRow(long endTicks, bool canceled, long nowTicks) => !canceled && RetainRow(endTicks, nowTicks);
+    internal static bool AcceptsRow(long endTicks, long durationTicks, bool canceled, long nowTicks) =>
+      !canceled && durationTicks > 0 && RetainRow(endTicks, nowTicks);
 
     /*
      * Rows parked in the overlay's idle list — the greyed "this is on cooldown" placeholders a player asked for. They age per row, from the

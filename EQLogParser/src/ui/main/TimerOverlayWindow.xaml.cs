@@ -150,7 +150,7 @@ namespace EQLogParser
          * away, and whatever the bar last showed — for these, "0:00" — stayed up for the rest of the session. Canceled is set before any Stop is
          * dispatched in every cancellation path, which is what makes it safe to believe here.
          */
-        if (TimerLifecycle.AcceptsRow(timerData.EndTicks, timerData.Canceled, DateTime.UtcNow.Ticks))
+        if (TimerLifecycle.AcceptsRow(timerData.EndTicks, timerData.DurationTicks, timerData.Canceled, DateTime.UtcNow.Ticks))
         {
           accepted = true;
           _timerList.Add(timerData);

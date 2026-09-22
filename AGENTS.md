@@ -41,7 +41,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the bar) or wraps `EndTicks` into the past. `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and asserts every row
   is ever removable — keep that green rather than moving the math back into `TimerOverlayWindow`. `trig.timerLateAdd` (rows refused because their stop
   arrived first — Start/Stop are fire-and-forget on the same semaphore, so `AcceptsRow` must stay) and `trig.timerStale` (rows the overlay reaped for
-  itself) both count zero when healthy. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
+  itself) both count zero when healthy. A row with **no length** is refused too (`AcceptsRow` takes `durationTicks`): `DateUtil.FormatTicks` prints `00:00` for
+  zero *and* for every negative value, and show-reset mode draws its cooldown text straight from `DurationTicks`, so an empty duration field is a greyed `00:00`
+  that never leaves — that is what "a timer appeared at 0:00" was. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

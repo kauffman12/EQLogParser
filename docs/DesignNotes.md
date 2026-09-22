@@ -2954,6 +2954,19 @@ alive. Further out (a typed `1e12`) `begin + TimeSpan.TicksPerSecond * seconds` 
 is guarded `>= 0`) and so can never be offered for removal by the model-driven path; in "standard time" mode that row's `DurationTicks` is also the
 divisor for every other bar's progress, flattening the whole overlay.
 
+**And the cause that is not a race: a row with no length at all.** *"A timer appeared at 0:00 and would not go away"* — reported for a spell that lasts two
+minutes — rules the races out: nothing ever counted down. The display cannot draw "nothing". Measured against the real formatter, every non-positive span comes
+back looking like an expired countdown (`ARowWithNoLengthNeverBecomesAForeverZeroBar` pins these strings):
+
+```
++120s -> "02:00"      0 -> "00:00"      -1s -> "00:00"      -100s -> "00:00"
+```
+
+So a trigger whose duration field is empty — or whose dynamic capture did not parse, which is the same hole with more steps — paints `00:00`. In the normal mode
+that is one wrong frame before the row stops producing models. In **show reset** mode it is permanent: the cooldown/idle text *is* `FormatTime(DurationTicks)`
+with `IsRemoved` false by design, so a greyed `00:00` sits under a spell that should read `02:00` for the rest of the session. The formatter keeps its behaviour
+(a real cooldown placeholder genuinely has no time left to show); what changes is that a row with nothing to count never reaches an overlay.
+
 **What changed.**
 - Durations are clamped where they enter (`MaxDurationSeconds` = a day: every real countdown is seconds to minutes, and a bar counting down for weeks is
   not a countdown). Junk — NaN, infinities, negatives — becomes 0, i.e. no timer. `NeedsClamping` reports the trigger once a minute in the log, which is
@@ -2973,9 +2986,14 @@ divisor for every other bar's progress, flattening the whole overlay.
   whose removal task wakes while its own Add is still queued (a quarter-second timer on a busy machine), and the **"restart timer" option under a burst** —
   three lines matching one trigger in the same batch, where message two cancels message one's row (`CleanupTimerData` then Stop, always in that order)
   while that row's insert is still waiting. `ThreeMessagesAtOnceNeverLeaveARowBehind` enumerates all 720 service orders of `A1 S1 A2 S2 A3 S3`: **630 of
-  them stranded a row as shipped, none do now.** StartTimerAsync consults `TimerLifecycle.AcceptsRow` (cancelled, or already past end + grace) and drops
+  them stranded a row as shipped, none do now.** StartTimerAsync consults `TimerLifecycle.AcceptsRow` (cancelled, lengthless, or already past end + grace) and drops
   such a row at the door, counting it as `trig.timerLateAdd` and naming one per window per minute. Note this is the same root symptom as the reaper above,
   caught one step earlier: the reaper is the backstop, the refusal is the fix.
+- **A row with no length is refused at the door.** `TimerLifecycle.AcceptsRow` takes `durationTicks` alongside the end stamp, and `StartTimerAsync` does not
+  offer a zero-length row to any overlay at all. The trigger still does everything else it was asked to — the row stays in the trigger's own list, and the end
+  actions (speak, display text, trigger log, repeat) run from the removal task exactly as before, none of which ever needed a painted bar — and it says what is
+  wrong: `Timer trigger 'X' has no duration, so no countdown is shown for it`, once a minute per trigger beside the saturation warning.
+
 - Idle (greyed cooldown) rows age per row from when they stopped being live, not only once *every* timer on the overlay has finished, which is the shipped
   rule and why a raid — where something is always counting down — accumulated them all night. With no idle timeout configured, "idle forever" still stands.
 
@@ -2983,7 +3001,7 @@ divisor for every other bar's progress, flattening the whole overlay.
 **zero is the healthy number** — every removal then came from the timer's own end or an "end early" line. Anything above zero names itself in the log, once a
 minute per trigger: `Timer overlay removed a bar its trigger never stopped: 'Rezuus' (trigger 7f2c…) ended 412s ago, type 1, mode 0`. The suffix is the
 diagnosis: a huge "ended … ago" with `mode 0` is a lost or saturated removal task; rows that die right at a day are captures that got clamped (which also
-warn separately, `Timer duration is not usable for trigger …`).
+warn separately, `Timer duration is not usable for trigger …`). A bar **born** at `00:00` leaves no `trig.timerStale` trail at all — it never had a countdown to lose — so that shape is found by the `has no duration` warning instead, and what to tell the player is: fill in the trigger's duration.
 
 **Do not "simplify" these away.** `RetainRow` ignoring the reset phase looks wrong and is not: a row in the *live* list long past its end has no owner, and
 letting the cooldown display vouch for it is precisely how the leak stays. `DelayMs` returning 0 rather than -1 for an empty timer is not a rounding choice —

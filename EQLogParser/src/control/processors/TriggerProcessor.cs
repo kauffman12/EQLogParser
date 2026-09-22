@@ -41,8 +41,9 @@ namespace EQLogParser
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
 
-    /* Last log per trigger id of a clamped duration, so the warning is once a minute per trigger rather than once a match. */
+    /* Last log per trigger id of an unusable duration, so those warnings are once a minute per trigger rather than once a match. */
     private static readonly ConcurrentDictionary<string, long> ClampedDurationLogMs = [];
+    private static readonly ConcurrentDictionary<string, long> EmptyDurationLogMs = [];
 
     /*
      * What one log line costs to evaluate, measured on the trigger thread. This path was the one unmeasured suspect in a report of the
@@ -1110,8 +1111,23 @@ namespace EQLogParser
         timerList.Add(newTimerData);
       }
 
-      // true for add
-      await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
+      /*
+       * Ask an overlay to show a countdown only when there is one. A duration that came out unusable (an empty duration field, or a dynamic capture that did
+       * not parse) leaves the row with no length, and the display cannot draw "nothing": DateUtil.FormatTicks answers the same string for zero as for every
+       * negative value ("00:00"), so in "show reset" mode — where the cooldown/idle text is FormatTime(DurationTicks) with IsRemoved false by design — such a
+       * row is a greyed 00:00 bar that never leaves. That is the report of a timer "appearing at 0:00" for a spell that lasts two minutes: there was never a
+       * countdown to draw. Everything else about the trigger still happens as before — the row stays in the trigger's own list, and the end actions (speak,
+       * display text, trigger log, repeat) run from the task below, none of which depend on a bar being painted.
+       */
+      if (newTimerData.DurationSeconds > 0)
+      {
+        // true for add
+        await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
+      }
+      else
+      {
+        LogEmptyDuration(wrapper);
+      }
 
       var data2 = newTimerData;
       var token = data2.CancelSource.Token;
@@ -1230,6 +1246,23 @@ namespace EQLogParser
       ClampedDurationLogMs[wrapper.Id] = nowMs;
       Log.Warn($"Timer duration is not usable for trigger '{wrapper.Name}' ({requested:0.###}s): " +
         $"using at most {TimerLifecycle.MaxDurationSeconds:0}s so the timer can still be removed");
+    }
+
+    /*
+     * The other shape of the same complaint: a timer trigger with nothing in its duration. Worth saying out loud, because the trigger looks like it is working
+     * — it speaks, it logs, its end fires — while the overlay has no countdown to show; and before such a row was refused at the door, what it showed instead
+     * was "00:00", which in cooldown mode meant forever.
+     */
+    private void LogEmptyDuration(TriggerWrapper wrapper)
+    {
+      var nowMs = Environment.TickCount64;
+      if (nowMs - EmptyDurationLogMs.GetValueOrDefault(wrapper.Id) < 60_000)
+      {
+        return;
+      }
+
+      EmptyDurationLogMs[wrapper.Id] = nowMs;
+      Log.Warn($"Timer trigger '{wrapper.Name}' has no duration, so no countdown is shown for it");
     }
 
     private async Task AddTextAsync(Trigger trigger, string text)

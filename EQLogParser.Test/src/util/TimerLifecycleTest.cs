@@ -290,7 +290,7 @@ namespace EQLogParser
           if (op % 2 == 0)
           {
             // The window's StartTimerAsync, with the check at the door.
-            if (TimerLifecycle.AcceptsRow(ends[row], canceled[row], now))
+            if (TimerLifecycle.AcceptsRow(ends[row], ends[row] - Begin, canceled[row], now))
             {
               list.Add(row);
             }
@@ -317,6 +317,33 @@ namespace EQLogParser
 
       Assert.IsTrue(strandedWithoutTheCheck > 500,
         $"expected most service orders to have stranded a row before the check, got {strandedWithoutTheCheck}");
+    }
+
+    /*
+     * How a timer "appears at 0:00 and never leaves": the row has no length. Zero is not a value the display can render as nothing — measured against the
+     * real formatter, every non-positive span comes back looking like an expired countdown — so a trigger whose duration field is empty, or whose dynamic
+     * capture did not parse, paints "00:00". In the normal mode that lasts one frame before the row stops producing models; in "show reset" mode the cooldown
+     * text IS FormatTime(DurationTicks) and IsRemoved is false by design, so the greyed 00:00 sits there for the rest of the session under a spell that
+     * should have read two minutes. The formatter behaviour stays as it is; what must not happen is a row without length reaching the overlay.
+     */
+    [TestMethod]
+    public void ARowWithNoLengthNeverBecomesAForeverZeroBar()
+    {
+      // The measurement behind the rule, pinned so a change to FormatTicks has to be noticed here rather than on someone's screen.
+      Assert.AreEqual("00:00", DateUtil.FormatTicks(0, DateUtil.TimeFormat.HMSCompact));
+      Assert.AreEqual("00:00", DateUtil.FormatTicks(-TimeSpan.TicksPerSecond, DateUtil.TimeFormat.HMSCompact));
+      Assert.AreEqual("00:00", DateUtil.FormatTicks(-100 * TimeSpan.TicksPerSecond, DateUtil.TimeFormat.HMSCompact));
+      Assert.AreEqual("02:00", DateUtil.FormatTicks(120 * Tps, DateUtil.TimeFormat.HMSCompact));
+
+      // Zero length: refused, however recent its end stamp is. A two minute spell reads 02:00 and must never be asked to show 00:00 instead.
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(Begin, 0, false, Begin), "a row with no countdown to show is not a row");
+
+      // And the overflow shape of it, where the arithmetic used to hand back a negative length.
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(Begin, -120 * Tps, false, Begin));
+
+      // The ordinary two minute spell still gets its bar.
+      var spell = TimerLifecycle.EndTicks(Begin, 120d);
+      Assert.IsTrue(TimerLifecycle.AcceptsRow(spell, spell - Begin, false, Begin));
     }
 
     /* The rank-th permutation of 0..count-1, so the enumeration above is deterministic and every ordering gets its turn. */
@@ -354,14 +381,14 @@ namespace EQLogParser
       var quick = TimerLifecycle.EndTicks(Begin, 0.4d);
 
       // Cancelled: its owner is finished with it, and the stop that would have removed it has already been spent.
-      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, true, Begin), "a cancelled row must not be inserted just because nothing stopped it");
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, quick - Begin, true, Begin), "a cancelled row must not be inserted just because nothing stopped it");
 
       // Not cancelled but already past its end plus the grace: same fate, nothing could take it away afterwards.
-      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, false, quick + TimerLifecycle.ReapGraceTicks + 1));
+      Assert.IsFalse(TimerLifecycle.AcceptsRow(quick, quick - Begin, false, quick + TimerLifecycle.ReapGraceTicks + 1));
 
       // And the ordinary cases must keep working — a slow dispatcher may not cost a player their timer.
-      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, false, Begin));
-      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, false, quick + TimerLifecycle.ReapGraceTicks / 2),
+      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, quick - Begin, false, Begin));
+      Assert.IsTrue(TimerLifecycle.AcceptsRow(quick, quick - Begin, false, quick + TimerLifecycle.ReapGraceTicks / 2),
         "a row that arrives late but still inside its own grace is drawn, not refused");
     }
 
