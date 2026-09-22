@@ -2231,6 +2231,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `text.render` | span | one trigger text overlay redrawing its blocks |
 | `trig.timerTick`, `trig.timerBar` | span | the two UI-thread passes of a trigger timer overlay: rewriting every visible bar's text and progress from the 75 ms loop, and the pass that adds and collapses bars when what is firing changes |
 | `trig.timerBars` | level | `TimerBar` elements the overlay is holding, collapsed spares included — the divisor for the two spans above |
+| `trig.timerStale` | total | bars the timer overlay had to reap for itself, i.e. rows whose trigger never sent the stop that was supposed to remove them. Zero is healthy; each one also names itself in the log — see "Timer overlays: how a bar gets taken away" |
 | `trig.logGrid` | span | the refresh `TriggersLogView` asks its grid for; nearly free when the grid already sorts by time |
 | `trig.logReset` | count | whole-collection invalidations reaching that grid. Each one tells WPF nothing can be done incrementally, so a bound grid rebuilds and re-sorts itself whether or not anything asked |
 | `trig.logBatch`, `trig.logEntry` | count | trigger-log appends in the window and the entries inside them (**off the UI thread**): how often any bound grid must reload, and how many rows it has to sort |
@@ -2926,3 +2927,54 @@ agrees with the number in its own name. Cost moved the same way as the search di
 **Auditing it on a real log**: `StatsUtil` logs one Debug line per windowed build, which is where before/after runs can be compared without opening two
 windows - `Stats window: asked min 0 max 300 -> 12345 .. 12645; 7 spans, 300.0 counted seconds (raw extent 412)`. On the old build the counted seconds exceed
 the requested maximum; on this one they land on it. Everything else in the two builds should be letter-identical.
+
+## Timer overlays: how a bar gets taken away
+
+A countdown row is drawn because something put it in `TimerOverlayWindow._timerList`, and only three things are supposed to take it out: the row's
+own scheduled removal, a line matching "end early", and the overlay dropping rows whose model says `IsRemoved`. Every stuck-bar complaint is one of
+those three failing to fire, and all three had holes. The rules that decide when a row may leave now live in **`EQLogParser.Core/src/control/util/TimerLifecycle.cs`**,
+on plain numbers rather than on a window, because every one of them was found by measuring an arithmetic result and each is unit-tested here:
+`dotnet test EQLogParser.Test/EQLogParser.Test.csproj --filter TimerLifecycle` (cross-platform, no STA, no window).
+
+**Where a duration comes from, and why it cannot be trusted.** `TriggerProcessor.StartTimerAsync` takes the countdown's length either from the number
+in the trigger config or, for the timer types that allow it, from a capture group named `TS` — `DateUtil.SimpleTimeToSeconds`, which answers in **uint**
+seconds. The only test on the whole path was `> 0`. Measured against .NET 10 with the real parser:
+
+| capture | seconds | `(int)(seconds * 1000)`, what shipped as the removal delay |
+|---|---|---|
+| `1:30` | 90 | 90,000 ms — fine |
+| `4h:20m:53s` | 15,653 | fine |
+| `999999999` | 999,999,999 | **`int.MaxValue`**, no throw: the removal task sleeps 24.8 days |
+| `49710d` | 4,294,944,000 | same |
+
+That middle column is the stuck bar, and it is the one that bites: the detached `Task.Delay` *is* the removal for an ordinary timer, so the row sits at
+`0:00` for the rest of the session — and because the render loop stops only when the list is empty, one forgotten row also keeps the overlay process
+alive. Further out (a typed `1e12`) `begin + TimeSpan.TicksPerSecond * seconds` wraps a signed long **into the past**, which draws nothing (`remaining`
+is guarded `>= 0`) and so can never be offered for removal by the model-driven path; in "standard time" mode that row's `DurationTicks` is also the
+divisor for every other bar's progress, flattening the whole overlay.
+
+**What changed.**
+- Durations are clamped where they enter (`MaxDurationSeconds` = a day: every real countdown is seconds to minutes, and a bar counting down for weeks is
+  not a countdown). Junk — NaN, infinities, negatives — becomes 0, i.e. no timer. `NeedsClamping` reports the trigger once a minute in the log, which is
+  the difference between "my timer vanished" and a player being told their capture parsed to a hundred million seconds.
+- All the arithmetic saturates instead of wrapping (`EndTicks`, `TPS`), and the delay goes through `DelayMs`, which can never be negative (that throws
+  inside an unsupervised task) nor exceed `int.MaxValue`.
+- `StartRenderingAsync` is wrapped in try/catch/**finally**. It used to be able to fault with `_isRendering` still `true`; since a loop is started only
+  `if (!_isRendering)`, that combination is permanent — the overlay freezes on its last painted frame and every later timer joins a list nothing renders.
+- The overlay reaps on the row's own clock (`ReapForgottenRows` → `TimerLifecycle.RetainRow`) instead of only on what its model reported. Two holes close:
+  rows stop producing models the moment their remaining time goes negative (so one hidden by "hide duplicates" at the wrong instant, or whose last frame
+  fell between long ticks, was never offered for removal again), and cooldown rows report `IsRemoved = false` forever by design. The grace
+  (`ReapGraceTicks`, 2 s) keeps the design intact — an owner that stops its own timers always wins, and the `0:00` frame still gets painted.
+- Idle (greyed cooldown) rows age per row from when they stopped being live, not only once *every* timer on the overlay has finished, which is the shipped
+  rule and why a raid — where something is always counting down — accumulated them all night. With no idle timeout configured, "idle forever" still stands.
+
+**Reading it on a real fight.** `trig.timerStale` (see the perf line format under "Reading a report") counts bars the overlay had to reclaim for itself;
+**zero is the healthy number** — every removal then came from the timer's own end or an "end early" line. Anything above zero names itself in the log, once a
+minute per trigger: `Timer overlay removed a bar its trigger never stopped: 'Rezuus' (trigger 7f2c…) ended 412s ago, type 1, mode 0`. The suffix is the
+diagnosis: a huge "ended … ago" with `mode 0` is a lost or saturated removal task; rows that die right at a day are captures that got clamped (which also
+warn separately, `Timer duration is not usable for trigger …`).
+
+**Do not "simplify" these away.** `RetainRow` ignoring the reset phase looks wrong and is not: a row in the *live* list long past its end has no owner, and
+letting the cooldown display vouch for it is precisely how the leak stays. `DelayMs` returning 0 rather than -1 for an empty timer is not a rounding choice —
+`Task.Delay` throws on negative, in a task nobody observes. And the clamp belongs at creation, not in the display: every consumer of these numbers has to be
+unable to overflow, not only the one that is showing a bar.

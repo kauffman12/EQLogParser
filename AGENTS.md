@@ -35,6 +35,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Namespaces**: the WPF app compiles every source into the flat `namespace EQLogParser` whatever folder it lives in, while
   `EQLogParser.Core` matches folders (`EQLogParser.perf`). Tests reach app internals through `using EQLogParser;` (`InternalsVisibleTo` is
   already granted to both test assemblies); declaring `EQLogParser.ui.perf` in a new app file breaks that.
+- **Timer bars: the lifecycle rules live in Core.** A countdown's length comes from the config box or a `TS:` capture (`DateUtil.SimpleTimeToSeconds`,
+  which answers in *uint* seconds), so it reaches the app unbounded; durations go through `TimerLifecycle.ClampDuration` at creation and every stamp/delay
+  through that class, because an unclamped value saturates `Task.Delay`'s int-ms cast (measured: a 24.8-day sleep for the task whose only job is removing
+  the bar) or wraps `EndTicks` into the past. `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and asserts every row
+  is ever removable — keep that green rather than moving the math back into `TimerOverlayWindow`. `trig.timerStale` counts rows the overlay reaped for itself;
+  zero is healthy. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
