@@ -28,7 +28,7 @@ namespace EQLogParser
 
     public void Add(List<TimeSegment> collection)
     {
-      if (collection != null)
+      if (collection is not null)
       {
         foreach (var segment in CollectionsMarshal.AsSpan(collection))
         {
@@ -44,7 +44,7 @@ namespace EQLogParser
      */
     public void Add(TimeRange range)
     {
-      if (range != null)
+      if (range is not null)
       {
         foreach (var segment in CollectionsMarshal.AsSpan(range.TimeSegments))
         {
@@ -55,13 +55,21 @@ namespace EQLogParser
 
     public TimeRange() { }
 
+    /*
+     * The constructors refuse null rather than storing it. A span list is read by GetTotal() and walked by every merge long after the thing that
+     * built it has been forgotten, and a null sitting in one of those lists failed at whichever read reached it first - far from the caller that
+     * put it there, and with nothing in the message naming that caller. Add() stays null-tolerant on purpose: its null is "the other player had no
+     * ranges", which is a real answer, while a constructor's null is a bug.
+     */
     public TimeRange(TimeSegment segment)
     {
-      TimeSegments.Add(segment);
+      TimeSegments.Add(segment ?? throw new ArgumentNullException(nameof(segment)));
     }
 
     public TimeRange(List<TimeSegment> segments)
     {
+      ArgumentNullException.ThrowIfNull(segments);
+
       segments.ForEach(segment => Add(new TimeSegment(segment.BeginTime, segment.EndTime)));
     }
 

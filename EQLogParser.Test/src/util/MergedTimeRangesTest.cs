@@ -67,7 +67,9 @@ namespace EQLogParserTest
     {
       var range = new TimeRange();
 
-      range.Add((TimeRange?)null!);
+      TimeRange? nothing = null;
+
+      range.Add(nothing);
       Assert.AreEqual(0, range.TimeSegments.Count, "a null range adds nothing");
 
       range.Add(new TimeRange());

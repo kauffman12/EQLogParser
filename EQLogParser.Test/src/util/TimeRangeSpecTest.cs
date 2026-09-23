@@ -456,9 +456,10 @@ namespace EQLogParserTest
     /* ---- sharp edges: asserted as they behave today, so a change of behaviour is a decision and not a surprise ---- */
 
     /*
-     * The constructor bypasses both guards Add() has: an inverted span gets in, and so does null. An inverted span makes GetTotal() NEGATIVE, which
-     * then flows out as TotalSeconds into every per-second number that divides by it. Nothing in the tree constructs one this way today (callers pass
-     * BeginTime/UpdateTime they have just read off a record), which is why it stays latent rather than visible.
+     * The constructor bypasses the guard Add() has on an inverted span: one gets in, and GetTotal() goes NEGATIVE on it, which then flows out as
+     * TotalSeconds into every per-second number that divides by it. Nothing in the tree constructs one this way today (callers pass BeginTime/UpdateTime
+     * they have just read off a record), which is why it stays latent rather than visible. Null is the guard the constructors DID gain: a stored null
+     * failed at whichever read reached it first, far from the caller that put it there.
      */
     [TestMethod]
     public void ConstructorWithSegmentSkipsTheGuardsAddHas()
@@ -466,10 +467,8 @@ namespace EQLogParserTest
       Assert.AreEqual(1, new TimeRange(new TimeSegment(30, 20)).TimeSegments.Count);
       Assert.AreEqual(-9, new TimeRange(new TimeSegment(30, 20)).GetTotal());
 
-      var withNull = new TimeRange((TimeSegment)null!);
-      Assert.AreEqual(1, withNull.TimeSegments.Count);
-      Assert.Throws<NullReferenceException>(() => withNull.GetTotal());
-      Assert.Throws<NullReferenceException>(() => new TimeRange((List<TimeSegment>)null!));
+      Assert.Throws<ArgumentNullException>(() => new TimeRange(default(TimeSegment)));
+      Assert.Throws<ArgumentNullException>(() => new TimeRange(default(List<TimeSegment>)));
     }
 
     /*
