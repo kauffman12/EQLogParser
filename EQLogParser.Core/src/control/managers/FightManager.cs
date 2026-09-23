@@ -35,8 +35,19 @@ namespace EQLogParser
     private int _currentNpcId = 1;
     private static readonly ConcurrentDictionary<string, bool> RecentSpellCache = [];
     private readonly ConcurrentDictionary<string, bool> _validCombo = [];
-    private readonly Dictionary<DamageRecord, DamageRecord> _damageCache = [];
     private const int RecentSpellTime = 300;
+
+    // A raid night offers this log's worth of damage records to the cache below; the filter is sized for that
+    // and starts over when full, which costs bytes rather than correctness — see RepeatFilter.
+    private const int ExpectedDamageOffers = 4_000_000;
+
+    /*
+     * One instance per distinct damage event, so a raid night that restates the same swing ten thousand times
+     * holds one object for it instead of ten thousand. A value's first sighting is not offered an entry — 84%
+     * of them are never restated, and the record stays in the store either way, so an entry spent on one buys
+     * nothing. Measured numbers: docs/DesignNotes.md → What a loaded raid costs in memory.
+     */
+    private readonly RepeatStore<DamageRecord> _damageCache = new(ExpectedDamageOffers);
 
     internal FightManager()
     {
@@ -478,20 +489,26 @@ namespace EQLogParser
     }
 
     /*
-     * Returns the cached DamageRecord if an identical one exists, otherwise caches and returns the incoming
-     * record. Deduplicating by value means two events with the same attacker, defender, amount, type and
-     * modifiers share one heap object — on the log this was measured against, about half of a raid night's
-     * damage events.
+     * Returns the shared DamageRecord if an identical one is held, otherwise offers the incoming record to be
+     * remembered and returns it. Deduplicating by value means two events with the same attacker, defender,
+     * amount, type and modifiers share one heap object — on the log this was measured against, about half of a
+     * raid night's damage events.
      *
      * The interning below is a second job riding along in the miss path. Records keep names as ids into
      * StringCache (see HitRecord), so which string is handed in here decides the spelling every later reader
-     * sees, grids and exports included; it is no longer what makes repeats cheap to hold. Deleting this
-     * dictionary would be a memory decision worth about a hundred MB of entries against the two hundred the
-     * dropped records save — but the interning below has to survive it, or names stop being title cased.
+     * sees, grids and exports included. It has to survive any future change to the cache above, or names stop
+     * being title cased — and it stays off the hit path, which is why the lookup and the offer are separate
+     * calls rather than one helper that would settle the spelling of a value we already have.
+     *
+     * One hazard worth knowing before moving this call: HandleDamageProcessed below rewrites record.Attacker
+     * to Labels.Unk a hundred lines after this returns, for the unknown-spell case. That mutates an instance
+     * this store may have just keyed on, so the entry it took can never be found again and every earlier event
+     * sharing the instance reads back Unk. Pre-dates this file and behaves the same here; fixing it means
+     * settling the record before it is offered, not deduplicating it earlier.
      */
     private DamageRecord GetCachedDamageRecord(DamageRecord incoming)
     {
-      if (_damageCache.TryGetValue(incoming, out var cached))
+      if (_damageCache.TryGet(incoming, out var cached))
       {
         return cached;
       }
@@ -513,7 +530,7 @@ namespace EQLogParser
         incoming.DefenderOwner = StringCache.GetOrAdd(incoming.DefenderOwner);
       }
 
-      _damageCache[incoming] = incoming;
+      _damageCache.Offer(incoming);
       return incoming;
     }
 

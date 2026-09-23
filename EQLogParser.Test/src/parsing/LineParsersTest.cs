@@ -26,12 +26,18 @@ namespace EQLogParser
 
       RecordsStore.Instance.Clear();
       PlayerRegistry.Instance.Clear();
+
+      // The heal cache and its sighting history are process globals: without this, whichever test class got
+      // here first decides whether a heal looks like a repeat, and the sharing assertions below depend on
+      // which sighting they are.
+      HealingLineParser.ClearCaches();
     }
 
     [TestCleanup]
     public void Cleanup()
     {
       AdpsTracker.Instance.Clear();
+      HealingLineParser.ClearCaches();
       RecordsStore.Instance.Clear();
       PlayerRegistry.Instance.Clear();
       _dataStore = null;
@@ -57,17 +63,26 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void Process_RepeatedHeal_SharesOneRecordInstance()
+    public void Process_RepeatedHeal_SharesOneRecordInstanceFromTheThirdSighting()
     {
       // three quarters of a raid night's heal lines restate a heal already seen; the repeat has to cost
-      // a slot in the store rather than another object, or the log keeps 2.7M of them alive per sitting
+      // a slot in the store rather than another object, or the log keeps 2.7M of them alive per sitting.
+      // A heal seen once is deliberately left unremembered — 84% of distinct values are never restated, and
+      // the store keeps the record either way, so an entry spent on a first sighting buys nothing — which
+      // means sharing begins on the third line, not the second. See RepeatStore.
       const string Text = "Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.";
       HealingLineParser.Process(Line(Text, 5));
       HealingLineParser.Process(Line(Text, 6));
 
       var heals = RecordsStore.Instance.GetAllHeals().ToList();
       Assert.AreEqual(2, heals.Count);
-      Assert.AreSame(heals[0].Item2, heals[1].Item2);
+      Assert.AreEqual(heals[0].Item2, heals[1].Item2);
+      Assert.AreNotSame(heals[0].Item2, heals[1].Item2, "the second sighting is the one that pays for the entry");
+
+      HealingLineParser.Process(Line(Text, 7));
+      var restated = RecordsStore.Instance.GetAllHeals().ToList();
+      Assert.AreEqual(3, restated.Count);
+      Assert.AreSame(restated[1].Item2, restated[2].Item2);
     }
 
     [TestMethod]
