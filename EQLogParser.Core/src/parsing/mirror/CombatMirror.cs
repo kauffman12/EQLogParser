@@ -34,6 +34,12 @@ namespace EQLogParser.Mirror
       DamageLineParser.EventsNewDeath += HandleDeath;
       DamageLineParser.EventsNewTaunt += HandleTaunt;
 
+      PreLineParser.EventsEvidence += OnPreLineEvidence;
+      MiscLineParser.EventsWhoRoster += OnWhoRoster;
+      MiscLineParser.EventsCalledToOwner += OnCalledToOwner;
+      MiscLineParser.EventsCharm += OnCharm;
+      CastLineParser.EventsCastEvidence += OnCast;
+
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet += OnVerifiedPet;
       registry.EventsNewVerifiedPlayer += OnVerifiedPlayer;
@@ -47,11 +53,42 @@ namespace EQLogParser.Mirror
       DamageLineParser.EventsNewDeath -= HandleDeath;
       DamageLineParser.EventsNewTaunt -= HandleTaunt;
 
+      PreLineParser.EventsEvidence -= OnPreLineEvidence;
+      MiscLineParser.EventsWhoRoster -= OnWhoRoster;
+      MiscLineParser.EventsCalledToOwner -= OnCalledToOwner;
+      MiscLineParser.EventsCharm -= OnCharm;
+      CastLineParser.EventsCastEvidence -= OnCast;
+
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet -= OnVerifiedPet;
       registry.EventsNewVerifiedPlayer -= OnVerifiedPlayer;
       registry.EventsRemoveVerifiedPet -= OnRemovedVerifiedPet;
       registry.EventsRemoveVerifiedPlayer -= OnRemovedVerifiedPlayer;
+    }
+
+    // Chat reaches the mirror through the pipeline's IChatSink seam (the app adapter and the test
+    // harness fan out here); every chat line becomes one EvChat fact, channel included.
+    public void HandleChat(ChatType chat)
+    {
+      if (chat is null || string.IsNullOrEmpty(chat.Sender)) return;
+      Emit(EvidenceFact.EvChat, chat.Sender, chat.BeginTime, chat.Channel);
+    }
+
+    private void OnPreLineEvidence(string name, double time, byte kind) => Emit(kind, name, time);
+
+    private void OnWhoRoster(string name, string cls, double time) => Emit(EvidenceFact.EvWhoRoster, name, time, cls);
+
+    private void OnCalledToOwner(string name, double time) => Emit(EvidenceFact.EvCalledToOwner, name, time);
+
+    private void OnCharm(string name, double time, bool isStart) => Emit(isStart ? EvidenceFact.EvCharmStart : EvidenceFact.EvCharmEnd, name, time);
+
+    private void OnCast(string caster, string spell, double time) => Emit(EvidenceFact.EvCast, caster, time, spell);
+
+    private void Emit(byte kind, string name, double time, string aux = null)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+      _lastSeenTs = ToTimeS(time);
+      _facts.AddEvidence(new EvidenceFact(++_sequence, ToTimeS(time), _facts.InternName(name), kind, _facts.InternAux(aux)));
     }
 
     private void OnVerifiedPet(string name) => HandleIdentity(IdentityEvent.VerifiedPet, name);

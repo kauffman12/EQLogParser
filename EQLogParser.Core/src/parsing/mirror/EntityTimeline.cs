@@ -9,7 +9,9 @@ namespace EQLogParser.Mirror
     Unknown = 0,
     Player = 1,
     Npc = 2,
-    Merc = 3
+    Merc = 3,
+    // Owned companion (catalog R5): player-side by affiliation, never a player itself.
+    Pet = 4
   }
 
   // Answer to "whose side is this name on, right now?" — genuinely time-scoped (charm windows,
@@ -123,6 +125,28 @@ namespace EQLogParser.Mirror
     }
 
     public bool HasIdentity(string name) => _identity.ContainsKey(name);
+
+    // Strongest assignment at +infinity, with its provenance (Phase 2 report input).
+    public IdentityKind IdentityWithSource(string name, out string source)
+    {
+      source = null;
+      if (!_identity.TryGetValue(name, out var list) || list.Count == 0) return IdentityKind.Unknown;
+
+      var best = IdentityKind.Unknown;
+      var bestStrength = int.MinValue;
+      var bestTime = double.NegativeInfinity;
+      foreach (var a in list)
+      {
+        if (a.Strength > bestStrength || (a.Strength == bestStrength && a.EffectiveFrom >= bestTime))
+        {
+          best = a.Kind;
+          bestStrength = a.Strength;
+          bestTime = a.EffectiveFrom;
+          source = a.Source;
+        }
+      }
+      return best;
+    }
 
     // Affiliation in force at t: strongest interval containing t (t0 <= t < t1).
     public AffiliationKind AffiliationAt(string name, double t, out string source)

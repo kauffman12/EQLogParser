@@ -25,12 +25,57 @@ namespace EQLogParser
     public static event Action<ResistEvent> EventsResistProcessed;
     public static event Action<MezBreakRecord> EventsNewMezBreak;
 
+    // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
+    internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
+    internal static event Action<string, double> EventsCalledToOwner;       // pet name, time
+    internal static event Action<string, double, bool> EventsCharm;         // name, time, is-start
+
     private static string _randomPlayer;
     private static long _lastLine = -1;
+
+    // Companion and charm line shapes (catalog R5/R9 evidence). Recognition only: the legacy
+    // pipeline never consumed these and still does not. Charm NEG lines ("This NPC cannot be
+    // charmed.", resists) deliberately do not match these suffixes.
+    private const string CalledToOwnerSuffix = " is called to it owner.";
+    private const string CharmedSuffix = " has been charmed.";
+    private const string Charmed2Suffix = " is charmed.";
+    private const string CharmEndMarker = " spell has worn off of ";
+
+    private static void ScanMirrorEvidence(string action, double beginTime)
+    {
+      if (string.IsNullOrEmpty(action)) return;
+
+      if (action.EndsWith(CalledToOwnerSuffix, StringComparison.OrdinalIgnoreCase))
+      {
+        var pet = action[..^CalledToOwnerSuffix.Length].Trim();
+        if (pet.Length > 0) EventsCalledToOwner?.Invoke(pet, beginTime);
+      }
+      else if (action.EndsWith(CharmedSuffix, StringComparison.OrdinalIgnoreCase))
+      {
+        var npc = action[..^CharmedSuffix.Length].Trim();
+        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true);
+      }
+      else if (action.EndsWith(Charmed2Suffix, StringComparison.OrdinalIgnoreCase))
+      {
+        var npc = action[..^Charmed2Suffix.Length].Trim();
+        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true);
+      }
+      else
+      {
+        var marker = action.IndexOf(CharmEndMarker, StringComparison.OrdinalIgnoreCase);
+        if (marker > 0)
+        {
+          var npc = action[(marker + CharmEndMarker.Length)..].Trim().TrimEnd('.');
+          if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, false);
+        }
+      }
+    }
 
     public static bool Process(LineData lineData)
     {
       var handled = false;
+
+      ScanMirrorEvidence(lineData.Action, lineData.BeginTime);
 
       try
       {
@@ -82,6 +127,7 @@ namespace EQLogParser
                (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
               PlayerRegistry.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
+              EventsWhoRoster?.Invoke(who, whoClass, lineData.BeginTime);
               if (EQDataStore.Instance.IsValidClassName(whoClass))
               {
                 PlayerRegistry.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);

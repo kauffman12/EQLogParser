@@ -1,0 +1,15 @@
+[Sun Apr 26 18:40:01 2026] Targeted (Player): Verifyguy
+[Sun Apr 26 18:40:02 2026] Targeted (NPC): Grisel Noshikun
+[Sun Apr 26 18:40:03 2026] Raidos joined the raid.
+[Sun Apr 26 18:40:04 2026] Chiefoc is now the leader of your raid.
+[Sun Apr 26 18:40:05 2026] [130 Juggernaut (Berserker)] Whoguy (Group: None)
+[Sun Apr 26 18:40:06 2026] Chatterbox tells the group, 'hello there'
+[Sun Apr 26 18:40:07 2026] Raiderone tells the raid, 'pulling in three'
+[Sun Apr 26 18:40:08 2026] Mobboss says, 'die vermin'
+[Sun Apr 26 18:40:09 2026] Frobum is called to it owner.
+[Sun Apr 26 18:40:10 2026] a toughened horror has been charmed.
+[Sun Apr 26 18:40:11 2026] Your Beguiler's Directed Banishment I spell has worn off of a toughened horror.
+[Sun Apr 26 18:40:12 2026] Spireina begins casting Spire of the Juggernaut XII.
+[Sun Apr 26 18:40:13 2026] Epica activates Spire of the Minstrels I.
+[Sun Apr 26 18:40:14 2026] Sirmr`s pet kicks an aetherial hydra for 4360 points of damage.
+[Sun Apr 26 18:40:15 2026] A bixie commander hits Verifyguy for 300 points of damage.

@@ -168,6 +168,43 @@ namespace EQLogParser.Mirror
     }
   }
 
+  // One identity/side evidence event captured by the mirror (Phase 2 rules input). Facts stay
+  // factual: the event says what a parser recognized, never what it means. AuxIdx carries the one
+  // secondary string some kinds have (class for who-roster, spell for casts, channel for chat),
+  // -1 when absent.
+  internal readonly struct EvidenceFact
+  {
+    public const byte EvTargetedPlayer = 1;
+    public const byte EvTargetedNpc = 2;
+    public const byte EvJoinedRaid = 3;
+    public const byte EvLeftRaid = 4;
+    public const byte EvJoinedGroup = 5;
+    public const byte EvLeftGroup = 6;
+    public const byte EvMercJoinedGroup = 7;
+    public const byte EvRaidLeader = 8;
+    public const byte EvWhoRoster = 9;      // aux: class name
+    public const byte EvCalledToOwner = 10;
+    public const byte EvCharmStart = 11;
+    public const byte EvCharmEnd = 12;
+    public const byte EvCast = 13;          // aux: spell name
+    public const byte EvChat = 14;          // aux: channel ("guild", "group", "raid", ...)
+
+    public readonly int Seq;
+    public readonly long TimeS;
+    public readonly short NameIdx;
+    public readonly byte Kind;
+    public readonly short AuxIdx;
+
+    public EvidenceFact(int seq, long timeS, short nameIdx, byte kind, short auxIdx = -1)
+    {
+      Seq = seq;
+      TimeS = timeS;
+      NameIdx = nameIdx;
+      Kind = kind;
+      AuxIdx = auxIdx;
+    }
+  }
+
   // One taunt line. The current pipeline runs GetFight(npc) ?? Create(npc, t) on every taunt —
   // a taunt can therefore open a fight that no damage line ever touches.
   internal readonly struct TauntFact
@@ -201,10 +238,14 @@ namespace EQLogParser.Mirror
     void AddDeath(DeathFact death);
     void AddIdentity(IdentityEvent identity);
     void AddTaunt(TauntFact taunt);
+    void AddEvidence(EvidenceFact evidence);
+    short InternAux(string aux);
+    string AuxOf(short idx);
     ReadOnlySpan<DamageFact> Facts { get; }
     ReadOnlySpan<DeathFact> Deaths { get; }
     ReadOnlySpan<IdentityEvent> IdentityEvents { get; }
     ReadOnlySpan<TauntFact> Taunts { get; }
+    ReadOnlySpan<EvidenceFact> Evidence { get; }
   }
 
   // In-RAM implementation: preallocated buffers (capacity estimated from file size by the caller),
@@ -222,11 +263,16 @@ namespace EQLogParser.Mirror
     private int _identityCount;
     private TauntFact[] _taunts;
     private int _tauntCount;
+    private EvidenceFact[] _evidences;
+    private int _evidenceCount;
 
     private readonly List<string> _names = [];
     private readonly Dictionary<string, short> _nameMap = new(StringComparer.Ordinal);
     private readonly List<string> _subtypes = [];
     private readonly Dictionary<string, ushort> _subtypeMap = new(StringComparer.Ordinal);
+    // Secondary strings for evidence facts (spell/class/channel names) - small, shared namespace.
+    private readonly List<string> _auxs = [];
+    private readonly Dictionary<string, short> _auxMap = new(StringComparer.OrdinalIgnoreCase);
 
     internal DamageFactTable(int initialCapacity = 65_536)
     {
@@ -234,6 +280,7 @@ namespace EQLogParser.Mirror
       _deaths = new DeathFact[Math.Max(16, initialCapacity / 64)];
       _identities = new IdentityEvent[256];   // registry changes are rare (verifications), not per-line
       _taunts = new TauntFact[256];
+      _evidences = new EvidenceFact[256];     // identity evidence lines: common, but not per-hit
     }
 
     public int FactCount => _factCount;
@@ -246,6 +293,9 @@ namespace EQLogParser.Mirror
     public ReadOnlySpan<DeathFact> Deaths => _deaths.AsSpan(0, _deathCount);
     public ReadOnlySpan<IdentityEvent> IdentityEvents => _identities.AsSpan(0, _identityCount);
     public ReadOnlySpan<TauntFact> Taunts => _taunts.AsSpan(0, _tauntCount);
+
+    public int EvidenceCount => _evidenceCount;
+    public ReadOnlySpan<EvidenceFact> Evidence => _evidences.AsSpan(0, _evidenceCount);
 
     // Names are interned with ordinal exactness — the same keying the current pipeline uses for
     // fight map keys (ParserUtil normalization happens upstream in the parsers).
@@ -298,10 +348,29 @@ namespace EQLogParser.Mirror
       _taunts[_tauntCount++] = taunt;
     }
 
+    public void AddEvidence(EvidenceFact evidence)
+    {
+      if (_evidenceCount == _evidences.Length) Array.Resize(ref _evidences, _evidences.Length * 2);
+      _evidences[_evidenceCount++] = evidence;
+    }
+
+    public short InternAux(string aux)
+    {
+      if (string.IsNullOrEmpty(aux)) return -1;
+      if (_auxMap.TryGetValue(aux, out var idx)) return idx;
+      _auxs.Add(aux);
+      idx = (short)(_auxs.Count - 1);
+      _auxMap[aux] = idx;
+      return idx;
+    }
+
+    public string AuxOf(short idx) => idx < 0 ? null : _auxs[idx];
+
     // Approximate in-RAM size of the fact buffers (for the D2 revisit trigger, ~512 MB).
     public long EstimatedBytes => (long)_facts.Length * Marshal.SizeOf<DamageFact>()
       + (long)_deaths.Length * Marshal.SizeOf<DeathFact>()
       + (long)_identities.Length * Marshal.SizeOf<IdentityEvent>()
-      + (long)_taunts.Length * Marshal.SizeOf<TauntFact>();
+      + (long)_taunts.Length * Marshal.SizeOf<TauntFact>()
+      + (long)_evidences.Length * Marshal.SizeOf<EvidenceFact>();
   }
 }

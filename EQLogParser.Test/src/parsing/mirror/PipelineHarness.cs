@@ -47,6 +47,25 @@ internal static class PipelineHarness
         }
     }
 
+    // Mirror runs additionally feed fully-classified chat to the tap (R3 evidence). This is the
+    // same seam the WPF app uses for ChatDB — no Core-side plumbing added for it.
+    private sealed class MirrorChatSinks : IChatSink, ITriggerHook
+    {
+        private readonly CombatMirror _mirror;
+
+        public MirrorChatSinks(CombatMirror mirror) => _mirror = mirror;
+
+        public void Init()
+        {
+        }
+
+        public void Add(ChatType chat) => _mirror.HandleChat(chat);
+
+        public void CheckQuickShare(ChatType chat, string action, double beginTime)
+        {
+        }
+    }
+
     public static RunResult RunFile(string path)
     {
         var (fights, _, _, _, _) = RunCore(path, withMirror: false);
@@ -67,15 +86,47 @@ internal static class PipelineHarness
         return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
     }
 
-    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
+    // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
+    // Public because tests that only touch EQDataStore (no log run) still need the host injection.
+    internal static void EnsureDataStore()
     {
-        // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
         if (_dataStore == null)
         {
+            // Host injection mirroring App.xaml.cs (the app supplies resx labels; the default
+            // lookup returns null, which would leave EQDataStore's class maps empty headless).
+            CombatRecordLookup.ClassLabelByEnumName = ClassLabel;
             _dataStore = new EQDataStore();
             EQDataStore.Instance = _dataStore;
         }
+    }
+
+    // Canonical EQ2 class labels keyed by uppercased SpellClass enum names — the same resource
+    // keys App.xaml.cs resolves through the resx ("WAR", "SHD", ...; "*_COLOR" returns null here).
+    private static string ClassLabel(string resourceName) => resourceName switch
+    {
+        "WAR" => "Warrior",
+        "CLR" => "Cleric",
+        "PAL" => "Paladin",
+        "RNG" => "Ranger",
+        "SHD" => "Shadow Knight",
+        "DRU" => "Druid",
+        "MNK" => "Monk",
+        "BRD" => "Bard",
+        "ROG" => "Rogue",
+        "SHM" => "Shaman",
+        "NEC" => "Necromancer",
+        "WIZ" => "Wizard",
+        "MAG" => "Magician",
+        "ENC" => "Enchanter",
+        "BST" => "Beastlord",
+        "BER" => "Berserker",
+        _ => null
+    };
+
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
+    {
+        EnsureDataStore();
 
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
@@ -139,7 +190,7 @@ internal static class PipelineHarness
         }
 
         using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
-        using var processor = new LogProcessor(path, new NoOpSinks(), new NoOpSinks());
+        using var processor = new LogProcessor(path, mirror is not null ? new MirrorChatSinks(mirror) : new NoOpSinks(), new NoOpSinks());
         processor.LinkTo(items);
 
         const int batchSize = 5000;

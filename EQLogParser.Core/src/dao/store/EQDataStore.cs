@@ -63,6 +63,23 @@ namespace EQLogParser
       return result;
     }
 
+    // Class-safe spells the generic single-mask rule cannot see (docs/batch-parsing-plan.md R4
+    // tier 1). The Bard spires I-III carry class mask 0 in spells.txt and would fall through;
+    // older-era seed epic names are not in the current data file at all but stay curated because
+    // they are certain from spell identity whenever a data version carries them. "Spear of Pain"
+    // is deliberately NOT here: the current file maps it mask=Shd and that mapping stands.
+    // Must stay declared above Instance: its initializer constructs EQDataStore in .cctor and the
+    // load path reads this table.
+    private static readonly (string Spell, SpellClass Class)[] CuratedClassSpells =
+    [
+      ("Spire of the Minstrels I", SpellClass.Brd),
+      ("Spire of the Minstrels II", SpellClass.Brd),
+      ("Spire of the Minstrels III", SpellClass.Brd),
+      ("Seed of Dru", SpellClass.Dru),
+      ("Seed of Nurturing", SpellClass.Clr),
+      ("Shiv of Hate", SpellClass.Shd)
+    ];
+
     // singleton with set for unit test
     internal static EQDataStore Instance { get; set; } = new();
 
@@ -78,6 +95,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
+
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
     private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
@@ -254,6 +272,28 @@ namespace EQLogParser
         }
       }
 
+      // Spires of the <class> (10 families x 9-15 ranks, each family single-class): every rank
+      // carries the shared all-classes mask, so the loop above skips them - and that mask is also
+      // shared with off-class procs, which is why the name pattern is mandatory. Single-bit rows
+      // only: a rank bound to multiple classes is not identity evidence for any one of them.
+      foreach (var spell in _allSpellData)
+      {
+        if (spell.Name.StartsWith("Spire of the", StringComparison.OrdinalIgnoreCase)
+          && spell.ClassMask is var mask && mask != 0 && (mask & (mask - 1)) == 0
+          && _classNames.TryGetValue((SpellClass)mask, out var spireClass))
+        {
+          _spellsToClass[spell.Name] = spireClass;
+        }
+      }
+
+      foreach (var (seedName, seedClass) in CuratedClassSpells)
+      {
+        if (_classNames.TryGetValue(seedClass, out var seedClassName))
+        {
+          _spellsToClass[seedName] = seedClassName;
+        }
+      }
+
       // load NPCs
       foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\npcs.txt")))
       {
@@ -381,6 +421,14 @@ namespace EQLogParser
       }
       return null;
     }
+
+    // Catalog R4 tier 1: spell identity alone proves the caster is a player of one class, no
+    // corroboration needed. The curated epics/Minstrels and every single-bit Spire row are seeded
+    // into _spellsToClass at load precisely because their raw masks cannot express this.
+    internal static bool IsClassSafeSpellName(string name)
+      => !string.IsNullOrEmpty(name)
+        && (name.StartsWith("Spire of", StringComparison.OrdinalIgnoreCase)
+            || Array.Exists(CuratedClassSpells, s => string.Equals(s.Spell, name, StringComparison.OrdinalIgnoreCase)));
 
     public SpellData GetSpellByAbbrv(string abbrv)
     {
