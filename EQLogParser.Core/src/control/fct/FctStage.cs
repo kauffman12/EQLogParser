@@ -293,8 +293,29 @@ namespace EQLogParser
         return region.X + (region.Width / 2);
       }
 
+      /* The hang is a fact about this column, and the park below prices the lean against it. Stamped here as well as in FctLayout.Spawn so
+       * that every spine question — the layout's own throw, a conveyor row pinned at its column's mouth, a placement candidate being scored —
+       * answers for the same aligned column instead of one asked before the row knew which side it hung on. */
+      hit.HangRight = HangsRightFor(hit);
       return ParkForBend(hit, lane, LaneSpine(lane));
     }
+
+    /*
+     * Which hand of its rail a row's block hangs on, and it is the mirror of the lean this column was told to make: a column that bends
+     * LEFT turns its rows around so the digits hang RIGHT. That is not decoration — the lean and the digits want the same hand, because a
+     * rail row's block has always hung left (f3ba116f), so a leftward bend was spending air the glyphs already occupied and came out at
+     * 0 px in a 1280 window (docs/DesignNotes.md → "Which way an arc leans"). Turning the row gives the bow the whole lane and costs the
+     * column nothing it was using: numbers still line up on one spine, they line up on their left edge instead of their right.
+     *
+     * Only a named lean turns anything. `open` bends into air the block already leaves free and must draw what every file written before
+     * FctOverlayArcBend draws; bands is not a column layout at all; and a straight rail (the "line" setting, whose bow is 0) keeps the
+     * shipped right-alignment word for word.
+     */
+    internal bool HangsRightFor(FctHitState hit) =>
+      _mode is FctLayoutMode.ByType
+      && hit.Style is FctMotionStyle.Arc
+      && FctLayout.ArcBend is not FctArcBend.Open
+      && FctLayout.BendDirection(this, RegionFor(hit), LaneSpine(CategoryLane(hit))) < 0.0;
 
     /*
      * A lean said in settings.txt is a promise, and in split the lane is the only place to pay for it.
@@ -334,9 +355,13 @@ namespace EQLogParser
       var wallLeft = region.X + FctLayout.EdgePad;
       var wallRight = region.X + region.Width - FctLayout.EdgePad;
 
+      /* What a column owes the wall it leans at is its own block on that hand plus the curve — and a row that hung right to make a leftward
+         lean affordable owes nearly nothing but curve (FctLayout.RailDemands), which is why turning the row buys a deeper arc AND leaves the
+         column nearer its slot than the old reserve-sized shove ever did. */
+      var (demandLeft, demandRight) = FctLayout.RailDemands(hit);
       return FctLayout.BendDirection(this, region, slot) < 0
-        ? Math.Min(wallRight, Math.Max(slot, wallLeft + FctLayout.RailReserve() + want))
-        : Math.Max(wallLeft, Math.Min(slot, wallRight - want));
+        ? Math.Min(wallRight, Math.Max(slot, wallLeft + demandLeft + want))
+        : Math.Max(wallLeft, Math.Min(slot, wallRight - demandRight - want));
     }
 
     /*

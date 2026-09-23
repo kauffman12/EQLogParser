@@ -17,9 +17,16 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   settings word, a panel entry, and tests — the shape names saved in `settings.txt` are exactly the words the dropdown shows (`arc`, `line`,
   `spray`, `freeze`; `Straight` excepted, saved as `line`). One dial rides inside `arc`: `FctArcBend` (`open`, `out`, `left`, `right`; absent =
   `open`, which is the pre-existing curve, not a fifth shape — see docs/DesignNotes.md). An explicit word makes the lane pay: `FctStage.ParkForBend` shifts a split column off the wall it leans at, from
-  lane-level facts only (slot, lane rect, `RailReserve()`, the bow share) — never from the arriving number, or a column goes out of line with itself.
+  lane-level facts only (slot, lane rect, `FctLayout.RailDemands`, the bow share) — never from the arriving number, or a column goes out of line with itself.
   `open` parks nothing. **Assert a lean's depth, not its sign**: a bow clamped to `0.0` passes `IsTrue(bow <= 0)` and draws a straight scroll, which is
   how `left` and half of `out` shipped looking like nothing (docs/DesignNotes.md → "The lane has to pay for the lean").
+- **A leftward lean turns its rows around**: `FctHitState.HangRight` makes the rail carry a value's LEFT edge, because a right-aligned block was standing in
+  the hand its own bow needed. It is stamped at spawn (and in `FctStage.SpineFor`, for a pinned conveyor entry) and read by `BlockFromRail` (extents swap),
+  `ArcedX` (rail→centre flips) and `DrawMark` (glyph outside the outer edge) — the canvas places every other glyph from the value's centre, so nothing else
+  moves. Only a named word in split turns anything: **`open` and `line`/`Straight` draw the shipped right-alignment in every case**, and a test that sets
+  `ArcBend` should keep asserting which hand the digits hang on (`ALeftwardLeanTurnsTheRowAround`). Related: `FitSource` cuts names against the room left
+  **after** the lean spends it, and drops a name that would have stood in the curve — per-row clamping of a too-wide label was measured stealing 56 px of a
+  153 px bend, differently for every row on the spine (docs/DesignNotes.md → "Turning the row around").
 - **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`, `FctLayout.ArcBend`). Test classes in
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another

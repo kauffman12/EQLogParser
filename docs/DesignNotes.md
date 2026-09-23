@@ -2148,10 +2148,12 @@ written against, where damage sits in the *outer* lane at three quarters of its 
 out inward. The word was never stable because it reads the lane, and the lane depends on which column you gave the category.
 
 So a named direction is now a promise, and the lane pays: **`ParkForBend` moves a column off the wall it leans at** until the widest row it can roll fits
-there with the full bend on top — `wall + RailReserve() + territory * ArcBowFrac`, bounded by the lane's own walls. Measured after the fix at 1280,
-one category per half: `out` parks the healing column from spine 155 to **375** and draws **-210.8** where it used to draw 0.0, while its damage column
-stands still at 815 and draws **+210.8** — a mirrored pair of equal depth, which is the "arc away from my target frame" look. `left` parks both (815 →
-**1035**) and bows -210.8 / -210.8. Same at 1920: halfW 940 → heals 235 → **484**, ±319.6 both halves.
+there with the full bend on top, bounded by the lane's own walls. What it has to buy is `FctLayout.RailDemands`: the hand the block hangs on owes its own
+digits plus `RailReserve()`, and the bare hand owes only what crosses the rail (an inline label). Measured after that first fix at 1280, one category per
+half: `out` parks the healing column from spine 155 to **375** and draws **-210.8** where it used to draw 0.0. `left` parks both and bows -210.8 / -210.8;
+at 1920 the healing column goes 235 → **484** for its ±319.6.
+
+That worked, and it was buying the wrong thing: it paid in column movement for air the row itself could have vacated. See the next section.
 
 Three rules keep that from becoming the park-shove that once put a column out of line with itself (`75e2992a`, which moved the rail *per row* and starved
 every right-seated name to `"(Des"`):
@@ -2169,10 +2171,65 @@ every right-seated name to `"(Des"`):
 
 Rows in flight keep the bow they were born with, for the same reason a resize maps an existing bow instead of recomputing it: the vertex is arithmetic from
 the spawn, and re-bending mid-flight tears one number's path in half. Bands takes none of this — it pre-pays its bow at spawn (`FctLayout.Spawn`), and
-could not be handed an arc anyway (`ClampShape`, asserted by `FountainIsNeverHandedAnArcToLean`). `FctArcBendTest` pins the lot: the shipped -319.6/+319.6
-pair so a change of default has to be a decision, the mirrored signs of `out`, the **full depth** each explicit word draws at 1280/1920/2560 on both
-one-column and two-column halves (the guard that was missing — every older assertion read a sign, and a bow clamped to exactly zero passes "not positive"),
-and the rail inside `[SideMin, SideMax]` across twenty-four steps of every flight.
+could not be handed an arc anyway (`ClampShape`, asserted by `FountainIsNeverHandedAnArcToLean`).
+
+### Turning the row around: `FctHitState.HangRight`
+
+The park above worked, and a reader pointed out that it was buying the wrong thing: *"could we change rows to be left aligned when arcing out to the left?
+Basically align the row as needed for the arc options, leave straight as is."* Right-alignment exists so a column is an odometer — ones digits under ones
+digits, which is the one text alignment anybody who reads parse numbers wants — and nothing in that requirement says which side of the rail the digits sit
+on. Turn a left-leaning column around and its numbers line up on their **left** edge instead, in the exact hand its own curve wanted.
+
+One flag, stamped before the spine is asked for (`FctLayout.Spawn`, and in `FctStage.SpineFor` too so a conveyor row pinned at its column's mouth agrees):
+
+- **`BlockFromRail` builds outward/inward and maps them by the hang.** Everything downstream already reads that one function — Spawn's reserved reach,
+  `AssignTravel`'s cap, `ParkForBend`'s debt, `FitSource`'s budget — so the swap propagates instead of being re-derived four times;
+- **`FctMotion.ArcedX` converts rail→centre the other way** (`rail + ValueWidth/2` rather than `rail − ValueWidth/2`), and that is the entire drawing
+  change, because the canvas places every glyph from that centre: the halo, all three label seats, the pop pivot. A turned row keeps its internal
+  arrangement exactly — a right-seated name still sits right of its amount — and only swaps which side of the rail the whole arrangement stands on;
+- **the special-event mark is the one exception**, since it hangs outside the number's *outer* edge (`FctSkiaCanvas.DrawMark`): turned rows put it on the
+  right, which is the side `BlockFromRail` charges `IconAllowance` on. Drawn box and reserved box stay one box.
+
+Who turns: an **arc** in **split** whose dial names a direction (`left`, `right`, `out`) and whose bow comes out negative. `line` never turns — it has no
+lean to make air for, and its exact geometry is the one every player already knows, so it draws the shipped alignment under all four words
+(`AStraightRailKeepsTheShippedAlignmentUnderEveryLean`). `open` never turns either: its whole bargain is bending into room the block already leaves free,
+and it must draw what every `settings.txt` written before this key draws (`ALeftwardLeanTurnsTheRowAround`, `OutHangsEachHalfOffTheHandItsCurveLeavesFree`).
+The consequence worth stating out loud: on `out`, the two halves are aligned *differently from each other* — that is what a mirrored pair means once the
+curves are equal, and every row inside one column still shares one edge.
+
+Measured at 1280x1080, one category per half (spine / hang / bow), current code:
+
+| dial | damage column | healing column |
+|---|---|---|
+| `open` | 1125.0 · hangs left · **+147.0** | 164.4 · hangs left · **+210.8** |
+| `out` | 1061.2 · hangs left · **+210.8** | 218.8 · **hangs right** · **-210.8** |
+| `left` | 1115.6 · **hangs right** · **-210.8** | 218.8 · **hangs right** · **-210.8** |
+| `right` | 1061.2 · hangs left · **+210.8** | 164.4 · hangs left · **+210.8** |
+
+and at 1920 the turned columns sit at 1685.0 (`left`) and **327.6** (`out`/`left`, was 484 under the reserve-sized park) for the same ±319.6. So the row
+turn costs the column *less* movement than the park alone did and buys the same depth, because `RailDemands` leaves a turned row nearly nothing to pay on
+the hand it bends at: `out`'s healing rail parks at **218.8** instead of 375 for its full **-210.8**.
+
+### A name and a lean cannot have the same pixels
+
+Making the fixture carry source names — as ingest does, `FitSource` right after placement — turned up a bug older than any of the above: the cap sizes a bow
+against the **amount** (so all rows of a column bend identically) while `ArcedX` clamps against the whole block **including the words**, so a name standing
+in the lean's path had the bend taken out of it at draw time, *row by row*. Measured at 1024 px, one column per half, right-seated label: the vertex drew at
+**959.7** of the **1016.0** the column was given — 56.3 px of a 153.6 px bow simply absent, and absent by a different amount for `"(Crush)"` than for
+`"(Ethereal Fire XIII Rk. III)"`, which is one spine drawing two paths.
+
+`FitSource` now charges the rooms it cuts against: each hand loses what the bow spends there, so names are trimmed to what the drawn curve truly leaves
+(`ANameStandingInTheLeansPathStepsAside`). And if a lean consumed the hand entirely — floor-of-a-name plus ellipsis still won't fit — the **name is dropped
+rather than the shape shortened**: cutting below the floor would state a false word, letting words stand steals the curve per row, and neither is as good as
+drawing no annotation. A column with no lean keeps the old floor-plus-ellipsis answer exactly, where the rail's own clamp absorbs the overflow as it always
+has, so `line` and every non-arc label are untouched.
+
+`FctArcBendTest` pins the lot: the shipped -319.6/+319.6 pair so a change of default has to be a decision, the mirrored signs of `out`, the **full depth**
+each explicit word draws at 1280/1920/2560 on both one-column and two-column halves (the guard that was missing — every older assertion read a sign, and a
+bow clamped to exactly zero passes "not positive"), which hand a row hangs on in every word, and a sweep over widths × tiling × **all four label seats** that
+asserts the **whole drawn box** (not the centre) inside `[SideMin, SideMax]` across twenty-four steps of every flight *and* that the vertex lands where the
+column's bow says it should. The two deeper ones exist because the shallower ones passed while the feature was broken: box-not-centre catches a mirror that
+keeps a centre honest while its digits cross a wall, and vertex-depth catches a curve silently eaten by a label.
 
 ## Damage meter setup window
 

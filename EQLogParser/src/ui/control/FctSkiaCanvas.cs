@@ -815,7 +815,12 @@ namespace EQLogParser
 
       var size = hit.ValueFontSize * FctStyle.IconSizeFrac;
       var gap = hit.ValueFontSize * FctStyle.IconGapFrac;
-      var left = (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
+      /* The mark hangs outside the number's OUTER edge, and which edge that is belongs to the row's hang: a column that turned its digits right to
+         lean left (FctHitState.HangRight) would otherwise draw its crit glyph across its own rail, into the hand the geometry reserved for nothing.
+         This is the same side FctLayout.BlockFromRail charges IconAllowance on — drawn box and reserved box stay one box. */
+      var left = hit.HangRight
+        ? textCenterX + (hit.ValueWidth / 2.0) + gap
+        : (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
       var topOfMark = top + ((FctLayout.TextHeight(hit) - size) / 2.0);
       var scale = size / FctMarks.Unit;
 

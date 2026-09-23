@@ -40,7 +40,11 @@ namespace EQLogParser
       FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height));
 
     /* The same pass over a stage the caller picked, so a two-column half can be asked about as easily as a one-column one. */
-    private static FctHitState Lean(FctArcBend bend, bool heal, FctStage stage)
+    private static FctHitState Lean(FctArcBend bend, bool heal, FctStage stage) => Lean(bend, heal, stage, FctMotionStyle.Arc);
+
+    /* The same pass with the shape stated, so `line` can be asked whether a lean moves it (it must not: a rail with no bow has no hand to make air
+       for, and the shipped right-alignment is what every straight column draws today). */
+    private static FctHitState Lean(FctArcBend bend, bool heal, FctStage stage, FctMotionStyle style)
     {
       FctLayout.ArcBend = bend;
       var hit = new FctHitState
@@ -48,7 +52,7 @@ namespace EQLogParser
         Lane = heal ? FctLane.HealingDealt : FctLane.DamageDealt,
         Incoming = false,
         Heal = heal,
-        Style = FctMotionStyle.Arc,
+        Style = style,
         Source = "Probe",
         Value = 12345,
       };
@@ -59,6 +63,10 @@ namespace EQLogParser
       FctLayout.Spawn(hit, stage, new Random(7));
       var spine = FctLayout.ColumnCentre(hit, stage);
       FctLayout.Spawn(hit, stage, new Random(7), (spine, stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY));
+
+      /* Exactly what ingest does after a row is placed: the label is cut to the room the rail left on each hand (FctIngest). A fixture that skipped
+         this would measure rows of digits only, and every "did the words steal the bend" assertion below would pass while proving nothing. */
+      FctLayout.FitSource(hit, FctLayout.EstimateTextWidth);
       return hit;
     }
 
@@ -263,8 +271,195 @@ namespace EQLogParser
       Assert.AreEqual(235.0, Math.Round(healing.X0, 1), "the healing column still stands at its slot's centre (measured at 1920px)");
 
       var parked = Lean(FctArcBend.Left, heal: true);
-      Assert.IsTrue(parked.X0 > healing.X0 + 100,
+
+      /* A named lean does move the column, but far less than it used to: a row that turns around to lean left leaves its own digits on the
+         other side of the rail, so the bill at the wall it leans at is the curve and not the curve plus a column of glyphs. Measured at this
+         width: 235.0 (open) to 327.6 — where charging the reserve as well cost 484. */
+      Assert.IsTrue(parked.X0 > healing.X0 + 50,
         $"a leftward lean has to move the column off the wall it leans at (spine {parked.X0:F1} vs open's {healing.X0:F1})");
+    }
+
+    /*
+     * Which way a row's own digits hang, which is the half of a lean nobody had asked about until the lean was real. A rail row has hung LEFT of
+     * its rail since f3ba116f, so a leftward bend was sweeping the hand the glyphs already stood in: that is why `left` measured 0 px at 1280 while
+     * 448 px of air sat unused on the right of the same rail (docs/DesignNotes.md → "Which way an arc leans"). The fix is to turn the row around,
+     * and this asserts the turning is real in the one place a player sees it — where the number sits relative to the spine it climbs along.
+     */
+    [TestMethod]
+    public void ALeftwardLeanTurnsTheRowAround()
+    {
+      var turned = Lean(FctArcBend.Left, heal: false);
+      var shipped = Lean(FctArcBend.Open, heal: false);
+
+      Assert.IsTrue(turned.HangRight, "a column told to lean left has to hang its digits right, into the air the lean is spending");
+      Assert.IsFalse(shipped.HangRight, "`open` draws what every file written before this dial draws: digits left of the rail");
+
+      /* Rail to centre, both ways, measured at rest (t=0) where the bow contributes nothing and only the hang moves the number. Which HAND of the
+         spine the digits sit on is the whole difference between a curve and a straight line, so it gets asserted at both ends of the flight: at rest
+         on the rail, and at the vertex, where the rail itself has moved by exactly the bow. */
+      Assert.AreEqual(turned.X0 + (turned.ValueWidth / 2.0), FctMotion.ArcedX(turned, 0.0), 1.0,
+        "a turned row's digits hang right of its rail");
+      Assert.AreEqual(turned.X0 + turned.Bow + (turned.ValueWidth / 2.0), FctMotion.ArcedX(turned, 0.5), 1.0,
+        "and still hang right at the vertex, where the lean is spending the air they vacated");
+      Assert.AreEqual(shipped.X0 - (shipped.ValueWidth / 2.0), FctMotion.ArcedX(shipped, 0.0), 1.0,
+        "and an unturned one hangs left of it, exactly as shipped");
+    }
+
+    /* `out` is the mirrored pair a player means by "the standard arc": the halves bend apart, and each one's digits stand on the hand the curve
+       leaves free — so the two columns are aligned differently from each other ON PURPOSE, and every row inside a column still shares one edge. */
+    [TestMethod]
+    public void OutHangsEachHalfOffTheHandItsCurveLeavesFree()
+    {
+      var damage = Lean(FctArcBend.Out, heal: false);
+      var healing = Lean(FctArcBend.Out, heal: true);
+
+      Assert.IsFalse(damage.Bow < 0, $"the right-hand column should bend outward (actual: {damage.Bow:F1})");
+      Assert.IsTrue(healing.HangRight, "the left-hand column bends left, so its digits hang right of the rail");
+      Assert.IsFalse(damage.HangRight, "while the right-hand one keeps the shipped hang");
+    }
+
+    /* Straight is not a bow with the bend turned down by accident — it has no lean to make air for, and it is the shape whose exact geometry every
+       player already knows. So the dial may not reach it: no turn, no bow, at any width and in any word. */
+    [TestMethod]
+    public void AStraightRailKeepsTheShippedAlignmentUnderEveryLean()
+    {
+      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      {
+        foreach (var heal in new[] { false, true })
+        {
+          var hit = Lean(bend, heal, FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, Width, Height),
+            FctMotionStyle.Straight);
+
+          Assert.IsFalse(hit.HangRight, $"{bend} turned a straight column around; only a bend needs the air");
+          Assert.AreEqual(0.0, hit.Bow, 1e-9, $"{bend} gave a straight column a bow");
+          Assert.AreEqual(hit.X0 - (hit.ValueWidth / 2.0), FctMotion.ArcedX(hit, 0.5), 1.0,
+            $"{bend} moved a straight column's digits off the shipped edge");
+        }
+      }
+    }
+
+    /* The block's extents follow the hang and nothing else does: no words means nothing crosses to the bare hand, and the digits plus their mark sit
+       entirely on the hanging one. Get this inverted and every clamp below protects the empty side of the rail while the drawn row walks through a wall. */
+    [TestMethod]
+    public void ATurnedRowReachesItsOwnHandOnly()
+    {
+      var turned = Lean(FctArcBend.Left, heal: false);
+      var (left, right) = FctLayout.BlockFromRail(turned, 0);
+
+      Assert.AreEqual(0.0, left, 1e-6, "a turned row with no words leaves the rail's left hand empty");
+      Assert.AreEqual(turned.ValueWidth + turned.IconAllowance, right, 1e-6, "and carries its digits, and its mark, on the right");
+
+      var shipped = Lean(FctArcBend.Open, heal: false);
+      var (shippedLeft, shippedRight) = FctLayout.BlockFromRail(shipped, 0);
+      Assert.AreEqual(0.0, shippedRight, 1e-6, "which is the shipped arrangement read backwards");
+      Assert.AreEqual(shipped.ValueWidth + shipped.IconAllowance, shippedLeft, 1e-6);
+    }
+
+    /* A name still has to fit the hand it draws on. FitSource is rail-relative so a turned column should cut its names against the right walls by
+       itself — but that is exactly the kind of "by itself" a swap breaks quietly, and a too-wide name on a turned row is drawn across the lane seam.
+       The measurer is synthetic (glyphs per character) for the same reason as FctLabelFitTest: this is about the budget, not the font. */
+    [TestMethod]
+    public void ATurnedColumnCutsItsNamesToTheHandItHas()
+    {
+      foreach (var seat in new[] { FctLabelSide.Left, FctLabelSide.Right, FctLabelSide.Below })
+      {
+        FctLayout.LabelSide = seat;
+        var turned = Lean(FctArcBend.Left, heal: false);
+
+        FctLayout.FitSource(turned, (text, size) => text.Length * size * 0.5);
+
+        var (left, right) = FctLayout.BlockFromRail(turned, turned.SourceWidth);
+        Assert.IsTrue(left <= turned.X0 - turned.SideMin + 0.5,
+          $"{seat} words on a turned column reach {left:F1} left of a rail with {turned.X0 - turned.SideMin:F1} to spare");
+        Assert.IsTrue(right <= turned.SideMax - turned.X0 + 0.5,
+          $"{seat} words on a turned column reach {right:F1} right of a rail with {turned.SideMax - turned.X0:F1} to spare");
+      }
+    }
+
+    /* The whole drawn box, every word, every label seat, every width, the whole flight — and this time the BOX rather than the centre the older sweeps
+       read. A mirror is exactly the kind of change that keeps a centre honest while its digits cross a wall, which is why the assertion carries
+       ValueWidth on both sides; and it reads every seat because a seat is where the words live, and words are what can quietly steal a bend. */
+    [TestMethod]
+    public void EveryLeanKeepsItsWholeBoxInsideTheLane()
+    {
+      foreach (var w in new[] { 1024.0, 1280.0, Width, 2560.0 })
+      {
+        var stages = new (string Name, FctStage Stage)[]
+        {
+          ("one column per half", FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height)),
+          ("two columns left",
+            FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height,
+              healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1)),
+        };
+
+        foreach (var (name, stage) in stages)
+        {
+          /* Every label seat, because the words are the widest part of a row and the clamp that keeps them in is the same one that could take the bend away. */
+          foreach (var seat in new[] { FctLabelSide.None, FctLabelSide.Left, FctLabelSide.Right, FctLabelSide.Below })
+          {
+            FctLayout.LabelSide = seat;
+
+            foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+            {
+              foreach (var heal in new[] { false, true })
+              {
+                var hit = Lean(bend, heal, stage);
+
+                for (var step = 0; step <= 24; step++)
+                {
+                  var centre = FctMotion.ArcedX(hit, step / 24.0);
+                  var half = hit.ValueWidth / 2.0 + hit.IconAllowance;
+                  Assert.IsTrue(centre - half >= hit.SideMin - 1 && centre + half <= hit.SideMax + 1,
+                    $"{bend} at {w}px ({(heal ? "heals" : "damage")}, {name}, {seat} label) drew a box across its wall at t={step / 24.0:F2}: " +
+                    $"[{centre - half:F1}, {centre + half:F1}] against [{hit.SideMin:F1}, {hit.SideMax:F1}]");
+
+                  /* And the shape is the one the column was promised. Containment alone would pass a curve silently shortened at its vertex: the cap sizes
+                     a bow against the AMOUNT (so every row of a column bends identically) while ArcedX clamps against the whole block INCLUDING the words,
+                     so a name wide enough to cross the rail steals the bend from the row that carries it — and then two rows on one spine trace two paths,
+                     which is the weld promise this whole engine is built on. */
+                  if (step == 12 && hit.Style is FctMotionStyle.Arc)
+                  {
+                    var railAtVertex = hit.HangRight
+                      ? centre - (hit.ValueWidth / 2.0)
+                      : centre + (hit.ValueWidth / 2.0);
+                    Assert.AreEqual(hit.X0 + hit.Bow, railAtVertex, 0.5,
+                      $"{bend} at {w}px ({(heal ? "heals" : "damage")}, {name}, {seat} label) drew its vertex at {railAtVertex:F1} instead of " +
+                      $"{hit.X0 + hit.Bow:F1} \u2014 the row's label ate {(hit.X0 + hit.Bow) - railAtVertex:F1} px of its bend");
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    /*
+     * What happens when a name and a lean want the same pixels, which is a question the engine had never been asked on purpose. The measured case is
+     * a 1024 px overlay, one column per half, names seated right: the curve sweeps the hand the words stand in, and before this rule the drawn vertex
+     * landed at 959.7 of the 1016.0 the column was given — 56.3 px of bend quietly missing, AND missing by a different amount on every row depending on
+     * how long that row's name happened to be, which is one spine drawing two paths. The rule now: the shape keeps its shape and the annotation steps
+     * out (FctLayout.FitSource), because a name with no room would have to be cut below what still reads as a word, and hiding an annotation states
+     * no falsehood while a column that misaligns itself cannot be un-seen.
+     */
+    [TestMethod]
+    public void ANameStandingInTheLeansPathStepsAside()
+    {
+      FctLayout.LabelSide = FctLabelSide.Right;
+
+      var tight = Lean(FctArcBend.Open, heal: false, 1024.0);
+      Assert.IsNull(tight.SourceLabel,
+        $"a name that cannot fit the lean's path has to be dropped, not drawn short and at the curve's expense (it measured {tight.SourceWidth:F1} px)");
+
+      /* Same narrow corner, same seat, no lean: nothing stands in the name's way, so it keeps the old answer — cut to the floor with an honest ellipsis
+         and let the rail's clamp absorb the overflow. The refusal belongs to the bow, not to narrowness. */
+      var straight = Lean(FctArcBend.Open, heal: false,
+        FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, 1024, Height), FctMotionStyle.Straight);
+      Assert.IsNotNull(straight.SourceLabel, "a column with no bend has nothing in a name's way, so the name still draws");
+
+      // and a roomy overlay pays for both without anyone noticing
+      var roomy = Lean(FctArcBend.Open, heal: false, 2560.0);
+      Assert.IsNotNull(roomy.SourceLabel, "a column with air keeps its names AND its curve");
     }
 
     /* Parked columns are still inside their lane: the vertex at half height is where a lean that overspends would show, so sweep the whole flight of
@@ -301,6 +496,19 @@ namespace EQLogParser
         FctLayout.ArcBend = bend;
         Assert.IsFalse(FctMotionStyles.IsRail(FctOverlaySettings.ClampShape(FctLayoutMode.Bands, FctMotionStyle.Arc)),
           $"{bend} should not be able to smuggle an arc into fountain");
+      }
+    }
+    /* Is the sweep above carrying words at all? A row whose label never got measured would make every seat assertion below pass on digits alone, which
+       is a test that proves nothing while looking like coverage. This pins the fixture: with a seat set and a source named, the row must arrive with a
+       measured label wider than nothing. */
+    [TestMethod]
+    public void TheSweepRowsReallyCarryWords()
+    {
+      foreach (var seat in new[] { FctLabelSide.Left, FctLabelSide.Right, FctLabelSide.Below })
+      {
+        FctLayout.LabelSide = seat;
+        var hit = Lean(FctArcBend.Left, heal: false);
+        Assert.IsTrue(hit.SourceWidth > 10, $"{seat} measured a label of {hit.SourceWidth:F1} px on a source named \"Probe\"");
       }
     }
   }
