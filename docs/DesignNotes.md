@@ -2735,6 +2735,75 @@ marked active until further log lines arrive to expire it, so such a guard would
 the stats trigger can cost anyway. And `LargeObjectHeapCompactionMode.CompactOnce` is set on every pass because the runtime clears it afterwards —
 leaving compaction permanently on would slow the collections the runtime picks for itself, which a test now refuses to let happen silently.
 
+### What a loaded raid costs in memory
+
+A loaded capture keeps its records, so a raid night that restates the same swing ten thousand times can hold ten thousand objects saying one thing.
+Two caches have always existed against that — `FightManager._damageCache` for damage, `HealingLineParser._healCache` for heals — and both were
+`Dictionary<Record, Record>` keyed to themselves. Getting this right took measuring the wrong beliefs out of them rather than adding a third cache.
+The two pieces are `RepeatStore<T>` (the shared instances) and `RepeatFilter` (a Bloom filter over value hashes), both in
+`EQLogParser.Utils/src/`, named next to `StringCache` because they solve the same problem one level up.
+
+Measured on one player's capture — `eqlog_Kizant_xegony.txt`, 6,066,108 lines, 3,359,001 damage events and 461,467 heals, 26 Apr → 6 May 2026 —
+driven through the real pipeline (`DamageLineParser`/`HealingLineParser` and the real `FightManager`, so the `Attacker` rewrite happens too), keeping
+every damage record reachable the way grids and fight blocks do, then a full blocking collection with LOH compaction and the heap that survives read
+back. One process per variant; the variants differ only in the cache:
+
+| what the cache does | damage entries held | heal entries held | heap after GC | RSS | parse wall |
+|---|---|---|---|---|---|
+| today: `Dictionary<Record, Record>`, every distinct value entered | 1,612,020 | 380,315 | 622 MB | ~720 MB | 14.5 s |
+| **A**: `HashSet<Record>` — what a self-keyed dictionary already is | 1,612,020 | 380,315 | **600 MB** | ~713 MB | 14.6 s |
+| **B**: plus the gate — a value takes an entry only once it has been seen before | 261,947 | 81,213 | **545 MB** | ~627 MB | 14.8 s |
+
+A is worth 22 MB and B another 55, for 77 MB of heap and roughly 95 MB of working set on a night like this one, bought with 6.25 MB of bits
+(`ExpectedDamageOffers` 4 M, `ExpectedHealOffers` 1 M) and about 2% of parse wall. This capture is *not* the 10,015,348-line file the GC matrix above was
+measured on — that one is no longer on disk — so its percentages are not comparable with the 47.3% damage dedup rate quoted there; it is a smaller
+capture (3.36 M damage events against 4.80 M) and every number in this section belongs to it alone.
+
+**The belief A killed: a shared record does not save a list slot.** The price of dropping a duplicate was being quoted as "record + list slot, ~104 B".
+The store keeps an entry for every event whether or not the record behind it is shared, so the 40 B of list slot is a floor no cache can touch, and what
+a deduped repeat actually reclaims is the object: measured 64 B. That is also why deleting the caches outright was never on the table — but it is worth
+saying how narrow that was.
+
+**The belief B killed: that the entries were the cheap half.** `FightManager`'s comment claimed "about a hundred MB of entries against the two hundred
+the dropped records save". Priced properly and measured, an entry costs about as much as the object it protects — 50 B in a self-keyed dictionary, 36 B
+in a `HashSet`, with 22.8 B of `Dictionary` internals measured per entry against 6.9 B of bucket array for a set — and the cache's *hit rate* decides
+whether it pays. Of 1,609,080 distinct damage records in this capture, **1,348,947 (83.8%) are never restated**: their entries answer no lookup ever
+again while the records stay in the store regardless. Ungated, all that machinery beat *no cache at all* by 16 MB. Declining to remember a value until it
+repeats is where the memory actually was.
+
+Why a Bloom filter can sit next to a cache that must not merge events: it is wrong in only one direction, and neither direction touches a record's
+content. A false "seen" buys an entry nobody needed, which is exactly what the cache did before this class existed; a false "new" would cost one shared
+instance for a repeat — while its bits stand it does not happen, which `RepeatFilterTest.NeverForgetsWhatItMarked` pins over 10k values. Nothing reads
+a value out of the filter, and no answer here changes what a grid totals: sharing is invisible because the records are equal by value, and
+`TryGet_NeverHandsOutADifferentValue` holds that line — whatever comes back is the caller's own instance or one equal to it.
+
+Two decisions inside it, both about not growing. When a window of sightings runs out the filter **begins again instead of doubling**: memory is what it
+exists to protect, and forgetting costs at most one shared instance per value that happens to straddle the reset. Clearing cached data clears the history
+with it (`ClearCaches` → `RepeatStore.Clear`) rather than leaving stale bits that would make every sighting in the next session look like a repeat.
+And the window is counted in *sightings*, not bits — ten bits and four probes reach the design's ~1-in-a-thousand false-positive rate exactly at the end
+of it, which is where the reset is set; counting bits instead would run it deep past saturation, where it says "seen" to everything and the cache
+silently degrades into the ungated one.
+
+**The behavior change players can see**: sharing now starts on a value's *third* sighting, not its second. The first two occurrences of a heal are
+distinct objects — one extra object per distinct record, which is what the 84% of never-restated values save many times over. The old test asserted
+`AreSame` on the second line and was renamed to `Process_RepeatedHeal_SharesOneRecordInstanceFromTheThirdSighting` rather than quietly loosened.
+The heal cache and its filter are static, so that test also became order-dependent in a way nothing else in the suite was: whichever class reached
+`HealingLineParser` first decided whether a heal looked like a repeat. `LineParsersTest` now calls `ClearCaches()` in setup and cleanup; any new test
+that asserts on shared instances has to do the same, or it passes only in its own position in the run order.
+
+**Accepted wart, unfixed**: `HandleDamageProcessed` rewrites `record.Attacker` to `Labels.Unk` about a hundred lines *after* the record was offered to
+the cache (the unknown-spell fix), so for those events the entry just taken can never be found by hash again, and every earlier event sharing the
+instance reads back `Unk`. It is visible in the numbers above: the ungated runs hold 1,612,020 damage entries where this capture has 1,609,080 distinct
+damage values, so about 2,900 entries are ones no lookup can reach — small here, and it grows with however many unknown-spell events a night carries.
+It predates this change and behaves identically under it; un-tangling it means settling the record before offering it, which would change what earlier
+unknown-spell rows display. Not a memory decision — whoever takes it up should decide it as a display one.
+
+What did *not* change, deliberately: the name ids stay. Converting `HitRecord`'s `int` ids to pre-hashed values, or freezing records so they cannot be
+rewritten after caching, measured larger than A+B together, but `StringCache.GetOrAdd` title-cases the spelling every view and export shows — a damage
+row would keep its raw `foob's sword` where it used to read `Foob's Sword`. That is a rename of other people's data to save bytes, and it needs its own
+decision. And the interning inside `GetCachedDamageRecord` is not part of the memory story at all: it is a spelling service that happens to live in the
+miss path, which is why the lookup and the offer are two calls rather than one helper that would settle names for a value already held.
+
 ### Reading a report
 
 One real line, every twenty seconds while an instrumented window is open, taken from the end of a 69 minute session:
