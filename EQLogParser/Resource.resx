@@ -273,6 +273,9 @@
   <data name="SPELL_TYPES_SELECTED" xml:space="preserve">
     <value>Spell Types</value>
   </data>
+  <data name="TIMELINE_OPTIONS_SELECTED" xml:space="preserve">
+    <value>Timeline Options</value>
+  </data>
   <data name="TRIGGER_CHARACTER_DELETE" xml:space="preserve">
     <value>Delete Character Settings</value>
   </data>

@@ -28,6 +28,13 @@ namespace EQLogParser
     private const ushort TankAdps = 4;
     private const ushort HealingAdps = 8;
     private const ushort AnyAdps = CasterAdps + MeleeAdps + TankAdps + HealingAdps;
+    private const string CasterAdpsLabel = "Caster ADPS";
+    private const string MeleeAdpsLabel = "Melee ADPS";
+    private const string HideSelfOnlyLabel = "Hide Spells Only You See";
+    private const string HideSelfOnlyTip =
+      "Include spells that only have a message that the player sees.\n" +
+      "Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes\n" +
+      "it easier to compare spell that players have in common";
     private const double StartTimeOffset = 90;
     private readonly string[] _types = ["Defensive Skills", "ADPS", "Healing Skills"];
     private readonly Dictionary<string, SpellRange> _spellRanges = [];
@@ -77,12 +84,6 @@ namespace EQLogParser
             titleLabel2.Content = _selectedStats[1].OrigName + "'s ";
             titleLabel3.Content = _types[_timelineType] + " | " + currentStats.ShortTitle;
             break;
-        }
-
-        if (_timelineType is 0 or 2)
-        {
-          showMeleeAdps.Visibility = Visibility.Hidden;
-          showCasterAdps.Visibility = Visibility.Hidden;
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
@@ -164,8 +165,7 @@ namespace EQLogParser
         }
       }
 
-      showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = _spellRanges.Count > 0;
-      hideSelfOnly.IsEnabled = _spellRanges.Count > 0 && _selectedStats.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
+      BuildOptions();
       Display();
       LoadLayoutsIntoSelector();
     }
@@ -368,9 +368,7 @@ namespace EQLogParser
       _currentShowCasterAdps = true;
       _currentShowMeleeAdps = true;
       _pixelsPerSecond = 1;
-      hideSelfOnly.IsChecked = true;
-      showCasterAdps.IsChecked = true;
-      showMeleeAdps.IsChecked = true;
+      BuildOptions();
       Display();
       LoadLayoutsIntoSelector();
     }
@@ -388,10 +386,7 @@ namespace EQLogParser
       _currentShowMeleeAdps = layout.ShowMeleeAdps;
       _pixelsPerSecond = layout.PixelsPerSecond;
 
-      hideSelfOnly.IsChecked = layout.HideSelfOnly;
-      showCasterAdps.IsChecked = layout.ShowCasterAdps;
-      showMeleeAdps.IsChecked = layout.ShowMeleeAdps;
-
+      BuildOptions();
       Display();
     }
 
@@ -533,24 +528,73 @@ namespace EQLogParser
       Application.Current.Resources["EQTimelineContentWidth"] = contentWidth;
     }
 
-    private void OptionsChange(object sender, RoutedEventArgs e)
+    // The options sit in one multi-select dropdown, and only the ones that can mean something here are
+    // offered: caster/melee belong to the ADPS timeline, "spells only you see" needs you in the group, and
+    // none of them exist before there is a spell row. Whatever is not offered keeps the value it had — a
+    // layout can still set those flags, they just have no control on this timeline.
+    private void BuildOptions()
+    {
+      var hasRows = _spellRanges.Count > 0;
+      var isPlayer = _selectedStats?.Exists(stats => stats.OrigName == ConfigUtil.PlayerName) ?? false;
+      var items = new List<ComboBoxItemDetails>();
+
+      if (hasRows && _timelineType == 1)
+      {
+        items.Add(new ComboBoxItemDetails(_currentShowCasterAdps, CasterAdpsLabel));
+        items.Add(new ComboBoxItemDetails(_currentShowMeleeAdps, MeleeAdpsLabel));
+      }
+
+      if (hasRows && isPlayer)
+      {
+        items.Add(new ComboBoxItemDetails(_currentHideSelfOnly, HideSelfOnlyLabel) { ToolTip = HideSelfOnlyTip });
+      }
+
+      timelineOptions.ItemsSource = items;
+      timelineOptions.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+      UiElementUtil.SetComboBoxTitle(timelineOptions, Resource.TIMELINE_OPTIONS_SELECTED);
+    }
+
+    private void OptionsChange(object sender, EventArgs e)
     {
       // ignore during init
-      if (hideSelfOnly == null || showCasterAdps == null || showMeleeAdps == null)
+      if (timelineOptions?.Items == null)
       {
         return;
       }
 
-      // check for changes
-      if (_currentHideSelfOnly != hideSelfOnly.IsChecked ||
-          _currentShowCasterAdps != showCasterAdps.IsChecked ||
-          _currentShowMeleeAdps != showMeleeAdps.IsChecked)
+      var hideSelfOnly = _currentHideSelfOnly;
+      var showCasterAdps = _currentShowCasterAdps;
+      var showMeleeAdps = _currentShowMeleeAdps;
+
+      foreach (var item in timelineOptions.Items.Cast<ComboBoxItemDetails>())
       {
-        _currentHideSelfOnly = hideSelfOnly?.IsChecked == true;
-        _currentShowCasterAdps = showCasterAdps?.IsChecked == true;
-        _currentShowMeleeAdps = showMeleeAdps?.IsChecked == true;
-        Display();
+        switch (item.Text)
+        {
+          case HideSelfOnlyLabel:
+            hideSelfOnly = item.IsChecked;
+            break;
+          case CasterAdpsLabel:
+            showCasterAdps = item.IsChecked;
+            break;
+          case MeleeAdpsLabel:
+            showMeleeAdps = item.IsChecked;
+            break;
+        }
       }
+
+      // check for changes
+      if (_currentHideSelfOnly == hideSelfOnly && _currentShowCasterAdps == showCasterAdps &&
+          _currentShowMeleeAdps == showMeleeAdps)
+      {
+        return;
+      }
+
+      _currentHideSelfOnly = hideSelfOnly;
+      _currentShowCasterAdps = showCasterAdps;
+      _currentShowMeleeAdps = showMeleeAdps;
+
+      UiElementUtil.SetComboBoxTitle(timelineOptions, Resource.TIMELINE_OPTIONS_SELECTED);
+      Display();
     }
 
     private void RefreshClick(object sender, RoutedEventArgs e)
