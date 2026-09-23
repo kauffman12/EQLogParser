@@ -2,6 +2,7 @@ using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -295,13 +296,28 @@ namespace EQLogParser
       {
         var started = false;
         var stopped = false;
-        foreach (var overlayId in trigger.SelectedOverlays)
+
+        /*
+         * A row comes off the overlays it went onto, not off whatever is ticked right now. Which windows a countdown was painted on is a fact
+         * about the past, and ticking a different overlay (or deleting and rebuilding one) between the countdown starting and its removal timer
+         * firing used to send the Stop to windows that never held the row while the one that did kept it - the window's own reaper collects that
+         * about two seconds later, so the symptom was a bar outstaying its spell rather than staying forever. Start therefore records the ids it
+         * actually dispatched to on the TimerData, and Stop follows that record. An empty record means the row came from somewhere that never
+         * showed it, which keeps the older behaviour of trying the current selection.
+         */
+        var overlayIds = state == TimerStateChange.Stop && timerData.TimerOverlayIds is { Count: > 0 } shownOn
+          ? (IEnumerable<string>)shownOn
+          : trigger.SelectedOverlays;
+        var dispatchedTo = new List<string>(2);
+
+        foreach (var overlayId in overlayIds)
         {
           if (_timerWindows.TryGetValue(overlayId, out var windowData) && windowData.TheWindow is TimerOverlayWindow { } window)
           {
             if (state == TimerStateChange.Start)
             {
               windowsToStart.Add(window);
+              dispatchedTo.Add(overlayId);
               started = true;
             }
             else if (state == TimerStateChange.Stop)
@@ -317,12 +333,20 @@ namespace EQLogParser
           _timerWindows.TryGetValue(overlay.Id, out var defaultWindowData) && defaultWindowData.TheWindow is TimerOverlayWindow { } defaultWindow)
         {
           windowsToStart.Add(defaultWindow);
+          dispatchedTo.Add(overlay.Id);
         }
         else if (state == TimerStateChange.Stop && !stopped &&
           _defaultOverlays.TryGetValue(TIMER_OVERLAY, out var overlay2) && !string.IsNullOrEmpty(overlay2?.Id) &&
           _timerWindows.TryGetValue(overlay2.Id, out var defaultWindowData2) && defaultWindowData2.TheWindow is TimerOverlayWindow { } defaultWindow2)
         {
           windowsToStop.Add(defaultWindow2);
+        }
+
+        // Recorded even when empty: "this countdown was shown on nothing" is the truth a later Stop needs, and it keeps that Stop from
+        // picking a fight with whatever happens to be ticked now.
+        if (state == TimerStateChange.Start)
+        {
+          timerData.TimerOverlayIds = new ReadOnlyCollection<string>(dispatchedTo);
         }
       });
 

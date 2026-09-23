@@ -922,7 +922,9 @@ namespace EQLogParser
         OriginalMatches = matches,
         PreviousMatches = previousMatches,
         ResetColor = _characterResetColor ?? trigger.ResetColor,
-        TimerOverlayIds = new ReadOnlyCollection<string>(trigger.SelectedOverlays),
+        // A copy, not a wrapper: ReadOnlyCollection is a view, and trigger.SelectedOverlays is edited in place by the overlay config UI, so
+        // wrapping it would let a later tick of a checkbox rewrite what this countdown remembers being shown on.
+        TimerOverlayIds = new ReadOnlyCollection<string>([.. trigger.SelectedOverlays]),
         TimerIcon = wrapper.TimerIcon,
         TimerType = trigger.TimerType,
         TimesToLoopCount = loopCount,
