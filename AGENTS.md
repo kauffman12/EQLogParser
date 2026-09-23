@@ -16,7 +16,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   stream were deleted on measurement, not parked: do not resurrect one because a comment mentions it. A new scheme or style arrives with a
   settings word, a panel entry, and tests — the shape names saved in `settings.txt` are exactly the words the dropdown shows (`arc`, `line`,
   `spray`, `freeze`; `Straight` excepted, saved as `line`). One dial rides inside `arc`: `FctArcBend` (`open`, `out`, `left`, `right`; absent =
-  `open`, which is the pre-existing curve, not a fifth shape — see docs/DesignNotes.md).
+  `open`, which is the pre-existing curve, not a fifth shape — see docs/DesignNotes.md). An explicit word makes the lane pay: `FctStage.ParkForBend` shifts a split column off the wall it leans at, from
+  lane-level facts only (slot, lane rect, `RailReserve()`, the bow share) — never from the arriving number, or a column goes out of line with itself.
+  `open` parks nothing. **Assert a lean's depth, not its sign**: a bow clamped to `0.0` passes `IsTrue(bow <= 0)` and draws a straight scroll, which is
+  how `left` and half of `out` shipped looking like nothing (docs/DesignNotes.md → "The lane has to pay for the lean").
 - **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`, `FctLayout.ArcBend`). Test classes in
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another
