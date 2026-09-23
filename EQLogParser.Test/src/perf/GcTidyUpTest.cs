@@ -128,6 +128,33 @@ namespace EQLogParser
       Assert.AreEqual(7, GcTidyUp.SuppressedCount);
     }
 
+    /*
+     * A rebuild stream must not collect inside itself. The damage window's compute timer is restarted by incoming data, so while a fight is being
+     * written the three builders ask again every second or so, and a wait measured from the FIRST of them stops the world in the middle of the pull
+     * that was still asking (a blocking full compact plus LOH compaction, once a minute, every fight). Requests therefore re-arm the wait: four asks
+     * arrive 80 ms apart against a 300 ms settle, no collection may land while they are still coming, and exactly one lands afterwards.
+     */
+    [TestMethod]
+    public void AStreamOfRequestsCollectsAfterTheStreamEnds()
+    {
+      Assert.IsTrue(GcTidyUp.Request("first of a stream", 300, 60_000));
+
+      for (var i = 0; i < 4; i++)
+      {
+        Thread.Sleep(80);
+
+        // Refused as a duplicate, and still a statement that the application is in the middle of something.
+        GcTidyUp.Request($"rebuild {i}", 300, 60_000);
+        Assert.AreEqual(0, GcTidyUp.TidyCount, $"the tidy landed while rebuilds were still arriving (request {i + 1}, {GcTidyUp.TidyCount} collections)");
+      }
+
+      WaitForCollection(1);
+      WaitForIdle();
+
+      Assert.AreEqual(1, GcTidyUp.TidyCount, "a stream of five asks pays for one collection, not five");
+      Assert.AreEqual(4, GcTidyUp.SuppressedCount, "the re-arming asks are counted as swallowed, since none of them got a collection of its own");
+    }
+
     /* Once the interval has passed the tidies come back: the rate limit is a throttle, not a one-shot. */
     [TestMethod]
     public void TidiesResumeAfterTheInterval()

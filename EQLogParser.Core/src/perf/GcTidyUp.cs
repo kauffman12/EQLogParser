@@ -1,10 +1,10 @@
+using log4net;
 using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
-using log4net;
 
 namespace EQLogParser
 {
@@ -25,10 +25,14 @@ namespace EQLogParser
    *   **stats finished building** - a rebuild walks every record again and hands back a much smaller result.
    *
    * A collection stops every thread, so the only thing that matters about it is when it happens, and each of those is a moment the player
-   * is not asking the interface for anything. That is also what makes it safe to fire on the stats rebuild: whichever way the wind blows on
-   * someone's machine, the cost lands while the numbers are already on screen, never mid-pull. There is deliberately no "is a fight active"
-   * guard - a loaded file leaves its last fight marked active until more log lines arrive to expire it, so such a guard would quietly veto the
-   * useful trigger, and the interval below bounds what a rebuild can cost anyway.
+   * is not asking the interface for anything - PROVIDED the wait below is a wait for QUIET rather than a fixed nap. The stats rebuild is the
+   * proof: the damage window's compute timer restarts on incoming data (MainWindow.cs:252,594), so while a fight is being written the three
+   * builders ask again inside every second of it, and a 1.5 s delay measured from the FIRST request collected with the world stopped in the
+   * middle of the pull that was still asking - one blocking compaction plus LOH compaction a minute, every minute of every fight, bounded only
+   * by the interval. There is deliberately no "is a fight active" guard (a loaded file leaves its last fight marked active until more log lines
+   * arrive to expire it, so such a guard would quietly veto the useful trigger); instead the settle is re-armed by every request, which makes
+   * the quiet moment the trigger and needs no knowledge of what produced the noise. A continuous hour of logging therefore hands nothing back
+   * until it stops, which is the correct trade: the memory is worth more than the pause while the log is still arriving.
    *
    * Two rules keep this from becoming the thing it was added to prevent. Requests return immediately: the collection runs on a pool thread
    * after a settle delay, so no caller - least of all the UI thread - sits inside a stop-the-world while its own work is still in flight.
@@ -37,9 +41,14 @@ namespace EQLogParser
    */
   internal static class GcTidyUp
   {
-    /* How long a request waits before collecting: enough for the caller's own layout and binding passes to finish, short enough that the
-       memory is handed back while the player is still looking at the thing they just did. */
+    /* How long the stream has to have STOPPED before collecting: enough for the caller's own layout and binding passes to finish, short enough
+       that the memory is handed back while the player is still looking at the thing they just did. Re-armed by every request - see the header. */
     internal const double DefaultSettleMs = 1500;
+
+    /* How often the settling request re-reads the clock while waiting for quiet. A quarter of the wait, so a request that arrives late in a
+       settle is noticed within a few hundred ms rather than at the end of it; bounded so neither a tiny nor a huge settle misbehaves. */
+    private const double QuietPollFloorMs = 10;
+    private const double QuietPollCeilMs = 250;
 
     /* One tidy per interval, however many triggers fire. A rebuild storm is a normal thing to do with the damage summary. */
     internal const double DefaultMinIntervalMs = 60_000;
@@ -50,6 +59,7 @@ namespace EQLogParser
     private static int _suppressedCount;
     private static int _inFlight;
     private static long _lastTidyMs;
+    private static long _lastRequestMs;
     private static int _epoch;
 
     /* Collections performed, for tests and for a heartbeat that wants to know whether the tidy ever ran at all. */
@@ -77,6 +87,7 @@ namespace EQLogParser
       Volatile.Write(ref _suppressedCount, 0);
       Volatile.Write(ref _inFlight, 0);
       Volatile.Write(ref _lastTidyMs, 0);
+      Volatile.Write(ref _lastRequestMs, 0);
     }
 
     /*
@@ -85,6 +96,11 @@ namespace EQLogParser
      */
     internal static bool Request(string reason, double settleMs = DefaultSettleMs, double minIntervalMs = DefaultMinIntervalMs)
     {
+      /* Stamped before anything else, including refusals: "somebody asked a moment ago" is the whole definition of busy here, and a request
+         the interval swallowed still says the application is in the middle of something. This is what defers a tidy out of a live fight -
+         the rebuild keeps re-arming the wait, and the collection happens when the re-arming stops. */
+      Volatile.Write(ref _lastRequestMs, Environment.TickCount64);
+
       // Claiming the slot first means two triggers in the same millisecond cannot both start a collection, which would be one long pause
       // followed by a second, pointless one over a heap the first just emptied.
       if (Interlocked.CompareExchange(ref _inFlight, 1, 0) != 0)
@@ -107,10 +123,7 @@ namespace EQLogParser
       {
         try
         {
-          if (settleMs > 0)
-          {
-            await Task.Delay(TimeSpan.FromMilliseconds(settleMs)).ConfigureAwait(false);
-          }
+          await WaitForQuiet(settleMs, epoch).ConfigureAwait(false);
 
           /* Stale by the time it woke: Reset() gave the slot to somebody else while this was settling, so the moment it was asked for is gone. */
           if (Volatile.Read(ref _epoch) != epoch)
@@ -136,6 +149,37 @@ namespace EQLogParser
       });
 
       return true;
+    }
+
+    /*
+     * Wait until nothing has asked for a tidy for settleMs. This is the difference between handing memory back at the end of a rebuild and
+     * stopping the world inside one: the damage window rebuilds on a 500 ms timer restarted by incoming data, so during a fight requests arrive
+     * forever and any fixed delay measured from the first of them expires mid-pull. Waiting for the ASKING to stop needs no idea what is asking -
+     * a fight, a filter being fiddled, a file loading - and it converges the moment whatever it was finishes.
+     *
+     * Polls rather than owning a timer per request because requests are allowed to keep arriving while this one waits, and a wait that can be
+     * extended by somebody else's call is a deadline, not a duration. Returns early once Reset() has retired this request (the caller re-checks
+     * the epoch and drops it), so a stale request neither spins nor sleeps out its whole settle.
+     */
+    private static async Task WaitForQuiet(double settleMs, int epoch)
+    {
+      if (settleMs <= 0)
+      {
+        return;
+      }
+
+      var pollMs = Math.Clamp(settleMs / 4, QuietPollFloorMs, QuietPollCeilMs);
+
+      while (Volatile.Read(ref _epoch) == epoch)
+      {
+        var quietFor = Environment.TickCount64 - Volatile.Read(ref _lastRequestMs);
+        if (quietFor >= settleMs)
+        {
+          return;
+        }
+
+        await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(pollMs, settleMs - quietFor))).ConfigureAwait(false);
+      }
     }
 
     /*
