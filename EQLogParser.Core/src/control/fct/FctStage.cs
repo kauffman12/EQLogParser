@@ -307,15 +307,13 @@ namespace EQLogParser
      * 0 px in a 1280 window (docs/DesignNotes.md → "Which way an arc leans"). Turning the row gives the bow the whole lane and costs the
      * column nothing it was using: numbers still line up on one spine, they line up on their left edge instead of their right.
      *
-     * Only a named lean turns anything. `open` bends into air the block already leaves free and must draw what every file written before
-     * FctOverlayArcBend draws; bands is not a column layout at all; and a straight rail (the "line" setting, whose bow is 0) keeps the
-     * shipped right-alignment word for word.
+     * Only a column that actually bends turns anything: bands is not a column layout at all, and a straight rail (the "line" setting, whose bow is 0)
+     * keeps the shipped right-alignment word for word — that is why the test is the direction and not merely the dial being set.
      */
     internal bool HangsRightFor(FctHitState hit) =>
       _mode is FctLayoutMode.ByType
       && hit.Style is FctMotionStyle.Arc
-      && FctLayout.ArcBend is not FctArcBend.Open
-      && FctLayout.BendDirection(this, RegionFor(hit), LaneSpine(CategoryLane(hit))) < 0.0;
+      && FctLayout.BendDirection(this, LaneSpine(CategoryLane(hit))) < 0.0;
 
     /*
      * A lean said in settings.txt is a promise, and in split the lane is the only place to pay for it.
@@ -333,9 +331,9 @@ namespace EQLogParser
      * bow share) and never of the arriving number, so every row still shares one rail — the weld SpineFor exists to hold is untouched, which is what
      * separates this from the per-row park-shove that broke a column's line and starved its names to "(Des" (75e2992a).
      *
-     * Open does NOT park. It means "the layout's own answer, at the budget the layout can afford", it is what every file written before
-     * FctOverlayArcBend exists already draws, and moving those columns would be an unrequested change to the shipped look — including for a player
-     * whose four columns each draw the shorter curve their lane can afford. The three explicit words buy their shape.
+     * Every lean on the dial is named, so every lean pays: there is no "the layout's own answer" branch left to exempt, which is also why the gate below
+     * asks only about mode and style. Turning the rows around (FctHitState.HangRight) is what keeps the bill small — a column that bends left hangs right
+     * and owes its leaning hand almost nothing, so `out` parks at 218.8 where reserving the hanging hand charged 375 for the same 210.8 px curve.
      *
      * A park is bounded by the same walls as everything else in the lane, so a lane too narrow for the bend it was promised keeps the bend short
      * rather than pushing the column through a neighbour; bands is not touched at all (it pre-pays its bow at spawn, FctLayout.Spawn); and a style
@@ -343,9 +341,7 @@ namespace EQLogParser
      */
     private double ParkForBend(FctHitState hit, FctRailLane lane, double slot)
     {
-      if (_mode is not FctLayoutMode.ByType
-          || hit.Style is not FctMotionStyle.Arc
-          || FctLayout.ArcBend is FctArcBend.Open)
+      if (_mode is not FctLayoutMode.ByType || hit.Style is not FctMotionStyle.Arc)
       {
         return slot;
       }
@@ -355,11 +351,16 @@ namespace EQLogParser
       var wallLeft = region.X + FctLayout.EdgePad;
       var wallRight = region.X + region.Width - FctLayout.EdgePad;
 
-      /* What a column owes the wall it leans at is its own block on that hand plus the curve — and a row that hung right to make a leftward
-         lean affordable owes nearly nothing but curve (FctLayout.RailDemands), which is why turning the row buys a deeper arc AND leaves the
-         column nearer its slot than the old reserve-sized shove ever did. */
-      var (demandLeft, demandRight) = FctLayout.RailDemands(hit);
-      return FctLayout.BendDirection(this, region, slot) < 0
+      /* What a column owes the wall it leans at is the hand that wall is on plus the curve (FctLayout.RailDemands, priced per COLUMN so a crit and the
+         parry under it park to the same spine). The hanging hand's digits are already paid for by RailReserve; the bare hand owes nothing at all, which is
+         why turning a row around buys the deeper arc AND leaves the column nearer its slot than the old reserve-sized shove ever did, plus the minimum a
+         seated label needs on its own hand (FctLayout.LabelDemands) so the words never stand in the path the column was told to trace. Both bills are
+         priced per COLUMN, so a crit and the parry below it park to the same spine. */
+      var (demandLeft, demandRight) = FctLayout.RailDemands(hit.HangRight);
+      var (wordsLeft, wordsRight) = FctLayout.LabelDemands(hit);
+      demandLeft += wordsLeft;
+      demandRight += wordsRight;
+      return FctLayout.BendDirection(this, slot) < 0
         ? Math.Min(wallRight, Math.Max(slot, wallLeft + demandLeft + want))
         : Math.Max(wallLeft, Math.Min(slot, wallRight - demandRight - want));
     }

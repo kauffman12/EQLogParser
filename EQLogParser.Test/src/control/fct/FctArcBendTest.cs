@@ -5,20 +5,22 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser
 {
   /*
-   * Which way an arc leans was never a question, only an answer — and the two schemes gave different ones. Fountain bows each column away from
-   * the shared middle strip; split asks the lane which of its own hands is open and spends that on the bend, because a split lane is private and
-   * pushing its rail off its spine to buy an outward curve starves every name on the lane. With one category on a side the open hand points at
-   * the middle of the screen, so a default split with heals left and damage right leans BOTH halves inward (measured at 1920x1080: the damage
-   * column at spine 1685 bends to -319.6, the healing column at spine 235 bends to +319.6). A player who reads that as "the arc goes the wrong
-   * way on my left side" is reading it correctly; nobody ever offered them the choice. Narrower overlays change the answer again — at 1280 the
-   * damage column flips to +147 because the lane's open hand moved — which is the other half of the complaint: the direction is not even stable
-   * across window sizes, because it is a consequence of lane geometry rather than something anybody picked.
+   * Three words say which way an arc leans (FctArcBend): `out` bows each half away from the middle of the overlay, `left` and `right` say one
+   * direction for every column whatever its width. `out` is what a file with no FctOverlayArcBend key means, and these tests are the guard on that:
+   * the pinned spines and depths below are what a fresh install draws, so moving the default - or the arithmetic behind it - has to be a decision that
+   * fails something first.
    *
-   * These tests pin all four words of FctArcBend against that measured reality: open keeps what shipped (the numbers here are the guard — if a
-   * future change moves the default, one of them fails and it is a decision rather than a drift), out mirrors the halves away from each other,
-   * and left/right say one direction for every column at every width. The last two assert the part that makes a forced lean safe: the bend is
-   * capped against the room on the side it was pointed at, so a lane with thin air draws a shorter curve rather than a number through a wall,
-   * and — the part that would be a bug — never one that turns around.
+   * The dial used to have a fourth word, `open`: ask the lane which of its own hands is roomier and spend that on the bend. It was deleted rather than
+   * aliased because it could not survive being asked what it was for. One category per half, damage on the right, and its direction moved with the window
+   * (+99.5 at 900px, +147.0 at 1280, -238.0 from 1440 up), which is a consequence of lane geometry rather than a preference; and it drew the shallower
+   * curve of the two (99.5 / 147.0 / 238.0 where `out` draws 146.2 / 210.8 / 238.0 at those same widths). Its entire compatibility debt was a word no
+   * released build ever wrote, and a settings.txt still carrying it now reads as the default. `EveryLeanWordIsThreeWordsNoMore` pins the size of the
+   * vocabulary, so re-adding a scheme is a decision with a failing test attached rather than an enum value these sweeps silently start looping over.
+   *
+   * What else is pinned here is the part that makes a lean real rather than decorative: a named direction buys its full depth (FctStage.ParkForBend moves
+   * the column, FctHitState.HangRight turns its rows around), and the bend is capped against the room on the side it was pointed at, so a thin lane draws
+   * a short curve rather than a number through a wall - and never one that turns around. The two sweeps read the WHOLE drawn box, not the centre the
+   * older assertions read, because a mirror is exactly the change that keeps a centre honest while its digits cross a wall.
    */
   [TestClass]
   public sealed class FctArcBendTest
@@ -74,76 +76,89 @@ namespace EQLogParser
        measures. Asked of the stage rather than guessed, because a half split between two columns wants half the bend of one that owns it alone. */
     private static double FullCurve(FctStage stage, FctHitState hit) => stage.TerritoryFor(hit) * FctLayout.ArcBowFrac;
 
-    /* A file with no lean in it leans open — which is the arrangement every settings.ini written before this key exists already draws. Junk
-       lands there too rather than reaching the geometry as garbage. */
+    /* A file with no lean in it leans out — each half bows away from the middle, which is what an arc looks like to somebody who never opened the panel.
+       Junk lands there too rather than reaching the geometry as garbage, and so does the retired word "open": no release ever wrote it, but a
+       develop-branch settings.txt may still carry it, and reading it as the default beats reading it as an error. */
     [TestMethod]
-    public void AFileWithNoLeanLeansOpen()
+    public void AFileWithNoLeanLeansOut()
     {
-      Assert.AreEqual(FctArcBend.Open, FctOverlaySettings.ShippedArcBend(null), "a fresh install keeps the curve it has always drawn");
-      Assert.AreEqual(FctArcBend.Open, FctOverlaySettings.ShippedArcBend(""), "an empty value is the same as no value");
-      Assert.AreEqual(FctArcBend.Open, FctOverlaySettings.ShippedArcBend("sideways"), "an unreadable word gets the shipped lean");
+      Assert.AreEqual(FctArcBend.Out, FctOverlaySettings.DefaultArcBend(null), "a fresh install bows both halves apart");
+      Assert.AreEqual(FctArcBend.Out, FctOverlaySettings.DefaultArcBend(""), "an empty value is the same as no value");
+      Assert.AreEqual(FctArcBend.Out, FctOverlaySettings.DefaultArcBend("sideways"), "an unreadable word gets the default lean");
+      Assert.AreEqual(FctArcBend.Out, FctOverlaySettings.DefaultArcBend("open"), "the retired word reads as the default, not as an error");
     }
 
-    /* Every word reaches its own arrangement, case-free, and no two arrangements claim the same word — which is what makes the panel's four
+    /* The vocabulary is closed at three. A fourth member would arrive with a settings word, a panel item and tests, rather than being smuggled in as an
+       enum value that every sweep in this class silently starts looping over — which is how a retired answer comes back to life. */
+    [TestMethod]
+    public void EveryLeanWordIsThreeWordsNoMore()
+    {
+      Assert.AreEqual(3, Enum.GetValues(typeof(FctArcBend)).Length,
+        "out, left, right — `open` was deleted, not parked: it could not hold one direction still across window sizes");
+    }
+
+    /* Every word reaches its own arrangement, case-free, and no two arrangements claim the same word — which is what makes the panel's three
        items, the saved file and the engine one vocabulary instead of three that drift. */
     [TestMethod]
     public void EveryLeanRoundTripsThroughItsWord()
     {
-      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
       {
         var word = FctOverlaySettings.WordForArcBend(bend);
-        Assert.AreEqual(bend, FctOverlaySettings.ShippedArcBend(word), $"{bend} has to read back from \"{word}\"");
-        Assert.AreEqual(bend, FctOverlaySettings.ShippedArcBend(word.ToUpperInvariant()), "spelling is case-free, as everywhere else in the file");
+        Assert.AreEqual(bend, FctOverlaySettings.DefaultArcBend(word), $"{bend} has to read back from \"{word}\"");
+        Assert.AreEqual(bend, FctOverlaySettings.DefaultArcBend(word.ToUpperInvariant()), "spelling is case-free, as everywhere else in the file");
       }
 
-      var saved = new HashSet<string> { "open", "out", "left", "right" };
-      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      var saved = new HashSet<string> { "out", "left", "right" };
+      foreach (FctArcBend bend in Enum.GetValues(typeof(FctArcBend)))
       {
         Assert.IsTrue(saved.Remove(FctOverlaySettings.WordForArcBend(bend)),
-          $"{bend} saved a word the other three do not own, or one they already had");
+          $"{bend} saved a word the others do not own, or one they already had");
       }
 
       Assert.AreEqual(0, saved.Count, "every word in the file has to reach an arrangement");
     }
 
-    /* The shipped answer, pinned with the numbers that were measured: both halves lean inward toward the middle strip. This is the behaviour a
-       player calls "the arc goes the wrong way", and it stays the default on purpose — changing it silently would re-shape every existing
-       overlay — but it does not stay unchosen. */
+    /* The default, at four widths: the halves bow apart, to the same depth, and each pays for the WHOLE curve it asks for. `out` is fountain's rule handed
+       to split — away from the middle of the overlay, which in split means the two halves bend away from each other — and that is why it deserves to be the
+       answer a fresh install draws: the direction is arithmetic about the middle line and nothing else, so it cannot flip because the window changed shape
+       (the rule it replaced answered "whichever hand is openest", and at 1280 that was the same hand for every column in the overlay). The depth claims are
+       measured against FullCurve rather than a formula written out here, so this test follows the lane's own arithmetic instead of racing it. */
     [TestMethod]
-    public void OpenLeansBothHalvesInward()
+    public void OutMirrorsBothHalvesAtEveryWidth()
     {
-      var damage = Lean(FctArcBend.Open, heal: false);
-      var healing = Lean(FctArcBend.Open, heal: true);
+      foreach (var w in new[] { 900.0, 1280.0, Width, 2560.0 })
+      {
+        var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height);
+        var damage = Lean(FctArcBend.Out, heal: false, stage);
+        var healing = Lean(FctArcBend.Out, heal: true, stage);
 
-      Assert.AreEqual(-319.6, Math.Round(damage.Bow, 1), "the right-hand column bends back over the gutter");
-      Assert.AreEqual(319.6, Math.Round(healing.Bow, 1), "and the left-hand column bends at it, so both point at the middle");
+        Assert.IsTrue(damage.Bow > 0, $"at {w}px the right-hand column should bend toward the right edge (actual: {damage.Bow:F1})");
+        Assert.IsTrue(healing.Bow < 0, $"at {w}px the left-hand column should bend toward the left edge (actual: {healing.Bow:F1})");
+        Assert.AreEqual(Math.Round(damage.Bow, 1), Math.Round(-healing.Bow, 1),
+          $"at {w}px the two halves owe each other the same curve ({healing.Bow:F1} vs {damage.Bow:F1})");
+
+        Assert.AreEqual(Math.Round(FullCurve(stage, damage), 1), Math.Round(damage.Bow, 1),
+          $"at {w}px the default lean pays for its full curve, not a share of one");
+        Assert.AreEqual(Math.Round(-FullCurve(stage, healing), 1), Math.Round(healing.Bow, 1),
+          $"at {w}px and so does the other half");
+      }
     }
 
-    /* "out" is fountain's rule handed to split: away from the middle of the overlay, which means the two halves bend apart. Same two columns, opposite
-       signs and — since each half buys the curve it promised — the same depth: a mirrored pair, which is what a player means by "the standard arc" and
-       what this dial could not draw before the lane paid for the lean (see EveryExplicitLeanDrawsItsFullCurve). */
+    /* Three words are three arrangements, not three spellings of two: the sign pair across (damage column, healing column) is distinct per word, and a
+       fourth value answering "+-", "--" or "++" would be a synonym wearing a word. */
     [TestMethod]
-    public void OutBendsTheTwoHalvesApart()
-    {
-      var damage = Lean(FctArcBend.Out, heal: false);
-      var healing = Lean(FctArcBend.Out, heal: true);
-
-      Assert.IsTrue(damage.Bow > 0, $"the right-hand column should bend toward the right edge (actual: {damage.Bow:F1})");
-      Assert.IsTrue(healing.Bow < 0, $"the left-hand column should bend toward the left edge (actual: {healing.Bow:F1})");
-    }
-
-    /* Four words are four arrangements, not four spellings of two: the sign pairs across (damage column, healing column) are distinct. */
-    [TestMethod]
-    public void TheFourWordsAreFourDifferentCurves()
+    public void TheThreeWordsAreThreeDifferentCurves()
     {
       /* One pair of signs per word: which way each of the two columns actually moved. */
       static string Sign(double bow) => bow > 0 ? "+" : bow < 0 ? "-" : "=";
       string Shape(FctArcBend bend) => $"{Sign(Lean(bend, heal: false).Bow)}{Sign(Lean(bend, heal: true).Bow)}";
 
-      var shapes = new[] { Shape(FctArcBend.Open), Shape(FctArcBend.Out), Shape(FctArcBend.Left), Shape(FctArcBend.Right) };
+      var shapes = new[] { Shape(FctArcBend.Out), Shape(FctArcBend.Left), Shape(FctArcBend.Right) };
 
-      Assert.AreEqual("++", shapes[3], "right bows both columns right");
-      Assert.AreEqual("--", shapes[2], "left bows both columns left");
+      Assert.AreEqual("+-", shapes[0], "out bends the halves apart");
+      Assert.AreEqual("--", shapes[1], "left bows both columns left");
+      Assert.AreEqual("++", shapes[2], "right bows both columns right");
       CollectionAssert.AllItemsAreUnique(shapes);
     }
 
@@ -185,7 +200,7 @@ namespace EQLogParser
         $"the thin lane should bend less than the roomy one ({thin.Bow:F1} vs {roomy.Bow:F1})");
 
       // and the rail never leaves the band the clamp was given, at any point of the flight or in any word
-      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
       {
         foreach (var heal in new[] { false, true })
         {
@@ -261,22 +276,23 @@ namespace EQLogParser
       Assert.AreEqual(small.Bow, large.Bow, 0.01, "and one curve per column, whatever the digits");
     }
 
-    /* Open is the arrangement the layout can afford rather than the one it was told to buy, so it parks nothing: the shipped columns stand exactly where
-       the lane puts them. Pinned because every settings.txt written before FctOverlayArcBend exists reads as open, and a player who never touched the
-       dial must not find their numbers moved sideways by an update. */
+    /* The default pays a park bill, and it is measured here so the bill stays small. At 1920px with one category per half, the healing column's slot centre
+       is 235.0 and `out` parks it at 327.6 to afford its 319.6 px curve; charging the hanging hand its RailReserve as well put that same column at 484, and
+       before a row learned to turn around the lane could not afford the bend at all. Both spines are pinned rather than compared, so a change to any part of
+       the arithmetic — slot, reserve, bow share, hang — surfaces as a number in a failing message rather than as a quiet shift in where the numbers live. */
     [TestMethod]
-    public void OpenParksNothingAndKeepsTheShippedLook()
+    public void OutPaysTheParkItNamed()
     {
-      var healing = Lean(FctArcBend.Open, heal: true);
-      Assert.AreEqual(235.0, Math.Round(healing.X0, 1), "the healing column still stands at its slot's centre (measured at 1920px)");
+      var healing = Lean(FctArcBend.Out, heal: true);
+      var damage = Lean(FctArcBend.Out, heal: false);
 
-      var parked = Lean(FctArcBend.Left, heal: true);
+      Assert.AreEqual(327.6, Math.Round(healing.X0, 1), "the left-hand column parks off the wall its curve leans at (measured at 1920px)");
+      Assert.AreEqual(-319.6, Math.Round(healing.Bow, 1), "and draws the whole curve it moved for");
+      Assert.AreEqual(1592.4, Math.Round(damage.X0, 1), "the right-hand column pays the same bill on its own hand");
+      Assert.AreEqual(319.6, Math.Round(damage.Bow, 1), "to the tenth");
 
-      /* A named lean does move the column, but far less than it used to: a row that turns around to lean left leaves its own digits on the
-         other side of the rail, so the bill at the wall it leans at is the curve and not the curve plus a column of glyphs. Measured at this
-         width: 235.0 (open) to 327.6 — where charging the reserve as well cost 484. */
-      Assert.IsTrue(parked.X0 > healing.X0 + 50,
-        $"a leftward lean has to move the column off the wall it leans at (spine {parked.X0:F1} vs open's {healing.X0:F1})");
+      var at1280 = Lean(FctArcBend.Out, heal: true, 1280.0);
+      Assert.AreEqual(218.8, Math.Round(at1280.X0, 1), "and the same trade at a smaller width, for its 210.8 px curve");
     }
 
     /*
@@ -289,10 +305,10 @@ namespace EQLogParser
     public void ALeftwardLeanTurnsTheRowAround()
     {
       var turned = Lean(FctArcBend.Left, heal: false);
-      var shipped = Lean(FctArcBend.Open, heal: false);
+      var unturned = Lean(FctArcBend.Right, heal: false);
 
       Assert.IsTrue(turned.HangRight, "a column told to lean left has to hang its digits right, into the air the lean is spending");
-      Assert.IsFalse(shipped.HangRight, "`open` draws what every file written before this dial draws: digits left of the rail");
+      Assert.IsFalse(unturned.HangRight, "a column bending right keeps the shipped hang: its own hand is the one it needs");
 
       /* Rail to centre, both ways, measured at rest (t=0) where the bow contributes nothing and only the hang moves the number. Which HAND of the
          spine the digits sit on is the whole difference between a curve and a straight line, so it gets asserted at both ends of the flight: at rest
@@ -301,8 +317,8 @@ namespace EQLogParser
         "a turned row's digits hang right of its rail");
       Assert.AreEqual(turned.X0 + turned.Bow + (turned.ValueWidth / 2.0), FctMotion.ArcedX(turned, 0.5), 1.0,
         "and still hang right at the vertex, where the lean is spending the air they vacated");
-      Assert.AreEqual(shipped.X0 - (shipped.ValueWidth / 2.0), FctMotion.ArcedX(shipped, 0.0), 1.0,
-        "and an unturned one hangs left of it, exactly as shipped");
+      Assert.AreEqual(unturned.X0 - (unturned.ValueWidth / 2.0), FctMotion.ArcedX(unturned, 0.0), 1.0,
+        "and an unturned one hangs left of its rail, exactly as every straight column does");
     }
 
     /* `out` is the mirrored pair a player means by "the standard arc": the halves bend apart, and each one's digits stand on the hand the curve
@@ -323,7 +339,7 @@ namespace EQLogParser
     [TestMethod]
     public void AStraightRailKeepsTheShippedAlignmentUnderEveryLean()
     {
-      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
       {
         foreach (var heal in new[] { false, true })
         {
@@ -349,10 +365,11 @@ namespace EQLogParser
       Assert.AreEqual(0.0, left, 1e-6, "a turned row with no words leaves the rail's left hand empty");
       Assert.AreEqual(turned.ValueWidth + turned.IconAllowance, right, 1e-6, "and carries its digits, and its mark, on the right");
 
-      var shipped = Lean(FctArcBend.Open, heal: false);
-      var (shippedLeft, shippedRight) = FctLayout.BlockFromRail(shipped, 0);
-      Assert.AreEqual(0.0, shippedRight, 1e-6, "which is the shipped arrangement read backwards");
-      Assert.AreEqual(shipped.ValueWidth + shipped.IconAllowance, shippedLeft, 1e-6);
+      var unturned = Lean(FctArcBend.Right, heal: false);
+      var (unturnedLeft, unturnedRight) = FctLayout.BlockFromRail(unturned, 0);
+      Assert.IsFalse(unturned.HangRight, "the control row has to be one that did not turn, or this proves nothing");
+      Assert.AreEqual(0.0, unturnedRight, 1e-6, "which is the shipped arrangement read backwards");
+      Assert.AreEqual(unturned.ValueWidth + unturned.IconAllowance, unturnedLeft, 1e-6);
     }
 
     /* A name still has to fit the hand it draws on. FitSource is rail-relative so a turned column should cut its names against the right walls by
@@ -399,7 +416,7 @@ namespace EQLogParser
           {
             FctLayout.LabelSide = seat;
 
-            foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+            foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
             {
               foreach (var heal in new[] { false, true })
               {
@@ -438,28 +455,44 @@ namespace EQLogParser
      * What happens when a name and a lean want the same pixels, which is a question the engine had never been asked on purpose. The measured case is
      * a 1024 px overlay, one column per half, names seated right: the curve sweeps the hand the words stand in, and before this rule the drawn vertex
      * landed at 959.7 of the 1016.0 the column was given — 56.3 px of bend quietly missing, AND missing by a different amount on every row depending on
-     * how long that row's name happened to be, which is one spine drawing two paths. The rule now: the shape keeps its shape and the annotation steps
-     * out (FctLayout.FitSource), because a name with no room would have to be cut below what still reads as a word, and hiding an annotation states
-     * no falsehood while a column that misaligns itself cannot be un-seen.
+     * how long that row's name happened to be, which is one spine drawing two paths.
+     *
+     * The rule: BOTH keep their room, and the lane pays for it before any name exists. Placement reserves a seated label's floor — "(00…)" plus its gap —
+     * on the hand that seat draws on (FctLayout.LabelDemands), and what is left over is the curve's. A name therefore gets cut to the pixels it truly has
+     * ("(Probe)" arrives as "(Pro…)" where the lean owns that hand, and whole where the lean goes the other way) while every row still bows the full
+     * distance. The version before this one dropped the label outright in that case, which measured 0 names kept out of 234 row-sightings at 1280 with the
+     * default lean and right-seated labels: an arc that deletes the log line is not worth drawing.
      */
     [TestMethod]
-    public void ANameStandingInTheLeansPathStepsAside()
+    public void ANameAndALeanBothGetRoom()
     {
       FctLayout.LabelSide = FctLabelSide.Right;
 
-      var tight = Lean(FctArcBend.Open, heal: false, 1024.0);
-      Assert.IsNull(tight.SourceLabel,
-        $"a name that cannot fit the lean's path has to be dropped, not drawn short and at the curve's expense (it measured {tight.SourceWidth:F1} px)");
+      foreach (var w in new[] { 1024.0, Width })
+      {
+        var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height);
+        foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+        {
+          foreach (var heal in new[] { false, true })
+          {
+            var hit = Lean(bend, heal, stage);
 
-      /* Same narrow corner, same seat, no lean: nothing stands in the name's way, so it keeps the old answer — cut to the floor with an honest ellipsis
-         and let the rail's clamp absorb the overflow. The refusal belongs to the bow, not to narrowness. */
-      var straight = Lean(FctArcBend.Open, heal: false,
-        FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, 1024, Height), FctMotionStyle.Straight);
-      Assert.IsNotNull(straight.SourceLabel, "a column with no bend has nothing in a name's way, so the name still draws");
+            Assert.IsNotNull(hit.SourceLabel, $"{bend} at {w}px cannot answer a name by drawing no name");
+            Assert.AreEqual(Math.Round(FullCurve(stage, hit), 1), Math.Round(Math.Abs(hit.Bow), 1),
+              $"{bend} at {w}px keeps its whole curve whatever the words cost ({hit.Bow:F1}, seat '{hit.SourceLabel}')");
+            Assert.IsTrue(hit.SourceWidth <= FctLayout.EstimateTextWidth("(Probe)", hit.SourceFontSize),
+              $"{bend} at {w}px cut the name to what its hand has (it kept {hit.SourceWidth:F1} px)");
+          }
+        }
+      }
 
-      // and a roomy overlay pays for both without anyone noticing
-      var roomy = Lean(FctArcBend.Open, heal: false, 2560.0);
-      Assert.IsNotNull(roomy.SourceLabel, "a column with air keeps its names AND its curve");
+      /* And the two halves show the trade from opposite ends of the same word: with `left` both columns bend left, so a right-seated name sits in the clear
+         on the column whose digits hang left of the rail, and gets trimmed on the one that turned itself around. Same dial, same seat, different hand. */
+      var stage2 = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, Width, Height);
+      var unturned = Lean(FctArcBend.Left, heal: false, stage2);
+      var turned = Lean(FctArcBend.Left, heal: true, stage2);
+      Assert.AreEqual("(Probe)", unturned.SourceLabel, "the column with air in front of its seat keeps the name whole");
+      Assert.AreNotEqual("(Probe)", turned.SourceLabel, "the one that turned around to make air for the bend does not");
     }
 
     /* Parked columns are still inside their lane: the vertex at half height is where a lean that overspends would show, so sweep the whole flight of
@@ -470,7 +503,7 @@ namespace EQLogParser
       var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, Width, Height,
         healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1);
 
-      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
       {
         foreach (var heal in new[] { false, true })
         {

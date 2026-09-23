@@ -50,9 +50,9 @@ namespace EQLogParser
      * (FctOverlaySettings.ShippedLabelSide). Save writes the word out even for none, so a first-run file starts carrying this key. */
     public const string LabelSideKey = "FctOverlayLabelSide";
 
-    /* Which way an arc leans: open (each lane's own open hand - the answer the lanes have always used), out (away from the middle of the
-     * overlay, which is what most people expect an arc to do in split), left or right. Absent is open, so a file written before this key
-     * exists keeps drawing what it drew (FctArcBend). */
+    /* Which way an arc leans: out (away from the middle of the overlay — the default, and what most people mean by an arc), left or right.
+     * Absent is out. The word "open" may still sit in a settings.txt written while that answer existed; it reads as the default now, because
+     * it was never a direction anybody could hold still across window sizes (FctArcBend). */
     public const string ArcBendKey = "FctOverlayArcBend";
     public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
     public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
@@ -419,31 +419,29 @@ namespace EQLogParser
         _ => "none",
       };
 
-    public static FctArcBend LoadArcBend() => ShippedArcBend(ConfigUtil.GetSetting(ArcBendKey, null));
+    public static FctArcBend LoadArcBend() => DefaultArcBend(ConfigUtil.GetSetting(ArcBendKey, null));
 
     public static void SaveArcBend(FctArcBend bend) => ConfigUtil.SetSetting(ArcBendKey, WordForArcBend(bend));
 
     /*
-     * One arm per word in both directions, same rule as the label seat above: absent lands on open (what every existing file means today),
-     * and no saved word can stop existing because the shipped default moved. The four are not synonyms downstream - they are four different
-     * curves - so a hand-edited "outside" reading as open is a typo being declined, not a preference being ignored.
+     * One arm per word in both directions, same rule as the label seat above: absent lands on `out`, and so does any word this does not know —
+     * including the retired "open", which a develop-branch settings.txt can still carry. The three words are not synonyms downstream (they are three
+     * different curves), so a hand-edited "outside" reading as the default is a typo being declined, not a preference being ignored.
      */
-    internal static FctArcBend ShippedArcBend(string raw) =>
+    internal static FctArcBend DefaultArcBend(string raw) =>
       raw switch
       {
-        string s when string.Equals(s, "out", StringComparison.OrdinalIgnoreCase) => FctArcBend.Out,
         string s when string.Equals(s, "left", StringComparison.OrdinalIgnoreCase) => FctArcBend.Left,
         string s when string.Equals(s, "right", StringComparison.OrdinalIgnoreCase) => FctArcBend.Right,
-        _ => FctArcBend.Open,
+        _ => FctArcBend.Out,
       };
 
     internal static string WordForArcBend(FctArcBend bend) =>
       bend switch
       {
-        FctArcBend.Out => "out",
         FctArcBend.Left => "left",
         FctArcBend.Right => "right",
-        _ => "open",
+        _ => "out",
       };
 
     internal static bool ParseUp(string raw) =>

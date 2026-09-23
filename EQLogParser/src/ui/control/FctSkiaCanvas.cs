@@ -65,10 +65,10 @@ namespace EQLogParser
     /*
      * Which way an arc leans (FctArcBend), handed to the layout for the next spawn to read. Rows already in flight keep the curve they were born
      * with: their vertex is arithmetic from a bow chosen at spawn, and re-bending one mid-flight tears that number's path in half - which is the
-     * same reason a resize maps an existing bow rather than recomputing it (FctResize). A player dragging through the four words sees the streams
+     * same reason a resize maps an existing bow rather than recomputing it (FctResize). A player dragging through the three words sees the streams
      * change one spawn at a time, and the demo restocks them faster than the eye follows.
      */
-    private FctArcBend _arcBend = FctArcBend.Open;
+    private FctArcBend _arcBend = FctArcBend.Out;
 
     public FctArcBend ArcBend
     {

@@ -24,8 +24,9 @@ namespace EQLogParser
     /* What the geometry uses before a canvas has stamped the setting — the same value the shipped overlay draws with. */
     internal static FctLabelSide LabelSideDefault => FctLabelSide.None;
 
-    /* Likewise the lean: open is what the columns drew before the word existed, and what every shipped arc in these tests draws unless a
-       class asks for one of the other three. */
-    internal static FctArcBend ArcBendDefault => FctArcBend.Open;
+    /* Likewise the lean: `out` is what a file with no FctOverlayArcBend key means, so it is what every arc in these tests draws unless a class asks for
+       `left` or `right`. Stated rather than inherited because the dial is process state — a class that sets it and does not reset leaks its curve into
+       whichever test runs next (FctArcBendTest). */
+    internal static FctArcBend ArcBendDefault => FctArcBend.Out;
   }
 }

@@ -98,11 +98,13 @@ namespace EQLogParser
            of the spine has more air is the side the curve spends — a promise made by the lane, identical for every row on it. This pins
            that the sign points into the lane's own air (not at some global "away", which shoved rails off their spines to buy the bend),
            and the magnitude at the full formula — this canvas is deliberately huge so the travel cap never speaks. */
+        /* Which way a lane bends is the dial's answer and the dial's alone (FctLayout.BendDirection), asked at the spine the number stands on. This asks
+           that function instead of restating its arithmetic, so what is left to prove is the formula: the row's bow IS the dial's sign times the whole
+           territory share. 4000 px wide means the travel cap never speaks (see above), and FctArcBendTest owns the directions themselves. */
         var spine = stage.SpineFor(hit);
-        var away = region.X + region.Width - FctLayout.EdgePad - spine >= spine - region.X - FctLayout.EdgePad - FctLayout.RailReserve() ? 1.0 : -1.0;
 
-        Assert.AreEqual(away * stage.TerritoryFor(hit) * FctLayout.ArcBowFrac, hit.Bow, 1e-9,
-          $"the vertex must sit over the open hand of the {caseName} lane");
+        Assert.AreEqual(FctLayout.BendDirection(stage, spine) * stage.TerritoryFor(hit) * FctLayout.ArcBowFrac, hit.Bow, 1e-9,
+          $"the vertex must sit on the side the dial named for the {caseName} lane");
 
         var x0 = FctMotion.ArcedX(hit, 0.0);
         Assert.AreEqual(0.0, FctMotion.ArcedX(hit, 1.0) - x0, 1e-9, "ends — and begins — on its own column");

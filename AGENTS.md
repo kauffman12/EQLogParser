@@ -15,18 +15,23 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (`Freeze`, `Fountain`, `Spray`, `Arc`) plus `Straight`, which is arc's rail with the bend taken out. Halves, pulse, the cell grid and the
   stream were deleted on measurement, not parked: do not resurrect one because a comment mentions it. A new scheme or style arrives with a
   settings word, a panel entry, and tests — the shape names saved in `settings.txt` are exactly the words the dropdown shows (`arc`, `line`,
-  `spray`, `freeze`; `Straight` excepted, saved as `line`). One dial rides inside `arc`: `FctArcBend` (`open`, `out`, `left`, `right`; absent =
-  `open`, which is the pre-existing curve, not a fifth shape — see docs/DesignNotes.md). An explicit word makes the lane pay: `FctStage.ParkForBend` shifts a split column off the wall it leans at, from
-  lane-level facts only (slot, lane rect, `FctLayout.RailDemands`, the bow share) — never from the arriving number, or a column goes out of line with itself.
-  `open` parks nothing. **Assert a lean's depth, not its sign**: a bow clamped to `0.0` passes `IsTrue(bow <= 0)` and draws a straight scroll, which is
-  how `left` and half of `out` shipped looking like nothing (docs/DesignNotes.md → "The lane has to pay for the lean").
+  `spray`, `freeze`; `Straight` excepted, saved as `line`). One dial rides inside `arc`: `FctArcBend` has exactly **three** words — `out` (the default, both
+  halves bow away from the overlay's middle), `left`, `right`; absent or junk = `out`, and so does the retired word `open`, which was deleted on measurement
+  rather than parked: it read the lane, so the same column changed direction with window width (+99.5 at 900, -238.0 from 1440). A fourth word would arrive
+  with a settings entry, a panel item and tests — `EveryLeanWordIsThreeWordsNoMore` refuses a smuggled one. An explicit word makes the lane pay:
+  `FctStage.ParkForBend` shifts a split column off the wall it leans at, from lane-level facts only (slot, lane rect, `FctLayout.RailDemands` +
+  `LabelDemands`, the bow share) — **never** from the arriving number's `ValueWidth`/`IconAllowance`, or a crit parks further off the wall than the parry
+  below it (that is what `ACritAndItsNeighbourShareOneSpineAndOneBend` holds; it fired the day `out` became default and the park stopped being dead code).
+  **Assert a lean's depth, not its sign**: a bow clamped to `0.0` passes `IsTrue(bow <= 0)` and draws a straight scroll, which is how `left` and half of
+  `out` shipped looking like nothing (docs/DesignNotes.md → "The lane has to pay for the lean").
 - **A leftward lean turns its rows around**: `FctHitState.HangRight` makes the rail carry a value's LEFT edge, because a right-aligned block was standing in
   the hand its own bow needed. It is stamped at spawn (and in `FctStage.SpineFor`, for a pinned conveyor entry) and read by `BlockFromRail` (extents swap),
   `ArcedX` (rail→centre flips) and `DrawMark` (glyph outside the outer edge) — the canvas places every other glyph from the value's centre, so nothing else
-  moves. Only a named word in split turns anything: **`open` and `line`/`Straight` draw the shipped right-alignment in every case**, and a test that sets
-  `ArcBend` should keep asserting which hand the digits hang on (`ALeftwardLeanTurnsTheRowAround`). Related: `FitSource` cuts names against the room left
-  **after** the lean spends it, and drops a name that would have stood in the curve — per-row clamping of a too-wide label was measured stealing 56 px of a
-  153 px bend, differently for every row on the spine (docs/DesignNotes.md → "Turning the row around").
+  moves. Only an arc in split turns anything: **`line`/`Straight` draws the shipped right-alignment under every word**, and a test that sets `ArcBend` should
+  keep asserting which hand the digits hang on (`ALeftwardLeanTurnsTheRowAround`). Two related laws, both because per-row clamping was measured stealing 56 px
+  of a 153 px bend differently for every row on one spine: `FctLayout.LabelDemands` reserves a seated label's **floor** on its hand *before any name exists*
+  (so a lean never eats a name whole — dropping names instead measured 0 kept of 234 rows at 1280 with `out` + right labels, now 234/234 with the full curve),
+  and `FitSource` cuts names against the room left **after** the lean spends it (docs/DesignNotes.md → "Turning the row around", "A name and a lean").
 - **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`, `FctLayout.ArcBend`). Test classes in
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another

@@ -217,8 +217,8 @@ namespace EQLogParser
         LabelSide = FctOverlaySettings.ShippedLabelSide(ComboTag(labelSideCombo)),
 
         /* The same one-vocabulary rule as the seat above: the combo's tags ARE the saved words, and a combo with nothing picked is an
-           unset value, which reads as open — the curve every file without this key already draws (FctArcBend). */
-        ArcBend = FctOverlaySettings.ShippedArcBend(ComboTag(arcBendCombo)),
+           unset value, which reads as `out` — what a file without this key draws too (FctArcBend). */
+        ArcBend = FctOverlaySettings.DefaultArcBend(ComboTag(arcBendCombo)),
         TextScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(sizeSlider.Value)),
         CritScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
