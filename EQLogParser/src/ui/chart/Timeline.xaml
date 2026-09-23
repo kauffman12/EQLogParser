@@ -26,6 +26,17 @@
            views use; the box reads "All Timeline Options" or "2 Timeline Options Selected". -->
       <ComboBox x:Name="timelineOptions" MinWidth="130" Margin="0,0,8,2" Padding="5,0,10,0" VerticalContentAlignment="Center" Visibility="Collapsed"
                 DropDownClosed="OptionsChange" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+      <!-- Every spell this fight produced that the options above allow: the rows on the timeline first (in panel
+           order), then the ones that are off, unchecked. This is how a curated layout gets rows back. -->
+      <ComboBox x:Name="rowOptions" MinWidth="130" Margin="0,0,8,2" Padding="5,0,10,0" VerticalContentAlignment="Center" Visibility="Collapsed"
+                ToolTip="Every spell this fight produced: untick to drop a row, tick to bring it back"
+                DropDownClosed="RowOptionsChange" ItemTemplateSelector="{StaticResource ComboBoxSelector}">
+        <ComboBox.ItemContainerStyle>
+          <Style>
+            <EventSetter Event="ComboBoxItem.PreviewMouseDown" Handler="RowPreviewMouseDown"/>
+          </Style>
+        </ComboBox.ItemContainerStyle>
+      </ComboBox>
       <ComboBox x:Name="layoutSelector" MinWidth="80" Margin="0,0,8,2" Padding="4,0,4,0" SelectionChanged="LayoutSelectorSelectionChanged" IsEnabled="False" />
       <syncfusion:DropDownButtonAdv Label="Manage Layouts" IconHeight="0" IconWidth="5" Height="{DynamicResource EQButtonHeight}" Padding="4,0,4,0" Margin="0,0,4,1">
         <syncfusion:DropDownMenuGroup>

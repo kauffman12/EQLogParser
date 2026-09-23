@@ -3210,3 +3210,37 @@ the cooldown display vouch for it is how the leak stays. `DelayMs` returning 0 r
 negative, in a task nobody observes. And the clamp belongs at creation, not in the display: every consumer of these numbers has to be unable to overflow, not only
 the one showing a bar. Keep the short tick in the `else` of the long-tick test in `RenderTimerLoopAsync`: the long tick runs when `_tickCounter` wraps to zero, so
 anything that can skip the reset while cooldown rows are up stops the overlay rebuilding bars at all.
+
+## Timeline rows: what a saved layout keeps, and how a row comes back
+
+A timeline layout stores `SpellOrder` and nothing else about visibility: the list is exactly the rows that were showing,
+in the order they were showing. The ✕ at the head of a row drops the spell out of `_keyOrder`, so before the rows
+dropdown there were no bytes anywhere distinguishing *"you turned this off three fights ago"* from *"this fight never
+contained it"* — and no way back short of rebuilding the layout. The fix is deliberately **not** a hidden list in the
+file. The universe of rows is the fight itself (`_spellRanges`) filtered by the same `IsOffered` test `Display()` draws
+with, so the dropdown can show what is switched off as unchecked rows without any new state: **absent from `SpellOrder`
+means off, never lost.** Old layouts load untouched. `HiddenSpells` is gone with it — `SaveLayout` filled it from
+`_selfOnly.Keys` (the self-only lookup, which is about *which* messages a spell has, not whether you want its row) and
+`ApplyLayout` never read a byte of it; System.Text.Json ignores the stale member in files already on disk.
+
+Two rules worth keeping:
+
+- **`_rowsSeeded`, not `Count == 0`, decides whether the order list still needs seeding.** `Display()` used to read an
+  empty list as "nobody initialised me" and refill it with every spell alphabetically. With a switch-board dropdown
+  that is a bug rather than a convenience: Unselect All empties the list on purpose, and the next redraw would have
+  resurrected all of it. An empty row list is a choice.
+- **A row ticked back on lands at the bottom and gets dragged home.** Nothing remembers the slot a row held before its
+  ✕ took it out; remembering would mean storing hidden rows *with positions*, plus a version marker for files written
+  without them — the file change this whole design exists to avoid. `TimelineRows.Apply` keeps that rule out of the
+  UserControl so it can be asserted (`EQLogParser.Wpf.Test/src/ui/chart/TimelineRowsTest.cs`; Windows-only assembly,
+  so it builds everywhere and runs there).
+
+`Select All` / `Unselect All` in this dropdown are momentary buttons rather than the latching pair from
+`UiElementUtil.PreviewSelectAllComboBox`, because that helper reads backwards once anything has been ticked: a click on
+a *Select All* whose box is empty routes to `Toggle("Unselect All", false)`, which unchecks every row and lights the
+*Unselect All* latch. In the class filters nobody noticed because `SharedControls` starts everything checked — two
+clicks on their Select All simply clears the list. Here both action boxes stay empty (`e.Handled` on the container's
+preview, so the inner checkbox never sees the click) and the closed combo carries the state instead: **"12 of 40 Rows"**,
+which is also the only hint a player gets that a layout — or an old ✕ — is holding rows back. `ChatViewer`'s channel
+pair already keeps its own local version for the same reason; the shared helper still serves the class lists, which are
+all-on by design, and is left alone.

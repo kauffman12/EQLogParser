@@ -691,6 +691,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Rows.
+        /// </summary>
+        public static string TIMELINE_ROWS {
+            get {
+                return ResourceManager.GetString("TIMELINE_ROWS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete Character Settings.
         /// </summary>
         public static string TRIGGER_CHARACTER_DELETE {
