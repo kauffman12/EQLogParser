@@ -36,7 +36,11 @@ namespace EQLogParser
      * owns its whole half, so there is no neighbour to explain the direction away. One spawn pass reads the lane's band, then the spine and the
      * spawn edge are pinned the way FctPlacement does, so these asserts measure the lean and not the origin jitter an unstreamed throw adds.
      */
-    private static FctHitState Lean(FctArcBend bend, bool heal, double w = Width)
+    private static FctHitState Lean(FctArcBend bend, bool heal, double w = Width) => Lean(bend, heal, FctStage.ByType(
+      FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height));
+
+    /* The same pass over a stage the caller picked, so a two-column half can be asked about as easily as a one-column one. */
+    private static FctHitState Lean(FctArcBend bend, bool heal, FctStage stage)
     {
       FctLayout.ArcBend = bend;
       var hit = new FctHitState
@@ -49,7 +53,6 @@ namespace EQLogParser
         Value = 12345,
       };
 
-      var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height);
       FctStyle.ApplyTo(hit, hit.Lane, minor: false);
       hit.ValueWidth = FctLayout.EstimateTextWidth("123,456", hit.ValueFontSize);
 
@@ -58,6 +61,10 @@ namespace EQLogParser
       FctLayout.Spawn(hit, stage, new Random(7), (spine, stage.UpFor(hit) > 0 ? hit.BandMaxY : hit.BandMinY));
       return hit;
     }
+
+    /* The curve the shape asks for at this lane's width: AssignTravel spends territory * ArcBowFrac and no more, so that is what a paid-for lean
+       measures. Asked of the stage rather than guessed, because a half split between two columns wants half the bend of one that owns it alone. */
+    private static double FullCurve(FctStage stage, FctHitState hit) => stage.TerritoryFor(hit) * FctLayout.ArcBowFrac;
 
     /* A file with no lean in it leans open — which is the arrangement every settings.ini written before this key exists already draws. Junk
        lands there too rather than reaching the geometry as garbage. */
@@ -104,8 +111,9 @@ namespace EQLogParser
       Assert.AreEqual(319.6, Math.Round(healing.Bow, 1), "and the left-hand column bends at it, so both point at the middle");
     }
 
-    /* "out" is fountain's rule handed to split: away from the middle of the overlay, which means the two halves bend apart. Same two columns,
-       opposite signs — and note the magnitudes differ, because how much air a half has on its outer side depends on where its spine stands. */
+    /* "out" is fountain's rule handed to split: away from the middle of the overlay, which means the two halves bend apart. Same two columns, opposite
+       signs and — since each half buys the curve it promised — the same depth: a mirrored pair, which is what a player means by "the standard arc" and
+       what this dial could not draw before the lane paid for the lean (see EveryExplicitLeanDrawsItsFullCurve). */
     [TestMethod]
     public void OutBendsTheTwoHalvesApart()
     {
@@ -149,14 +157,21 @@ namespace EQLogParser
       }
     }
 
-    /* The cap is a wish's brake, not a veto: a lane with no air on the side it was pointed at bends less rather than bending through the wall —
-       and never past zero into the other direction, which would hand one column two shapes depending on how lucky its digits were. */
+    /* The cap is a wish's brake, not a veto. A lane that cannot pay parks as far as its own walls allow and draws a shorter curve — it does not push the
+       column through a neighbour, and never past zero into the other direction, which would hand one column two shapes depending on how lucky its digits
+       were. The unaffordable case is a narrow overlay split into columns: 700px, two claimants in the left half, so each owns ~157px and cannot fit a
+       reserve plus a bend between its walls. */
     [TestMethod]
     public void ALeanWithoutRoomShrinksInsteadOfTurningAround()
     {
-      var thin = Lean(FctArcBend.Left, heal: true, w: 700);
+      var narrow = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, 700, Height,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1);
+
+      var thin = Lean(FctArcBend.Left, heal: true, narrow);
       var roomy = Lean(FctArcBend.Left, heal: true);
 
+      /* At this width a single rail reserve (~156px of glyphs at the crit ceiling) is most of the column, so there is genuinely nowhere to park: the
+         honest answer is a very short curve or none, and the thing that must never happen is a sign flip. */
       Assert.IsTrue(thin.Bow <= 0, $"a column with no room on its left must not lean right (actual: {thin.Bow:F1})");
       Assert.IsTrue(Math.Abs(thin.Bow) < Math.Abs(roomy.Bow),
         $"the thin lane should bend less than the roomy one ({thin.Bow:F1} vs {roomy.Bow:F1})");
@@ -167,6 +182,105 @@ namespace EQLogParser
         foreach (var heal in new[] { false, true })
         {
           var hit = Lean(bend, heal);
+          for (var step = 0; step <= 24; step++)
+          {
+            var x = FctMotion.ArcedX(hit, step / 24.0);
+            Assert.IsTrue(x >= hit.SideMin - 1 && x <= hit.SideMax + 1,
+              $"{bend} put the rail at {x:F1}, outside [{hit.SideMin:F1}, {hit.SideMax:F1}] at t={step / 24.0:F2}");
+          }
+        }
+      }
+    }
+
+    /*
+     * A lean that draws nothing is not a lean. This is the guard this dial shipped without: every assertion above reads a SIGN, and a bow clamped to
+     * exactly zero passes "not positive" while the player watches a straight vertical scroll and reports that left looks like nothing and out works only
+     * on one side. Measured before the fix, split with one column per side (docs/DesignNotes.md -> "Which way an arc leans"): 448 px of air right of
+     * the rail, 0 px left of it, because a rail row is RIGHT-aligned and parks its own glyphs in the hand a leftward bend would sweep. So every explicit
+     * word has to buy its depth — ParkForBend moves the column off the wall it leans at until the lane can pay — and this asserts the curve is the full
+     * one the shape asked for, at widths an overlay actually gets resized to, on both halves and on both one- and two-column halves.
+     */
+    [TestMethod]
+    public void EveryExplicitLeanDrawsItsFullCurve()
+    {
+      foreach (var w in new[] { 1280.0, Width, 2560.0 })
+      {
+        var stages = new (string Name, FctStage Stage)[]
+        {
+          ("one column per half", FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height)),
+          ("two columns left",
+            FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, w, Height,
+              healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1)),
+        };
+
+        foreach (var (name, stage) in stages)
+        {
+          foreach (var bend in new[] { FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+          {
+            foreach (var heal in new[] { false, true })
+            {
+              var hit = Lean(bend, heal, stage);
+              var want = FullCurve(stage, hit);
+
+              Assert.IsTrue(Math.Abs(hit.Bow) >= want - 0.1,
+                $"{bend} at {w}px ({(heal ? "heals" : "damage")}, {name}) drew {hit.Bow:F1} of a {want:F1} curve — " +
+                "a lean this short reads as a straight line, which is the bug this test exists for");
+            }
+          }
+        }
+      }
+    }
+
+    /* The park is a property of the LANE, never of the number that arrived: two rows on one column, one narrow and one six nines wide, still share a
+       rail and a path. This is what separates paying for a bend from the per-row shove (75e2992a) that put a column out of line with itself. */
+    [TestMethod]
+    public void APaidForLeanIsTheSameCurveForEveryRowOnTheColumn()
+    {
+      var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, Width, Height);
+
+      FctLayout.ArcBend = FctArcBend.Left;
+      var small = new FctHitState { Lane = FctLane.DamageDealt, Heal = false, Style = FctMotionStyle.Arc, Value = 7 };
+      var large = new FctHitState { Lane = FctLane.DamageDealt, Heal = false, Style = FctMotionStyle.Arc, Value = 999999 };
+
+      foreach (var hit in new[] { small, large })
+      {
+        FctStyle.ApplyTo(hit, hit.Lane, minor: false);
+        hit.ValueWidth = FctLayout.EstimateTextWidth("999,999", hit.ValueFontSize);
+        FctLayout.Spawn(hit, stage, new Random(7), (FctLayout.ColumnCentre(hit, stage), hit.BandMinY));
+      }
+
+      Assert.AreEqual(small.X0, large.X0, 0.01, "one spine per column, whatever the digits");
+      Assert.AreEqual(small.Bow, large.Bow, 0.01, "and one curve per column, whatever the digits");
+    }
+
+    /* Open is the arrangement the layout can afford rather than the one it was told to buy, so it parks nothing: the shipped columns stand exactly where
+       the lane puts them. Pinned because every settings.txt written before FctOverlayArcBend exists reads as open, and a player who never touched the
+       dial must not find their numbers moved sideways by an update. */
+    [TestMethod]
+    public void OpenParksNothingAndKeepsTheShippedLook()
+    {
+      var healing = Lean(FctArcBend.Open, heal: true);
+      Assert.AreEqual(235.0, Math.Round(healing.X0, 1), "the healing column still stands at its slot's centre (measured at 1920px)");
+
+      var parked = Lean(FctArcBend.Left, heal: true);
+      Assert.IsTrue(parked.X0 > healing.X0 + 100,
+        $"a leftward lean has to move the column off the wall it leans at (spine {parked.X0:F1} vs open's {healing.X0:F1})");
+    }
+
+    /* Parked columns are still inside their lane: the vertex at half height is where a lean that overspends would show, so sweep the whole flight of
+       every word against the walls it was placed between, on halves that own everything and halves divided with a neighbour. */
+    [TestMethod]
+    public void AParkedColumnStillTravelsInsideItsLane()
+    {
+      var stage = FctStage.ByType(FctRegionSide.Left, incomingUp: false, outgoingUp: false, Width, Height,
+        healLane: FctRailLane.Left1, incomingDamageLane: FctRailLane.Left2, outgoingDamageLane: FctRailLane.Right1);
+
+      foreach (var bend in new[] { FctArcBend.Open, FctArcBend.Out, FctArcBend.Left, FctArcBend.Right })
+      {
+        foreach (var heal in new[] { false, true })
+        {
+          var hit = Lean(bend, heal, stage);
+
           for (var step = 0; step <= 24; step++)
           {
             var x = FctMotion.ArcedX(hit, step / 24.0);

@@ -2134,13 +2134,45 @@ which way. Saved as `FctOverlayArcBend`; the panel puts a fourth item beside `sh
 no curve to point anywhere and fountain's two shapes have no spine to bend (`ClampShape` keeps that promise, `FountainIsNeverHandedAnArcToLean`
 asserts it).
 
-A direction is a wish, not a promise. `AssignTravel` caps the bow against the air on whichever side it was pointed at, and a lane whose spine
-stands near the outer edge has little (at 700 px wide the left column's outward lean lands on **-0.0**), so forcing a lean toward a wall shortens
-the curve instead of pushing the number through the wall — and never sends it past zero, which would hand one column two shapes depending on how
-many digits that particular hit rolled. Rows in flight keep the bow they were born with, for the same reason a resize maps an existing bow instead
-of recomputing it: the vertex is arithmetic from the spawn, and re-bending mid-flight tears one number's path in half. `FctArcBendTest` pins the
-lot: the shipped -319.6/+319.6 pair so a change of default has to be a decision, the mirrored signs of `out`, one direction held at 700/1280/1920/2560,
-and the rail inside `[SideMin, SideMax]` across twenty-four steps of every flight in all four words.
+### The lane has to pay for the lean: `FctStage.ParkForBend`
+
+Three of these four words drew nothing when they shipped, and it took a player noticing that `left` looked like a straight scroll, `out` curved on one
+side only, and `open` was indistinguishable from `right`. The reason is one-sided by construction: **a rail row is right-aligned** ("right edges ride the
+rail", `f3ba116f`), so its number — plus its words when they sit left or below — hangs LEFT of the spine. Every split column therefore keeps its own
+glyphs in its left hand and its free air in its right one. Measured at 1280x1080, one category per half: **448 px of air right of the rail, 0 px left of
+it.** Not "little": zero, exactly, always — `Spawn` pins the rail to `wall + max(RailReserve, valueWidth)` and `AssignTravel` then caps a bow against
+`rail − wall − max(RailReserve, valueWidth)`, the same expression subtracted from the same wall. A leftward bend was refused the very margin spawn had
+just created for it, so it collapsed to a straight line; rightward bends were capped by `valueRight`, which is 0 for a rail row, and got the whole lane.
+That is also why `open` looked like `right`: asked which hand is open, every column answered "the right one" — except in the arrangement the tests were
+written against, where damage sits in the *outer* lane at three quarters of its half (spine 1685) and has air on both hands, so the shipped answer comes
+out inward. The word was never stable because it reads the lane, and the lane depends on which column you gave the category.
+
+So a named direction is now a promise, and the lane pays: **`ParkForBend` moves a column off the wall it leans at** until the widest row it can roll fits
+there with the full bend on top — `wall + RailReserve() + territory * ArcBowFrac`, bounded by the lane's own walls. Measured after the fix at 1280,
+one category per half: `out` parks the healing column from spine 155 to **375** and draws **-210.8** where it used to draw 0.0, while its damage column
+stands still at 815 and draws **+210.8** — a mirrored pair of equal depth, which is the "arc away from my target frame" look. `left` parks both (815 →
+**1035**) and bows -210.8 / -210.8. Same at 1920: halfW 940 → heals 235 → **484**, ±319.6 both halves.
+
+Three rules keep that from becoming the park-shove that once put a column out of line with itself (`75e2992a`, which moved the rail *per row* and starved
+every right-seated name to `"(Des"`):
+
+- **the shift is a property of the lane**, never of the arriving number — slot, lane rect, `RailReserve()` and the bow share are all column-level facts,
+  so a `7` and a `999,999` on one column still share a rail and trace one path (`EveryExplicitLeanDrawsItsFullCurve`, `APaidForLeanIsTheSameCurveForEveryRowOnTheColumn`);
+- **`open` parks nothing.** It means "the layout's own answer, at the budget the layout can afford", it is what every file written before
+  `FctOverlayArcBend` exists reads as, and sliding those columns would re-shape every existing overlay for somebody who asked for nothing. The three
+  explicit words buy their shape (`OpenParksNothingAndKeepsTheShippedLook`). The visible price of `left`/`out` is that a column sits further from the edge
+  it leans away from, and its label hand shrinks by what the bend borrowed — at 1280 with two columns on a side, the healing column's right-hand air goes
+  137 px → **32 px**, so names there get cut sooner. That is the trade, not a bug; if it bites, narrowing the bow is one constant;
+- **a lane too narrow to pay keeps its column where it stands and draws what fits.** At 700 px split into columns, one rail reserve (~156 px at the crit
+  ceiling) is most of the column: no park exists, and the answer is a very short curve — never a sign flip, which would hand one column two shapes
+  depending on how lucky its digits were.
+
+Rows in flight keep the bow they were born with, for the same reason a resize maps an existing bow instead of recomputing it: the vertex is arithmetic from
+the spawn, and re-bending mid-flight tears one number's path in half. Bands takes none of this — it pre-pays its bow at spawn (`FctLayout.Spawn`), and
+could not be handed an arc anyway (`ClampShape`, asserted by `FountainIsNeverHandedAnArcToLean`). `FctArcBendTest` pins the lot: the shipped -319.6/+319.6
+pair so a change of default has to be a decision, the mirrored signs of `out`, the **full depth** each explicit word draws at 1280/1920/2560 on both
+one-column and two-column halves (the guard that was missing — every older assertion read a sign, and a bow clamped to exactly zero passes "not positive"),
+and the rail inside `[SideMin, SideMax]` across twenty-four steps of every flight.
 
 ## Damage meter setup window
 

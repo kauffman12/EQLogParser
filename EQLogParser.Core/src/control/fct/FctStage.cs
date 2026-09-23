@@ -293,7 +293,50 @@ namespace EQLogParser
         return region.X + (region.Width / 2);
       }
 
-      return LaneSpine(lane);
+      return ParkForBend(hit, lane, LaneSpine(lane));
+    }
+
+    /*
+     * A lean said in settings.txt is a promise, and in split the lane is the only place to pay for it.
+     *
+     * The problem is one-sided by construction: a rail row is RIGHT-aligned (f3ba116f, "right edges ride the rail"), so its whole block — number,
+     * plus words when they sit left or below — hangs LEFT of the spine. That leaves every split column with its free air on its right hand and its own
+     * glyphs on its left, which is why `right` has always drawn a full curve while `left` drew nothing at all: FctLayout.AssignTravel caps a bow
+     * against the room between the rail and the wall it leans at, measured as RailReserve() (the widest amount the column can roll), and a column
+     * parked at its slot's centre has spent that room on itself. Measured at 1280x1080 with one category per side: 448 px of air to the right of the
+     * rail, and 0 px on its left — `left` and `out` came out exactly straight, and `open`, which asks which hand is open, answered "the right one"
+     * for every column in the overlay (docs/DesignNotes.md → "Which way an arc leans").
+     *
+     * So when the player names a direction the slot cannot pay for, the column parks away from it until it can: far enough off the wall it leans at
+     * that the widest row on the lane traces the full curve without crossing. The shift is a property of the LANE (slot, its rect, the reserve and the
+     * bow share) and never of the arriving number, so every row still shares one rail — the weld SpineFor exists to hold is untouched, which is what
+     * separates this from the per-row park-shove that broke a column's line and starved its names to "(Des" (75e2992a).
+     *
+     * Open does NOT park. It means "the layout's own answer, at the budget the layout can afford", it is what every file written before
+     * FctOverlayArcBend exists already draws, and moving those columns would be an unrequested change to the shipped look — including for a player
+     * whose four columns each draw the shorter curve their lane can afford. The three explicit words buy their shape.
+     *
+     * A park is bounded by the same walls as everything else in the lane, so a lane too narrow for the bend it was promised keeps the bend short
+     * rather than pushing the column through a neighbour; bands is not touched at all (it pre-pays its bow at spawn, FctLayout.Spawn); and a style
+     * with no bend takes no room, so a straight scroll never slides anywhere for an arc it does not draw.
+     */
+    private double ParkForBend(FctHitState hit, FctRailLane lane, double slot)
+    {
+      if (_mode is not FctLayoutMode.ByType
+          || hit.Style is not FctMotionStyle.Arc
+          || FctLayout.ArcBend is FctArcBend.Open)
+      {
+        return slot;
+      }
+
+      var region = LaneRect(lane);
+      var want = region.Width * FctLayout.ArcBowFrac;
+      var wallLeft = region.X + FctLayout.EdgePad;
+      var wallRight = region.X + region.Width - FctLayout.EdgePad;
+
+      return FctLayout.BendDirection(this, region, slot) < 0
+        ? Math.Min(wallRight, Math.Max(slot, wallLeft + FctLayout.RailReserve() + want))
+        : Math.Max(wallLeft, Math.Min(slot, wallRight - want));
     }
 
     /*
