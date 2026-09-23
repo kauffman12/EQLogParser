@@ -735,7 +735,7 @@ namespace EQLogParser
     {
       var union = new TimeRange();
 
-      if (members != null)
+      if (members is not null)
       {
         foreach (var member in members)
         {

@@ -68,7 +68,9 @@ namespace EQLogParser
       return false;
     }
 
-    /// <summary>Drops the shared heal instances. Called when the manager clears active data.</summary>
+    /*
+     * Drops the shared heal instances. Called when the manager clears active data.
+     */
     internal static void ClearCaches() => _healCache.Clear();
 
     // Exact repeats of a heal collapse onto one instance; two heals that differ in any stored field at all

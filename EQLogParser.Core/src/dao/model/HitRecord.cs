@@ -1,21 +1,19 @@
 namespace EQLogParser;
 
-/// <summary>
-/// Base of the two record types a raid produces by the million: what happened, as one hit or one heal.
-/// </summary>
-/// <remarks>
-/// Every name on a record is stored as an id into <see cref="StringCache"/> instead of a reference to
-/// a string. A record is read as text (grids, exports, the log viewers) and written once by a parser,
-/// so the id costs four bytes where a pointer cost eight, and the text it stands for was already shared
-/// by interning. Reading a name therefore resolves rather than dereferences; it is an array index into
-/// strings that live forever, so it stays cheap enough to sit in the aggregation loops.
-/// <para>
-/// Setting a name assigns whatever text is handed in, exactly as before: callers that want title casing
-/// keep calling <see cref="StringCache.GetOrAdd"/> themselves, and callers that display the text verbatim
-/// (spell names) keep their exact spelling. Ids are matched ordinally, so two spellings that differ by
-/// case stay two different values here just as they did when they were references.
-/// </para>
-/// </remarks>
+/*
+ * Base of the two record types a raid produces by the million: what happened, as one hit or one heal.
+ *
+ * Every name on a record is stored as an id into StringCache instead of a reference to
+ * a string. A record is read as text (grids, exports, the log viewers) and written once by a parser,
+ * so the id costs four bytes where a pointer cost eight, and the text it stands for was already shared
+ * by interning. Reading a name therefore resolves rather than dereferences; it is an array index into
+ * strings that live forever, so it stays cheap enough to sit in the aggregation loops.
+ *
+ * Setting a name assigns whatever text is handed in, exactly as before: callers that want title casing
+ * keep calling StringCache.GetOrAdd themselves, and callers that display the text verbatim
+ * (spell names) keep their exact spelling. Ids are matched ordinally, so two spellings that differ by
+ * case stay two different values here just as they did when they were references.
+ */
 public class HitRecord : IAction
 {
   public uint Total { get; set; }
@@ -41,11 +39,11 @@ public class HitRecord : IAction
   private int _subTypeId;
 }
 
-/// <summary>
-/// One heal. Equal by value, so the manager can keep a single instance for every repeat of it —
-/// heals are the most repetitive thing a raid writes (three quarters of one night's heal lines
-/// restate a heal already seen), and each repeat costs an object if nothing recognises it.
-/// </summary>
+/*
+ * One heal. Equal by value, so the manager can keep a single instance for every repeat of it —
+ * heals are the most repetitive thing a raid writes (three quarters of one night's heal lines
+ * restate a heal already seen), and each repeat costs an object if nothing recognises it.
+ */
 internal class HealRecord : HitRecord
 {
   public string Healer
@@ -72,10 +70,10 @@ internal class HealRecord : HitRecord
   private int _healedId;
 }
 
-/// <summary>
-/// One damage event. Equal by value so the manager hands the same instance to every repeat of it;
-/// see <see cref="FightManager.GetCachedDamageRecord"/>.
-/// </summary>
+/*
+ * One damage event. Equal by value so the manager hands the same instance to every repeat of it;
+ * see FightManager.GetCachedDamageRecord.
+ */
 internal class DamageRecord : HitRecord
 {
   public string Attacker

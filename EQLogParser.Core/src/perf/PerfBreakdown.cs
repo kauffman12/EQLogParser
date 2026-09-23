@@ -50,21 +50,31 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>Name of the whole pass; it leads the line so the phases read as belonging to it.</summary>
+    /*
+     * Name of the whole pass; it leads the line so the phases read as belonging to it.
+     */
     internal string Name { get; }
 
     internal int PhaseCount => _phaseNames.Length;
 
-    /// <summary>How long a pass has to be slow before it is worth a line.</summary>
+    /*
+     * How long a pass has to be slow before it is worth a line.
+     */
     internal double NoteIntervalMs { get; set; } = DefaultNoteIntervalMs;
 
-    /// <summary>Breakdown lines written since this breakdown was created.</summary>
+    /*
+     * Breakdown lines written since this breakdown was created.
+     */
     internal long NoteCount => Volatile.Read(ref _written);
 
-    /// <summary>Breakdown lines refused because one went out inside the interval. Counted, never silently dropped.</summary>
+    /*
+     * Breakdown lines refused because one went out inside the interval. Counted, never silently dropped.
+     */
     internal long SuppressedCount => Volatile.Read(ref _suppressed);
 
-    /// <summary>Starts timing one pass. A pass belongs to the thread that opened it - these are UI-thread passes.</summary>
+    /*
+     * Starts timing one pass. A pass belongs to the thread that opened it - these are UI-thread passes.
+     */
     internal Pass NewPass()
     {
       return new Pass(this);
@@ -149,7 +159,9 @@ namespace EQLogParser
         _startTicks = Stopwatch.GetTimestamp();
       }
 
-      /// <summary>Opens a phase by index, closing whichever phase was open before it.</summary>
+      /*
+       * Opens a phase by index, closing whichever phase was open before it.
+       */
       internal void Open(int phase)
       {
         Close();
@@ -163,7 +175,9 @@ namespace EQLogParser
         _marks[phase] = PerfCounters.Begin(_owner._spanIds[phase]);
       }
 
-      /// <summary>Closes whichever phase is open. Safe to call when none is.</summary>
+      /*
+       * Closes whichever phase is open. Safe to call when none is.
+       */
       internal void Close()
       {
         if (_open < 0)
@@ -176,13 +190,17 @@ namespace EQLogParser
         _ms[phase] += PerfCounters.End(_marks[phase]);
       }
 
-      /// <summary>Milliseconds measured in one phase so far, for a caller that wants to branch on them.</summary>
+      /*
+       * Milliseconds measured in one phase so far, for a caller that wants to branch on them.
+       */
       internal double Ms(int phase)
       {
         return (uint)phase >= (uint)_ms.Length ? 0d : _ms[phase];
       }
 
-      /// <summary>Wall time from the pass opening to now, phases or no phases.</summary>
+      /*
+       * Wall time from the pass opening to now, phases or no phases.
+       */
       internal double TotalMs => (Stopwatch.GetTimestamp() - _startTicks) * 1000.0 / Stopwatch.Frequency;
 
       /*

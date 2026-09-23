@@ -472,7 +472,7 @@ namespace EQLogParser
           if (selectedName == Labels.PetPlayerOption)
           {
             pass = names.Contains(first.PlayerName) || (_hasPets.ContainsKey(first.Name) &&
-            names.FirstOrDefault(name => _hasPets[first.Name].Contains(name)) != null);
+            names.FirstOrDefault(name => _hasPets[first.Name].Contains(name)) is not null);
           }
           else if (selectedName == Labels.PlayerOption)
           {

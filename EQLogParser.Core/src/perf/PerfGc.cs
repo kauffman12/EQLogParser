@@ -26,7 +26,8 @@ namespace EQLogParser
      * 794 ms` beside `STOP-THE-WORLD 969 ms … profiler or gcdump, power management, or no CPU for anybody`. Whoever calls GC.Collect knows what it did,
      * which is one fact the counters do not deliver in time, so it notes the stop here and the gap line reads it.
      */
-    internal readonly struct IntentionalStop {
+    internal readonly struct IntentionalStop
+    {
       internal readonly string Reason;   // null: nothing has ever been noted, and an empty register explains nothing
       internal readonly long StartMs;
       internal readonly long EndMs;      // 0 while the collection is still running

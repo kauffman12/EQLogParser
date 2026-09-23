@@ -365,12 +365,12 @@ namespace EQLogParser
 
         try
         {
-          if (damageOverlayStats.DamageStats != null)
+          if (damageOverlayStats.DamageStats is not null)
           {
             LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
           }
 
-          if (damageOverlayStats.TankStats != null)
+          if (damageOverlayStats.TankStats is not null)
           {
             LoadStats(tankContent.Children, damageOverlayStats.TankStats);
           }

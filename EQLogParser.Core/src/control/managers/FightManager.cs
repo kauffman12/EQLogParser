@@ -477,19 +477,18 @@ namespace EQLogParser
       return true;
     }
 
-    /// <summary>
-    /// Returns the cached DamageRecord if an identical one exists, otherwise caches and returns the incoming
-    /// record. Deduplicating by value means two events with the same attacker, defender, amount, type and
-    /// modifiers share one heap object — on the log this was measured against, about half of a raid night's
-    /// damage events.
-    /// <para>
-    /// The interning below is a second job riding along in the miss path. Records keep names as ids into
-    /// StringCache (see HitRecord), so which string is handed in here decides the spelling every later reader
-    /// sees, grids and exports included; it is no longer what makes repeats cheap to hold. Deleting this
-    /// dictionary would be a memory decision worth about a hundred MB of entries against the two hundred the
-    /// dropped records save — but the interning below has to survive it, or names stop being title cased.
-    /// </para>
-    /// </summary>
+    /*
+     * Returns the cached DamageRecord if an identical one exists, otherwise caches and returns the incoming
+     * record. Deduplicating by value means two events with the same attacker, defender, amount, type and
+     * modifiers share one heap object — on the log this was measured against, about half of a raid night's
+     * damage events.
+     *
+     * The interning below is a second job riding along in the miss path. Records keep names as ids into
+     * StringCache (see HitRecord), so which string is handed in here decides the spelling every later reader
+     * sees, grids and exports included; it is no longer what makes repeats cheap to hold. Deleting this
+     * dictionary would be a memory decision worth about a hundred MB of entries against the two hundred the
+     * dropped records save — but the interning below has to survive it, or names stop being title cased.
+     */
     private DamageRecord GetCachedDamageRecord(DamageRecord incoming)
     {
       if (_damageCache.TryGetValue(incoming, out var cached))
