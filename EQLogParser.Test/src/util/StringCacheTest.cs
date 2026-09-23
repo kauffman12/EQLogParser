@@ -1,5 +1,5 @@
 using EQLogParser;
-
+using System.Collections.Concurrent;
 namespace EQLogParserTest
 {
   [TestClass]
@@ -238,6 +238,65 @@ namespace EQLogParserTest
       reader.Wait(TimeSpan.FromSeconds(10));
 
       Assert.AreEqual(0, failures);
+    }
+
+    /*
+     * The hit path takes no lock, so it is the path this test has to prove: eight threads reading three hundred established names while two more
+     * register thousands must always get back the id they were given the first time. A miss on that path would not throw, it would answer 0 — which
+     * reads as "no name stored", so a record would silently lose its player or its spell rather than fail.
+     */
+    [TestMethod]
+    public void GetId_OnTheLockFreeHitPath_AnswersCorrectlyWhileOtherThreadsRegister()
+    {
+      const int Established = 300;
+
+      var names = Enumerable.Range(0, Established).Select(static i => $"pcx hit {i}").ToArray();
+      var expected = names.Select(StringCache.GetId).ToArray();
+
+      var stop = false;
+      var wrong = 0;
+
+      var readers = Enumerable.Range(0, 8).Select(slot => Task.Run(() =>
+      {
+        while (!Volatile.Read(ref stop))
+        {
+          for (var i = slot; i < Established; i += 8)
+          {
+            if (StringCache.GetId(names[i]) != expected[i])
+            {
+              Interlocked.Increment(ref wrong);
+            }
+          }
+        }
+      })).ToArray();
+
+      var writers = Enumerable.Range(0, 2).Select(slot => Task.Run(() =>
+      {
+        for (var i = 0; i < 3000; i++)
+        {
+          StringCache.GetId($"pcx churn {slot}-{i}");
+        }
+      })).ToArray();
+
+      Task.WaitAll(writers);
+      Volatile.Write(ref stop, true);
+      Task.WaitAll(readers);
+
+      Assert.AreEqual(0, wrong, "a lookup during registration answered something other than the id that name was given");
+    }
+
+    /* Two threads meeting the same new name at the same moment must be given one id: ids are equality, and two ids for one player splits their damage in two. */
+    [TestMethod]
+    public void GetId_GivesOneIdToTheFirstTenThreadsThatAskForANewName()
+    {
+      const string Name = "pcx arrived together";
+
+      var ids = new ConcurrentBag<int>();
+
+      Parallel.For(0, 10, _ => ids.Add(StringCache.GetId(Name)));
+
+      Assert.AreEqual(1, ids.Distinct().Count(), $"one name was given {ids.Distinct().Count()} ids: {string.Join(", ", ids)}");
+      Assert.AreEqual(Name, StringCache.GetName(ids.First()));
     }
 
     [TestMethod]
