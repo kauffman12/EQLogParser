@@ -22,6 +22,10 @@
       <Label x:Name="titleLabel3" Style="{StaticResource EQTitleStyle}" Padding="0,5,5,5"/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <!-- The former Caster/Melee/self-only checkboxes, in the one multi-select dropdown style the other
+           views use; the box reads "All Timeline Options" or "2 Timeline Options Selected". -->
+      <ComboBox x:Name="timelineOptions" MinWidth="130" Margin="0,0,8,2" Padding="5,0,10,0" VerticalContentAlignment="Center" Visibility="Collapsed"
+                DropDownClosed="OptionsChange" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <ComboBox x:Name="layoutSelector" MinWidth="80" Margin="0,0,8,2" Padding="4,0,4,0" SelectionChanged="LayoutSelectorSelectionChanged" IsEnabled="False" />
       <syncfusion:DropDownButtonAdv Label="Manage Layouts" IconHeight="0" IconWidth="5" Height="{DynamicResource EQButtonHeight}" Padding="4,0,4,0" Margin="0,0,4,1">
         <syncfusion:DropDownMenuGroup>
@@ -31,10 +35,6 @@
           <syncfusion:DropDownMenuItem x:Name="deleteLayoutButton" Header="Delete Layout" IsEnabled="False" Click="DeleteLayoutClick"/>
         </syncfusion:DropDownMenuGroup>
       </syncfusion:DropDownButtonAdv>
-      <!-- The former Caster/Melee/self-only checkboxes, in the one multi-select dropdown style the other
-           views use; the box reads "All Timeline Options" or "2 Timeline Options Selected". -->
-      <ComboBox x:Name="timelineOptions" MinWidth="130" Margin="0,0,8,2" Padding="5,0,10,0" VerticalContentAlignment="Center" Visibility="Collapsed"
-                DropDownClosed="OptionsChange" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Reload</Button>
     </StackPanel>
     <Grid Grid.Row="1" HorizontalAlignment="Left">
