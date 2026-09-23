@@ -14,9 +14,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **FCT vocabulary is closed**: two region schemes (`Bands` = the panel's *fountain*, `ByType` = *split*) and four motion styles
   (`Freeze`, `Fountain`, `Spray`, `Arc`) plus `Straight`, which is arc's rail with the bend taken out. Halves, pulse, the cell grid and the
   stream were deleted on measurement, not parked: do not resurrect one because a comment mentions it. A new scheme or style arrives with a
-  settings word, a panel entry, and tests — the shape names saved in `settings.ini` are exactly the words the dropdown shows (`arc`, `line`,
-  `spray`, `freeze`; `Straight` excepted, saved as `line`).
-- **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`). Test classes in
+  settings word, a panel entry, and tests — the shape names saved in `settings.txt` are exactly the words the dropdown shows (`arc`, `line`,
+  `spray`, `freeze`; `Straight` excepted, saved as `line`). One dial rides inside `arc`: `FctArcBend` (`open`, `out`, `left`, `right`; absent =
+  `open`, which is the pre-existing curve, not a fifth shape — see docs/DesignNotes.md).
+- **FCT engine tests**: the dials are process globals (`FctScale.Text/Crit/Time`, `FctLayout.LabelSide`, `FctLayout.ArcBend`). Test classes in
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another
   (a leaked speed dial was measured moving a row's spine 74 px — a real assertion failing on a machine that ran the same code).

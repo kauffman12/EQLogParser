@@ -184,11 +184,26 @@
              for a mode are never even choices in it - a scheme cannot store a motion it would only degrade. -->
         <TextBlock x:Name="shapeTitle" Grid.Row="1" Text="shape" VerticalAlignment="Center"
                    Foreground="{DynamicResource ContentForegroundAlt}" />
-        <ComboBox x:Name="shapeCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
-          <ComboBoxItem Content="arc" Tag="arc" />
-          <ComboBoxItem Content="line" Tag="line" />
-        </ComboBox>
-        <ComboBox x:Name="sprayCombo" Grid.Row="1" Grid.Column="1" Margin="0,3" Visibility="Collapsed" SelectionChanged="ControlChanged">
+        <!-- The arc's lean rides in the same cell as the shape it bends, and is offered only while that shape is arc: "line" has no curve
+             to point anywhere, so a dial answering a question the current shape does not ask would be noise. Its four words are exactly the
+             words settings.txt carries (FctOverlaySettings.WordForArcBend): open is what the columns drew before the choice existed, out sends
+             each half away from the middle of the overlay, left and right pick one way for the whole thing. No title of its own - two combos
+             under one label is already how the lane rows read. -->
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,3">
+          <ComboBox x:Name="shapeCombo" Width="84" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="arc" Tag="arc" />
+            <ComboBoxItem Content="line" Tag="line" />
+          </ComboBox>
+          <ComboBox x:Name="arcBendCombo" Width="92" Margin="6,0,0,0" Visibility="Collapsed" SelectionChanged="ControlChanged">
+            <ComboBoxItem Content="open" Tag="open" />
+            <ComboBoxItem Content="out" Tag="out" />
+            <ComboBoxItem Content="left" Tag="left" />
+            <ComboBoxItem Content="right" Tag="right" />
+          </ComboBox>
+        </StackPanel>
+        <!-- Same width and left edge as the shape combo it stands in for, so switching mode does not move the row. -->
+        <ComboBox x:Name="sprayCombo" Grid.Row="1" Grid.Column="1" Width="84" HorizontalAlignment="Left" Margin="0,3"
+                  Visibility="Collapsed" SelectionChanged="ControlChanged">
           <ComboBoxItem Content="spray" Tag="spray" />
           <ComboBoxItem Content="freeze" Tag="freeze" />
         </ComboBox>

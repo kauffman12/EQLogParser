@@ -103,6 +103,15 @@ namespace EQLogParser
      */
     internal static FctLabelSide LabelSide = FctLabelSide.None;
 
+    /*
+     * Which way an arc leans (FctArcBend): the same kind of dial as the label seat above — the canvas owns the player's choice and stamps it
+     * when settings load, because it is not decoration but a sign that every downstream clamp reads. Open is what the lanes have always done
+     * and what a file with no FctOverlayArcBend key means; out mirrors the two halves away from each other; left and right pick one side for
+     * the whole overlay. Nothing else in the layout changes with it: the bow is still capped against the room on whichever side it goes, so a
+     * forced direction in a lane with no air draws a shorter curve rather than a number through a wall.
+     */
+    internal static FctArcBend ArcBend = FctArcBend.Open;
+
     internal static bool LabelsBelow => LabelSide is FctLabelSide.Below;
 
     /*
@@ -316,6 +325,27 @@ namespace EQLogParser
       _ => w * 0.50, // DamageDealt, DamageTaken, Crit, Defensive, Missed: one plume out of the middle
     };
 
+    /*
+     * The sign of a lane's bend, asked once per row and answered from the dial rather than the row (FctArcBend), so a column cannot contain two
+     * shapes. Open is the arrangement Spawn describes a little below: fountain away from its middle strip, split toward whichever of the lane's
+     * own hands is open - which,
+     * with one category on a side, points at the middle of the screen, and is why both halves of a default split lean inward. Out mirrors about
+     * the overlay's centre instead of the lane's, which is fountain's rule handed to split; left and right stop asking and say which way.
+     *
+     * Measured at the spine (cx) rather than the region's centre so that the two answers agree for the case that matters - a lane that owns its
+     * whole half, where those are different points and the spine is the one the number actually stands on.
+     */
+    internal static double BendDirection(FctStage stage, (double X, double Y, double Width, double Height) region, double spineX) =>
+      ArcBend switch
+      {
+        FctArcBend.Left => -1.0,
+        FctArcBend.Right => 1.0,
+        FctArcBend.Out => spineX < stage.W / 2 ? -1.0 : 1.0,
+        _ => stage.Mode is FctLayoutMode.Bands
+          ? (region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0)
+          : (region.X + region.Width - EdgePad - spineX >= spineX - region.X - EdgePad - 2 * RailReserve() ? 1.0 : -1.0),
+      };
+
     /* Which x the column puts a NUMBER at, as opposed to its rail. X0 is the right-align rail everywhere (FctMotion.ArcedX), so in bands a number left
      * on its slot draws half a text to the left of it — measured 4.9% of a 1600 px panel with the slot dead on the middle line, which is what "the
      * fountain sits left of centre" turned out to be, half of it legacy and half of it pure anchor. Bands throws a plume rather than setting type, so
@@ -409,14 +439,16 @@ namespace EQLogParser
        * every right-seated name on the lane to "(Des)". In split the bow curves toward whichever hand of the lane is open, measured at the
        * spine and equal for every row; the rail holds its slot and the bend spends the lane's leftover air instead of eating its label share.
        *
+       * That rule is now one answer on a dial rather than the only answer: FctArcBend offers it ("open") alongside three the lane cannot infer,
+       * because what the open hand points at with one category per side is the MIDDLE of the screen — both halves leaning inward at each other,
+       * measured -319.6/+319.6 at 1920 px (FctArcBendTest), and flipping sides on its own when the window narrows.
+       *
        * The open hand is measured honestly against what a bend that way actually costs: the value box hangs LEFT of its rail, so a leftward bow
        * pays for the hanging box TWICE - once at spawn (xLo below keeps RailReserve clear of the seam) and again in AssignTravel's cap, which
        * trims every row's bow against the same reserve. Comparing the hands at ONE reserve was optimistic: it could hand the lane a leftward
        * direction whose cap then collapsed to a few pixels, an arc in name only (the retuned crit dial shrinking RailReserve is what exposed
        * the near-tie). Two reserves is the distance at which a leftward bow can genuinely pay for itself. */
-      var bowOut = stage.Mode is FctLayoutMode.Bands
-        ? (region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0)
-        : (region.X + region.Width - EdgePad - cx >= cx - region.X - EdgePad - 2 * RailReserve() ? 1.0 : -1.0);
+      var bowOut = BendDirection(stage, region, cx);
 
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;

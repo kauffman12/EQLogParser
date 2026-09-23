@@ -696,6 +696,7 @@ namespace EQLogParser
       _canvas.Layout = state.BuildLayout();
       _canvas.MotionStyle = state.BuildMotion();
       _canvas.LabelSide = state.LabelSide;
+      _canvas.ArcBend = state.ArcBend;
       FctScale.Text = FctScale.ClampSize(state.TextScale);
       FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
       FctScale.Time = FctScale.TimeFromSpeed(state.Speed);

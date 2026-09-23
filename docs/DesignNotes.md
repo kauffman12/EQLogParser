@@ -2118,6 +2118,30 @@ asserts the vertex sits over the lane's open hand instead of "away from the midd
 compares NAME lengths where it compared label lengths — "(Glo)" growing "(Glo…)" as a column narrows is the cut mark
 appearing, not the name growing. 1081/1081; the real question was the screenshot's, and the answer was "yes".
 
+### Which way an arc leans: `open`, `out`, `left`, `right`
+
+The open-hand rule answered a question the player never got to ask, and its answer is not what the genre looks like. Measured at 1920x1080 with
+heals left and damage right, one category per half: the damage column (spine 1685) bows to **-319.6** and the healing column (spine 235) bows to
+**+319.6** — both halves leaning inward, at each other, across the gutter. Narrow that same overlay to 1280 and the damage column flips to
+**+147**, because "which of the lane's hands is open" is a fact about lane width and rail reserve rather than about anybody's taste. Fountain holds
+the opposite law (every column bows away from the shared middle strip, because leaning into the neighbour's stream tangles it), so the two schemes
+disagree and only one of them was ever chosen.
+
+`FctArcBend` turns it into a word. **open** is the rule above untouched and stays the default — it is what every `settings.txt` written before the
+key exists already draws, so nothing moves until somebody asks. **out** mirrors about the middle of the overlay: fountain's law handed to split,
+which is the "arc away from my target frame" look most people mean when they say standard. **left** and **right** stop consulting the lane and say
+which way. Saved as `FctOverlayArcBend`; the panel puts a fourth item beside `shape` and shows it only while the shape is `arc`, because `line` has
+no curve to point anywhere and fountain's two shapes have no spine to bend (`ClampShape` keeps that promise, `FountainIsNeverHandedAnArcToLean`
+asserts it).
+
+A direction is a wish, not a promise. `AssignTravel` caps the bow against the air on whichever side it was pointed at, and a lane whose spine
+stands near the outer edge has little (at 700 px wide the left column's outward lean lands on **-0.0**), so forcing a lean toward a wall shortens
+the curve instead of pushing the number through the wall — and never sends it past zero, which would hand one column two shapes depending on how
+many digits that particular hit rolled. Rows in flight keep the bow they were born with, for the same reason a resize maps an existing bow instead
+of recomputing it: the vertex is arithmetic from the spawn, and re-bending mid-flight tears one number's path in half. `FctArcBendTest` pins the
+lot: the shipped -319.6/+319.6 pair so a change of default has to be a decision, the mirrored signs of `out`, one direction held at 700/1280/1920/2560,
+and the rail inside `[SideMin, SideMax]` across twenty-four steps of every flight in all four words.
+
 ## Damage meter setup window
 
 Configure used to be a form painted on top of the thing it configured: pressing the cog swapped the live meter for a

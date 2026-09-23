@@ -49,6 +49,11 @@ namespace EQLogParser
     /* Where the "(source)" label sits by its amount: left, below, right — or none, which is what ships and what an absent key means
      * (FctOverlaySettings.ShippedLabelSide). Save writes the word out even for none, so a first-run file starts carrying this key. */
     public const string LabelSideKey = "FctOverlayLabelSide";
+
+    /* Which way an arc leans: open (each lane's own open hand - the answer the lanes have always used), out (away from the middle of the
+     * overlay, which is what most people expect an arc to do in split), left or right. Absent is open, so a file written before this key
+     * exists keeps drawing what it drew (FctArcBend). */
+    public const string ArcBendKey = "FctOverlayArcBend";
     public const string DealtDamageSideKey = "FctOverlayDealtDamageSide";
     public const string DealtDamageLaneKey = "FctOverlayDealtDamageLane";
 
@@ -273,6 +278,7 @@ namespace EQLogParser
         Threshold = LoadThreshold(),
         Gutter = LoadGutter(),
         LabelSide = LoadLabelSide(),
+        ArcBend = LoadArcBend(),
         TextScale = LoadTextScale(),
         CritScale = LoadCritScale(),
         Speed = LoadSpeed(),
@@ -319,6 +325,7 @@ namespace EQLogParser
       SaveGutter(state.Gutter);
       FctShowList.Save(state);
       SaveLabelSide(state.LabelSide);
+      SaveArcBend(state.ArcBend);
       SaveTextScale(state.TextScale);
       SaveCritScale(state.CritScale);
       SaveSpeed(state.Speed);
@@ -410,6 +417,33 @@ namespace EQLogParser
         FctLabelSide.Below => "below",
         FctLabelSide.Right => "right",
         _ => "none",
+      };
+
+    public static FctArcBend LoadArcBend() => ShippedArcBend(ConfigUtil.GetSetting(ArcBendKey, null));
+
+    public static void SaveArcBend(FctArcBend bend) => ConfigUtil.SetSetting(ArcBendKey, WordForArcBend(bend));
+
+    /*
+     * One arm per word in both directions, same rule as the label seat above: absent lands on open (what every existing file means today),
+     * and no saved word can stop existing because the shipped default moved. The four are not synonyms downstream - they are four different
+     * curves - so a hand-edited "outside" reading as open is a typo being declined, not a preference being ignored.
+     */
+    internal static FctArcBend ShippedArcBend(string raw) =>
+      raw switch
+      {
+        string s when string.Equals(s, "out", StringComparison.OrdinalIgnoreCase) => FctArcBend.Out,
+        string s when string.Equals(s, "left", StringComparison.OrdinalIgnoreCase) => FctArcBend.Left,
+        string s when string.Equals(s, "right", StringComparison.OrdinalIgnoreCase) => FctArcBend.Right,
+        _ => FctArcBend.Open,
+      };
+
+    internal static string WordForArcBend(FctArcBend bend) =>
+      bend switch
+      {
+        FctArcBend.Out => "out",
+        FctArcBend.Left => "left",
+        FctArcBend.Right => "right",
+        _ => "open",
       };
 
     internal static bool ParseUp(string raw) =>

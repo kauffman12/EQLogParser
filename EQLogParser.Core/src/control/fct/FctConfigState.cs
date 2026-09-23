@@ -123,6 +123,11 @@ namespace EQLogParser
      * answer a state gets when nobody has chosen one, and it matches the value the engine opens with (FctLayout.LabelSide). */
     public FctLabelSide LabelSide = FctLabelSide.None;
 
+    /* Which way an arc leans (FctArcBend), read by the layout the same way the label seat is. Ships at open, which is the curve the columns
+     * have always drawn: a player has to ask for the other three. Fountain takes no shape from this - it has no arc to bend - but the field
+     * travels anyway rather than being mode-dependent furniture. */
+    public FctArcBend ArcBend = FctArcBend.Open;
+
     public double TextScale = FctScale.SizeDefault;
     public double CritScale = FctScale.CritSizeDefault;
     public double Speed = FctScale.SpeedDefault;
@@ -167,6 +172,7 @@ namespace EQLogParser
       ShowAbsorb = ShowAbsorb,
       ShowInvulnerable = ShowInvulnerable,
       LabelSide = LabelSide,
+      ArcBend = ArcBend,
       TextScale = TextScale,
       CritScale = CritScale,
       Speed = Speed,
