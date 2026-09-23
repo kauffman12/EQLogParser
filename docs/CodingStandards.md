@@ -16,11 +16,23 @@
 - **Never use single-line try/catch blocks** — always use multi-line brace style, even for simple bodies
 - Consistent spacing around operators and after commas
 - Logical grouping of related methods with blank lines
-- Line length limited to ~120 characters
+- **Line length: ~120 for code, prose comments run longer.** The number is a rule about *statements* — a wrapped expression takes the operator on
+  the continuation line and stays readable in a side-by-side diff. It has never described this codebase's comment style: measured across all 328
+  tracked `.cs` files there are 4,704 lines past 120 characters, one or more in every single file, because a measurement argument (what was
+  measured, on what width, what the number turned out to be) loses its point when broken into six lines. Wrap prose at roughly the same column the
+  paragraph around it uses and do not reflow a comment you did not change to enforce a rule the tree does not enforce.
 
 ### Visual Studio Cleanup Code
 
-The root `.editorconfig` is the single source of truth for style. Run Visual Studio's **Cleanup Code** (or `dotnet format`) on every file you touch and commit the result rather than hand-formatting around it. The enforced choices that differ from what most editors default to:
+The root `.editorconfig` is the source of truth for style *intent*, and it is not currently satisfiable: it declares `end_of_line = crlf` and
+`insert_final_newline = false`, while 274 of the 328 tracked `.cs` files are LF-only. So `dotnet format --verify-no-changes` fails on files nobody
+touched, and running Cleanup Code without a scope rewrites line endings across the tree — a diff of ten thousand whitespace lines that hides the
+change you came to make. Run it **on the files you edited, and only those** (`dotnet format <project> --include <path>`), and match the file you are
+editing rather than the config: open a CRLF file (the FCT engine under `EQLogParser.Core/src/control/fct`, the trigger managers) and stay CRLF; a new
+file in an LF folder stays LF. Fixing the census is its own job — decide CRLF or LF once, convert in one commit that touches nothing else, then
+re-point this paragraph at whichever won.
+
+The enforced choices that differ from what most editors default to:
 
 - **No space after a cast**: `(ITtsEngine)null`, not `(ITtsEngine) null` (`csharp_space_after_cast = false`).
 - **`var` wherever the type is apparent** — including built-in types and `out` arguments: `var total = 0L;`, `if (cache.TryGetValue(key, out var entry))`.
