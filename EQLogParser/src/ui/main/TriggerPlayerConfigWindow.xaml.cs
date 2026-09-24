@@ -1,12 +1,9 @@
 using EQLogParser.Audio;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 
 namespace EQLogParser
@@ -219,24 +216,11 @@ namespace EQLogParser
 
     private void ChooseFileClicked(object sender, RoutedEventArgs e)
     {
-      var initialPath = string.IsNullOrEmpty(txtFilePath.Text) ? string.Empty : Path.GetDirectoryName(txtFilePath.Text);
-
-      var dialog = new CommonOpenFileDialog
-      {
-        // Set to false because we're opening a file, not selecting a folder
-        IsFolderPicker = false,
-        // Set the initial directory
-        InitialDirectory = initialPath ?? "",
-      };
-
-      // Show dialog and read result
-      dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt"));
-
-      var handle = new WindowInteropHelper(this).Handle;
-      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
+      var file = FileDialogUtil.PickFile(this, txtFilePath.Text, "character log", "eqlog_Player_server", "*.txt");
+      if (file != null)
       {
         txtFilePath.FontStyle = FontStyles.Normal;
-        txtFilePath.Text = dialog.FileName;
+        txtFilePath.Text = file;
       }
     }
 

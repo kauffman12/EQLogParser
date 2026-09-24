@@ -1,10 +1,8 @@
-using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 
 namespace EQLogParser
 {
@@ -147,17 +145,13 @@ namespace EQLogParser
 
     private void ChooseFolderClicked(object sender, RoutedEventArgs e)
     {
-      using var dialog = new CommonOpenFileDialog();
-      dialog.IsFolderPicker = true;
-      dialog.InitialDirectory = string.IsNullOrEmpty(txtFolderPath.Text)
-        ? string.Empty
-        : Path.GetDirectoryName(txtFolderPath.Text);
-
-      var handle = new WindowInteropHelper(this).Handle;
-      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
+      // The box holds a folder, so it goes in as-is. It used to be run through GetDirectoryName, which turned
+      // "D:\Logs" into "D:" and opened the chooser at the drive root instead.
+      var folder = FileDialogUtil.PickFolder(this, txtFolderPath.Text, "archive");
+      if (folder != null)
       {
         txtFolderPath.FontStyle = FontStyles.Normal;
-        txtFolderPath.Text = dialog.FileName;
+        txtFolderPath.Text = folder;
         EnableSave();
       }
     }

@@ -2,7 +2,6 @@ using FontAwesome5;
 using log4net;
 using log4net.Appender;
 using Microsoft.Win32;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -406,15 +405,10 @@ namespace EQLogParser
 
     internal static void Restore()
     {
-      var dialog = new CommonOpenFileDialog
-      {
-        // Set to false because we're opening a file, not selecting a folder
-        IsFolderPicker = false,
-      };
-
-      // Show dialog and read result
-      dialog.Filters.Add(new CommonFileDialogFilter("EQLogParser_backup.zip", "*.zip"));
-      if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+      // No start folder: a restore can come from anywhere, so let Windows show what it likes. Null also covers
+      // "cancelled" and "the chooser could not be shown", which are handled the same way — nothing happens.
+      var pickedFile = FileDialogUtil.PickFile(GetOwner(), null, "backup restore", "EQLogParser_backup.zip", "*.zip");
+      if (pickedFile != null)
       {
         Task.Delay(150).ContinueWith(async _ =>
         {
@@ -424,7 +418,7 @@ namespace EQLogParser
 
           try
           {
-            using var archive = ZipFile.OpenRead(dialog.FileName);
+            using var archive = ZipFile.OpenRead(pickedFile);
             // Check for the presence of the folder at the top level
             var containsFolder = archive.Entries
               .Any(entry => entry.FullName.StartsWith("config/triggers.db", StringComparison.OrdinalIgnoreCase));
@@ -444,7 +438,7 @@ namespace EQLogParser
               }
 
               Directory.CreateDirectory(source);
-              ZipFile.ExtractToDirectory(dialog.FileName, source);
+              ZipFile.ExtractToDirectory(pickedFile, source);
               worked = true;
 
               await Task.Delay(500);

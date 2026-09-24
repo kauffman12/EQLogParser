@@ -1,4 +1,3 @@
-using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Tools.Controls;
 using System.Collections.Generic;
@@ -8,7 +7,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Interop;
 
 namespace EQLogParser
 {
@@ -136,21 +134,10 @@ namespace EQLogParser
     {
       ShowImage();
 
-      var dialog = new CommonOpenFileDialog
+      var file = FileDialogUtil.PickFile(MainActions.GetOwner(), FileUtil.GetDirFromPath(_theImagePath?.Text), "icon image", "Images", "*.png;*.jpg;*.jpeg");
+      if (file != null)
       {
-        // Set to false because we're opening a file, not selecting a folder
-        IsFolderPicker = false,
-        // Set the initial directory
-        InitialDirectory = FileUtil.GetDirFromPath(_theImagePath?.Text) ?? string.Empty
-      };
-
-      // Show dialog and read result
-      dialog.Filters.Add(new CommonFileDialogFilter("Images", "*.png;*.jpg;*.jpeg"));
-
-      var handle = new WindowInteropHelper(MainActions.GetOwner()).Handle;
-      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
-      {
-        _theImagePath.Text = dialog.FileName;
+        _theImagePath.Text = file;
       }
       else if (_theImage.Source == null)
       {

@@ -1,7 +1,6 @@
 using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -1188,25 +1187,18 @@ namespace EQLogParser
         }
         else
         {
-          var initialPath = string.IsNullOrEmpty(AppSettings.CurrentLogFile) ? string.Empty : Path.GetDirectoryName(AppSettings.CurrentLogFile);
+          // Where this character's log lives, when we know it; otherwise the newest recent file whose folder is
+          // still on disk, and failing that whatever Windows wants to show. ResolveDirectory drops every
+          // candidate that does not exist, so the chooser is never handed a folder it cannot open — that was
+          // the crash.
+          var start = new[] { AppSettings.CurrentLogFile }.Concat(_recentFiles)
+            .Select(FileDialogUtil.ResolveDirectory).FirstOrDefault(dir => dir != null);
 
-          var dialog = new CommonOpenFileDialog
+          // Cancel and failure both come back as "no file", so there is nothing here that can end the app.
+          PerfCounters.Run(PickFileId, () =>
           {
-            // Set to false because we're opening a file, not selecting a folder
-            IsFolderPicker = false,
-            // Set the initial directory
-            InitialDirectory = initialPath ?? "",
-          };
-
-          // Show dialog and read result
-          dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.gz;*.log"));
-
-          var picked = default(CommonFileDialogResult);
-          PerfCounters.Run(PickFileId, () => { picked = dialog.ShowDialog(); });
-          if (picked == CommonFileDialogResult.Ok)
-          {
-            theFile = dialog.FileName; // Get the selected file name
-          }
+            theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server", "*.txt;*.gz;*.log");
+          });
         }
 
         if (!string.IsNullOrEmpty(theFile))
@@ -1250,12 +1242,10 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        if (e is not (InvalidCastException or ArgumentException or FormatException))
-        {
-          throw;
-        }
-
-        Log.Error("Problem During Initialization", e);
+        // Logged and swallowed on purpose. The old version rethrew anything that was not a cast, argument or
+        // format problem, which meant the unexpected failures were exactly the ones that reached the user; the
+        // dispatcher handler would only have caught them again, with less context in the log.
+        Log.Error("Problem Opening Log File", e);
       }
       finally
       {
