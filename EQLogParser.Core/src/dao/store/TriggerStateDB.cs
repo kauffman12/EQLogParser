@@ -98,7 +98,9 @@ namespace EQLogParser
           // ancient — has a version document and the signal is gone.
           var firstVersionedRun = _db.GetCollection<BsonDocument>(VersionCol).FindById("1") is not BsonDocument;
 
-          Log.Info($"Opening trigger database: {path}");
+          // Debug rather than Info: it opens once per run and tells a reader nothing the absence of every later line does not already
+          // imply, while players pay for it in first lines to trawl through when something else goes wrong.
+          Log.Debug($"Opening trigger database: {path}");
 
           // The queue must exist even if migration throws below: a throw that left it null would
           // NRE every later call on the cached singleton for the whole session.
