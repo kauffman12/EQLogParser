@@ -26,3 +26,4 @@
 [Sun Apr 26 18:45:05 2026] Witherfang hits Sirmr for 900 points of damage.
 [Sun Apr 26 18:45:30 2026] a grimtooth matriarch has been charmed.
 [Sun Apr 26 18:46:10 2026] A grimtooth matriarch was slain by Sirmr!
+[Sun Apr 26 18:47:00 2026] You hit an aetherial hydra for 500 points of damage.

@@ -58,8 +58,12 @@ public class RegistryRebuildTest
         // (plain join lines pass isPossiblePlayerName) — the audit list for registry pollution.
         var mercs = logNames.Where(n => timeline.IdentityWithSource(n, out _) == IdentityKind.Merc).OrderBy(n => n).ToList();
 
+        // R0: the log's own author is player by construction; not registry ground truth.
+        var localNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ChatType.You };
+        if (!string.IsNullOrEmpty(ConfigUtil.PlayerName)) localNames.Add(ConfigUtil.PlayerName);
+
         var falsePlayers = logNames
-            .Where(n => PlayerSide(timeline.IdentityWithSource(n, out _)) && !truthPlayers.Contains(n))
+            .Where(n => PlayerSide(timeline.IdentityWithSource(n, out _)) && !truthPlayers.Contains(n) && !localNames.Contains(n))
             .ToList();
 
         Console.WriteLine($"[rebuild] {Path.GetFileName(path)}: names={logNames.Count} evidence={facts.EvidenceCount} facts={facts.FactCount}");

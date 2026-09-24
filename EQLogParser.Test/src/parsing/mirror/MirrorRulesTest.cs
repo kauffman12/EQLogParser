@@ -67,6 +67,10 @@ public class MirrorRulesTest
         Assert.AreEqual(AffiliationKind.Enemy, timeline.AffiliationAt("a toughened horror", charmT1, out _));
         Assert.IsTrue(charmT1 > charmT0);
 
+        // R0: the log's author — "You" is player by construction (fixture filename carries no
+        // name, so ConfigUtil.PlayerName stays empty and the literal key is the identity target).
+        AssertIdentity(timeline, ChatType.You, IdentityKind.Player, "R0-local");
+
         // R13: Targeted (NPC) plus player-shaped behavior (join + group chat) is the merc
         // signature — neither Player (behavior lies for hirelings) nor plain Npc.
         AssertIdentity(timeline, "Hirelina", IdentityKind.Merc, "R13-merc");

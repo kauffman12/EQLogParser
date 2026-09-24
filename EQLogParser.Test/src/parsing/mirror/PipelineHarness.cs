@@ -128,6 +128,13 @@ internal static class PipelineHarness
     {
         EnsureDataStore();
 
+        // The app derives the local player from the log filename (eqlog_(Player)_(Server).txt);
+        // do the same so You-mapping and the R0-local rule behave as they will in production.
+        // Fixture names never match, so synthetic runs keep PlayerName untouched.
+        var selfMatch = System.Text.RegularExpressions.Regex.Match(
+            Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (selfMatch.Success) ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
+
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
 

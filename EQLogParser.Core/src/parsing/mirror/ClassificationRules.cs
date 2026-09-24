@@ -61,11 +61,25 @@ namespace EQLogParser.Mirror
     public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline)
     {
       var outcome = new MirrorRuleOutcome();
+      ApplyLocalPlayer(timeline);
       var charmWindows = ApplyEvidence(facts, timeline, outcome);
       ApplyOwnershipFlags(facts, timeline);
       ApplyNpcDatabase(facts, timeline);
       ApplyGraphInference(facts, timeline, charmWindows);
       return outcome;
+    }
+
+    // R0: the log's own author. Every "You" in the file is the local player by construction,
+    // and their name comes from the filename itself (App sets ConfigUtil.PlayerName; the test
+    // harness derives it the same way from eqlog_(Player)_(Server).txt). Self cannot self-target,
+    // so without this rule the local player can sit below weaker evidence all log.
+    private static void ApplyLocalPlayer(EntityTimeline timeline)
+    {
+      timeline.SetIdentity(ChatType.You, IdentityKind.Player, RuleStrength.Certain, "R0-local", double.NegativeInfinity);
+      if (!string.IsNullOrEmpty(ConfigUtil.PlayerName))
+      {
+        timeline.SetIdentity(ConfigUtil.PlayerName, IdentityKind.Player, RuleStrength.Certain, "R0-local", double.NegativeInfinity);
+      }
     }
 
     // R10 seed: the Phase 3 UI ("set as player / merc / npc from t0") calls through here.
