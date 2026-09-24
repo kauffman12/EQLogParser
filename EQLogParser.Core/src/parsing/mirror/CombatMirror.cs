@@ -16,10 +16,16 @@ namespace EQLogParser.Mirror
     private const string OwnerToken = "Owner:";
 
     private readonly IFactTable _facts;
+    // Ingest/derive gate: appends take it per fact (uncontended ~free), a derivation holds it
+    // for its whole pass. Readers of the fact table therefore never observe mid-append mutation
+    // while tailing continues — no stop/start games, no dropped facts; live ingest just pauses
+    // for the duration of one derivation.
+    private readonly object _gate = new();
     private int _sequence;
     // Registry events carry no timestamp; this is the most recent BeginTime seen on any tapped
     // event, used only as a best-effort TimeS for IdentityEvent (replay orders by Seq).
     private long _lastSeenTs = -1;
+    private long _firstSeenTs = -1;
 
     public CombatMirror(IFactTable facts)
     {
@@ -27,6 +33,11 @@ namespace EQLogParser.Mirror
     }
 
     public IFactTable Facts => _facts;
+
+    // Time window of tapped line events (double.NaN until the first event). The registry seed
+    // uses it to decide ingest-replay vs retroactive evidence times.
+    public double FirstEventTime => _firstSeenTs < 0 ? double.NaN : _firstSeenTs;
+    public double LastEventTime => _lastSeenTs < 0 ? double.NaN : _lastSeenTs;
 
     public void Start()
     {
@@ -68,6 +79,12 @@ namespace EQLogParser.Mirror
 
     // Chat reaches the mirror through the pipeline's IChatSink seam (the app adapter and the test
     // harness fan out here); every chat line becomes one EvChat fact, channel included.
+    // Runs derivation logic against the fact table with ingest parked at the gate.
+    public T DeriveQuiescent<T>(Func<T> derive)
+    {
+      lock (_gate) return derive();
+    }
+
     public void HandleChat(ChatType chat)
     {
       if (chat is null || string.IsNullOrEmpty(chat.Sender)) return;
@@ -87,8 +104,11 @@ namespace EQLogParser.Mirror
     private void Emit(byte kind, string name, double time, string aux = null)
     {
       if (string.IsNullOrEmpty(name)) return;
-      _lastSeenTs = ToTimeS(time);
-      _facts.AddEvidence(new EvidenceFact(++_sequence, ToTimeS(time), _facts.InternName(name), kind, _facts.InternAux(aux)));
+      lock (_gate)
+      {
+        var ts = MarkTs(time);
+        _facts.AddEvidence(new EvidenceFact(++_sequence, ts, _facts.InternName(name), kind, _facts.InternAux(aux)));
+      }
     }
 
     private void OnVerifiedPet(string name) => HandleIdentity(IdentityEvent.VerifiedPet, name);
@@ -114,26 +134,29 @@ namespace EQLogParser.Mirror
       if (registry.IsPetOrPlayerOrMerc(r.Attacker)) flags |= DamageFact.FlagAttkPlayerSide;
       if (registry.IsPetOrPlayerOrMerc(r.Defender)) flags |= DamageFact.FlagDefPlayerSide;
 
-      var subIdx = string.IsNullOrEmpty(r.SubType) ? DamageFactTable.NoSubtype : (ushort)Math.Max(0, (int)_facts.InternSubtype(r.SubType));
-      _lastSeenTs = ToTimeS(e.BeginTime);
+      lock (_gate)
+      {
+        MarkTs(e.BeginTime);
 
-      _facts.AddFact(new DamageFact(
-        seq: ++_sequence,
-        timeS: ToTimeS(e.BeginTime),
-        atkIdx: _facts.InternName(r.Attacker),
-        defIdx: _facts.InternName(r.Defender),
-        total: r.Total,
-        overTotal: r.OverTotal,
-        typeId: LabelTypes.IdOf(r.Type),
-        flags: flags,
-        subIdx: subIdx));
+        var subIdx = string.IsNullOrEmpty(r.SubType) ? DamageFactTable.NoSubtype : (ushort)Math.Max(0, (int)_facts.InternSubtype(r.SubType));
+        _facts.AddFact(new DamageFact(
+          seq: ++_sequence,
+          timeS: ToTimeS(e.BeginTime),
+          atkIdx: _facts.InternName(r.Attacker),
+          defIdx: _facts.InternName(r.Defender),
+          total: r.Total,
+          overTotal: r.OverTotal,
+          typeId: LabelTypes.IdOf(r.Type),
+          flags: flags,
+          subIdx: subIdx));
+      }
     }
 
     private void HandleDeath(DeathEvent e)
     {
       if (string.IsNullOrEmpty(e.Record.Killed)) return;
-      _lastSeenTs = ToTimeS(e.BeginTime);
-      _facts.AddDeath(new DeathFact(
+      MarkTs(e.BeginTime);
+      lock (_gate) _facts.AddDeath(new DeathFact(
         seq: ++_sequence,
         timeS: ToTimeS(e.BeginTime),
         killedIdx: _facts.InternName(e.Record.Killed),
@@ -143,8 +166,8 @@ namespace EQLogParser.Mirror
     private void HandleTaunt(TauntEvent e)
     {
       if (string.IsNullOrEmpty(e.Record.Npc)) return;
-      _lastSeenTs = ToTimeS(e.BeginTime);
-      _facts.AddTaunt(new TauntFact(
+      MarkTs(e.BeginTime);
+      lock (_gate) _facts.AddTaunt(new TauntFact(
         seq: ++_sequence,
         timeS: ToTimeS(e.BeginTime),
         npcIdx: _facts.InternName(e.Record.Npc)));
@@ -153,7 +176,7 @@ namespace EQLogParser.Mirror
     private void HandleIdentity(byte kind, string name)
     {
       if (string.IsNullOrEmpty(name)) return;
-      _facts.AddIdentity(new IdentityEvent(
+      lock (_gate) _facts.AddIdentity(new IdentityEvent(
         seq: ++_sequence,
         timeS: _lastSeenTs,
         nameIdx: _facts.InternName(name),
@@ -173,5 +196,13 @@ namespace EQLogParser.Mirror
     // the parser's dotnet-epoch seconds (year 0001 origin, ~6.4e10 in the 2020s) — long, or the
     // cast silently wraps and every derived timestamp is garbage
     internal static long ToTimeS(double beginTime) => (long)Math.Round(beginTime);
+
+    private long MarkTs(double time)
+    {
+      var ts = ToTimeS(time);
+      if (_firstSeenTs < 0) _firstSeenTs = ts;
+      _lastSeenTs = ts;
+      return ts;
+    }
   }
 }
