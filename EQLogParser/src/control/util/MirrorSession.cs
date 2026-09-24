@@ -1,5 +1,7 @@
+using log4net;
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -26,12 +28,17 @@ namespace EQLogParser
     // Raised on the derivation thread; subscribers marshal to the dispatcher themselves.
     public event Action<MirrorSnapshot> Derived;
 
+    public event Action<string> DeriveFailed;
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     private readonly DamageFactTable _facts = new(100_000);
     private readonly CombatMirror _mirror;
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
-    private bool _firstDerived;
     private long _lastTickCount = -1;
+    private long _lastDerivedCount = -1;
+    private volatile bool _autoDeriveDisabled;
     private bool _disposed;
 
     public MirrorSession()
@@ -74,10 +81,19 @@ namespace EQLogParser
           sw.Stop();
 
           snapshot.ElapsedMs = sw.Elapsed.TotalMilliseconds;
-          _firstDerived = true;
+          _lastDerivedCount = snapshot.FactCount;
           Derived?.Invoke(snapshot);
         }
-        catch (Exception) when (_disposed)
+        catch (Exception ex) when (!_disposed)
+        {
+          // A stale list must never fail silently: it is the one surface where a broken
+          // derivation would otherwise be indistinguishable from an idle mirror. Auto-retry at
+          // timer rate would spam the log — stop the loop, leave Re-derive available.
+          _autoDeriveDisabled = true;
+          Log.Error("Combat mirror derivation failed; auto-derive disabled", ex);
+          DeriveFailed?.Invoke(ex.Message);
+        }
+        catch (Exception)
         {
           // Log closed mid-derive — the snapshot has no reader anymore.
         }
@@ -101,16 +117,20 @@ namespace EQLogParser
       }
     }
 
-    // Bulk-load completion proxy without touching LogReader internals: once facts have arrived and
-    // the count stops growing between ticks, EOF was reached (tail lines only come at human speed).
+    // Quiescence proxy without touching LogReader internals: derive once the fact count has been
+    // stable for two ticks AND differs from the last derived count. Not a one-shot EOF latch — a
+    // damage-free stretch during bulk load (raid gap in a recorded log, GC pause) may fire an
+    // early pass, but any later growth re-arms the trigger, so the visible snapshot converges to
+    // end-of-file and tailing refreshes whenever the log goes quiet. Derivation itself parks
+    // ingest at the gate, so a completed pass always leaves count == lastDerivedCount: no churn.
     private void QuietTick(object sender, EventArgs e)
     {
-      if (_firstDerived || _disposed) return;
+      if (_disposed || _autoDeriveDisabled) return;
 
       var count = _facts.FactCount;
       if (count == 0) return;
 
-      if (count == _lastTickCount) RederiveAsync();
+      if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();
       else _lastTickCount = count;
     }
 

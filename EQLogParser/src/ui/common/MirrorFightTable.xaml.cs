@@ -10,7 +10,7 @@ namespace EQLogParser
   // and cross-grid selection sync land on top of it later.
   public partial class MirrorFightTable
   {
-    private readonly ObservableCollection<MirrorFightRow> _rows = [];
+    private ObservableCollection<MirrorFightRow> _rows = [];
 
     private MirrorSession _session;
     private bool _currentShowBreaks;
@@ -45,29 +45,44 @@ namespace EQLogParser
       });
     }
 
-    // Derivation completes on a background thread; rows swap on the dispatcher.
+    // Derivation completes on a background thread; rows swap on the dispatcher. Big logs derive
+    // thousands of fights — a whole-collection ItemsSource swap re-lays-out once instead of
+    // signalling every row insert, and ItemsSourceChanged reapplies the divider filter.
     private void OnDerived(MirrorSnapshot snapshot)
     {
       Dispatcher.InvokeAsync(() =>
       {
-        _rows.Clear();
-        foreach (var row in snapshot.Rows) _rows.Add(row);
+        _rows = new ObservableCollection<MirrorFightRow>(snapshot.Rows);
+        mirrorGrid.ItemsSource = _rows;
 
         mirrorStatus.Text = $"Derived {snapshot.DerivedAt:HH:mm:ss} - {snapshot.FightCount} fights, " +
                             $"{snapshot.FactCount:N0} facts, {snapshot.ElapsedMs:F0} ms";
       });
     }
 
+    private void OnDeriveFailed(string message)
+    {
+      Dispatcher.InvokeAsync(() => mirrorStatus.Text = $"Derive failed: {message}");
+    }
+
     private void Attach(MirrorSession session)
     {
       _session = session;
-      if (session is not null) session.Derived += OnDerived;
+      if (session is not null)
+      {
+        session.Derived += OnDerived;
+        session.DeriveFailed += OnDeriveFailed;
+      }
       mirrorRederiveButton.IsEnabled = session is not null;
     }
 
     private void Detach()
     {
-      if (_session is not null) _session.Derived -= OnDerived;
+      if (_session is not null)
+      {
+        _session.Derived -= OnDerived;
+        _session.DeriveFailed -= OnDeriveFailed;
+      }
       _session = null;
     }
 
