@@ -3291,3 +3291,32 @@ Where a chooser *starts* is deliberately unchanged for saves: every save call pa
 remembered location, exactly as each of them behaved before. The log picker is the exception that was asked for —
 this character's log folder, then the newest recent file whose folder still exists, then whatever Windows wants to
 show — and `OpenLogFile` no longer rethrows on the way past it, which was the only bare `throw;` in the app.
+
+### The sound path cell answers a click, and keeps its text selectable
+
+`TextSoundEditor` shows a sound file picked out of the file system in a read-only text box, and that box used to be a
+dead display: the only way back to the chooser was to move the options dropdown off "Browse for Sound File" and pick
+it again, because re-picking the item already on show raises no `SelectionChanged` at all. Clicking the path opens the
+chooser now — which is one mouse button doing two jobs, so `EQLogParser/src/ui/util/ClickNotDrag.cs` decides between
+them:
+
+- **The excursion latches.** A selection drag that wanders off and happens to come back over its own press point is
+  still a drag. Comparing the press point against the release point called that a click and opened a dialog on top of
+  the text being selected.
+- **The tail of a double-click never arms**, so the word-select gesture does not stack a second chooser behind the
+  first one.
+- **A release with no armed press answers false**: focus landing in the cell cannot summon a dialog.
+- **The release handler listens with `handledEventsToo`.** The text box owns this click — caret and selection — and
+  marks it handled when it is done, so a plain `+=` on the bubbling event risks never running at all, which a player
+  experiences as "clicking the path does nothing". Listening after the control keeps its half of the gesture and
+  still gets the chooser.
+- The tolerance is six device-independent units rather than `SystemParameters.MinimumHorizontalDragDistance`, because
+  that dial is the shell's user-tweakable `SM_CXDRAG` and a test written against it changes results when somebody
+  adjusts their mouse. `EQLogParser.Wpf.Test/src/ui/util/ClickNotDragTest.cs` holds each of these, and needs Windows to
+  run like the rest of that assembly.
+
+The box stays read-only but carries a visible caret and an inactive selection highlight, so the path can still be
+selected by drag, by Shift and the arrows, and copied while the chooser has focus. Where the chooser *starts* follows
+the rule above: the folder of the path on screen, or nothing at all when no path is showing — "pick a different one"
+usually means another file in this folder. The dropdown itself is untouched: re-picking "Browse for Sound File" still
+does nothing, and the path is the door.
