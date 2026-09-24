@@ -28,6 +28,13 @@ namespace EQLogParser
     private readonly Dictionary<string, TriggerNode> _defaultOverlays = [];
     private readonly ConcurrentDictionary<string, RegexData> _closeRegex = [];
 
+    /*
+     * Cooldown stamps for the "text/timer had nowhere to go" warnings. AddText and timer Start are called per matched line, and an overlay
+     * that stays missing must be reported once per trigger every few minutes — not once per raid event.
+     */
+    private static readonly ConcurrentDictionary<string, long> _noWindowWarnStamps = [];
+    private static readonly long NoWindowWarnCooldownTicks = MonoTime.SecondsToTicks(300);
+
     private TriggerOverlayManager()
     {
       TriggerStateDB.Instance.DeleteEvent += TriggerOverlayDeleteEvent;
@@ -188,8 +195,19 @@ namespace EQLogParser
           // if not found make sure there's no window
           if (overlay == null)
           {
+            /*
+             * Overlays are written as whole documents inside the serialized queue and planned deletes reach the manager first through the
+             * delete event, so a miss here means the id really is gone from the database rather than caught mid-write. It still gets a line
+             * at the default log level: this is the one path that closes a window the player can see, and "my overlay vanished" should say
+             * so in the log without Debug switched on.
+             */
+            var hadWindow = _textWindows.ContainsKey(overlayId) || _timerWindows.ContainsKey(overlayId);
             await RemoveWindowAsync(overlayId);
             _closeRegex.TryRemove(overlayId, out _);
+            if (hadWindow)
+            {
+              Log.Warn($"Overlay '{overlayId}' no longer exists in the trigger database; closed its window.");
+            }
             continue;
           }
 
@@ -274,6 +292,14 @@ namespace EQLogParser
         }
       });
 
+      // Throttled: this is a per-line path, and silence here is what made "sound plays but the overlay never shows" untraceable.
+      if (windowsToAdd.Count == 0 &&
+        ShouldWarnNow(_noWindowWarnStamps, WarnKey(trigger, "text"), MonoTime.NowStamp(), NoWindowWarnCooldownTicks))
+      {
+        Log.Warn($"Text from trigger '{PatternOf(trigger)}' was dropped: no text overlay window is open for"
+          + $" [{string.Join(", ", trigger?.SelectedOverlays ?? [])}] and the default text overlay window is unavailable.");
+      }
+
       foreach (var window in windowsToAdd)
       {
         try
@@ -350,6 +376,15 @@ namespace EQLogParser
         }
       });
 
+      // Start only: a Stop with no window is normal after the window was recreated mid-row, while a Start that lands nowhere is the silent
+      // loss the text overlay warned about above. Throttled for the same reason.
+      if (state == TimerStateChange.Start && windowsToStart.Count == 0 &&
+        ShouldWarnNow(_noWindowWarnStamps, WarnKey(trigger, "timer"), MonoTime.NowStamp(), NoWindowWarnCooldownTicks))
+      {
+        Log.Warn($"Timer from trigger '{PatternOf(trigger)}' was dropped: no timer overlay window is open for"
+          + $" [{string.Join(", ", trigger?.SelectedOverlays ?? [])}] and the default timer overlay window is unavailable.");
+      }
+
       foreach (var startWindow in windowsToStart)
       {
         try
@@ -373,6 +408,52 @@ namespace EQLogParser
           Log.Debug("Error Stopping Timer", ex);
         }
       }
+    }
+
+    /*
+     * True when the slot for {id} still holds exactly {windowData}, and the slot goes away then. Identity-checked because the id can be
+     * reused: RemoveWindowAsync untracks before closing, and a restart can install a newer window under the same id — a late Closed event
+     * for an old window must never drop the replacement or resurrect anything.
+     */
+    internal static bool TryUntrackClosed(Dictionary<string, OverlayWindowData> theWindows, string id, OverlayWindowData windowData)
+    {
+      if (ReferenceEquals(theWindows.GetValueOrDefault(id), windowData))
+      {
+        theWindows.Remove(id);
+        return true;
+      }
+
+      return false;
+    }
+
+    /*
+     * Not a lock and not meant to be exact at the boundary — two threads deciding "due" at once cost one duplicate line. What it must never
+     * do is let a per-line call turn a missing overlay into a per-line warning, so callers hand it a key and a fixed cooldown window.
+     */
+    internal static bool ShouldWarnNow(ConcurrentDictionary<string, long> stamps, string key, long nowStamp, long cooldownTicks)
+    {
+      if (stamps.Count > 4096)
+      {
+        // Bounded: keys come from trigger patterns, which imported packs can make numerous. Cooldown restarts for everything; a slow leak
+        // of stale keys is the lesser evil against growing without limit.
+        stamps.Clear();
+      }
+
+      var due = false;
+      stamps.AddOrUpdate(key,
+        _ => { due = true; return nowStamp; },
+        (_, previous) =>
+        {
+          if (nowStamp - previous >= cooldownTicks)
+          {
+            due = true;
+            return nowStamp;
+          }
+
+          return previous;
+        });
+
+      return due;
     }
 
     private async void TriggerOverlayDeleteEvent(string id)
@@ -426,7 +507,57 @@ namespace EQLogParser
         windowData.TheWindow.Visibility = Visibility.Collapsed;
         windowData.TheWindow.Opacity = 1.0;
         theWindows[overlay.Id] = windowData;
+
+        /*
+         * The window can die without the manager's knowledge: the OS tears a layered window down after a GPU/DWM fault, and the overlay's own
+         * close button calls Window.Close directly. Without this subscription the corpse keeps the slot forever — both window classes guard
+         * every later write on an _isClosed flag set in Closing, so sound keeps playing while text silently goes nowhere for the rest of the
+         * run. Planned closes (RemoveWindowAsync, and the delete event behind it) take the entry out *before* Close, so the identity check
+         * below only fires for the unplanned ones; those rebuild through the existing restart path.
+         */
+        windowData.TheWindow.Closed += (_, _) => OnOverlayWindowClosed(theWindows, overlay.Id, windowData);
       }
+    }
+
+    // Runs on the closing window's thread — the UI thread this manager already confines these dictionaries to.
+    private void OnOverlayWindowClosed(Dictionary<string, OverlayWindowData> theWindows, string id, OverlayWindowData windowData)
+    {
+      try
+      {
+        if (!TryUntrackClosed(theWindows, id, windowData))
+        {
+          // A planned close (the entry was already taken out) or a late event from a window this one replaced; nothing is ours to fix.
+          return;
+        }
+
+        Log.Warn($"The overlay window '{id}' was closed outside the manager; recreating it from saved settings.");
+        _ = RecoverWindowAsync(id);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Could not recover a closed overlay window.", ex);
+      }
+    }
+
+    private async Task RecoverWindowAsync(string id)
+    {
+      try
+      {
+        await RestartOverlayAsync(id);
+      }
+      catch (Exception ex)
+      {
+        // The overlay was deleted while the close was in flight, or the app is on its way out: nothing to recover in either case.
+        Log.Debug($"Could not recreate overlay window '{id}'.", ex);
+      }
+    }
+
+    private static string WarnKey(Trigger trigger, string kind) => $"{kind}:{PatternOf(trigger)}";
+
+    private static string PatternOf(Trigger trigger)
+    {
+      var pattern = trigger?.Pattern ?? string.Empty;
+      return pattern.Length > 80 ? pattern[..80] + "…" : pattern;
     }
 
     // only run this from UI thread
@@ -434,6 +565,7 @@ namespace EQLogParser
     {
       if (_textWindows.Remove(id, out var textWindow))
       {
+        Log.Debug($"Closing text overlay window '{id}'.");
         if (textWindow.TheWindow is TextOverlayWindow { } window)
         {
           window.StopOverlay();
@@ -445,6 +577,7 @@ namespace EQLogParser
 
       if (_timerWindows.Remove(id, out var timerWindow))
       {
+        Log.Debug($"Closing timer overlay window '{id}'.");
         if (timerWindow.TheWindow is TimerOverlayWindow { } window)
         {
           await window.StopOverlayAsync();
