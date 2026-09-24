@@ -34,6 +34,7 @@ namespace EQLogParser
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
+    private MirrorSession _mirrorSession;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
@@ -124,6 +125,10 @@ namespace EQLogParser
       // Enable EMU parsing
       AppSettings.IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = AppSettings.IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      // Combat mirror (experimental derived fight list) — the tap attaches when a log opens
+      AppSettings.IsCombatMirrorEnabled = ConfigUtil.IfSet("EnableCombatMirror");
+      combatMirrorIcon.Visibility = AppSettings.IsCombatMirrorEnabled ? Visibility.Visible : Visibility.Hidden;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -627,6 +632,21 @@ namespace EQLogParser
     private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
     {
       AppSettings.IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
+    }
+
+    private void ToggleCombatMirrorClick(object sender, RoutedEventArgs e)
+    {
+      AppSettings.IsCombatMirrorEnabled = MainActions.ToggleSetting("EnableCombatMirror", combatMirrorIcon);
+
+      if (!AppSettings.IsCombatMirrorEnabled)
+      {
+        // The tap only sees lines from the moment it subscribes — stop cleanly rather than
+        // keep a half-log session; the next log open starts fresh.
+        _mirrorSession?.Dispose();
+        _mirrorSession = null;
+      }
+
+      DockingManager.SetState(mirrorFightWindow, AppSettings.IsCombatMirrorEnabled ? DockState.Dock : DockState.Hidden);
     }
 
     private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
@@ -1154,6 +1174,11 @@ namespace EQLogParser
               DockingManager.SetState(npcWindow, DockState.Dock);
             }
 
+            if (AppSettings.IsCombatMirrorEnabled && DockingManager.GetState(mirrorFightWindow) == DockState.Hidden)
+            {
+              DockingManager.SetState(mirrorFightWindow, DockState.Dock);
+            }
+
             CloseLogFile(changed);
             fileText.Text = $"-- {theFile}";
             _startLoadTime = DateTime.Now;
@@ -1174,7 +1199,20 @@ namespace EQLogParser
             ConfigUtil.SetSetting("RecentFiles", string.Join(",", _recentFiles));
             UpdateRecentFiles();
             AppSettings.CurrentLogFile = theFile;
-            _eqLogReader = new LogReader(new LogProcessor(theFile, new ChatDbSink(), new TriggerHookAdapter()), theFile, lastMins);
+
+            // Mirror session subscribes to the parser statics before any line flows, and shares
+            // the single chat sink slot via fan-out (archive first, mirror second — D8 seam).
+            _mirrorSession?.Dispose();
+            _mirrorSession = null;
+            IChatSink chatSink = new ChatDbSink();
+            if (AppSettings.IsCombatMirrorEnabled)
+            {
+              _mirrorSession = new MirrorSession();
+              _mirrorSession.Start();
+              chatSink = new CompositeChatSink(chatSink, _mirrorSession.ChatSink);
+            }
+
+            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
             _ = _eqLogReader.StartAsync();
             UpdateLoadingProgress();
           }, DispatcherPriority.Render);
@@ -1206,6 +1244,8 @@ namespace EQLogParser
         statusText.Text = string.Empty;
         _eqLogReader?.Dispose();
         _eqLogReader = null;
+        _mirrorSession?.Dispose();
+        _mirrorSession = null;
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;

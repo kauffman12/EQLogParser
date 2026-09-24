@@ -1,0 +1,65 @@
+<UserControl x:Class="EQLogParser.MirrorFightTable"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:EQLogParser"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:sfgrid="clr-namespace:Syncfusion.UI.Xaml.Grid;assembly=Syncfusion.SfGrid.WPF"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+  <Grid>
+    <Grid.Resources>
+      <!-- Divider rows read as background text, not data (D5 inactivity separators). -->
+      <Style x:Key="MirrorRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
+        <Style.Triggers>
+          <DataTrigger Binding="{Binding IsDivider}" Value="True">
+            <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
+          </DataTrigger>
+        </Style.Triggers>
+        <Setter Property="RowHoverForeground" Value="{DynamicResource ContentForeground}"/>
+      </Style>
+    </Grid.Resources>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}"></RowDefinition>
+      <RowDefinition Height="300*" />
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Button x:Name="mirrorRederiveButton" Margin="4,2,0,2" Content="Re-derive" Padding="8,1" Click="RederiveClick"
+              ToolTip="Re-run classification and derivation over all captured facts"/>
+      <CheckBox x:Name="mirrorShowBreaks" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
+                IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
+    </StackPanel>
+    <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Mirror: no log" />
+    <syncfusion:SfDataGrid x:Name="mirrorGrid"
+                           AllowResizingColumns="True"
+                           AllowSorting="True"
+                           AutoGenerateColumns="False"
+                           CurrentCellBorderThickness="0"
+                           Grid.Row="1"
+                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                           ItemsSourceChanged="MirrorGridItemsSourceChanged"
+                           GridLinesVisibility="Horizontal"
+                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                           IsReadOnly="True"
+                           RowHeight="{DynamicResource EQTableRowHeight}"
+                           RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
+                           RowStyle="{DynamicResource MirrorRowStyle}"
+                           SelectionMode="Single"
+                           ShowRowHeader="True"
+                           SourceType="{x:Type local:MirrorFightRow}">
+      <syncfusion:SfDataGrid.Columns>
+        <syncfusion:GridTextColumn MappingName="No" HeaderText="#" Width="46" />
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Fight" ColumnSizer="Star" />
+        <syncfusion:GridTextColumn MappingName="Identity" HeaderText="Identity" Width="70" />
+        <syncfusion:GridTextColumn MappingName="Source" HeaderText="Rule" Width="110" />
+        <syncfusion:GridTextColumn MappingName="Begin" HeaderText="Begin" Width="145" />
+        <syncfusion:GridTextColumn MappingName="Last" HeaderText="Last" Width="145" />
+        <syncfusion:GridTextColumn MappingName="Duration" HeaderText="Dur" Width="70" />
+        <syncfusion:GridNumericColumn MappingName="Damage" HeaderText="Damage" NumberDecimalDigits="0" Width="95" />
+        <syncfusion:GridNumericColumn MappingName="Hits" HeaderText="Hits" NumberDecimalDigits="0" Width="65" />
+        <syncfusion:GridTextColumn MappingName="Status" HeaderText=" " Width="50" />
+      </syncfusion:SfDataGrid.Columns>
+    </syncfusion:SfDataGrid>
+  </Grid>
+</UserControl>

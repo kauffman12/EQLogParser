@@ -340,6 +340,11 @@
               <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
+          <MenuItem x:Name="combatMirror" Header="Combat Mirror (Experimental)" Click="ToggleCombatMirrorClick" ToolTip="Derived fight list computed from captured combat facts; the tap attaches when a log opens">
+            <MenuItem.Icon>
+              <fa:ImageAwesome x:Name="combatMirrorIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator />
           <MenuItem x:Name="damageOptions" Header="_Damage Settings">
             <MenuItem.Icon>
@@ -540,6 +545,10 @@
         <ContentControl x:Name="npcWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List" syncfusion:DockingManager.State="Dock" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:FightTable />
+        </ContentControl>
+        <ContentControl x:Name="mirrorFightWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List (Derived)" syncfusion:DockingManager.State="Hidden"
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
+          <local:MirrorFightTable />
         </ContentControl>
         <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
