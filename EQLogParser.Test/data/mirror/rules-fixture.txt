@@ -13,3 +13,16 @@
 [Sun Apr 26 18:40:13 2026] Epica activates Spire of the Minstrels I.
 [Sun Apr 26 18:40:14 2026] Sirmr`s pet kicks an aetherial hydra for 4360 points of damage.
 [Sun Apr 26 18:40:15 2026] A bixie commander hits Verifyguy for 300 points of damage.
+[Sun Apr 26 18:41:00 2026] Targeted (NPC): Hirelina
+[Sun Apr 26 18:41:01 2026] Hirelina has joined the group.
+[Sun Apr 26 18:41:02 2026] Hirelina tells the group, 'keeping everyone up'
+[Sun Apr 26 18:41:30 2026] Zorchmaw hits an aetherial hydra for 1200 points of damage.
+[Sun Apr 26 18:41:40 2026] Zorchmaw hits an aetherial hydra for 1200 points of damage.
+[Sun Apr 26 18:42:20 2026] Zorchmaw hits an aetherial hydra for 1200 points of damage.
+[Sun Apr 26 18:42:35 2026] Zorchmaw hits an aetherial hydra for 1200 points of damage.
+[Sun Apr 26 18:43:20 2026] Zorchmaw hits an aetherial hydra for 1200 points of damage.
+[Sun Apr 26 18:44:00 2026] Witherfang hits Spireina for 900 points of damage.
+[Sun Apr 26 18:44:20 2026] Witherfang hits Epica for 900 points of damage.
+[Sun Apr 26 18:45:05 2026] Witherfang hits Sirmr for 900 points of damage.
+[Sun Apr 26 18:45:30 2026] a grimtooth matriarch has been charmed.
+[Sun Apr 26 18:46:10 2026] A grimtooth matriarch was slain by Sirmr!

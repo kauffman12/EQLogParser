@@ -22,7 +22,8 @@ public class MirrorRulesTest
         Assert.IsTrue(facts.EvidenceCount >= 12, $"expected identity evidence, got {facts.EvidenceCount} — tap not wired?");
 
         var timeline = new EntityTimeline();
-        ClassificationRules.Apply(facts, timeline);
+        var outcome = ClassificationRules.Apply(facts, timeline);
+        CollectionAssert.AreEqual(Array.Empty<string>(), outcome.Conflicts, "target-frame kinds must not collide on the fixture");
 
         // R1: targeted verdicts, both kinds
         AssertIdentity(timeline, "Verifyguy", IdentityKind.Player, "R1-target");
@@ -65,6 +66,36 @@ public class MirrorRulesTest
         // half-open on the end side: wear-off second is already Enemy again
         Assert.AreEqual(AffiliationKind.Enemy, timeline.AffiliationAt("a toughened horror", charmT1, out _));
         Assert.IsTrue(charmT1 > charmT0);
+
+        // R13: Targeted (NPC) plus player-shaped behavior (join + group chat) is the merc
+        // signature — neither Player (behavior lies for hirelings) nor plain Npc.
+        AssertIdentity(timeline, "Hirelina", IdentityKind.Merc, "R13-merc");
+
+        // R7: instance-counting inference recovers names with zero other evidence. Zorchmaw's
+        // five hydra hits are THREE instances (two combat-gap splits) over 110 s -> player-side.
+        AssertIdentity(timeline, "Zorchmaw", IdentityKind.Player, "R7-graph");
+
+        // R7 mirror direction: attacking exactly three player-side names across 65 s is a mob.
+        AssertIdentity(timeline, "Witherfang", IdentityKind.Npc, "R7-side");
+
+        // R9 until-death: no wear-off line, the slain event closes the charm window
+        var tCharm = DateUtil.StandardDateToDotNetSeconds("[Sun Apr 26 18:45:30 2026] x");
+        var tDeath = DateUtil.StandardDateToDotNetSeconds("[Sun Apr 26 18:46:10 2026] x");
+        Assert.AreEqual(AffiliationKind.Friendly, timeline.AffiliationAt("a grimtooth matriarch", tCharm + 5, out var untilSrc));
+        Assert.AreEqual("R9-charm", untilSrc);
+        // death second itself is Enemy again (half-open like wear-off), despite "A" vs "a" casing
+        Assert.AreEqual(AffiliationKind.Enemy, timeline.AffiliationAt("a grimtooth matriarch", tDeath + 0.5, out _));
+    }
+
+    [TestMethod]
+    public void ManualOverride_BeatsEveryRule()
+    {
+        // R10 seed for the future UI action "set as merc" — Manual strength outranks Certain.
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Someguy", IdentityKind.Player, RuleStrength.Certain, "R1-target");
+        ClassificationRules.ApplyManualOverride(timeline, "Someguy", IdentityKind.Merc);
+
+        AssertIdentity(timeline, "Someguy", IdentityKind.Merc, "R10-manual");
     }
 
     [TestMethod]

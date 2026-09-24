@@ -29,7 +29,7 @@ public class RegistryRebuildTest
         var facts = run.Facts;
 
         var timeline = new EntityTimeline();
-        ClassificationRules.Apply(facts, timeline);
+        var outcome = ClassificationRules.Apply(facts, timeline);
 
         var logNames = new HashSet<string>(facts.InternedNames, StringComparer.Ordinal);
         var truthPlayers = ReadRegistryNames(Path.Combine(registryDir, "players.txt"));
@@ -43,13 +43,30 @@ public class RegistryRebuildTest
         var playerHits = truthPlayers.Where(n => PlayerSide(timeline.IdentityWithSource(n, out _))).ToHashSet(StringComparer.Ordinal);
         var petHits = truthPets.Where(n => timeline.IdentityWithSource(n, out _) == IdentityKind.Pet).ToHashSet(StringComparer.Ordinal);
 
+        // Owner-path pet metric: registry keys are pet NAMES that the log often never prints —
+        // the pair (Pet=Owner) counts as rebuilt when the owner is recovered AND the log proved
+        // an owned pet of his ("X`s pet|warder" attacker strings interned by R5-owner evidence).
+        var ownedStrings = logNames.Where(n => n.Contains("`s ", StringComparison.Ordinal)).ToList();
+        var ownerPairs = (from line in File.ReadLines(Path.Combine(registryDir, "petmapping.txt"))
+                          where line.Contains('=')
+                          let i = line.IndexOf('=')
+                          select (Pet: line[..i].Trim(), Owner: line[(i + 1)..].Trim())).ToList();
+        var ownerPathHits = ownerPairs.Count(p => PlayerSide(timeline.IdentityWithSource(p.Owner, out _))
+            && ownedStrings.Any(s => s.StartsWith(p.Owner + "`s", StringComparison.OrdinalIgnoreCase)));
+
+        // R13 output: mercs are exactly what the legacy pipeline auto-verifies into players.txt
+        // (plain join lines pass isPossiblePlayerName) — the audit list for registry pollution.
+        var mercs = logNames.Where(n => timeline.IdentityWithSource(n, out _) == IdentityKind.Merc).OrderBy(n => n).ToList();
+
         var falsePlayers = logNames
             .Where(n => PlayerSide(timeline.IdentityWithSource(n, out _)) && !truthPlayers.Contains(n))
             .ToList();
 
         Console.WriteLine($"[rebuild] {Path.GetFileName(path)}: names={logNames.Count} evidence={facts.EvidenceCount} facts={facts.FactCount}");
         Console.WriteLine($"[rebuild] players in log={truthPlayers.Count} recovered={playerHits.Count} recall={(truthPlayers.Count == 0 ? 1 : (double)playerHits.Count / truthPlayers.Count):P1}");
-        Console.WriteLine($"[rebuild] pets in log={truthPets.Count} recovered={petHits.Count} recall={(truthPets.Count == 0 ? 1 : (double)petHits.Count / truthPets.Count):P1}");
+        Console.WriteLine($"[rebuild] pets in log={truthPets.Count} recovered={petHits.Count} recall={(truthPets.Count == 0 ? 1 : (double)petHits.Count / truthPets.Count):P1}; owner-path pairs proven={ownerPathHits}/{ownerPairs.Count}");
+        Console.WriteLine($"[rebuild] mercs (R13): {mercs.Count} ({string.Join(", ", mercs.Take(20))})");
+        Console.WriteLine($"[rebuild] target-frame conflicts: {outcome.Conflicts.Count} ({string.Join(", ", outcome.Conflicts.Take(10))})");
         Console.WriteLine($"[rebuild] classified player-side but absent from registry: {falsePlayers.Count} (sample: {string.Join(", ", falsePlayers.OrderBy(n => n).Take(25))})");
 
         var misses = truthPlayers.Except(playerHits)
