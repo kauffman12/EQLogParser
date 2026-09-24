@@ -19,8 +19,6 @@ for %%F in (
     "%RELEASE_DIR%\FontAwesome5.Net.dll"
     "%RELEASE_DIR%\LiteDB.dll"
     "%RELEASE_DIR%\log4net.dll"
-    "%RELEASE_DIR%\Microsoft.WindowsAPICodePack.dll"
-    "%RELEASE_DIR%\Microsoft.WindowsAPICodePack.Shell.dll"
     "%RELEASE_DIR%\Microsoft.Windows.SDK.NET.dll"
     "%RELEASE_DIR%\Microsoft.Extensions.Caching.Abstractions.dll"
     "%RELEASE_DIR%\Microsoft.Extensions.Caching.Memory.dll"

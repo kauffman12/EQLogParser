@@ -10,6 +10,7 @@ However: **whenever a new project or NuGet package reference is added, its outpu
 
 - Adding or renaming a project that produces a dll shipped to `EQLogParser\bin\Release\...`
 - Adding a NuGet package that emits an app-local runtime assembly the code can touch
+- **Removing** a project or NuGet package: take its dll out of both files **and** add the old names to `[InstallDelete]`. Inno only removes what it installed itself, so a dll an earlier version left in `{app}` rides through every upgrade forever. Done for `Microsoft.WindowsAPICodePack.dll` and `Microsoft.WindowsAPICodePack.Shell.dll` when the choosers moved onto the dialogs that ship inside .NET (`FileDialogUtil`).
 - Adding a new sub-project that BackupUtil depends on (BackupUtil references the whole `EQLogParser` project and also loads `EQLogParser.dll` **reflectively** at runtime — `Assembly.Load("EQLogParser")` in `BackupUtil/Program.cs` — so everything that assembly needs must be present next to it too)
 
 ## How to verify the list is complete (smarter than trial-and-error)
