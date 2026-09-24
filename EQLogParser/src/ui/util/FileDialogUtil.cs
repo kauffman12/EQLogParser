@@ -25,7 +25,7 @@ namespace EQLogParser
     /// </summary>
     internal static string PickFile(Window owner, string startPath, string label, string filter, string title = null, string defaultExt = null)
     {
-      return Show(owner, startPath, label, from =>
+      return Show(owner, startPath, label, (window, from) =>
       {
         var dialog = new OpenFileDialog
         {
@@ -39,7 +39,7 @@ namespace EQLogParser
           dialog.DefaultExt = defaultExt;
         }
 
-        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+        return dialog.ShowDialog(window) == true ? dialog.FileName : null;
       });
     }
 
@@ -49,7 +49,7 @@ namespace EQLogParser
     /// </summary>
     internal static string PickFolder(Window owner, string startPath, string label, string title = null)
     {
-      return Show(owner, startPath, label, from =>
+      return Show(owner, startPath, label, (window, from) =>
       {
         var dialog = new OpenFolderDialog
         {
@@ -58,7 +58,7 @@ namespace EQLogParser
           InitialDirectory = from,
         };
 
-        return dialog.ShowDialog(owner) == true ? dialog.FolderName : null;
+        return dialog.ShowDialog(window) == true ? dialog.FolderName : null;
       });
     }
 
@@ -69,7 +69,7 @@ namespace EQLogParser
     /// </summary>
     internal static string SaveFile(Window owner, string startPath, string label, string filter, string fileName = null, string title = null, string defaultExt = null)
     {
-      return Show(owner, startPath, label, from =>
+      return Show(owner, startPath, label, (window, from) =>
       {
         var dialog = new SaveFileDialog
         {
@@ -88,7 +88,7 @@ namespace EQLogParser
           dialog.DefaultExt = defaultExt;
         }
 
-        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+        return dialog.ShowDialog(window) == true ? dialog.FileName : null;
       });
     }
 
@@ -128,7 +128,7 @@ namespace EQLogParser
     // show it, try once more with no folder at all so Windows opens wherever it keeps this kind of dialog. That
     // retry is what turns "their EQ folder moved" into a working chooser instead of an exception on a click
     // handler — and a handler that throws here is a window that closes, which is the report we keep getting.
-    private static string Show(Window owner, string startPath, string label, Func<string, string> run)
+    private static string Show(Window owner, string startPath, string label, Func<Window, string, string> run)
     {
       var from = ResolveDirectory(startPath);
 
@@ -136,7 +136,10 @@ namespace EQLogParser
       {
         try
         {
-          return run(attempt == 1 ? from : null);
+          // The second pass drops the owner as well as the folder: WPF refuses outright to show a dialog for a
+          // window whose handle has not been created, and a chooser parented to nothing still works — which is
+          // what several of these call sites did on purpose before there was one place to do it.
+          return run(attempt == 1 ? owner : null, attempt == 1 ? from : null);
         }
         catch (Exception e)
         {

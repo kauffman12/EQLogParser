@@ -3280,8 +3280,12 @@ What every call keeps, and why:
   own try, because an error path that can throw is not an error path — and the log carries the control's name:
   *"the spell count import chooser failed from 'D:\Logs'"*. Before this, "clicked Export, nothing happened" was the
   entire user experience of a broken chooser.
-- **Owner windows are real.** Several sites called `ShowDialog()` with nobody to own the dialog, which is how a
-  picker ends up behind the window it belongs to and un-clickable.
+- **Owner windows are real, and one of them can throw.** Several sites called `ShowDialog()` with nobody to own the
+  dialog, which is how a picker ends up behind the window it belongs to and un-clickable — so every call passes an
+  owner now. Handing `CommonDialog.ShowDialog(owner)` a null owner is fine (it falls back to the active window), but
+  handing it a *window whose handle does not exist yet* throws `InvalidOperationException`: `WindowInteropHelper.Handle`
+  is zero until that window has been shown. A click inside a visible window cannot hit this, so it stays theoretical —
+  which is exactly why the second attempt drops the owner along with the folder rather than throwing the same way twice.
 
 Where a chooser *starts* is deliberately unchanged for saves: every save call passes null and so keeps Windows'
 remembered location, exactly as each of them behaved before. The log picker is the exception that was asked for —
