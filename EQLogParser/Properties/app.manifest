@@ -43,6 +43,16 @@
       <supportedOS Id="{9fdf0d10-61a6-4b0d-9e6d-98de1a4a01e5}"/>
     </application>
   </compatibility>
+  <!-- EQ log paths get long on their own (a raid named in the folder, a Logs tree under OneDrive) and the old
+       260 character limit is a per-process opt-out that Windows still honours unless an application asks. With
+       this set, a long path is a real path instead of a DirectoryNotFoundException from wherever the file was
+       reached — and a chooser asked to open one answers with an exception rather than a folder list. Needs
+       Windows 10 1607 or newer, which is well inside what .NET 10 runs on. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
   <!-- Enable themes for Windows common controls and dialogs (Windows XP and later) -->
   <!--
   <dependency>
