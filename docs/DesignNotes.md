@@ -3244,3 +3244,46 @@ preview, so the inner checkbox never sees the click) and the closed combo carrie
 which is also the only hint a player gets that a layout — or an old ✕ — is holding rows back. `ChatViewer`'s channel
 pair already keeps its own local version for the same reason; the shared helper still serves the class lists, which are
 all-on by design, and is left alone.
+
+## Choosing a file: one engine, and what it swallows
+
+Three implementations of the same three jobs lived here until recently: the Windows API Code Pack
+(`CommonOpenFileDialog`, also doing folders with `IsFolderPicker`), `Microsoft.Win32.OpenFileDialog` /
+`SaveFileDialog`, and a `System.Windows.Forms.FolderBrowserDialog` for the NAG database folder. The reason for
+three was nobody's. Add up every chooser in the app — 19 of them — and the whole feature set is a filter, a
+suggested filename, a title, a default extension and a starting folder: no multi-select, no custom places, no
+shell items, nothing that one engine can do and another cannot. What three engines did buy was three ways to
+fail, because each validated `InitialDirectory` in its own manner and only some of them threw.
+
+They are one file now: `EQLogParser/src/ui/util/FileDialogUtil.cs`, the only place a dialog gets constructed
+(`PickFile`, `PickFolder`, `SaveFile`), on the dialogs that ship inside .NET — `OpenFileDialog`, `SaveFileDialog`,
+`OpenFolderDialog`. The folder dialog arriving in .NET 8 is what made consolidation possible at all; while the
+replacement was missing, "use the Code Pack" had a reason. The package went out with it: reference gone, both dlls
+out of `sign.cmd` and the installer, `[InstallDelete]` entries added so an upgraded install takes the stale copies
+with it too.
+
+What every call keeps, and why:
+
+- **A starting directory is only used while it exists.** `ResolveDirectory` takes a folder or a full file path and
+  answers with the folder, or null for "Windows decides". Saved paths go stale — drive unmounted, EQ folder
+  renamed, `Logs` moved into OneDrive — and a chooser pointed at a folder that isn't there answers with whatever
+  exception that shell call felt like throwing.
+- **Nothing escapes to the click handler.** Two attempts: the caller's folder, then no folder at all so Windows
+  opens wherever it keeps that kind of dialog. Then null, which all 19 callers already treat as "nothing
+  happened". That is not politeness. `App.xaml.cs:73` handles `DispatcherUnhandledException` and sets `Handled`,
+  so a *managed* exception at Export was never what closed the window — which means "the app vanished" describes a
+  native fault, somewhere no `catch` reaches. Dropping the interop wrapper we do not control is the strongest fix
+  available for a crash we cannot reproduce; an injected third-party shell extension is the other candidate, and it
+  names itself in Event Viewer → Windows Logs → Application → Application Error, faulting module.
+- **A chooser that failed twice says so out loud.** Cancel and failure both arrive as null, which is precisely what
+  a caller wants and precisely what a player cannot tell apart. So `Show` ends with a `MessageWindow` — inside its
+  own try, because an error path that can throw is not an error path — and the log carries the control's name:
+  *"the spell count import chooser failed from 'D:\Logs'"*. Before this, "clicked Export, nothing happened" was the
+  entire user experience of a broken chooser.
+- **Owner windows are real.** Several sites called `ShowDialog()` with nobody to own the dialog, which is how a
+  picker ends up behind the window it belongs to and un-clickable.
+
+Where a chooser *starts* is deliberately unchanged for saves: every save call passes null and so keeps Windows'
+remembered location, exactly as each of them behaved before. The log picker is the exception that was asked for —
+this character's log folder, then the newest recent file whose folder still exists, then whatever Windows wants to
+show — and `OpenLogFile` no longer rethrows on the way past it, which was the only bare `throw;` in the app.

@@ -844,17 +844,13 @@ namespace EQLogParser
 
     private void MenuItemExportNpcNamesClick(object sender, RoutedEventArgs e)
     {
-      var saveFileDialog = new SaveFileDialog
-      {
-        // get file name
-        Filter = "Text Files (*.txt)|*.txt"
-      };
+      var pickedFile = FileDialogUtil.SaveFile(this, null, "npc names export", "Text Files (*.txt)|*.txt");
 
-      if (saveFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         try
         {
-          File.WriteAllLines(saveFileDialog.FileName, GetFights(true).Select(f => f.Name).Distinct().OrderBy(n => n));
+          File.WriteAllLines(pickedFile, GetFights(true).Select(f => f.Name).Distinct().OrderBy(n => n));
         }
         catch (Exception ex)
         {
@@ -1197,7 +1193,7 @@ namespace EQLogParser
           // Cancel and failure both come back as "no file", so there is nothing here that can end the app.
           PerfCounters.Run(PickFileId, () =>
           {
-            theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server", "*.txt;*.gz;*.log");
+            theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server|*.txt;*.gz;*.log");
           });
         }
 

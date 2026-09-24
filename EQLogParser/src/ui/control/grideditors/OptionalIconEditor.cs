@@ -134,7 +134,7 @@ namespace EQLogParser
     {
       ShowImage();
 
-      var file = FileDialogUtil.PickFile(MainActions.GetOwner(), FileUtil.GetDirFromPath(_theImagePath?.Text), "icon image", "Images", "*.png;*.jpg;*.jpeg");
+      var file = FileDialogUtil.PickFile(MainActions.GetOwner(), _theImagePath?.Text, "icon image", "Images|*.png;*.jpg;*.jpeg");
       if (file != null)
       {
         _theImagePath.Text = file;

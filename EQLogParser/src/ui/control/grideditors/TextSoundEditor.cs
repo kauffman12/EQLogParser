@@ -1,5 +1,4 @@
 using EQLogParser.Audio;
-using Microsoft.Win32;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
@@ -299,15 +298,11 @@ namespace EQLogParser
 
     private bool BrowseForSoundFile()
     {
-      var dialog = new OpenFileDialog
-      {
-        Filter = "Audio Files|*.wav;*.mp3",
-        Title = "Select a Sound File"
-      };
+      var pickedFile = FileDialogUtil.PickFile(MainActions.GetOwner(), null, "sound file", "Audio Files|*.wav;*.mp3", "Select a Sound File");
 
-      if (dialog.ShowDialog() == true && !string.IsNullOrEmpty(dialog.FileName))
+      if (!string.IsNullOrEmpty(pickedFile))
       {
-        var selectedPath = dialog.FileName;
+        var selectedPath = pickedFile;
         // Store the full path in <<>> encoding — ResolveSoundPath handles absolute paths
         _theRealTextBox.Text = "<<" + selectedPath + ">>";
         return true;

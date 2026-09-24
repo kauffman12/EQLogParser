@@ -1,20 +1,17 @@
 using log4net;
-using Microsoft.WindowsAPICodePack.Dialogs;
+using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Windows;
-using System.Windows.Interop;
 
 namespace EQLogParser
 {
   /// <summary>
-  /// Every chooser the app opens goes through here, because the one thing a file dialog must never do is take
-  /// the window down with it. The shell call behind a chooser fails over things nobody controls — a log folder
-  /// on a drive that is not mounted today, a path that grew past MAX_PATH, a folder that moved into OneDrive
-  /// and dehydrated — and it arrives as whatever exception Windows felt like throwing, which is not a type
-  /// worth asking a click handler to predict. So an initial directory is used only while it still exists, the
-  /// dialog runs inside a try, and a failure comes back as "the user picked nothing" with the reason in the log
-  /// instead of an exception escaping into the dispatcher.
+  /// The only place in the app that builds a chooser: one way to open a file, one way to pick a folder, one way
+  /// to save one. That is a deliberate consolidation — this used to be spread over three implementations (the
+  /// Windows API Code Pack, Microsoft.Win32 and a WinForms folder browser), which bought nothing since the whole
+  /// feature set in use is a filter, a suggested name, a title and a starting folder, and cost a crash class:
+  /// each implementation checked its starting directory in its own way, and only some of them threw.
   /// </summary>
   internal static class FileDialogUtil
   {
@@ -23,72 +20,83 @@ namespace EQLogParser
     /// <summary>
     /// Picks one file, or returns null for cancelled *and* for failed — either way the caller has nothing to do.
     /// <paramref name="startPath"/> may be a folder or a full file path; the dialog only opens there if that
-    /// place still exists. <paramref name="label"/> names the control in the log, since "a chooser threw" is
-    /// not something a player can tell us.
+    /// place still exists. <paramref name="label"/> names the control in the log, since "a chooser threw" is not
+    /// something a player can tell us.
     /// </summary>
-    internal static string PickFile(Window owner, string startPath, string label, string description, string patterns)
+    internal static string PickFile(Window owner, string startPath, string label, string filter, string title = null, string defaultExt = null)
     {
-      var from = ResolveDirectory(startPath);
-
-      // Two tries at most: the folder the caller asked for, then no folder at all and let Windows show what it
-      // likes. That second attempt is what turns "their EQ folder moved" into a working dialog.
-      for (var attempt = 1; attempt <= 2; attempt++)
+      return Show(owner, startPath, label, from =>
       {
-        try
+        var dialog = new OpenFileDialog
         {
-          using var dialog = new CommonOpenFileDialog
-          {
-            IsFolderPicker = false,
-            InitialDirectory = attempt == 1 ? from : null,
-          };
+          Filter = filter,
+          Title = title,
+          InitialDirectory = from,
+        };
 
-          dialog.Filters.Add(new CommonFileDialogFilter(description, patterns));
-
-          return dialog.ShowDialog(OwnerHandle(owner)) == CommonFileDialogResult.Ok ? dialog.FileName : null;
-        }
-        catch (Exception e)
+        if (!string.IsNullOrEmpty(defaultExt))
         {
-          Log.Error($"The {label} file chooser failed from {(attempt == 1 ? $"'{from}'" : "no start folder")}", e);
+          dialog.DefaultExt = defaultExt;
         }
-      }
 
-      return null;
+        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+      });
     }
 
     /// <summary>
     /// Picks one folder. Same rules as <see cref="PickFile"/>: null means nothing was picked, whether that is a
     /// cancel or a chooser that could not be shown.
     /// </summary>
-    internal static string PickFolder(Window owner, string startPath, string label)
+    internal static string PickFolder(Window owner, string startPath, string label, string title = null)
     {
-      var from = ResolveDirectory(startPath);
-
-      for (var attempt = 1; attempt <= 2; attempt++)
+      return Show(owner, startPath, label, from =>
       {
-        try
+        var dialog = new OpenFolderDialog
         {
-          using var dialog = new CommonOpenFileDialog
-          {
-            IsFolderPicker = true,
-            InitialDirectory = attempt == 1 ? from : null,
-          };
+          Multiselect = false,
+          Title = title,
+          InitialDirectory = from,
+        };
 
-          return dialog.ShowDialog(OwnerHandle(owner)) == CommonFileDialogResult.Ok ? dialog.FileName : null;
-        }
-        catch (Exception e)
+        return dialog.ShowDialog(owner) == true ? dialog.FolderName : null;
+      });
+    }
+
+    /// <summary>
+    /// Saves one file. Returns the path chosen, or null for cancelled and for failed. <paramref name="fileName"/>
+    /// is the name offered in the box — the sanitising of characters a filename cannot hold stays with the caller,
+    /// since each export builds its own suggested name.
+    /// </summary>
+    internal static string SaveFile(Window owner, string startPath, string label, string filter, string fileName = null, string title = null, string defaultExt = null)
+    {
+      return Show(owner, startPath, label, from =>
+      {
+        var dialog = new SaveFileDialog
         {
-          Log.Error($"The {label} folder chooser failed from {(attempt == 1 ? $"'{from}'" : "no start folder")}", e);
-        }
-      }
+          Filter = filter,
+          Title = title,
+          InitialDirectory = from,
+        };
 
-      return null;
+        if (!string.IsNullOrEmpty(fileName))
+        {
+          dialog.FileName = fileName;
+        }
+
+        if (!string.IsNullOrEmpty(defaultExt))
+        {
+          dialog.DefaultExt = defaultExt;
+        }
+
+        return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
+      });
     }
 
     /// <summary>
     /// The directory to open a chooser in, out of whatever the caller has — a folder, a full file path, or
     /// nothing — but only if it exists. Null means "let Windows decide", which is the safe answer: pointing a
-    /// chooser at a folder that isn't there is how this whole class of crash got here. Exposed so a caller with
-    /// a list of candidates (the log file, then the recent files) can take the first one that resolves.
+    /// chooser at a folder that isn't there is how this whole class of crash got here. Exposed so a caller with a
+    /// list of candidates (the log file, then the recent files) can take the first one that resolves.
     /// </summary>
     internal static string ResolveDirectory(string path)
     {
@@ -116,7 +124,43 @@ namespace EQLogParser
       }
     }
 
-    // The Code Pack takes an owner as a window handle rather than a Window, and takes zero for "no owner".
-    private static IntPtr OwnerHandle(Window owner) => owner != null ? new WindowInteropHelper(owner).Handle : IntPtr.Zero;
+    // The one loop every chooser runs: ask for the caller's folder first, and if the shell cannot be moved to
+    // show it, try once more with no folder at all so Windows opens wherever it keeps this kind of dialog. That
+    // retry is what turns "their EQ folder moved" into a working chooser instead of an exception on a click
+    // handler — and a handler that throws here is a window that closes, which is the report we keep getting.
+    private static string Show(Window owner, string startPath, string label, Func<string, string> run)
+    {
+      var from = ResolveDirectory(startPath);
+
+      for (var attempt = 1; attempt <= 2; attempt++)
+      {
+        try
+        {
+          return run(attempt == 1 ? from : null);
+        }
+        catch (Exception e)
+        {
+          // Nothing to rethrow. The second pass gets the same shot at a default location, and if that fails too
+          // the answer is "nothing was picked" with the reason logged under the name of the control.
+          Log.Error($"The {label} chooser failed from {(attempt == 1 ? $"'{from}'" : "no start folder")}", e);
+        }
+      }
+
+      // Both attempts failed, which is the state a player experiences as "I clicked Export and nothing happened".
+      // It used to be a crash, then a silence; say something instead, since a broken chooser on some Windows build
+      // we cannot reproduce is otherwise indistinguishable from a mis-click. Its own try because an error path that
+      // can throw is not an error path.
+      try
+      {
+        new MessageWindow($"The {label} file chooser could not be opened.\n\nCheck the EQLogParser error log for details.",
+          "File Chooser").ShowDialog();
+      }
+      catch (Exception e)
+      {
+        Log.Error("Could not tell the user that the file chooser failed", e);
+      }
+
+      return null;
+    }
   }
 }

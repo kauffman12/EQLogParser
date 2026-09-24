@@ -1,7 +1,6 @@
 using FontAwesome5;
 using log4net;
 using log4net.Appender;
-using Microsoft.Win32;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -350,14 +349,12 @@ namespace EQLogParser
 
     internal static async Task CreateBackupAsync()
     {
-      var saveFileDialog = new SaveFileDialog();
-
       // get file name
       var filename = FileUtil.BuildBackupFilename();
-      saveFileDialog.Filter = "EQLogParser Backup Files (*.zip)|*.zip";
-      saveFileDialog.FileName = string.Join("", filename.Split(Path.GetInvalidFileNameChars()));
+      var pickedFile = FileDialogUtil.SaveFile(GetOwner(), null, "backup",
+        "EQLogParser Backup Files (*.zip)|*.zip", string.Join("", filename.Split(Path.GetInvalidFileNameChars())));
 
-      if (saveFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         var dialog = new MessageWindow($"Creating EQLogParser Backup", Resource.CREATE_BACKUP, MessageWindow.IconType.Save, null, null, false, true);
         dialog.Show();
@@ -367,7 +364,7 @@ namespace EQLogParser
 
         var accessError = false;
         var source = Environment.ExpandEnvironmentVariables(ConfigUtil.AppData);
-        var backupFile = saveFileDialog.FileName;
+        var backupFile = pickedFile;
 
         try
         {
@@ -407,7 +404,7 @@ namespace EQLogParser
     {
       // No start folder: a restore can come from anywhere, so let Windows show what it likes. Null also covers
       // "cancelled" and "the chooser could not be shown", which are handled the same way — nothing happens.
-      var pickedFile = FileDialogUtil.PickFile(GetOwner(), null, "backup restore", "EQLogParser_backup.zip", "*.zip");
+      var pickedFile = FileDialogUtil.PickFile(GetOwner(), null, "backup restore", "EQLogParser_backup.zip|*.zip");
       if (pickedFile != null)
       {
         Task.Delay(150).ContinueWith(async _ =>
@@ -503,12 +500,11 @@ namespace EQLogParser
 
     internal static void ExportFights(string currentFile, List<Fight> fights)
     {
-      var saveFileDialog = new SaveFileDialog();
       var fileName = $"eqlog_{ConfigUtil.PlayerName}_{ConfigUtil.ServerName}-selected.txt";
-      saveFileDialog.Filter = "Text Files (*.txt)|*.txt";
-      saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+      var pickedFile = FileDialogUtil.SaveFile(GetOwner(), null, "selected fights export", "Text Files (*.txt)|*.txt",
+        string.Join("", fileName.Split(Path.GetInvalidFileNameChars())));
 
-      if (saveFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights.", Resource.FILEMENU_SAVE_FIGHTS,
           MessageWindow.IconType.Save);
@@ -519,7 +515,7 @@ namespace EQLogParser
 
           try
           {
-            using (var os = File.Open(saveFileDialog.FileName, FileMode.Create))
+            using (var os = File.Open(pickedFile, FileMode.Create))
             {
               var range = new TimeRange();
               fights.ForEach(fight =>
@@ -600,11 +596,6 @@ namespace EQLogParser
     {
       try
       {
-        var saveFileDialog = new SaveFileDialog
-        {
-          Filter = "HTML Files (*.html)|*.html"
-        };
-
         var fileName = DateUtil.GetCurrentDate("MM-dd-yy") + " ";
         if (tables.Values.FirstOrDefault() is { } summary)
         {
@@ -615,11 +606,12 @@ namespace EQLogParser
           fileName += "No Summaries Exported";
         }
 
-        saveFileDialog.FileName = string.Join("", fileName.Split(Path.GetInvalidFileNameChars()));
+        var pickedFile = FileDialogUtil.SaveFile(GetOwner(), null, "html report export", "HTML Files (*.html)|*.html",
+          string.Join("", fileName.Split(Path.GetInvalidFileNameChars())));
 
-        if (saveFileDialog.ShowDialog() == true)
+        if (pickedFile != null)
         {
-          HtmlExport.SaveHtml(saveFileDialog.FileName, tables);
+          HtmlExport.SaveHtml(pickedFile, tables);
         }
       }
       catch (IOException ex)

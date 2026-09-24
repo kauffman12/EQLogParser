@@ -1,6 +1,5 @@
 using FontAwesome5;
 using log4net;
-using Microsoft.Win32;
 using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using System;
@@ -310,18 +309,12 @@ namespace EQLogParser
     {
       try
       {
-        // WPF doesn't have its own file chooser so use Win32 Version
-        var dialog = new OpenFileDialog
-        {
-          // filter to txt files
-          DefaultExt = ".scf.gz",
-          Filter = "Spell Count File (*.scf.gz) | *.scf.gz"
-        };
+        var pickedFile = FileDialogUtil.PickFile(MainActions.GetOwner(), null, "spell count import",
+          "Spell Count File (*.scf.gz) | *.scf.gz", defaultExt: ".scf.gz");
 
-        // show dialog and read result
-        if (dialog.ShowDialog() == true)
+        if (pickedFile != null)
         {
-          var gzipFileName = new FileInfo(dialog.FileName);
+          var gzipFileName = new FileInfo(pickedFile);
 
           var decompressionStream = new GZipStream(gzipFileName.OpenRead(), CompressionMode.Decompress);
           var reader = new StreamReader(decompressionStream);
@@ -387,12 +380,10 @@ namespace EQLogParser
         data.PlayerNames.AddRange(_playerList);
 
         var result = JsonSerializer.Serialize(data);
-        var saveFileDialog = new SaveFileDialog();
-        const string filter = "Spell Count File (*.scf.gz)|*.scf.gz";
-        saveFileDialog.Filter = filter;
-        if (saveFileDialog.ShowDialog() == true)
+        var pickedFile = FileDialogUtil.SaveFile(MainActions.GetOwner(), null, "spell count export", "Spell Count File (*.scf.gz)|*.scf.gz");
+        if (pickedFile != null)
         {
-          var gzipFileName = new FileInfo(saveFileDialog.FileName);
+          var gzipFileName = new FileInfo(pickedFile);
           var gzipTargetAsStream = gzipFileName.Create();
           var gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
           var writer = new StreamWriter(gzipStream);

@@ -1,5 +1,4 @@
 using log4net;
-using Microsoft.Win32;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.Grid.Helpers;
 using Syncfusion.UI.Xaml.ScrollAxis;
@@ -167,17 +166,14 @@ namespace EQLogParser
 
     private void Import()
     {
-      var openFileDialog = new OpenFileDialog
-      {
-        Filter = "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-        Title = "Import Phonetic Dictionary"
-      };
+      var pickedFile = FileDialogUtil.PickFile(this, null, "phonetic dictionary import",
+        "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*", "Import Phonetic Dictionary");
 
-      if (openFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         try
         {
-          var data = File.ReadAllText(openFileDialog.FileName);
+          var data = File.ReadAllText(pickedFile);
           var rows = TextUtils.ReadTsv(data);
 
           var updated = false;
@@ -237,20 +233,16 @@ namespace EQLogParser
 
     private void Export()
     {
-      var saveFileDialog = new SaveFileDialog
-      {
-        Filter = "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt",
-        Title = "Export Phonetic Dictionary",
-        FileName = "eqlp-phonetic-dictionary.tsv"
-      };
+      var pickedFile = FileDialogUtil.SaveFile(this, null, "phonetic dictionary export",
+        "TSV Files (*.tsv)|*.tsv|Text Files (*.txt)|*.txt", "eqlp-phonetic-dictionary.tsv", "Export Phonetic Dictionary");
 
-      if (saveFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         try
         {
           var export = DataGridUtil.BuildExportData(dataGrid);
           var result = TextUtils.BuildTsv(export.Item1, export.Item2);
-          using (var writer = new StreamWriter(saveFileDialog.FileName))
+          using (var writer = new StreamWriter(pickedFile))
           {
             writer.Write(result);
           }

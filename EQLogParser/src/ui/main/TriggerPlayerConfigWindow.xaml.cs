@@ -216,7 +216,7 @@ namespace EQLogParser
 
     private void ChooseFileClicked(object sender, RoutedEventArgs e)
     {
-      var file = FileDialogUtil.PickFile(this, txtFilePath.Text, "character log", "eqlog_Player_server", "*.txt");
+      var file = FileDialogUtil.PickFile(this, txtFilePath.Text, "character log", "eqlog_Player_server|*.txt");
       if (file != null)
       {
         txtFilePath.FontStyle = FontStyles.Normal;

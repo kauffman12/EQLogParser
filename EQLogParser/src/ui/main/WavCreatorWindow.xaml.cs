@@ -1,5 +1,4 @@
 using EQLogParser.Audio;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -40,14 +39,18 @@ namespace EQLogParser
 
     private void ExportClicked(object sender, RoutedEventArgs e)
     {
-      var saveFileDialog = new SaveFileDialog();
-      saveFileDialog.Filter = "WAV Files (*.wav)|*.wav";
+      // Checked before the chooser opens: no point asking where to save a line that cannot be rendered.
+      if (!IsValid())
+      {
+        return;
+      }
 
-      if (IsValid() && saveFileDialog.ShowDialog() == true)
+      var pickedFile = FileDialogUtil.SaveFile(this, null, "tts wav export", "WAV Files (*.wav)|*.wav");
+      if (pickedFile != null)
       {
         var volume = (int)Math.Round(volumeSlider.Value) / 100.0f;
         AudioManager.Instance.SpeakOrSaveTtsAsync(tts.Text, voices.SelectedValue as string, _deviceIdList[deviceList.SelectedIndex],
-          volume, rateOption.SelectedIndex, saveFileDialog.FileName);
+          volume, rateOption.SelectedIndex, pickedFile);
       }
     }
 
