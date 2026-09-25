@@ -11,6 +11,22 @@
   <Grid>
     <Grid.Resources>
       <!-- Divider rows read as background text, not data (D5 inactivity separators). -->
+      <!-- Same visual row numbering as the current Fight Table (its GridRowHeaderCell template):
+           the number is the row's live position, so divider rows count like any row and hidden
+           dividers renumber the list - identical semantics means the two grids line up. -->
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
       <Style x:Key="MirrorRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <DataTrigger Binding="{Binding IsDivider}" Value="True">
@@ -49,7 +65,6 @@
                            ShowRowHeader="True"
                            SourceType="{x:Type local:MirrorFightRow}">
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="No" HeaderText="#" Width="46" />
         <syncfusion:GridTextColumn MappingName="Name" HeaderText="Fight" ColumnSizer="Star" />
         <syncfusion:GridTextColumn MappingName="Identity" HeaderText="Identity" Width="70" />
         <syncfusion:GridTextColumn MappingName="Source" HeaderText="Rule" Width="110" />

@@ -10,8 +10,9 @@ namespace EQLogParser
   // time; the grid binds plain properties.
   internal sealed class MirrorFightRow
   {
+    // Row numbers are not data: the grid's row-header template shows the live position, exactly
+    // like the current Fight Table - divider rows count, hidden dividers renumber. No `No` field.
     public bool IsDivider { get; init; }
-    public int No { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Identity { get; init; } = string.Empty;
     public string Source { get; init; } = string.Empty;
@@ -65,7 +66,6 @@ namespace EQLogParser
         var identity = timeline.IdentityWithSource(fight.Name, out var source);
         snapshot.Rows.Add(new MirrorFightRow
         {
-          No = fight.Id,
           Name = fight.Name,
           Identity = identity.ToString(),
           Source = source ?? string.Empty,
