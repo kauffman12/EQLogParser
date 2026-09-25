@@ -411,22 +411,6 @@ namespace EQLogParser
     }
 
     /*
-     * True when the slot for {id} still holds exactly {windowData}, and the slot goes away then. Identity-checked because the id can be
-     * reused: RemoveWindowAsync untracks before closing, and a restart can install a newer window under the same id — a late Closed event
-     * for an old window must never drop the replacement or resurrect anything.
-     */
-    internal static bool TryUntrackClosed(Dictionary<string, OverlayWindowData> theWindows, string id, OverlayWindowData windowData)
-    {
-      if (ReferenceEquals(theWindows.GetValueOrDefault(id), windowData))
-      {
-        theWindows.Remove(id);
-        return true;
-      }
-
-      return false;
-    }
-
-    /*
      * Not a lock and not meant to be exact at the boundary — two threads deciding "due" at once cost one duplicate line. What it must never
      * do is let a per-line call turn a missing overlay into a per-line warning, so callers hand it a key and a fixed cooldown window.
      */
@@ -507,48 +491,6 @@ namespace EQLogParser
         windowData.TheWindow.Visibility = Visibility.Collapsed;
         windowData.TheWindow.Opacity = 1.0;
         theWindows[overlay.Id] = windowData;
-
-        /*
-         * The window can die without the manager's knowledge: the OS tears a layered window down after a GPU/DWM fault, and the overlay's own
-         * close button calls Window.Close directly. Without this subscription the corpse keeps the slot forever — both window classes guard
-         * every later write on an _isClosed flag set in Closing, so sound keeps playing while text silently goes nowhere for the rest of the
-         * run. Planned closes (RemoveWindowAsync, and the delete event behind it) take the entry out *before* Close, so the identity check
-         * below only fires for the unplanned ones; those rebuild through the existing restart path.
-         */
-        windowData.TheWindow.Closed += (_, _) => OnOverlayWindowClosed(theWindows, overlay.Id, windowData);
-      }
-    }
-
-    // Runs on the closing window's thread — the UI thread this manager already confines these dictionaries to.
-    private void OnOverlayWindowClosed(Dictionary<string, OverlayWindowData> theWindows, string id, OverlayWindowData windowData)
-    {
-      try
-      {
-        if (!TryUntrackClosed(theWindows, id, windowData))
-        {
-          // A planned close (the entry was already taken out) or a late event from a window this one replaced; nothing is ours to fix.
-          return;
-        }
-
-        Log.Warn($"The overlay window '{id}' was closed outside the manager; recreating it from saved settings.");
-        _ = RecoverWindowAsync(id);
-      }
-      catch (Exception ex)
-      {
-        Log.Debug("Could not recover a closed overlay window.", ex);
-      }
-    }
-
-    private async Task RecoverWindowAsync(string id)
-    {
-      try
-      {
-        await RestartOverlayAsync(id);
-      }
-      catch (Exception ex)
-      {
-        // The overlay was deleted while the close was in flight, or the app is on its way out: nothing to recover in either case.
-        Log.Debug($"Could not recreate overlay window '{id}'.", ex);
       }
     }
 
