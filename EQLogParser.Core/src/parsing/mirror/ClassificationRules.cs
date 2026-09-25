@@ -251,11 +251,16 @@ namespace EQLogParser.Mirror
 
     private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline)
     {
+      // The verdict depends only on the attacker name - one pass per distinct name, not per fact
+      // (a busy pet contributes tens of thousands of flagged lines for one identity).
+      var seen = new HashSet<string>(StringComparer.Ordinal);
       foreach (var f in facts.Facts)
       {
         if ((f.Flags & DamageFact.FlagOwnerInLine) == 0) continue;
 
         var attacker = facts.NameOf(f.AtkIdx);
+        if (!seen.Add(attacker)) continue;
+
         var source = "R5-owner";
         string owner = null;
         foreach (var suffix in OwnerSuffixes)

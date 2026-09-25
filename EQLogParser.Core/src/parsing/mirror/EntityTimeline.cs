@@ -71,19 +71,48 @@ namespace EQLogParser.Mirror
     {
       if (string.IsNullOrEmpty(name)) return;
       var list = GetOrCreate(_identity, name);
-      var assignment = new IdentityAssignment(kind, effectiveFrom, strength, source);
+
+      // Dedupe identical assignments: hot callers (owner-line damage facts, join-line churn)
+      // re-assert the exact same tuple thousands of times per name, and a duplicate adds no
+      // information at read time - conflicts resolve by (strength, effectiveFrom). Without this,
+      // lists grew with the FACT count and were fully re-sorted per insert (measured: classify
+      // spent 127 s on a 445k-fact log; the derive then hid behind "capturing..." in the app).
+      for (var i = 0; i < list.Count; i++)
+      {
+        var a = list[i];
+        if (a.Kind == kind && a.Strength == strength && a.EffectiveFrom == effectiveFrom
+            && string.Equals(a.Source, source, StringComparison.Ordinal)) return;
+      }
+
       // keep the list sorted by effective time so AffiliationAt-style lookups can sweep;
       // conflicts are resolved at read time by (strength, effectiveFrom) — nothing is silently dropped.
-      list.Add(assignment);
-      list.Sort((a, b) => a.EffectiveFrom.CompareTo(b.EffectiveFrom));
+      InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source)
     {
       if (string.IsNullOrEmpty(name)) return;
       var list = GetOrCreate(_affiliation, name);
-      list.Add(new AffiliationInterval(kind, t0, t1, strength, source));
-      list.Sort((a, b) => a.T0.CompareTo(b.T0));
+
+      // Same dedupe rationale as SetIdentity (identical interval = no new read-time information).
+      for (var i = 0; i < list.Count; i++)
+      {
+        var a = list[i];
+        if (a.Kind == kind && a.T0 == t0 && a.T1 == t1 && a.Strength == strength
+            && string.Equals(a.Source, source, StringComparison.Ordinal)) return;
+      }
+
+      InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source), static a => a.T0);
+    }
+
+    // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
+    // any binary-search ceremony and keeps the common append-at-end case one comparison.
+    private static void InsertSortedByTime<T>(List<T> list, T item, Func<T, double> timeKey)
+    {
+      var t = timeKey(item);
+      var i = list.Count;
+      while (i > 0 && timeKey(list[i - 1]) > t) i--;
+      list.Insert(i, item);
     }
 
     private static List<T> GetOrCreate<T>(Dictionary<string, List<T>> map, string key)
