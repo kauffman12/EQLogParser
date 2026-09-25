@@ -41,6 +41,12 @@ namespace EQLogParser
 
     internal async Task StartAsync()
     {
+      /*
+       * Resume (MainWindow's PowerModes.Resume handler) restarts a manager that Suspend disposed through DisposeAsync. The flag has to
+       * come back with the manager: nothing else ever clears it, so once it survived a resume every later DisposeAsync — including the
+       * one App makes at shutdown — returned early at its own guard and silently skipped taking the log readers and overlay windows down.
+       */
+      _isDisposed = false;
       CreateTimers();
       await TriggerUtil.LoadOverlayStyles();
       TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
