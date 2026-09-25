@@ -1,3 +1,10 @@
+# 2.4.1 | 09/25/26
+1. Added dropdown to **Timelines** for customizing saved layouts.
+2. **FCT Overlay** now has more **Arc** options in split mode.
+3. Reduced memory usage during parsing and changing log files.
+4. Fixed minor **Trigger** bugs and improved error handling.
+5. Made file dialogs consistent and removed old DLLs.
+
 # 2.4.0 | 09/18/26
 1. **.NET 10 Now Required**
 2. .NET 10 Performance improvements and fixes.
