@@ -30,6 +30,10 @@ namespace EQLogParser
 
     public event Action<string> DeriveFailed;
 
+    // Liveness feedback while capture is dirty (raised on the timer, i.e. the dispatcher):
+    // total captured facts since no snapshot covers them yet.
+    public event Action<long> Capturing;
+
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private readonly DamageFactTable _facts = new(100_000);
@@ -64,6 +68,8 @@ namespace EQLogParser
     {
       if (_disposed || Interlocked.Exchange(ref _deriveInFlight, 1) == 1) return;
 
+      Log.Info($"Combat mirror derive starting over {CapturedTotal:N0} captured facts");
+
       _ = Task.Run(() =>
       {
         try
@@ -76,12 +82,13 @@ namespace EQLogParser
             var timeline = new EntityTimeline();
             RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
             ClassificationRules.Apply(_facts, timeline);
-            return MirrorFightRows.Build(FightDeriver.Derive(_facts), timeline, _facts.FactCount);
+            return MirrorFightRows.Build(FightDeriver.Derive(_facts), timeline, CapturedTotal);
           });
           sw.Stop();
 
           snapshot.ElapsedMs = sw.Elapsed.TotalMilliseconds;
-          _lastDerivedCount = snapshot.FactCount;
+          _lastDerivedCount = CapturedTotal;
+          Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms");
           Derived?.Invoke(snapshot);
         }
         catch (Exception ex) when (!_disposed)
@@ -117,17 +124,27 @@ namespace EQLogParser
       }
     }
 
-    // Quiescence proxy without touching LogReader internals: derive once the fact count has been
-    // stable for two ticks AND differs from the last derived count. Not a one-shot EOF latch — a
-    // damage-free stretch during bulk load (raid gap in a recorded log, GC pause) may fire an
-    // early pass, but any later growth re-arms the trigger, so the visible snapshot converges to
-    // end-of-file and tailing refreshes whenever the log goes quiet. Derivation itself parks
-    // ingest at the gate, so a completed pass always leaves count == lastDerivedCount: no churn.
+    // Every fact stream counts — a log without combat damage (login/city logs) still derives
+    // (an empty fight list is an honest answer; "capturing forever" is not).
+    private long CapturedTotal =>
+      _facts.FactCount + _facts.DeathCount + _facts.TauntCount + _facts.IdentityEventCount + _facts.EvidenceCount;
+
+    // Quiescence proxy without touching LogReader internals: derive once the captured-fact count
+    // has been stable for two ticks AND differs from the last derived count. Not a one-shot EOF
+    // latch — a damage-free stretch during bulk load (raid gap in a recorded log, GC pause) may
+    // fire an early pass, but any later growth re-arms the trigger, so the visible snapshot
+    // converges to end-of-file and tailing refreshes whenever the log goes quiet. Derivation
+    // itself parks ingest at the gate, so a completed pass always leaves count == lastDerivedCount.
     private void QuietTick(object sender, EventArgs e)
     {
       if (_disposed || _autoDeriveDisabled) return;
 
-      var count = _facts.FactCount;
+      var count = CapturedTotal;
+
+      // Dirty-while-idle feedback doubles as field diagnostics: "capturing… 0 captured" separates
+      // an empty log from a stalled pipeline without needing a debugger.
+      if (count != _lastDerivedCount) Capturing?.Invoke(count);
+
       if (count == 0) return;
 
       if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();

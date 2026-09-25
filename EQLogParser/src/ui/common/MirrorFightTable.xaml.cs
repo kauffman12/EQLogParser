@@ -65,6 +65,13 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() => mirrorStatus.Text = $"Derive failed: {message}");
     }
 
+    // Capture heartbeat (dispatcher thread already). Only fires while no snapshot covers the
+    // newest facts, so it never stomps a fresh "Derived …" line.
+    private void OnCapturing(long total)
+    {
+      mirrorStatus.Text = $"Mirror: capturing... {total:N0} captured";
+    }
+
     private void Attach(MirrorSession session)
     {
       _session = session;
@@ -72,6 +79,7 @@ namespace EQLogParser
       {
         session.Derived += OnDerived;
         session.DeriveFailed += OnDeriveFailed;
+        session.Capturing += OnCapturing;
       }
       mirrorRederiveButton.IsEnabled = session is not null;
     }
@@ -82,6 +90,7 @@ namespace EQLogParser
       {
         _session.Derived -= OnDerived;
         _session.DeriveFailed -= OnDeriveFailed;
+        _session.Capturing -= OnCapturing;
       }
       _session = null;
     }
