@@ -117,6 +117,45 @@ public class MirrorRulesTest
         Assert.IsNull(EQDataStore.Instance.GetSpellClass("Savage Bloodlust Effect"));
     }
 
+    [TestMethod]
+    public void SelfFeedback_SpellNameAttackerIsNeverClassified()
+    {
+        // R7 negative: "You have taken N damage from X." puts a SPELL NAME in the attacker field.
+        // When the spell targets Self in the spell DB - spell feedback such as "Cloudburst Strike
+        // Feedback XII" - the damage is the local player hitting themselves. Four instances over
+        // three minutes, every defender player-side, must NOT produce an R7-side NPC: without the
+        // guard this exact shape is what would brand the operator's own spell an enemy.
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-feedback-" + Guid.NewGuid().ToString("N")));
+        var log = Path.Combine(dir.FullName, "eqlog_Feedbackone_Eqgate.txt"); // filename seeds ConfigUtil.PlayerName via the harness
+        var previousPlayerName = ConfigUtil.PlayerName;
+        try
+        {
+            File.WriteAllLines(log, new[]
+            {
+                "[Sun Apr 26 18:48:00 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
+                "[Sun Apr 26 18:49:05 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
+                "[Sun Apr 26 18:50:10 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
+                "[Sun Apr 26 18:51:15 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
+            });
+
+            var facts = PipelineHarness.RunFileWithMirror(log).Facts;
+            Assert.AreEqual(4, facts.Facts.Length, "feedback lines produced no damage facts?");
+
+            var timeline = new EntityTimeline();
+            ClassificationRules.Apply(facts, timeline);
+
+            // the defender must be player-side for the negative to mean anything
+            AssertIdentity(timeline, "Feedbackone", IdentityKind.Player, "R0-local");
+            Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityWithSource("Cloudburst Strike Feedback XII", out var spellSrc),
+                $"own spell feedback classified as a combatant (source {spellSrc ?? "none"})");
+        }
+        finally
+        {
+            ConfigUtil.PlayerName = previousPlayerName;
+            try { Directory.Delete(dir.FullName, true); } catch (IOException) { }
+        }
+    }
+
     private static void AssertIdentity(EntityTimeline timeline, string name, IdentityKind expected, string expectedSource)
     {
         var kind = timeline.IdentityWithSource(name, out var source);

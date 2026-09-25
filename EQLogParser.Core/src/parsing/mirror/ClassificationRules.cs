@@ -327,6 +327,14 @@ namespace EQLogParser.Mirror
         var atk = facts.NameOf(f.AtkIdx);
         if (kinds[atk] != IdentityKind.Unknown) continue;
 
+        // A spell name is not a combatant. "You have taken N damage from X." leaves the attacker
+        // field holding a spell, and when that spell targets Self in the spell DB ("Cloudburst
+        // Strike Feedback XII") the fact is the local player hitting themselves with their own
+        // feedback — side evidence from it would fabricate an NPC out of the operator's own cast.
+        // Mob dots share the line shape and keep their evidence: their DB entries are not
+        // Self-target, and something beating you all night still earns the hostile verdict.
+        if (IsSelfTargetDamageSpell(atk)) continue;
+
         // edges laid down while the attacker is charmed prove nothing about its real side
         if (windowsByName.TryGetValue(atk, out var wins))
         {
@@ -418,5 +426,10 @@ namespace EQLogParser.Mirror
 
     private static bool IsClassSafeCast(string spell)
       => EQDataStore.IsClassSafeSpellName(spell) && EQDataStore.Instance.GetSpellClass(spell) is not null;
+
+    // Damaging spell the spell DB says only hits its caster (SpellTarget.Self): spell feedback.
+    // Cheap dict lookup, reached only for facts whose attacker has no identity yet.
+    private static bool IsSelfTargetDamageSpell(string name)
+      => EQDataStore.Instance.GetDamagingSpellByName(name) is { Target: (byte) SpellTarget.Self };
   }
 }
