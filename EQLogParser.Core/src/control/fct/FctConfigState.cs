@@ -123,6 +123,12 @@ namespace EQLogParser
      * answer a state gets when nobody has chosen one, and it matches the value the engine opens with (FctLayout.LabelSide). */
     public FctLabelSide LabelSide = FctLabelSide.None;
 
+    /* Which way an arc leans (FctArcBend), read by the layout the same way the label seat is. Ships at out - each half bows away from the middle -
+     * because that is what an arc looks like to somebody who never opened the panel, and the alternative this used to default to could not hold one
+     * direction still across window sizes. Fountain takes no shape from this - it has no arc to bend - but the field travels anyway rather than being
+     * mode-dependent furniture. */
+    public FctArcBend ArcBend = FctArcBend.Out;
+
     public double TextScale = FctScale.SizeDefault;
     public double CritScale = FctScale.CritSizeDefault;
     public double Speed = FctScale.SpeedDefault;
@@ -167,6 +173,7 @@ namespace EQLogParser
       ShowAbsorb = ShowAbsorb,
       ShowInvulnerable = ShowInvulnerable,
       LabelSide = LabelSide,
+      ArcBend = ArcBend,
       TextScale = TextScale,
       CritScale = CritScale,
       Speed = Speed,

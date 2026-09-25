@@ -32,6 +32,29 @@ namespace EQLogParser
     internal static string Version = "";
     internal static WindowState LastWindowState = WindowState.Normal;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    /*
+     * The startup phases as named spans (docs/DesignNotes.md, "Instrumenting the UI thread"). They exist because a measured launch wrote
+     * "UI STALL closed: beat ran 2922 ms late | in progress nothing": the thread was blocked for three seconds and every span we had
+     * belonged to a window that did not exist yet. A phase name is what makes such a line fixable, so these boundaries are the ones a
+     * reader can act on - the voice load, the trigger database opened on this thread, the main window's construction, the trigger manager,
+     * and the first Show. They are registered as fields so a span can be opened before the phase it measures and closed after it throws.
+     */
+    private static readonly int VoicesId = PerfCounters.Register("app.voices");
+
+    /*
+     * Speech costs are measured inside EQLogParser.Audio, which references no counter code at all, so they arrive through AudioManager.PerfSink
+     * rather than a span. Both are off the UI thread by design - synthesis was moved off it precisely because a neural voice froze the window -
+     * and they are here to answer the other question: how long does this machine's engine take per callout, and is the SAPI path slower than the
+     * neural one. A soak on kokoro reads differently from the same soak on Windows voices, which is the difference between two players on the
+     * same build where only one of them freezes.
+     */
+    private static readonly int SynthId = PerfCounters.Register("audio.synth", uiThread: false);
+    private static readonly int AudioFileId = PerfCounters.Register("audio.file", uiThread: false);
+    private static readonly int TriggerDbId = PerfCounters.Register("app.triggerdb");
+    private static readonly int MainWindowId = PerfCounters.Register("app.mainwindow");
+    private static readonly int TriggerMgrId = PerfCounters.Register("app.triggmgr");
+    private static readonly int FirstShowId = PerfCounters.Register("app.firstshow");
     private SplashWindow _splash;
 
     public App()
@@ -140,15 +163,58 @@ namespace EQLogParser
         Version = ResourceAssembly.GetName().Version!.ToString()[..^2];
         Log.Info($"EQLogParser: {Version}, OS: {osVersion.VersionString}, DotNet: {Environment.Version}, RenderMode: {RenderOptions.ProcessRenderMode}");
 
+        /*
+         * The UI-thread watchdog, started before the voice load and the main window so the slow parts of startup are measured with
+         * everything else. It is the only thing that can attribute "the combat numbers stopped for a second": every window here draws
+         * on this one thread, so the freeze has to be caught at the thread and not in whichever window happened to notice. See
+         * UiBeatMonitor and docs/DesignNotes.md ("Instrumenting the UI thread").
+         *
+         * The threshold is settable because one second is the wrong number for measuring. It is the right number for reporting - it is what
+         * a player would call a freeze, and setting it lower would fill a raid log with passes nobody felt - but a measurement session wants
+         * the band below it: a first full-surface run showed beat delays of 90 to 235 ms with none of our measured passes inside them, which
+         * is the same event as a multi-second stall at a fifth of the size and is where the evidence is easiest to catch. PerfStallMs=200 in
+         * settings.txt watches that band; anything under 100 ms only generates noise from ordinary frames, so it is not allowed.
+         *
+         * The whole thing is opt-in (`PerfReport=True`, or `Debug`, which implies it) because its cheapest line is one per 20 seconds of
+         * uptime: played straight it writes 90 lines an hour saying nothing is wrong, in a file that also carries game-data errors and rolls
+         * over. Off is the normal case, so the monitor is not started at all rather than started and silenced - and when it IS on, this is the
+         * line that says so, so a reader knows whether the silence in a log means "instrumented and clean" or "nobody was looking".
+         */
+        var stallMs = Math.Max(100, ConfigUtil.GetSettingAsDouble("PerfStallMs", UiBeatMonitor.DefaultStallMs));
+        PerfJournal.Enabled = ConfigUtil.IfSet("Debug") || ConfigUtil.IfSetOrElse("PerfReport", false);
+        if (PerfJournal.Enabled)
+        {
+          PerfJournal.Note($"UI perf reporting on: beat every {UiBeatMonitor.BeatSeconds:0} s, stall threshold {stallMs:0} ms");
+          UiBeatMonitor.Start(Dispatcher.CurrentDispatcher, stallMs);
+        }
+
         var urlVersion = Version.Replace(".", "-");
         ReleaseNotesUrl = $"{ParserHome}/releasenotes.html#{urlVersion}";
 
         MainActions.UpdateStatus($"RenderMode: {RenderOptions.ProcessRenderMode}");
-        AudioManager.Initialize(AppCache, null, ConfigUtil.GetSetting("TtsEngine"));
-        await LoadVoicesSafe();
 
-        // preload trigger DB
-        _ = TriggerStateDB.Instance;
+        /* The voice load is the first thing on this thread with real work in it, and a model load can take seconds. */
+        AudioManager.PerfSink = (name, ms) => PerfCounters.Record(name switch
+        {
+          "synth" => SynthId,
+          "file" => AudioFileId,
+          _ => -1
+        }, ms);
+
+        var voicesMark = PerfCounters.Begin(VoicesId);
+        try
+        {
+          AudioManager.Initialize(AppCache, null, ConfigUtil.GetSetting("TtsEngine"));
+          await LoadVoicesSafe();
+        }
+        finally
+        {
+          PerfCounters.End(voicesMark);
+        }
+
+        // preload trigger DB - on this thread, so its cost is a startup freeze if the database is big or cold
+        PerfCounters.Run(TriggerDbId, () => { _ = TriggerStateDB.Instance; });
+
         await ShowMain();
 
         OpenFctSimulationFromCommandLine(e.Args);
@@ -186,6 +252,7 @@ namespace EQLogParser
 
     protected override async void OnExit(ExitEventArgs e)
     {
+      UiBeatMonitor.Stop();
       LifecycleManager.Shutdown();
       ChatDB.Instance.Stop();
       AudioManager.Instance.Dispose();
@@ -267,12 +334,17 @@ namespace EQLogParser
       // Sanitize Top/Left BEFORE assigning them to a Window (prevents WPF ArgumentException)
       var (top, left) = SanitizePosition(savedTop, savedLeft);
 
-      var main = new MainWindow
+      /* The main window's construction: one huge XAML tree, Syncfusion docksite and all its child windows. Biggest startup suspect, and it was unnamed. */
+      MainWindow main = null;
+      PerfCounters.Run(MainWindowId, () =>
       {
-        Height = savedHeight,
-        Width = savedWidth
-        // DO NOT set Top/Left here
-      };
+        main = new MainWindow
+        {
+          Height = savedHeight,
+          Width = savedWidth
+          // DO NOT set Top/Left here
+        };
+      });
 
       // Only assign if safe (otherwise leave as NaN and let CheckWindowPosition reset/center)
       if (!double.IsNaN(top)) main.Top = top;
@@ -288,7 +360,15 @@ namespace EQLogParser
       try
       {
         MainActions.UpdateStatus("Starting Trigger Manager");
-        await TriggerManager.Instance.StartAsync();
+        var triggerMark = PerfCounters.Begin(TriggerMgrId);
+        try
+        {
+          await TriggerManager.Instance.StartAsync();
+        }
+        finally
+        {
+          PerfCounters.End(triggerMark);
+        }
 
         var savedState = ConfigUtil.GetSetting("WindowState", "Normal") switch
         {
@@ -297,26 +377,34 @@ namespace EQLogParser
           _ => WindowState.Normal
         };
 
-        if (savedState != WindowState.Minimized || !ConfigUtil.IfSet("HideWindowOnMinimize"))
+        /*
+         * Show and the window state. This span covers up to the call that queues the first layout, not the layout itself: a freeze that
+         * reports "in progress nothing" just after app.firstshow finished is the main window's first paint, and would be instrumented in
+         * the render pass rather than guessed at from here.
+         */
+        PerfCounters.Run(FirstShowId, () =>
         {
-          main.Show();
-        }
-
-        if (ConfigUtil.IfSet("StartWithWindowMinimized"))
-        {
-          if (savedState != WindowState.Minimized)
+          if (savedState != WindowState.Minimized || !ConfigUtil.IfSet("HideWindowOnMinimize"))
           {
-            LastWindowState = savedState;
+            main.Show();
           }
 
-          main.WindowState = WindowState.Minimized;
-        }
-        else
-        {
-          main.WindowState = savedState;
-        }
+          if (ConfigUtil.IfSet("StartWithWindowMinimized"))
+          {
+            if (savedState != WindowState.Minimized)
+            {
+              LastWindowState = savedState;
+            }
 
-        main.UpdateWindowBorder();
+            main.WindowState = WindowState.Minimized;
+          }
+          else
+          {
+            main.WindowState = savedState;
+          }
+
+          main.UpdateWindowBorder();
+        });
 
         await Task.Delay(350);
         MainActions.FireWindowStateChanged(main.WindowState);

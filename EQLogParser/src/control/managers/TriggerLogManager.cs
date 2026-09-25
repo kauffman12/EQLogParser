@@ -10,6 +10,15 @@ namespace EQLogParser
     internal static TriggerLogManager Instance => Lazy.Value;
 
     private const int MAX_ENTRIES_PER_CHARACTER = 5000;
+
+    /*
+     * Trigger log traffic, on the heartbeat alongside the window that displays it (TriggersLogView). One AddRange is one whole-collection
+     * Reset to anything bound, so the batch count is how often a visible grid must rebuild and re-sort itself, and the entry count is what
+     * it has to sort — read together they separate "triggers fired a lot" from "the grid reloads too often for what fired". Counted off the
+     * UI thread, because that is where the trigger processor appends.
+     */
+    private static readonly int LogBatchId = PerfCounters.Register("trig.logBatch", uiThread: false);
+    private static readonly int LogEntryId = PerfCounters.Register("trig.logEntry", uiThread: false);
     private readonly HashSet<string> _activeProcessors = [];
     private readonly Dictionary<string, BulkObservableCollection<TriggerLogEntry>> _logs = [];
     private readonly object _globalLock = new();
@@ -45,6 +54,9 @@ namespace EQLogParser
       {
         return;
       }
+
+      PerfCounters.Note(LogBatchId);
+      PerfCounters.Note(LogEntryId, entries.Count);
 
       lock (log)
       {

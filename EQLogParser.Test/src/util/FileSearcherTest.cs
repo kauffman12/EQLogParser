@@ -98,7 +98,7 @@ namespace EQLogParser
 
       // window covers lines 1..3 only; a matching line after the end must never be seen
       var range = new TimeRange();
-      range.TimeSegments.Add(new TimeSegment(Ts(lines[1]), Ts(lines[3])));
+      range.Add(new TimeSegment(Ts(lines[1]), Ts(lines[3])));
 
       List<string?> found = [];
       var searcher = new FileSearcher<string?>([file]);

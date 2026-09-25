@@ -375,10 +375,8 @@ namespace EQLogParser
         // Reset and recalculate stats
         StatsUtil.ResetPlayerStats(groupEntry);
 
-        // Merge time segments for accurate TotalSeconds
-        var mergedRange = new TimeRange();
-        mergedRange.Add(groupEntry.TimeSegments);
-        groupEntry.TotalSeconds = mergedRange.GetTotal();
+        // Uptime is the union of the members' own ranges, rebuilt from Members every pass so membership changes cannot leave stale seconds behind.
+        groupEntry.TotalSeconds = StatsUtil.MergeMemberRanges(groupEntry.Members).GetTotal();
 
         // Merge all player stats into group entry
         foreach (var player in groupEntry.Members)
@@ -451,11 +449,6 @@ namespace EQLogParser
         var groupEntry = _groupEntries[groupId];
 
         groupEntry.Members.Add(stats);
-
-        if (stats.Ranges?.TimeSegments != null)
-        {
-          groupEntry.TimeSegments.AddRange(stats.Ranges.TimeSegments);
-        }
       }
     }
 
@@ -543,19 +536,9 @@ namespace EQLogParser
       var oldGroup = _groupEntries[oldGroupId];
       var newGroup = _groupEntries[newGroupId];
 
-      // Remove from old group
+      // Members are the only state a group keeps; BuildGroupedPlayers recomputes each group's seconds from them.
       oldGroup.Members.Remove(player);
-      if (player.Ranges?.TimeSegments != null)
-      {
-        oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));
-      }
-
-      // Add to new group
       newGroup.Members.Add(player);
-      if (player.Ranges?.TimeSegments != null)
-      {
-        newGroup.TimeSegments.AddRange(player.Ranges.TimeSegments);
-      }
     }
 
     /// <summary>

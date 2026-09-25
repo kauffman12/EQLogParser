@@ -1,7 +1,6 @@
 using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -10,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,6 +31,30 @@ namespace EQLogParser
     private FctOverlayWindow _fctOverlay;
     private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
+
+    /*
+     * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). All three run on the UI thread and all
+     * three are quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
+     * antivirus scan away from a second), stats are recomputed when a fight changes, and an open chart takes a data-point update at
+     * whatever rate the parser produces them. A stall line that names one of these is a different conversation from one that names
+     * nothing.
+     */
+    private static readonly int SaveId = PerfCounters.Register("ui.configSave");
+    private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
+    private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
+
+    /* How many times a redraw request arrived while one was already waiting to run; see QueueChartUpdate. */
+    private static readonly int ChartBacklogId = PerfCounters.Register("chart.backlog");
+    private int _chartUpdatesWaiting;
+
+    /*
+     * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
+     * and switching logs is something a player does mid-raid; the dialog gets its own name because the question "does a modal Win32 dialog
+     * starve the beat?" has to be answered from evidence before anyone decides whether such a stall counts as one.
+     */
+    private static readonly int OpenLogId = PerfCounters.Register("ui.openlogfile");
+    private static readonly int PickFileId = PerfCounters.Register("ui.pickfile");
+
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
@@ -221,9 +245,9 @@ namespace EQLogParser
           }
         }
 
-        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(damageChartIcon.Tag as string, data));
-        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(healingChartIcon.Tag as string, data));
-        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => Dispatcher.InvokeAsync(() => HandleChartUpdate(tankingChartIcon.Tag as string, data));
+        DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon, data);
+        HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon, data);
+        TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(tankingChartIcon, data);
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
@@ -565,7 +589,9 @@ namespace EQLogParser
       // save once loaded but also if backup isnt trying to shutdown
       if (!_isStarting && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        ConfigUtil.Save();
+        /* Timed because it writes settings.ini to disk on the UI thread, once a half minute — which is close enough to "every so often"
+           to be worth ruling in or out by measurement rather than by argument. */
+        PerfCounters.Run(SaveId, ConfigUtil.Save);
       }
     }
 
@@ -573,7 +599,7 @@ namespace EQLogParser
     {
       if (!_isStarting)
       {
-        ComputeStats();
+        PerfCounters.Run(ComputeStatsId, ComputeStats);
         _computeStatsTimer.Stop();
       }
     }
@@ -659,13 +685,46 @@ namespace EQLogParser
       await MainActions.CreateBackupAsync();
     }
 
+    /*
+     * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue full
+     * redraws behind each other - three builders can ask for three. Counting how often a request found one already waiting is the only way to
+     * see that shape afterwards: it is what one merged redraw would take away, and nothing else in the log distinguishes "each redraw is too
+     * slow" from "too many redraws were asked for".
+     */
+    /*
+     * The icon is handed over as an object and its Tag is read inside the dispatched callback, not here. Reading a property of that control
+     * from this thread throws - `InvalidOperationException: the calling thread cannot access this object` - because the event arrives on a
+     * stats builder's thread, and this shape is not incidental: the lambdas that used to sit here wrapped the whole `icon.Tag as string`
+     * expression inside InvokeAsync precisely so the read happened on the UI thread. Measuring how many redraws queue up cannot be allowed to
+     * move a property read across threads to do it.
+     */
+    private void QueueChartUpdate(FrameworkElement icon, DataPointEvent e)
+    {
+      if (Interlocked.Increment(ref _chartUpdatesWaiting) > 1)
+      {
+        PerfCounters.Note(ChartBacklogId);
+      }
+
+      /* The count is released by the redraw itself; a callback the dispatcher never ran means the application was closing anyway. */
+      Dispatcher.InvokeAsync(() =>
+      {
+        Interlocked.Decrement(ref _chartUpdatesWaiting);
+        HandleChartUpdate(icon.Tag as string, e);
+      });
+    }
+
     private void HandleChartUpdate(string key, DataPointEvent e)
     {
-      if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
-          value.Content is LineChart chart)
+      /* One span per data point rather than one counter: an open chart is the only other thing in this application that redraws
+         continuously during a fight, and how much a single update costs decides whether it can starve an overlay. */
+      PerfCounters.Run(ChartUpdateId, () =>
       {
-        chart.HandleUpdateEvent(e);
-      }
+        if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
+          value.Content is LineChart chart)
+        {
+          chart.HandleUpdateEvent(e);
+        }
+      });
     }
 
     internal void CheckComputeStats()
@@ -805,17 +864,13 @@ namespace EQLogParser
 
     private void MenuItemExportNpcNamesClick(object sender, RoutedEventArgs e)
     {
-      var saveFileDialog = new SaveFileDialog
-      {
-        // get file name
-        Filter = "Text Files (*.txt)|*.txt"
-      };
+      var pickedFile = FileDialogUtil.SaveFile(this, null, "npc names export", "Text Files (*.txt)|*.txt");
 
-      if (saveFileDialog.ShowDialog() == true)
+      if (pickedFile != null)
       {
         try
         {
-          File.WriteAllLines(saveFileDialog.FileName, GetFights(true).Select(f => f.Name).Distinct().OrderBy(n => n));
+          File.WriteAllLines(pickedFile, GetFights(true).Select(f => f.Name).Distinct().OrderBy(n => n));
         }
         catch (Exception ex)
         {
@@ -1060,6 +1115,11 @@ namespace EQLogParser
               OpenDamageOverlayIfEnabled(true, false);
               FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
             }, DispatcherPriority.DataBind);
+
+            // The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
+            // expensive for the collector. Asked for after the overlays have allocated their steady state, and collected on a pool thread,
+            // so the UI thread never sits inside a stop-the-world holding its own work.
+            GcTidyUp.Request("log loaded");
           }
           else
           {
@@ -1133,6 +1193,7 @@ namespace EQLogParser
 
     private void OpenLogFile(string previousFile, int lastMins)
     {
+      var openMark = PerfCounters.Begin(OpenLogId);
       try
       {
         string theFile = null;
@@ -1142,23 +1203,18 @@ namespace EQLogParser
         }
         else
         {
-          var initialPath = string.IsNullOrEmpty(AppSettings.CurrentLogFile) ? string.Empty : Path.GetDirectoryName(AppSettings.CurrentLogFile);
+          // Where this character's log lives, when we know it; otherwise the newest recent file whose folder is
+          // still on disk, and failing that whatever Windows wants to show. ResolveDirectory drops every
+          // candidate that does not exist, so the chooser is never handed a folder it cannot open — that was
+          // the crash.
+          var start = new[] { AppSettings.CurrentLogFile }.Concat(_recentFiles)
+            .Select(FileDialogUtil.ResolveDirectory).FirstOrDefault(dir => dir != null);
 
-          var dialog = new CommonOpenFileDialog
+          // Cancel and failure both come back as "no file", so there is nothing here that can end the app.
+          PerfCounters.Run(PickFileId, () =>
           {
-            // Set to false because we're opening a file, not selecting a folder
-            IsFolderPicker = false,
-            // Set the initial directory
-            InitialDirectory = initialPath ?? "",
-          };
-
-          // Show dialog and read result
-          dialog.Filters.Add(new CommonFileDialogFilter("eqlog_Player_server", "*.txt;*.gz;*.log"));
-
-          if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
-          {
-            theFile = dialog.FileName; // Get the selected file name
-          }
+            theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server|*.txt;*.gz;*.log");
+          });
         }
 
         if (!string.IsNullOrEmpty(theFile))
@@ -1220,12 +1276,14 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        if (e is not (InvalidCastException or ArgumentException or FormatException))
-        {
-          throw;
-        }
-
-        Log.Error("Problem During Initialization", e);
+        // Logged and swallowed on purpose. The old version rethrew anything that was not a cast, argument or
+        // format problem, which meant the unexpected failures were exactly the ones that reached the user; the
+        // dispatcher handler would only have caught them again, with less context in the log.
+        Log.Error("Problem Opening Log File", e);
+      }
+      finally
+      {
+        PerfCounters.End(openMark);
       }
     }
 

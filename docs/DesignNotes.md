@@ -1291,10 +1291,19 @@ upstream, but the loss was always there.)
 Split answers it structurally now, and every rung is counted (`FctIngest.Accept`'s conveyor branch, `FctConveyor.Ramp`):
 
 1. **The lane presses its own clock.** A lane holds a certain number of rows at the dialled pace — its travel over the pitch it pays at entry —
-   and a lane carrying more than that runs faster, floored at `FctConveyor.PressFloor` (0.45) so even a jam stays readable and clears inside
-   about a second and a half instead of typing on after the fight stopped. Press belongs to the lane; it is copied onto each row for
+   and a lane carrying more than that runs faster, floored at `FctConveyor.PressFloor` (0.38) so even a jam stays readable and clears inside
+   about a second instead of typing on after the fight stopped. Press belongs to the lane; it is copied onto each row for
    observability (`FctHitState.RailPress`) and one row's acceleration is never another row's, because an odometer that changes speed mid-flight
    is lying about where it is going.
+
+   Two numbers here come from one measured session (`fct.drop: 572` spread over eleven minutes of fighting, `fct.dropLive = fct.drop`, queue shut at
+   `BacklogCap`) and neither was arrived at by argument. First, **a full queue is a clipped signal, not a mild one** (`FctConveyor.Ramp`): the ratio
+   reads what the lane *has*, so a column of about twenty rows holding twelve more asked for 0.63 and sat there with half its accelerator in hand while
+   the door stayed shut and a number was refused every second — which is why `Waiting >= BacklogCap` now drives straight to the floor instead of through
+   the ratio (`ASaturatedColumnRunsAtTheFloorOfItsTravel` fails at press 0.55 without that rule, and passes at 0.38 with it). Second, **the floor came
+   down from 0.45**, because a lane should not be spending an accelerator it measured as unusable while numbers are being lost; both changes are invisible
+   in a calm fight (press leaves 1.0 only under load) and both are one constant to walk back if a jammed column now reads too quick — `fct.drop` is the
+   number that says whether walking it back costs anything.
 2. **Room is bought before the row is visible.** An arrival whose slot has not reached the mouth waits off-column — invisible, still folding
    duplicates into whatever it will merge with — and the lane carries its turn to the front. Congestion in a column therefore shows up as delay
    rather than as overlap.
@@ -2105,9 +2114,155 @@ and where a lane truly cannot carry a name, the floor wears its mark too — "(D
 ArcedX tucks the rail back and the ellipsis never crosses a wall.
 
 Two pinned laws came out rewritten rather than broken, which is what measuring is for: `TheArcBowsToAVertex...` now
-asserts the vertex sits over the lane's open hand instead of "away from the middle", and `ANameFollowsTheRoomItHas`
+asserts the vertex sits over the lane's open hand instead of "away from the middle" — that rule has since been retired and the test asks
+`FctLayout.BendDirection` for the sign rather than computing one, which is the same lesson one level up — and `ANameFollowsTheRoomItHas`
 compares NAME lengths where it compared label lengths — "(Glo)" growing "(Glo…)" as a column narrows is the cut mark
 appearing, not the name growing. 1081/1081; the real question was the screenshot's, and the answer was "yes".
+
+### Which way an arc leans: `out`, `left`, `right`
+
+Three words, and `out` is the one a file with no `FctOverlayArcBend` key means: each half bows away from the middle of the overlay. **left** and
+**right** stop consulting the lane and say which way, which is the answer for an overlay parked on one side of the screen. Saved as
+`FctOverlayArcBend`; the panel puts the item beside `shape` and shows it only while the shape is `arc`, because `line` has no curve to point anywhere and
+fountain's two shapes have no spine to bend (`ClampShape` keeps that promise, `FountainIsNeverHandedAnArcToLean` asserts it).
+
+`out` is also why the row alignment had to become a consequence of the lean rather than a constant (below): a mirrored pair cannot be drawn by two columns
+whose blocks both hang left, because one half's curve is spending the hand its own digits occupy.
+
+There was a fourth word until recently — `open`, meaning "ask the lane which of its own hands is roomier and spend that on the bend". It was not a rule
+anybody would have written down if it had not already been what the code did, and measured on its own merits it does not survive:
+
+- **fountain never heard it.** Bands is not a column layout and is never handed an arc, so the word addressed one scheme only;
+- **in split it could not hold a direction still.** One category per half, damage on the right: +99.5 at 900 px, +147.0 at 1280, then **-238.0 from 1440
+  up** — resize the window and the same column's arc bends the other way, because the answer is a consequence of lane width and rail reserve rather than
+  of anybody's taste. With heals left and damage right at 1920 it put **-319.6 / +319.6**, both halves leaning inward at each other across the gutter,
+  which is precisely what a player meant by "the arc goes the wrong way";
+- **and it was not even the better curve.** With the row turned to hang in the hand its bend spends (below), `out` bows 146.2 / 210.8 / 238.0 at those same
+  widths where `open` managed 99.5 / 147.0 / 238.0.
+
+So the word is gone rather than aliased, and a `settings.txt` written while it existed reads as the default instead of as an error — which is the entire
+compatibility debt a setting that never appeared in a release owed.
+
+What reading the code needs to keep is that the retired rule is still the one most of the surrounding arithmetic was written for: `Spawn` pre-pays a bow,
+`AssignTravel` caps one, and both were built when "which hand is open" was the only question. Fountain's law (every column bows away from the shared middle
+strip, because leaning into the neighbour's stream tangles it) is what `out` hands to split — the "arc away from my target frame" look most people mean
+when they say standard — and split had been doing the opposite of it by default since before there was a dial. `FctLayout.BendDirection` is now the single
+place that answers the direction, and it reads the word and the spine's side of the middle line, nothing else; `FctArcTest` asks *that function* instead of
+restating its arithmetic so a third copy cannot drift out of existence alongside it.
+
+### The lane has to pay for the lean: `FctStage.ParkForBend`
+
+Two of the words still on the dial drew nothing when they shipped — `left` looked like a straight scroll and `out` curved on one side only (and their
+predecessor `open`, since deleted, was indistinguishable from `right`). The reason is one-sided by construction: **a rail row is right-aligned** ("right edges ride the
+rail", `f3ba116f`), so its number — plus its words when they sit left or below — hangs LEFT of the spine. Every split column therefore keeps its own
+glyphs in its left hand and its free air in its right one. Measured at 1280x1080, one category per half: **448 px of air right of the rail, 0 px left of
+it.** Not "little": zero, exactly, always — `Spawn` pins the rail to `wall + max(RailReserve, valueWidth)` and `AssignTravel` then caps a bow against
+`rail − wall − max(RailReserve, valueWidth)`, the same expression subtracted from the same wall. A leftward bend was refused the very margin spawn had
+just created for it, so it collapsed to a straight line; rightward bends were capped by `valueRight`, which is 0 for a rail row, and got the whole lane.
+That is also why `open` looked like `right`: asked which hand is open, every column answered "the right one" — except in the arrangement the tests were
+written against, where damage sits in the *outer* lane at three quarters of its half (spine 1685) and has air on both hands, so the shipped answer comes
+out inward. The word was never stable because it reads the lane, and the lane depends on which column you gave the category.
+
+So a named direction is now a promise, and the lane pays: **`ParkForBend` moves a column off the wall it leans at** until the widest row it can roll fits
+there with the full bend on top, bounded by the lane's own walls. What it has to buy is `FctLayout.RailDemands` plus `FctLayout.LabelDemands`: the hand the
+block hangs on owes `RailReserve()` (the widest block the column can ever be asked to draw, mark included) and the bare hand owes nothing; then the seated
+label's floor is added to whichever hand that seat draws on. Nothing in either bill comes from the arriving row. Measured after that first fix at 1280, one
+category per half: `out` parks the healing column from spine 155 to **375** and draws **-210.8** where it used to draw 0.0 — before the row learned to turn
+around; see below for what it costs now.
+
+That worked, and it was buying the wrong thing: it paid in column movement for air the row itself could have vacated. See the next section.
+
+Three rules keep that from becoming the park-shove that once put a column out of line with itself (`75e2992a`, which moved the rail *per row* and starved
+every right-seated name to `"(Des"`):
+
+- **the shift is a property of the lane**, never of the arriving number — slot, lane rect, `RailReserve()`, `LabelDemands` and the bow share are all
+  column-level facts, so a `7` and a `999,999` on one column still share a rail and trace one path (`EveryExplicitLeanDrawsItsFullCurve`,
+  `APaidForLeanIsTheSameCurveForEveryRowOnTheColumn`). This was a law stated rather than enforced until `out` became the default: with `open` parked nothing,
+  so nobody ever ran the park. The day the default moved, `ACritAndItsNeighbourShareOneSpineAndOneBend` failed at **206 vs 194** — `RailDemands` had been
+  asking the arriving `hit` for its measured `ValueWidth` and `IconAllowance`, which priced a crit's column further off the wall than the parry below it.
+  The signature is now `RailDemands(bool hangRight)` precisely so a row cannot be passed to it;
+- **a rail row takes no origin jitter.** `FctMotionStyles.IsRail` styles are conveyor rows and the conveyor pins every one of them to `SpineFor`, so nothing
+  shipped was scattering sideways — but a caller that spawned a rail row directly got a start point within a blowout's jitter of the spine, levelled back
+  onto it by the clamp band, which is how "one rail for the column" was passing by accident rather than by construction;
+- **every lean on the dial pays.** There is no "the layout's own answer" branch left to exempt, which is why `ParkForBend`'s gate asks only about mode and
+  style. The visible price is that a column sits further from the edge it leans away from, and its label hand shrinks by what the bend borrowed — at 1280
+  with two columns on a side, the healing column's right-hand air goes 137 px → **32 px**, so names there get cut sooner. That is the trade, not a bug; if
+  it bites, narrowing the bow is one constant (`OutPaysTheParkItNamed` pins what the debt buys);
+- **a lane too narrow to pay keeps its column where it stands and draws what fits.** At 700 px split into columns, one rail reserve (~156 px at the crit
+  ceiling) is most of the column: no park exists, and the answer is a very short curve — never a sign flip, which would hand one column two shapes
+  depending on how lucky its digits were.
+
+Rows in flight keep the bow they were born with, for the same reason a resize maps an existing bow instead of recomputing it: the vertex is arithmetic from
+the spawn, and re-bending mid-flight tears one number's path in half. Bands takes none of this — it pre-pays its bow at spawn (`FctLayout.Spawn`), and
+could not be handed an arc anyway (`ClampShape`, asserted by `FountainIsNeverHandedAnArcToLean`).
+
+### Turning the row around: `FctHitState.HangRight`
+
+The park above worked, and a reader pointed out that it was buying the wrong thing: *"could we change rows to be left aligned when arcing out to the left?
+Basically align the row as needed for the arc options, leave straight as is."* Right-alignment exists so a column is an odometer — ones digits under ones
+digits, which is the one text alignment anybody who reads parse numbers wants — and nothing in that requirement says which side of the rail the digits sit
+on. Turn a left-leaning column around and its numbers line up on their **left** edge instead, in the exact hand its own curve wanted.
+
+One flag, stamped before the spine is asked for (`FctLayout.Spawn`, and in `FctStage.SpineFor` too so a conveyor row pinned at its column's mouth agrees):
+
+- **`BlockFromRail` builds outward/inward and maps them by the hang.** Everything downstream already reads that one function — Spawn's reserved reach,
+  `AssignTravel`'s cap, `ParkForBend`'s debt, `FitSource`'s budget — so the swap propagates instead of being re-derived four times;
+- **`FctMotion.ArcedX` converts rail→centre the other way** (`rail + ValueWidth/2` rather than `rail − ValueWidth/2`), and that is the entire drawing
+  change, because the canvas places every glyph from that centre: the halo, all three label seats, the pop pivot. A turned row keeps its internal
+  arrangement exactly — a right-seated name still sits right of its amount — and only swaps which side of the rail the whole arrangement stands on;
+- **the special-event mark is the one exception**, since it hangs outside the number's *outer* edge (`FctSkiaCanvas.DrawMark`): turned rows put it on the
+  right, which is the side `BlockFromRail` charges `IconAllowance` on. Drawn box and reserved box stay one box.
+
+Who turns: an **arc** in **split** whose dial leans left of its rail (`left`, or `out` on the left half), because that is the only case where the digits
+were standing in the hand the curve needs. `line` never turns — it has no lean to make air for, and its exact geometry is the one every player already
+knows, so it draws the shipped right-alignment under every word (`AStraightRailKeepsTheShippedAlignmentUnderEveryLean`). The consequence worth stating out
+loud: on `out`, the two halves are aligned *differently from each other* — that is what a mirrored pair means once the curves are equal, and every row inside
+one column still shares one edge (`ALeftwardLeanTurnsTheRowAround`, `OutHangsEachHalfOffTheHandItsCurveLeavesFree`).
+
+Measured at 1280x1080, one category per half (spine / hang / bow), current code:
+
+| dial | damage column (right half) | healing column (left half) |
+|---|---|---|
+| `out` (default) | 1061.2 · hangs left · **+210.8** | 218.8 · **hangs right** · **-210.8** |
+| `left` | 1115.6 · **hangs right** · **-210.8** | 218.8 · **hangs right** · **-210.8** |
+| `right` | 1061.2 · hangs left · **+210.8** | 164.4 · hangs left · **+210.8** |
+
+and at 1920 the turned columns sit at 1685.0 (`left`) and **327.6** (`out`/`left`, was 484 under the reserve-sized park) for the same ±319.6, with `right`'s
+unturned healing rail still on its slot at 235.0 (`OutPaysTheParkItNamed` pins the 1920 quartet so a change to slot, reserve, bow share or hang shows up as a
+number in a failing message instead of as a quiet shift in where the numbers live). So the row turn costs the column *less* movement than the park alone did
+and buys the same depth, because `RailDemands` leaves a turned row nearly nothing to pay on the hand it bends at: `out`'s healing rail parks at **218.8**
+instead of 375 for its full **-210.8**.
+
+### A name and a lean want the same pixels, so the lane buys both
+
+Making the fixture carry source names — as ingest does, `FitSource` right after placement — turned up a bug older than any of the above: the cap sizes a bow
+against the **amount** (so all rows of a column bend identically) while `ArcedX` clamps against the whole block **including the words**, so a name standing
+in the lean's path had the bend taken out of it at draw time, *row by row*. Measured at 1024 px, one column per half, right-seated label: the vertex drew at
+**959.7** of the **1016.0** the column was given — 56.3 px of a 153.6 px bow simply absent, and absent by a different amount for `"(Crush)"` than for
+`"(Ethereal Fire XIII Rk. III)"`, which is one spine drawing two paths.
+
+`FitSource` now charges the rooms it cuts against: each hand loses what the bow spends there, so names are trimmed to what the drawn curve truly leaves.
+That was the whole answer for one build, and it turned out to be too generous to the curve: measured with `out` as the default at 1280 with right-seated
+labels, **0 of 234 live row-sightings kept a name at all** — a mirrored pair spends a hand on every half, so there was always a column whose seat stood in
+the bend, and the fix had been to delete the annotation. An arc that eats the log line is not worth drawing, so the room is now bought **before any name
+exists**, by `FctLayout.LabelDemands`: placement adds "`(00…)` at this lane's source size, plus its gap" to the demand on the hand the seat draws on, in
+`ParkForBend`'s debt and in `AssignTravel`'s cap alike. Every row keeps its name (cut to what its hand truly has — `(Probe)` arrives as `(Pro…)` where the
+lean owns that seat and whole where the lean goes the other way) *and* every row bows its full distance, at every width from 900 up (`ANameAndALeanBothGetRoom`).
+
+Both bills are column-level on purpose: they read the seat, the font and the dial, never a row's name, so reserving a label's floor cannot make one row curve
+differently from its neighbour. `FitSource` still holds the drop as a last resort — it fires only when the two measurers disagree about the room (the canvas
+has real glyphs where the spawn pass had an estimate), and the alternative, letting words stand and having `ArcedX` take the bend out per row, is the bug this
+section opened with. A column with no lean keeps the floor-plus-ellipsis answer exactly as before, where the rail's own clamp absorbs the overflow, so `line`
+and every non-arc label are untouched.
+
+`FctArcBendTest` pins the lot: that the vocabulary is **three words and no more** (`EveryLeanWordIsThreeWordsNoMore` — a fourth enum member would be silently
+looped over by every sweep in the class, which is how a retired answer comes back to life), that absent/junk/`open` all read as `out`, the mirrored signs *and
+mirrored depths* of `out` at 900/1280/1920/2560 measured against the lane's own `FullCurve`, the **full depth** each word draws on both one-column and
+two-column halves (the guard that was missing — every older assertion read a sign, and a bow clamped to exactly zero passes "not positive"), which hand a row
+hangs on in every word, the parked spines at 1920, and a sweep over widths × tiling × **every label seat** that asserts the **whole drawn box** (not the
+centre) inside `[SideMin, SideMax]` across twenty-four steps of every flight *and* that the vertex lands where the column's bow says it should. The two deeper
+ones exist because the shallower ones passed while the feature was broken: box-not-centre catches a mirror that keeps a centre honest while its digits cross a
+wall, and vertex-depth catches a curve silently eaten by a label.
 
 ## Damage meter setup window
 
@@ -2149,3 +2304,1019 @@ breaker, players/pets killed read as a will or a plain death, named pets shorten
 (`Puksu`, never `Sancus`s pet Puksu`), generic unnamed pets and mob deaths never speak, taunts land on success only,
 and `PlayerRegistry.IsVerifiedPlayer` answers the player question behind a settable seam. Nothing subscribes at
 startup; whoever builds the real feed takes it from there.
+
+## Instrumenting the UI thread
+
+Reported often, impossible to reproduce on demand: the combat numbers stop for a second or two in the middle of a raid, then carry on
+without a restart. That shape is not a leak and not a crash — it is somebody occupying the application's one UI thread, and this
+application draws everything on that thread: the overlay's raster and blit (`FctSkiaCanvas.OnRender`), the damage meter's once-a-second
+bar rebuild (`DamageOverlayWindow`), every trigger text overlay (`TextOverlayWindow`, 150 ms per tick), Syncfusion grids
+(`FightTable`) and open charts, and the `settings.txt` write on the main window's half-minute timer. Any one of them holding the thread
+stops all the others, so the report a player files always names whichever window they happened to be looking at. The instrumentation
+exists to answer the question the report cannot: whose second was it.
+
+It is deliberately not a profiler. A profiler answers once, on the machine running it, and never on the one where the hitch happened;
+this lives in the product, costs tens of nanoseconds per instrumented span, and leaves its evidence in a log file that is still there
+the next morning. (Deep profiling is still available from outside — `dotnet-counters monitor -p <pid>` for live GC and thread-pool
+numbers, PerfView or WPF ETW traces for frame-level detail — none of it required, and nothing here depends on it.)
+
+### One watchdog on the thread, not one per window
+
+`UiBeatMonitor` posts a beat to the dispatcher from a pool timer. A beat that has not run after `DefaultStallMs` means the UI thread is
+somewhere else for that long, and the line it writes says what was open and which named spans were inside at the time. Instrumenting
+only the overlay would have printed an innocent "my paint took 1.2 ms" beside every freeze, which is a report with no answer in it.
+
+Four decisions in that design are load-bearing:
+
+- **The beat goes out at `Render` priority**, which is 7 on the scale WPF actually uses — `Send` 10, `Normal` 9, `DataBind` 8, `Render` 7,
+  `Background` 4 (where a `DispatcherTimer` fires by default), `ContextIdle` 3. That is above the band which starves while a window is being
+  dragged or resized, so dragging an overlay does not read as a stall, and below ordinary queued work, so a late beat's number includes time
+  spent behind work the player was also waiting for. It is also why a stall line naming `in progress nothing` has a mundane reading:
+  something outside this process's own work had the thread.
+- **A stall is counted where it is detected**, on the pool thread, not on the beat that closes it. The episode a process never recovers from
+  is precisely the one with no closing beat, and a counter that only moves when things get well again reports a clean session for the worst
+  freeze of the night.
+- **Detection happens while the process is still stuck**, on the pool thread, and again when the beat finally arrives. If the UI thread
+  never comes back the log still holds everything known at the time; waiting only for the resumed beat loses exactly the worst case.
+- **Gaps longer than `SleepGuardMs` (30 s) are discarded.** A laptop lid is not a hitch, and reporting one trains the reader to ignore
+  the lines that matter.
+
+Those priority numbers are also what make `UiBeatMonitorTest` work, and they were got wrong the first time. The test ends its message loop
+by re-posting a budget check; queued at `Normal`, that check won against the `Render` beat when a blocked sleep finished — the loop returned
+before the beat that measures the stall ever ran, and the blocked-dispatcher test reported nothing while the watchdog was working correctly.
+So work queued by a test sits below `Render` (`ContextIdle` for the busy chain) and the pump's own check between them, which is the only
+arrangement where both the beats and the end of pumping are guaranteed their turn. The numbers above read off the reference assembly rather
+than from memory for that reason.
+
+Heartbeats (one Info line every 20 s: window length, what was open, worst beat delay, render mode, GC deltas and allocation rate, and the
+cost table of instrumented spans) are written only while an instrumented surface is open. They exist to explain overlay stalls; a build
+with no overlay running has nothing to explain, and the log rolls over at a few megabytes with game-data errors sharing it — a heartbeat
+that pushes out last night's stall line is worse than no heartbeat. Even that is opt-in now: see "Off unless asked" below.
+
+### Off unless asked (`PerfReport`)
+
+Everything the instruments say leaves through **`PerfJournal`**, and `PerfJournal.Enabled` is the door. Normal use leaves it shut — `PerfReport=True` in
+`AppData\config\settings.txt` opens it, and `Debug` implies it — because the cheapest thing the watchdog does is cost 90 log lines an hour saying nothing is
+wrong, and a player's complaint has to share that file with them. When the answer is off, `App` does not start `UiBeatMonitor` at all: a watchdog with nowhere to
+report is only the timer it posts on, plus a `GC.GetGCMemoryInfo()`/pause-delta poll every twenty seconds.
+
+The switch controls **speech, not measurement**. `PerfCounters` still counts (interlocked adds on paths that were already touching those fields), and `GcTidyUp`
+still hands memory back at its three chosen moments because that is a feature rather than an instrument. Two consequences worth knowing before reading a log:
+
+```
+UI perf reporting on: beat every 20 s, stall threshold 1000 ms
+```
+
+- That line is the first thing written when the instruments are on, so silence in someone's log means either "watched and clean" or "nobody was looking", and only
+  their `settings.txt` says which. Ask for it before asking about a missing stall line.
+- Nothing is throttled while the journal is closed, so the first offender after it opens is reported immediately rather than waiting out a silence that accumulated
+  unread (`PerfJournalTest` pins both halves of that, along with `Enabled`'s default).
+
+### What a name means, and where it comes from
+
+`PerfCounters` holds three shapes of entry under one reporting table: timed spans (`Begin`/`End`, count + average + worst), counters
+(`Note`, "how many") and levels (`Gauge`, "how much right now"). Names are lowercase dotted, prefixed by the surface they belong to, and
+the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` says which window ate the second. What exists today:
+
+| name | shape | what it covers |
+|---|---|---|
+| `fct.pump` | span | a render tick that is not rasterizing — prune, demo, DPI check (its duration is also published as `LastFrameMs`) |
+| `fct.paint` | span | a whole `OnRender`: clear, every glyph pass, both copies into WPF |
+| `fct.feed` | span | the overlay window draining its queue into the canvas — per-record work on the UI thread |
+| `fct.bake` | count | halo sprites baked this window (once per distinct crit string, not per frame) |
+| `fct.surface` | count | render-surface reallocations; each one also logs its size in megabytes |
+| `fct.hits`, `fct.queue`, `fct.drop` | level | live hits on the canvas, records waiting in `FctManager`, and the lifetime sum of everything the overlay turned away (canvas refusals plus queue discards added together) |
+| `fct.dropLive` | level | how much of `fct.drop` was refused **while the canvas was still being handed frames** — text that could have been read. The number that decides whether a drop count is a bug report or a browser sitting on the overlay |
+| `fct.dropQueued` | level | the part of `fct.drop` that never left `FctManager`'s queue (age-out and cap). A level for the same reason as the two beside it: the per-window `fct.dropStale`/`fct.dropCeiling` counters can be displaced off the line, and an absent counter proves nothing |
+| `fct.backlog` | level | the deepest a lane's arrival queue has been all session (`FctConveyor.PeakWaiting`, a lifetime high-water). Read against `BacklogCap` (12), it says whether more room is the fix or the losses came from elsewhere |
+| `fct.dropMax`, `fct.dropCrit` | level | the largest number ever refused, and how many refusals were crits. A count cannot say whether anything was missed — a saturated rail turns away its newest arrival whatever that is — so these say what the losses cost. `FctOverlayWindow` prints the same worst figure in the overlay's own stats row |
+| *(log line)* `FCT refused its largest number yet: Flurry 3200300 crit` | once per advance, 5 s gate | the same refusal **named**. A bare integer cannot be chased down: a face value no spell in this game produces is either a line parsed into a number it should not be, or a lane fed the wrong figure, and the ability name is which. `FctIngest.WorstDropText`, printed by `FctOverlayWindow.OnCanvasFrame` |
+| `meter.build` | span | the stats rebuild under `StatsLock` — **registered off the UI thread**, see below |
+| `meter.loadstats` | span | rewriting every bar in both meter lists, on the UI thread, ten times a second |
+| `text.render` | span | one trigger text overlay redrawing its blocks |
+| `trig.timerTick`, `trig.timerBar` | span | the two UI-thread passes of a trigger timer overlay: rewriting every visible bar's text and progress from the 75 ms loop, and the pass that adds and collapses bars when what is firing changes |
+| `trig.timerBars` | level | `TimerBar` elements the overlay is holding, collapsed spares included — the divisor for the two spans above |
+| `trig.logGrid` | span | the refresh `TriggersLogView` asks its grid for; nearly free when the grid already sorts by time |
+| `trig.logReset` | count | whole-collection invalidations reaching that grid. Each one tells WPF nothing can be done incrementally, so a bound grid rebuilds and re-sorts itself whether or not anything asked |
+| `trig.logBatch`, `trig.logEntry` | count | trigger-log appends in the window and the entries inside them (**off the UI thread**): how often any bound grid must reload, and how many rows it has to sort |
+| `app.voices`, `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: voice load, trigger database, main window construction, trigger manager, first `Show` |
+| `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
+| `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
+| `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
+| `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
+| `chart.clear`, `chart.walk`, `chart.rolling`, `chart.pick`, `chart.reset`, `chart.series`, `chart.refresh` | span | the phases inside one line-chart redraw — emptying the aggregates, walking the records, the 5 s rolling window, choosing which lines to show, emptying the chart control, building its series, handing them over. See *A chart redraw is phases too* |
+| `chart.rendergap` | span | what the framework took with the chart after the series were handed to it: a callback posted at `ContextIdle`, so the gap is layout and render (and anything else queued behind it), which is work outside this codebase |
+| `chart.column` | span | one page of the players-vs-top-performer chart, which is hand-made WPF elements — a rectangle, labels and a tooltip per column — rebuilt on a 250 ms timer while that window is open |
+| `chart.updates`, `chart.plots` | count | data point events arriving versus redraws actually performed; `plots` at twice `updates` is a cascade (a view option changing re-plots before the data even arrives) |
+| `chart.backlog` | count | redraw requests that arrived while one was already waiting on the dispatcher — the shape one merged redraw would remove |
+| `chart.records`, `chart.lines`, `chart.points` | level | what a redraw was asked to draw: records walked, lines built, data points handed to the control |
+| `trig.line` | span | evaluating one log line against every active trigger, on the trigger thread (**off the UI thread**) — count is lines, average is what a line costs |
+| `trig.tests` | count | patterns that pass asked for: multiplied out, this is the matching bill (an imported set of 4,227 enabled triggers tests every raid line against all of them) |
+| `trig.active` | level | how many triggers every live `TriggerProcessor` is testing lines against, summed (one processor per watched log plus the tester; whichever one wrote last used to print an idle character's 0 over the 608 that were running) — the number that separates a clean soak from somebody's freeze |
+| `audio.synth` | span | turning text into samples, measured inside `EQLogParser.Audio` and reported through `AudioManager.PerfSink` because that assembly references no counter code (**off the UI thread**). This is where the engines differ: a neural model on one machine, SAPI or WinRT on the next, and the same build either way |
+| `audio.file` | span | reading and decoding a sound file for a player, including the cache miss that has to open it (**off the UI thread**) |
+| `ui.worldstop` | span | how late the watchdog's own pool timer ran behind its interval, recorded only past 500 ms — the one in-app figure that sees a stop-the-world, since the collection freezes the watchdog too (**off the UI thread**) |
+
+`Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
+up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the
+heartbeat while keeping its name out of "in progress": the meter's rebuild genuinely runs on a pool thread, and a stall line that blamed it
+would point at a window that was holding nothing.
+
+Values are best-effort: fields are plain writes rather than interlocked, two threads colliding on one counter loses a sample of a
+diagnostic and nothing else. Do not "fix" that with locking — an instrumented span that can block is worse than an unmeasured one.
+
+`fct.paint` exists because it did not: the canvas has always published pump time (prune, demo, DPI), which never included rasterizing or
+the two copies into WPF, so the expensive half of an overlay frame — the half that scales with pixel area rather than with how many
+numbers are on screen — was invisible from outside. `FctSkiaCanvas` now reports both, and the simulation header prints them side by side;
+`EnsureSurface` writes one line per reallocation, which is how a 3840 × 2160 overlay admitting to a 33 MB memset per frame reaches the log
+without anybody having to guess at the size.
+
+**A nonzero drop count is the normal state of an overlay, which is why its accounting is levels.** An overlay refuses a number rather than draw it on top of
+another — every combat-text overlay does, and `FctConveyor.BacklogCap` (12) is where ours says no — and it refuses with identical arithmetic whether or not
+anybody can see the window, so "564 drops" on its own is neither a bug nor an all-clear. What it takes to read one is: was anybody positioned to see the
+number (`fct.dropLive`), did anything die on the way rather than at the rail (`fct.dropQueued`), and how full was the queue that said no (`fct.backlog`).
+Those three are levels because of what the counter budget does to a diagnosis: over an eleven-minute session with a browser partly covering the overlay, the
+per-window cause counters were **absent from nine of its thirty-three heartbeats** — four counted names share a line, and `fct.dropConveyor`, `trig.logBatch`,
+`trig.logEntry` and `trig.tests` filled it nearly every time. A cause split that cannot be *absent* without meaning nothing is not a cause split, and it was the
+reason a rewrite of the render pump got proposed and withdrawn in one conversation. The arithmetic now closes on one line: `fct.drop` is the sum, minus
+`fct.dropQueued` what the rails refused, of which `fct.dropLive` is the part that happened under a running pump — text somebody could have read. If that last
+figure climbs while somebody is watching, `fct.backlog` picks the fix off the page: parked at 12, the rail was too short for that fight (more queue, or shorter
+rows); well below it, these losses came from somewhere else.
+
+A follow-up session is what those levels were for, and it settled the diagnosis while leaving the judgement open: 572 refusals, `fct.dropLive` at **572**
+(every one with the canvas painting, ~57 fps), `fct.dropQueued` at **0** across eleven minutes, and `fct.backlog` pinned at **12 from the first second of
+combat to the last**. That is a rail running with no slack whatsoever — roughly one arrival refused per second, indefinitely — reported by a player who watched
+the overlay the whole time and saw nothing wrong. Both statements are correct: a refused row never appears, so saturation has no visible signature, and "it
+seemed fine" is not evidence of anything. Those zeroes also buried the other theory this log had already produced — the queue never starved and the compositor
+was never missing, and without `fct.dropLive` on the page a rewrite of the render pump would have been written against a mechanism the measurement rules out.
+
+The run with those fields filled in said more than the question it was asked. Refusals carried on at the same rate (~560 per ten minutes, `fct.dropQueued`
+still 0, `fct.backlog` still reaching the cap), so spending the accelerator was neither the whole cause nor the whole cure — and `fct.dropMax` came back at
+**3,200,300**, with `fct.dropCrit` at **306 of 564**. Two findings sit in those numbers and neither is about tempo. More than half of what the rail throws
+away is crits, which is the half a player is reading; and something is arriving on a damage lane with a value no cast in this game does, which is why the
+worst refusal now names itself rather than leaving an integer to be argued about — and why that chase leaves the overlay behind, since the same parse feeds
+the damage tables.
+What saturation costs is the remaining question, and it is a question about size rather than count: a hundred white swings refused a minute is what every
+overlay does and what the melee filters exist for, while one big cast refused every few minutes is a rail that needs room.
+
+### Startup and log loading are phases, not windows
+
+Every name above, until this section, belonged to a window a player can see. The startup spans were added because the first measured session
+produced two stalls and attributed neither: `UI STALL closed: beat ran 2922 ms late | open none | in progress nothing`, then 1563 ms more a
+few seconds later. Both sat in code that had no name — the trigger database opened on the UI thread, the main window's XAML construction,
+the trigger manager starting, a log file being restored from the last session — and "nothing" is the one answer a stall line should never
+have to give about work this codebase does.
+
+Two consequences worth knowing before reading a startup log:
+
+- `app.firstshow` ends at the call that queues the first layout, not at the pixels. A stall naming `nothing` immediately after it closed is
+  the main window's first paint, which is framework work between operations; instrumenting the render pass itself is the next step if the
+  evidence says so rather than the guess being made now.
+- A span held open across an `await` (the voice load, the trigger manager) reads as running while the thread is idle at the await point. That
+  costs nothing here: a beat posted at `Render` runs the moment the thread is free, so if it was late, the thread really was inside that phase.
+
+The file dialog has its own name for a reason too. Whether a modal Win32 dialog starves the beat is a question about WPF's dispatcher, not a
+fact anybody should assert; `ui.pickfile` names it as the occupant if it does, and if it never appears in a stall line after a season of use
+then a dialog is provably not the freeze and nobody has to wonder again.
+
+The trigger paths were named next, because a measured session had eliminated everything that *was* instrumented — rasterizing at 1.3 ms a
+frame, the meter's rebuild at under a millisecond against eight hours of records, a 31 s log load that never delayed a beat by more than
+31 ms, GC costing 0.3 s per ten minutes at a 2 GB heap — and still had explained nothing. Two windows a player opens during a raid had no
+number against their names: the timer overlay, which redraws every visible bar from a 75 ms loop for as long as any timer is live inside an
+`AllowsTransparency` window; and the trigger log, which is bound to a live collection whose batches arrive as whole-collection `Reset`
+notifications. Both register in the `open …` field too (`tmr:<title>-<id>`, `triglog`), since "was that window up when the beat went
+unanswered?" is half the question and the heartbeat cannot answer what it cannot see.
+
+The `open …` field carries the same improvement: a text overlay used to register as `text` plus its database id, which produced lines like
+`open meter+fct+text29d9e8ff-ac7b-…` — true, and useless to read during a raid. It registers under the overlay's own title now, with the
+first characters of the id kept so two overlays sharing a title stay two names (`TextOverlaySurfaceNameTest` holds that shape, including the
+separators: the title must not be able to write a `+` or a `|` into the line).
+
+### A chart redraw is phases too
+
+The heartbeat that led here said `chart.update n=9 avg 410 max 1693 ms`: nine redraws of an open chart in a twenty second window, one of them
+second and a half long, which is a player staring at a chart that will not change while their combat numbers are stopped. That name is the whole
+pipeline though — empty the aggregates, walk every record, roll a 5 s window over them, pick the top lines, clear the control, build series,
+hand them over — and only one or two of those steps can be the expensive one. Averaging them together measures nothing useful: the fix for a slow
+record walk (build it on a pool thread) is the opposite of the fix for a slow control (draw fewer lines), and picking between them by guessing
+buys the wrong refactor.
+
+So `PerfBreakdown` registers each phase as its own span — the heartbeat keeps averaging them all session, which is a stronger statement than any
+single redraw's line — and writes one line for a pass over 300 ms with the phases beside the sizes that explain them:
+
+```
+chart.update 1694 ms | DamageChart UPDATE | walked 41233 records -> 7 lines, 84000 points | plots 2 | chart.clear 0.4 ms chart.walk 310 ms … chart.refresh 1289 ms | budget 300 ms
+```
+
+Three things about it are deliberate:
+
+- **Phases never nest; opening one closes the one before it.** A phase abandoned by an exception would keep naming itself in `in progress` for
+  the rest of the session (the same hazard `PerfCounters` warns about), and a caller's `finally` calling `Complete`/`Abort` clears whatever is
+  open. `APhaseNobodyClosedStopsNamingItself` holds that, and `APhaseOpenedTwiceAddsUp` holds the other half: one redraw that plots twice must
+  add its two runs into one phase rather than showing only the last and accounting for less than the total.
+- **A redraw asked for by a dropdown or a selection opens a pass of its own**, under the same phase names, so "the chart is slow" is answerable
+  whatever the player just clicked and not only when a data point arrives.
+- **`chart.rendergap` measures the part that is not ours.** Right after `sfLineChart.Series = series` a callback goes out at `ContextIdle`, which
+  sits below WPF's layout and render priorities; the time until it runs is what the framework did with the chart. It is coarse on purpose — it
+  also counts anything else queued behind, and the beat lines already say how loaded that queue was — which is why it is reported beside the
+  phases rather than inside their sum. A `chart.refresh` of 2 ms next to a `chart.rendergap` of 900 ms says the cost is the control's, and this
+  file should stop looking for it in itself.
+- Lines are throttled to one per five seconds per breakdown, with what was swallowed counted and printed on the next one, because a redraw that is
+  slow three times a second is one solved problem and three hundred lines hides the next thing. Throttling costs no measurement: the spans record
+  whether or not a sentence came out (`ASecondSlowPassIsSuppressedAndCounted` asserts both halves).
+
+What is already visible by reading the code, and is what these phases exist to confirm or kill: one `UPDATE` empties the chart control twice and
+then replaces it — `Clear()` ends in `Series.Clear()`, `Plot()` ends in `Reset()` which is `Series.Clear()` again, then a fresh collection is
+assigned — so three full invalidations of a Syncfusion chart per data point event, every one of them landing on the UI thread. Whether those three
+cost 3 ms or 1,300 ms is precisely what `chart.reset` and `chart.refresh` are now instrumented to say.
+
+The three builders each raise their own event and `MainWindow.QueueChartUpdate` dispatches a redraw per event, so a rebuild storm queues redraws
+back to back; `chart.backlog` counts how often a request found one already waiting. That is the number that decides between "make a redraw
+cheaper" and "ask for fewer of them", which is a decision nobody should make without it.
+
+The number arrived, and it retired an idea. Across a session that opened the tanking and damage charts and selected every fight - 4.66M records
+walked, redraws of 1,369 ms - `chart.backlog` never fired once: requests came about 1.3 s apart and each one drew before the next arrived
+(`chart.updates×17` against `chart.plots×16`). Redraws do not queue behind each other in normal use, so the merge-queued-UPDATEs change that shipped
+on the strength of the measurement above had nothing to merge, and was reverted rather than kept as unearned complexity. Keep `chart.backlog`:
+zero is a result worth still seeing.
+
+What that session did say about cost: `chart.rendergap` - Syncfusion laying out what we handed it, measured at `ContextIdle` - averages 84-96 ms on
+ordinary redraws against our own 18-25 ms in `chart.update`, and ran 1,737 ms after a select-all walk of 1,341 ms. A select-all view hands over
+36,163 points across five lines for a chart about 1,700 px wide, so the remaining lever is drawing fewer points, not asking for fewer redraws.
+
+The first run of this caught two things, one of them a bug this commit itself shipped.
+
+`chart.column` came back at `n=2 avg 0.3 max 0.6 ms`: the players-vs-top-performer page costs about nothing, so that blind spot is closed and
+can stop being wondered about.
+
+And the chart phases printed **nothing at all**, because counting the backlog had moved a property read across threads. The three subscriptions
+used to read `data => Dispatcher.InvokeAsync(() => HandleChartUpdate(icon.Tag as string, data))`, which evaluates `icon.Tag` *inside* the
+dispatched callback, on the UI thread — not an accident of style. Writing `data => QueueChartUpdate(icon.Tag as string, data)` evaluates it on
+whatever thread the stats builder reached, and a `FrameworkElement` answers that with `InvalidOperationException: the calling thread cannot
+access this object because a different thread owns it`, thrown inside `FireChartEvent`, logged by whichever builder was holding it — 27 stack
+traces — with the result that no chart ever received an event, so there was no redraw left to measure. The fix passes the icon as an object and
+reads `Tag` in the callback: handing a reference between threads is fine, touching its properties is not.
+
+It cost nothing else, which is worth knowing how to read: `FireChartEvent` is the last statement in each builder's try block, after
+`_lastStatsEvent = genEvent` and `EventsGenerationStatus`, so the meter, the grids and the stored results all completed — a frozen chart with a
+healthy damage table is the signature of a subscriber that threw, not of a builder that failed.
+
+### What the walk spends its time on, proven without Windows
+
+The walk kept asking for the same information it had already read: `diffs` was a whole dictionary written three times per record and re-read by
+each of the four series; `Aggregate` looked up that *and* `lastTimes` again by name; two modifier bit tests and a miss lookup ran once per series
+instead of once per record; and `playerName + " +Pets"` allocated a fresh string for every one of those 4.66M records — a cost charged to the
+whole application's collector, not just to this loop. Those lookups are now read once in the caller and passed as arguments, the tests run once,
+and the `+Pets` name is memoized per run of records. `_hasPets` became a set of names because the byte its inner dictionary carried was never
+read.
+
+That is a change to arithmetic inside a UI control that no Linux-runnable test can reach, so it was checked by *executing both versions side by
+side* rather than by review: `local/walk-equiv/` (not committed) slices the walk out of `git show HEAD:…` and out of the working tree, compiles
+them into one program against `EQLogParser.Core`, feeds both walkers the same synthetic stream, and reflects over every property of every plotted
+point in all four series plus the pet map. Identical output on 1M records / 73k points, at 945.6 ms → 847.7 ms (**1.12×**); identical on a
+gap-heavy stream at **1.00×**. Keeping a change like this because it is *cleaner* would be guesswork — the harness is what says whether it paid.
+
+### TimeRange: what it means, whether it is correct, and where its time actually goes
+
+`TimeRange` is the activity model behind every "was this player here" question: all the log ever says is that something happened at an exact second,
+so spans are laid down as `[begin,end]`, merged when they overlap or touch, and `GetTotal()` answers "how long was this one active". Its `Offset` of 6
+closes silences shorter than that — two attacks six seconds apart read as one continuous engagement, **including the silent seconds between them**
+(`[0,0] + [6,6]` totals 7), while seven seconds apart totals 2. That fudge is the point of the class, not an accident: a player who pauses between
+casts was still in the fight.
+
+**The answers are right.** `EQLogParser.Test/src/util/TimeRangeSpecTest.cs` tests meaning rather than API shape against a brute-force model written
+two different ways (a `HashSet` of active seconds; spans joined across short silences, transitively), including adds arriving out of order — which is
+what happens when fight ranges get merged into raid ranges or rebuilt by `FilterTimeRange`. A scratch harness (`local/timerange-lab/`, not committed)
+pushed harder: 200,712 adds at absolute random positions with `GetTotal()` read after every one, comparing the live class against both an independent
+model and a prototype. Zero disagreements. Two things that looked like bugs are not: the bridging pass in `GetTotal()` reaches the full transitive
+closure in one pass (verified, not assumed), and **how often you read the range cannot change its total** — closing a silence merges a run's *outer*
+bounds only, so materialising a bridge early moves no endpoint a later `Add` could have reached. That independence is pinned by two tests.
+
+**Four sharp edges are real**, all asserted as-they-behave in that file so a fix fails loudly instead of moving numbers quietly: the single-segment
+constructor bypasses both guards `Add` has (an inverted span gets in and makes the total *negative*, which then flows out as `TotalSeconds` into every
+per-second number; `null` gets in and detonates later as a `NullReferenceException`, as does `new TimeRange((List<TimeSegment>)null)`); that same
+constructor stores the caller's `TimeSegment` while the list constructor copies, so a caller moving its own object moves the range (11 seconds becomes
+891); `GetTotal()` on an empty range returns 0 and the app divides by totals in about ten places — 5,000 damage over no seconds does not throw, it
+saturates to `long.MaxValue`, a chart spike tall enough to flatten everything else; and `TimeCheck(line, start, range, out exceeds)` throws on an
+empty range via `TimeSegments.Last()`, which is fine only because its single caller (`MainActions`' save-selected-fights) checks `Count > 0` first —
+that check is load bearing and undocumented.
+
+**My earlier blame was wrong.** I wrote that the superlinear chart redraw (20k / 40k / 80k records → 146 / 370 / 1,477 ms) was `GetTotal()`, called once
+per inserted point. Measured directly on a LineChart-shaped stream — 400k records, five plotted names, ~6k fight boundaries, 193,745 real
+`Add`+`GetTotal` pairs — the whole thing costs **46.5 ms** in the current class. Because `Aggregate` adds `[previousCrossing, now]` every time, each
+name's spans chain into **one span** and stay there: a list of one is walked for free, so `GetTotal()` runs about 0.2 µs. The remaining superlinearity
+lives somewhere else in the walk and is still unexplained.
+
+What *is* quadratic is **`Add`**: a linear scan from index 0 to find its place, then `List.Insert` shifting everything after it. Fold every fight of a
+long log into one range per name (spans stay separate — fights are minutes apart) and the cost climbs with the square: for 40 names carrying
+50 / 200 / 800 fight spans apiece, building the ranges takes **3.7 / 21.5 / 166.5 ms**, of which the totals are under 1.5 ms. That is the shape used by
+`FightTable` and `EQLogViewer` over all fights, by `DamageOverlayStatsBuilder`'s `allTime` plus one range per name, and by `StatsUtil` inside loops
+over names and sub-stats.
+
+**Shipped: `Add` finds its place by halving instead of walking from zero.** The spans are sorted and disjoint, so `EndTime` rises along with
+`BeginTime`, and "which span could this merge with" is a binary search (`FirstSpanReaching`) rather than up to *n* iterations of six predicates. From
+there it is two facts: widen the found span, then swallow the ones on its right in one pass and drop them with a single `RemoveRange`. Six ordered
+predicates reduce to two questions, and six helpers (`CollapseLeft`, `CollapseRight`, `IsSurrounding`, `IsWithin`, `IsLeftOf`, `IsRightOf`) went away
+rather than being wrapped. The `Equals` short-circuit is gone because merging with a span of identical bounds *is* the same nothing, done by arithmetic.
+Nothing collapses left any more - the span before the found index ends before our begin by definition, and a disjoint list cannot touch a span we only
+widen rightward - which is the one place the old code could recurse and this one cannot.
+
+Measured on the shape above (40 names, one range each, every fight of the log folded in): **2.4 to 0.5 ms at 50 fights, 24.7 to 0.6 ms at 200,
+165.9 to 1.7 ms at 800 - 100x**. `GetTotal()` was not touched, nor its bridging, nor anything else in the class.
+
+Correctness was demonstrated rather than argued, twice over. The previous implementation is frozen in `local/timerange-lab/OldTimeRange.cs` and both run
+side by side in `local/timerange-lab` (`-- equivA`, `-- equivBig`): **1.9M ops** with the *whole segment list* compared after every add - in order, out of
+order, exact duplicates, touching endpoints, single-second points, inverted spans, nulls, and reads interleaved at random - plus **300k adds into ranges
+of about 2,000 spans**, the size where walking from zero hurt. Zero differences in lists or totals. And because that harness is not part of the build, the
+guard that ships is `TimeRangeSpecTest.ManyOutOfOrderAddsProduceExactlyTheBruteForceRuns`, which builds 400 randomly placed spans per trial and compares
+every span of the result against a run list computed the obvious way. (It was `...BruteForceUnion` until the tick rule moved into `Add`; see "TimeRange: the
+tick rule lives in Add" below.)
+
+**Not shipped: making `GetTotal()` O(1) by carrying the total around.** Worth knowing because it is where the next speed-up lives, and it was prototyped.
+A bridged run's length is additive - total = sum of span lengths + sum of (`gap - 1`) over consecutive pairs closer than `Offset` - so an insert only
+disturbs the links at its own neighbourhood: keep a running length-sum and a running bridge-bonus and the answer needs no list walk, no allocation, and no
+mutation. The prototype agreed with the live class and with an independent model on 200,712 out-of-order adds. Its own bugs are the argument for
+differential testing over review: it counted a self-link when appending past the end (one second short), removed a link twice when a merge swallowed a
+neighbour (five seconds short), and kept counting a pair that stopped being adjacent after an insert landed between them (four seconds *long*) - each
+found by shrinking the failing history to three adds. Shipping it changes one observable thing beyond speed: `GetTotal()` would stop rewriting the segment
+list. The *numbers* are provably unaffected (closing a silence moves no outer bound), but `LineChart.UpdateRemaining` reads `TimeSegments.Last().BeginTime`
+back into an `Add`, and 15 call sites share this class, so it is a decision rather than an edit. (Superseded on the mutation half: the thing that made a
+non-mutating read unsafe was an external segment removal in `DamageSummary`, and that cache is gone - see "TimeRange: merging copies, adding adopts" below.)
+The counter itself is still not shipped, and the reason is staleness rather than speed: `TimeSegment`'s bounds are public setters and `TimeSegments` is a
+public list, so any cached sum can be quietly invalidated by a caller the class cannot see. `GetTotal()` sums instead - no allocation, no mutation, about
+0.1 ms for five asks on an 800-span range - which is most of the win with none of the ways to be wrong.
+
+### Blocked or busy: what the thread was doing while nobody answered
+
+A stall line proves the thread did not run a beat for N milliseconds and, when it says `in progress nothing`, that none of our passes held
+it. That is as far as anything inside the process can go on its own, and it leaves two explanations pointing at different code. Either the
+thread was *running* — draining framework work nobody times here, layout, binding refresh, rasterizing a window — or it was *waiting*, held
+by something outside itself: a lock another thread owns, the render thread, a driver call. No span can separate them, because in the second
+case the span would have to surround code this codebase does not contain.
+
+The kernel already tracks the distinction per thread, so `UiThreadProbe` asks it. While an episode lasts the watchdog samples the UI
+thread's state on its own 200 ms cadence — `Run`, or `Wait` with a reason (`UserRequest`, `LpcReceive`, `EventPairPort`) — and the closing
+line carries the tally with the CPU actually burned:
+
+```
+UI STALL closed: beat ran 46031 ms late (first seen at 1000 ms) | open fct+triglog | in progress nothing | ui thread: blocked 229/230 samples waiting (UserRequest), cpu 40 ms
+```
+
+Blocked with almost no CPU is a wait, and the hunt is a lock or a call into something outside us; running with wall-matching CPU is work,
+and the next step is an external trace (`dotnet-trace collect -p <pid>`) against code we will then know is hot. Sampling only happens during
+an episode, and every call is guarded: a probe that threw while reporting a frozen interface would replace a symptom with a crash — the
+watchdog's own poll handler stops monitoring when a poll throws, which is the one outcome worse than an unmeasured stall.
+
+Two things learned by running this rather than reasoning about it. `ProcessThread` answers each property from a fresh query instead of one
+snapshot, so asking for `WaitReason` a moment after the thread wakes throws ("only available if the ThreadState is Wait") — that is the
+common case in a thread that flaps, not the exotic one, so the reason comes back `unknown` and the sample still counts. And `n/a` on its own
+could not be told apart from a probe that quietly stopped listening, so the line now names which half failed: no thread id captured, or an id
+this process's thread list does not contain. `TheProbeNamesTheThreadItIsStandingOn` checks those two halves separately for the same reason.
+
+A second trap in the same API, found by a test failing on Windows and passing here: **the thread list a `Process` hands back is a snapshot of
+the moment that object first read it**. Holding one Process to "avoid the cost" of fetching another makes every thread created afterwards
+invisible to it — a worker started five seconds later simply is not in the list, and reports as "not in this process" forever. Measured on a
+scratch program before changing anything: absent from the held Process, present after `Refresh()`, present in a fresh `GetCurrentProcess()`.
+So each observation takes a fresh Process, reads state, reason and CPU inside it, and keeps nothing; the cost is microseconds once per 200 ms
+of an episode, and `AThreadCreatedAfterTheFirstLookIsStillFound` is there to keep it that way. The symptoms of getting this wrong were exactly
+the misleading kind: the id was correct, the thread was alive and readable, and the only wrong answer came from the reader's own stale copy.
+
+The threshold that opens an episode is settable — `PerfStallMs` in `AppData\config\settings.txt`, default 1000 ms, floor 100 ms — because one second is the
+right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
+nothing of ours running: the same event as a multi-second stall at a fifth of the size, and easiest to catch while it is small. Nobody should
+run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
+probe fire except on a freeze, and freezes are the rare half of this.
+
+### What a clean run looks like, because it is worth knowing one
+
+A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and four overlays open, the same raid log played twice — produced
+**no stall at all after the first eight seconds**: across 63 heartbeats the worst beat delay outside startup was 47 ms. The three episodes on
+record are all launch, and all of them read *running* with CPU close to their wall time, so they are our own slowness rather than a wait:
+`app.mainwindow` 3856 ms, `app.firstshow` 1749 ms, `app.voices` 1089 ms (enumerating voices), `app.triggerdb` 227 ms. Every instrumented pass
+held its shape while the raid streamed — `fct.paint` ~1.3 ms worst 30 ms, `trig.timerTick` ~36 a second at 0.1 ms, `ui.fightTable` once a second
+at ~1 ms (worst 18 ms) — and `trig.logReset` shows up nine to twenty times a window instead of the two it managed
+when the log held 605 entries, at 0 ms: the frequency question from an earlier soak, answered by a counter that was already there.
+
+What that run did produce is a memory figure, and it is the one to compare against a machine that really does freeze. The replay allocated
+66.9 GB, ran at 619–869 MB/s while parsing with 2,218 gen0 collections in its first minute, then **kept 2.7 GB of heap resident for the
+remaining nineteen minutes** at a flat 3.4 GB working set — not climbing, not released. A process sitting at 3.4 GB next to EverQuest on a 16 GB
+machine is page-file territory, and paging reads as a freeze with almost no CPU: the shape the probe calls *blocked*, caused by neither a lock
+nor our code. Two limits on this measurement, stated plainly: the machine had memory to spare, and the runtime's pause counter (22.4 s over the
+run, 10.7 s of it inside minute one, up to 281 ms in a single second) counted collector work that never once stopped our thread — and the `paused`
+reading printed in that transcript was the runtime's `PauseTimePercentage`, which this note went on to describe wrongly for a while as "a lifetime share that
+dilutes toward zero". It is not a lifetime share; see below, where the figure is built here instead. Read it against the allocation rate either way, never as
+this window's cost. GC is cleared for this
+run and no other. One correction, since this paragraph sent somebody chasing a flag that does not exist: there is no `EventSource` in this
+codebase — `PerfCounters` lives in-process and its only outlet is the heartbeat line — so `-c System.Runtime,EQLogParser` collects nothing of
+ours. The pairing that works is the app's own log beside `dotnet-counters -c System.Runtime --sample-interval 1`, matched by wall clock; and the
+heartbeat now carries the collector's pause itself, which is half of why that pairing was needed.
+
+Speech is on that timeline now too, because two players on one build can disagree about nearly everything except the log they leave behind, and
+audio was the widest gap of that kind. The engine is chosen at startup from which packs happen to exist, so one machine synthesizes through a local
+neural model and the next through SAPI or WinRT while both print nothing about it — the announcement used to fire only for the neural engines, on
+the reasoning that the boring default needs no introduction. It names all three now, since "kokoro" and silence were two different facts wearing
+the same clothes. `audio.synth` and `audio.file` arrive through a hook rather than a span: `EQLogParser.Audio` references no counter code and stays
+that way, so durations cross the boundary as numbers (`AudioManager.PerfSink` into `PerfCounters.Record`, which is `End` without the timestamps —
+a span cannot straddle an `await` inside another assembly).
+
+### The freeze the watchdog cannot see, and now can
+
+The run that was meant to settle the memory question settled something sharper first: the app watched a two second freeze go by and reported
+nothing. An outside collector (`dotnet-counters`, 1 s samples, `dotnet.gc.pause.time`) shows **2,292 ms of pause inside the single second at
+19:03:47** — while the heartbeat covering that window reads `beat delay max 0 ms`, `stalls 3` (all three from launch), `gc2 +1`, and heap
+falling 2,784 MB → 1,998 MB. A second one, 699 ms at 19:06:34, is the `dotnet-gcdump` suspending the process to walk the heap.
+
+The reason is structural rather than a bug in the watchdog: a full collection stops *every* managed thread, the pool timer that posts beats
+included. The beat that gets posted after the world resumes is punctual, so "beat delay" measures what the UI thread owed the interface and
+never whether the process existed during the gap. Anything that suspends a whole process — a blocking collection, a gcdump or trace start/stop,
+a debugger break — is invisible to a probe living inside it. Two numbers close that hole:
+
+- **`stopped N ms`** on every heartbeat: the window's own stop time, from `GC.GetTotalPauseDuration()`, which is cumulative and keeps no
+  appointment, so subtracting two readings recovers pauses no beat ever witnessed.
+- **`paused N% since start`** on the same line, which used to be `GC.GetGCMemoryInfo().PauseTimePercentage` and is now the sum of those same window figures
+  over the time they cover. The runtime's number was removed because two measurements of one thing disagreed on one line: over a 69 minute run it held exactly
+  `5.15%` across three heartbeats spanning 46 quiet minutes, one of which reports 762 ms of collector stop inside it — it is a snapshot as of whichever
+  collection the runtime last reported rather than a running total, so between collections it is not a stale measurement, it is no measurement at all — and
+  where it did speak it read `0.32%` against 35.5 s of pause across 4,166 s of life, which is 0.85% by the arithmetic of its own neighbouring column: a factor
+  of 2.7 between two numbers one clause apart. A reader cannot use a figure beside another that contradicts it, and the one we add up cannot contradict itself.
+  Both halves are summed outside the "is a surface open" test — beats are suppressed while the overlays are closed but the monitor's window keeps closing,
+  so those minutes enter numerator and denominator together — and neither is zeroed when a log loads, because a ratio that rewinds on every file open is how an
+  hour of collector work disappears from its own log.
+
+  **And the replacement was wrong on its first run, by exactly 1000.** The next capture came back `paused 3956.6% since start`, easing down to `345.36%` over
+  twelve minutes: the numerator was milliseconds and the denominator was the window length in seconds — a value already sitting in scope for the rest of that
+  line — so it computed `pauseMs / seconds`. Summing that same file's figures gives 2,421 ms stopped over 720 s = **0.336%**, which is printed/1000 to four
+  digits. The shape is the lesson rather than the arithmetic: a percentage that decays smoothly as uptime grows is a denominator in the wrong unit, not a
+  collector calming down, and few things look more believable in a log than a number falling monotonically. The span is a `TimeSpan` now, so the wrong unit does
+  not compile; `PausePercent` deliberately does not clamp at 100, because a figure above 100% is the evidence and clamping throws it away; and
+  `TheLifetimeSpanAdvancesWithRealTime` asserts that the span gains roughly as much time as actually passed — which needs the beat length to be a parameter of
+  `Start`, since a test cannot wait twenty seconds for a window to close.
+- **`ui.worldstop`** plus a `STOP-THE-WORLD …` warning: the watchdog now times the interval between its *own* callbacks. A gap of
+  `GapReportMs` (500 ms, two and a half polls) counts and maxes into that row; once it reaches the stall threshold it writes its own line,
+  attributed by `PerfGap.Classify` against the collector's cumulative pause — "collector (gen2, the full collection), it held every thread for
+  2200 of the 2292 ms", or "no collection in that gap: stopped from outside the runtime (profiler or gcdump, power management, or no CPU for
+  anybody)". That second wording matters: a measurement freeze caused by our own tools must not arrive looking like our code.
+
+**…except it did, in that sentence's own favour.** The counters can be late. A blocking collection publishes its count and its pause *after* the runtime lets
+the other threads run again, so a gap classified inside that window reads "no collection happened": at **11:53:34** a `gc.tidy log loaded` that had held every
+thread for **794 ms** printed in the same millisecond as `STOP-THE-WORLD 969 ms … profiler or gcdump, power management, or no CPU for anybody`. No arithmetic
+over cumulative counters could have caught that — but the code calling `GC.Collect` knows what it is doing, so it writes it down: `PerfGc.NoteStopStart(reason)`
+before the call and `NoteStopEnd()` after (`IntentionalStop`, readable *while* the collection runs, which is exactly when a gap gets classified around it), and
+`UiBeatMonitor` asks only whether that stop overlaps the gap before handing it to `PerfGap.Classify`, which puts ours ahead of the counters: "our own gc.tidy
+(log loaded) held every thread in that gap: 794 of the 969 ms, timed by the code that asked for it; the pause counter agrees" — or "the counters had not caught
+up with it", which is the case that shipped blameless before. A stop still in flight says "still running as this line was written" rather than quoting a
+duration nobody measured. An unexplained gap keeps its external suspects and now names its own weakness too ("…or a collection whose count the runtime had not
+published when this line was read"), because somebody hunting a profiler deserves to know which way the doubt falls.
+
+What the heap dump says, since 2 GB of it had been unexplained for three soaks: `dotnet-gcdump report` on a 320 MB capture (heap ~2.06 GB, 9.36 M
+objects sampled) puts it in the parsed fight records — `DamageRecord` 2.44 M instances / 186 MB, `HealRecord` 1.92 M / 117 MB, `IAction[]` 63 MB
+across 37,641 arrays, `SpellData[]` 44 MB, `ReceivedSpell` 679 k / 31 MB, `SpellCast` 551 k / 25 MB. About 484 MB of the sample is
+`EQLogParser.Core` types; **WPF and Syncfusion together are under 25 MB**, and nothing audio-related appears at all. So the resident gigabytes are
+the data the tabs draw, proportional to the log, not a UI leak — which also explains the pause: a full collection's cost scales with that heap, and
+launch pays for it in advance (minute one of this run spent **11.2 s** paused while the heap went 624 → 2,997 MB, ~280 ms at a time — a real share
+of a 54 second load). The levers are allocating less during the parse or telling the collector not to compact mid-replay
+(`GCSettings.LatencyMode = SustainedLowLatency`); neither is measured, so neither is done.
+
+The trigger path, from the same run at **608 active triggers** with logsim feeding ~2,350 lines/s: `trig.line` held `avg 0.10 ms` every single
+window for eleven minutes, worst 6–21 ms, with `trig.tests` at 19–30 M patterns per 20 s window — roughly 1.2 M pattern tests a second, about a
+quarter of one core. Linear in the set size, that is ~0.7 ms per line at their 4,227: a few percent of a core in a live raid at 60 lines/s, but
+**seven times the parse cost when a whole file is loaded or replayed**. That is a load-time and memory story, not a dropped-frame story, which is
+worth saying to a player who reports freezes while *opening* a log versus during a fight.
+
+And audio, on `Using windows-tts`: `audio.synth` at n=5–18 a window, **avg 0.7–2.9 ms, worst 9.5 ms**, no warm-up spike anywhere (the startup
+voice enumeration is the 213 ms figure, not a speak call), and no `audio.file` calls at all in eleven minutes. On this machine SAPI synthesis is
+not a freeze source. It is still unmeasured under a set that speaks as often as the imported one, so the hypothesis is unfalsified rather than dead.
+
+One instrument was lying, found only because two numbers disagreed: `trig.active` printed 608 on the first heartbeat and then **0 for ten minutes**
+in windows whose `trig.tests ÷ trig.line` was exactly 608. There is one `TriggerProcessor` per watched log plus the tester, and a level written by
+whichever of them last rebuilt its set prints an idle character's zero over the set that is actually running. It sums across live instances now and
+takes each share back on dispose.
+
+One of those sentences shipped broken, in a way worth recording because it is not really about pluralization. `UiBeatMonitor.ClassifyGap` built
+`"{collections} collection(s) account for only …"` while its test asserted `"3 collections"`, and both went in the same commit — so what failed was
+the assertion nobody on that machine could run. Wording tests for app-side code live in `EQLogParser.Wpf.Test`, which *builds* everywhere but whose
+tests need Windows; "the suite passes" meant 1,168 tests in a different assembly and said nothing about these.
+
+The message now reads as a sentence ("1 collection accounts", "3 collections account"), which is what the test wanted. The durable fix is where it
+lives: the classifier moved to `EQLogParser.Core/src/perf/PerfGap.cs` as `PerfGap.Classify`, taking its four numbers as arguments exactly as before,
+and its wording tests to `EQLogParser.Test/src/perf/PerfGapTest.cs` — ten of them, in 25 ms, on every machine that runs the suite rather than on one with
+a Windows desktop runtime. It was worth more than the typo fix: the half-the-gap threshold is now pinned so changing that ratio has to be a decision,
+and two tests hold the floor on negative counter deltas, one of them on the branch whose sentence contains a hyphen anyway.
+
+The rule this leaves behind: **pure classifiers and formatters go in Core, where they can be tested; only things that need a dispatcher, a window or
+a thread probe belong to the Windows-only assembly.** A test that cannot run on the machine making the change is not a guard rail — it is the reason
+the change ships.
+
+### Asking the collector for memory back at chosen moments
+
+No GC setting was changed, because measuring them found nothing left to change. A 10,015,348-line replay with records retained the way the app
+retains them (4.80 M damage events → 2.53 M distinct, 2.67 M heals → 627 k distinct, ~600 MB peak), watched by a thread pumping at 16 ms and
+reporting every wake that arrived late:
+
+| configuration | wall | gen0/gen1/gen2 | peak RSS | wakes ≥25 ms late |
+|---|---|---|---|---|
+| shipping default (workstation) | 7,942 ms | 828 / 202 / 6 | 611 MB | none |
+| `Concurrent=false` (runtime then reports latency mode `Batch`) | 8,303 ms | 776 / 210 / 7 | 589 MB | 2 (137, 89 ms) |
+| `Concurrent=true` | 7,779 ms | 827 / 200 / 6 | 618 MB | none |
+| Server GC | 8,083 ms | 98 / 38 / 13 | **916 MB** | none |
+| `SustainedLowLatency` | 7,983 ms | 828 / 204 / 6 | 610 MB | none |
+
+The default *is* concurrent background collection — the first and third rows are the same run twice over — and turning concurrency off is the
+only thing in the matrix that made the pump arrive late. "More aggressive" has no headroom either: 828 gen0 collections in 7.9 s is one every
+9.6 ms and not one of them was noticeable. Server GC buys the same interface for 50% more memory, so it does not ship.
+
+What is left is *when*, which the runtime cannot know and this program can: `GcTidyUp.Request` asks for one full, compacting collection at three
+moments a player is not asking the interface for anything — a log file finished loading (`MainWindow.UpdateLoadingProgress`), the fight list was
+cleared (`FightTable.ClearClick`, where the record cache and every parsed event drop together), and a stats rebuild finished (all three builders,
+after their locks rather than inside them). Two rules make it safe. **A request never collects on the caller's thread**: it waits 1.5 s (`SettleMs`)
+so the trigger's own layout finishes, then collects on a pool thread. **And it is rate-limited** to one per `MinIntervalMs` (60 s), counted in
+`SuppressedCount`, because flapping a time filter five times is ordinary and five forced compactions would be worse than none — which is also why
+there is no timer here, since every forced collection promotes young survivors and a storm makes the heap bigger and the next unasked-for
+collection longer.
+
+The cost, measured rather than assumed: an aggressive compacting pass on a ~4.8 GB heap stopped every thread for **3,065 ms**, which is roughly
+what a raid-session heap will pay, in a moment chosen to hurt nobody. That the pass reclaims anything was shown in a quiet process — 100 MB of
+released large arrays taking the heap from 30 MB to 5 — and cannot be asserted inside a test run, where `HeapSizeBytes` is dominated by unrelated
+live data (a suite at 4.8 GB swallowed the signal entirely). Every tidy writes one line so the claim stays checkable:
+`gc.tidy log loaded: heap 2901 to 742 MB, working set 3120 to 905 MB, gen2 +1, stopped 812 ms, wall 813 ms`.
+
+A request expires, because the settle delay makes it a promise about a moment that can go away. `Reset()` bumps an epoch, and a task still settling when that
+happens stands down instead of collecting: the slot was handed to whoever reset, so collecting would stop the world on behalf of state nobody is waiting for any
+more — and it would also take back a slot that belongs to somebody else now. Proven rather than assumed: with the guard removed, a request retired by `Reset()`
+still ran its collection (two collections where one was asked for). This is what made `GcTidyUpTest` order-dependent — a stats builder finishing its work asks
+for a tidy 1.5 s hence, and in a suite that runs sequentially that timer goes off inside whichever test comes next.
+
+Same file, the tests' own waits: they used to be one condition, `TidyCount == n && Idle`, which cannot distinguish "this machine is slow at compacting" from
+"the tidy finished and never released its slot" — the second is a real bug (every later request refused forever), the first is arithmetic, since one pass costs
+**3,065 ms** on a 4.8 GB heap and a test host's heap is whatever the rest of the suite has been parsing. Five seconds was measured insufficient on Windows for
+the two throttle tests while passing on Linux, so each half now waits and fails separately with a generous budget, quoting counts, whether the slot is claimed
+and how big the heap was.
+
+Two details that are decisions rather than accidents. There is deliberately **no "is a fight active" guard**: a loaded file leaves its last fight
+marked active until further log lines arrive to expire it, so such a guard would quietly veto the most useful trigger, and the interval bounds what
+the stats trigger can cost anyway. And `LargeObjectHeapCompactionMode.CompactOnce` is set on every pass because the runtime clears it afterwards —
+leaving compaction permanently on would slow the collections the runtime picks for itself, which a test now refuses to let happen silently.
+
+### What a loaded raid costs in memory
+
+A loaded capture keeps its records, so a raid night that restates the same swing ten thousand times can hold ten thousand objects saying one thing.
+Two caches have always existed against that — `FightManager._damageCache` for damage, `HealingLineParser._healCache` for heals — and both were
+`Dictionary<Record, Record>` keyed to themselves. Getting this right took measuring the wrong beliefs out of them rather than adding a third cache.
+The two pieces are `RepeatStore<T>` (the shared instances) and `RepeatFilter` (a Bloom filter over value hashes), both in
+`EQLogParser.Utils/src/`, named next to `StringCache` because they solve the same problem one level up.
+
+Measured on one player's capture — `eqlog_Kizant_xegony.txt`, 6,066,108 lines, 3,359,001 damage events and 461,467 heals, 26 Apr → 6 May 2026 —
+driven through the real pipeline (`DamageLineParser`/`HealingLineParser` and the real `FightManager`, so the `Attacker` rewrite happens too), keeping
+every damage record reachable the way grids and fight blocks do, then a full blocking collection with LOH compaction and the heap that survives read
+back. One process per variant; the variants differ only in the cache:
+
+| what the cache does | damage entries held | heal entries held | heap after GC | RSS | parse wall |
+|---|---|---|---|---|---|
+| today: `Dictionary<Record, Record>`, every distinct value entered | 1,612,020 | 380,315 | 622 MB | ~720 MB | 14.5 s |
+| **A**: `HashSet<Record>` — what a self-keyed dictionary already is | 1,612,020 | 380,315 | **600 MB** | ~713 MB | 14.6 s |
+| **B**: plus the gate — a value takes an entry only once it has been seen before | 261,947 | 81,213 | **545 MB** | ~627 MB | 14.8 s |
+
+A is worth 22 MB and B another 55, for 77 MB of heap and roughly 95 MB of working set on a night like this one, bought with 6.25 MB of bits
+(`ExpectedDamageOffers` 4 M, `ExpectedHealOffers` 1 M) and about 2% of parse wall. This capture is *not* the 10,015,348-line file the GC matrix above was
+measured on — that one is no longer on disk — so its percentages are not comparable with the 47.3% damage dedup rate quoted there; it is a smaller
+capture (3.36 M damage events against 4.80 M) and every number in this section belongs to it alone.
+
+**The belief A killed: a shared record does not save a list slot.** The price of dropping a duplicate was being quoted as "record + list slot, ~104 B".
+The store keeps an entry for every event whether or not the record behind it is shared, so the 40 B of list slot is a floor no cache can touch, and what
+a deduped repeat actually reclaims is the object: measured 64 B. That is also why deleting the caches outright was never on the table — but it is worth
+saying how narrow that was.
+
+**The belief B killed: that the entries were the cheap half.** `FightManager`'s comment claimed "about a hundred MB of entries against the two hundred
+the dropped records save". Priced properly and measured, an entry costs about as much as the object it protects — 50 B in a self-keyed dictionary, 36 B
+in a `HashSet`, with 22.8 B of `Dictionary` internals measured per entry against 6.9 B of bucket array for a set — and the cache's *hit rate* decides
+whether it pays. Of 1,609,080 distinct damage records in this capture, **1,348,947 (83.8%) are never restated**: their entries answer no lookup ever
+again while the records stay in the store regardless. Ungated, all that machinery beat *no cache at all* by 16 MB. Declining to remember a value until it
+repeats is where the memory actually was.
+
+Why a Bloom filter can sit next to a cache that must not merge events: it is wrong in only one direction, and neither direction touches a record's
+content. A false "seen" buys an entry nobody needed, which is exactly what the cache did before this class existed; a false "new" would cost one shared
+instance for a repeat — while its bits stand it does not happen, which `RepeatFilterTest.NeverForgetsWhatItMarked` pins over 10k values. Nothing reads
+a value out of the filter, and no answer here changes what a grid totals: sharing is invisible because the records are equal by value, and
+`TryGet_NeverHandsOutADifferentValue` holds that line — whatever comes back is the caller's own instance or one equal to it.
+
+Two decisions inside it, both about not growing. When a window of sightings runs out the filter **begins again instead of doubling**: memory is what it
+exists to protect, and forgetting costs at most one shared instance per value that happens to straddle the reset. Clearing cached data clears the history
+with it (`ClearCaches` → `RepeatStore.Clear`) rather than leaving stale bits that would make every sighting in the next session look like a repeat.
+And the window is counted in *sightings*, not bits — ten bits and four probes reach the design's ~1-in-a-thousand false-positive rate exactly at the end
+of it, which is where the reset is set; counting bits instead would run it deep past saturation, where it says "seen" to everything and the cache
+silently degrades into the ungated one.
+
+**The behavior change players can see**: sharing now starts on a value's *third* sighting, not its second. The first two occurrences of a heal are
+distinct objects — one extra object per distinct record, which is what the 84% of never-restated values save many times over. The old test asserted
+`AreSame` on the second line and was renamed to `Process_RepeatedHeal_SharesOneRecordInstanceFromTheThirdSighting` rather than quietly loosened.
+The heal cache and its filter are static, so that test also became order-dependent in a way nothing else in the suite was: whichever class reached
+`HealingLineParser` first decided whether a heal looked like a repeat. `LineParsersTest` now calls `ClearCaches()` in setup and cleanup; any new test
+that asserts on shared instances has to do the same, or it passes only in its own position in the run order.
+
+**Accepted wart, unfixed**: `HandleDamageProcessed` rewrites `record.Attacker` to `Labels.Unk` about a hundred lines *after* the record was offered to
+the cache (the unknown-spell fix), so for those events the entry just taken can never be found by hash again, and every earlier event sharing the
+instance reads back `Unk`. It is visible in the numbers above: the ungated runs hold 1,612,020 damage entries where this capture has 1,609,080 distinct
+damage values, so about 2,900 entries are ones no lookup can reach — small here, and it grows with however many unknown-spell events a night carries.
+It predates this change and behaves identically under it; un-tangling it means settling the record before offering it, which would change what earlier
+unknown-spell rows display. Not a memory decision — whoever takes it up should decide it as a display one.
+
+What did *not* change, deliberately: the name ids stay. Converting `HitRecord`'s `int` ids to pre-hashed values, or freezing records so they cannot be
+rewritten after caching, measured larger than A+B together, but `StringCache.GetOrAdd` title-cases the spelling every view and export shows — a damage
+row would keep its raw `foob's sword` where it used to read `Foob's Sword`. That is a rename of other people's data to save bytes, and it needs its own
+decision. And the interning inside `GetCachedDamageRecord` is not part of the memory story at all: it is a spelling service that happens to live in the
+miss path, which is why the lookup and the offer are two calls rather than one helper that would settle names for a value already held.
+
+### Reading a report
+
+One real line, every twenty seconds while an instrumented window is open, taken from the end of a 69 minute session:
+
+```
+UI perf 20 s | open fct+tmr:CooldownOverlay-413c | beat delay max 0 ms, stalls 3 worst 2297 ms | render:auto |
+gc0 1 gc1 0 gc2 0 stopped 5 ms | heap 202 MB ws 554 MB alloc 0.6 MB/s paused 0.32% since start |
+trig.timerTick n=220 avg 0.1 max 0.4 ms, trig.timerBar n=45 avg 0.1 max 0.1 ms, fct.feed n=1492 avg 0 max 0 ms,
+ui.fightTable n=20 avg 0 max 0 ms, trig.logBatch×1, trig.logEntry×1, fct.queue=0, fct.drop=567, fct.hits=0, trig.timerBars=11
+```
+
+Wrapped here for the page; it is one line in the log, and the surface name carries a window hash. Everything up to `render:auto` is the watchdog: which
+windows were open, how late the last beat's callback actually was, how many stalls the process has ever detected, and whether WPF fell back to software
+rendering. The `gc …` clause is the window's own collector figures — one gen0 in twenty seconds, nothing stopped, the quiet case — and `paused` is the one lifetime
+figure on the line. Quoted exactly as that build wrote it: it reads 0.32% where summing this file's own `stopped` column gives 35.48 s over 4,166 s of life,
+which is why that figure is computed here now (0.85% for this moment) and why both it and the stall counters carry a `since start` label this transcript
+predates. The tail is `PerfCounters.FormatWindow()`: per-span counts and times for the window, then the gauges — and `fct.hits=0` with `fct.feed n=1492` is
+worth pausing on, because it says the overlay pumped 1,492 times in twenty seconds and had nothing alive to draw.
+
+`UI STALL (open)` and `UI STALL closed` bracket one episode; the closed line's number is how late the beat ran, which is a lower bound on
+how long the thread was unavailable. Read them in order:
+
+1. `in progress …` — a span named there is the occupant, and the slow-pass warning for that same name (`slow UI pass meter.loadstats:
+   812 ms (threshold 150 ms)`) will usually already be in the log, because any span over `PerfJournal.SlowPassMs` (150 ms: nine frames at
+   60 Hz) complains on its own account, throttled to once per five seconds per name. A stall that names `nothing` is not a named span: it is
+   something outside the instrumented paths — the framework, another window nobody timed, or native code.
+2. `ui thread: blocked …` / `running …` — which of the two it was, since "nothing of ours ran" reads both ways. Blocked sends you looking
+   for a wait (a lock, the render thread, a driver); running sends you looking for a pass nobody timed, in a trace.
+3. `open …` — if the stall's window is not in that list, it is not the cause.
+4. The heartbeat's cost table — worst spans first, so one 40 ms pass outranks nine hundred 0.2 ms ones, since the question is who held the
+   thread and not who is chattiest. Each kind gets its own room on the line: with eight surfaces open the spans alone filled ten rows and
+   every counter fell off, including the drop counters — the line has to carry what arrived and what was discarded during it, not just what
+   ran.
+5. `gc2`, `stopped N ms` and `alloc` in the same window — a gen2 collection in the window of a stall is memory pressure and wants different code;
+   a stall with no collections is somebody's loop. And if a freeze is reported by neither the stall lines nor `beat delay`, look for
+   `ui.worldstop` / `STOP-THE-WORLD` before believing the run was clean: those are the ones where nothing inside the process could watch — unless the line
+   says `our own gc.tidy`, which means we stopped it ourselves and the counters were merely late.
+6. `render:software` — a machine that fell back to software rendering changes what every other number on the page means.
+
+The session that followed, run specifically to have everything open at once — overlay, meter, text overlay, trigger log and four timer
+overlays, with the live log file opened *while* two simulated clients were still writing to it — cleared the rest of the list, so none of it
+gets re-examined. Four timer overlays cost 31.5 passes a second averaging 0.08 ms and the trigger grid's refresh 0.4 a second averaging
+0.04 ms: a few milliseconds of UI time per second summed. The concurrent load allocated at up to 925 MB/s for 38 s and never delayed a beat
+by more than 31 ms, so loading costs memory rather than responsiveness — heap 0.3 GB to 2.4 GB and flat from then on, no leak with every
+surface open. After that the longest beat delay in nine and a half minutes was 31 ms. Whatever the reported freezes are, they are not any
+pass this code measures, which is why the probe above is the next instrument rather than another span.
+
+### Instrumenting something new
+
+Register a handle in a field initializer, wrap the work in `Begin`/`End` inside a `finally`, and use `PerfCounters.Run` where a
+try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
+the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
+line that points at a span nobody can find in the docs is a dead end.
+
+An event raised by a builder arrives on that builder's thread, so anything measured there must not read a property of a UI element before
+handing work to the dispatcher. Pass the element over and read it inside the callback; the reference crosses threads safely, its properties do
+not.
+
+When the thing being measured is a pipeline rather than a pass — several steps whose split decides which one to fix — use `PerfBreakdown`
+rather than registering half a dozen spans by hand: it names them as a set, keeps them sequential, prints the phase breakdown with the sizes,
+and hands its line back to the caller instead of only logging it, because a rule nobody can assert is a rule that quietly changes.
+
+### Taking the instruments back out
+
+This much measuring was borrowed to answer specific questions, and none of it is what the application is for. When the questions stop arriving, delete it as one
+pass rather than letting it age into scenery — a heartbeat nobody reads still costs a `GC.GetGCMemoryInfo()` every twenty seconds and still teaches a new
+reader that this is how the codebase writes logs.
+
+What goes, in the order that leaves the tree compiling:
+
+1. The instrumented spans: every `PerfCounters.Register` in a field initialiser and its `Begin`/`End`/`Record`/`Note`/`Gauge` calls in frame paths —
+   `trig.*`, `meter.*`, `chart.*`, `fct.*`, `audio.synth`, `ui.fightTable`. These are the hundreds of lines, and they are the reason the frame code reads
+   harder than it does.
+2. `EQLogParser.Core/src/perf/PerfCounters.cs`, `PerfGc.cs`, `PerfGap.cs`, `PerfBreakdown.cs`, and `EQLogParser/src/ui/perf/UiBeatMonitor.cs` plus its thread
+   probe, with the tests beside them (`PerfCountersTest`, `PerfGcTest`, `PerfGapTest`, `PerfBreakdownTest`, `PerfJournalTest`, `UiBeatMonitorTest` and the Wpf
+   beat/gap tests), the `PerfJournal.Enabled` gate and the `PerfReport` read in `App`. The wording assertions go with the sentences they pin — do not keep them as
+   a museum.
+3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at three chosen moments), so `PerfJournal` stays alive for its
+   one line — move that to the ordinary logger if deleting `PerfJournal` with the rest. Likewise `FctFramePacer` paces the display and `FctIngest`'s
+   drop counters answer "did the overlay have room", which is a product decision, not a measurement.
+4. What stays as knowledge: this section, the heap dump, and the two sentences worth remembering from the whole exercise — that a stop-the-world stops the
+   watchdog so `beat delay` cannot see it, and that allocation during a parse (not rendering) is what stops this interface.
+
+
+Everything below was measured against `local/eqlog_Kizant_xegony-09-03-26.txt`: 10,015,348 lines, two full raid nights plus some solo
+killing, which is about what a heavy player loads in one sitting. Instance sizes came from filling an array with half a million records and
+reading `GC.GetTotalAllocatedBytes`; the counts came from feeding the file through `DamageLineParser` and `HealingLineParser`.
+
+| | events produced | distinct by value | repeats |
+|---|---|---|---|
+| damage | 4,799,101 | 2,530,156 | 47.3% |
+| heal | 2,670,820 | 626,506 | 76.5% |
+
+The whole file uses **1,002 distinct names and types**. That is the number that decides what a record should look like: four or five name
+fields per event, drawn from a thousand values, do not want to be references.
+
+**Repeats.** Damage already collapses onto one instance per distinct value in `FightManager.GetCachedDamageRecord`, which keeps 2.27M objects
+off the heap for that file. Heals had nothing of the sort — three quarters of a night's heal lines restate a heal already seen and each one
+reached the store as its own object until `HealingLineParser` grew the same cache. A heal is worth caching harder than a damage event because
+it repeats more often, and `HealRecord` is now equal by value in the same way `DamageRecord` is; both compare the stored ids, so hashing one
+costs four integer compares instead of six string walks.
+
+**Names are ids.** `HitRecord`, `HealRecord` and `DamageRecord` store a `StringCache` id per name (four bytes) where they used to store a
+reference (eight), which is most of the difference below; the text they stand for was already shared by interning, so the pointers were the
+only thing the record owned.
+
+| | before | now |
+|---|---|---|
+| `DamageRecord` | 88 B | 56 B |
+| `HealRecord` | 72 B | 48 B |
+
+Together with the heal cache that is roughly **240 MB of a ~500 MB record footprint** for the file above, and about 2.7M fewer live objects
+for the collector to walk — which matters more than the bytes, since pause length tracks the graph it has to mark.
+
+Two invariants hold this up and both are load-bearing:
+
+- **ids are assigned ordinally.** `StringCache.GetId` matches exactly, so ids partition names precisely the way references did — `"spell"` and
+  `"Spell"` stay two symbols. Whatever normalization a caller wanted before still happens where it happened (`GetOrAdd` title-cases damage
+  names in `GetCachedDamageRecord`, and heals call it themselves). What that interning now decides is *spelling*: a record hands back the text
+  that was stored, so grids, exports and the log viewers see what they saw before. It is no longer what makes repeats cheap to keep — the value
+  lookup above does that — which means the damage cache could one day be judged on its own merits without renaming anything.
+- **ids are never reused and never cleared.** `StringCache.Clear()` still drops the dedup dictionary, but the id tables outlive it: records
+  already stored carry ids, and letting names go mid-session would silently rename them. The cost is bounded by however many distinct names and
+  spells the process ever sees, which on two raid nights is four digits.
+- **resolving a name takes no lock.** A read used to be a field load and is now an index into state the parser thread appends to, on the UI thread,
+  inside loops over millions of records — so `StringCache` keeps names in fixed pages rather than one growing list. Growth allocates a fresh page and
+  reveals it by publishing a longer directory in one write; nothing is ever moved, so a reader either sees a name or sees nothing, never a list
+  half-grown underneath it. Putting a `List<string>` here would have worked on paper through the happens-before of whoever published the record and
+  would have been the worst kind of thing to rely on: correct until some later caller stores a record somewhere unsynchronized. The parse of the file
+  above ran the same in nine seconds either way, so the pages cost nothing to keep.
+
+**What is still on this road.** Records being small is step one; the layout step is storing a fight's hits in flat arrays instead of a
+`List<IAction>` of heap objects, which would take the damage side from ~140 MB to something like 60-80 MB and let the `_damageCache` dictionary
+(order of 100 MB of entries at 2.5M keys) go away entirely, since a repeat stored inline costs bytes rather than an object. It is blocked on one
+thing worth knowing before anyone starts: `StatsUtil.UpdateStats(PlayerSubStats, HitRecord, …)` and `LineModifiersParser.UpdateStats` are shared
+by damage *and* heals, so a struct-per-hit representation either forks that stat logic in two or materializes records again on every summary
+rebuild — and the summary rebuilds every few seconds during a fight. The two ways past it are to hoist that logic onto the fields themselves (an
+interface over "a hit", with rows implementing it by index rather than by identity) or to give heals their own row shape and let each keep its own
+copy of the rules. Either is a branch of its own; measure with `stopped` and `gc2` before believing any claim about it.
+### TimeRange: merging copies, adding adopts
+
+Two rules live in this class and only one of them was ever written down. **`Add(List<TimeSegment>)` adopts**: the segments handed to it become part of
+the list, and the next overlapping `Add` welds them *in place* (`BeginTime`/`EndTime` are public setters). **`new TimeRange(segments)` copies.** The two
+look alike and behave differently, so the safe rule is: anything merging a range it does not own uses `Add(TimeRange)`, added here for exactly that
+reason - it copies one segment at a time.
+
+The leak was not hypothetical. Computing a group's uptime rewrote the players it summarised: `DamageSummary` collected `stats.Ranges.TimeSegments`
+*references* into a per-group cache, then merged that cache into a throwaway range and asked for a total - which welded span objects still owned by live
+players. Reproduced in minutes with today's API before any fix was written (a test that has since gone: three spans for A, B sitting on A's weld point,
+sum the group, and A's own spans had changed length).
+
+**Shipped: a group derives its seconds from its members.** `StatsUtil.MergeMemberRanges(members)` unions each member's `Ranges` into a fresh range by
+copying, and `BuildGroupedPlayers` calls it on every pass. That deletes the cache (`GroupEntry.TimeSegments`), the collection that filled it, and the one
+external removal in the tree:
+
+```csharp
+oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));   // gone
+```
+
+That line was a hand-patched cache update, needed only because moving a player between groups takes an incremental path that skips
+`InitializeGroupTracking`. It depended on `List.Contains`, which for `TimeSegment` is **reference** equality - the class declares `Equals(TimeSegment)` but
+implements neither `IEquatable<TimeSegment>` nor `Object.Equals`/`GetHashCode` - so it worked only while the exact objects survived in the player's list.
+Removals from a segment list happen inside `Add` (`RemoveRange`), and one reachable-by-inspection path replaces a player's ranges with value copies
+(`DamageStatsBuilder`: `stats.Ranges = new TimeRange(range.TimeSegments)`); if that ran between collecting and removing, `Contains` would match nothing and
+the old group would keep 100% of the departed player's uptime. Whether it does run in that order was never traced, because it no longer matters: there is
+no snapshot to invalidate. Guards: `EQLogParser.Test/src/util/MergedTimeRangesTest.cs` - union covers every member, overlapping members count once (which is
+why a group cannot sum its members' `TotalSeconds`), order independence, rebuild-twice stability, and the aliasing guard that fails if `MergeMemberRanges`
+or `Add(TimeRange)` is switched back to adoption. Verified to bite: reintroducing adoption fails 3 of the 11.
+
+**The tick rule, stated.** `GetTotal()` treats silence as activity: a bridge span is inserted for every pair closer than `Offset = 6`, which is why asking
+for a total mutates the list. Because `TimeSegment.Total` is `End - Begin + 1`, the unit is off by one from wall clock: gap 1 means *no* silence, so the
+rule fills **up to 5 seconds of actual dead air, inclusive at 5** (measured: gap 6 → 21 s reported; gap 7 → 15 s reported). Chains compound without limit -
+five 3-second spans with 4 s between each report 31 s from 15 real ones. Constant since the initial import, no comment on it; neighbouring conventions are
+`SpellCountBuilder.DmgOffset = 5` and `StatsUtil.SpecialOffset/DeathOffset = 15`.
+
+**Open at the time: folding that rule into `Add` so reads stop writing.** Prototyped in `local/timerange-lab/FastRange.cs` (`bridgeGap`) and measured against
+the live class over **95,389 accepted adds**: totals differed 0 *and* the welded lists differed 0 - applying a "within 6 s" closure at insert reaches exactly
+the list that read-time bridging reaches, and shape stops depending on who asked first. `GetTotal()` is idempotent today (ask1 = ask2 over ~160k asks), so
+there is no compounding bug to preserve. Two things I got wrong on the way and fixed by measurement: my first fuzz reported a 14% mismatch, which was the
+harness feeding the two structures different inputs (an "inverted" span with `begin == end` is a legal one-second point that `Add` accepts); and I flagged
+the per-span consumers as a risk when they are provably unaffected - `SpellCountBuilder` queries `[begin-30, end+15]` and `StatsUtil` ±15, and two spans
+within 6 s already have overlapping query windows (6 <= 45, 6 <= 30), so welding them cannot change what those loops ask for.
+
+### TimeRange: the tick rule lives in Add
+
+**Shipped.** `Add` welds a span that lands within `Offset = 6` of an existing run - the search starts at "first span whose `EndTime` reaches `begin - Offset`",
+the overlap test carries `+ Offset`, and the rightward swallow does too. `GetTotal()` is now a sum over the spans: no bridge list, no `Add` called from a
+getter, no rewrite of the thing it was asked about. The invariant is *runs in a range are always more than `Offset` apart*, and `Add` is the only door -
+the `List` overload, both constructors and `Add(TimeRange)` all come through it.
+
+Proven three ways rather than by review, in `local/timerange-lab` (`-- equivB`, not part of the build): **162,447 accepted adds** across four input shapes
+(in order, out of order, single-second points, endpoints touching, inverted spans, nulls), with the frozen `OldTimeRange` read after every add, the live
+class, and an independent model computed from the added spans themselves:
+
+```
+  totals disagreed with old      : 0            (and the same counter covers the independent model: all three always agree)
+  live list != old's post-read   : 0            <- the shape the rule-at-insert produces is exactly the shape a bridging read produced
+  invariant broken in live       : 0            <- sorted, disjoint, every pair more than a tick apart
+  live list != old's UNREAD list : 120,708      (74.3% of steps - the intended change: silences are welded from the start)
+```
+
+The consequence nobody can see in those numbers is the good one. `StatsUtil.UpdateMinMaxTimes` buys "the last N seconds" by walking spans and spending their
+lengths, and it was spending *raw* lengths while `TotalSeconds` reported *bridged* ones - the two definitions of a second disagreeing inside one filter.
+Synthetic hour of bursts, asked for the last 600 seconds:
+
+| quiet stretches | window the old walk returned | what the meter reported for it | after |
+|---|---|---|---|
+| up to 4 s | started at 2,849 | **753 s** for a 600 s filter | starts at 3,001, **601 s** |
+| up to 8 s | started at 2,704 | **894 s** | 2,884, **714 s** |
+| up to 11 s | started at 2,511 | **1,080 s** | 2,701, **890 s** |
+
+So the "last N seconds"/"first N seconds" filters now hand back what they were asked for instead of up to 80% more, and a filtered select's `TotalSeconds`
+agrees with the number in its own name. Cost moved the same way as the search did: 40 names x 800 fight spans build **25.4 → 2.6 ms**, five totals
+**6.4 → 0.1 ms**, same answer; 200,000 casting ticks three seconds apart now sit in **one span** from the first insert instead of waiting for a read.
+
+**What changed meaning** (the honest list, since this is the part a diff cannot show):
+- `TimeSegments` is welded *always*, so membership tests change side: `TimeCheck(line, ...)` - which decides whether a clicked line falls in a player's
+  activity - now says yes inside a ≤ 5 s silence whether or not anybody asked for a number first. Previously the answer depended on call order, which is the
+  hidden bug in the question.
+- Two spec tests pinned the old behaviour and were replaced, not deleted: `GetTotalBridgesTheSegmentListAsASideEffectOfBeingRead` became
+  `AddingWithinATickWeldsTheRunAtInsert` + `ReadingTheTotalLeavesTheListAlone`, and the brute-force run model in
+  `ManyOutOfOrderAddsProduceExactlyTheBruteForceRuns` now folds short silences because `Add` does. Those were the only 2 failures in 1,209 tests when the rule
+  moved; both were assertions about mechanism. `AssertSortedAndDisjoint` gained the gap rule, so every sweep in that file proves the invariant for free, and
+  `ExactlyATickOfSilenceWeldsAndOneSecondMoreDoesNot` pins the boundary (6 welds, 7 does not).
+- The lab's older comparison `-- equivA` is **red by design** now: 310,086 whole-list disagreements over 1.92M ops, **0** in totals, every one of them a pair
+  of runs ≤ 6 s apart welded early. `-- equivB` is the authoritative comparison from here on.
+- `StatsUtil.FilterTimeRange` copies the spans it clips instead of handing the caller's own `TimeSegment` objects to `Add`, which welds what it is given -
+  adoption was already a leak and the rule made it reach further. Guarded by `MergedTimeRangesTest.FilteringARangeNeverEditsTheSource`.
+- Hand-built lists are now a shape the class cannot produce. `TimeSegments` is public, so a caller appending directly (three test fixtures did) skips the
+  rule and gets a total that misses the silences their own data implies; all three go through `Add` now. Production code never bypassed it - the only
+  `.TimeSegments.Add(` in the tree was already `TimeRange.Add`.
+
+**Auditing it on a real log**: `StatsUtil` logs one Debug line per windowed build, which is where before/after runs can be compared without opening two
+windows - `Stats window: asked min 0 max 300 -> 12345 .. 12645; 7 spans, 300.0 counted seconds (raw extent 412)`. On the old build the counted seconds exceed
+the requested maximum; on this one they land on it. Everything else in the two builds should be letter-identical.
+
+## Timer overlays: how a bar gets taken away
+
+A countdown row is drawn because something put it in `TimerOverlayWindow._timerList`, and three things are supposed to take it out: the row's own scheduled
+removal, a line matching "end early", and the overlay dropping rows whose model says `IsRemoved`. Every stuck-bar complaint is one of those failing, and each
+had a hole. The rules that decide when a row may leave live in **`EQLogParser.Core/src/control/util/TimerLifecycle.cs`** — on plain numbers rather than on a
+window, because every one was found by measuring an arithmetic result:
+
+```
+dotnet test EQLogParser.Test/EQLogParser.Test.csproj --filter TimerLifecycle     # cross-platform, no STA, no window
+```
+
+- **A duration cannot be trusted.** The length comes from the trigger config or a `TS` capture through `DateUtil.SimpleTimeToSeconds`, which answers in **uint**
+  seconds; the only test on the whole path was `> 0`. A capture of `999999999` makes the removal delay `(int)(seconds * 1000)` **saturate** to `int.MaxValue`
+  without throwing, so the task whose entire job is deleting the bar sleeps 24.8 days and the row sits at `0:00` for the session — keeping the render loop (which
+  stops only on an empty list) alive with it. Further out, a typed `1e12` wraps `begin + TPS*seconds` into the **past**: nothing is drawn (`remaining` is guarded
+  `>= 0`), so the row can never be offered for removal, and in "standard time" mode its `DurationTicks` is the divisor that flattens every other bar. Durations are
+  clamped where they enter (`MaxDurationSeconds`, a day) and all the arithmetic saturates instead of wrapping (`EndTicks`, `TPS`, and `DelayMs`, which can never be
+  negative — `Task.Delay` throws on that, in a task nobody observes).
+- **A row arrives with no future.** Start is fire-and-forget while Stop waits on the overlay's render semaphore, so nothing anywhere keeps Add before Stop, and a
+  Stop only removes what is already in the list. A short countdown whose removal task wakes while its own row is still queued loses that way, and so does the
+  "restart timer" option under a burst: three lines matching one trigger, message two cancelling message one's row before that row's insert lands. Either way the
+  insert lands a row past its end — which produces no model, so nothing can ever take it away, and whatever the bar last showed stays up. `AcceptsRow` refuses it
+  at the door. `ThreeMessagesAtOnceNeverLeaveARowBehind` enumerates all 720 service orders of `A1 S1 A2 S2 A3 S3`: **630 stranded a row as shipped, none do now.**
+- **A row has no length at all** — the shape that reads as *"a timer appeared at 0:00 and never left"* for a two-minute spell, which is not a race at all. The
+  display cannot draw "nothing": `DateUtil.FormatTicks` answers `00:00` for zero *and* for every negative value (`ARowWithNoLengthNeverBecomesAForeverZeroBar`
+  pins those strings). One wrong frame in the normal mode; in **show reset** mode permanent, because the cooldown/idle text *is* `FormatTime(DurationTicks)` with
+  `IsRemoved` false by design. The display keeps that behaviour (a real cooldown placeholder has no time left to show) and a lengthless row never reaches an
+  overlay — from `TriggerProcessor` it is not offered at all, though the trigger still fires, speaks, logs and repeats exactly as before, none of which needed a
+  painted bar. What to tell a player reporting this: fill in the trigger's duration.
+- **Idle rows only aged when the whole overlay went quiet.** The shipped rule at the foot of the render loop clears greyed cooldown rows once *every* timer has
+  finished and an idle timeout is configured, which in a raid — where something is always counting down — is never, so they accumulated all night. They now age
+  per row from when that row stopped being live (`RetainIdleRow`; the later of the countdown and its reset). With no idle timeout configured, `IdleNever` keeps
+  the shipped "idle forever".
+- **A fault in the render loop used to be permanent.** `StartRenderingAsync` could fault with `_isRendering` still `true`, and a loop is started only
+  `if (!_isRendering)` — so every later timer joined a list nothing painted: the overlay froze on its last frame, which for a bar caught at its end reads `0:00`.
+  The wrapper now clears the flag in a `finally`, so the next timer re-arms it. `StartTimerAsync`'s catch unwinds only the loop *it* armed; clearing one other
+  rows are still using was itself a way to freeze an overlay.
+
+The backstop is `ReapForgottenRows`, called under the render lock from the long tick: it drops live rows whose end plus `ReapGraceTicks` (2 s) has passed, which
+is how a stop lost against a closing dispatcher, or routed to a window the trigger no longer uses, gets cleaned up in seconds instead of never. The grace is what
+keeps the design intact — an owner that stops its own timers always wins, and the `0:00` frame still gets painted. **Zero reaping is the healthy expectation**; a
+row that has to be reclaimed had no owner.
+
+**Do not "simplify" these away.** `RetainRow` ignoring the reset phase looks wrong and is not: a row in the *live* list long past its end has no owner, and letting
+the cooldown display vouch for it is how the leak stays. `DelayMs` returning 0 rather than -1 for an empty timer is not a rounding choice — `Task.Delay` throws on
+negative, in a task nobody observes. And the clamp belongs at creation, not in the display: every consumer of these numbers has to be unable to overflow, not only
+the one showing a bar. Keep the short tick in the `else` of the long-tick test in `RenderTimerLoopAsync`: the long tick runs when `_tickCounter` wraps to zero, so
+anything that can skip the reset while cooldown rows are up stops the overlay rebuilding bars at all.
+
+## Timeline rows: what a saved layout keeps, and how a row comes back
+
+A timeline layout stores `SpellOrder` and nothing else about visibility: the list is exactly the rows that were showing,
+in the order they were showing. The ✕ at the head of a row drops the spell out of `_keyOrder`, so before the rows
+dropdown there were no bytes anywhere distinguishing *"you turned this off three fights ago"* from *"this fight never
+contained it"* — and no way back short of rebuilding the layout. The fix is deliberately **not** a hidden list in the
+file. The universe of rows is the fight itself (`_spellRanges`) filtered by the same `IsOffered` test `Display()` draws
+with, so the dropdown can show what is switched off as unchecked rows without any new state: **absent from `SpellOrder`
+means off, never lost.** Old layouts load untouched. `HiddenSpells` is gone with it — `SaveLayout` filled it from
+`_selfOnly.Keys` (the self-only lookup, which is about *which* messages a spell has, not whether you want its row) and
+`ApplyLayout` never read a byte of it; System.Text.Json ignores the stale member in files already on disk.
+
+Two rules worth keeping:
+
+- **`_rowsSeeded`, not `Count == 0`, decides whether the order list still needs seeding.** `Display()` used to read an
+  empty list as "nobody initialised me" and refill it with every spell alphabetically. With a switch-board dropdown
+  that is a bug rather than a convenience: Unselect All empties the list on purpose, and the next redraw would have
+  resurrected all of it. An empty row list is a choice.
+- **A row ticked back on lands at the bottom and gets dragged home.** Nothing remembers the slot a row held before its
+  ✕ took it out; remembering would mean storing hidden rows *with positions*, plus a version marker for files written
+  without them — the file change this whole design exists to avoid. `TimelineRows.Apply` keeps that rule out of the
+  UserControl so it can be asserted (`EQLogParser.Wpf.Test/src/ui/chart/TimelineRowsTest.cs`; Windows-only assembly,
+  so it builds everywhere and runs there).
+
+`Select All` / `Unselect All` in this dropdown are momentary buttons rather than the latching pair from
+`UiElementUtil.PreviewSelectAllComboBox`, because that helper reads backwards once anything has been ticked: a click on
+a *Select All* whose box is empty routes to `Toggle("Unselect All", false)`, which unchecks every row and lights the
+*Unselect All* latch. In the class filters nobody noticed because `SharedControls` starts everything checked — two
+clicks on their Select All simply clears the list. Here both action boxes stay empty (`e.Handled` on the container's
+preview, so the inner checkbox never sees the click) and the closed combo carries the state instead: **"12 of 40 Rows"**,
+which is also the only hint a player gets that a layout — or an old ✕ — is holding rows back. `ChatViewer`'s channel
+pair already keeps its own local version for the same reason; the shared helper still serves the class lists, which are
+all-on by design, and is left alone.
+
+## Choosing a file: one engine, and what it swallows
+
+Three implementations of the same three jobs lived here until recently: the Windows API Code Pack
+(`CommonOpenFileDialog`, also doing folders with `IsFolderPicker`), `Microsoft.Win32.OpenFileDialog` /
+`SaveFileDialog`, and a `System.Windows.Forms.FolderBrowserDialog` for the NAG database folder. The reason for
+three was nobody's. Add up every chooser in the app — 19 of them — and the whole feature set is a filter, a
+suggested filename, a title, a default extension and a starting folder: no multi-select, no custom places, no
+shell items, nothing that one engine can do and another cannot. What three engines did buy was three ways to
+fail, because each validated `InitialDirectory` in its own manner and only some of them threw.
+
+They are one file now: `EQLogParser/src/ui/util/FileDialogUtil.cs`, the only place a dialog gets constructed
+(`PickFile`, `PickFolder`, `SaveFile`), on the dialogs that ship inside .NET — `OpenFileDialog`, `SaveFileDialog`,
+`OpenFolderDialog`. The folder dialog arriving in .NET 8 is what made consolidation possible at all; while the
+replacement was missing, "use the Code Pack" had a reason. The package went out with it: reference gone, both dlls
+out of `sign.cmd` and the installer, `[InstallDelete]` entries added so an upgraded install takes the stale copies
+with it too.
+
+What every call keeps, and why:
+
+- **A starting directory is only used while it exists.** `ResolveDirectory` takes a folder or a full file path and
+  answers with the folder, or null for "Windows decides". Saved paths go stale — drive unmounted, EQ folder
+  renamed, `Logs` moved into OneDrive — and a chooser pointed at a folder that isn't there answers with whatever
+  exception that shell call felt like throwing.
+- **Nothing escapes to the click handler.** Two attempts: the caller's folder, then no folder at all so Windows
+  opens wherever it keeps that kind of dialog. Then null, which all 19 callers already treat as "nothing
+  happened". That is not politeness. `App.xaml.cs:73` handles `DispatcherUnhandledException` and sets `Handled`,
+  so a *managed* exception at Export was never what closed the window — which means "the app vanished" describes a
+  native fault, somewhere no `catch` reaches. Dropping the interop wrapper we do not control is the strongest fix
+  available for a crash we cannot reproduce; an injected third-party shell extension is the other candidate, and it
+  names itself in Event Viewer → Windows Logs → Application → Application Error, faulting module.
+- **A chooser that failed twice says so out loud.** Cancel and failure both arrive as null, which is precisely what
+  a caller wants and precisely what a player cannot tell apart. So `Show` ends with a `MessageWindow` — inside its
+  own try, because an error path that can throw is not an error path — and the log carries the control's name:
+  *"the spell count import chooser failed from 'D:\Logs'"*. Before this, "clicked Export, nothing happened" was the
+  entire user experience of a broken chooser.
+- **Owner windows are real, and one of them can throw.** Several sites called `ShowDialog()` with nobody to own the
+  dialog, which is how a picker ends up behind the window it belongs to and un-clickable — so every call passes an
+  owner now. Handing `CommonDialog.ShowDialog(owner)` a null owner is fine (it falls back to the active window), but
+  handing it a *window whose handle does not exist yet* throws `InvalidOperationException`: `WindowInteropHelper.Handle`
+  is zero until that window has been shown. A click inside a visible window cannot hit this, so it stays theoretical —
+  which is exactly why the second attempt drops the owner along with the folder rather than throwing the same way twice.
+
+Where a chooser *starts* is deliberately unchanged for saves: every save call passes null and so keeps Windows'
+remembered location, exactly as each of them behaved before. The log picker is the exception that was asked for —
+this character's log folder, then the newest recent file whose folder still exists, then whatever Windows wants to
+show — and `OpenLogFile` no longer rethrows on the way past it, which was the only bare `throw;` in the app.
+
+### The sound path cell answers a click, and keeps its text selectable
+
+`TextSoundEditor` shows a sound file picked out of the file system in a read-only text box, and that box used to be a
+dead display: the only way back to the chooser was to move the options dropdown off "Browse for Sound File" and pick
+it again, because re-picking the item already on show raises no `SelectionChanged` at all. Clicking the path opens the
+chooser now — which is one mouse button doing two jobs, so `EQLogParser/src/ui/util/ClickNotDrag.cs` decides between
+them:
+
+- **The excursion latches.** A selection drag that wanders off and happens to come back over its own press point is
+  still a drag. Comparing the press point against the release point called that a click and opened a dialog on top of
+  the text being selected.
+- **The tail of a double-click never arms**, so the word-select gesture does not stack a second chooser behind the
+  first one.
+- **A release with no armed press answers false**: focus landing in the cell cannot summon a dialog.
+- **The release handler listens with `handledEventsToo`.** The text box owns this click — caret and selection — and
+  marks it handled when it is done, so a plain `+=` on the bubbling event risks never running at all, which a player
+  experiences as "clicking the path does nothing". Listening after the control keeps its half of the gesture and
+  still gets the chooser.
+- The tolerance is six device-independent units rather than `SystemParameters.MinimumHorizontalDragDistance`, because
+  that dial is the shell's user-tweakable `SM_CXDRAG` and a test written against it changes results when somebody
+  adjusts their mouse. `EQLogParser.Wpf.Test/src/ui/util/ClickNotDragTest.cs` holds each of these, and needs Windows to
+  run like the rest of that assembly.
+
+The box stays read-only but carries a visible caret and an inactive selection highlight, so the path can still be
+selected by drag, by Shift and the arrows, and copied while the chooser has focus. Where the chooser *starts* follows
+the rule above: the folder of the path on screen, or nothing at all when no path is showing — "pick a different one"
+usually means another file in this folder. The dropdown itself is untouched: re-picking "Browse for Sound File" still
+does nothing, and the path is the door.

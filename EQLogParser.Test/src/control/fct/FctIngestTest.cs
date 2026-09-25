@@ -255,6 +255,133 @@ namespace EQLogParser
     }
 
     /*
+     * Which half of a drop count is worth reading. An overlay refuses a number rather than draw it over another, and does so with the same
+     * arithmetic whether or not anybody can see the window; a refusal while the host was still being handed frames is text somebody could have
+     * read, and a refusal while nothing was painting is the same lost allocation with no lost text. Both land in DroppedCount, so only the split
+     * tells a bug report from a browser sitting on top of the overlay — pinned by running one storm with frames stamped and one without.
+     */
+    [TestMethod]
+    public void RefusalsAreSplitByWhetherTheCanvasWasPainting()
+    {
+      var blindHits = new List<FctHitState>();
+      var liveHits = new List<FctHitState>();
+      var blind = NewIngest();
+      var live = NewIngest();
+
+      Storm(blind, blindHits, 0, 24, pump: false);
+      Storm(live, liveHits, 0, 24, pump: true);
+
+      Assert.IsTrue(blind.DroppedCount > 0, "the storm has to overflow a lane, or the test proves nothing");
+      Assert.AreEqual(0, blind.DroppedLiveCount, "a canvas never handed a frame loses nothing a viewer could have seen");
+      Assert.AreEqual(blind.DroppedCount, live.DroppedCount, "same storm, same total lost");
+      Assert.AreEqual(live.DroppedCount, live.DroppedLiveCount, "every refusal under a fresh stamp is lost text");
+
+      /* And from the other side, since the freshness of the stamp is the whole mechanism: a pump left to age stops the count while the refusals
+         go on. PumpFreshMs = -1 makes even a stamp taken this instant stale, which keeps the test from sleeping to make one. */
+      var agedHits = new List<FctHitState>();
+      var aged = NewIngest();
+      Storm(aged, agedHits, 0, 24, pump: true);
+      var seenWhilePainting = aged.DroppedLiveCount;
+      aged.PumpFreshMs = -1;
+      Storm(aged, agedHits, 24, 24, pump: false);
+
+      Assert.IsTrue(aged.DroppedCount > seenWhilePainting, "the storm went on losing numbers after the stamp aged out");
+      Assert.AreEqual(seenWhilePainting, aged.DroppedLiveCount, "and none of them counted as lost text");
+    }
+
+    /*
+     * What a refusal cost, which is the figure that says whether saturation matters. A rail turns its newest arrival away whatever it is — taking a
+     * slot off a visible row for an invisible one is the one thing it will not do — so the count of losses cannot separate a flood of white swings
+     * from a lost big cast, and only one of those two is worth changing anything for.
+     */
+    [TestMethod]
+    public void RefusalsRememberTheBiggestNumberTheyTook()
+    {
+      var railHits = new List<FctHitState>();
+      var rail = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+
+      /* Ascending values on a rail: the queue fills after its first few, and every arrival after that — each bigger than anything it kept — is refused. */
+      Storm(rail, railHits, 0, 40, pump: true);
+
+      Assert.IsTrue(rail.DroppedCount > 0, "the queue has to overflow for the level to mean anything");
+      Assert.AreEqual(900 + 39 * 250, rail.MaxDroppedValue, 0.001, "the biggest refusal is recorded, not merely the biggest arrival");
+      Assert.AreEqual(rail.DroppedCount, rail.DroppedCritCount, "this storm is all crits, so every loss counts as one");
+
+      /* Same mechanism under plain hits: the worst-loss figure still fills in, and nothing inflates the crit count. The two numbers answer
+         different questions — "how bad was the worst thing lost" and "how often did it cost something worth noticing". */
+      var plainHits = new List<FctHitState>();
+      var plain = NewIngest();
+      Storm(plain, plainHits, 0, 40, pump: true, crit: false);
+
+      Assert.IsTrue(plain.DroppedCount > 0, "the scatter cap overflowed too");
+      Assert.IsTrue(plain.MaxDroppedValue > 0, "and it knows how big the worst of them was");
+      Assert.AreEqual(0, plain.DroppedCritCount, "none of which were crits");
+    }
+
+    /* What a refusal cost, named. The session that motivated fct.dropMax printed 3.2 million, which is not a number any cast in this game does, and an
+       integer cannot be chased down — the ability beside it can be. So the worst refusal carries the name of what was refused, and it has to be the worst
+       of them: a counter that names some number thrown away while a larger one went unremarked answers the question with a coincidence. And the number it
+       names must genuinely have been refused, not merely been seen — otherwise the log line would let a parse bug off by pointing at a row that displayed
+       perfectly. */
+    [TestMethod]
+    public void TheWorstRefusalIsNamedByWhatItWas()
+    {
+      var rail = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+      var hits = new List<FctHitState>();
+      var shown = new HashSet<long>();
+
+      // distinct values so nothing folds, arriving far faster than the column can separate them
+      for (var i = 0; i < 120; i++)
+      {
+        rail.NotePump();
+        var value = 900 + i * 250;
+        if (rail.Accept(hits, FctLane.DamageDealt, value, "Flurry", crit: false, minor: false, periodic: false,
+              fixedText: null, Width, Height, i * 60.0) is not null)
+        {
+          shown.Add(value);
+        }
+      }
+
+      Assert.IsTrue(rail.DroppedCount > 0, "a feed this fast should have been refused somewhere");
+      Assert.IsTrue(rail.WorstDropText.StartsWith("Flurry "),
+        $"the worst refusal should name the ability it was: {rail.WorstDropText}");
+      var named = long.Parse(rail.WorstDropText.Split(' ')[1]);
+      Assert.AreEqual((long)rail.MaxDroppedValue, named, "the name belongs to the largest refusal, not to any refusal");
+      Assert.IsFalse(shown.Contains(named), $"{named} was shown on screen, so naming it as a loss would be a lie");
+
+      // and a refused crit says so: over half of a measured session's losses were crits, which is the part worth reading
+      var crits = new FctIngest(new Random(7)) { Style = FctMotionStyle.Straight };
+      var critHits = new List<FctHitState>();
+      for (var i = 0; i < 120; i++)
+      {
+        crits.NotePump();
+        crits.Accept(critHits, FctLane.DamageDealt, 900 + i * 250, "Spike of Fury", crit: true, minor: false, periodic: false,
+          fixedText: null, Width, Height, i * 60.0);
+      }
+
+      Assert.IsTrue(crits.WorstDropText.EndsWith(" crit"), $"a refused crit should say so: {crits.WorstDropText}");
+    }
+
+    /*
+     * One lane, one source, values that never fold into each other, arriving 60 ms apart — faster than any rail can display them, which is why
+     * forty-eight land a lane on its cap and leave most of them refused. `first` lets one storm continue on an ingest another pass already filled.
+     */
+    private static void Storm(FctIngest ingest, List<FctHitState> hits, int first, int count, bool pump, bool crit = true)
+    {
+      for (var i = 0; i < count; i++)
+      {
+        if (pump)
+        {
+          ingest.NotePump();
+        }
+
+        var n = first + i;
+        ingest.Accept(hits, FctLane.DamageDealt, 900 + n * 250, "Flurry", crit: crit, minor: false, periodic: false,
+          fixedText: null, Width, Height, n * 60);
+      }
+    }
+
+    /*
      * The fold key. Lane alone was what this matched on, which let one number accumulate totals that were not its own and
      * then say something untrue about where they came from — an Immolation tick growing a number labelled "Spinning
      * Attack", or two DoTs taken collapsing into whichever landed first with the other one vanishing from the log entirely.

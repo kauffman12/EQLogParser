@@ -136,6 +136,10 @@ namespace EQLogParser
        * which is also what a mode switch mid-configure will offer first. */
       SelectByTag(shapeCombo, !state.Fountain && state.Shape is FctMotionStyle.Straight ? "line" : "arc");
       SelectByTag(sprayCombo, state.Fountain && state.Shape is FctMotionStyle.Freeze ? "freeze" : "spray");
+
+      /* The lean combo is selected even when the shape hides it: a player on "line" still has a saved opinion about which way an arc
+         would lean, and the panel is not entitled to lose it by declining to look at that control. */
+      SelectByTag(arcBendCombo, FctOverlaySettings.WordForArcBend(state.ArcBend));
       SelectByTag(healLaneCombo, FctRailLanes.Token(state.HealLane));
       SelectByTag(healDirCombo, Up(state.HealUp));
       SelectByTag(takenLaneCombo, FctRailLanes.Token(state.TakenLane));
@@ -211,6 +215,10 @@ namespace EQLogParser
         /* One vocabulary for the seats: the combo's tags ARE the words settings.ini carries, so the panel reads through the same helper the file
          * does — including "a combo with nothing picked yet", which is an unset value and gets the shipped seat, not a choice. */
         LabelSide = FctOverlaySettings.ShippedLabelSide(ComboTag(labelSideCombo)),
+
+        /* The same one-vocabulary rule as the seat above: the combo's tags ARE the saved words, and a combo with nothing picked is an
+           unset value, which reads as `out` — what a file without this key draws too (FctArcBend). */
+        ArcBend = FctOverlaySettings.DefaultArcBend(ComboTag(arcBendCombo)),
         TextScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(sizeSlider.Value)),
         CritScale = FctScale.SizeFromPercent(FctScale.SizePercentFromDial(critSlider.Value)), // same percent rule as the text dial; only its middle differs
         Speed = FctScale.SpeedFromPercent((int)Math.Round(speedSlider.Value)),
@@ -245,7 +253,9 @@ namespace EQLogParser
         return;
       }
 
-      if (sender == modeCombo)
+      /* The shape decides whether the lean dial has anything to talk about, so a shape pick re-runs the visibility pass too: picking
+         "line" retires it, picking "arc" brings it back wearing whatever was saved. */
+      if (sender == modeCombo || sender == shapeCombo)
       {
         ApplyModeVisibility();
       }
@@ -393,6 +403,10 @@ namespace EQLogParser
 
       shapeCombo.Visibility = fountain ? Visibility.Collapsed : Visibility.Visible;
       sprayCombo.Visibility = fountain ? Visibility.Visible : Visibility.Collapsed;
+
+      /* A lean needs a curve to lean. The dial shows for split's arc and steps off for "line", which has none, and for fountain, whose
+         shapes are spray and freeze — neither of which has a spine to bend (FctArcBend). */
+      arcBendCombo.Visibility = !fountain && ComboTag(shapeCombo) == "arc" ? Visibility.Visible : Visibility.Collapsed;
 
       /* Fountain has no columns to hand out, so the lane pickers step off — but the DIRECTION dials stay, healing's
          included: a fountain gets to say whether heals rise while damage falls (the genre's classic look) or sink.

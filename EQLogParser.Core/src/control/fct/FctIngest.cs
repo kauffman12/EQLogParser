@@ -69,6 +69,46 @@ namespace EQLogParser
     public int DroppedCount { get; private set; }
 
     /*
+     * How many of those losses happened while the canvas was still being handed frames. This is the split that decides whether a drop report
+     * is a bug: a refusal with a live pump under it is a number that never reached a screen somebody could have been looking at, while a refusal
+     * while nothing was painting cost an allocation and nothing else — the row could not have been read in either case, and every overlay throws
+     * overflow away rather than draw two numbers on top of each other. Read beside "fct.drop", whose total it is part of.
+     */
+    public int DroppedLiveCount { get; private set; }
+
+    /*
+     * What the refusals cost, because "572 numbers lost" cannot say whether anything was missed: a rail that is saturated throws away its newest
+     * arrival whatever it is, so a session of white swings and one that keeps losing a 40k nuke look identical in the count. MaxDroppedValue is the
+     * largest face value ever refused and DroppedCritCount how many refusals were crits — together they separate "the flood is bigger than the rail"
+     * (fix: fewer arrivals, or more room) from "the rail lost things worth reading" (fix: the rail). Both lifetime figures, read beside fct.backlog.
+     */
+    public double MaxDroppedValue { get; private set; }
+    public int DroppedCritCount { get; private set; }
+
+    /*
+     * The worst refusal named, because a number alone could not be acted on. A measured session put fct.dropMax at 3.2 million — no cast in this game
+     * does that, so the number was either a parse gone wrong or a lane fed something it should not be, and neither answer lives in an integer. This is
+     * the ability (or word) beside the largest face value ever refused, kept for one log line (FctOverlayWindow) to print. It changes only when the
+     * maximum advances, so printing it whenever it changes cannot fill a log.
+     */
+    public string WorstDropText { get; private set; } = "";
+
+    /* How recently a composition tick has to have arrived for its moment to count as "painting". A dial, so a test can make freshness instant. */
+    internal int PumpFreshMs = 250;
+
+    /* Environment.TickCount64 of the last frame the host was handed; 0 means never, which is not fresh (an overlay that has never painted loses nothing). */
+    private long _lastPumpMs;
+
+    /*
+     * The same losses as counted perf entries. The overlay already gauges their sum as a lifetime level ("fct.drop"), which answers "does this
+     * build lose numbers at all" but not "which pull lost them", and the settings panel that shows DroppedCount is only read after somebody
+     * thinks to open it. Split by cause here: a lane with no slot is the stage too small for the fight, a refused conveyor enrol is the feed
+     * outrunning its mouth. Counts are per window, so an overload stands out in its own window instead of hiding inside a total.
+     */
+    private static readonly int DropLaneId = PerfCounters.Register("fct.dropLane");
+    private static readonly int DropConveyorId = PerfCounters.Register("fct.dropConveyor");
+
+    /*
      * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered in the settings panel. It is a
      * display filter applied at the gate, not a parser change: the log and every counter still see all of it. Zero (the
      * default) means off. Heals and zero-damage labels are exempt by design; see Accept.
@@ -386,7 +426,7 @@ namespace EQLogParser
         var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
-          DroppedCount++;
+          CountDrop(DropLaneId, value, crit, fixedText ?? source);
           return null;
         }
 
@@ -446,7 +486,7 @@ namespace EQLogParser
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
-          DroppedCount++;
+          CountDrop(DropConveyorId, value, crit, fixedText ?? source);
           return null;
         }
 
@@ -475,6 +515,18 @@ namespace EQLogParser
      * carries a clock epoch the canvas has already restarted (FctConveyor.Reset) - see there for what that costs.
      */
     public void ResetConveyor() => _conveyor.Reset();
+
+    /* How full the deepest lane queue has been, for the heartbeat. */
+    public int PeakBacklog => _conveyor.PeakWaiting;
+
+    /*
+     * Stamped by the canvas on every composition tick it is handed, before its early-outs. One write per frame of a clock read, so
+     * a refusal can ask whether the overlay was alive at the moment it said no; nothing here needs the frame's contents.
+     */
+    public void NotePump()
+    {
+      Volatile.Write(ref _lastPumpMs, Environment.TickCount64);
+    }
 
     /* Drops expired hits, newest-last so the list keeps its order. Returns how many went. */
     public int PruneExpired(List<FctHitState> hits, double now, Action<FctHitState> onRemoved = null)
@@ -513,6 +565,33 @@ namespace EQLogParser
      * scoring among braided candidate columns, with congestion valves underneath — went away rather than being kept for
      * some second rail scheme.
      */
+    /*
+     * One place a refusal is accounted for, whichever door turned the number away: the lifetime total the settings panel shows, the
+     * per-window counter the heartbeat names, and — when the host was painting — the half of the total that could have been seen.
+     */
+    private void CountDrop(int counterId, double value, bool crit, string name)
+    {
+      DroppedCount++;
+      PerfCounters.Note(counterId);
+
+      if (value > MaxDroppedValue)
+      {
+        MaxDroppedValue = value;
+        WorstDropText = $"{name} {(long)value}{(crit ? " crit" : "")}";
+      }
+
+      if (crit)
+      {
+        DroppedCritCount++;
+      }
+
+      var pumpedAt = Volatile.Read(ref _lastPumpMs);
+      if (pumpedAt != 0 && Environment.TickCount64 - pumpedAt <= PumpFreshMs)
+      {
+        DroppedLiveCount++;
+      }
+    }
+
     private static bool UseConveyor(FctMotionStyle style) => FctMotionStyles.IsRail(style);
 
     /* A conveyor row's life is a distance, not a duration: it is finished when the lane has carried its own flight past it,

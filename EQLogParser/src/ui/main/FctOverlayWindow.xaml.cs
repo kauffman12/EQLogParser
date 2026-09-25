@@ -59,6 +59,31 @@ namespace EQLogParser
     private readonly FctSkiaCanvas _canvas;
     private readonly List<FctHitCommand> _pending = [];
 
+    /*
+     * What this window reports to the heartbeat (PerfCounters, UiBeatMonitor). "feed" is the drain plus everything the canvas does with
+     * what it drained — parse, gates, placement — which is where a raid burst lands if it costs more than a frame; "queue" and "drop"
+     * are the two ends of backpressure read together: a queue full while the overlay paints at 60 fps is a different problem from an
+     * empty queue behind a UI thread that stopped answering, and the log cannot tell those apart without both numbers on the page.
+     *
+     * "droplive", "dropqueued" and "backlog" say what those losses mean, because a nonzero drop count on its own looks like a bug and usually is not one:
+     * an overlay refuses a number rather than draw it on top of another, and refuses while covered by a browser cost nothing but the allocation. "droplive"
+     * is the part refused with frames arriving (text somebody could have read), "dropqueued" is the part that never left FctManager's queue, and "backlog"
+     * is how close a lane's queue came to the cap that refused it — which is what decides between more room and looking elsewhere. All three are levels on
+     * purpose: the per-window cause counters share four slots with the trigger counts, and in a measured session they were pushed off nine windows in thirty-three.
+     */
+    private static readonly int FeedId = PerfCounters.Register("fct.feed");
+    private static readonly int QueueId = PerfCounters.Register("fct.queue");
+    private static readonly int DropId = PerfCounters.Register("fct.drop");
+    private static readonly int DropLiveId = PerfCounters.Register("fct.dropLive");
+    private static readonly int DropQueuedId = PerfCounters.Register("fct.dropQueued");
+    private static readonly int BacklogId = PerfCounters.Register("fct.backlog");
+    private static readonly int DropMaxId = PerfCounters.Register("fct.dropMax");
+    private static readonly int DropCritId = PerfCounters.Register("fct.dropCrit");
+
+    /* The last refused-record the overlay named in the log, and when. See OnCanvasFrame. */
+    private string _lastWorstDrop = "";
+    private double _lastWorstDropMs;
+
     /* The parser feed this window opened and closes. Held here rather than reached through FctManager.Instance, so hiding
      * or closing this window can only ever affect the feed this window itself created. */
     private readonly FctManager _manager;
@@ -265,6 +290,9 @@ namespace EQLogParser
        counted. An overlay nobody sees must not parse or raster either. */
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
+      /* Tells the watchdog which windows are up, because half of attributing a stall is knowing what could have caused it. */
+      UiBeatMonitor.NoteSurface("fct", (bool)e.NewValue);
+
       if ((bool)e.NewValue)
       {
         /* The clock starts before the feed opens. AddHit refuses hits while the canvas has no clock, so a manager enabled
@@ -436,14 +464,48 @@ namespace EQLogParser
      */
     private void OnCanvasFrame(double now)
     {
-      _manager.DrainTo(_pending);
-      foreach (var cmd in _pending)
+      /* Timed rather than counted: this is the one place per-record work happens on the UI thread, so its worst frame is the number
+         that says whether a burst of numbers was ever the reason the interface paused. try/finally for the same reason as every other
+         span here — a pass that ends in an exception would otherwise keep claiming the next stall. */
+      var mark = PerfCounters.Begin(FeedId);
+
+      try
       {
-        _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
-          proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
+        _manager.DrainTo(_pending);
+
+        foreach (var cmd in _pending)
+        {
+          _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
+            proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
+        }
+
+        _pending.Clear();
+      }
+      finally
+      {
+        PerfCounters.End(mark);
+        PerfCounters.Gauge(QueueId, _manager.PendingCount);
+        PerfCounters.Gauge(DropId, _canvas.DroppedCount + _manager.DroppedCount);
+        PerfCounters.Gauge(DropLiveId, _canvas.DroppedLiveCount);
+        PerfCounters.Gauge(DropQueuedId, _manager.DroppedCount);
+        PerfCounters.Gauge(BacklogId, _canvas.PeakBacklog);
+        PerfCounters.Gauge(DropMaxId, _canvas.MaxDroppedValue);
+        PerfCounters.Gauge(DropCritId, _canvas.DroppedCritCount);
       }
 
-      _pending.Clear();
+      /*
+       * Say what the biggest refusal actually was, saying it no more than once per advance. A measured session printed fct.dropMax: 3200300,
+       * and an integer that large cannot be acted on — no cast in this game does that damage, so either a line is parsed into a number it should not
+       * be or some lane is being fed the wrong figure, and which one it is lives in the ability name rather than the value. The text changes only when
+       * the session record falls; the seconds gate keeps a stream of ever-larger junk from turning the log into itself.
+       */
+      var worstDrop = _canvas.WorstDropText;
+      if (worstDrop.Length > 0 && worstDrop != _lastWorstDrop && now - _lastWorstDropMs > 5000)
+      {
+        _lastWorstDrop = worstDrop;
+        _lastWorstDropMs = now;
+        PerfJournal.Note($"FCT refused its largest number yet: {worstDrop}");
+      }
 
       if (now - _lastStatsMs < 500)
       {
@@ -466,7 +528,13 @@ namespace EQLogParser
       var stats = $"{_canvas.Fps:0} fps · {_canvas.ActiveCount} live";
       if (dropped > 0)
       {
+        /* The size of the biggest loss rides beside the count because the count alone cannot say whether anything was missed: a saturated rail
+           refuses its newest arrival whatever that is, so a hundred white swings and one lost 40k nuke both read "100 dropped". */
         stats += $" · {dropped} dropped";
+        if (_canvas.MaxDroppedValue > 0)
+        {
+          stats += $" · {FctText.FormatHitValue(_canvas.MaxDroppedValue)} worst";
+        }
       }
 
       if (hidden > 0)
@@ -628,6 +696,7 @@ namespace EQLogParser
       _canvas.Layout = state.BuildLayout();
       _canvas.MotionStyle = state.BuildMotion();
       _canvas.LabelSide = state.LabelSide;
+      _canvas.ArcBend = state.ArcBend;
       FctScale.Text = FctScale.ClampSize(state.TextScale);
       FctScale.Crit = FctScale.ClampCritSize(state.CritScale);
       FctScale.Time = FctScale.TimeFromSpeed(state.Speed);

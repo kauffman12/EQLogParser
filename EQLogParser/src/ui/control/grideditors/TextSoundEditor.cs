@@ -1,5 +1,4 @@
 using EQLogParser.Audio;
-using Microsoft.Win32;
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
@@ -27,6 +26,7 @@ namespace EQLogParser
     private Button _testButton;
     private StackPanel _buttonContainer;
     private Grid _grid;
+    private ClickNotDrag _pathClick;
     private bool _isSettingOptionsFromText;
 
     public TextSoundEditor(ObservableCollection<string> fileList)
@@ -112,6 +112,10 @@ namespace EQLogParser
         Visibility = Visibility.Collapsed
       };
 
+      // A sound picked out of the file system has no other way back to the chooser: the options combo is already
+      // sitting on "Browse for Sound File", so re-picking that item raises no SelectionChanged and does nothing.
+      // Clicking this path is what opens the dialog again — and since a click and a selection drag share a button,
+      // ClickNotDrag decides between them (see its notes).
       _thePathBox = new TextBox
       {
         HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -121,6 +125,13 @@ namespace EQLogParser
         VerticalContentAlignment = VerticalAlignment.Center,
         BorderThickness = new Thickness(0, 0, 0, 0),
         IsReadOnly = true,
+        // Read-only must not mean unreadable-by-keyboard: the caret lets a player walk the path and Shift-select
+        // it, which is the copy-the-path job a click cannot do.
+        IsReadOnlyCaretVisible = true,
+        // The chooser takes focus the instant a click lands; without this the selection vanishes with the focus.
+        IsInactiveSelectionHighlightEnabled = true,
+        ToolTip = "Click to choose a different sound file.\n"
+          + "Drag, or hold Shift and use the arrow keys, to select this path instead.",
         Visibility = Visibility.Collapsed
       };
 
@@ -151,7 +162,14 @@ namespace EQLogParser
       _grid.Children.Add(_theSoundCombo);
       _grid.Children.Add(_buttonContainer);
 
+      _pathClick = new ClickNotDrag();
       _testButton.Click += TestButtonOnClick;
+      _thePathBox.PreviewMouseLeftButtonDown += PathBoxPreviewMouseLeftButtonDown;
+      _thePathBox.PreviewMouseMove += PathBoxPreviewMouseMove;
+      // Attached with handledEventsToo, and on the bubbling event rather than its Preview twin: the text box owns
+      // this click (caret, selection) and marks it handled when it is done, and a handler a `+=` never calls is a
+      // cell that quietly does nothing. This way the control finishes its half first and ours runs after.
+      _thePathBox.AddHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(PathBoxMouseLeftButtonUp), true);
       _theTtsBox.TextChanged += TextBoxTextChanged;
       _theSoundCombo.SelectionChanged += SoundComboSelectionChanged;
       _theOptionsCombo.SelectionChanged += TypeComboBoxSelectionChanged;
@@ -297,17 +315,31 @@ namespace EQLogParser
       }
     }
 
+    // The three handlers behind the gesture: they only feed it positions and answer "open the chooser?", all of the
+    // judgement lives in ClickNotDrag.
+    private void PathBoxPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
+      _pathClick.OnMouseDown(e.GetPosition(_thePathBox), e.ClickCount);
+
+    private void PathBoxPreviewMouseMove(object sender, MouseEventArgs e) => _pathClick.OnMouseMove(e.GetPosition(_thePathBox));
+
+    private void PathBoxMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (_pathClick.OnMouseUp(e.GetPosition(_thePathBox)))
+      {
+        BrowseForSoundFile();
+      }
+    }
+
     private bool BrowseForSoundFile()
     {
-      var dialog = new OpenFileDialog
-      {
-        Filter = "Audio Files|*.wav;*.mp3",
-        Title = "Select a Sound File"
-      };
+      // Open next to the file on screen, because "pick a different one" usually means another file in this folder.
+      // Null when no path is showing, which leaves the choice to Windows (FileDialogUtil checks it still exists).
+      var startPath = _thePathBox.Visibility == Visibility.Visible ? _thePathBox.Text : null;
+      var pickedFile = FileDialogUtil.PickFile(MainActions.GetOwner(), startPath, "sound file", "Audio Files|*.wav;*.mp3", "Select a Sound File");
 
-      if (dialog.ShowDialog() == true && !string.IsNullOrEmpty(dialog.FileName))
+      if (!string.IsNullOrEmpty(pickedFile))
       {
-        var selectedPath = dialog.FileName;
+        var selectedPath = pickedFile;
         // Store the full path in <<>> encoding — ResolveSoundPath handles absolute paths
         _theRealTextBox.Text = "<<" + selectedPath + ">>";
         return true;
@@ -411,6 +443,9 @@ namespace EQLogParser
 
       if (_thePathBox != null)
       {
+        _thePathBox.PreviewMouseLeftButtonDown -= PathBoxPreviewMouseLeftButtonDown;
+        _thePathBox.PreviewMouseMove -= PathBoxPreviewMouseMove;
+        _thePathBox.RemoveHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(PathBoxMouseLeftButtonUp));
         _thePathBox.Text = string.Empty;
         BindingOperations.ClearAllBindings(_thePathBox);
         _thePathBox = null;

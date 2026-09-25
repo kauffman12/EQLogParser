@@ -48,6 +48,10 @@ namespace EQLogParser
     private readonly ConcurrentQueue<FctHitCommand> _pending = [];
     private int _dropped;
 
+    /* The name from settings.ini that points the overlay at somebody's fight instead of the log's own character. See Subject. */
+    private const string WatchKey = "FctWatch";
+    private static string _watched;
+
     /*
      * How many commands are waiting. Counted by hand because ConcurrentQueue<T>.Count is O(n) — it walks every
      * segment — and Enqueue asks on the log thread for every record: asking it directly turns a raid pull into
@@ -61,6 +65,43 @@ namespace EQLogParser
     internal volatile bool Enabled;
 
     internal int DroppedCount => Volatile.Read(ref _dropped);
+
+    /*
+     * The same losses as counted perf entries so a night of "the overlay went quiet" leaves a line behind. Registered with uiThread: false —
+     * these increments happen on the parsing thread, and "in progress" means the UI thread was inside something (see PerfCounters.Register).
+     */
+    private static readonly int DropStaleId = PerfCounters.Register("fct.dropStale", uiThread: false);
+    private static readonly int DropCeilingId = PerfCounters.Register("fct.dropCeiling", uiThread: false);
+
+    /*
+     * How much is waiting to be drawn, published for the heartbeat (UiBeatMonitor). Read-only and approximate, exactly like the field
+     * behind it. It distinguishes the two ways "the numbers stopped" can go: a queue sitting at its ceiling means the log thread kept
+     * producing and the drain was the bottleneck, while an empty queue behind a stalled UI thread means the interface stopped asking.
+     */
+    internal int PendingCount => Volatile.Read(ref _pendingCount);
+
+    /*
+     * Whose fight the overlay draws. This is the entire "is this record mine" decision: three handlers ask it, and every comparison in them
+     * goes through here rather than reading the log's character directly, so the question is answered in one place. Where those handlers say
+     * "I", "my pet" or "me" (iAmAttacker and friends), read "the subject".
+     *
+     * That character by default, exactly as it has always been. Setting FctWatch in settings.ini to a name spelled as the log spells it points
+     * the overlay at somebody else - a caster watching the tank she keeps alive - and the pet mapping follows the watched name too, so that
+     * tank's pet counts as that tank. What does not follow: the damage meter, the stats windows and the timeline stay on your own character,
+     * because those are about what you did, and neither do voice triggers, which match on their own terms. Only the floating numbers move.
+     *
+     * Read once per process - settings.ini is loaded at startup - so changing who to watch takes a restart. Hot-reloading it would mean
+     * deciding what happens to the numbers already drifting up the screen, and nobody has asked for that decision yet.
+     */
+    internal static string Subject => WatchedPlayer ?? ConfigUtil.PlayerName;
+
+    /* The settings lookup is done once: these handlers see every combat record in a pull, and the trim would allocate on each. */
+    private static string WatchedPlayer => _watched ??= TrimToNull(ConfigUtil.GetSetting(WatchKey));
+
+    private static string TrimToNull(string name) => string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+
+    /* Test seam: the watched name is cached for the life of the process (see Subject) and tests need to try both answers. */
+    internal static void ResetWatchedPlayer() => _watched = null;
 
     private FctManager()
     {
@@ -101,6 +142,7 @@ namespace EQLogParser
         if (now - command.EnqueueTick > MaxQueueAgeMs)
         {
           Interlocked.Increment(ref _dropped);
+          PerfCounters.Note(DropStaleId);
           continue;
         }
 
@@ -128,12 +170,12 @@ namespace EQLogParser
       /* Which of my pets, if either, is on this line: the pet's own numbers get rows of their own (FctRow), so "counts as
          me" and "is my pet" have to stay separate questions. Damage landing ON the pet is still just damage taken — there
          is no pet row for that, because "who was hit" is not something a player filters. */
-      var petAttacker = PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == ConfigUtil.PlayerName;
-      var iAmAttacker = record.Attacker == ConfigUtil.PlayerName || petAttacker;
-      var iAmDefender = record.Defender == ConfigUtil.PlayerName ||
-                        PlayerRegistry.Instance.GetPlayerFromPet(record.Defender) == ConfigUtil.PlayerName;
+      var petAttacker = PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == Subject;
+      var iAmAttacker = record.Attacker == Subject || petAttacker;
+      var iAmDefender = record.Defender == Subject ||
+                        PlayerRegistry.Instance.GetPlayerFromPet(record.Defender) == Subject;
 
-      // FCT covers my character's fight only; anything else is noise
+      // FCT covers one character's fight only (Subject says which); anything else is noise
       if (!iAmAttacker && !iAmDefender)
       {
         return;
@@ -201,9 +243,9 @@ namespace EQLogParser
       }
 
       var record = e.Record;
-      if (record.Healed != ConfigUtil.PlayerName)
+      if (record.Healed != Subject)
       {
-        return; // cast on somebody else, or on the pet: not my number
+        return; // healed somebody else: not this overlay's number
       }
 
       // EQ heal lines read "for 9409 (11000)": Total is the effective amount, OverTotal the gross
@@ -279,11 +321,11 @@ namespace EQLogParser
         return;
       }
 
-      var iAmCaster = e.Record.Attacker == ConfigUtil.PlayerName ||
-                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Attacker) == ConfigUtil.PlayerName;
-      var iAmResister = e.Record.Defender == ConfigUtil.PlayerName ||
+      var iAmCaster = e.Record.Attacker == Subject ||
+                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Attacker) == Subject;
+      var iAmResister = e.Record.Defender == Subject ||
                         e.Record.Defender == "You" || // a line worded with the literal "You" still means me
-                        PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Defender) == ConfigUtil.PlayerName;
+                        PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Defender) == Subject;
 
       if (!iAmCaster && !iAmResister)
       {
@@ -355,6 +397,7 @@ namespace EQLogParser
         }
 
         Interlocked.Increment(ref _dropped);
+        PerfCounters.Note(DropCeilingId);
         queued = Interlocked.Decrement(ref _pendingCount);
       }
     }

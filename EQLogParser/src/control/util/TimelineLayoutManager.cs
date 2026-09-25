@@ -101,8 +101,10 @@ namespace EQLogParser
   public class TimelineLayout
   {
     public string Name { get; set; }
+    // Exactly the rows the timeline turned on, in panel order: what is not listed is simply off. Layouts
+    // written before the rows dropdown keep working — a stale "HiddenSpells" member in an older file is
+    // unread by anything now and System.Text.Json ignores it.
     public List<string> SpellOrder { get; set; }
-    public HashSet<string> HiddenSpells { get; set; }
     public bool HideSelfOnly { get; set; }
     public bool ShowCasterAdps { get; set; }
     public bool ShowMeleeAdps { get; set; }

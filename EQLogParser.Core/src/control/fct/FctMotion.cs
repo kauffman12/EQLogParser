@@ -199,7 +199,7 @@ namespace EQLogParser
      * Where the value's CENTRE is at time t, for every style, from one rule:
      *
      * Values are an odometer. The spine X0+lateral carries the value's RIGHT
-     * edge, so a 950 and a 12,040 in the same column line their ones digit up under each other instead of their
+     * edge (its LEFT edge on a column that turned its rows around to lean left — FctHitState.HangRight), so a 950 and a 12,040 in the same column line their ones digit up under each other instead of their
      * middles — Mik's "right-justify" text alignment, the one every parse-heavy player turns on. It ships as the
      * hidden default with no knob: centre-aligning a number column is never what anyone wants. The clamp keeps the
      * WHOLE drawn box left of SideMax and right of SideMin — the box grows LEFTWARDS out of the rail, which is also how a crit blowout pops: the rail
@@ -240,7 +240,12 @@ namespace EQLogParser
          exceeds 1), so the odometer's edge is safe in both directions. Callers that need the drawn box apply their
          own scaled half-width around this centre; scoring and drawing agree to the bit exactly as before. */
       var rail = Math.Clamp(hit.X0 + lateral, loR, hiR);
-      return rail - hit.ValueWidth / 2.0;
+
+      /* Rail to centre, and the hang says which way: an odometer's digits hang LEFT of its rail, but a column that leans left turns
+         them around so they hang RIGHT, into the air the lean is spending. That is the entire alignment change — the halo, the special-
+         event mark and every label seat are placed from this centre (FctSkiaCanvas), so a mirrored row keeps its internal arrangement
+         exactly and only swaps which side of the rail that arrangement sits on. */
+      return hit.HangRight ? rail + (hit.ValueWidth / 2.0) : rail - (hit.ValueWidth / 2.0);
     }
 
     /*

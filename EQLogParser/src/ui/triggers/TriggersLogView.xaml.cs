@@ -14,6 +14,17 @@ namespace EQLogParser
 {
   public partial class TriggersLogView : IDocumentContent
   {
+    /*
+     * What this document reports to the heartbeat (PerfCounters, UiBeatMonitor). The grid is bound to a live collection that the trigger
+     * thread appends to in batches, and each batch arrives as a whole-collection Reset — which tells WPF nothing it can do incrementally: a
+     * bound grid throws its view away and rebuilds it, re-sorting up to 5000 rows on the UI thread. trig.logGrid prices the refresh this
+     * window asks for; trig.logReset counts the invalidations arriving whether or not anybody asks, so a stall naming "triglog" with no span
+     * running points at the grid's own reload rather than at code of ours. Both are new because a player debugging triggers opens exactly
+     * this window during exactly the fight that made them debug it, and until now nothing in the log could see it.
+     */
+    private static readonly int LogGridId = PerfCounters.Register("trig.logGrid");
+    private static readonly int LogResetId = PerfCounters.Register("trig.logReset", uiThread: false);
+
     private readonly DelayedAction _batchRefresh;
     private bool _ready;
     private ObservableCollection<TriggerLogEntry> _currentCollection;
@@ -21,6 +32,10 @@ namespace EQLogParser
     public TriggersLogView()
     {
       _batchRefresh = new DelayedAction(TimeSpan.FromSeconds(1), RefreshGrid);
+
+      /* Named once, not per change: the beat line has to say this window was up while a beat went unanswered. */
+      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface("triglog", (bool)e.NewValue);
+
       InitializeComponent();
 
       // default these columns to descending
@@ -111,12 +126,17 @@ namespace EQLogParser
 
     private void TheCollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
+      if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+      {
+        PerfCounters.Note(LogResetId);
+      }
+
       _batchRefresh.Invoke();
     }
 
     private void RefreshGrid()
     {
-      Dispatcher.InvokeAsync(() =>
+      Dispatcher.InvokeAsync(() => PerfCounters.Run(LogGridId, () =>
       {
         var colDescriptions = dataGrid.SortColumnDescriptions;
         if (colDescriptions.Count != 1 || colDescriptions[0].ColumnName != "BeginTime" ||
@@ -127,7 +147,7 @@ namespace EQLogParser
           { ColumnName = "BeginTime", SortDirection = ListSortDirection.Descending });
           dataGrid?.View?.Refresh();
         }
-      });
+      }));
     }
 
     private void ClearClick(object sender, RoutedEventArgs e)

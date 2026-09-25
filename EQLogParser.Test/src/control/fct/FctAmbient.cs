@@ -17,10 +17,16 @@ namespace EQLogParser
       FctScale.Crit = FctScale.CritSizeDefault;
       FctScale.Time = FctScale.TimeDefault;
       FctLayout.LabelSide = LabelSideDefault;
+      FctLayout.ArcBend = ArcBendDefault; // which way an arc leans is stamped the same way, and leaks the same way
       FctPalette.Reset(); // the seventh dial's family: hues are process globals like size and speed, and leak the same way
     }
 
     /* What the geometry uses before a canvas has stamped the setting — the same value the shipped overlay draws with. */
     internal static FctLabelSide LabelSideDefault => FctLabelSide.None;
+
+    /* Likewise the lean: `out` is what a file with no FctOverlayArcBend key means, so it is what every arc in these tests draws unless a class asks for
+       `left` or `right`. Stated rather than inherited because the dial is process state — a class that sets it and does not reset leaks its curve into
+       whichever test runs next (FctArcBendTest). */
+    internal static FctArcBend ArcBendDefault => FctArcBend.Out;
   }
 }

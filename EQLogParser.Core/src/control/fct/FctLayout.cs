@@ -103,6 +103,15 @@ namespace EQLogParser
      */
     internal static FctLabelSide LabelSide = FctLabelSide.None;
 
+    /*
+     * Which way an arc leans (FctArcBend): the same kind of dial as the label seat above — the canvas owns the player's choice and stamps it
+     * when settings load, because it is not decoration but a sign that every downstream clamp reads. `out` is what a file with no
+     * FctOverlayArcBend key means: each half bows away from the middle of the overlay; `left` and `right` pick one side for the whole thing.
+     * Nothing else in the layout changes with it: the bow is still capped against the room on whichever side it goes, so a forced direction in a
+     * lane with no air draws a shorter curve rather than a number through a wall.
+     */
+    internal static FctArcBend ArcBend = FctArcBend.Out;
+
     internal static bool LabelsBelow => LabelSide is FctLabelSide.Below;
 
     /*
@@ -180,7 +189,8 @@ namespace EQLogParser
 
     /* How far the drawn block reaches either side of the odometer RAIL, which is where every horizontal clamp lives. Priced at the size the row draws
      * at: a caller scoring a row mid-swell applies its own frame scale afterwards (FctPlacement.Block). This is the arithmetic that decides whether two
-     * numbers in one column line up, because a rail row carries its whole value box to the LEFT of the rail (FctMotion.ArcedX). Each label side is
+     * numbers in one column line up, because a rail row carries its whole value box on ONE side of the rail — the left, unless the column turned its
+     * rows around to lean left (FctHitState.HangRight, mapped once at the bottom here by `Sides`). Each label side is
      * therefore translated on its own terms rather than shifted symmetrically:
      *
      * - inline: it hangs outside the value on its side, so that side pays gap + words and the other keeps the box.
@@ -192,31 +202,73 @@ namespace EQLogParser
     internal static (double Left, double Right) BlockFromRail(FctHitState hit, double sourceWidth)
     {
       var valueWidth = hit.ValueWidth;
-      var left = valueWidth + hit.IconAllowance;   // the whole amount, plus any mark hung outside its left edge
-      var right = 0.0;
+      var outward = valueWidth + hit.IconAllowance;   // the whole amount, plus any mark hung outside its outer edge
+      var inward = 0.0;                              // what crosses the rail to the other hand
 
       if (sourceWidth <= 0)
       {
-        return (left, right);
+        return Sides(hit, outward, inward);
       }
 
       var words = sourceWidth;
       if (LabelsBelow)
       {
-        left = Math.Max(left, (valueWidth / 2.0) + (words / 2.0));
-        right = Math.Max(0.0, (words / 2.0) - (valueWidth / 2.0));
+        outward = Math.Max(outward, (valueWidth / 2.0) + (words / 2.0));
+        inward = Math.Max(0.0, (words / 2.0) - (valueWidth / 2.0));
       }
       else if (LabelSide is FctLabelSide.Left)
       {
-        left += LabelGap(hit) + words;
+        outward += LabelGap(hit) + words;
       }
       else
       {
-        right = LabelGap(hit) + words;
+        inward = LabelGap(hit) + words;
       }
 
-      return (left, right);
+      return Sides(hit, outward, inward);
     }
+
+    /* What a rail owes each wall before a bow may spend the gap: the hanging hand owes RailReserve() — the widest block the column can ever be asked to
+     * draw, a crit-class number at the size its dial allows plus the mark hung outside it — and the bare hand owes nothing. Words are excluded on
+     * purpose: the spine is placed for the AMOUNT and never for a label (Spawn), and FitSource cuts names to whatever the spine leaves over.
+     *
+     * Priced from the dials rather than from `hit` because this is a fact about a COLUMN, and FctStage.ParkForBend spends it to decide where that column
+     * stands. Ask the arriving row instead — its measured ValueWidth, its IconAllowance — and a crit parks further off the wall than the parry below it,
+     * which is the per-row shove this engine was rebuilt to remove (75e2992a): FctLabelFitTest's ACritAndItsNeighbourShareOneSpineAndOneBend caught it at
+     * 12 px apart the day `out` became the default and the park stopped being a code path nobody took. A row wider than the ceiling still cannot draw
+     * through a wall, because Refit gives every row its own SideMin/SideMax and FctMotion clamps to them; what it must not get is a spine of its own. */
+    internal static (double Left, double Right) RailDemands(bool hangRight) =>
+      hangRight ? (0.0, RailReserve()) : (RailReserve(), 0.0);
+
+    /* What a seated label owes its hand before a bow may spend it: not a name, which is per row and unknowable at placement, but the SMALLEST thing that
+     * still reads as an annotation — an ellipsis in parentheses at the size this lane's sources draw, plus the gap that holds it off the digits. Reserve
+     * that much on the named hand and two things happen at once: the cap below stops handing a lean the ground the words stand on, and FitSource never has
+     * to choose between a name and the column's curve (measured before: `out` at 1280 with right-seated labels drew 0 names in 234 row-sightings, because
+     * every hand a label could sit on had been spent on the bend).
+     *
+     * It is priced from the seat and the font rather than from any one row's name, so like RailDemands it is a fact about the COLUMN: every row of a lane
+     * bows the same distance whether or not it rolled something worth naming. `none` pays nothing (no words are drawn), and `below` pays nothing on either
+     * hand because a second line spends vertical room, not horizontal — except for the overhang BlockFromRail already charges it. */
+    internal static (double Left, double Right) LabelDemands(FctHitState hit)
+    {
+      if (LabelSide is FctLabelSide.None || LabelsBelow)
+      {
+        return (0.0, 0.0);
+      }
+
+      var floor = EstimateTextWidth(LabelFloorLabel, hit.SourceFontSize) + LabelGap(hit);
+      return Sides(hit, LabelSide is FctLabelSide.Left ? floor : 0.0, LabelSide is FctLabelSide.Right ? floor : 0.0);
+    }
+
+    /* The widest a floor label can be asked to measure: MinSourceChars of the widest digit, so the reservation never depends on which name a row rolled. */
+    private static string LabelFloorLabel => "(" + new string('0', MinSourceChars) + Ellipsis + ")";
+
+    /* Outward is the hand the block hangs on and inward the bare one; a row that HangsRight turns them over. The label seats are
+     * NOT mirrored — they lean against the number's measured edge, and the drawing places every glyph from the number's CENTRE, so
+     * "(Glormok)" sits left of the amount whichever side of the rail the row hangs on. Only which side of the rail that centre is on
+     * moves, which is why this one mapping is the whole alignment change. */
+    private static (double Left, double Right) Sides(FctHitState hit, double outward, double inward) =>
+      hit.HangRight ? (inward, outward) : (outward, inward);
 
     /*
      * The source name this row can actually draw, shortened only when its column genuinely runs out of room. Two bounds do the work:
@@ -230,14 +282,28 @@ namespace EQLogParser
      * draws. A below line may overhang to either hand from under its amount; an inline one lives entirely on one side and cannot borrow from the other.
      * Asking the geometry rather than a caller for that answer also makes a name's budget a property of the COLUMN — every row of a lane is placed on
      * one spine (Spawn), so every row of a lane cuts its names at the same width instead of a crit losing letters before the parry above it does. */
+    /* The room a name has is what the rail leaves AFTER the column's own lean spends it. Charging the bow on the hand it bends at is not
+     * generosity to the curve over the words: the cap in AssignTravel sizes a bow without looking at any one row's label (every row of a column
+     * bends identically, whatever it rolled) while FctMotion.ArcedX clamps against the whole drawn block INCLUDING the words — so a name wide
+     * enough to stand in the lean's path had the bend taken out of it at draw time, row by row, and two numbers on one spine traced two different
+     * curves. Measured before this: 1024 px, one column per half, right-seated label, 56.3 px of a 153.6 px bow simply not there (the vertex drew
+     * at 959.7 of the 1016.0 the column was told to reach). Cutting the name against the same arithmetic instead keeps one path per column and
+     * trims words to what they truly have, which is this function's whole job. */
     internal static void FitSource(FctHitState hit, Func<string, double, double> widthOf)
-      => FitSource(hit, hit.X0 - hit.SideMin, hit.SideMax - hit.X0, widthOf);
+      => FitSource(hit,
+        Math.Max(0.0, hit.X0 - hit.SideMin - Math.Max(0.0, -hit.Bow)),
+        Math.Max(0.0, hit.SideMax - hit.X0 - Math.Max(0.0, hit.Bow)),
+        widthOf,
+        placed: true);
 
     /* Fitting against a stated total, for callers (and tests) that have no placed row to ask. */
     internal static void FitSource(FctHitState hit, double room, Func<string, double, double> widthOf)
-      => FitSource(hit, room, 0, widthOf);
+      => FitSource(hit, room, 0, widthOf, placed: false);
 
-    private static void FitSource(FctHitState hit, double leftRoom, double rightRoom, Func<string, double, double> widthOf)
+    /* `placed` says whether the two rooms are real rather than one stated total. It used to be inferred from "rightRoom > 0", which a legitimate
+     * column can do on its own — a lean that spends the whole hand leaves nothing there, and that is exactly the case this function has to answer
+     * honestly instead of falling back to the pre-placement guess and accepting a block the drawn curve then has to squeeze. */
+    private static void FitSource(FctHitState hit, double leftRoom, double rightRoom, Func<string, double, double> widthOf, bool placed)
     {
       /* The None seat: names are not wanted, so no name is measured and none is drawn. Every width question downstream answers
        * "no words" once the label is absent (BlockFromRail's early return is the load-bearing one), which is what makes this a seat
@@ -268,7 +334,7 @@ namespace EQLogParser
         var (left, right) = BlockFromRail(hit, width);
 
         // unplaced rows (no rail yet: SideMin/SideMax are zero) fall back to the total-block test against whatever room was stated
-        var fits = rightRoom > 0
+        var fits = placed
           ? left <= leftRoom && right <= rightRoom
           : left + right <= Math.Max(0, leftRoom);
 
@@ -283,6 +349,22 @@ namespace EQLogParser
           {
             label = $"({name}{Ellipsis})";
             width = widthOf(label, hit.SourceFontSize);
+
+            /* Still no room means the column's own lean is standing on this spot — which placement works to prevent by reserving this floor on the named
+               hand before any name exists (LabelDemands), so reaching here means the two measurers disagree about how much room there was: the canvas has
+               real glyphs and the spawn pass had an estimate. And the two things are not equally shared: a rail's bend belongs to every number on the
+               column (that is what makes a column read as one stream — FctStage.SpineFor welds it), while a label belongs to the one row that rolled it.
+               Let the words stand anyway and ArcedX takes the bend out per row, so a "(Crush)" and an "(Ethereal Fire XIII Rk. III)" on one spine draw two
+               different curves. So an arc gives up the annotation rather than the shape: nothing false is stated by drawing no name,
+               and a hidden name is still in the log, while a column whose rows each bend by their own label's width cannot be recovered. A column with no
+               lean keeps the floor-plus-ellipsis answer above untouched, where the rail's own clamp absorbs the overflow exactly as it always has. */
+            var (floorLeft, floorRight) = BlockFromRail(hit, width);
+            if (hit.Bow != 0.0 && (floorLeft > leftRoom || floorRight > rightRoom))
+            {
+              hit.SourceLabel = null;
+              hit.SourceWidth = 0;
+              return;
+            }
           }
 
           hit.SourceLabel = label;
@@ -315,6 +397,25 @@ namespace EQLogParser
       FctLane.HealingDealt or FctLane.HealingReceived => w * 0.63,
       _ => w * 0.50, // DamageDealt, DamageTaken, Crit, Defensive, Missed: one plume out of the middle
     };
+
+    /*
+     * The sign of a lane's bend: asked once per row, answered from the dial rather than from the row or the shape of the lane (FctArcBend), so a column can
+     * never contain two. `left` and `right` stop asking and say which way. The default, `out`, is fountain's law handed to split — away from the overlay's
+     * middle line — and that is why it is measured at the SPINE rather than at the region's centre: with one category on a half those are the same answer,
+     * and with two each column curves away from wherever it stands, which is what "arc outward" looks like when you watch it.
+     *
+     * Nothing here reads the air in the lane, deliberately. "Which of my own hands is roomier" was a fourth word nobody could pick in a settings panel; it
+     * answered the same for every column at 1280 (both halves leaning at the middle), and it changed direction when the window did, because the answer was a
+     * consequence of lane width and rail reserve rather than of anybody's taste. The lane's air is spent by RailDemands and LabelDemands and paid for by
+     * FctStage.ParkForBend instead (docs/DesignNotes.md → "Which way an arc leans").
+     */
+    internal static double BendDirection(FctStage stage, double spineX) =>
+      ArcBend switch
+      {
+        FctArcBend.Left => -1.0,
+        FctArcBend.Right => 1.0,
+        _ => spineX < stage.W / 2 ? -1.0 : 1.0,
+      };
 
     /* Which x the column puts a NUMBER at, as opposed to its rail. X0 is the right-align rail everywhere (FctMotion.ArcedX), so in bands a number left
      * on its slot draws half a text to the left of it — measured 4.9% of a 1600 px panel with the slot dead on the middle line, which is what "the
@@ -364,11 +465,24 @@ namespace EQLogParser
       var region = stage.RegionFor(hit);
       var territory = stage.TerritoryFor(hit);
 
+      /* Which hand of its rail this row's digits hang on, decided before the spine is asked for because the spine is parked against
+         it: a column that leans LEFT turns its rows around so they hang RIGHT, into the air the lean is about to spend. Stamped here
+         rather than asked at draw time because it is a fact about the column a row was born into — a dial moved mid-flight changes the
+         next rows, not the ones already climbing. */
+      hit.HangRight = stage.HangsRightFor(hit);
+
       /* Split has no lane columns — a category owns its whole lane, and the lane's spine is its slot centre whether the
          neighbour is booked or has just freed the half for wider labels: spawn on the spine (bands keeps its lane slots). */
       var cx = ColumnCentre(hit, stage);
 
-      hit.X0 = origin is null ? cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09))) : origin.Value.X;
+      /* A rail row has no origin to scatter: its whole claim is that every value follows the previous one along one path, so it starts on the column's spine
+       * and nowhere else. Production already guarantees this another way — FctMotionStyles.IsRail styles are conveyor rows, and the conveyor Pins each one to
+       * stage.SpineFor (FctIngest) — so the zero below changes no shipped flight; what it stops is a caller that spawns a rail row directly getting a start
+       * point within a blowout's jitter of the spine and then being levelled back onto it by the clamp band, which made "one rail for the column"
+       * (FctLabelFitTest) pass by accident rather than by construction. Free placement keeps its scatter for the styles that have one. */
+      hit.X0 = origin is null
+        ? FctMotionStyles.IsRail(hit.Style) ? cx : cx + ((rand.NextDouble() * 2 - 1) * (territory * (hit.Blowout ? 0.17 : 0.09)))
+        : origin.Value.X;
 
       /*
        * Clamped here as well as at draw time by FctMotion.ArcedX, which must hold anyway for a resize mid-flight. The reason to
@@ -393,30 +507,21 @@ namespace EQLogParser
          * FitSource cuts names to exactly that — so a column also gets the second, quieter benefit of cutting every name at the same width rather than
          * cutting a crit's name sooner than the parry above it. The max() is containment insurance for a row wider than the estimate (an extreme size
          * dial), where drawing through the wall would be worse than one row's spine sitting slightly further in. */
-        var (valueLeft, valueRight) = BlockFromRail(hit, 0);
-        reachLeft = Math.Max(RailReserve(), valueLeft);
-        reachRight = valueRight;
+        /* The reserve belongs to the hand the digits hang on. For a row that leans left and hangs right that is the far side of its
+           own rail, so the leaning hand stays open — charging the reserve at the rail's left is what made a named "left" curve 0 px in a
+           1280 window while a whole lane of air sat unused on the other side (FctLayout.RailDemands). */
+        (reachLeft, reachRight) = RailDemands(hit.HangRight);
       }
       else
       {
         (reachLeft, reachRight) = BlockFromRail(hit, hit.SourceWidth);
       }
 
-      /* Which way this column bows, decided by the region rather than the row so a lane never contains two shapes.
-       * Bands keeps the genre rule — away from the shared strip, toward the outer edge, where no flight can lean into the other stream.
-       * A split lane is private: there is no other stream to dodge, and "outward" turned out to be a demand rather than a direction — the
-       * left-half rail shoved itself 126 px off its own spine (breaking FctStage.SpineFor's weld) to pre-pay for a bend that then starved
-       * every right-seated name on the lane to "(Des)". In split the bow curves toward whichever hand of the lane is open, measured at the
-       * spine and equal for every row; the rail holds its slot and the bend spends the lane's leftover air instead of eating its label share.
-       *
-       * The open hand is measured honestly against what a bend that way actually costs: the value box hangs LEFT of its rail, so a leftward bow
-       * pays for the hanging box TWICE - once at spawn (xLo below keeps RailReserve clear of the seam) and again in AssignTravel's cap, which
-       * trims every row's bow against the same reserve. Comparing the hands at ONE reserve was optimistic: it could hand the lane a leftward
-       * direction whose cap then collapsed to a few pixels, an arc in name only (the retuned crit dial shrinking RailReserve is what exposed
-       * the near-tie). Two reserves is the distance at which a leftward bow can genuinely pay for itself. */
-      var bowOut = stage.Mode is FctLayoutMode.Bands
-        ? (region.X + (region.Width / 2) < stage.W / 2 ? -1.0 : 1.0)
-        : (region.X + region.Width - EdgePad - cx >= cx - region.X - EdgePad - 2 * RailReserve() ? 1.0 : -1.0);
+      /* Which way this column bows, asked of the dial rather than of the row so a lane never contains two shapes (FctArcBend). A split lane is private,
+       * so the direction is the player's to name and the lane pays for it twice over: the rail parks off the wall it leans at (FctStage.ParkForBend) and
+       * the rows turn to hang in the hand the curve spends (FctHitState.HangRight, stamped above). What the lane cannot pay for is taken out of the bend,
+       * never out of a neighbour: AssignTravel caps the bow against the walls, every row bows equally less, and the sign never moves. */
+      var bowOut = BendDirection(stage, cx);
 
       var xLo = region.X + EdgePad + reachLeft;
       var xHi = region.X + region.Width - EdgePad - reachRight;
@@ -592,10 +697,19 @@ namespace EQLogParser
          * therefore bend identically even though one is twice as wide. ArcedX still clamps each row by its own block, as the resize safety net. */
         if (hit.SideMax > hit.SideMin && hit.X0 > 0)
         {
-          var (valueLeft, valueRight) = BlockFromRail(hit, 0);   // words excluded: see Spawn
+          /* RailDemands is the whole bill, and it is a COLUMN's bill rather than this row's: cap the bow against the widest block the column can roll
+           * and every row on the spine bends identically, which is what makes a column read as one stream (a crit and the parry above it curve the same
+           * distance although one is twice as wide). A row that HangsRight — a left/out column turned around so its lean has somewhere to go,
+           * FctHitState.HangRight — owes nearly nothing on the hand it bends at, which is the point of turning it. ArcedX still clamps each row by its own
+           * block afterwards, but that net clips a drawing; it never moves a spine. The seated label's floor rides along (LabelDemands) so the words are
+           * never standing in the path the column was told to trace. */
+          var (demandLeft, demandRight) = RailDemands(hit.HangRight);
+          var (wordsLeft, wordsRight) = LabelDemands(hit);
+          demandLeft += wordsLeft;
+          demandRight += wordsRight;
           hit.Bow = hit.Bow < 0
-            ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - Math.Max(RailReserve(), valueLeft))))
-            : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - valueRight));
+            ? Math.Min(0.0, Math.Max(hit.Bow, -(hit.X0 - hit.SideMin - demandLeft)))
+            : Math.Max(0.0, Math.Min(hit.Bow, hit.SideMax - hit.X0 - demandRight));
         }
         return;
       }

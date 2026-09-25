@@ -239,7 +239,6 @@ namespace EQLogParser
   {
     public int GroupId { get; set; }
     public List<PlayerStats> Members { get; set; } = [];
-    public List<TimeSegment> TimeSegments { get; set; } = [];
     public List<PlayerStats> Children { get; set; } = [];
   }
 

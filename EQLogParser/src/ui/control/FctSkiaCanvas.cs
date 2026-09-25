@@ -62,6 +62,24 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Which way an arc leans (FctArcBend), handed to the layout for the next spawn to read. Rows already in flight keep the curve they were born
+     * with: their vertex is arithmetic from a bow chosen at spawn, and re-bending one mid-flight tears that number's path in half - which is the
+     * same reason a resize maps an existing bow rather than recomputing it (FctResize). A player dragging through the three words sees the streams
+     * change one spawn at a time, and the demo restocks them faster than the eye follows.
+     */
+    private FctArcBend _arcBend = FctArcBend.Out;
+
+    public FctArcBend ArcBend
+    {
+      get => _arcBend;
+      set
+      {
+        _arcBend = value;
+        FctLayout.ArcBend = value;
+      }
+    }
+
     /* Blur sprites are baked per unique crit label; bounded so a long session cannot grow without end. */
     private const int HaloCacheMax = 64;
 
@@ -118,6 +136,27 @@ namespace EQLogParser
     private double _pixelsPerDip = 1.0;
     private double _lastDpiCheckMs;
     private double _statFrameMsMax;
+
+    /*
+     * What OnRender spends: the transparent memset, every glyph pass and both copies. MaxFrameMs covers the pump only (prune, demo,
+     * DPI), so without these the expensive half of a frame was invisible from outside — and it is the half that grows with the
+     * overlay's pixel area rather than with how many numbers are on it, which is what makes "same fight, bigger window, worse" a
+     * question these numbers can answer and the pump's cannot.
+     */
+    private double _statPaintMsSum, _statPaintMsMax;
+    private int _statPaintCount;
+
+    /*
+     * Named spans and counters reported by the heartbeat (PerfCounters, UiBeatMonitor). The point is attribution, not profiling: when
+     * the watchdog says the UI thread stopped for a second and a half, these are the names it can print for "what was in there", and
+     * fct.paint is the one that decides whether the overlay was the cause of somebody else's freeze or its victim.
+     */
+    private static readonly int PumpId = PerfCounters.Register("fct.pump");
+    private static readonly int PaintId = PerfCounters.Register("fct.paint");
+    private static readonly int BakeId = PerfCounters.Register("fct.bake");
+    private static readonly int SurfaceId = PerfCounters.Register("fct.surface");
+    private static readonly int HitsId = PerfCounters.Register("fct.hits");
+
     private Stopwatch _clock;
     private bool _dirty;
 
@@ -183,11 +222,28 @@ namespace EQLogParser
     /* Worst frame in the current stats window: average frame time hides the spike that reads as a hitch. */
     public double MaxFrameMs { get; private set; }
 
+    /* The paint's average and worst over the same window as FPS — a different number from MaxFrameMs on purpose: see _statPaintMsSum. */
+    public double AvgPaintMs { get; private set; }
+    public double MaxPaintMs { get; private set; }
+
     /* What the monitor is actually running at, so a low fps can be told apart from a deliberate pacing cap. */
     public double DisplayHz => _pacer.DisplayHz;
     public double LastFrameMs { get; private set; }
     public double DrawsPerSec { get; private set; }
     public int DroppedCount => _ingest.DroppedCount;
+
+    /* The half of those losses that happened while this canvas was still getting frames, i.e. text a viewer could have seen. */
+    public int DroppedLiveCount => _ingest.DroppedLiveCount;
+
+    /* Deepest a lane's arrival queue has been all session, so a refusal can be told from a cap that was barely touched. */
+    public int PeakBacklog => _ingest.PeakBacklog;
+
+    /* The largest number ever refused, and how many refusals were crits: what the losses cost, not just how many there were. */
+    public double MaxDroppedValue => _ingest.MaxDroppedValue;
+    public int DroppedCritCount => _ingest.DroppedCritCount;
+
+    /* The ability beside that largest value — the difference between "the rail is too small" and "something is feeding it junk". */
+    public string WorstDropText => _ingest.WorstDropText;
 
     /* How many numbers the "hide under" filter has taken off screen; shown beside the drop count, because a filter
      * doing its job and a bug swallowing numbers should never look the same from outside. */
@@ -395,7 +451,29 @@ namespace EQLogParser
       _dirty = true;
     }
 
+    /* Timed as one span, the two early-outs included: a paint that was asked for and could not run is still a frame the layout missed. */
     protected override void OnRender(DrawingContext dc)
+    {
+      var mark = PerfCounters.Begin(PaintId);
+
+      try
+      {
+        Paint(dc);
+      }
+      finally
+      {
+        var ms = PerfCounters.End(mark);
+        _statPaintMsSum += ms;
+        _statPaintCount++;
+
+        if (ms > _statPaintMsMax)
+        {
+          _statPaintMsMax = ms;
+        }
+      }
+    }
+
+    private void Paint(DrawingContext dc)
     {
       var now = _clock?.Elapsed.TotalMilliseconds ?? 0;
       var scale = _pixelsPerDip > 0 ? _pixelsPerDip : 1.0;
@@ -477,6 +555,13 @@ namespace EQLogParser
        * spacing, so measuring only the frames it likes would make it blind to exactly the displays it exists for. */
       var shouldPaint = _pacer.Tick(now);
 
+      /* Every tick, before the early-outs, so the level the heartbeat prints is current even while the overlay sits idle. */
+      PerfCounters.Gauge(HitsId, _hits.Count);
+
+      /* Same reason: a refusal in the ingest has to be able to ask whether frames were arriving when it happened, and a tick that
+         painted nothing is still proof the compositor was handing this window work. */
+      _ingest.NotePump();
+
       // fires every tick, not just painted ones: the simulation paces its whole record schedule off this
       EventsFrame?.Invoke(now);
 
@@ -498,31 +583,42 @@ namespace EQLogParser
         return;
       }
 
-      var sw = Stopwatch.StartNew();
-      _pacer.Painted();
+      /*
+       * The pump is the work a render tick does that is not rasterizing; it gets its own name so a slow prune or demo step arrives in
+       * the heartbeat as itself instead of as an unexplained gap. try/finally because a pass left marked "running" by an exception
+       * would keep naming itself in every stall line after it, which is worse than not having measured it at all.
+       */
+      var mark = PerfCounters.Begin(PumpId);
 
-      if (now - _lastDpiCheckMs >= DpiCheckMs)
+      try
       {
-        _lastDpiCheckMs = now;
-        RefreshDpi();
-      }
+        _pacer.Painted();
 
-      if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+        if (now - _lastDpiCheckMs >= DpiCheckMs)
+        {
+          _lastDpiCheckMs = now;
+          RefreshDpi();
+        }
+
+        if (_ingest.PruneExpired(_hits, now, ReleaseHalo) > 0)
+        {
+          _dirty = true;
+        }
+
+        if (_demoWanted && !_demo.Active)
+        {
+          _demo.Start(now);
+        }
+
+        if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo, _ingest))
+        {
+          _dirty = true;
+        }
+      }
+      finally
       {
-        _dirty = true;
+        LastFrameMs = PerfCounters.End(mark);
       }
-
-      if (_demoWanted && !_demo.Active)
-      {
-        _demo.Start(now);
-      }
-
-      if (_demo.Advance(now, ActualWidth, ActualHeight, _ingest.Style, _ingest.Layout, RebuildGlyphs, ReleaseHalo, _ingest))
-      {
-        _dirty = true;
-      }
-
-      LastFrameMs = sw.Elapsed.TotalMilliseconds;
 
       /*
        * Animated content: a hit's position is a function of the clock, so any frame with live hits must repaint or the text stands still until the
@@ -547,7 +643,9 @@ namespace EQLogParser
      * in fixed quarters. Lanes nobody books are not drawn: they have no rect left to outline, which is exactly the point (they
      * gave their space away). Bands has no columns and gets no map.
      */
-    private void DrawLaneGuide(SKCanvas canvas)
+    /* Internal rather than private so a test can drive the guide straight onto an SKCanvas: reaching it through OnRender needs WPF
+       layout, a surface and a window, which is more machinery than the one line this guards. */
+    internal void DrawLaneGuide(SKCanvas canvas)
     {
       var choice = _ingest.Layout;
       if (choice.Mode is not FctLayoutMode.ByType)
@@ -562,6 +660,15 @@ namespace EQLogParser
       {
         return;
       }
+
+      /*
+       * The paints drawn with arrive with the first number, and configure mode arrives before that: an overlay opened unlocked puts its
+       * guide on a canvas that has never measured a glyph, so Configure() received a null SKPaint and threw inside WPF's layout pass -
+       * caught by the dispatcher, written to disk as a stack trace, and thrown again on the next resize. Three of those in 140 ms was how
+       * it announced itself in a player-visible log. Resources are cheap and idempotent; the invariant is that paints exist before anything
+       * is drawn with them, which is what Configure's non-nullable signature already claims.
+       */
+      EnsureSkiaResources();
 
       var stage = choice.Stage(ActualWidth, ActualHeight);
 
@@ -708,7 +815,12 @@ namespace EQLogParser
 
       var size = hit.ValueFontSize * FctStyle.IconSizeFrac;
       var gap = hit.ValueFontSize * FctStyle.IconGapFrac;
-      var left = (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
+      /* The mark hangs outside the number's OUTER edge, and which edge that is belongs to the row's hang: a column that turned its digits right to
+         lean left (FctHitState.HangRight) would otherwise draw its crit glyph across its own rail, into the hand the geometry reserved for nothing.
+         This is the same side FctLayout.BlockFromRail charges IconAllowance on — drawn box and reserved box stay one box. */
+      var left = hit.HangRight
+        ? textCenterX + (hit.ValueWidth / 2.0) + gap
+        : (textCenterX - (hit.ValueWidth / 2.0)) - gap - size;
       var topOfMark = top + ((FctLayout.TextHeight(hit) - size) / 2.0);
       var scale = size / FctMarks.Unit;
 
@@ -800,6 +912,16 @@ namespace EQLogParser
       _bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
       _pixelCopy = new byte[w * h * 4];
       _pixelHandle = GCHandle.Alloc(_pixelCopy, GCHandleType.Pinned);
+
+      PerfCounters.Note(SurfaceId);
+
+      /*
+       * One line per reallocation — a resize or a DPI change, which is rare enough to print every time. It is the size of the frame's
+       * memset and of both copies stated in one place: on a 3840 x 2160 overlay that buffer is 33 MB touched every frame, three buffers
+       * counting toward the working set, and a plausible cause of a hitch nobody can otherwise see from the outside.
+       */
+      PerfJournal.Note($"FCT render surface {w} x {h} px, {(double)w * h * 4 / (1024 * 1024):0.0} MB copy buffer");
+
       return true;
     }
 
@@ -863,6 +985,10 @@ namespace EQLogParser
 
           entry = new HaloEntry { Image = surf.Snapshot(), Refs = 0, Pad = pad };
           _halos[key] = entry;
+
+          /* Counted, not timed: a bake is a blur of a label into its own surface, it happens once per distinct crit string rather
+             than per frame, and what matters about it is how many the fight asked for. */
+          PerfCounters.Note(BakeId);
         }
       }
 
@@ -1003,11 +1129,16 @@ namespace EQLogParser
         Fps = _statFrames / seconds;
         AvgFrameMs = _statFrames > 0 ? _statFrameMsSum / _statFrames : 0;
         MaxFrameMs = _statFrameMsMax;
+        AvgPaintMs = _statPaintCount > 0 ? _statPaintMsSum / _statPaintCount : 0;
+        MaxPaintMs = _statPaintMsMax;
         DrawsPerSec = (_statDrawsTotal - _statDrawsWindow) / seconds;
         _statsWindowStartMs = now;
         _statFrames = 0;
         _statFrameMsSum = 0;
         _statFrameMsMax = 0;
+        _statPaintMsSum = 0;
+        _statPaintMsMax = 0;
+        _statPaintCount = 0;
         _statDrawsWindow = _statDrawsTotal;
       }
 

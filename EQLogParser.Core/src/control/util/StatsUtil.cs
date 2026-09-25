@@ -1,5 +1,7 @@
+using log4net;
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -15,6 +17,8 @@ namespace EQLogParser
     internal static readonly CompositeFormat SpecialFormat = CompositeFormat.Parse("{0} {{{1}}}");
     internal const int SpecialOffset = 15;
     internal const int DeathOffset = 15;
+
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>
     {
@@ -182,6 +186,13 @@ namespace EQLogParser
           removeFromStart -= range.Total;
         }
       }
+
+      /*
+       * This walk spends span lengths to buy "the last N seconds", and a span's length now includes the short silences Add welds into it. So N means what
+       * TotalSeconds means rather than N raw seconds of activity, which is the one visible consequence of moving the tick rule (docs/DesignNotes.md ->
+       * "TimeRange: the tick rule lives in Add"). Nothing is logged about it: a Debug line here could only be read by a build someone had already
+       * reconfigured, and the behaviour it was checking is pinned by MergedTimeRangesTest instead.
+       */
     }
 
     internal static void UpdateRaidTimeRanges(Dictionary<string, TimeSegment> segments, Dictionary<string, Dictionary<string, TimeSegment>> subSegments,
@@ -713,6 +724,28 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The seconds during which any of these players was active - a group's uptime, and anything else that wants the union of several ranges. It is
+     * meant to be called on every pass over the members: adding or removing a player needs no bookkeeping because nothing is cached.
+     *
+     * MergeMemberRanges copies each member's spans into the result (TimeRange.Add(TimeRange)) so computing a group total cannot lengthen the spans of
+     * the players it summarises. It unions rather than sums: two players fighting in the same second are one second of activity.
+     */
+    internal static TimeRange MergeMemberRanges(IEnumerable<PlayerStats> members)
+    {
+      var union = new TimeRange();
+
+      if (members is not null)
+      {
+        foreach (var member in members)
+        {
+          union.Add(member?.Ranges);
+        }
+      }
+
+      return union;
+    }
+
     internal static TimeRange FilterTimeRange(TimeRange range, double minTime, double maxTime)
     {
       TimeRange result;
@@ -724,7 +757,9 @@ namespace EQLogParser
         {
           if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && (double.IsNaN(maxTime) || segment.EndTime <= maxTime))
           {
-            result.Add(segment);
+            // A copy, not the caller's object. Add() welds what it is given, and the span handed over would keep widening in this list's merges - which
+            // would be quietly worse since the tick rule moved into Add, because a weld now reaches a few seconds further than an overlap did.
+            result.Add(new TimeSegment(segment.BeginTime, segment.EndTime));
           }
           else if ((double.IsNaN(minTime) || segment.BeginTime >= minTime) && maxTime >= segment.BeginTime)
           {

@@ -22,6 +22,7 @@ namespace EQLogParser
       var checkBoxFactory = new FrameworkElementFactory(typeof(CheckBox));
       var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
       stackPanelFactory.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+      stackPanelFactory.SetBinding(FrameworkElement.ToolTipProperty, new Binding("ToolTip"));
       checkBoxFactory.SetBinding(ToggleButton.IsCheckedProperty, new Binding("IsChecked"));
       checkBoxFactory.SetValue(FrameworkElement.WidthProperty, 20.0);
       textBlockFactory.SetBinding(TextBlock.TextProperty, new Binding("Text"));

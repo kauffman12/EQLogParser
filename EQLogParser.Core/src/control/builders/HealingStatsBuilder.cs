@@ -53,6 +53,8 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
+      var built = false;
+
       lock (_lock)
       {
         if (_healingGroups.Count != 0)
@@ -60,7 +62,14 @@ namespace EQLogParser
           options.Npcs.AddRange(_selected);
           options.AllRanges = _allRanges;
           BuildTotalStats(options);
+          built = true;
         }
+      }
+
+      // Outside the lock: the tidy waits before collecting, and it must not be holding the builder while it does.
+      if (built)
+      {
+        GcTidyUp.Request("stats built");
       }
     }
 

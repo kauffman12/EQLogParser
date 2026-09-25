@@ -28,6 +28,15 @@ namespace EQLogParser
     private const ushort TankAdps = 4;
     private const ushort HealingAdps = 8;
     private const ushort AnyAdps = CasterAdps + MeleeAdps + TankAdps + HealingAdps;
+    private const string CasterAdpsLabel = "Caster ADPS";
+    private const string MeleeAdpsLabel = "Melee ADPS";
+    private const string HideSelfOnlyLabel = "Hide Spells Only You See";
+    private const string SelectAllLabel = "Select All";
+    private const string UnselectAllLabel = "Unselect All";
+    private const string HideSelfOnlyTip =
+      "Include spells that only have a message that the player sees.\n" +
+      "Meaning there is no 'lands on other' message if the spell is cast on someone else. Turning this off makes\n" +
+      "it easier to compare spell that players have in common";
     private const double StartTimeOffset = 90;
     private readonly string[] _types = ["Defensive Skills", "ADPS", "Healing Skills"];
     private readonly Dictionary<string, SpellRange> _spellRanges = [];
@@ -44,6 +53,7 @@ namespace EQLogParser
     private bool _currentShowCasterAdps = true;
     private bool _currentShowMeleeAdps = true;
     private bool _isApplyingLayout;
+    private bool _rowsSeeded;
     private readonly ComboBoxItem _selectLayoutItem = new() { Content = "Select a Layout", Tag = "" };
     private static readonly List<string> NoLayoutsList = ["No Layouts Available"];
     private List<string> _availableLayouts;
@@ -77,12 +87,6 @@ namespace EQLogParser
             titleLabel2.Content = _selectedStats[1].OrigName + "'s ";
             titleLabel3.Content = _types[_timelineType] + " | " + currentStats.ShortTitle;
             break;
-        }
-
-        if (_timelineType is 0 or 2)
-        {
-          showMeleeAdps.Visibility = Visibility.Hidden;
-          showCasterAdps.Visibility = Visibility.Hidden;
         }
 
         var deathMap = new Dictionary<string, HashSet<double>>();
@@ -164,8 +168,9 @@ namespace EQLogParser
         }
       }
 
-      showCasterAdps.IsEnabled = showMeleeAdps.IsEnabled = _spellRanges.Count > 0;
-      hideSelfOnly.IsEnabled = _spellRanges.Count > 0 && _selectedStats.Find(stats => stats.OrigName == ConfigUtil.PlayerName) != null;
+      SeedRows();
+      BuildOptions();
+      BuildRows();
       Display();
       LoadLayoutsIntoSelector();
     }
@@ -226,18 +231,12 @@ namespace EQLogParser
         {
           Name = layoutName,
           SpellOrder = [.. _keyOrder],
-          HiddenSpells = [],
           HideSelfOnly = _currentHideSelfOnly,
           ShowCasterAdps = _currentShowCasterAdps,
           ShowMeleeAdps = _currentShowMeleeAdps,
           PixelsPerSecond = _pixelsPerSecond,
           LastModified = DateTime.Now
         };
-
-        foreach (var key in _selfOnly.Keys)
-        {
-          layout.HiddenSpells.Add(key);
-        }
 
         TimelineLayoutManager.SaveLayout(layout.Name, layout);
 
@@ -363,35 +362,28 @@ namespace EQLogParser
 
     private void ResetLayout()
     {
-      _keyOrder.Clear();
       _currentHideSelfOnly = true;
       _currentShowCasterAdps = true;
       _currentShowMeleeAdps = true;
       _pixelsPerSecond = 1;
-      hideSelfOnly.IsChecked = true;
-      showCasterAdps.IsChecked = true;
-      showMeleeAdps.IsChecked = true;
+      SeedRows();
+      BuildOptions();
+      BuildRows();
       Display();
       LoadLayoutsIntoSelector();
     }
 
     private void ApplyLayout(TimelineLayout layout)
     {
-      _keyOrder.Clear();
-      if (layout.SpellOrder != null)
-      {
-        _keyOrder.AddRange(layout.SpellOrder);
-      }
+      SetRowOrder(layout.SpellOrder);
 
       _currentHideSelfOnly = layout.HideSelfOnly;
       _currentShowCasterAdps = layout.ShowCasterAdps;
       _currentShowMeleeAdps = layout.ShowMeleeAdps;
       _pixelsPerSecond = layout.PixelsPerSecond;
 
-      hideSelfOnly.IsChecked = layout.HideSelfOnly;
-      showCasterAdps.IsChecked = layout.ShowCasterAdps;
-      showMeleeAdps.IsChecked = layout.ShowMeleeAdps;
-
+      BuildOptions();
+      BuildRows();
       Display();
     }
 
@@ -443,9 +435,11 @@ namespace EQLogParser
       var maxLength = 150.0;
       SpellRange deathRanges = null;
 
-      if (_keyOrder.Count == 0)
+      // Belt and braces: an order list nobody seeded means every spell this fight produced is on. The flag
+      // is what says so — an empty list can also mean "Unselect All", which has to stay empty.
+      if (!_rowsSeeded)
       {
-        _keyOrder.AddRange(_spellRanges.Keys.OrderBy(key => key));
+        SeedRows();
       }
 
       foreach (var key in _keyOrder)
@@ -460,11 +454,7 @@ namespace EQLogParser
           deathRanges = spellRange;
         }
 
-        if ((!_currentHideSelfOnly || !_selfOnly.ContainsKey(key))
-          && ((_currentShowCasterAdps && ((spellRange.Adps & CasterAdps) == CasterAdps))
-          || (_currentShowMeleeAdps && ((spellRange.Adps & MeleeAdps) == MeleeAdps))
-          || (_timelineType == 0 && ((spellRange.Adps & TankAdps) == TankAdps))
-          || (_timelineType == 2 && ((spellRange.Adps & HealingAdps) == HealingAdps))))
+        if (IsOffered(key, spellRange))
         {
           var calc = DataGridUtil.CalculateMinGridHeaderWidth(key);
           if (calc > maxLength)
@@ -533,24 +523,203 @@ namespace EQLogParser
       Application.Current.Resources["EQTimelineContentWidth"] = contentWidth;
     }
 
-    private void OptionsChange(object sender, RoutedEventArgs e)
+    // The options sit in one multi-select dropdown, and only the ones that can mean something here are
+    // offered: caster/melee belong to the ADPS timeline, "spells only you see" needs you in the group, and
+    // none of them exist before there is a spell row. Whatever is not offered keeps the value it had — a
+    // layout can still set those flags, they just have no control on this timeline.
+    private void BuildOptions()
+    {
+      var hasRows = _spellRanges.Count > 0;
+      var isPlayer = _selectedStats?.Exists(stats => stats.OrigName == ConfigUtil.PlayerName) ?? false;
+      var items = new List<ComboBoxItemDetails>();
+
+      if (hasRows && _timelineType == 1)
+      {
+        items.Add(new ComboBoxItemDetails(_currentShowCasterAdps, CasterAdpsLabel));
+        items.Add(new ComboBoxItemDetails(_currentShowMeleeAdps, MeleeAdpsLabel));
+      }
+
+      if (hasRows && isPlayer)
+      {
+        items.Add(new ComboBoxItemDetails(_currentHideSelfOnly, HideSelfOnlyLabel) { ToolTip = HideSelfOnlyTip });
+      }
+
+      timelineOptions.ItemsSource = items;
+      timelineOptions.Visibility = items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+      UiElementUtil.SetComboBoxTitle(timelineOptions, Resource.TIMELINE_OPTIONS_SELECTED);
+    }
+
+    private void OptionsChange(object sender, EventArgs e)
     {
       // ignore during init
-      if (hideSelfOnly == null || showCasterAdps == null || showMeleeAdps == null)
+      if (timelineOptions?.Items == null)
       {
         return;
       }
 
-      // check for changes
-      if (_currentHideSelfOnly != hideSelfOnly.IsChecked ||
-          _currentShowCasterAdps != showCasterAdps.IsChecked ||
-          _currentShowMeleeAdps != showMeleeAdps.IsChecked)
+      var hideSelfOnly = _currentHideSelfOnly;
+      var showCasterAdps = _currentShowCasterAdps;
+      var showMeleeAdps = _currentShowMeleeAdps;
+
+      foreach (var item in timelineOptions.Items.Cast<ComboBoxItemDetails>())
       {
-        _currentHideSelfOnly = hideSelfOnly?.IsChecked == true;
-        _currentShowCasterAdps = showCasterAdps?.IsChecked == true;
-        _currentShowMeleeAdps = showMeleeAdps?.IsChecked == true;
-        Display();
+        switch (item.Text)
+        {
+          case HideSelfOnlyLabel:
+            hideSelfOnly = item.IsChecked;
+            break;
+          case CasterAdpsLabel:
+            showCasterAdps = item.IsChecked;
+            break;
+          case MeleeAdpsLabel:
+            showMeleeAdps = item.IsChecked;
+            break;
+        }
       }
+
+      // check for changes
+      if (_currentHideSelfOnly == hideSelfOnly && _currentShowCasterAdps == showCasterAdps &&
+          _currentShowMeleeAdps == showMeleeAdps)
+      {
+        return;
+      }
+
+      _currentHideSelfOnly = hideSelfOnly;
+      _currentShowCasterAdps = showCasterAdps;
+      _currentShowMeleeAdps = showMeleeAdps;
+
+      BuildOptions();
+
+      // Flipping a filter changes which rows exist to offer.
+      BuildRows();
+      Display();
+    }
+
+    // A layout's SpellOrder is exactly what it turns on, in panel order. Seeding without one is the same
+    // operation over every spell this fight produced, alphabetically.
+    private void SetRowOrder(List<string> order)
+    {
+      _keyOrder.Clear();
+      if (order != null)
+      {
+        _keyOrder.AddRange(order);
+      }
+
+      _rowsSeeded = true;
+    }
+
+    private void SeedRows() => SetRowOrder([.. _spellRanges.Keys.OrderBy(key => key)]);
+
+    // One test decides what the option toggles allow through: Display() draws with it and BuildRows() lists
+    // with it, so the dropdown can never offer a row the panel would refuse to draw.
+    private bool IsOffered(string key, SpellRange spellRange) =>
+      (!_currentHideSelfOnly || !_selfOnly.ContainsKey(key))
+      && ((_currentShowCasterAdps && (spellRange.Adps & CasterAdps) == CasterAdps)
+        || (_currentShowMeleeAdps && (spellRange.Adps & MeleeAdps) == MeleeAdps)
+        || (_timelineType == 0 && (spellRange.Adps & TankAdps) == TankAdps)
+        || (_timelineType == 2 && (spellRange.Adps & HealingAdps) == HealingAdps));
+
+    // Every spell this fight produced that the options allow, in the order the panel shows them: the rows
+    // that are on, top to bottom, then everything else alphabetically and unchecked. Ticking one of those
+    // puts the row back at the bottom of the timeline — drag it home from there. A layout's file only lists
+    // what it turned on, so this is how a curated layout gets rows back without being rebuilt from zero.
+    private void BuildRows()
+    {
+      var offered = new HashSet<string>();
+      foreach (var (key, spellRange) in _spellRanges)
+      {
+        if (IsOffered(key, spellRange))
+        {
+          offered.Add(key);
+        }
+      }
+
+      // Both action boxes start unchecked and stay that way (see RowPreviewMouseDown): "12 of 40 Rows" on
+      // the closed box is what says where things stand.
+      var items = new List<ComboBoxItemDetails>
+      {
+        new() { IsChecked = false, Text = SelectAllLabel },
+        new() { IsChecked = false, Text = UnselectAllLabel }
+      };
+
+      var on = 0;
+      foreach (var key in _keyOrder)
+      {
+        if (offered.Contains(key))
+        {
+          items.Add(new ComboBoxItemDetails(true, key));
+          on++;
+        }
+      }
+
+      var current = new HashSet<string>(_keyOrder);
+      foreach (var key in offered.Where(key => !current.Contains(key)).OrderBy(key => key))
+      {
+        items.Add(new ComboBoxItemDetails(false, key));
+      }
+
+      rowOptions.ItemsSource = items;
+      rowOptions.Visibility = offered.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+      SetRowTitle(on, offered.Count);
+    }
+
+    // "12 of 40 Rows" is the hint that a layout (or an ✕) is holding rows back; with nothing off it reads
+    // "All Rows". The first item carries the title, same as the other multi-select dropdowns.
+    private void SetRowTitle(int on, int total)
+    {
+      if (rowOptions.Items[0] is not ComboBoxItemDetails carrier)
+      {
+        return;
+      }
+
+      var rows = Resource.TIMELINE_ROWS;
+      carrier.SelectedText = on >= total ? "All " + rows : $"{on} of {total} {rows}";
+      rowOptions.SelectedIndex = -1;
+      rowOptions.SelectedItem = carrier;
+    }
+
+    private void RowOptionsChange(object sender, EventArgs e)
+    {
+      if (rowOptions?.Items == null)
+      {
+        return;
+      }
+
+      // The first two items are the Select All / Unselect All pair, which act on click rather than here.
+      if (!TimelineRows.Apply(_keyOrder, rowOptions.Items.OfType<ComboBoxItemDetails>().Skip(2)))
+      {
+        return;
+      }
+
+      BuildRows();
+      Display();
+    }
+
+    // Select All / Unselect All are momentary, like ChatViewer's channel pair rather than the latching
+    // UiElementUtil helper: the rows go to what the name says and the action box never fills in, since this
+    // fires before the checkbox would flip itself and the click is handled here instead.
+    private void RowPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ComboBoxItem { Content: ComboBoxItemDetails details })
+      {
+        return;
+      }
+
+      var turnOn = details.Text == SelectAllLabel;
+      if (!turnOn && details.Text != UnselectAllLabel)
+      {
+        return;
+      }
+
+      for (var i = 2; i < rowOptions.Items.Count; i++)
+      {
+        if (rowOptions.Items[i] is ComboBoxItemDetails row)
+        {
+          row.IsChecked = turnOn;
+        }
+      }
+
+      e.Handled = true;
     }
 
     private void RefreshClick(object sender, RoutedEventArgs e)
@@ -684,7 +853,9 @@ namespace EQLogParser
       image.SetResourceReference(MarginProperty, "EQTimelineLabelMargin");
       image.PreviewMouseLeftButtonDown += (_, _) =>
       {
+        // Off, not gone: the row drops out of the order list and the rows dropdown keeps offering it, unchecked.
         _keyOrder.Remove(labelText);
+        BuildRows();
         Display();
       };
 
@@ -1163,6 +1334,9 @@ namespace EQLogParser
               labelStackPanel.Children.Insert(i + 2, _draggedElements[1]);
               mainStackPanel.Children.Insert(i + 1, _draggedElements[2]);
               mainStackPanel.Children.Insert(i + 2, _draggedElements[3]);
+
+              // The dropdown mirrors the panel, so it follows a drag.
+              BuildRows();
             }
             break;
           }

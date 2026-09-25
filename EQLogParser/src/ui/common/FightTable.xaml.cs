@@ -45,6 +45,13 @@ namespace EQLogParser
     private readonly DispatcherTimer _updateTimer;
     private bool _batchMode = UseBatchMode;
 
+    /*
+     * The grid's own span on the heartbeat (PerfCounters, UiBeatMonitor). It started with the table and keeps running whether or not the
+     * Fights tab is anywhere visible, inserting rows into a Syncfusion grid on the UI thread — which makes it a first-order suspect for
+     * any freeze reported in a different window, and the reason it is measured rather than assumed innocent.
+     */
+    private static readonly int ProcessFightsId = PerfCounters.Register("ui.fightTable");
+
     public FightTable()
     {
       InitializeComponent();
@@ -163,7 +170,13 @@ namespace EQLogParser
     private void EventsRemovedFight(string name) => RemoveFight(name);
     private void EventsNewFight(Fight fight) => ProcessFight(fight);
     private void EventsNewNonTankingFight(Fight fight) => ProcessNonTankingFight(fight);
-    private void ClearClick(object sender, RoutedEventArgs e) => FightManager.Instance.Clear();
+    private void ClearClick(object sender, RoutedEventArgs e)
+    {
+      FightManager.Instance.Clear();
+
+      // The record cache and every parsed event drop together here, which is the most the collector has ever had to hand back in one go.
+      GcTidyUp.Request("fight list cleared");
+    }
     private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     private void EventsThemeChanged(string _)
@@ -251,7 +264,10 @@ namespace EQLogParser
       lock (_fightsToProcess) _nonTankingFightsToProcess.Add(fight);
     }
 
-    private void DoProcessFights()
+    /* Wrapped rather than instrumented inside, so the batch-mode early-out is not mistaken for a one-microsecond pass. */
+    private void DoProcessFights() => PerfCounters.Run(ProcessFightsId, ProcessFightQueue);
+
+    private void ProcessFightQueue()
     {
       if (_batchMode) return;
 

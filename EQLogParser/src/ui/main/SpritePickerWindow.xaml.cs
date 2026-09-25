@@ -1,5 +1,4 @@
 using log4net;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -195,17 +193,10 @@ namespace EQLogParser
 
     private void OpenUiFilesClick(object sender, RoutedEventArgs e)
     {
-      var dialog = new CommonOpenFileDialog
+      var folder = FileDialogUtil.PickFolder(MainActions.GetOwner(), txtFolderPath.Text, "sprite sheet");
+      if (folder != null)
       {
-        IsFolderPicker = true,
-        // Set the initial directory
-        InitialDirectory = txtFolderPath.Text,
-      };
-
-      var handle = new WindowInteropHelper(MainActions.GetOwner()).Handle;
-      if (dialog.ShowDialog(handle) == CommonFileDialogResult.Ok)
-      {
-        LoadDefaultSheets(dialog.FileName);
+        LoadDefaultSheets(folder);
       }
     }
   }

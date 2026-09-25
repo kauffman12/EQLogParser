@@ -68,6 +68,37 @@ namespace EQLogParser
       return seen;
     }
 
+    /*
+     * The heartbeat's "fct.backlog" reading, which is what makes a drop count actionable instead of alarming: a peak parked at the cap says the queue
+     * was the limit and more room (or a shorter row) is the fix, while a peak nowhere near it says the losses came from somewhere else. It is a lifetime
+     * high-water because the question gets asked long after the pull, and a frame has to run for it to exist — waiting is counted where the lane clock runs.
+     */
+    [TestMethod]
+    public void PeakBacklogHoldsTheDeepestQueueAcrossTheWholeShow()
+    {
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+
+      Assert.AreEqual(0, ingest.PeakBacklog, "no frame has run, so nothing has been measured");
+
+      for (var i = 0; i < FctConveyor.BacklogCap + 4; i++)
+      {
+        Swing(ingest, hits, 200 + i, 0);
+      }
+
+      Frame(ingest, hits, 1);
+      var deepest = ingest.PeakBacklog;
+      Assert.IsTrue(deepest >= FctConveyor.BacklogCap - 1, $"a burst that filled the rail is reported as the queue it made: {deepest}");
+
+      /* Let the column run out entirely. The level stays where the burst left it, which is the whole point: tomorrow's reader asks about last night's raid. */
+      for (var now = 2.0; now < 6000; now += 50)
+      {
+        Frame(ingest, hits, now);
+      }
+
+      Assert.AreEqual(deepest, ingest.PeakBacklog, "high-water does not follow the queue back down");
+    }
+
     /* How far every visible row travelled across one frame. One column, one number: that is the invariant under test. */
     private static List<double> Step(FctIngest ingest, List<FctHitState> hits, double from, double to)
     {
@@ -630,6 +661,52 @@ namespace EQLogParser
 
       Assert.IsTrue(framesMeasured > 30, "the flood should have exercised the accelerator for a good stretch of frames");
       Assert.IsTrue(slowestPress < 0.90, $"a lane this busy should have sped up at all, lowest press {slowestPress:0.###}");
+    }
+
+    /* How far a column goes when it is saturated for good, rather than for one AoE. The session this was written for ran with its
+       queue pinned at BacklogCap for eleven minutes and lost 572 arrivals, every one refused while the canvas was painting — which
+       is only fixable by the lane moving faster, because a lane at the floor has no other knob left. So the floor is measured here,
+       not assumed: a flood held long enough must drive the pace all the way down to it, and the floor sits below the 45% that session was
+       drowning at (which is why the assertions are on the pace actually reached rather than on the constant: a comparison of two literals proves
+       nothing about a lane). Both halves matter: a lane that never reaches its floor leaves throughput unusable, and a floor nobody lowered after
+       the measurement leaves the numbers lost. */
+    [TestMethod]
+    public void ASaturatedColumnRunsAtTheFloorOfItsTravel()
+    {
+      var ingest = Line();
+      var hits = new List<FctHitState>();
+      var msPerPx = FctMotion.ArcScrollMsPerPx * FctScale.Time;
+
+      var head = (FctHitState?)null;
+      var slowestPress = 1.0;
+
+      // one arrival every frame for four seconds: a feed the column cannot separate even when pressed, which is the state the
+      // floor exists to survive rather than the brief burst the ramp test above covers
+      for (var frame = 1; frame <= 250; frame++)
+      {
+        var now = frame * 16.0;
+        Swing(ingest, hits, 400 + frame, now - 8);
+
+        var before = head?.ConveyorQ ?? 0.0;
+        Frame(ingest, hits, now);
+
+        if (head is null || !hits.Contains(head) || head.ConveyorQ >= head.ConveyorTravel)
+        {
+          head = Visible(hits).OrderByDescending(h => h.ConveyorQ).FirstOrDefault();
+          continue;
+        }
+
+        var step = head.ConveyorQ - before;
+        if (step > 0.0)
+        {
+          slowestPress = Math.Min(slowestPress, FctConveyor.FrameMs / (msPerPx * step));
+        }
+      }
+
+      Assert.IsTrue(slowestPress <= FctConveyor.PressFloor * 1.05,
+        $"a column this busy should have run its accelerator to the floor: fastest press {slowestPress:0.###}, floor {FctConveyor.PressFloor:0.###}");
+      Assert.IsTrue(slowestPress >= FctConveyor.PressFloor - 0.02,
+        $"the floor is a floor, not a suggestion: {slowestPress:0.###}");
     }
 
     /* The pace is the player's dial and nothing else — the one number a "too fast / too slow" complaint is about. Half the speed

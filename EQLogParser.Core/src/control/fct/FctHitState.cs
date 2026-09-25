@@ -67,6 +67,14 @@ namespace EQLogParser
      * guessing which law a number meant. */
     public double Bow;
 
+    /* Which hand of its rail this row's block hangs on, and it is the mirror of the bow: a column that leans LEFT turns its
+     * rows around so the digits hang to the RIGHT of the rail, because the lean is where their own air is. The rail stays the
+     * spine either way — same-column numbers still line up, they line up on their left edge instead of their right. Straight
+     * rails never set it (the shipped odometer), and neither does `open`, which bends into room the block already leaves free.
+     * Everything downstream reads this: FctLayout.BlockFromRail swaps its extents, FctMotion.ArcedX converts rail→centre the
+     * other way, and the drawing needs no change at all because it places text from the centre. */
+    public bool HangRight;
+
     /*
      * Fountain fall distance, and note the sign runs opposite to Rise because it is screen-relative: positive
      * accelerates toward the bottom of the screen (the usual gravity tail), negative back up toward the gap, which is

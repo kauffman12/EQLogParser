@@ -1,7 +1,6 @@
 using EQLogParser.Audio;
 using log4net;
 using log4net.Appender;
-using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -33,13 +32,10 @@ namespace EQLogParser
     // Pick a NAG database directory via folder dialog; returns the path or null if cancelled
     internal static string SelectNagDatabaseDirectory()
     {
-      using var dialog = new System.Windows.Forms.FolderBrowserDialog
-      {
-        Description = "Select the directory containing your NAG database files. (*.json)",
-        AutoUpgradeEnabled = true,
-      };
-
-      return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dialog.SelectedPath : null;
+      // This one was a WinForms FolderBrowserDialog: a third implementation of the same job, with no owner window
+      // and nothing around it. The app picks folders one way now.
+      return FileDialogUtil.PickFolder(MainActions.GetOwner(), null, "NAG database",
+        "Select the directory containing your NAG database files. (*.json)");
     }
 
     internal static string SelectImportFile(TriggerNode parent, bool triggers = true)
@@ -47,13 +43,7 @@ namespace EQLogParser
       var defExt = triggers ? $".{ExtTrigger}.gz" : $".{ExtOverlay}.gz";
       var filter = triggers ? $"All Supported Files|*.{ExtTrigger}.gz;*.gtp" : $"All Supported Files|*.{ExtOverlay}.gz";
 
-      var dialog = new OpenFileDialog
-      {
-        DefaultExt = defExt,
-        Filter = filter
-      };
-
-      return dialog.ShowDialog() == true ? dialog.FileName : null;
+      return FileDialogUtil.PickFile(MainActions.GetOwner(), null, triggers ? "trigger import" : "overlay import", filter, defaultExt: defExt);
     }
 
     // Import overlays from a NAG database directory (reads overlays-database.json and parses via NagUtil).
@@ -870,13 +860,13 @@ namespace EQLogParser
           {
             var isTriggers = exportList[0].Name == TriggerStateDB.Triggers;
             var result = JsonSerializer.Serialize(exportList);
-            var saveFileDialog = new SaveFileDialog();
             var filter = isTriggers ? $"Triggers File (*.{ExtTrigger}.gz)|*.{ExtTrigger}.gz" : $"Overlays File (*.{ExtOverlay}.gz)|*.{ExtOverlay}.gz";
-            saveFileDialog.Filter = filter;
+            var pickedFile = FileDialogUtil.SaveFile(MainActions.GetOwner(), null,
+              isTriggers ? "triggers export" : "overlays export", filter);
 
-            if (saveFileDialog.ShowDialog() == true)
+            if (pickedFile != null)
             {
-              var gzipFileName = new FileInfo(saveFileDialog.FileName);
+              var gzipFileName = new FileInfo(pickedFile);
               var gzipTargetAsStream = gzipFileName.Create();
               var gzipStream = new GZipStream(gzipTargetAsStream, CompressionMode.Compress);
               var writer = new StreamWriter(gzipStream);

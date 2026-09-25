@@ -40,6 +40,30 @@ namespace EQLogParser
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<Speak> _speakCollection = [];
     private readonly Dictionary<string, TriggerWrapper> _activeTriggersById = [];
+
+
+    /*
+     * What one log line costs to evaluate, measured on the trigger thread. This path was the one unmeasured suspect in a report of the
+     * numbers stopping: matching runs here, tens of thousands of times a second on a player with a large set (one imported set measures
+     * 4,227 enabled triggers, so a raid line is tested against every one of them), and it runs on a pool thread, which means it can eat a
+     * core without ever showing up as a UI stall. `trig.line` is the whole pass over one line including anything a fired trigger then did;
+     * `trig.tests` is how many patterns that pass asked for, so count times average is the matching bill and the difference is the actions.
+     * Neither may be named as the occupant of a stall — see the uiThread flag — and all three cost one timestamp pair per line.
+     */
+    private static readonly int LineEvalId = PerfCounters.Register("trig.line", uiThread: false);
+    private static readonly int LineTestsId = PerfCounters.Register("trig.tests", uiThread: false);
+    private static readonly int ActiveTriggersId = PerfCounters.Register("trig.active", uiThread: false);
+
+    /*
+     * How many triggers every live processor is testing lines against, summed. There is one processor per watched log plus the tester, and a
+     * level written by whichever of them last rebuilt its set would print 0 for an idle character over the 608 that are actually running - which
+     * is exactly what it did (a soak showed trig.active=0 in windows whose trig.tests/trig.line ratio was 608). Each instance contributes its own
+     * count and takes it back on dispose, so the number on the heartbeat is the one a line pays.
+     */
+    private static int _activeTotal;
+
+    /* What this instance last contributed to that sum, so changing it is a delta rather than a guess. */
+    private int _reportedActive;
     private readonly SemaphoreSlim _activeTriggerSemaphore = new(1, 1);
     private readonly object _repeatedLock = new();
     // Source of truth for variable values — ConcurrentDictionary allows lock-free reads during text processing.
@@ -305,6 +329,9 @@ namespace EQLogParser
       if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync().ConfigureAwait(false);
 
+      var evalMark = PerfCounters.Begin(LineEvalId);
+      PerfCounters.Note(LineTestsId, _activeTriggersById.Count);
+
       try
       {
         var beginTicks = DateTime.UtcNow.Ticks;
@@ -360,6 +387,7 @@ namespace EQLogParser
       }
       finally
       {
+        PerfCounters.End(evalMark);
         _previous = lineData;
         _activeTriggerSemaphore.Release();
       }
@@ -894,7 +922,9 @@ namespace EQLogParser
         OriginalMatches = matches,
         PreviousMatches = previousMatches,
         ResetColor = _characterResetColor ?? trigger.ResetColor,
-        TimerOverlayIds = new ReadOnlyCollection<string>(trigger.SelectedOverlays),
+        // A copy, not a wrapper: ReadOnlyCollection is a view, and trigger.SelectedOverlays is edited in place by the overlay config UI, so
+        // wrapping it would let a later tick of a checkbox rewrite what this countdown remembers being shown on.
+        TimerOverlayIds = new ReadOnlyCollection<string>([.. trigger.SelectedOverlays]),
         TimerIcon = wrapper.TimerIcon,
         TimerType = trigger.TimerType,
         TimesToLoopCount = loopCount,
@@ -905,15 +935,23 @@ namespace EQLogParser
         TriggerAgainOption = trigger.TriggerAgainOption,
       };
 
-      newTimerData.DurationSeconds = trigger.DurationSeconds;
-      if (wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0)
-      {
-        newTimerData.DurationSeconds = dynamicDuration;
-      }
+      /*
+       * Clamp the duration where it enters, because from here on it is arithmetic. Its length comes from the trigger config or, for the timer types that allow
+       * it, from a TS capture (DateUtil.SimpleTimeToSeconds, which answers in uint seconds), and the only test on either was "> 0" — past which the removal
+       * delay saturates its int cast (measured: a 24.8 day sleep for the task whose only job is removing this bar) and a big enough value wraps EndTicks into
+       * the past. TimerLifecycle holds the numbers, the ceiling and the measurements.
+       */
+      var requestedDuration = wrapper.TriggerData.TimerType is 1 or 3 && !double.IsNaN(dynamicDuration) && dynamicDuration > 0
+        ? dynamicDuration
+        : trigger.DurationSeconds;
 
-      newTimerData.EndTicks = beginTicks + (long)(TimeSpan.TicksPerSecond * newTimerData.DurationSeconds);
+      newTimerData.DurationSeconds = TimerLifecycle.ClampDuration(requestedDuration);
+
+      newTimerData.EndTicks = TimerLifecycle.EndTicks(beginTicks, newTimerData.DurationSeconds);
       newTimerData.DurationTicks = newTimerData.EndTicks - beginTicks;
-      newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0 ? beginTicks + (long)(TimeSpan.TicksPerSecond * trigger.ResetDurationSeconds) : 0;
+      newTimerData.ResetTicks = trigger.ResetDurationSeconds > 0
+        ? TimerLifecycle.ResetTicks(beginTicks, trigger.ResetDurationSeconds)
+        : 0;
       newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
 
       if (wrapper.HasRepeatedTimer)
@@ -947,7 +985,7 @@ namespace EQLogParser
         {
           try
           {
-            await Task.Delay((int)diff * 1000, warningToken);
+            await Task.Delay(TimerLifecycle.DelayMs(diff), warningToken);
           }
           catch (OperationCanceledException)
           {
@@ -1064,8 +1102,17 @@ namespace EQLogParser
         timerList.Add(newTimerData);
       }
 
-      // true for add
-      await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
+      /*
+       * Ask an overlay to show a countdown only when there is one. A row with no length cannot be drawn as "nothing" — FormatTicks answers 00:00 for zero as it
+       * does for any negative — and in show-reset mode that 00:00 is the cooldown text itself, with IsRemoved false by design, so it never leaves. The trigger
+       * still does everything else it was asked to: the row stays in its own list, and the end actions below (speak, display text, trigger log, repeat) run the
+       * same whether or not a bar is painted.
+       */
+      if (newTimerData.DurationSeconds > 0)
+      {
+        // true for add
+        await TriggerOverlayManager.Instance.UpdateTimerAsync(trigger, newTimerData, TriggerOverlayManager.TimerStateChange.Start);
+      }
 
       var data2 = newTimerData;
       var token = data2.CancelSource.Token;
@@ -1074,7 +1121,9 @@ namespace EQLogParser
       {
         try
         {
-          await Task.Delay((int)(data2.DurationSeconds * 1000), token);
+          // The removal task. DelayMs rather than a cast: this one detached task is the ONLY thing that takes an ordinary timer off
+          // the overlay, so a duration that saturates the cast (or throws on a negative) leaves the row on screen permanently.
+          await Task.Delay(TimerLifecycle.DelayMs(data2.DurationSeconds), token);
         }
         catch (OperationCanceledException)
         {
@@ -1404,6 +1453,10 @@ namespace EQLogParser
           }
         }
       }
+
+      /* The set size belongs on the heartbeat: "4,227 enabled triggers" is the difference between a clean soak and somebody's freeze. */
+      Interlocked.Add(ref _activeTotal, activeTriggersById.Count - Interlocked.Exchange(ref _reportedActive, activeTriggersById.Count));
+      PerfCounters.Gauge(ActiveTriggersId, Volatile.Read(ref _activeTotal));
 
       if (triggerCount > 750 && CurrentProcessorName?.Contains("Trigger Tester") is false)
       {
@@ -1928,6 +1981,9 @@ namespace EQLogParser
       if (_isDisposed) return;
       _isDisposed = true;
       _ready = false;
+
+      /* Takes this processor's share out of the heartbeat's trig.active; a stopped matcher must not keep being counted as work. */
+      Interlocked.Add(ref _activeTotal, -Interlocked.Exchange(ref _reportedActive, 0));
       await StopTriggersAsync(true).ConfigureAwait(false);
 
       TriggerStateDB.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;

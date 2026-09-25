@@ -68,6 +68,8 @@ namespace EQLogParser
 
     internal void RebuildTotalStats(GenerateStatsOptions options, bool reset = false)
     {
+      var built = false;
+
       if (EventsGenerationStatus?.GetInvocationList().Length > 0)
       {
         lock (_lock)
@@ -81,8 +83,15 @@ namespace EQLogParser
           {
             FireNewStatsEvent();
             ComputeDamageStats(options);
+            built = true;
           }
         }
+      }
+
+      // Outside the lock: the tidy waits before collecting, and it must not be holding the builder while it does.
+      if (built)
+      {
+        GcTidyUp.Request("stats built");
       }
     }
 

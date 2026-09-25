@@ -31,6 +31,9 @@ namespace EQLogParser
     public string Text { get; set; }
     public string SelectedText { get; set; }
 
+    // Shown on the row inside the dropdown, for the options whose wording needs explaining.
+    public object ToolTip { get; set; }
+
     private bool _isChecked;
     public bool IsChecked
     {

@@ -12,6 +12,19 @@ namespace EQLogParser
      * consume heals without re-parsing. Fires on the log reader thread, replay and live alike. */
     public static event Action<HealProcessedEvent> EventsHealProcessed;
 
+    // Heal lines run at about a quarter of the damage rate on the logs this was measured against.
+    private const int ExpectedHealOffers = 1_000_000;
+
+    /* A raid restates the same heal over and over — on a two night log, three quarters of the heal lines
+     * repeat one already seen. HealRecord is equal by value, so a repeat costs a slot in the store instead of
+     * another object, and the objects stay alive as long as the loaded log does. Sharing an instance means
+     * sharing it with the FCT feed and the store both, which heals tolerate because nothing writes to a heal
+     * after it is handed out — unlike damage, where HandleDamageProcessed rewrites record.Attacker some hundred
+     * lines after its own cache lookup, changing every earlier event that shared the instance and moving a live
+     * key. First sightings take no entry, as in FightManager._damageCache; numbers in
+     * docs/DesignNotes.md → What a loaded raid costs in memory. */
+    private static readonly RepeatStore<HealRecord> _healCache = new(ExpectedHealOffers);
+
     private HealingLineParser()
     {
 
@@ -26,6 +39,7 @@ namespace EQLogParser
         if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1 &&
           HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
+          record = GetCachedHealRecord(record);
           RecordsStore.Instance.Add(record, lineData.BeginTime);
 
           // hoisted so the event object is not built per heal when nothing is listening (FCT off)
@@ -56,6 +70,24 @@ namespace EQLogParser
       }
 
       return false;
+    }
+
+    /*
+     * Drops the shared heal instances. Called when the manager clears active data.
+     */
+    internal static void ClearCaches() => _healCache.Clear();
+
+    // Exact repeats of a heal collapse onto one instance; two heals that differ in any stored field at all
+    // — target, spell, amount, overage, modifiers — stay separate records.
+    private static HealRecord GetCachedHealRecord(HealRecord incoming)
+    {
+      if (_healCache.TryGet(incoming, out var cached))
+      {
+        return cached;
+      }
+
+      _healCache.Offer(incoming);
+      return incoming;
     }
 
     private static HealRecord HandleHealed(string part, int optional, double beginTime)
