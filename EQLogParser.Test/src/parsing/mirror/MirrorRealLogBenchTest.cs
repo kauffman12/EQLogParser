@@ -25,8 +25,12 @@ public class MirrorRealLogBenchTest
 
         PipelineHarness.EnsureDataStore();
 
+        // Same regex as PipelineHarness.RunCore. An earlier version ended in \.txt$ while reading
+        // the name WITHOUT extension, so it never matched: PlayerName stayed empty, every record
+        // kept "You" instead of the character name, and legacy+mirror both under-counted together
+        // (222 vs the real 261 on the 09-17 capture) - two consistent numbers is not proof.
         var selfMatch = System.Text.RegularExpressions.Regex.Match(
-            Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_(?:.+?)(?:-[^-]*)?\.txt$",
+            Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (selfMatch.Success)
         {
@@ -41,6 +45,12 @@ public class MirrorRealLogBenchTest
         var fm = new FightManager();
         FightManager.Instance = fm;
         DamageLineParser.FightManager = fm;
+
+        // Legacy count inside the same run: "derived == current" here is what MirrorComparisonTest
+        // asserts end-to-end; seeing both numbers side by side says whether a difference is parser
+        // variance across processes or a deriver gap (learned the hard way on the 09-17 capture).
+        var legacyFights = 0;
+        fm.EventsNewFight += _ => Interlocked.Increment(ref legacyFights);
 
         var facts = new DamageFactTable(100_000);
         var mirror = new CombatMirror(facts);
@@ -126,7 +136,7 @@ public class MirrorRealLogBenchTest
 
             totalSw.Stop();
             Console.WriteLine($"[bench] seed={seedSw.ElapsedMilliseconds:N0} ms  classify={classSw.ElapsedMilliseconds:N0} ms  " +
-                              $"derive={deriveSw.ElapsedMilliseconds:N0} ms  fights={derived.Count:N0}");
+                              $"derive={deriveSw.ElapsedMilliseconds:N0} ms  fights={derived.Count:N0}  legacy-fights={legacyFights:N0}");
             Console.WriteLine($"[bench] TOTAL wall={totalSw.ElapsedMilliseconds:N0} ms");
         }
         finally
