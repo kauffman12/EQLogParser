@@ -212,6 +212,52 @@ public class FightProjectionTest
     }
 
     [TestMethod]
+    public void SameSecondKillingBlow_StaysInTheDeadRow_NoPhantomRow()
+    {
+        // The real shape (Waxwork Lancer, 2026-09-13 log): the last hits and the slain line all
+        // carry the same second-resolution timestamp, the slain line LAST. Legacy folds them into
+        // one dead fight; "dt <= t" used to split at the first same-second fact, orphaning the
+        // killing blow into a zero-length live row behind the dead one.
+        var facts = BuildFacts(
+            ("Nniki", "Waxwork Lancer", 220465, 0, LabelTypes.Melee),
+            ("Sancus", "Waxwork Lancer", 54797, 0, LabelTypes.Melee),
+            ("Highwizard", "Waxwork Lancer", 7461640, 1, LabelTypes.Melee)); // killing blow, same second as the slain line
+        facts.AddDeath(new DeathFact(3, (long)(T0 + 1), facts.InternName("Waxwork Lancer"), -1));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Nniki", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+        timeline.SetIdentity("Sancus", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+        timeline.SetIdentity("Highwizard", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var rows = FightProjection.Build(facts, timeline);
+        Assert.AreEqual(1, rows.Count, "no extra row behind the dead one");
+        Assert.IsTrue(rows[0].Dead, "the slain line still marks the engagement dead");
+        Assert.AreEqual(7736902, rows[0].DamageTotal, "the killing blow belongs to this fight");
+        Assert.AreEqual((long)(T0 + 1), rows[0].LastTime);
+    }
+
+    [TestMethod]
+    public void HitStrictlyAfterTheSlainSecond_StillOpensTheNextEngagement()
+    {
+        // The split boundary is the slain's second, not the slain line's position: a later
+        // instance first struck one second after the death starts its own (live) row.
+        var facts = BuildFacts(
+            ("Nniki", "Waxwork Lancer", 220465, 0, LabelTypes.Melee),
+            ("Highwizard", "Waxwork Lancer", 7461640, 1, LabelTypes.Melee),
+            ("Nniki", "Waxwork Lancer", 900, 2, LabelTypes.Melee));       // next instance
+        facts.AddDeath(new DeathFact(2, (long)(T0 + 1), facts.InternName("Waxwork Lancer"), -1));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Nniki", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+        timeline.SetIdentity("Highwizard", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var rows = FightProjection.Build(facts, timeline);
+        Assert.AreEqual(2, rows.Count);
+        Assert.IsTrue(rows[0].Dead);
+        Assert.AreEqual(7682105, rows[0].DamageTotal, "everything up to and including the slain second stays in the dead row");
+        Assert.IsFalse(rows[1].Dead);
+        Assert.AreEqual(900, rows[1].DamageTotal);
+    }
+
+    [TestMethod]
     public void DeathMarksTheProjectedRow()
     {
         var facts = BuildFacts(("Raidman", "Grul", 10, 0, LabelTypes.Melee));

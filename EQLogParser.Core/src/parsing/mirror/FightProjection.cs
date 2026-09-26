@@ -100,9 +100,15 @@ namespace EQLogParser.Mirror
 
         open.TryGetValue(key, out var row);
 
-        // A slain line at/before this fact ends the engagement that was open when it died.
+        // A slain line ends the engagement only once a STRICTLY LATER timestamp arrives - the
+        // same boundary legacy draws: CheckSlainQueue flushes on currentTime > _slainTime, so
+        // same-second damage (the killing blow and "was slain" share a second-resolution stamp,
+        // e.g. Waxwork Lancer @ 18:36:52) still lands in the old fight. "dt <= t" split that
+        // combat mid-second: the first same-second fact consumed the death, closed the row at
+        // the previous second, and every remaining hit of the kill - including the killing blow
+        // itself - opened a zero-length live row behind the dead one.
         if (row is not null && deathsByName.TryGetValue(key, out var deaths)
-            && deaths.TryPeek(out var dt) && dt <= t)
+            && deaths.TryPeek(out var dt) && dt < t)
         {
           deaths.Dequeue();
           row.Dead = true;
