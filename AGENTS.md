@@ -97,6 +97,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   passes a `Labels` constant or a variable assigned from one; `GetTypeFromSpell` returns only its input, `Bane` or `Proc`; the miss branch maps onto six words;
   heals pick two) — and note `Reverse DS` is **not** in it: the parser uses that word for an *attacker*, never as a type. Both records are **40 B** now; below
   that wants two-byte name ids, which is the flat-array conversation, not trimming. Numbers: docs/DesignNotes.md → "Sixteen words in one byte".
+- **The mirror's damage summary decides direction, and never "fixes" the pet gap**: `MirrorDamageIndex` is filled inside
+  `FightProjection` through `FactOwnershipHandler`, whose flag is `towardOwner` — the row's own name was the defender,
+  which is the same comparison that splits `DamageToOwner` from `DamageByOwner`. It is **not** "the attacker was
+  player-side": an unclassified name hitting a known NPC belongs in those blocks too (legacy agrees), and one expression
+  for both is what keeps an index sum from drifting from the row's number (`MirrorSummaryFightsTest`). Two silent-nothing
+  traps live in materializing: seed-and-compare on `double.NaN` leaves a fight with no end (`time > NaN` is false, so the
+  summary divides by an empty window and nothing throws), and a record's `SubType` may never be null —
+  `StatsUtil.UpdateDamageStats` keys a `ConcurrentDictionary` on it, inside `DamageStatsBuilder`'s catch that logs and
+  carries on, so a null is an empty board. A materialization test therefore asserts real time bounds **and** pushes the
+  result through the real builder. On `mini-fight.txt` the derived board reads **+19.5 %** over legacy with every raider
+  legacy placed reading identically: two pets whose owner the registry never learned contribute nothing to the legacy
+  board at all, while the line's own ownership word (`ClassificationRules.OwnerInName` → `AttackerOwner`) folds them under
+  their raiders here. Do not force the two sides into agreement — the gap is the experiment; the test pins its shape.
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

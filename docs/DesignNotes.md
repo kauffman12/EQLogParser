@@ -3440,3 +3440,70 @@ selected by drag, by Shift and the arrows, and copied while the chooser has focu
 the rule above: the folder of the path on screen, or nothing at all when no path is showing — "pick a different one"
 usually means another file in this folder. The dropdown itself is untouched: re-picking "Browse for Sound File" still
 does nothing, and the path is the door.
+
+## Combat mirror: a damage summary from derived facts
+
+The mirror's first product seam. Selecting rows in the derived fight list runs the *existing* damage summary over
+facts the projection captured, so two engines can be read side by side over one log. `EQLogParser.Core/src/parsing/
+mirror/MirrorSummaryFights.cs` holds it: `MirrorDamageIndex` (fight → the ordinals of its damage facts), `SummaryFightFor`
+(ordinal list → an ordinary `Fight` whose `DamageBlocks` hold ordinary `DamageRecord`s, one `ActionGroup` per run of
+facts sharing a second — `FightManager.AddAction`'s own grouping rule), and `MirrorSummaryFights.Build` (selected rows →
+fights plus the `TimeRange` window `FightTable` would have built for the same selection). Nothing in the summary knows
+the mirror exists; it is handed `Fight` objects.
+
+The index is filled **during** the projection, through the `FactOwnershipHandler` sink, because the answer it needs —
+which end of the fact the row sits on — only exists inside `FightProjection`, at the second the timeline decided what
+each name was. The flag is called `towardOwner`: true when the row's own name was the defender, which is literally the
+comparison `FightProjection` splits `DamageToOwner` from `DamageByOwner` by. It is *not* "the attacker was player-side":
+an unclassified name hitting a known NPC aims at that NPC too, and legacy puts such a record in `DamageBlocks` as well
+(`FightManager.IsValidAttack` accepts it when the name looks like a player). Keeping one expression for both means an
+index filled from the sink cannot drift from the row's number — a test checks that instead of trusting a comment.
+
+### Two ways to produce nothing at all, both found by tests
+
+Neither failure prints anything, which is why they are written down.
+
+- `lastDamage` seeded with `double.NaN` and updated by `if (time > lastDamage)` never leaves NaN: `time > NaN` is
+  false. The fight then has no end, `TimeRange.Add` drops a segment whose bounds do not compare, and
+  `DamageStatsBuilder` divides by an activity window of nothing. A derived selection that renders no numbers, with no
+  exception anywhere to say so. Both bounds need their own `double.IsNaN` test.
+- A materialized record's `SubType` may never be null. The fact table stores "the line carried no modifier text" as
+  `NoSubtype` (-1) and plain melee is the ordinary case of that; but `StatsUtil.UpdateDamageStats` looks the subtype up
+  in a `ConcurrentDictionary`, which throws on a null key — inside `DamageStatsBuilder`'s own catch, which logs and
+  carries on. So a null there is an empty board, not a rougher one. `MirrorSummaryFights.SubTypeOf` substitutes the type
+  word: identical activity window, one breakdown row per kind instead of one per modifier message.
+
+So a materialization test must not stop at "the records match the facts". Assert the fight's time bounds are real, and
+run the result through the actual `DamageStatsBuilder` — that is where both traps surfaced.
+
+### What the two boards actually say, measured (`mini-data/mirror/mini-fight.txt`)
+
+All six damage-filter settings on (AppSettings' defaults), one boss, both lists selecting the same fight:
+
+| | legacy board | derived board |
+|---|---|---|
+| raid total | 604,857 | **722,926** (+19.5 %) |
+| Rune, Ammeren, Triumph, Soell, Puksu, Kuma | 234065, 123456, 98636, 91356, 56666, 678 | identical, to the point |
+| Sancus +Pets | — | 114,811 |
+| Jazrakhan +Pets | — | 3,258 |
+
+Every raider legacy managed to place reads exactly the same on the derived board, and the whole difference is two pets.
+`PlayerRegistry` never learned them from this log: at the end of the run "Sancus`s pet" answers `IsPetOrPlayerOrMerc`
+false, `IsPossiblePlayerName` false, `GetPlayerFromPet` null — so `FightManager.IsValidAttack` refused every one of their
+records and their damage entered **no fight at all**, neither the boss's row nor a row of their own. The line itself says
+whose pet it is; that is R5 evidence, stored as a flag on the fact and cut back out by `ClassificationRules.OwnerInName`
+(one rule now shared by the rules pass, `FightDeriver`'s row `PetOwner`, and the materialized record's `AttackerOwner`).
+`DamageStatsBuilder` folds a pet under the name in `AttackerOwner` when the registry has no mapping, which is where the
+"+Pets" rows come from.
+
+This difference is a rule difference, not arithmetic, and it must not be "fixed" into agreement: the mirror's whole
+purpose is to decide at read time from everything the log said, rather than at parse time from what the registry
+happened to know when the first line of a pair arrived. `MirrorSummaryFightsTest` pins the shape instead — every legacy
+raider equal, derived-only entries all `+Pets`, and the delta equal to the owner-in-line damage computed from the fact
+table (not from either board).
+
+One gap is deliberate and known: a materialized record carries `ModifiersMask` 0 because the fact table never captured
+the mask, so `DamageValidator` cannot exclude assassinate/headshot/slay-undead/… damage. With any of those six settings
+off the derived total reads high — by design of the capture, and closing it costs one byte per damage fact (~10 MB on a
+5 M-fact log), not a rebuild. `EQLogParser.Test/src/parsing/mirror/MirrorSummaryFightsTest.cs` holds all of the above;
+the UI side is one-way (mirror selection → damage board) so that clicking the other list still owns its own boards.
