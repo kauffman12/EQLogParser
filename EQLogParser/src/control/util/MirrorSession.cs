@@ -38,6 +38,13 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private readonly DamageFactTable _facts = new(100_000);
+
+    /*
+     * Healing in its own table, sharing the damage table's interned names — see HealFact for why the streams
+     * are separate. Captured from here so the mirror's heal population is exactly the population the healing
+     * board reads (RecordsStore gets the same records, off the same event).
+     */
+    private readonly HealFactTable _heals;
     private readonly CombatMirror _mirror;
 
     // The snapshot currently on screen (see MirrorSnapshot.Facts): a selection is materialized against
@@ -52,7 +59,8 @@ namespace EQLogParser
 
     public MirrorSession()
     {
-      _mirror = new CombatMirror(_facts);
+      _heals = new HealFactTable(_facts);
+      _mirror = new CombatMirror(_facts, _heals);
       ChatSink = new MirrorChatSink(_mirror);
       _quietTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
       _quietTimer.Tick += QuietTick;
@@ -102,7 +110,9 @@ namespace EQLogParser
             // dividers in this grid.
             Sectionizer.StampGroupIds(fights);
 
-            return MirrorFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
+            var snapshot = MirrorFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
+            snapshot.Heals = _heals;
+            return snapshot;
           });
           sw.Stop();
 
@@ -169,10 +179,18 @@ namespace EQLogParser
       return MirrorSummaryFights.Build(selected, snapshot.DamageIndex, snapshot.Facts);
     }
 
-    // Every fact stream counts — a log without combat damage (login/city logs) still derives
-    // (an empty fight list is an honest answer; "capturing forever" is not).
+    /*
+     * Every fact stream counts, heals included. Two reasons the heals belong in the quiescence signal rather
+     * than beside it: a healing-only stretch (a raid regrouping while everyone recovers) would otherwise read
+     * as quiet and fire a derive over facts that are still arriving; and "capturing… N", which is the one
+     * number a user can compare against the log, would be quietly short by a third of the raid's output.
+     *
+     * A log without combat damage (login/city logs) still derives — an empty fight list is an honest answer,
+     * "capturing forever" is not.
+     */
     private long CapturedTotal =>
-      _facts.FactCount + _facts.DeathCount + _facts.TauntCount + _facts.IdentityEventCount + _facts.EvidenceCount;
+      _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount
+      + _facts.IdentityEventCount + _facts.EvidenceCount;
 
     // Quiescence proxy without touching LogReader internals: derive once the captured-fact count
     // has been stable for two ticks AND differs from the last derived count. Not a one-shot EOF

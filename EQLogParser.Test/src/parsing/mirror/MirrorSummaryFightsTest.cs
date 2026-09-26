@@ -33,7 +33,8 @@ public class MirrorSummaryFightsTest
         {
             var a = facts.InternName(atk);
             var d = facts.InternName(def);
-            facts.AddFact(new DamageFact(seq++, (long)(T0 + t), a, d, dmg, 0, label, 0, ushort.MaxValue));
+            facts.AddFact(new DamageFact(seq++, (long)(T0 + t), a, d, total: dmg, typeId: label,
+              flags: 0, modMask: 0, subIdx: ushort.MaxValue));
         }
         return facts;
     }
@@ -157,8 +158,10 @@ public class MirrorSummaryFightsTest
         var a = facts.InternName("Illuminai");
         var d = facts.InternName("Echohead");
         var subFire = (ushort)facts.InternSubtype("Greater Summoning: Fire");
-        facts.AddFact(new DamageFact(0, (long)T0, a, d, 500, 0, LabelTypes.Dd, 0, subFire));
-        facts.AddFact(new DamageFact(1, (long)T0 + 1, a, d, 250, 0, LabelTypes.Dot, DamageFact.FlagAttackerIsSpell, ushort.MaxValue));
+        facts.AddFact(new DamageFact(0, (long)T0, a, d, total: 500, typeId: LabelTypes.Dd,
+          flags: 0, modMask: 0, subIdx: subFire));
+        facts.AddFact(new DamageFact(1, (long)T0 + 1, a, d, total: 250, typeId: LabelTypes.Dot,
+          flags: DamageFact.FlagAttackerIsSpell, modMask: 0, subIdx: ushort.MaxValue));
 
         var timeline = new EntityTimeline();
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");

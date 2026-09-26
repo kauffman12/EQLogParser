@@ -1,0 +1,14 @@
+[Mon May 04 18:50:01 2026] Vexmora slashes a frostbound sentinel for 5123 points of damage. (Critical)
+[Mon May 04 18:50:01 2026] Corunist hits a frostbound sentinel for 2011 points of damage.
+[Mon May 04 18:50:02 2026] Vexmora healed Rellam for 4200 hit points by Blessed Radiance Rk. II.
+[Mon May 04 18:50:02 2026] Vexmora healed Corunist for 3100 (9900) hit points by Avowed Remedy Rk. II.
+[Mon May 04 18:50:02 2026] A frostbound sentinel hits Rellam for 8100 points of damage. (Crush)
+[Mon May 04 18:50:03 2026] Corunist healed Vexmora over time for 1750 (2600) hit points by Spirit of the Wood XLIV.
+[Mon May 04 18:50:03 2026] Rellam has been healed over time for 900 hit points by Roar of the Lion IX.
+[Mon May 04 18:50:04 2026] Corunist`s pet healed Corunist for 1500 (4100) hit points by Superior Healing Boon.
+[Mon May 04 18:50:04 2026] Vexmora slashes a frostbound sentinel for 6100 points of damage. (Crippling Blow)
+[Mon May 04 18:50:05 2026] Rellam begins casting Jann's Light.
+[Mon May 04 18:50:05 2026] Rellam hit a frostbound sentinel for 3300 points of chromatic damage by Jann's Light. (Lucky Critical)
+[Mon May 04 18:50:05 2026] Rellam has been healed for 40000 hit points by Theft of Essence Effect XVII.
+[Mon May 04 18:50:06 2026] Vexmora healed Vexmora for 1200 (1200) hit points by Healing Ward. (Critical)
+[Mon May 04 18:50:06 2026] A frostbound sentinel is slain by Vexmora!

@@ -2,9 +2,15 @@ using System.Runtime.InteropServices;
 
 namespace EQLogParser.Mirror
 {
-  // Closed vocabulary of damage record types seen on DamageRecord.Type (Labels).
-  // Stored as a byte in DamageFact; LabelOf() round-trips back to the Labels string so the
-  // deriver can call the same StatsUtil.IsHitType / Labels checks the current pipeline uses.
+  /*
+   * Closed vocabulary of record types, one byte wide. Ids 1-15 are the damage words seen on
+   * DamageRecord.Type; 16 and 17 are the two heal words seen on HealRecord.Type. They share one table
+   * because the words come from one source (Labels / HitLabels) and a fact that could carry either word
+   * must not need two vocabularies — but no damage line produces a heal word and no heal line produces a
+   * damage word (the damage parser cannot emit a heal label, see HitLabelTest), so which ids a given
+   * stream can hold is still closed. LabelOf() round-trips back to the Labels string so the deriver can
+   * call the same StatsUtil.IsHitType / Labels checks the current pipeline uses.
+   */
   internal static class LabelTypes
   {
     public const byte Unknown = 0;
@@ -23,6 +29,8 @@ namespace EQLogParser.Mirror
     public const byte Block = 13;
     public const byte Invulnerable = 14;
     public const byte Riposte = 15;
+    public const byte Heal = 16;
+    public const byte Hot = 17;
 
     private static readonly Dictionary<string, byte> Map = new(StringComparer.Ordinal)
     {
@@ -40,7 +48,9 @@ namespace EQLogParser.Mirror
       [Labels.Parry] = Parry,
       [Labels.Block] = Block,
       [Labels.Invulnerable] = Invulnerable,
-      [Labels.Riposte] = Riposte
+      [Labels.Riposte] = Riposte,
+      [Labels.Heal] = Heal,
+      [Labels.Hot] = Hot
     };
 
     private static readonly string[] LabelsById =
@@ -60,20 +70,44 @@ namespace EQLogParser.Mirror
       Labels.Parry,
       Labels.Block,
       Labels.Invulnerable,
-      Labels.Riposte
+      Labels.Riposte,
+      Labels.Heal,
+      Labels.Hot
     ];
 
     public static byte IdOf(string type) => Map.TryGetValue(type ?? string.Empty, out var id) ? id : Unknown;
 
     public static string LabelOf(byte id) => (uint)id < (uint)LabelsById.Length ? LabelsById[id] : null;
 
-    // Mirrors StatsUtil.IsHitType for the closed vocabulary above (everything is a hit type
-    // except Absorb/Dodge/Invulnerable/Miss/Parry/Riposte).
-    public static bool IsHit(byte id) => id != Absorb && id != Dodge && id != Invulnerable && id != Miss && id != Parry && id != Riposte;
+    /*
+     * Mirrors StatsUtil.IsHitType for the damage words (everything is a hit type except
+     * Absorb/Dodge/Invulnerable/Miss/Parry/Riposte) and says NO to the two heal words. A heal is not a
+     * hit: the exclusion is defensive, because no damage line can carry a heal word today, but a caller
+     * that sums IsHit facts into DamageTotal must never find itself adding healing because one more
+     * stream started sharing this table.
+     */
+    public static bool IsHit(byte id) => id != Absorb && id != Dodge && id != Invulnerable && id != Miss
+      && id != Parry && id != Riposte && id != Heal && id != Hot;
+
+    // The two words a heal line writes. Damage facts never answer yes here; the check exists so the
+    // heal side does not have to compare strings (or repeat the ids) to know what it is holding.
+    public static bool IsHeal(byte id) => id == Heal || id == Hot;
   }
 
-  // One parsed damage line, exactly as the parser fired it. Names are interned indices (short)
-  // into the fact table's name table — 24 B/record, no per-record allocation after init.
+  /*
+   * One parsed damage line, exactly as the parser fired it. Names are interned indices (short)
+   * into the fact table's name table — 32 B/record, no per-record allocation after init.
+   *
+   * The size is not an accident and it is worth knowing which bytes are load-bearing, because this is
+   * the most numerous thing the mirror holds: a 5 M-fact log is 160 MB of it. Seq + TimeS (and TimeS
+   * must be a long — see its comment) cannot shrink; AtkIdx/DefIdx/SubIdx are the interning that makes
+   * the table cheap at all. Everything else lives in the padding around those: TypeId, Flags, ModMask.
+   *
+   * OverTotal used to sit here and was always 0 — "asked for more than landed" is a heal-line number,
+   * and HealRecord owns it for the same reason (docs/DesignNotes.md → What a loaded raid costs in
+   * memory). Deleting it made room for ModMask inside the same 32 bytes, which is what lets a derived
+   * damage summary honour the six modifier filters instead of reading high (see MirrorSummaryFights).
+   */
   internal readonly struct DamageFact
   {
     public const byte FlagAttackerIsSpell = 1;
@@ -98,21 +132,28 @@ namespace EQLogParser.Mirror
     public readonly short AtkIdx;
     public readonly short DefIdx;
     public readonly uint Total;
-    public readonly uint OverTotal;
     public readonly byte TypeId;
     public readonly byte Flags;
+
+    /*
+     * DamageRecord.ModifiersMask verbatim — the six modifier settings (assassinate, headshot,
+     * slay-undead, ...) are read out of it by DamageValidator. Without it a derived summary cannot
+     * exclude what the legacy board excludes, so its totals read HIGH whenever one of those filters is
+     * off. Captured from the record rather than re-derived: this stays "what the pipeline saw".
+     */
+    public readonly short ModMask;
     public readonly ushort SubIdx;   // index into the subtype table (spell/modifier name); 65535 = none
 
-    public DamageFact(int seq, long timeS, short atkIdx, short defIdx, uint total, uint overTotal, byte typeId, byte flags, ushort subIdx)
+    public DamageFact(int seq, long timeS, short atkIdx, short defIdx, uint total, byte typeId, byte flags, short modMask, ushort subIdx)
     {
       Seq = seq;
       TimeS = timeS;
       AtkIdx = atkIdx;
       DefIdx = defIdx;
       Total = total;
-      OverTotal = overTotal;
       TypeId = typeId;
       Flags = flags;
+      ModMask = modMask;
       SubIdx = subIdx;
     }
 

@@ -16,6 +16,14 @@ namespace EQLogParser.Mirror
     private const string OwnerToken = "Owner:";
 
     private readonly IFactTable _facts;
+
+    /*
+     * The heal stream, or null when the caller did not ask for one. Own table by choice — see HealFact's
+     * comment for why heals are not rows in the damage table. Capture works the same way as damage: append
+     * at the gate, in the shared sequence, with the registry's answer at this instant stamped in.
+     */
+    private readonly IHealFactTable _heals;
+
     // Ingest/derive gate: appends take it per fact (uncontended ~free), a derivation holds it
     // for its whole pass. Readers of the fact table therefore never observe mid-append mutation
     // while tailing continues — no stop/start games, no dropped facts; live ingest just pauses
@@ -27,12 +35,16 @@ namespace EQLogParser.Mirror
     private long _lastSeenTs = -1;
     private long _firstSeenTs = -1;
 
-    public CombatMirror(IFactTable facts)
+    public CombatMirror(IFactTable facts, IHealFactTable heals = null)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
+      _heals = heals;
     }
 
     public IFactTable Facts => _facts;
+
+    // Null unless a heal table was handed in — the tap does not invent storage behind its owner's back.
+    public IHealFactTable HealFacts => _heals;
 
     // Time window of tapped line events (double.NaN until the first event). The registry seed
     // uses it to decide ingest-replay vs retroactive evidence times.
@@ -44,6 +56,11 @@ namespace EQLogParser.Mirror
       DamageLineParser.EventsDamageProcessed += HandleDamage;
       DamageLineParser.EventsNewDeath += HandleDeath;
       DamageLineParser.EventsNewTaunt += HandleTaunt;
+
+      // Fires for every heal the parser stored, immediately after RecordsStore.Add — so "heal facts" and
+      // "what the healing board reads" are the same population, which is what makes the fidelity ledger
+      // (MirrorHealCaptureTest) an equality test rather than an approximation.
+      if (_heals is not null) HealingLineParser.EventsHealProcessed += HandleHeal;
 
       PreLineParser.EventsEvidence += OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster += OnWhoRoster;
@@ -63,6 +80,8 @@ namespace EQLogParser.Mirror
       DamageLineParser.EventsDamageProcessed -= HandleDamage;
       DamageLineParser.EventsNewDeath -= HandleDeath;
       DamageLineParser.EventsNewTaunt -= HandleTaunt;
+
+      if (_heals is not null) HealingLineParser.EventsHealProcessed -= HandleHeal;
 
       PreLineParser.EventsEvidence -= OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster -= OnWhoRoster;
@@ -145,16 +164,51 @@ namespace EQLogParser.Mirror
           atkIdx: _facts.InternName(r.Attacker),
           defIdx: _facts.InternName(r.Defender),
           total: r.Total,
-
-          // Damage lines carry no over-amount — the field a heal line writes ("for 9409 (11000)") lives on
-          // HealRecord now, and it was always 0 on a damage record, so this component has been recording zeros
-          // since the mirror existed. Nothing reads it (no rule touches DamageFact.OverTotal); it stays in the
-          // struct because the padding around the long TimeS absorbs it either way. Whoever mirrors heals should
-          // decide then whether this is a fact per hit of any kind or damage-only with its own heal fact.
-          overTotal: 0,
           typeId: LabelTypes.IdOf(r.Type),
           flags: flags,
+
+          // The six modifier filters' input. Its old four bytes came from deleting the always-zero OverTotal,
+          // so DamageFact is still 32 B — and the derived damage summary stopped reading high whenever one of
+          // those filters was switched off, which is what MirrorSummaryFights used to have to warn about.
+          modMask: r.ModifiersMask,
           subIdx: subIdx));
+      }
+    }
+
+    /*
+     * One heal, captured exactly as the parser fired it: healer/healed as named, what landed and what the
+     * line asked for, the spell behind it, and the modifier mask. Nothing here decides whether a heal counts
+     * toward a fight — that question belongs to the projection, and answers differently for damage (aimed at
+     * an entity) than for healing (done inside a window).
+     */
+    private void HandleHeal(HealProcessedEvent e)
+    {
+      var r = e.Record;
+      if (r is null || string.IsNullOrEmpty(r.Healer) || string.IsNullOrEmpty(r.Healed)) return;
+
+      var registry = PlayerRegistry.Instance;
+
+      var flags = (byte)0;
+      if (HasOwnershipInName(r.Healer)) flags |= HealFact.FlagOwnerInLine;
+      if (registry.IsPetOrPlayerOrMerc(r.Healer)) flags |= HealFact.FlagHealerPlayerSide;
+      if (registry.IsPetOrPlayerOrMerc(r.Healed)) flags |= HealFact.FlagHealedPlayerSide;
+
+      lock (_gate)
+      {
+        MarkTs(e.BeginTime);
+        _heals.AddHeal(new HealFact(
+          seq: ++_sequence,
+          timeS: ToTimeS(e.BeginTime),
+          healerIdx: _heals.InternName(r.Healer),
+          healedIdx: _heals.InternName(r.Healed),
+          total: r.Total,
+
+          // Verbatim, zero included — see HealFact.OverTotal for what normalising it would quietly cost.
+          overTotal: r.OverTotal,
+          typeId: LabelTypes.IdOf(r.Type),
+          flags: flags,
+          modMask: r.ModifiersMask,
+          subIdx: _heals.InternSpell(r.SubType)));
       }
     }
 
@@ -196,8 +250,14 @@ namespace EQLogParser.Mirror
     {
       if (string.IsNullOrEmpty(action)) return false;
       if (action.Contains(OwnerToken, StringComparison.OrdinalIgnoreCase)) return true;
-      return attacker.EndsWith("`s pet", StringComparison.Ordinal) || attacker.EndsWith("`s warder", StringComparison.Ordinal);
+      return HasOwnershipInName(attacker);
     }
+
+    // The ownership word inside the name itself. Both streams read it — a pet that heals is still somebody's
+    // pet — and one copy of the two spellings means the heal side cannot drift behind the damage side.
+    private static bool HasOwnershipInName(string name)
+      => !string.IsNullOrEmpty(name)
+         && (name.EndsWith("`s pet", StringComparison.Ordinal) || name.EndsWith("`s warder", StringComparison.Ordinal));
 
     // the parser's dotnet-epoch seconds (year 0001 origin, ~6.4e10 in the 2020s) — long, or the
     // cast silently wraps and every derived timestamp is garbage

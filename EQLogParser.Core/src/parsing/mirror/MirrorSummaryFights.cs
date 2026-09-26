@@ -30,12 +30,12 @@ namespace EQLogParser.Mirror
    *                   the row, so a fight whose blocks and roll-up ever drift apart is visible as a
    *                   mismatch instead of silently agreeing.
    *
-   * What a materialized record does NOT hold, and what that costs:
-   *   ModifiersMask is 0 — the fact table never captured it. DamageValidator therefore cannot exclude
-   *   assassinate/headshot/slay-undead/... damage, so with any of those six settings turned OFF the
-   *   derived total reads HIGHER than the legacy one. All six default to on (AppSettings), where the two
-   *   agree exactly. Capturing parity means one more byte per damage fact (~10 MB on a 5 M-fact log), not
-   *   a rebuild of anything — deliberately left for when parity is being chased for real.
+   *   ModifiersMask comes off the fact, which copies it off the record. That byte is why the six modifier
+   *   settings (assassinate, headshot, slay-undead, ...) exclude the same damage on both boards: DamageValidator
+   *   reads the mask, and a derived record with a mask of 0 would have excluded nothing — every derived total
+   *   reading HIGH the moment one of those filters was switched off. It cost no memory: the four bytes it now
+   *   occupies were spent on DamageFact.OverTotal, a field damage never wrote (see DamageFact).
+   *   A heal's mask is captured the same way (HealFact.ModMask) for when the healing board is fed from facts.
    *   AttackerOwner comes from the line's own ownership word (ClassificationRules.OwnerInName), not from the
    *   registry: a pet the manager never mapped still lands under its owner here, which is a difference in what
    *   the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same field.
@@ -154,6 +154,11 @@ namespace EQLogParser.Mirror
           Defender = facts.NameOf(fact.DefIdx),
           AttackerIsSpell = fact.AttackerIsSpell,
           Total = fact.Total,
+
+          // Straight off the fact. Without it DamageValidator excludes nothing and the board disagrees with
+          // legacy on every modifier-filtered run; the mask is also what makes a derived record comparable in
+          // HitLogViewer, which shows the same column for stored records.
+          ModifiersMask = fact.ModMask,
           Type = LabelTypes.LabelOf(fact.TypeId),
           SubType = SubTypeOf(fact, facts),
         };

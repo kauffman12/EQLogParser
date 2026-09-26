@@ -29,7 +29,11 @@ internal static class PipelineHarness
         IReadOnlyList<Fight> NonTankingFights,
         IReadOnlyList<DerivedFight> DerivedFights,
         DamageFactTable Facts,
-        EntityTimeline Timeline);
+        EntityTimeline Timeline,
+
+        // Captured on every mirror run, exactly as the app's MirrorSession captures it, so a test that says
+        // "the mirror saw the same heals the healing board reads" is testing the wiring users get.
+        HealFactTable HealFacts);
 
     // Side channels are inert in headless runs: no chat archive, no trigger evaluation.
     private sealed class NoOpSinks : IChatSink, ITriggerHook
@@ -68,22 +72,22 @@ internal static class PipelineHarness
 
     public static RunResult RunFile(string path)
     {
-        var (fights, _, _, _, _) = RunCore(path, withMirror: false);
+        var (fights, _, _, _, _, _) = RunCore(path, withMirror: false);
         return new RunResult(fights);
     }
 
     public static MirrorRunResult RunFileWithMirror(string path)
     {
-        var (fights, nonTanking, derived, facts, timeline) = RunCore(path, withMirror: true);
-        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withMirror: true);
+        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline, heals);
     }
 
     // onEvent observes every processed damage record from the test thread (same instant the
     // pipeline sees it) — debugging hook for live-state inspection of the current pipeline.
     public static MirrorRunResult RunFileWithMirror(string path, Action<DamageProcessedEvent> onEvent)
     {
-        var (fights, nonTanking, derived, facts, timeline) = RunCore(path, withMirror: true, onEvent);
-        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline);
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withMirror: true, onEvent);
+        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline, heals);
     }
 
     // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
@@ -129,7 +133,7 @@ internal static class PipelineHarness
     };
 #pragma warning restore CS8603 // Possible null reference return.
 
-    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
     {
         EnsureDataStore();
 
@@ -191,13 +195,15 @@ internal static class PipelineHarness
         fm.EventsNewNonTankingFight += CollectNonTanking;
 
         DamageFactTable? facts = null;
+        HealFactTable? heals = null;
         EntityTimeline? timeline = null;
         CombatMirror? mirror = null;
         if (withMirror)
         {
             facts = new DamageFactTable(100_000);
+            heals = new HealFactTable(facts);
             timeline = new EntityTimeline();
-            mirror = new CombatMirror(facts);
+            mirror = new CombatMirror(facts, heals);
             mirror.Start();
         }
 
@@ -283,7 +289,16 @@ internal static class PipelineHarness
             nonTankingSnapshot = [.. nonTanking];
         }
 
-        return (snapshot, nonTankingSnapshot, derived, facts ?? new DamageFactTable(1), timeline ?? new EntityTimeline());
+        /*
+         * Empty tables rather than nulls for a run without the mirror: callers never branch on the mode. The
+         * one table both streams share is decided here so a fallback heal table can never intern names into a
+         * different damage table than the one handed back — two index spaces wearing the same numbers is
+         * exactly the bug the shared-name design exists to prevent.
+         */
+        facts ??= new DamageFactTable(1);
+        heals ??= new HealFactTable(facts);
+
+        return (snapshot, nonTankingSnapshot, derived, facts, heals, timeline ?? new EntityTimeline());
     }
 
     // Registry end-state + evidence times as manual identity assignments. Strengths stay below the

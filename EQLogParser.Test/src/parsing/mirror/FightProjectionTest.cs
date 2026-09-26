@@ -21,7 +21,8 @@ public class FightProjectionTest
         {
             var a = facts.InternName(atk);
             var d = facts.InternName(def);
-            facts.AddFact(new DamageFact(seq++, (long)(T0 + t), a, d, dmg, 0, label, 0, ushort.MaxValue));
+            facts.AddFact(new DamageFact(seq++, (long)(T0 + t), a, d, total: dmg, typeId: label,
+              flags: 0, modMask: 0, subIdx: ushort.MaxValue));
         }
         return facts;
     }

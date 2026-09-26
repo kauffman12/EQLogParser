@@ -48,6 +48,13 @@ namespace EQLogParser
     // be materialized against the new one's classification.
     internal DamageFactTable Facts;
     internal MirrorDamageIndex DamageIndex;
+
+    /*
+     * The heal stream as of this pass. Nothing is displayed from it yet — that is the heal projection's job —
+     * but a snapshot has to be able to say what was captured, and a selection has to be materializable
+     * against the same pass that made its rows (the damage index above exists for exactly that reason).
+     */
+    internal HealFactTable Heals;
   }
 
   internal static class MirrorFightRows
