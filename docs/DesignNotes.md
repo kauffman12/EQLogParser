@@ -3502,8 +3502,76 @@ happened to know when the first line of a pair arrived. `MirrorSummaryFightsTest
 raider equal, derived-only entries all `+Pets`, and the delta equal to the owner-in-line damage computed from the fact
 table (not from either board).
 
-One gap is deliberate and known: a materialized record carries `ModifiersMask` 0 because the fact table never captured
-the mask, so `DamageValidator` cannot exclude assassinate/headshot/slay-undead/… damage. With any of those six settings
-off the derived total reads high — by design of the capture, and closing it costs one byte per damage fact (~10 MB on a
-5 M-fact log), not a rebuild. `EQLogParser.Test/src/parsing/mirror/MirrorSummaryFightsTest.cs` holds all of the above;
-the UI side is one-way (mirror selection → damage board) so that clicking the other list still owns its own boards.
+A materialized record carries the modifier mask off its fact, which is what makes `DamageValidator`'s six exclusion
+settings (assassinate, headshot, slay-undead, …) mean the same thing on both boards; see *The byte that filters live in*
+below. `EQLogParser.Test/src/parsing/mirror/MirrorSummaryFightsTest.cs` holds all of the above; the UI side is one-way
+(mirror selection → damage board) so that clicking the other list still owns its own boards.
+
+### The byte that filters live in, and the field it moved into
+
+`DamageFact` carried a `ushort` after `Total` to keep `Time` eight-aligned — a padding slot holding a constant `0`, and
+two more bytes after it went to `OverTotal`, "how much more was asked for than landed", which is a thing only a heal
+line says. Damage never wrote it, the damage summary never read it, and it cost four bytes in every one of the ~13 M
+damage facts on the 393 MB capture (~52 MB) so a derived record could carry a zero nobody consumed. `ModifiersMask` slid
+into those bytes: the struct is still 32 B (`DamageFactSizeShouldNotGrowPastPadding`), and now `MirrorSummaryFights`
+can hand `DamageValidator` the mask it reads — before this, every derived total read **high** the moment one of the six
+filters was switched off, because a mask of 0 excludes nothing.
+
+That zero had a second consumer worth naming: `HitLogViewer` shows the mask as a column, and "(Riposte)" is part of why
+a spell row reads the way it does. A fact that never stored it could not reproduce the row.
+
+The rule the field enforces is on `DamageRecord`: **a record carries only what its own log lines can write**, which is
+also why counting is split (`UpdateDamageStats` takes a `DamageRecord`, `UpdateHealStats` a `HealRecord`). `OverTotal`
+lives on `HealRecord`. A heal's mask is captured the same way (`HealFact.ModMask`) for the day the healing board reads
+from facts.
+
+### Healing joins the capture, in its own table
+
+Heals now flow into `HealFactTable` off `HealingLineParser.EventsHealProcessed` — deliberately *not* into the damage
+table. Measured with a temporary probe over `EQLogParser.Test/data/mirror/heal-fight.txt`: 5 of 9 events are heals, and
+one array of the union (42 B: 36 for the shared fields plus the four damage-only bytes a heal can never write, and
+always a zero) sat **57 % full of zeros** at capacity, **40 %** after trimming to what is shared. Split, each stream
+pays only its own tail: 32 B and 40 B.
+
+One array was not merely wasteful, it was wrong. `DamageFactsByFight` is a **contiguous ordinal run** per fight — a
+consequence of the 64-bit spine being fight-major with time ascending inside it — so one array would force every heal
+to carry a `FightId`. A raid heals before a pull exists and after the last boss dies, and those two populations are not
+edge cases, they are the healing report: on the reference capture 16,947 of 582,785 events fall outside a fight,
+*healing only*, because a heal does not create a fight and no `FightTimeline` transition happens on one. They would
+either be dropped from the board or force the spine to grow an out-of-fight range while healing damage by the same
+name stays inside it.
+
+Three rules the split keeps honest, all pinned by `MirrorHealCaptureTest`:
+
+- **One sequence across both tables.** The damage table owns the counter and hands it out (`NextSeq()`); a heal takes
+  one. Each table's facts are appended under the caller's lock, so seq increases within each stream and the merged
+  order is reconstructible — which is how heals get fight attribution later (read both streams in order, ask the same
+  `FightTimeline`) without either table knowing about fights.
+- **Names must resolve through the damage table's pool**, or the same raider gets two indices and the merge splits her
+  in half. One test reads her name back out of *both* tables and demands they be equal.
+- **The quiescence signal counts heals too.** Counting only damage would fire a derive during a healing-only stretch
+  (a raid regrouping while everyone recovers) over facts still arriving, and "capturing… N" — the one number a user
+  can check against the log — would be short by a third of the raid's output.
+
+`HealFact.OverTotal` follows the damage rule and keeps both meanings of the log's parenthesised number apart: *with* a
+paren it is the amount **after** over-heal was subtracted; *without* one it is 0, which means "the line said no more"
+and never "zero was asked". A projection that summed it as extra healing would add nothing where the line said nothing.
+
+### What falls out of the heal capture before the mirror ever sees it, measured
+
+The parser fires `EventsHealProcessed` only for lines it resolves to a named healer and target, so three shapes are
+dropped upstream — these counts are from the 393 MB capture (`local/eqlog_Incogitable_xegony.txt`), against ~448,600
+heal-action lines (2.9 % total):
+
+| Line shape | Lines | Why |
+|---|---:|---|
+| `` `s pet healed itself … `` | 10,194 | the healer word is a pet name; extraction special-cases `` `s ward ``, not `` `s pet `` |
+| `` `s pet has been healed … `` | 2,688 | same gap, on the receiving side of the sentence |
+| `has been healed over time for …` | 120 | the amount offset expects `for <n>` right after "healed"; "over time" sits between |
+
+What makes these a footnote instead of a bug is the composition: **all 10,194 active pet lines are a pet healing
+itself** (measured, not assumed — 10,194 of 10,194), so no raider's output moves; and the passive shapes name no healer
+at all, so the board could only have filed them under an unknown healer. The damage side of those same sentences is not
+lost — `` X`s pet `` parses as attacker and as defender. What would flip this is a capture where pet lines heal
+*raiders*, which is why the counts are written down rather than reasoned about; a fix should arrive with them
+re-measured, and `MirrorHealCaptureTest` re-asserts each shape against the parser's actual behaviour.

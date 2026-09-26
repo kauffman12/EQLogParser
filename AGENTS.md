@@ -110,6 +110,25 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   legacy placed reading identically: two pets whose owner the registry never learned contribute nothing to the legacy
   board at all, while the line's own ownership word (`ClassificationRules.OwnerInName` → `AttackerOwner`) folds them under
   their raiders here. Do not force the two sides into agreement — the gap is the experiment; the test pins its shape.
+- **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name
+  pool and its sequence counter (`IFactTable.NextSeq()`), and nothing else. One array of the union (42 B) sat **57 % full of
+  zeros** at capacity — measured with a temporary probe, not estimated — because each side's tail fields are words the other's
+  log lines cannot write; split, they are 32 B and 40 B. The stronger reason is that `DamageFactsByFight` is a **contiguous
+  ordinal run** (the spine is fight-major, time ascending inside it), so a shared array would force every heal to carry a
+  `FightId`, and heals outside a fight are the healing report, not an edge case: 16,947 events on the reference capture, heal-only,
+  because a heal opens no fight. Three laws, all pinned by `MirrorHealCaptureTest`: **one sequence across both tables** (each
+  stream is ordered by it and the merged order is reconstructible — that is how heals get fight attribution later, without either
+  table knowing about fights); **names resolve through the damage table's pool** or the same raider gets two indices and a merge
+  splits her in half; **quiescence counts heals too** (`MirrorSession.CapturedTotal`), else a healing-only stretch reads as quiet
+  and fires a derive over facts still arriving. `HealFact.OverTotal` keeps the log's two meanings apart — with a paren it is the
+  amount *after* over-heal, without one it is `0` = "the line said no more", never "zero was asked".
+- **A record's modifier mask is captured on the fact, because filters read it**: `DamageFact.ModifiersMask` rides in the padding
+  bytes that `OverTotal` (a heal-only amount) had spent on damage, so `DamageFact` stays **32 B** — and a materialized record with
+  mask `0` would have excluded *nothing*, making every derived total read high the moment one of the six `DamageValidator` settings
+  (assassinate, headshot, slay-undead, …) is switched off. `HitLogViewer` shows that same mask as a column, so it is also what a
+  reproduced row needs. This is the `HitRecord` rule applied one layer down: a field belongs to the type whose lines can write it.
+  Numbers and the refused heal shapes (10,194 pet self-heals / 2,688 pet-healed-passive / 120 HoT = 2.9 % of heal-action lines, all
+  healer-less or self-directed): docs/DesignNotes.md → "The byte that filters live in", "Healing joins the capture".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
