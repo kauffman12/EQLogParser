@@ -20,6 +20,10 @@ namespace EQLogParser
       "Companion's Aegis", "Second Wind Ward", "Zeal of the Elements"
     ];
 
+    // Mirror evidence (D8): caster + resolved spell name per non-interrupted cast; R4 tier-1
+    // identity comes from spell identity alone (curated epics / Spires, see EQDataStore seed).
+    internal static event Action<string, string, double> EventsCastEvidence;
+
     public static bool Process(LineData lineData)
     {
       try
@@ -147,6 +151,9 @@ namespace EQLogParser
 
               var cast = new SpellCast { Caster = StringCache.GetOrAdd(player), Spell = StringCache.GetOrAdd(spellName), SpellData = spellData };
               RecordsStore.Instance.Add(cast, currentTime);
+
+              // Mirror evidence (D8): fire-only, covers every non-interrupted cast verb form.
+              EventsCastEvidence?.Invoke(player, spellName, currentTime);
 
               if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {

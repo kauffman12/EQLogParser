@@ -59,6 +59,10 @@ namespace EQLogParser
     public DamageRecord Record { get; set; }
     public double BeginTime { get; set; }
 
+    // The raw action line as parsed (D1: consumers like CombatMirror read line-intrinsic evidence
+    // — e.g. "X`s pet" ownership — without a registry or a second parse).
+    public string Action { get; set; }
+
     /* live tail line vs initial replay load - see LineData.IsMonitor */
     public bool IsMonitor { get; set; }
   }

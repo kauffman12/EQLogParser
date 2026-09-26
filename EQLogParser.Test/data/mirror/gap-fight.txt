@@ -1,0 +1,5 @@
+[Sun Apr 26 12:00:00 2026] Rune slashes an ice giant priest for 1000 points of damage. (Crippling Blow)
+[Sun Apr 26 12:00:05 2026] Ammeren hit an ice giant priest for 2000 points of magic damage by Shock.
+[Sun Apr 26 12:00:10 2026] An ice giant priest was slain by Ammeren!
+[Sun Apr 26 12:05:00 2026] Rune slashes an ice giant priest for 3000 points of damage. (Critical)
+[Sun Apr 26 12:05:02 2026] An ice giant priest was slain by Rune!

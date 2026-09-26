@@ -37,6 +37,9 @@ namespace EQLogParser
     {
       AdpsTracker.Instance.Clear();
       _dataStore = null;
+
+      // restore default resolution (EQLogParser.FightManager.Instance) for later test classes
+      DamageLineParser.FightManager = null;
     }
 
     private static DamageRecord ParseAction(string? action)

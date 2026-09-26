@@ -58,6 +58,10 @@ namespace EQLogParser
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || CombatRecordLookup.IsPlayerSpell(name);
     internal bool IsMerc(string name) => _mercs.TryGetValue(StringCache.GetOrAdd(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
+
+    // name -> log time the player-side evidence appeared (used by the combat mirror's Phase 1
+    // seed so ingest-time identity replay matches what IsPetOrPlayerOrMerc saw at each line)
+    internal IReadOnlyDictionary<string, double> GetVerifiedPlayerTimes() => _verifiedPlayers;
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
     internal List<PetMapping> GetPetMappings() => [.. _petToPlayer.Select(kv => new PetMapping(kv.Key, kv.Value))];
 

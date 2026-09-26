@@ -1,0 +1,53 @@
+[Sun Apr 26 18:40:19 2026] Rune hit an ice giant priest for 1234 points of magic damage by Vampiric Draw.
+[Sun Apr 26 18:40:19 2026] An ice giant priest is withered by a vampiric strike.
+[Sun Apr 26 18:40:19 2026] Rune slashes an ice giant priest for 54321 points of damage. (Crippling Blow)
+[Sun Apr 26 18:40:19 2026] Rune slashes an ice giant priest for 43210 points of damage. (Critical)
+[Sun Apr 26 18:40:19 2026] Rune begins casting Jann's Light.
+[Sun Apr 26 18:40:19 2026] Rune hit an ice giant priest for 1500 points of chromatic damage by Jann's Light.
+[Sun Apr 26 18:40:19 2026] Rune begins casting Frightful Force.
+[Sun Apr 26 18:40:19 2026] Rune hit an ice giant priest for 23456 points of disease damage by Frightful Force. (Lucky Critical)
+[Sun Apr 26 18:40:19 2026] An ice giant priest staggers.
+[Sun Apr 26 18:40:19 2026] Rune slashes an ice giant priest for 34567 points of damage. (Lucky Critical)
+[Sun Apr 26 18:40:19 2026] Rune slashes an ice giant priest for 21456 points of damage. (Lucky Critical)
+[Sun Apr 26 18:40:19 2026] Rune slashes an ice giant priest for 54321 points of damage. (Crippling Blow)
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet hits an ice giant for 1234 points of damage. (Critical)
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet hits an ice giant for 567 points of damage.
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet tries to hit an ice giant, but an ice giant blocks!
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet hits an ice giant for 890 points of damage. (Flurry)
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet hits an ice giant for 567 points of damage. (Flurry)
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet tries to hit an ice giant, but an ice giant blocks!
+[Sun Apr 26 18:40:19 2026] Jazrakhan`s pet tries to hit an ice giant, but an ice giant dodges!
+[Sun Apr 26 18:40:19 2026] Sancus`s pet slashes an ice giant for 12345 points of damage.
+[Sun Apr 26 18:40:19 2026] Sancus`s pet slashes an ice giant for 23456 points of damage. (Lucky Critical)
+[Sun Apr 26 18:40:19 2026] An ice giant tries to hit Soell, but Soell ripostes! (Strikethrough)
+[Sun Apr 26 18:40:19 2026] Soell begins casting Crippling Snare.
+[Sun Apr 26 18:40:19 2026] An ice giant is tormented by Soell's frost for 45678 points of non-melee damage.
+[Sun Apr 26 18:40:19 2026] An ice giant hits Soell for 12345 points of damage. (Riposte Strikethrough)
+[Sun Apr 26 18:40:19 2026] An ice giant tries to hit Soell, but Soell ripostes! (Strikethrough)
+[Sun Apr 26 18:40:20 2026] An ice giant is tormented by Soell's frost for 45678 points of non-melee damage.
+[Sun Apr 26 18:40:20 2026] An ice giant hits Soell for 23456 points of damage. (Riposte Strikethrough)
+[Sun Apr 26 18:40:20 2026] Sancus`s pet slashes an ice giant for 34567 points of damage. (Critical)
+[Sun Apr 26 18:40:20 2026] Sancus`s pet slashes an ice giant for 34567 points of damage. (Critical Flurry)
+[Sun Apr 26 18:40:20 2026] Sancus`s pet slashes an ice giant for 9876 points of damage.
+[Sun Apr 26 18:40:20 2026] Puksu pierces an ice giant for 54321 points of damage. (Lucky Critical)
+[Sun Apr 26 18:40:20 2026] Puksu begins casting Arcane Aria Strike XII Caza.
+[Sun Apr 26 18:40:20 2026] Puksu hit an ice giant for 2345 points of chromatic damage by Arcane Aria Strike XII Caza.
+[Sun Apr 26 18:40:20 2026] An ice giant quivers as a bolt of energy surges through them.
+[Sun Apr 26 18:40:20 2026] Kuma bashes an ice giant priest for 678 points of damage. (Critical)
+[Sun Apr 26 18:40:20 2026] Triumph begins casting Night's Eternal Darkness III.
+[Sun Apr 26 18:40:20 2026] Triumph hit an ice giant for 3456 points of magic damage by Night's Eternal Darkness III.
+[Sun Apr 26 18:40:20 2026] An ice giant staggers.
+[Sun Apr 26 18:40:20 2026] Triumph healed itself for 0 (3456) hit points by Night's Eternal Darkness III.
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 23456 points of damage. (Critical)
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 4567 points of damage.
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 34567 points of damage. (Lucky Critical)
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 4567 points of damage. (Flurry)
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 23456 points of damage. (Critical Flurry)
+[Sun Apr 26 18:40:20 2026] Triumph pierces an ice giant for 4567 points of damage. (Flurry)
+[Sun Apr 26 18:40:20 2026] You have reached the AA point cap, and cannot gain any further experience until some of your stored AA point pool is used.
+[Sun Apr 26 18:40:20 2026] You gained raid experience!
+[Sun Apr 26 18:40:20 2026] An ice giant priest totters backward, falling with a heavy thud.
+[Sun Apr 26 18:40:20 2026] Ammeren hit an ice giant priest for 123456 points of fire damage by Shock of Many XI Rk. III.
+[Sun Apr 26 18:40:20 2026] An ice giant priest is struck by waves of elemental power.
+[Sun Apr 26 18:40:20 2026] An ice giant priest was slain by Ammeren!
+[Sun Apr 26 18:40:20 2026] Tunky begins casting Raging Servant XIII Rk. III.

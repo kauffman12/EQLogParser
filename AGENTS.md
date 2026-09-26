@@ -6,8 +6,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
 - **Git**: Commit with detailed messages, but **never push to remote**. Pushing is the user's call.
+- **Docs are local discussion**: most files under `docs/` are untracked working documents (see `.gitignore`). Never `git add`/commit new files there — only the ones already tracked (`git ls-files docs/`) belong in the repo.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
+
+## Build Environment (Linux, this machine)
+- .NET 10 SDK (10.0.4xx) lives in `~/.dotnet`; prepend it on every shell: `export PATH="$HOME/.dotnet:$PATH"`. The system's dotnet 8 will not satisfy `global.json` (`"10.0"`, `rollForward: latestPatch`).
+- Full solution on Linux: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true` (flag lets the WPF projects cross-compile; no source changes needed).
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (~1,120 tests, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only runs on Windows.
 
 ## Testing Guidelines
 - **Always** run `dotnet build` after completing work
