@@ -61,7 +61,8 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
                            RowStyle="{DynamicResource MirrorRowStyle}"
-                           SelectionMode="Single"
+                           SelectionChanged="MirrorSelectionChanged"
+                           SelectionMode="Extended"
                            ShowRowHeader="True"
                            SourceType="{x:Type local:MirrorFightRow}">
       <syncfusion:SfDataGrid.Columns>

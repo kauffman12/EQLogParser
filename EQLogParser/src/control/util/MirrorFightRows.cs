@@ -24,6 +24,10 @@ namespace EQLogParser
     public long Damage { get; init; }
     public long Hits { get; init; }
     public string Status { get; init; } = string.Empty;
+
+    // The row's data, for the one thing the grid has to be able to DO right now: hand a selection to a
+    // stats run. Formatted strings are what the grid shows; this is what a selection means.
+    internal DerivedFight Fight { get; init; }
   }
 
   internal sealed class MirrorSnapshot
@@ -37,17 +41,27 @@ namespace EQLogParser
     // Kept for the interactive step: identity overrides call ClassificationRules.ApplyManualOverride
     // against this timeline, then trigger a re-derive.
     internal EntityTimeline Timeline;
+
+    // What a selection needs in order to become stats input: the captured facts of THIS pass and, per
+    // fight, which of them were aimed at its own name. Both belong to the snapshot rather than to the
+    // session because a re-derive replaces the projection wholesale — rows from the old list must never
+    // be materialized against the new one's classification.
+    internal DamageFactTable Facts;
+    internal MirrorDamageIndex DamageIndex;
   }
 
   internal static class MirrorFightRows
   {
-    public static MirrorSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount)
+    public static MirrorSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount,
+      DamageFactTable facts, MirrorDamageIndex damageIndex)
     {
       var snapshot = new MirrorSnapshot
       {
         FactCount = factCount,
         DerivedAt = DateTime.Now,
         Timeline = timeline,
+        Facts = facts,
+        DamageIndex = damageIndex,
       };
 
       foreach (var (isDivider, gapFrom, gapTo, fight) in Sectionizer.ToDisplayRows(fights))
@@ -75,6 +89,7 @@ namespace EQLogParser
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,
           Status = $"{(fight.Dead ? "dead" : string.Empty)}{(fight.Dead && fight.CharmedOwned ? ", " : string.Empty)}{(fight.CharmedOwned ? "charmed" : string.Empty)}",
+          Fight = fight,
         });
       }
 

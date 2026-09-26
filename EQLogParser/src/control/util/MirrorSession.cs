@@ -1,5 +1,6 @@
 using log4net;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
@@ -38,6 +39,10 @@ namespace EQLogParser
 
     private readonly DamageFactTable _facts = new(100_000);
     private readonly CombatMirror _mirror;
+
+    // The snapshot currently on screen (see MirrorSnapshot.Facts): a selection is materialized against
+    // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
+    private MirrorSnapshot _snapshot;
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
     private long _lastTickCount = -1;
@@ -82,15 +87,30 @@ namespace EQLogParser
             var timeline = new EntityTimeline();
             RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
             ClassificationRules.Apply(_facts, timeline);
+
+            // The index is filled DURING the projection: it needs the same direction decision the rows split
+            // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler).
+            var damageIndex = new MirrorDamageIndex();
+
             // Display list = facts projected over the classification above. Rows self-correct:
             // a name that gains player-side evidence between passes loses its row to the NPC it
             // was actually fighting (FightDeriver's legacy-keyed list is retired from display and
             // lives on only in the parity tests/bench).
-            return MirrorFightRows.Build(FightProjection.Build(_facts, timeline), timeline, CapturedTotal);
+            var fights = FightProjection.Build(_facts, timeline, damageIndex.OnFact);
+
+            // "Fight N" numbers for a stats run reading GroupId, from the same walk that draws the
+            // dividers in this grid.
+            Sectionizer.StampGroupIds(fights);
+
+            return MirrorFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
           });
           sw.Stop();
 
           snapshot.ElapsedMs = sw.Elapsed.TotalMilliseconds;
+
+          // Swapped before the event: a selection made from the fresh rows materializes against the pass
+          // that made them, never against the previous snapshot's facts.
+          _snapshot = snapshot;
           _lastDerivedCount = CapturedTotal;
           Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms");
           Derived?.Invoke(snapshot);
@@ -121,11 +141,32 @@ namespace EQLogParser
       _disposed = true;
       _quietTimer.Stop();
       _mirror.Stop();
+
+      // The fact table is the biggest thing the mirror holds; a disposed session must not stay the reason
+      // a closed log's records are still reachable.
+      _snapshot = null;
       if (ReferenceEquals(Active, this))
       {
         Active = null;
         ActiveChanged?.Invoke();
       }
+    }
+
+    /*
+     * Turn a derived selection into stats input (damage side). Called from a worker task by whoever is
+     * feeding the summary, which is where the allocation belongs: one DamageRecord per selected fact,
+     * the same cost the legacy pipeline already pays for its own selection — only here it is paid per
+     * click rather than once at parse time, and it is paid again on no row that was not asked for.
+     *
+     * Returns an empty input when no snapshot has landed: an empty selection is the caller's business,
+     * a missing one means "the list you clicked is gone".
+     */
+    internal MirrorSummaryInput BuildSummaryInput(IReadOnlyList<DerivedFight> selected)
+    {
+      var snapshot = _snapshot;
+      if (snapshot is null || selected is not { Count: > 0 }) return new MirrorSummaryInput([], new TimeRange());
+
+      return MirrorSummaryFights.Build(selected, snapshot.DamageIndex, snapshot.Facts);
     }
 
     // Every fact stream counts — a log without combat damage (login/city logs) still derives

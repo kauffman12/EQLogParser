@@ -18,6 +18,9 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
+
+using EQLogParser.Mirror;
+
 using Application = System.Windows.Application;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
@@ -153,6 +156,14 @@ namespace EQLogParser
       // Combat mirror (experimental derived fight list) — the tap attaches when a log opens
       AppSettings.IsCombatMirrorEnabled = ConfigUtil.IfSet("EnableCombatMirror");
       combatMirrorIcon.Visibility = AppSettings.IsCombatMirrorEnabled ? Visibility.Visible : Visibility.Hidden;
+
+      /*
+       * Selecting rows in the derived list rebuilds the DAMAGE summary from the mirror's own facts. One
+       * board on purpose (see MirrorFightTable.DerivedSelectionChanged): the experiment is to click the same
+       * fight in both lists and read two engines' answers, and that only means something while exactly one
+       * of the two lists owns the numbers at a time.
+       */
+      if (mirrorFightWindow?.Content is MirrorFightTable mirrorTable) mirrorTable.DerivedSelectionChanged += MirrorDerivedSelectionChanged;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -767,6 +778,50 @@ namespace EQLogParser
 
         _ = Task.Run(() => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions)).ContinueWith(t => Log.Error("TankingStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       }
+    }
+
+    /*
+     * The same question ComputeStats asks of FightManager state, asked of the combat mirror instead: the
+     * builder gets ordinary Fight objects whose DamageBlocks were rebuilt from captured facts, so the board
+     * shows what the derived list thinks happened without the summary knowing anything new. Heal and tanking
+     * boards are deliberately untouched — the derived side has no equivalent blocks for them yet, and a half
+     * populated comparison reads as a bug in whichever side looks empty.
+     *
+     * An empty selection still reaches the builder: zero npcs is how it is told to clear the board, which is
+     * what the legacy list does with an empty selection too.
+     */
+    private void MirrorDerivedSelectionChanged(IReadOnlyList<DerivedFight> selected)
+    {
+      var session = _mirrorSession;
+      if (session is null) return;
+
+      /*
+       * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the
+       * UI thread's part ends at "these fights". No single-flight guard here: BuildTotalStats serialises on its
+       * own lock, and the grid's settle timer upstream keeps a dragged range to one announcement.
+       */
+      _ = Task.Run(() =>
+      {
+        try
+        {
+          var input = session.BuildSummaryInput(selected);
+
+          GenerateStatsOptions damageStatsOptions = new();
+          damageStatsOptions.Npcs.AddRange(input.Fights);
+          damageStatsOptions.AllRanges = input.AllRanges;
+          damageStatsOptions.MinSeconds = 0;
+
+          var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
+          Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s)"
+                   + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) nothing is aimed at" : string.Empty));
+
+          DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Derived damage summary error", ex);
+        }
+      });
     }
 
     private void RestoreButtonUp(object sender, MouseButtonEventArgs e)
