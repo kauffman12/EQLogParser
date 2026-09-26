@@ -2954,7 +2954,7 @@ line and pet mapping quietly stops learning from damage taken.
 The reason neither field could be moved a decade ago is `StatsUtil.UpdateStats(PlayerSubStats, HitRecord, …)`: one routine counting both kinds of event through
 their common base, which is why the base had to hold a field only heals write. It is two routines now — `UpdateDamageStats` and `UpdateHealStats` — each
 holding only what its own lines can produce. The damage switch kept every damage label and lost `Hot`/`Heal`, which is safe rather than tidy: the type of a
-damage record comes from `CreateDamageRecord`'s callers, and that vocabulary is Ds, Rs, Bane, Melee, Dd, Dot, Proc, OtherDmg, Absorb, Block, Dodge, Miss,
+damage record comes from `CreateDamageRecord`'s callers, and that vocabulary is Ds, Bane, Melee, Dd, Dot, Proc, OtherDmg, Absorb, Block, Dodge, Miss,
 Parry, Invulnerable and Riposte (`GetTypeFromSpell` only ever returns the type it was handed, `Bane` or `Proc`), so a heal label cannot reach it — do not put
 those cases back. The heal half has no switch at all because `HealingLineParser` writes only `Heal` and `HoT`. And `LineModifiersParser.UpdateStats` takes
 `(short modifiersMask, uint total, …)` rather than a record, since that pair is the whole of a hit its tallies depend on; the `Type != Miss` guard it used to
@@ -2972,10 +2972,79 @@ The one visible consequence is in `HitLogViewer`: its grid row accumulates event
 so `HitLogRow` carries `OverTotal` of its own now and heals feed it. Damage rows show zero there exactly as they always did.
 
 On this capture that is 8 B off each of ~2.38 M surviving damage records (~19 MB) and off each of the 4.52 M events the parser allocates (~36 MB never
-allocated). `HealRecord` is unchanged at 48 B — it needs `OverTotal` and cannot get below it, which is worth saying out loud: the trimming was never going to
-even out the two record types, it was about not paying for a field in the type that has none. The floor after this change is 48 B; the next step down (40 B)
-needs a four-byte field gone or `Type` stored as a byte — its vocabulary is ~15 values and `Labels` holds 36 constants, so that is possible without inventing
-an id space with a ceiling. Anything below that wants two-byte name ids, and that is the flat-array conversation in the section above, not a trimming job.
+allocated). `HealRecord` was unchanged at 48 B — it needs `OverTotal`, and the trimming was never going to even out the two record types, it was about not
+paying for a field in the type that has none. That paragraph's "next step down" was taken: the label went into a byte and both records fell to 40 B, which is
+the subsection below. Anything below *that* wants two-byte name ids, and that is the flat-array conversation in the section above, not a trimming job.
+
+#### Sixteen words in one byte: what a record's label costs
+
+A `HitRecord` said what kind of event it was with an `int` id into `StringCache` — four bytes to name one of sixteen words. Those sixteen are fourteen damage
+labels (Melee, Direct Damage, DoT Tick, Proc, Bane Damage, Damage Shield, Other Damage, Absorb, Block, Dodge, Miss, Parry, Riposte, Invulnerable) and two heal
+labels (Direct Heal, HoT Tick), and they are closed by construction rather than by hope: every `CreateDamageRecord` call site passes a `Labels` constant or a
+variable assigned from one, `GetTypeFromSpell` returns the label it was handed or `Bane` or `Proc`, the miss branch maps its seven outcomes onto the last six,
+and `HealingLineParser` picks `Heal` or `HoT` and nothing else. No line text reaches a record's label, so the word does not need an id space at all — it needs
+an index into a table declared in code (`EQLogParser.Core/src/dao/model/HitLabel.cs`).
+
+| | master | after the field trim | with the label in a byte |
+|---|---|---|---|
+| `HitRecord` (base) | 40 B | 32 B | 32 B |
+| `DamageRecord` | 56 B | 48 B | **40 B** |
+| `HealRecord` | 48 B | 48 B | **40 B** |
+| `SpellCast`, `ReceivedSpell` | 48 B, 80 B | unchanged | unchanged — their payload never crossed a boundary |
+
+`HealRecord` came down too, which the section above did not expect: with the label a byte, its payload sits at 23 B and lands inside the same step.
+
+**A byte, not a short, and an enum only with the backing type written down.** Measured in `local/memprobe`, all at the same five ids plus the total, mask and
+bool:
+
+```
+as shipped (27 B payload)           48.00 B
+label id as a BYTE  (24)            40.00 B
+label id as USHORT  (25)            48.00 B     the win, lost to one extra byte
+enum : byte         (24)            40.00 B
+enum, default int   (27)            48.00 B     an enum nobody gave a backing type
+```
+
+Sixteen values fit in a byte with 240 slots to spare, so the ceiling argument is not about the count — it is about *which* number is stored. A truncated
+`StringCache` id would need the ceiling conversation (a long session interns hundreds of thousands of strings), and that is why `HitLabel` is its own table
+rather than a narrowed id. `Labels` stays the single spelling source: the enum's words are the `Labels` constants, so `record.Type` hands back the same
+interned literal it always did and every `record.Type == Labels.Melee` comparison — reference equality included — behaves as before.
+
+Three rules keep the trade honest, all pinned in `HitLabelTest`:
+
+- **`None` (0) reads back as null, not as a word.** Records that never set a label are not hypothetical, and while `Type` was an id they read null because
+  `StringCache.GetName(0)` is null by design. A table that answered "Unknown" instead would be renaming events.
+- **A word outside the table maps to `None` and is counted** (`HitLabels.Unmapped`), never guessed at. Folding `"direct damage"` into `Direct Damage` would
+  move those events into a column of every view silently; matching is ordinal, so casing is a different word. The counter is the only thing that would ever
+  notice, and a real session should leave it at zero.
+- **The vocabulary is asserted at its size**, in the spirit of `EveryLeanWordIsThreeWordsNoMore`: sixteen plus `None`, each holding its expected `Labels`
+  constant, no two sharing a word. A new label arrives with an enum member, a table pair, and the parser work that produces it — it does not get smuggled in
+  as an extra line in an enum nobody re-reads.
+
+The existing `DamageLineParserTest` turned out to be the real coverage for gaps: 54 assertions compare `record.Type` against `Labels` across eleven of these
+words, so a word missing from the table reads back null *there*, in a test about parsing, rather than in some viewer nobody runs.
+
+A correction worth keeping, because it was written down wrong here for a while: **`Reverse DS` is not one of the sixteen.** It appears in the damage parser as
+the word given to an *attacker*, and no `CreateDamageRecord` call has ever passed it as a type. Anything that treated it as a label value was reserving space
+for a case that cannot occur.
+
+Parsing got cheaper on the way, which was not the point but is measurable: heal records used to run `StringCache.GetOrAdd(type)` per event — capitalise, look
+up, mint under a lock if new — for one of two words the table already holds; damage records used to take a `ConcurrentDictionary` lookup per event. Both are
+now one ordinal dictionary hit with no locking and nothing new to intern.
+
+**What this is worth on the big local capture** (`local/eqlog_Kizant_xegony-09-03-26.txt`, 997 MB, counted by pass rather than driven through the pipeline:
+4,524,557 damage events and 3,288,435 heal lines). Retained figures need the distinct-instance assumption from the section above (measured there at 52.7% of
+damage events restated-or-unique ⇒ ~2.38 M surviving damage objects), so treat them as arithmetic on measured sizes, not as a heap reading:
+
+| against `origin/master` | resident after the log is loaded | allocation never made |
+|---|---|---|
+| damage records, 56 B → 40 B | **−36 MB** (127 → 91 MB of record objects; −17% of the 210 MB damage store once its per-timestamp containers are counted) | 69 MB |
+| heal records, 48 B → 40 B | −6 MB to −25 MB, depending on how much sharing the repeat store achieves (its measured rate on a smaller capture was ~3/4 of lines restated) | 25 MB |
+| both changes, this commit alone | −18 MB of damage objects (and the 8 B on heals) | 34 MB damage + 25 MB heal |
+
+The allocation column matters more than it looks: that is gen0 traffic the parser stops producing, and gen0 frequency is what the stall hunting under
+"Instrumenting the UI thread" is chasing. Remaining headroom in the record itself is now the four-byte name ids — 24 B of a 40 B object — which is the
+flat-array conversation above rather than another trim.
 
 ### Reading a report
 

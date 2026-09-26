@@ -292,7 +292,8 @@ namespace EQLogParser
           OverTotal = overHeal,
           Healer = StringCache.GetOrAdd(healer),
           Healed = StringCache.GetOrAdd(healed),
-          Type = StringCache.GetOrAdd(type),
+          // no GetOrAdd: a label is one of two words the table already holds, and there is nothing to share
+          Type = type,
           ModifiersMask = -1,
           SubType = subType
         };

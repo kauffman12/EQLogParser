@@ -63,6 +63,10 @@ namespace EQLogParser
       Assert.AreEqual("Sontalak", record.Defender);
       Assert.AreEqual((uint)126225, record.Total);
       Assert.AreEqual(Labels.Melee, record.Type);
+
+      // The label behind that word. Every `record.Type` assertion in this file is now also a test of HitLabel's
+      // table: a word missing from it would read back as null right here instead of somewhere nobody looks.
+      Assert.AreEqual(HitLabel.Melee, record.Label);
       Assert.AreEqual("Crushes", record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
       Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));

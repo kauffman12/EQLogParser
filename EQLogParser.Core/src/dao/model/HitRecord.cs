@@ -15,7 +15,9 @@ namespace EQLogParser;
  * case stay two different values here just as they did when they were references.
  *
  * What is left in the base is what both kinds of event can actually carry: an amount that landed, a modifier
- * mask, and the two labels. OverTotal used to sit here, and it cost four bytes in every damage record the
+ * mask, and the two labels. The event label (Type) is not an id but a byte from HitLabel's closed table — see
+ * EQLogParser.Core/src/dao/model/HitLabel.cs for why seventeen words do not need a string or a pointer, and what
+ * a record that carries no label reads back as. OverTotal used to sit here, and it cost four bytes in every damage record the
  * parser ever made because only heals have an over-amount — a heal line reads "for 9409 (11000)" and damage
  * has no counterpart. A hit record is the most numerous object in the process, millions to a night, so a
  * field one kind of line can write belongs to that kind; docs/DesignNotes.md → What a loaded raid costs in
@@ -26,10 +28,15 @@ public class HitRecord : IAction
   public uint Total { get; set; }
   public short ModifiersMask { get; set; }
 
+  /*
+   * The event's word, stored as one byte of the HitLabel table and read back as the same string it always was.
+   * Assigning a word the table does not know leaves the record unlabeled (Type reads null, which is what an unset
+   * record field has always read), and is counted in HitLabels.Unmapped rather than renamed into another label.
+   */
   public string Type
   {
-    get => StringCache.GetName(_typeId);
-    set => _typeId = StringCache.GetId(value);
+    get => HitLabels.Text(_label);
+    set => _label = HitLabels.Parse(value);
   }
 
   public string SubType
@@ -38,10 +45,10 @@ public class HitRecord : IAction
     set => _subTypeId = StringCache.GetId(value);
   }
 
-  internal int TypeId => _typeId;
+  internal HitLabel Label => _label;
   internal int SubTypeId => _subTypeId;
 
-  private int _typeId;
+  private HitLabel _label;
   private int _subTypeId;
 }
 
@@ -72,11 +79,11 @@ internal class HealRecord : HitRecord
 
   public override bool Equals(object obj)
   {
-    return obj is HealRecord other && _healerId == other._healerId && _healedId == other._healedId && TypeId == other.TypeId
+    return obj is HealRecord other && _healerId == other._healerId && _healedId == other._healedId && Label == other.Label
       && SubTypeId == other.SubTypeId && Total == other.Total && OverTotal == other.OverTotal && ModifiersMask == other.ModifiersMask;
   }
 
-  public override int GetHashCode() => HashCode.Combine(_healerId, _healedId, TypeId, SubTypeId, Total, OverTotal, ModifiersMask);
+  public override int GetHashCode() => HashCode.Combine(_healerId, _healedId, Label, SubTypeId, Total, OverTotal, ModifiersMask);
 
   private int _healerId;
   private int _healedId;
@@ -112,13 +119,13 @@ internal class DamageRecord : HitRecord
   {
     return obj is DamageRecord other && _attackerId == other._attackerId && _attackerOwnerId == other._attackerOwnerId
       && _defenderId == other._defenderId && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total
-      && TypeId == other.TypeId && SubTypeId == other.SubTypeId && ModifiersMask == other.ModifiersMask;
+      && Label == other.Label && SubTypeId == other.SubTypeId && ModifiersMask == other.ModifiersMask;
   }
 
   public override int GetHashCode()
   {
     var hash1 = HashCode.Combine(_attackerId, _attackerOwnerId, _defenderId);
-    var hash2 = HashCode.Combine(AttackerIsSpell, Total, TypeId);
+    var hash2 = HashCode.Combine(AttackerIsSpell, Total, Label);
     return HashCode.Combine(hash1, hash2, SubTypeId, ModifiersMask);
   }
 

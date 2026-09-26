@@ -78,9 +78,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `DamageLineParser.CreateDamageRecord`, because registering the pet with its player is why that call runs; deleting the line stops pet mapping learning
   from damage taken. And whoever counts a miss must not spend its modifier mask (`(Riposte)` rides on a line the parser called a miss): that guard lives
   in `UpdateDamageStats`, not in `LineModifiersParser`. `HitStatSplitTest` pins both, plus the heal arithmetic (`Extra` = ask − landed).
-  Measured floor with `int` name ids is **48 B** per damage record; the next step down (40 B) needs `Type` as a byte or four more bytes gone, and below
-  that wants two-byte ids — the flat-array conversation, not trimming. Numbers and reasoning: docs/DesignNotes.md → "The eight bytes that were in every
-  damage record for nothing".
+  Numbers and reasoning: docs/DesignNotes.md → "The eight bytes that were in every damage record for nothing".
+- **A record's kind is one byte, not a string and not a `StringCache` id**: `HitLabel : byte` holds the sixteen words a record can be (fourteen damage,
+  two heal) and `HitLabels` pairs each with its `Labels` constant, so `record.Type` hands back the same interned literal as ever and every
+  `record.Type == Labels.Melee` comparison still works. Four rules. (1) **Write the backing type**: a default enum is an `int`, and one extra byte puts a
+  damage record from 40 B back to 48 — measured, and pinned by `Unsafe.SizeOf<HitLabel>()`. A *narrowed* id would be the wrong idea entirely (a long session
+  interns far more than 256 strings); this is its own table, not a truncated one. (2) **`None` reads back as null**, because records with no label have always
+  read null (`StringCache.GetName(0)` is null) and answering "Unknown" instead would rename events. (3) **A word outside the table maps to `None` and is
+  counted in `HitLabels.Unmapped`, never guessed at** — matching is ordinal, so `"direct damage"` does not become `Direct Damage` and quietly move those
+  events into another column of every view. (4) **The vocabulary is asserted at its size** by `HitLabelTest`; a new label arrives with an enum member, a table
+  pair, the parser branch that produces it and a test, exactly like a new FCT word. The vocabulary is closed by construction (every `CreateDamageRecord` call
+  passes a `Labels` constant or a variable assigned from one; `GetTypeFromSpell` returns only its input, `Bane` or `Proc`; the miss branch maps onto six words;
+  heals pick two) — and note `Reverse DS` is **not** in it: the parser uses that word for an *attacker*, never as a type. Both records are **40 B** now; below
+  that wants two-byte name ids, which is the flat-array conversation, not trimming. Numbers: docs/DesignNotes.md → "Sixteen words in one byte".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
