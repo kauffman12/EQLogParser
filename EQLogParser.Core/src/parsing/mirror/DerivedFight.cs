@@ -34,6 +34,16 @@ namespace EQLogParser.Mirror
     public double LastTime = double.NegativeInfinity;
     public bool Dead;
 
+    // Projection-only: the row exists because a charm window put this name on the enemy side
+    // (charmed raider), or its facts were owned while such a window was open. Rendered as a
+    // status word so "Illuminai" in the list is never mistaken for a mob.
+    public bool CharmedOwned;
+
+    // Direction split of DamageTotal (hits only): damage received by the row's owner versus
+    // damage it dealt. DamageTotal stays the engagement sum.
+    public long DamageToOwner;
+    public long DamageByOwner;
+
     public double BeginDamageTime = double.NaN;
     public double LastDamageTime = double.NaN;
     public double BeginTankingTime = double.NaN;

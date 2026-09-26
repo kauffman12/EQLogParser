@@ -429,7 +429,7 @@ namespace EQLogParser.Mirror
 
     // Damaging spell the spell DB says only hits its caster (SpellTarget.Self): spell feedback.
     // Cheap dict lookup, reached only for facts whose attacker has no identity yet.
-    private static bool IsSelfTargetDamageSpell(string name)
+    internal static bool IsSelfTargetDamageSpell(string name)
       => EQDataStore.Instance.GetDamagingSpellByName(name) is { Target: (byte) SpellTarget.Self };
   }
 }

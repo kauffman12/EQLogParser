@@ -74,7 +74,7 @@ namespace EQLogParser
           Duration = DateUtil.FormatGeneralTime(Math.Max(0, fight.EndTime - fight.BeginTime)),
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,
-          Status = fight.Dead ? "dead" : string.Empty,
+          Status = $"{(fight.Dead ? "dead" : string.Empty)}{(fight.Dead && fight.CharmedOwned ? ", " : string.Empty)}{(fight.CharmedOwned ? "charmed" : string.Empty)}",
         });
       }
 

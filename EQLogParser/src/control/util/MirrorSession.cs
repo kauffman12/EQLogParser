@@ -82,7 +82,11 @@ namespace EQLogParser
             var timeline = new EntityTimeline();
             RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
             ClassificationRules.Apply(_facts, timeline);
-            return MirrorFightRows.Build(FightDeriver.Derive(_facts), timeline, CapturedTotal);
+            // Display list = facts projected over the classification above. Rows self-correct:
+            // a name that gains player-side evidence between passes loses its row to the NPC it
+            // was actually fighting (FightDeriver's legacy-keyed list is retired from display and
+            // lives on only in the parity tests/bench).
+            return MirrorFightRows.Build(FightProjection.Build(_facts, timeline), timeline, CapturedTotal);
           });
           sw.Stop();
 
