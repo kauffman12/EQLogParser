@@ -30,6 +30,12 @@ namespace EQLogParser.Mirror
   {
     public string Name;                 // interned boss key (exactly as the current pipeline keys fights)
     public int Id;                      // creation order, 1-based (mirrors Fight.Id ordering for reports)
+
+    // "Fight N" section this row belongs to, stamped by Sectionizer.StampGroupIds over the whole list.
+    // It is the number a stats run reads as Fight.GroupId (legacy assigns it in FightTable as fights are
+    // processed), so a derived selection that spans an inactivity gap groups into the same columns the
+    // legacy list would have used. Stays 1 for a list nobody has sectioned.
+    public int GroupId = 1;
     public double BeginTime = double.PositiveInfinity;
     public double LastTime = double.NegativeInfinity;
     public bool Dead;

@@ -112,6 +112,22 @@ namespace EQLogParser.Mirror
       }
     }
 
+    /*
+     * R5's ownership word: the owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), null
+     * when the name has no such suffix. Three places have to cut the name exactly the same way - the rules pass
+     * that claims the pet, the fight row's PetOwner, and a materialized damage record, whose AttackerOwner is what
+     * folds a pet's damage under its owner in DamageStatsBuilder - so it is written once, here.
+     */
+    internal static string OwnerInName(string name)
+    {
+      foreach (var suffix in OwnerSuffixes)
+      {
+        if (name.EndsWith(suffix, StringComparison.Ordinal)) return name[..^suffix.Length];
+      }
+
+      return null;
+    }
+
     // Returns the charm (Friendly) intervals for the graph pass; windows close on wear-off or death.
     private static List<(string Name, double T0, double T1)> ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome)
     {
@@ -262,15 +278,7 @@ namespace EQLogParser.Mirror
         if (!seen.Add(attacker)) continue;
 
         var source = "R5-owner";
-        string owner = null;
-        foreach (var suffix in OwnerSuffixes)
-        {
-          if (attacker.EndsWith(suffix, StringComparison.Ordinal))
-          {
-            owner = attacker[..^suffix.Length];
-            break;
-          }
-        }
+        var owner = OwnerInName(attacker);
 
         timeline.SetIdentity(attacker, IdentityKind.Pet, RuleStrength.Certain, owner is null ? source : $"{source}:{owner}", double.NegativeInfinity);
         if (owner != null)

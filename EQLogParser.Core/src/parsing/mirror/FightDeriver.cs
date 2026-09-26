@@ -329,22 +329,10 @@ namespace EQLogParser.Mirror
     // Phase 1 line-derived ownership (R5 input already stored as a flag on the fact): "X`s pet" /
     // "X`s warder" attacker names carry their owner in the name. Registry-gated owner lookups
     // (the parser's CheckOwner) are intentionally not reproduced — that gate is part of what the
-    // rules replace in Phase 2.
+    // rules replace in Phase 2. The cut itself is ClassificationRules.OwnerInName, shared with the
+    // rules pass and with the damage summary's records.
     private static string OwnerOf(in DamageFact fact, string attacker)
-    {
-      if (!fact.OwnerInLine) return null;
-      const string petSuffix = "`s pet";
-      const string warderSuffix = "`s warder";
-      if (attacker.EndsWith(petSuffix, StringComparison.Ordinal))
-      {
-        return attacker[..^petSuffix.Length];
-      }
-      if (attacker.EndsWith(warderSuffix, StringComparison.Ordinal))
-      {
-        return attacker[..^warderSuffix.Length];
-      }
-      return null;
-    }
+      => fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : null;
 
     private static void CheckExpireFights(DeriveContext ctx, double currentTime)
     {

@@ -49,6 +49,24 @@ namespace EQLogParser.Mirror
       return sections;
     }
 
+    // Write each fight's section number back onto the row and return how many sections there were.
+    // The display list is built from ToDisplayRows, which uses this same walk and this same timeout, so a
+    // stamped GroupId agrees with the dividers the user sees above it in the grid.
+    public static int StampGroupIds(IReadOnlyList<DerivedFight> fights, int groupTimeout = DefaultGroupTimeout)
+    {
+      var sections = Sectionize(fights, groupTimeout);
+
+      foreach (var section in sections)
+      {
+        foreach (var fight in section.Fights)
+        {
+          fight.GroupId = section.Index;
+        }
+      }
+
+      return sections.Count;
+    }
+
     private static MirrorSection NewSection(int index, List<MirrorSection> sections)
     {
       var section = new MirrorSection { Index = index };

@@ -32,7 +32,24 @@ namespace EQLogParser.Mirror
 
     private enum Side : byte { Unknown, Player, Npc }
 
-    public static List<DerivedFight> Build(DamageFactTable facts, EntityTimeline timeline)
+    /*
+     * Optional reporter: which row a fact ended up owning. The projection is the single place that
+     * decides sides, so anything that needs "the facts of this fight" (the damage summary fed from the
+     * derived list, MirrorSummaryFights) has to be told here rather than re-deciding somewhere else —
+     * a second copy of these rules would drift the moment a rule changes, and the drift would show up
+     * as a summary that disagrees with the row it was opened from.
+     *
+     * `towardOwner` is the fact's direction inside its row: true when the row's own name was the DEFENDER,
+     * i.e. the fact is damage done TO that entity rather than by it — the same test that splits DamageToOwner
+     * from DamageByOwner, and the split a damage summary needs (FightManager puts everything aimed at the npc
+     * in DamageBlocks and the mob's own output in TankingBlocks). Note it is not the same as "the attacker was
+     * player-side": an unclassified name hitting a known NPC aims at the owner too, and belongs in those
+     * blocks even while its per-player credit waits for a classification pass. Consumers cannot re-derive this
+     * later, because which side a name was on depends on the timeline at the fact's own second.
+     */
+    internal delegate void FactOwnershipHandler(DamageFact fact, int ordinal, DerivedFight owner, bool towardOwner);
+
+    public static List<DerivedFight> Build(DamageFactTable facts, EntityTimeline timeline, FactOwnershipHandler ownerSink = null)
     {
       // Open row per name; a gap (or a slain line) closes it and the next exchange opens a fresh
       // row under the same key. Rows keep arrival order until the final sort.
@@ -47,8 +64,10 @@ namespace EQLogParser.Mirror
         q.Enqueue(death.TimeS);
       }
 
-      foreach (var fact in facts.Facts)
+      var allFacts = facts.Facts;
+      for (var ordinal = 0; ordinal < allFacts.Length; ordinal++)
       {
+        var fact = allFacts[ordinal];
         if (fact.AtkIdx == fact.DefIdx) continue;                    // self damage
         var atkName = facts.NameOf(fact.AtkIdx);
         if (ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue; // spell feedback
@@ -136,6 +155,11 @@ namespace EQLogParser.Mirror
           open[key] = row;
         }
         if (charmed || IsFlipped(timeline, key, t)) row.CharmedOwned = true;
+
+        // Reported after the boundary checks and row creation, so every fact is announced exactly
+        // once and to the row that really carries it in its totals. The direction is the same comparison
+        // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
+        ownerSink?.Invoke(fact, ordinal, row, string.Equals(key, defName, StringComparison.Ordinal));
 
         var isHit = LabelTypes.IsHit(fact.TypeId);
         if (isHit)
