@@ -525,11 +525,6 @@ namespace EQLogParser
         incoming.AttackerOwner = StringCache.GetOrAdd(incoming.AttackerOwner);
       }
 
-      if (incoming.DefenderOwner != null)
-      {
-        incoming.DefenderOwner = StringCache.GetOrAdd(incoming.DefenderOwner);
-      }
-
       _damageCache.Offer(incoming);
       return incoming;
     }

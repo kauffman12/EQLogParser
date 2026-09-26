@@ -292,7 +292,7 @@ namespace EQLogParser
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
-                      StatsUtil.UpdateStats(stats, record, isNewFrame, isAttackerPet);
+                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet);
 
                       if ((!_petToPlayer.TryGetValue(record.Attacker, out var player) && !_playerPets.ContainsKey(record.Attacker))
                       || player == Labels.Unassigned)
@@ -307,7 +307,7 @@ namespace EQLogParser
                         isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
 
                         var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
-                        StatsUtil.UpdateStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
+                        StatsUtil.UpdateDamageStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
                         if (childrenStats.TryGetValue(aggregateName, out var children))
@@ -324,7 +324,7 @@ namespace EQLogParser
 
                       var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
                       var critHits = subStats.CritHits;
-                      StatsUtil.UpdateStats(subStats, record, false, isAttackerPet);
+                      StatsUtil.UpdateDamageStats(subStats, record, false, isAttackerPet);
 
                       // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)

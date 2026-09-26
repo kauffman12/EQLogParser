@@ -289,7 +289,16 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateStats(PlayerSubStats stats, HitRecord record, bool newFrame = false, bool isPet = false)
+    /*
+     * Count one damage event.
+     *
+     * Damage and healing shared this routine through their common base, which cost both of them a field they
+     * cannot use and a switch they cannot land on: the labels below are damage vocabulary (Absorb, Parry,
+     * Bane), the melee and bow counters mean nothing to a heal, and OverTotal sat in every damage record for
+     * the pair. Splitting them is what lets HitRecord hold only what both kinds write; the heal half is
+     * UpdateHealStats.
+     */
+    internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false, bool isPet = false)
     {
       var newMeleeHit = false;
       var parseModifiers = true;
@@ -336,11 +345,6 @@ namespace EQLogParser
           stats.SpellHits++;
           stats.Hits++;
           break;
-        case Labels.Hot:
-        case Labels.Heal:
-          stats.SpellHits++;
-          stats.Hits += 1;
-          break;
         case Labels.Ds:
         case Labels.Rs:
           stats.Hits += 1;
@@ -385,18 +389,42 @@ namespace EQLogParser
         stats.BestSecTemp += record.Total;
       }
 
+      // nothing is ever asked for beyond what lands: damage carries no OverTotal (HealRecord does)
+      stats.MaxPotentialHit = Math.Max(record.Total, stats.MaxPotentialHit);
+
+      // a miss can arrive with a mask on it (a riposte line reads as a miss), and its attacker did not do those things
+      if (parseModifiers && record.Type != Labels.Miss)
+      {
+        LineModifiersParser.UpdateStats(record.ModifiersMask, record.Total, stats);
+      }
+    }
+
+    /*
+     * Count one heal. Its type is Heal or HoT and nothing else (HealingLineParser writes only those), so there
+     * is no label switch to walk and no melee bookkeeping — just the amount, the overheal the line asked for,
+     * and whichever modifier bits a heal can carry (Critical, Twincast, Lucky).
+     */
+    internal static void UpdateHealStats(PlayerSubStats stats, HealRecord record)
+    {
+      stats.SpellHits++;
+      stats.Hits += 1;
+
+      if (record.Total > 0)
+      {
+        stats.Total += record.Total;
+        stats.Max = Math.Max(stats.Max, record.Total);
+        stats.Min = GetMin(stats.Min, record.Total);
+        stats.BestSecTemp += record.Total;
+      }
+
       if (record.OverTotal > 0)
       {
         stats.Extra += record.OverTotal - record.Total;
       }
 
-      var hitPotential = record.Total + record.OverTotal;
-      stats.MaxPotentialHit = Math.Max(hitPotential, stats.MaxPotentialHit);
+      stats.MaxPotentialHit = Math.Max(record.Total + record.OverTotal, stats.MaxPotentialHit);
 
-      if (parseModifiers)
-      {
-        LineModifiersParser.UpdateStats(record, stats);
-      }
+      LineModifiersParser.UpdateStats(record.ModifiersMask, record.Total, stats);
     }
 
     internal static void MergeStats(PlayerSubStats to, PlayerSubStats from)

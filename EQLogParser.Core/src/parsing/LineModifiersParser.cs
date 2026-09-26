@@ -53,14 +53,21 @@ namespace EQLogParser
       source is not null && source.StartsWith("Life Burn", StringComparison.Ordinal) ? FctSpecial.LifeBurn :
       FctSpecial.None;
 
-    internal static void UpdateStats(HitRecord record, Attempt playerStats, Attempt theHit = null)
+    /*
+     * Spend a damage event's modifier mask on the tallies that read it. It takes scalars rather than a record
+     * because that is all of a hit these numbers depend on — which bits are set, and how much was done — and a
+     * record-shaped parameter is what kept the two record types wearing the same fields (see HitRecord).
+     * Callers holding a miss must not call this: whoever counts a riposte line as a miss decides its attacker
+     * gets nothing.
+     */
+    internal static void UpdateStats(short modifiersMask, uint total, Attempt playerStats, Attempt theHit = null)
     {
-      if (record.ModifiersMask > -1 && record.Type != Labels.Miss)
+      if (modifiersMask > -1)
       {
-        if ((record.ModifiersMask & Assassinate) != 0)
+        if ((modifiersMask & Assassinate) != 0)
         {
           playerStats.AssHits++;
-          playerStats.TotalAss += record.Total;
+          playerStats.TotalAss += total;
 
           if (theHit is not null)
           {
@@ -68,7 +75,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Doublebow) != 0)
+        if ((modifiersMask & Doublebow) != 0)
         {
           playerStats.DoubleBowHits++;
 
@@ -78,7 +85,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Flurry) != 0)
+        if ((modifiersMask & Flurry) != 0)
         {
           playerStats.FlurryHits++;
 
@@ -88,10 +95,10 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Headshot) != 0)
+        if ((modifiersMask & Headshot) != 0)
         {
           playerStats.HeadHits++;
-          playerStats.TotalHead += record.Total;
+          playerStats.TotalHead += total;
 
           if (theHit is not null)
           {
@@ -99,10 +106,10 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Finishing) != 0)
+        if ((modifiersMask & Finishing) != 0)
         {
           playerStats.FinishingHits++;
-          playerStats.TotalFinishing += record.Total;
+          playerStats.TotalFinishing += total;
 
           if (theHit is not null)
           {
@@ -110,7 +117,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Twincast) != 0)
+        if ((modifiersMask & Twincast) != 0)
         {
           playerStats.TwincastHits++;
 
@@ -121,10 +128,10 @@ namespace EQLogParser
         }
         else
         {
-          playerStats.TotalNonTwincast += record.Total;
+          playerStats.TotalNonTwincast += total;
         }
 
-        if ((record.ModifiersMask & Rampage) != 0)
+        if ((modifiersMask & Rampage) != 0)
         {
           playerStats.RampageHits++;
 
@@ -135,10 +142,10 @@ namespace EQLogParser
         }
 
         // A Strikethrough Riposte is the attacker attacking through a riposte from the defender
-        if (IsRiposte(record.ModifiersMask))
+        if (IsRiposte(modifiersMask))
         {
           playerStats.RiposteHits++;
-          playerStats.TotalRiposte += record.Total;
+          playerStats.TotalRiposte += total;
 
           if (theHit is not null)
           {
@@ -146,7 +153,7 @@ namespace EQLogParser
           }
         }
 
-        if (IsStrikethrough(record.ModifiersMask))
+        if (IsStrikethrough(modifiersMask))
         {
           playerStats.StrikethroughHits++;
 
@@ -156,10 +163,10 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Slay) != 0)
+        if ((modifiersMask & Slay) != 0)
         {
           playerStats.SlayHits++;
-          playerStats.TotalSlay += record.Total;
+          playerStats.TotalSlay += total;
 
           if (theHit is not null)
           {
@@ -167,7 +174,7 @@ namespace EQLogParser
           }
         }
 
-        if ((record.ModifiersMask & Crit) != 0)
+        if ((modifiersMask & Crit) != 0)
         {
           playerStats.CritHits++;
 
@@ -176,49 +183,49 @@ namespace EQLogParser
             theHit.CritHits++;
           }
 
-          if ((record.ModifiersMask & Lucky) == 0)
+          if ((modifiersMask & Lucky) == 0)
           {
-            playerStats.TotalCrit += record.Total;
+            playerStats.TotalCrit += total;
 
             if (theHit is not null)
             {
-              theHit.TotalCrit += record.Total;
+              theHit.TotalCrit += total;
             }
 
-            if ((record.ModifiersMask & Twincast) == 0)
+            if ((modifiersMask & Twincast) == 0)
             {
               playerStats.NonTwincastCritHits++;
-              playerStats.TotalNonTwincastCrit += record.Total;
+              playerStats.TotalNonTwincastCrit += total;
 
               if (theHit is not null)
               {
                 theHit.NonTwincastCritHits++;
-                theHit.TotalNonTwincastCrit += record.Total;
+                theHit.TotalNonTwincastCrit += total;
               }
             }
           }
         }
 
-        if ((record.ModifiersMask & Lucky) != 0)
+        if ((modifiersMask & Lucky) != 0)
         {
           playerStats.LuckyHits++;
-          playerStats.TotalLucky += record.Total;
+          playerStats.TotalLucky += total;
 
           if (theHit is not null)
           {
             theHit.LuckyHits++;
-            theHit.TotalLucky += record.Total;
+            theHit.TotalLucky += total;
           }
 
-          if ((record.ModifiersMask & Twincast) == 0)
+          if ((modifiersMask & Twincast) == 0)
           {
             playerStats.NonTwincastLuckyHits++;
-            playerStats.TotalNonTwincastLucky += record.Total;
+            playerStats.TotalNonTwincastLucky += total;
 
             if (theHit is not null)
             {
               theHit.NonTwincastLuckyHits++;
-              theHit.TotalNonTwincastLucky += record.Total;
+              theHit.TotalNonTwincastLucky += total;
             }
           }
         }

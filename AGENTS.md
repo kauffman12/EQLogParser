@@ -68,6 +68,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   passes only from whichever position in the run order it happens to occupy (`LineParsersTest` is where that was found). Sharing is never a correctness
   mechanism: records are equal by value, and the filter is allowed to be wrong only toward "seen". Numbers and reasoning:
   docs/DesignNotes.md → "What a loaded raid costs in memory".
+- **A hit record carries only what its own lines can write**: `OverTotal` belongs to `HealRecord`, not to `HitRecord` — over-heal is the only
+  "asked for more than landed" number EQ writes, and damage has no counterpart, so keeping it in the base cost 4 B in every one of the millions of
+  damage records. Counting is split the same way: `StatsUtil.UpdateDamageStats(PlayerSubStats, DamageRecord, …)` and
+  `UpdateHealStats(PlayerSubStats, HealRecord)`, and `LineModifiersParser.UpdateStats` takes `(short mask, uint total, …)` — **nothing in the codebase
+  takes a `HitRecord`**, which is what keeps the base small. So a new field goes on the type whose log lines can fill it, never on the base "for
+  convenience", and the damage switch must not gain `Hot`/`Heal` cases: `CreateDamageRecord`'s callers cannot produce a heal label. Two traps.
+  `DamageRecord` has no defender owner and that is deliberate (nothing read it) — but `CheckOwner(defender, out _)` **stays** in
+  `DamageLineParser.CreateDamageRecord`, because registering the pet with its player is why that call runs; deleting the line stops pet mapping learning
+  from damage taken. And whoever counts a miss must not spend its modifier mask (`(Riposte)` rides on a line the parser called a miss): that guard lives
+  in `UpdateDamageStats`, not in `LineModifiersParser`. `HitStatSplitTest` pins both, plus the heal arithmetic (`Extra` = ask − landed).
+  Measured floor with `int` name ids is **48 B** per damage record; the next step down (40 B) needs `Type` as a byte or four more bytes gone, and below
+  that wants two-byte ids — the flat-array conversation, not trimming. Numbers and reasoning: docs/DesignNotes.md → "The eight bytes that were in every
+  damage record for nothing".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

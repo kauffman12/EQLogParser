@@ -2926,6 +2926,57 @@ row would keep its raw `foob's sword` where it used to read `Foob's Sword`. That
 decision. And the interning inside `GetCachedDamageRecord` is not part of the memory story at all: it is a spelling service that happens to live in the
 miss path, which is why the lookup and the offer are two calls rather than one helper that would settle names for a value already held.
 
+#### The eight bytes that were in every damage record for nothing
+
+The cache decides how many record objects a night holds; the record's own fields decide what each one costs, and those had never been measured against
+what the log can actually write. An object is 16 B of header plus its fields rounded up to a multiple of 8, so a field is worth either nothing or 8 B
+depending on which side of a boundary the payload sits on — which is why this was measured field by field (`local/memprobe`) instead of added up:
+
+| `DamageRecord` | size |
+|---|---|
+| as it stood: `Total`, `OverTotal`, mask, five name ids, `AttackerIsSpell` (35 B of payload) | **56 B** |
+| `OverTotal` moved to `HealRecord` (31 B payload) | **48 B** |
+| and the defender's owner deleted too (27 B payload) | **48 B** — free, bought by the first one |
+
+Both are gone. `OverTotal` is the amount a line *asked* for, which is an over-heal: `HealingLineParser` was its only writer in the codebase, and `FctManager`
+carried a comment saying damage records never carry it. It now lives on `HealRecord`, where the compiler enforces that. Dropping it from
+`DamageRecord.Equals`/`GetHashCode` cannot merge two events that were distinct before, because the component being dropped was always 0 — of the two fields
+removed, this is the one whose deletion is provably invisible to the dedup store.
+
+The defender's owner was simply dead weight: written by the parser, title-cased in `GetCachedDamageRecord`, compared in `Equals`, and read by nothing — every
+owner that gets displayed is an *attacker* owner (`RecordGroupCollections`' pet grouping, `DamageStatsBuilder`'s "SoAndSo +Pets", `HitLogViewer`'s own check).
+Deleting it does merge records in one narrow case: the old key held a value derived from the defender's name *and* from whether `PlayerRegistry` had verified
+that player yet, so the same pet defender could carry a null owner early in a session and a real one later, and those were two cache entries. They are one now,
+which can only reduce what is retained, and the field nobody read is not in either record's display. **What stays is the parser's `CheckOwner(defender, out _)`
+call**: it registers the pet with its player on the way out, so the side effect survives even though the answer no longer has anywhere to live — delete that
+line and pet mapping quietly stops learning from damage taken.
+
+The reason neither field could be moved a decade ago is `StatsUtil.UpdateStats(PlayerSubStats, HitRecord, …)`: one routine counting both kinds of event through
+their common base, which is why the base had to hold a field only heals write. It is two routines now — `UpdateDamageStats` and `UpdateHealStats` — each
+holding only what its own lines can produce. The damage switch kept every damage label and lost `Hot`/`Heal`, which is safe rather than tidy: the type of a
+damage record comes from `CreateDamageRecord`'s callers, and that vocabulary is Ds, Rs, Bane, Melee, Dd, Dot, Proc, OtherDmg, Absorb, Block, Dodge, Miss,
+Parry, Invulnerable and Riposte (`GetTypeFromSpell` only ever returns the type it was handed, `Bane` or `Proc`), so a heal label cannot reach it — do not put
+those cases back. The heal half has no switch at all because `HealingLineParser` writes only `Heal` and `HoT`. And `LineModifiersParser.UpdateStats` takes
+`(short modifiersMask, uint total, …)` rather than a record, since that pair is the whole of a hit its tallies depend on; the `Type != Miss` guard it used to
+read off the record moved to its callers, where it belongs — a riposte line arrives as a miss, and whoever makes that call decides its attacker scores nothing.
+Removing the record parameter is also what leaves `HitRecord` free to be small: nothing in the codebase takes a `HitRecord` any more.
+
+Splitting them surfaced two things worth writing down rather than "fixing" on the way through. `MaxPotentialHit` for a heal has always been landed +
+asked-for — 9409 landed of an 11000 ask makes it 20409, which counts the landed part twice — and it turns out nothing reads `MaxPotentialHit` at all: the
+summary and breakdown tables print `Potential`, which is computed separately as `Total + Extra`. It is left exactly as it was and pinned that way in
+`HitStatSplitTest`, because a number nobody sees is not worth a behaviour change on a memory commit; whoever wants it printed should decide what it means
+first. The other is that the damage half's `BestSecTemp` accumulation runs for heals too — no heal caller passes `newFrame`, so no heal ever flushed a best
+second, but the running total kept filling — and the heal routine keeps doing that, likewise pinned.
+
+The one visible consequence is in `HitLogViewer`: its grid row accumulates events while grouping is on, and the "Over Healed" column read the inherited field,
+so `HitLogRow` carries `OverTotal` of its own now and heals feed it. Damage rows show zero there exactly as they always did.
+
+On this capture that is 8 B off each of ~2.38 M surviving damage records (~19 MB) and off each of the 4.52 M events the parser allocates (~36 MB never
+allocated). `HealRecord` is unchanged at 48 B — it needs `OverTotal` and cannot get below it, which is worth saying out loud: the trimming was never going to
+even out the two record types, it was about not paying for a field in the type that has none. The floor after this change is 48 B; the next step down (40 B)
+needs a four-byte field gone or `Type` stored as a byte — its vocabulary is ~15 values and `Labels` holds 36 constants, so that is possible without inventing
+an id space with a ceiling. Anything below that wants two-byte name ids, and that is the flat-array conversation in the section above, not a trimming job.
+
 ### Reading a report
 
 One real line, every twenty seconds while an instrumented window is open, taken from the end of a 69 minute session:

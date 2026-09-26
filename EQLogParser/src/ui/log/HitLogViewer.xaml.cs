@@ -439,7 +439,13 @@ namespace EQLogParser
 
         row.IsGroupingEnabled = _currentGroupActionsFilter;
         row.Total += hit.Total;
-        row.OverTotal += hit.OverTotal;
+
+        // only a heal asks for more than it lands, so the "Over Healed" column is fed from HealRecord alone;
+        // a damage row keeps its zero exactly as it did when the field sat on the shared base
+        if (action is HealRecord heal)
+        {
+          row.OverTotal += heal.OverTotal;
+        }
         row.Critical += (uint)(LineModifiersParser.IsCrit(hit.ModifiersMask) ? 1 : 0);
         row.Lucky += (uint)(LineModifiersParser.IsLucky(hit.ModifiersMask) ? 1 : 0);
         row.Twincast += (uint)(LineModifiersParser.IsTwincast(hit.ModifiersMask) ? 1 : 0);
@@ -551,8 +557,15 @@ namespace EQLogParser
     #endregion
   }
 
+  /*
+   * A grid row, not a record: it accumulates every event folded into it while grouping is on. It borrows
+   * Total/Type/SubType/ModifiersMask from HitRecord for the columns, and keeps OverTotal of its own because
+   * the amount asked-for belongs to heals alone (HealRecord) while this row answers to both kinds of line.
+   */
   public class HitLogRow : HitRecord
   {
+    public uint OverTotal { get; set; }
+
     public string Actor { get; set; }
     public string ActorClass { get; set; }
     public string Acted { get; set; }

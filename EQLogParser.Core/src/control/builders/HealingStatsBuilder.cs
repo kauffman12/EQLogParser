@@ -327,17 +327,17 @@ namespace EQLogParser
                 if (action is HealRecord record)
                 {
                   var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
-                  StatsUtil.UpdateStats(stats, record);
+                  StatsUtil.UpdateHealStats(stats, record);
 
                   var subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
-                  StatsUtil.UpdateStats(subStats2, record);
+                  StatsUtil.UpdateHealStats(subStats2, record);
 
                   var spellStatName = record.SubType ?? Labels.SelfHeal;
                   var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                  StatsUtil.UpdateStats(spellStats, record);
+                  StatsUtil.UpdateHealStats(spellStats, record);
 
                   var subStats3 = StatsUtil.CreatePlayerSubStats(subStats2.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
-                  StatsUtil.UpdateStats(subStats3, record);
+                  StatsUtil.UpdateHealStats(subStats3, record);
 
                   long value = 0;
                   if (totals.TryGetValue(record.Healed, out var total))
@@ -474,18 +474,18 @@ namespace EQLogParser
                   {
                     _raidTotals.Total += record.Total;
                     var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
-                    StatsUtil.UpdateStats(stats, record);
+                    StatsUtil.UpdateHealStats(stats, record);
 
                     var spellStatName = record.SubType ?? Labels.SelfHeal;
                     var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
-                    StatsUtil.UpdateStats(spellStats, record);
+                    StatsUtil.UpdateHealStats(spellStats, record);
 
                     var healedStatName = record.Healed;
                     var healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
-                    StatsUtil.UpdateStats(healedStats, record);
+                    StatsUtil.UpdateHealStats(healedStats, record);
 
                     var subStats3 = StatsUtil.CreatePlayerSubStats(healedStats.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
-                    StatsUtil.UpdateStats(subStats3, record);
+                    StatsUtil.UpdateHealStats(subStats3, record);
                   }
                 }
 

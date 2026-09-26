@@ -228,11 +228,11 @@ namespace EQLogParser
                       _raidTotals.Total += record.Total;
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
-                      StatsUtil.UpdateStats(stats, record, isNewFrame);
+                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame);
                       var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
 
                       var critHits = subStats.CritHits;
-                      StatsUtil.UpdateStats(subStats, record, false);
+                      StatsUtil.UpdateDamageStats(subStats, record, false);
 
                       // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)

@@ -13,11 +13,17 @@ namespace EQLogParser;
  * keep calling StringCache.GetOrAdd themselves, and callers that display the text verbatim
  * (spell names) keep their exact spelling. Ids are matched ordinally, so two spellings that differ by
  * case stay two different values here just as they did when they were references.
+ *
+ * What is left in the base is what both kinds of event can actually carry: an amount that landed, a modifier
+ * mask, and the two labels. OverTotal used to sit here, and it cost four bytes in every damage record the
+ * parser ever made because only heals have an over-amount — a heal line reads "for 9409 (11000)" and damage
+ * has no counterpart. A hit record is the most numerous object in the process, millions to a night, so a
+ * field one kind of line can write belongs to that kind; docs/DesignNotes.md → What a loaded raid costs in
+ * memory.
  */
 public class HitRecord : IAction
 {
   public uint Total { get; set; }
-  public uint OverTotal { get; set; }
   public short ModifiersMask { get; set; }
 
   public string Type
@@ -46,6 +52,12 @@ public class HitRecord : IAction
  */
 internal class HealRecord : HitRecord
 {
+  /*
+   * What the line asked for, as opposed to what landed (Total), so OverTotal - Total is the overheal the tabs
+   * print. Damage has no such number: HealingLineParser is the only writer of this field in the codebase.
+   */
+  public uint OverTotal { get; set; }
+
   public string Healer
   {
     get => StringCache.GetName(_healerId);
@@ -94,31 +106,34 @@ internal class DamageRecord : HitRecord
     set => _defenderId = StringCache.GetId(value);
   }
 
-  public string DefenderOwner
-  {
-    get => StringCache.GetName(_defenderOwnerId);
-    set => _defenderOwnerId = StringCache.GetId(value);
-  }
-
   public bool AttackerIsSpell { get; set; }
 
   public override bool Equals(object obj)
   {
     return obj is DamageRecord other && _attackerId == other._attackerId && _attackerOwnerId == other._attackerOwnerId
-      && _defenderId == other._defenderId && _defenderOwnerId == other._defenderOwnerId && AttackerIsSpell == other.AttackerIsSpell
-      && Total == other.Total && OverTotal == other.OverTotal && TypeId == other.TypeId && SubTypeId == other.SubTypeId
-      && ModifiersMask == other.ModifiersMask;
+      && _defenderId == other._defenderId && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total
+      && TypeId == other.TypeId && SubTypeId == other.SubTypeId && ModifiersMask == other.ModifiersMask;
   }
 
   public override int GetHashCode()
   {
-    var hash1 = HashCode.Combine(_attackerId, _attackerOwnerId, _defenderId, _defenderOwnerId);
-    var hash2 = HashCode.Combine(AttackerIsSpell, Total, OverTotal, TypeId);
+    var hash1 = HashCode.Combine(_attackerId, _attackerOwnerId, _defenderId);
+    var hash2 = HashCode.Combine(AttackerIsSpell, Total, TypeId);
     return HashCode.Combine(hash1, hash2, SubTypeId, ModifiersMask);
   }
 
+  /*
+   * Two fields used to sit here: OverTotal, which damage never writes (it is on HealRecord now), and the
+   * defender's owner. Nothing read that owner — the pet naming that wants an owner names the *attacker*
+   * (RecordGroupCollections, DamageStatsBuilder, HitLogViewer) — so it was written, capitalised and compared,
+   * never displayed. Losing them takes a damage record from 56 bytes to 48 (the allocator steps down once the
+   * payload crosses under 32). OverTotal cannot merge anything that was distinct, being always 0 here; the owner
+   * can, in one case — it was derived from the defender's name *and* from whether PlayerRegistry had verified
+   * that player yet, so the same pet could carry a null owner early in a session and a real one later, which was
+   * two cache entries and is now one. That only ever retains less, and the field it turns on is unread. The
+   * parser still resolves the defender's owner for its side effect, PlayerRegistry.AddPetToPlayer.
+   */
   private int _attackerId;
   private int _attackerOwnerId;
   private int _defenderId;
-  private int _defenderOwnerId;
 }

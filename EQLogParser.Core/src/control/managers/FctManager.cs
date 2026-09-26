@@ -211,7 +211,7 @@ namespace EQLogParser
         Crit = crit,
         Periodic = record.Type == Labels.Dot,
         Proc = proc,
-        // Total is the amount actually dealt (damage records never carry OverTotal today)
+        // Total is the amount actually dealt — a damage record holds no other amount (over-heal is HealRecord's)
         Value = record.Total,
         Source = DisplaySource(record),
         // the glyph'd events: mask flags, plus Decapitation whose only tell is the spell name in SubType

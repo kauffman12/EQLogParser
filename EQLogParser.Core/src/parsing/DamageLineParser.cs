@@ -1077,7 +1077,10 @@ namespace EQLogParser
 
         // check for pets
         CheckOwner(attacker, out var attackerOwner);
-        CheckOwner(defender, out var defenderOwner);
+
+        // the defender's owner is resolved for what CheckOwner does on the way out (it registers the pet with
+        // its player), not for anything the record keeps — a damage record has no place for it any more
+        CheckOwner(defender, out _);
 
         if (attacker.Length <= 64 && defender.Length <= 64)
         {
@@ -1089,7 +1092,6 @@ namespace EQLogParser
             SubType = subType,
             Total = damage,
             AttackerOwner = attackerOwner,
-            DefenderOwner = defenderOwner,
             ModifiersMask = modifiersMask,
             AttackerIsSpell = attackerIsSpell
           };
