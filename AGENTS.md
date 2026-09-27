@@ -129,6 +129,28 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   reproduced row needs. This is the `HitRecord` rule applied one layer down: a field belongs to the type whose lines can write it.
   Numbers and the refused heal shapes (10,194 pet self-heals / 2,688 pet-healed-passive / 120 HoT = 2.9 % of heal-action lines, all
   healer-less or self-directed): docs/DesignNotes.md → "The byte that filters live in", "Healing joins the capture".
+- **Identity rules read a closed vocabulary and never reason from their own guesses**: the four rules added after reading six
+  captures (2022-2026) cold are pinned by `MirrorRuleExtensionsTest`, and each has a shape that looked safe until it was measured.
+  **R5 ownership is five words, in one list** — `OwnerSuffixes` = `` `s pet``, `` `s warder``, `` `s ward``, `` `s familiar``,
+  `` `s mount``, matched case-insensitively (the logs do print `` `s Warder ``), and `ClassificationRules.OwnerInName` is the single
+  copy that `CombatMirror`'s fact flag, `FightDeriver`'s `PetOwner` and a record's `AttackerOwner` all read; a new word arrives with a
+  `` `s <word>`` census over several eras, never from one log. The possessives that turned up and stayed out (`corpse`, `Acolyte`,
+  `Heart`) are an NPC's own text, not ownership. Ownership is claimed by sweeping the **name pool**, not the facts, because a ward is
+  overwhelmingly something the raid heals and never something it watches attack ("a summon nobody owns is a stray row forever") — and
+  an owner text containing a comma (`Akini, Xanathan`s Warder` = one summon, two masters) claims the pet but must not invent a raid
+  member named `Akini, Xanathan`. **R14 (the article is the game's own "this is a thing" marker)** claims `a `/`an `/`the ` names as Npc
+  at **Medium**, yields to anything already holding Medium so npcs.txt keeps its better provenance (`ADatabaseNameKeepsItsOwnReason` is
+  the only thing stopping this rule from relabelling every database hit as a guess about grammar), never claims a name the spell DB
+  answers for, and loses to line evidence. **R7's unknown allowance is a share (2 %) of that attacker's own edges**, while opposition
+  from the other side stays an absolute veto — that veto is what keeps a charmed raid from inventing NPCs out of players; one unnamed
+  defender used to be enough to leave `Squirticus` (8,909 edges, 4 unnamed) unclassified for a whole capture. **R15 (our side keeps
+  healing it) accepts a healer only at ≥ Strong**, so no Medium inference can launder a name onto our side; it needs ≥10 heal lines
+  from ≥2 such casters, and any swing back above the friendly-fire share vetoes it, because raid AoE waters the mob stack too
+  ("Yokii healed an arcborn wraith for 2 hit points") and a boss answers for itself by swinging at the raid. R15 alone moves **6-14 %**
+  of each capture's damage facts onto a side with **zero** overlap against `Targeted (NPC)` or `npcs.txt`; derived-vs-legacy parity is
+  unchanged (2024: 691/691 field-matched, Incogitable: 4,473/4,473). Known and accepted: an article-named ally summon (`A good egg`,
+  healed 36× for 11.1 M HP) stays on the enemy column — its correct fix is a time-scoped `Friendly` interval like R9's charm windows,
+  not a rename. Numbers and the reading procedure: docs/combat-mirror-design.md → "Fourth audit".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
