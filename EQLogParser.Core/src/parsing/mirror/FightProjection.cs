@@ -74,7 +74,9 @@ namespace EQLogParser.Mirror
 
         var defName = facts.NameOf(fact.DefIdx);
         var t = fact.TimeS;
-        var atkSide = SideAt(timeline, atkName, t);
+        // The attacker may be a corpse name the parser stripped (R16); the defender never is — UpdateAttacker
+        // takes the suffix off attackers only, so a corpse at the receiving end still reads in full.
+        var atkSide = SideAt(timeline, atkName, t, fact.CorpseAttacker);
         var defSide = SideAt(timeline, defName, t);
 
         string key;
@@ -212,8 +214,13 @@ namespace EQLogParser.Mirror
     // A Friendly interval from R5-called (a summoned pet) is a static statement of allegiance,
     // not a flip: only R9-charm windows reverse a name's side for their duration. Source names
     // are the rule tags stamped by ClassificationRules; "R9-charm" prefixes both charm variants.
-    private static Side SideAt(EntityTimeline timeline, string name, double t)
+    private static Side SideAt(EntityTimeline timeline, string name, double t, bool corpseForm = false)
     {
+      // R16 — a raised corpse fights for whoever raised it, and only inside that window. The name itself
+      // proves nothing (the same shape carries 488 M HP of lingering boss damage belonging to nobody's pet),
+      // so this is the one place where affiliation alone decides a side.
+      if (timeline.PetOwnerAt(name, t, out _, corpseForm) is not null) return Side.Player;
+
       var kind = timeline.IdentityAt(name, t);
       if (kind is IdentityKind.Unknown) return Side.Unknown;
       return IsFlipped(timeline, name, t)

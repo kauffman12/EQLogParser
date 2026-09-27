@@ -178,7 +178,10 @@ namespace EQLogParser
       var snapshot = _snapshot;
       if (snapshot is null || selected is not { Count: > 0 }) return new MirrorSummaryInput([], new TimeRange());
 
-      return MirrorSummaryFights.Build(selected, snapshot.DamageIndex, snapshot.Facts);
+      // The snapshot's own timeline, not a fresh one: which name belonged to whom is a per-second property of
+      // the pass that produced these rows (R16 reports a raised corpse as its necro's pet entry for exactly
+      // the seconds it was raised).
+      return MirrorSummaryFights.Build(selected, snapshot.DamageIndex, snapshot.Facts, snapshot.Timeline);
     }
 
     /*

@@ -48,6 +48,7 @@ namespace EQLogParser.Mirror
       T1 = t1;
       Strength = strength;
       Source = source;
+      Owner = null;
     }
 
     public AffiliationKind Kind;
@@ -55,6 +56,18 @@ namespace EQLogParser.Mirror
     public double T1;   // exclusive upper bound; double.PositiveInfinity for open-ended
     public int Strength;
     public string Source;
+
+    // True when this key is the CORPSE-FORM name the parser leaves behind ("Vexmaw", stripped from "Vexmaw's
+    // corpse"). Such an interval may only answer for a fact whose own line said corpse, because the same string
+    // is what the living player is called - and a raised corpse is raised precisely around the time that player
+    // gets resurrected.
+    public bool CorpseNameForm;
+
+    // Whose it is, for the intervals that mean "belongs to someone" (PetOfPlayer, R16). Ownership lives
+    // on the WINDOW because the same entity can change hands: a corpse raised at 19:01 by one necro and
+    // re-raised at 20:38 by another is two servants with two masters, and a name-keyed owner map would
+    // credit whichever necro read the log last with both of them.
+    public string Owner;
   }
 
   // Per-name identity + time-scoped affiliation intervals (D3 choice (b)). Written by evidence
@@ -90,19 +103,29 @@ namespace EQLogParser.Mirror
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source)
+      => AddOwnedAffiliation(kind, name, t0, t1, strength, source, null);
+
+    // The owner-bearing form: R16's raised servant, where the interval answers "whose pet, right now?".
+    public void AddOwnedAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength,
+        string source, string owner, bool corpseNameForm = false)
     {
       if (string.IsNullOrEmpty(name)) return;
       var list = GetOrCreate(_affiliation, name);
 
-      // Same dedupe rationale as SetIdentity (identical interval = no new read-time information).
+      // Same dedupe rationale as SetIdentity (identical interval = no new read-time information). Owner is
+      // part of the key: the same window shape with a different master IS new information.
       for (var i = 0; i < list.Count; i++)
       {
         var a = list[i];
         if (a.Kind == kind && a.T0 == t0 && a.T1 == t1 && a.Strength == strength
-            && string.Equals(a.Source, source, StringComparison.Ordinal)) return;
+            && string.Equals(a.Source, source, StringComparison.Ordinal)
+            && string.Equals(a.Owner, owner, StringComparison.Ordinal)
+            && a.CorpseNameForm == corpseNameForm) return;
       }
 
-      InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source), static a => a.T0);
+      var interval = new AffiliationInterval(kind, t0, t1, strength, source)
+      { Owner = owner, CorpseNameForm = corpseNameForm };
+      InsertSortedByTime(list, interval, static a => a.T0);
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -226,6 +249,31 @@ namespace EQLogParser.Mirror
         }
       }
       return best;
+    }
+
+    // Who owns this name at t, or null when nothing owns it: only PetOfPlayer intervals answer, and they
+    // answer for their own seconds only. This is the read side of "the corpse is Coas's pet from 19:01
+    // until it is somebody else's" - see AffiliationInterval.Owner for why the alternative is wrong.
+    public string PetOwnerAt(string name, double t, out string source, bool corpseForm = false)
+    {
+      source = null;
+      if (!_affiliation.TryGetValue(name, out var list) || list.Count == 0) return null;
+
+      string owner = null;
+      var bestStrength = int.MinValue;
+      foreach (var iv in list)
+      {
+        if (iv.T0 > t) break;   // sorted by T0
+        if (t >= iv.T1 || iv.Kind != AffiliationKind.PetOfPlayer) continue;
+        if (iv.CorpseNameForm && !corpseForm) continue;   // a living player is not somebody's pet
+        if (iv.Strength >= bestStrength)
+        {
+          owner = iv.Owner;
+          bestStrength = iv.Strength;
+          source = iv.Source;
+        }
+      }
+      return owner;
     }
 
     // One cursor per name over a time-ordered fact stream — the pointer sweep §6 asks for.

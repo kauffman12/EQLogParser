@@ -66,6 +66,8 @@ namespace EQLogParser.Mirror
       MiscLineParser.EventsWhoRoster += OnWhoRoster;
       MiscLineParser.EventsCalledToOwner += OnCalledToOwner;
       MiscLineParser.EventsCharm += OnCharm;
+      MiscLineParser.EventsServantRaise += OnServantRaise;
+      MiscLineParser.EventsFallsInBattle += OnFallsInBattle;
       CastLineParser.EventsCastEvidence += OnCast;
 
       var registry = PlayerRegistry.Instance;
@@ -87,6 +89,8 @@ namespace EQLogParser.Mirror
       MiscLineParser.EventsWhoRoster -= OnWhoRoster;
       MiscLineParser.EventsCalledToOwner -= OnCalledToOwner;
       MiscLineParser.EventsCharm -= OnCharm;
+      MiscLineParser.EventsServantRaise -= OnServantRaise;
+      MiscLineParser.EventsFallsInBattle -= OnFallsInBattle;
       CastLineParser.EventsCastEvidence -= OnCast;
 
       var registry = PlayerRegistry.Instance;
@@ -117,6 +121,14 @@ namespace EQLogParser.Mirror
     private void OnCalledToOwner(string name, double time) => Emit(EvidenceFact.EvCalledToOwner, name, time);
 
     private void OnCharm(string name, double time, bool isStart) => Emit(isStart ? EvidenceFact.EvCharmStart : EvidenceFact.EvCharmEnd, name, time);
+
+    // The owner rides in Aux, the same channel the /who class and the chat channel use: one fact per raise,
+    // no second table to keep in step with the fact stream.
+    private void OnServantRaise(string servant, string owner, double time) => Emit(EvidenceFact.EvServantRaise, servant, time, owner);
+
+    // A name dying. Asserts nothing on its own (mobs fall in battle too, and the husk mobs whose names end in
+    // "'s corpse" do it over and over); it only ever ends an ownership window R16 already opened.
+    private void OnFallsInBattle(string name, double time) => Emit(EvidenceFact.EvFallsInBattle, name, time);
 
     private void OnCast(string caster, string spell, double time) => Emit(EvidenceFact.EvCast, caster, time, spell);
 
@@ -152,6 +164,7 @@ namespace EQLogParser.Mirror
       if (HasOwnershipInLine(e.Action, r.Attacker)) flags |= DamageFact.FlagOwnerInLine;
       if (registry.IsPetOrPlayerOrMerc(r.Attacker)) flags |= DamageFact.FlagAttkPlayerSide;
       if (registry.IsPetOrPlayerOrMerc(r.Defender)) flags |= DamageFact.FlagDefPlayerSide;
+      if (HasCorpseInLine(e.Action, r.Attacker)) flags |= DamageFact.FlagCorpseAttacker;
 
       lock (_gate)
       {
@@ -260,6 +273,18 @@ namespace EQLogParser.Mirror
      * it here; HitStatSplitTest-style, the vocabulary is asserted at its size.
      */
     private static bool HasOwnershipInName(string name) => ClassificationRules.OwnerInName(name) is not null;
+
+    /*
+     * Whether this line wrote its attacker as a corpse ("Vexmaw's corpse hits …"). The suffix is gone from the
+     * record — UpdateAttacker cuts it — so the raw action is the only place the difference still exists, and the
+     * test is anchored on the attacker itself: the name stored on the fact is always the prefix of what the line
+     * said, while a corpse named about somebody else ("looted from Vexmaw's corpse") must not flag this hit.
+     * A miss here fails safe: no flag, so the fact keeps its own name instead of joining a pet entry.
+     */
+    private static bool HasCorpseInLine(string action, string attacker)
+      => !string.IsNullOrEmpty(action) && !string.IsNullOrEmpty(attacker)
+         && (action.Contains(attacker + ClassificationRules.CorpseSuffixApostrophe, StringComparison.OrdinalIgnoreCase)
+             || action.Contains(attacker + ClassificationRules.CorpseSuffixBacktick, StringComparison.OrdinalIgnoreCase));
 
     // the parser's dotnet-epoch seconds (year 0001 origin, ~6.4e10 in the 2020s) — long, or the
     // cast silently wraps and every derived timestamp is garbage

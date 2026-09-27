@@ -122,6 +122,14 @@ namespace EQLogParser.Mirror
     public const byte FlagAttkPlayerSide = 4;
     public const byte FlagDefPlayerSide = 8;
 
+    /*
+     * The line said "X's corpse" (or "X`s corpse") — the only trace left of it, because ParserUtil.UpdateAttacker
+     * cuts the suffix off before a record is ever built, so a risen servant and the player it was used to be
+     * arrive as the same name. R16 needs the difference: `Coas`s pets` may take the corpse's damage, while
+     * Vexmaw swinging a sword after being resurrected stays Vexmaw's own.
+     */
+    public const byte FlagCorpseAttacker = 16;
+
     // consumer-order sequence across BOTH fact streams — preserves within-second line order, which
     // the slain queue's flush-vs-enqueue decisions depend on
     public readonly int Seq;
@@ -161,6 +169,7 @@ namespace EQLogParser.Mirror
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;
     public bool AttackerPlayerSide => (Flags & FlagAttkPlayerSide) != 0;
     public bool DefenderPlayerSide => (Flags & FlagDefPlayerSide) != 0;
+    public bool CorpseAttacker => (Flags & FlagCorpseAttacker) != 0;
   }
 
   // One "X was slain by Y!" / "X died." line.
@@ -229,6 +238,8 @@ namespace EQLogParser.Mirror
     public const byte EvCharmEnd = 12;
     public const byte EvCast = 13;          // aux: spell name
     public const byte EvChat = 14;          // aux: channel ("guild", "group", "raid", ...)
+    public const byte EvServantRaise = 15;   // aux: the player the raised corpse now serves (R16)
+    public const byte EvFallsInBattle = 16;  // a summon dying; closes an open R16 window, asserts nothing alone
 
     public readonly int Seq;
     public readonly long TimeS;

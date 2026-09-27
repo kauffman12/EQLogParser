@@ -68,6 +68,16 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   owner forgot (`ReapForgottenRows`, 2 s grace) and the render loop's `_isRendering` is cleared in a `finally`, since a latched flag freezes the window permanently.
   `EQLogParser.Test/src/util/TimerLifecycleTest.cs` sweeps the real parser's output range and the 720 service orders of a three-message burst — keep that green
   rather than moving the math back into `TimerOverlayWindow`. Reasoning: docs/DesignNotes.md → "Timer overlays: how a bar gets taken away".
+- **A raised corpse is owned by a window, never by its name**: `<name>'s corpse rises to serve <player>.` (Wake the Dead) opens
+  `R16-servant`; it closes at the next raise of that corpse or at `<name> wordlessly falls in battle.`, else runs to the end of the log
+  (measured: 0 of 23 raises have a closing line, `Nniki's corpse` raised twice 5,769 s apart — a name→owner map would let whichever necro
+  read last own everything). Two traps. **(1)** Only a *raise line* opens a window: the same `'s corpse` shape carries 488 M HP of lingering
+  boss DoT over 29 never-raised names, and the fall line belongs mostly to respawning husk mobs. **(2)** `ParserUtil.UpdateAttacker` cuts
+  `'s corpse` off the attacker before a record exists, so a servant's hit arrives as the bare name of the dead player — which is why windows
+  are also filed under that stripped spelling with `AffiliationInterval.CorpseNameForm`, readable only by a fact carrying
+  `DamageFact.FlagCorpseAttacker` (set from the raw line in `CombatMirror`); without the flag a resurrected raider's own swings would join
+  whoever last woke his corpse. Damage shows as one entry per master (`Coas`s pets`, plural in `OwnerSuffixes`) — tests are fixture-driven
+  because in all six captures raised corpses deal 0 damage. Reasoning: docs/combat-mirror-design.md → "What a corpse name is worth".
 - **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
   sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**
   process state, so a test asserting that two parsed heals share an instance has to call `HealingLineParser.ClearCaches()` in setup — otherwise it
