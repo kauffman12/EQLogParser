@@ -361,6 +361,48 @@ namespace EQLogParser
       Assert.Contains("Bob", verified);
     }
 
+    /*
+     * Consume lines (R17's input). Three things are asserted by the shape of the data, not by taste: both sounds,
+     * ANY vessel (the item name is whatever is being consumed) and case-insensitive matching, because EQ writes
+     * the sound effect from client emote text. The actor field is the whole point — only a player character eats
+     * or drinks.
+     */
+    [TestMethod]
+    public void NeedProcessing_ConsumeLines_VerifyTheActor()
+    {
+      foreach (var line in new[]
+      {
+        "Glug, glug, glug...  Bithika takes a drink from their Water Flask.",
+        "Chomp, chomp, chomp...  Bithika takes a bite from their Fresh Fish.",
+        "glug, glug, glug...  Bithika takes a DRINK from an Ironbone Mead.",
+      })
+      {
+        List<string> verified = [];
+        Assert.IsFalse(PreLineParser.NeedProcessing(Line(line, 5), (name, _) => verified.Add(name), (_, _) => true, _ => { }),
+          $"consume line reached the rest of the pipeline: {line}");
+        CollectionAssert.Contains(verified, "Bithika", line);
+      }
+    }
+
+    [TestMethod]
+    public void NeedProcessing_ConsumeLine_RejectsQualifiedNamesAndOtherShapes()
+    {
+      foreach (var line in new[]
+      {
+        // Server-qualified names are never a key this pipeline uses (same rule the drink branch always applied).
+        "Glug, glug, glug...  Bithika.Karana takes a drink from their Water Flask.",
+        // Same lead-in, different verb: not evidence of anything.
+        "Glug, glug, glug...  Bithika sharpens their sword.",
+        // A mob eating someone: the actor field is multi-word, so this is not a name at all.
+        "Chomp, chomp, chomp...  A rabid gnawbat takes a bite of Bithika.",
+      })
+      {
+        List<string> verified = [];
+        PreLineParser.NeedProcessing(Line(line, 5), (name, _) => verified.Add(name), (_, _) => true, _ => { });
+        Assert.AreEqual(0, verified.Count, $"verified a player from: {line}");
+      }
+    }
+
     [TestMethod]
     public void NeedProcessing_JoinedRaid_VerifiesPlayer()
     {

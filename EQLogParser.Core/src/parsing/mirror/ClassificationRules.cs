@@ -258,6 +258,14 @@ namespace EQLogParser.Mirror
             }
             break;
 
+          case EvidenceFact.EvSelfFeeds:
+            // R17: the actor on a consume line ("Glug… / Chomp… <name> takes a drink / bite from …"). Only a
+            // player character carries a flask or a loaf. Strong rather than Certain, so a Targeted (NPC) verdict
+            // on the same name still wins (docs/combat-mirror-design.md R17).
+            playerBehavior.Add(name);
+            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvCalledToOwner:
             timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Certain, "R5-called", double.NegativeInfinity);
             timeline.AddAffiliation(AffiliationKind.Friendly, name, e.TimeS, double.PositiveInfinity, RuleStrength.Certain, "R5-called");

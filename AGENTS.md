@@ -173,7 +173,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   member named `Akini, Xanathan`. **R14 (the article is the game's own "this is a thing" marker)** claims `a `/`an `/`the ` names as Npc
   at **Medium**, yields to anything already holding Medium so npcs.txt keeps its better provenance (`ADatabaseNameKeepsItsOwnReason` is
   the only thing stopping this rule from relabelling every database hit as a guess about grammar), never claims a name the spell DB
-  answers for, and loses to line evidence. **R7's unknown allowance is a share (2 %) of that attacker's own edges**, while opposition
+  answers for, and loses to line evidence. **R17 (a consume line names a player)** reads the actor of
+`Glug, glug, glug...  Bithika takes a drink from their Water Flask.` / `Chomp, chomp, chomp...  Bithika takes a bite from their Fresh
+Fish.` — the **vessel is not part of the match** (any item) and both sound effect and verb match without case, because EQ writes them from
+client emote text; server-qualified (`Name.Server`) names are rejected as everywhere else. Strong, not Certain, so `Targeted (NPC)` still
+wins a name that somehow drinks. Measured: 370 lines / 67 distinct actors over three captures, none article-shaped, one sharing an entry with
+npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kizant-01-06-24) while player recall stays **87.9 % / 85.6 %**.
+`PreLineParser.TryGetConsumer` is the single recognizer (it feeds the legacy verified-player registry too). **R7's unknown allowance is a share (2 %) of that attacker's own edges**, while opposition
   from the other side stays an absolute veto — that veto is what keeps a charmed raid from inventing NPCs out of players; one unnamed
   defender used to be enough to leave `Squirticus` (8,909 attack edges, a handful pointing at names nothing had
   yet named) unclassified for a whole capture. **R15 (our side keeps

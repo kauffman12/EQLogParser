@@ -57,6 +57,12 @@ public class MirrorRulesTest
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
         AssertIdentity(timeline, bixie, IdentityKind.Npc, "R6-npcdb");
 
+        // R17: the actor on a consume line. Only a player character carries a flask or a loaf; the vessel is not
+        // part of the match (Water Flask vs Ironbone Mead) and both sound effect and verb match without case.
+        AssertIdentity(timeline, "Guzzleway", IdentityKind.Player, "R17-selffeed");
+        AssertIdentity(timeline, "Nibblenosh", IdentityKind.Player, "R17-selffeed");
+        AssertIdentity(timeline, "Slurpmania", IdentityKind.Player, "R17-selffeed");
+
         // R9: charm window is time-scoped; identity itself stays Npc
         AssertIdentity(timeline, "a toughened horror", IdentityKind.Npc, "R9-charm");
         var charmT0 = DateUtil.StandardDateToDotNetSeconds("[Sun Apr 26 18:40:10 2026] x");

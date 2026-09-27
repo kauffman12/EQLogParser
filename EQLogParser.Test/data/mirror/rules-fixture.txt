@@ -14,6 +14,9 @@
 [Sun Apr 26 18:40:13 2026] Epica activates Spire of the Minstrels I.
 [Sun Apr 26 18:40:14 2026] Sirmr`s pet kicks an aetherial hydra for 4360 points of damage.
 [Sun Apr 26 18:40:15 2026] A bixie commander hits Verifyguy for 300 points of damage.
+[Sun Apr 26 18:40:16 2026] Glug, glug, glug...  Guzzleway takes a drink from their Water Flask.
+[Sun Apr 26 18:40:17 2026] Chomp, chomp, chomp...  Nibblenosh takes a bite from their Fresh Fish.
+[Sun Apr 26 18:40:18 2026] glug, glug, glug...  Slurpmania takes a DRINK from an Ironbone Mead.
 [Sun Apr 26 18:41:00 2026] Targeted (NPC): Hirelina
 [Sun Apr 26 18:41:01 2026] Hirelina has joined the group.
 [Sun Apr 26 18:41:02 2026] Hirelina tells the group, 'keeping everyone up'

@@ -229,6 +229,7 @@ namespace EQLogParser.Mirror
     public const byte EvCharmEnd = 12;
     public const byte EvCast = 13;          // aux: spell name
     public const byte EvChat = 14;          // aux: channel ("guild", "group", "raid", ...)
+    public const byte EvSelfFeeds = 15;     // "Glug…/Chomp… <name> takes a drink/bite from …" — vessel-agnostic
 
     public readonly int Seq;
     public readonly long TimeS;

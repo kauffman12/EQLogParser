@@ -96,18 +96,61 @@ namespace EQLogParser
             found = true;
           }
         }
-        else if (action.StartsWith("Glug, glug, glug...  ", StringComparison.OrdinalIgnoreCase))
+        else if (TryGetConsumer(action, out var consumer))
         {
-          var end = FindPossiblePlayerName(action, out var isCrossServer, 21, -1, ' ');
-          if (end != -1 && !isCrossServer && action.AsSpan()[end..].StartsWith(" takes a drink ", StringComparison.OrdinalIgnoreCase))
-          {
-            addVerifiedPlayer(action[21..end], lineData.BeginTime);
-            found = true;
-          }
+          addVerifiedPlayer(consumer, lineData.BeginTime);
+          EventsEvidence?.Invoke(consumer, lineData.BeginTime, EvidenceFact.EvSelfFeeds);
+          found = true;
         }
       }
 
       return !found;
+    }
+
+    /*
+     * The two lines EQ writes when somebody consumes something:
+     *
+     *   "Glug, glug, glug...  Bithika takes a drink from their Water Flask."
+     *   "Chomp, chomp, chomp...  Bithika takes a bite from their Fresh Fish."
+     *
+     * Neither half of the match is specific on purpose. The **vessel** is not part of it — EQ writes whatever item
+     * is being consumed ("their Water Flask", "an Ironbone Mead") — and the **sound effect** is client emote text,
+     * so it is matched without case. Only the actor field between them matters.
+     *
+     * And only a player character eats or drinks: measured across three captures, 370 such lines naming 67
+     * distinct actors, none article-shaped ("a X") and exactly one colliding with npcs.txt (a player who happens
+     * to share a mob's name). The drink half has been verifying players into the registry for years; eating is the
+     * same line with a different sound, so it verifies the same way and feeds R17 (docs/combat-mirror-design.md).
+     */
+    private static readonly (string Sound, string Verb)[] ConsumeShapes =
+    [
+      ("Glug, glug, glug...", "takes a drink"),
+      ("Chomp, chomp, chomp...", "takes a bite"),
+    ];
+
+    private static bool TryGetConsumer(string action, out string name)
+    {
+      name = string.Empty;
+
+      foreach (var (sound, verb) in ConsumeShapes)
+      {
+        if (!action.StartsWith(sound, StringComparison.OrdinalIgnoreCase)) continue;
+
+        // The client pads the sound with two spaces; skipping whatever run it wrote keeps this from breaking on
+        // a client that writes one.
+        var from = sound.Length;
+        while (from < action.Length && action[from] == ' ') from++;
+
+        var end = FindPossiblePlayerName(action, out var isCrossServer, from, -1, ' ');
+        if (end == -1 || isCrossServer) return false;   // server-qualified: never a key this pipeline uses
+
+        if (!action.AsSpan(end).TrimStart().StartsWith(verb, StringComparison.OrdinalIgnoreCase)) return false;
+
+        name = action[from..end];
+        return name.Length > 0;
+      }
+
+      return false;
     }
 
     internal static int FindPossiblePlayerName(string action, out bool isCrossServer, int startIndex, int stopIndex, char stopChar)
