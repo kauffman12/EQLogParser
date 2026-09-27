@@ -114,6 +114,10 @@ namespace EQLogParser.Mirror
       // Before R7 for the same reason - our-side defenders are what R7-side needs to call an attacker hostile.
       if (heals is not null) ApplyHealedByRaidSide(facts, heals, timeline);
 
+      // The other marker the client writes inside a name. After R15 on purpose: R15 only considers names still
+      // Unknown, so a summon whose name happens to carry a comma would lose the heal evidence to punctuation.
+      ApplyCommaTitle(facts, timeline);
+
       ApplyGraphInference(facts, timeline, charmWindows);
       return outcome;
     }
@@ -410,6 +414,55 @@ namespace EQLogParser.Mirror
          && (name.StartsWith("a ", StringComparison.OrdinalIgnoreCase)
              || name.StartsWith("an ", StringComparison.OrdinalIgnoreCase)
              || name.StartsWith("the ", StringComparison.OrdinalIgnoreCase));
+
+    /*
+     * R16 - a comma inside a name field is the client writing "Name, Title", and characters have no titles:
+     * an EQ character name is ONE token, so `Teknaz, Bringer of Flames` cannot be a raid member. Where R14
+     * reads the article in front of a name, this reads the title after it - the two markers do not overlap
+     * (`Kratakel, Lord Misery` takes neither an article nor a registry entry until somebody adds one).
+     *
+     * Measured over the six captures (2022-2026): exactly 11 name fields carry a comma. Seven of them also
+     * arrive with a `Targeted (NPC)` line, which is Certain (R1), and one is an owned summon
+     * (`Akini, Xanathan`s Warder`, R5). The remaining three rest on npcs.txt alone - `Glarubaran, the Great
+     * Storm`, plus `Kratakel, Lord Misery` (71M of attack damage) and `Ogna, Artisan of War` (12M), which
+     * only entered the registry in Sep 2026. Before that edit those two had no identity claim at all beyond
+     * the graph's guess, and that is the hole this rule fills: content newer than any list we ship, in a
+     * capture where nobody parks the target frame on it. Four years of logs never put a comma name under
+     * `Targeted (Player)`, and npcs.txt itself holds 238 of them (`Atathus, the Red Lord`,
+     * `Ma`Maie, the Nest Mother`), so the shape is ordinary, not exotic - 0.6 % of the registry, against 8 % that
+     * is a single bare word, which is a shape any character could wear (see the R6 tiers above).
+     *
+     * The one counterexample class is SUMMONS, not players: a pet name is free text, so `Feroun, come back` is
+     * legal and prints with no ownership word for R5 to read. What keeps that honest is ordering - this rule runs
+     * after R15, which only reads names still Unknown, so a name half the raid keeps topping up stays our side.
+     *
+     * Medium and not Strong, even though this invariant has no counterexample: what makes a shape rule safe
+     * is that every piece of line evidence outranks it, and that property is worth more than a notch of
+     * confidence here. The guards are R14's - an owned summon belongs to R5 (whose own owner cut already
+     * refuses a comma owner, see UsableOwnerInName), and seven spell rows carry commas in their names
+     * (`First Create, Then Destroy`, `Teleport: Doomfire, the Burning Lands`), so the attacker field of a dot
+     * line must not be read as a combatant. The database keeps its reason too: R6 already spoke at Medium for
+     * every name it knows, and at equal strength the earlier writer's provenance stands.
+     */
+    private static void ApplyCommaTitle(IFactTable facts, EntityTimeline timeline)
+    {
+      var store = EQDataStore.Instance;
+      foreach (var name in facts.InternedNames)
+      {
+        if (!HasTitleComma(name)) continue;
+        if (OwnerInName(name) is not null) continue;                    // somebody's summon: R5 owns it
+        if (store.GetDamagingSpellByName(name) is not null) continue;   // a spell is not a combatant
+
+        timeline.IdentityAt(name, double.PositiveInfinity, out var held, out _);
+        if (held >= RuleStrength.Medium) continue;
+
+        timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Medium, "R16-comma", double.NegativeInfinity);
+      }
+    }
+
+    // "Name, Title" - a comma with text behind it. A stray trailing comma is not a title.
+    internal static bool HasTitleComma(string name)
+      => !string.IsNullOrEmpty(name) && name.Contains(", ", StringComparison.Ordinal);
 
     /*
      * R15 - a verified member of our side healing an unclassified name says more about the name than the
