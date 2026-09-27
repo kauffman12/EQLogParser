@@ -8,7 +8,8 @@
 [Sun Apr 26 18:40:08 2026] Mobboss says, 'die vermin'
 [Sun Apr 26 18:40:09 2026] Frobum is called to it owner.
 [Sun Apr 26 18:40:10 2026] a toughened horror has been charmed.
-[Sun Apr 26 18:40:11 2026] Your Beguiler's Directed Banishment I spell has worn off of a toughened horror.
+[Sun Apr 26 18:40:11 2026] Your Charm XVII spell has worn off of a toughened horror.
+[Sun Apr 26 18:40:12 2026] Your Frost Shackles I spell has worn off of a toughened horror.
 [Sun Apr 26 18:40:12 2026] Spireina begins casting Spire of the Juggernaut XII.
 [Sun Apr 26 18:40:13 2026] Epica activates Spire of the Minstrels I.
 [Sun Apr 26 18:40:14 2026] Sirmr`s pet kicks an aetherial hydra for 4360 points of damage.

@@ -116,7 +116,11 @@ namespace EQLogParser.Mirror
 
     private void OnCalledToOwner(string name, double time) => Emit(EvidenceFact.EvCalledToOwner, name, time);
 
-    private void OnCharm(string name, double time, bool isStart) => Emit(isStart ? EvidenceFact.EvCharmStart : EvidenceFact.EvCharmEnd, name, time);
+    // The start line never says who charmed anything (measured: no charm cast text precedes a
+    // third-party "has been charmed." inside 20 s in any capture), so aux is null there; the wear-off
+    // line does name its caster, and that owner rides on the end fact for the window policy to apply
+    // retroactively.
+    private void OnCharm(string name, double time, bool isStart, string owner) => Emit(isStart ? EvidenceFact.EvCharmStart : EvidenceFact.EvCharmEnd, name, time, owner);
 
     private void OnCast(string caster, string spell, double time) => Emit(EvidenceFact.EvCast, caster, time, spell);
 

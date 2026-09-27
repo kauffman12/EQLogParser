@@ -1,3 +1,4 @@
+using EQLogParser.Mirror;
 using log4net;
 using System.Reflection;
 
@@ -28,7 +29,7 @@ namespace EQLogParser
     // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
     internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
     internal static event Action<string, double> EventsCalledToOwner;       // pet name, time
-    internal static event Action<string, double, bool> EventsCharm;         // name, time, is-start
+    internal static event Action<string, double, bool, string> EventsCharm;  // name, time, is-start, owner
 
     private static string _randomPlayer;
     private static long _lastLine = -1;
@@ -53,12 +54,12 @@ namespace EQLogParser
       else if (action.EndsWith(CharmedSuffix, StringComparison.OrdinalIgnoreCase))
       {
         var npc = action[..^CharmedSuffix.Length].Trim();
-        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true);
+        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true, null);
       }
       else if (action.EndsWith(Charmed2Suffix, StringComparison.OrdinalIgnoreCase))
       {
         var npc = action[..^Charmed2Suffix.Length].Trim();
-        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true);
+        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true, null);
       }
       else
       {
@@ -66,9 +67,48 @@ namespace EQLogParser
         if (marker > 0)
         {
           var npc = action[(marker + CharmEndMarker.Length)..].Trim().TrimEnd('.');
-          if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, false);
+          if (npc.Length == 0) return;
+
+          // "<Owner>'s <spell> spell has worn off of <npc>." — and only a CHARM spell's wear-off line
+          // ends a charm. Every buff in the game writes this same shape (measured: 15,936 of 15,943
+          // such lines in three captures are roots, shackle dots and raid invis upkeep), so the spell
+          // name decides and everything else is dropped here rather than forwarded as a charm end.
+          var spell = SplitCasterAndSpell(action[..marker], out var owner);
+          if (CharmSpells.IsCharmSpellName(spell)) EventsCharm?.Invoke(npc, beginTime, false, owner);
         }
       }
+    }
+
+    // "Your Charm XVII" -> ("Charm XVII", You); "Incogitable`s Compulsion IV" -> ("Compulsion IV", "Incogitable").
+    // The possessive is scanned from the END because owner names carry apostrophes of their own
+    // ("Sirmr`s pet"), and the buff belongs to whatever owns the whole phrase.
+    private static string SplitCasterAndSpell(string left, out string owner)
+    {
+      owner = null;
+      var s = left.Trim();
+      if (s.Length == 0) return null;
+
+      var space = s.IndexOf(' ');
+      if (space > 0 && CharmSpells.IsLocalOwnerWord(s[..space]))
+      {
+        // Same resolution the cast parser applies to "You …": the author's own name, which is also one
+        // of the two keys R0 stamps. Empty only when the run has no author (a synthetic log).
+        owner = string.IsNullOrEmpty(ConfigUtil.PlayerName) ? ChatType.You : ConfigUtil.PlayerName;
+        return s[(space + 1)..].Trim();
+      }
+
+      for (var i = s.Length - 2; i > 0; i--)
+      {
+        if ((s[i - 1] == '\'' || s[i - 1] == '`') && s[i] == 's' && (i + 1 == s.Length || s[i + 1] == ' '))
+        {
+          owner = s[..(i - 1)].Trim();
+          var rest = s[(i + 1)..].Trim();
+          return rest.Length > 0 ? rest : null;
+        }
+      }
+
+      // No owner in the phrase ("Charm XVII"): still a usable charm-end signal, just an anonymous one.
+      return s;
     }
 
     public static bool Process(LineData lineData)

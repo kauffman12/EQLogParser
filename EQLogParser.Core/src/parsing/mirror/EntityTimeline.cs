@@ -41,13 +41,14 @@ namespace EQLogParser.Mirror
 
   internal struct AffiliationInterval
   {
-    public AffiliationInterval(AffiliationKind kind, double t0, double t1, int strength, string source)
+    public AffiliationInterval(AffiliationKind kind, double t0, double t1, int strength, string source, string owner = null)
     {
       Kind = kind;
       T0 = t0;
       T1 = t1;
       Strength = strength;
       Source = source;
+      Owner = owner;
     }
 
     public AffiliationKind Kind;
@@ -55,6 +56,12 @@ namespace EQLogParser.Mirror
     public double T1;   // exclusive upper bound; double.PositiveInfinity for open-ended
     public int Strength;
     public string Source;
+
+    // Whose companion this interval makes the name, when the log says so. Null for the two kinds of
+    // "on your side" that name nobody: a raid-buff-driven Friendly stretch and a CHARM whose caster was
+    // never in the text (measured: third-party charms write no cast line at all, so most charmed mobs
+    // in somebody else's log are ownerless by construction, not by missing data).
+    public string Owner;
   }
 
   // Per-name identity + time-scoped affiliation intervals (D3 choice (b)). Written by evidence
@@ -89,7 +96,7 @@ namespace EQLogParser.Mirror
       InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
     }
 
-    public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source)
+    public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
     {
       if (string.IsNullOrEmpty(name)) return;
       var list = GetOrCreate(_affiliation, name);
@@ -99,10 +106,11 @@ namespace EQLogParser.Mirror
       {
         var a = list[i];
         if (a.Kind == kind && a.T0 == t0 && a.T1 == t1 && a.Strength == strength
-            && string.Equals(a.Source, source, StringComparison.Ordinal)) return;
+            && string.Equals(a.Source, source, StringComparison.Ordinal)
+            && string.Equals(a.Owner, owner, StringComparison.Ordinal)) return;
       }
 
-      InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source), static a => a.T0);
+      InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source, owner), static a => a.T0);
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -226,6 +234,29 @@ namespace EQLogParser.Mirror
         }
       }
       return best;
+    }
+
+    // Whose companion this name is at t, or null when nothing claims it. The seam every pet/charm
+    // consumer asks for ("is this row somebody's pet, and whose") without re-deriving affiliation and
+    // without treating "Friendly" as ownership: a mob under a raid buff and a mob someone charmed both
+    // read Friendly, only the second one has an Owner.
+    public string OwnerOf(string name, double t)
+    {
+      if (!_affiliation.TryGetValue(name, out var list)) return null;
+
+      var bestStrength = int.MinValue;
+      string owner = null;
+      foreach (var iv in list)
+      {
+        if (iv.T0 > t) break;   // sorted by T0
+        if (t >= iv.T1 || string.IsNullOrEmpty(iv.Owner)) continue;
+        if (iv.Strength >= bestStrength)
+        {
+          owner = iv.Owner;
+          bestStrength = iv.Strength;
+        }
+      }
+      return owner;
     }
 
     // One cursor per name over a time-ordered fact stream — the pointer sweep §6 asks for.

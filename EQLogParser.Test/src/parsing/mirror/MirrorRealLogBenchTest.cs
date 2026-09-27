@@ -127,8 +127,10 @@ public class MirrorRealLogBenchTest
             seedSw.Stop();
 
             var classSw = Stopwatch.StartNew();
-            ClassificationRules.Apply(facts, timeline);
+            var rules = ClassificationRules.Apply(facts, timeline);
             classSw.Stop();
+
+            PrintCharmReport(facts, rules.Charms);
 
             var deriveSw = Stopwatch.StartNew();
             var derived = FightDeriver.Derive(facts);
@@ -145,6 +147,59 @@ public class MirrorRealLogBenchTest
             FightManager.Instance = priorInstance;
             DamageLineParser.FightManager = priorParserFm;
             Console.Out.Flush();
+        }
+    }
+
+    /*
+     * Charm accounting over the real capture: how many windows the sightings collapse into, who owns
+     * them, what closed them, and how much damage moves from an NPC row to a pet row. The percentage is
+     * the number that matters when a charm rule changes — it is what that rule is worth in HP, not how
+     * many lines it touches (25 windows in a night is nothing; the credit inside them is the fight).
+     */
+    private static void PrintCharmReport(DamageFactTable facts, List<CharmWindow> charms)
+    {
+        if (charms.Count == 0)
+        {
+            Console.WriteLine("[charm] no charm windows in this capture");
+            return;
+        }
+
+        ulong total = 0;
+        foreach (var f in facts.Facts) total += f.Total;
+
+        // Summed by hand: LINQ's Sum has no ulong overload, and the ambiguity resolves to decimal.
+        ulong credited = 0;
+        var lines = 0;
+        var sameName = 0;
+        foreach (var w in charms)
+        {
+            credited += w.CreditedTotal;
+            lines += w.FactCount;
+            sameName += w.SameNameFactCount;
+        }
+
+        Console.WriteLine($"[charm] windows={charms.Count} sightings={charms.Sum(static w => w.Starts)} " +
+                          $"owned={charms.Count(static w => w.Owned)} ownerless={charms.Count(static w => !w.Owned)}");
+        foreach (var r in Enum.GetValues<CharmEndReason>())
+        {
+            var n = charms.Count(w => w.Reason == r);
+            if (n > 0) Console.WriteLine($"[charm]   closed by {r}: {n}");
+        }
+        Console.WriteLine($"[charm] credited inside windows={credited:N0} of {total:N0} " +
+                          $"({(total == 0 ? 0 : 100.0 * credited / total):F4}% of log damage)  lines={lines:N0} " +
+                          $"ambiguous same-name lines={sameName:N0} ({(lines == 0 ? 0 : 100.0 * sameName / lines):F1}%)");
+
+        // One entry per mob NAME — the roll-up the pet list shows, six charms of one mob type as one row.
+        var byName = charms.GroupBy(static w => w.Name, StringComparer.OrdinalIgnoreCase)
+                           .Select(g => (Name: g.Key, Windows: g.Count(), Sightings: g.Sum(static w => w.Starts),
+                                         Damage: g.Aggregate(0UL, static (acc, w) => acc + w.CreditedTotal),
+                                         Owners: string.Join(",", g.Select(static w => w.Owner ?? "unowned").Distinct()),
+                                         Closes: string.Join(",", g.Select(static w => w.Reason.ToString()).Distinct())))
+                           .OrderByDescending(static e => e.Damage).Take(12);
+        foreach (var e in byName)
+        {
+            Console.WriteLine($"[charm]   {e.Name,-36} windows={e.Windows} sightings={e.Sightings} " +
+                              $"dmg={e.Damage:N0} owners=[{e.Owners}] closes=[{e.Closes}]");
         }
     }
 

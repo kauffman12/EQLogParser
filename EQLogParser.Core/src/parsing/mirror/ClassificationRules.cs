@@ -18,6 +18,11 @@ namespace EQLogParser.Mirror
     // frame never contradicts itself in measured logs, so any hit here is genuine conflict
     // material (illusion state, log bug) for the comparison report. NPC wins the tie.
     public List<string> Conflicts { get; } = [];
+
+    // Every charm span the run produced, with its owner (or the fact that no caster was named), its end
+    // reason and the same-name ambiguity count. Report/tooltip input; the affiliation intervals derived
+    // from these are what the deriver reads.
+    public List<CharmWindow> Charms { get; } = [];
   }
 
   // Phase 2 rules (identity slice): turn the captured evidence facts into retroactive identity
@@ -103,7 +108,7 @@ namespace EQLogParser.Mirror
     {
       var outcome = new MirrorRuleOutcome();
       ApplyLocalPlayer(timeline);
-      var charmWindows = ApplyEvidence(facts, timeline, outcome);
+      ApplyEvidence(facts, timeline, outcome);
       ApplyOwnershipFlags(facts, timeline);
       ApplyNpcDatabase(facts, timeline);
 
@@ -118,7 +123,12 @@ namespace EQLogParser.Mirror
       // Unknown, so a summon whose name happens to carry a comma would lose the heal evidence to punctuation.
       ApplyCommaTitle(facts, timeline);
 
-      ApplyGraphInference(facts, timeline, charmWindows);
+      // Charm after everything that decides sides, before the graph: a window ends when the charmed name
+      // swings at somebody these rules put on our side, so it has to see settled identities.
+      var charms = CharmWindowPolicy.Apply(facts, timeline);
+      outcome.Charms.AddRange(charms);
+
+      ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))]);
       return outcome;
     }
 
@@ -194,13 +204,12 @@ namespace EQLogParser.Mirror
       return string.IsNullOrEmpty(owner) || owner.Contains(',') ? null : owner;
     }
 
-    // Returns the charm (Friendly) intervals for the graph pass; windows close on wear-off or death.
-    private static List<(string Name, double T0, double T1)> ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome)
+    // Identity evidence only. Charm WINDOWS are not built here: they need settled sides to know when a
+    // charm broke, so they come later in Apply through CharmWindowPolicy. What this pass does is stamp the
+    // fact that a name was charmed at all (identity stays Npc — a charmed mob is an NPC on our side for a
+    // while, never a player).
+    private static void ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome)
     {
-      // charm windows: Edict-style starts open a Friendly interval, the wear-off line closes it.
-      // Re-charm without a close leaves the earlier window open until the next close (last-open wins).
-      var charmStarts = new Dictionary<string, double>(StringComparer.Ordinal);
-      var charmWindows = new List<(string, double, double)>();
 
       // Target-frame verdicts and player-side behavior are collected per name and applied AFTER
       // the sweep as a deterministic ladder (order of evidence arrival must not matter).
@@ -257,17 +266,11 @@ namespace EQLogParser.Mirror
           case EvidenceFact.EvCharmStart:
             // A charmed mob is an NPC that is temporarily on your side (identity Npc stays the
             // stable answer; the Friendly interval is time-scoped, per D3).
-            charmStarts[name] = e.TimeS;
             timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCharmEnd:
-            if (charmStarts.TryGetValue(name, out var charmT0))
-            {
-              charmStarts.Remove(name);
-              charmWindows.Add((name, charmT0, e.TimeS));
-              timeline.AddAffiliation(AffiliationKind.Friendly, name, charmT0, e.TimeS, RuleStrength.Certain, "R9-charm");
-            }
+            // Consumed by CharmWindowPolicy, which pairs it with the sighting it belongs to.
             break;
 
           case EvidenceFact.EvCast:
@@ -278,31 +281,6 @@ namespace EQLogParser.Mirror
             }
             break;
         }
-      }
-
-      // A charm that never wore off still ends - the charmed mob died (measured: raid kills end
-      // charms by killing). First death at/after the start closes the window; otherwise it stays
-      // open through the log's end (owner dismissed it off-screen; nothing contradicts it).
-      // Case-insensitive on purpose: charm lines and slain lines can disagree on the leading
-      // article's case ("a X has been charmed." vs "A X was slain by …") while identity keys stay ordinal.
-      Dictionary<string, List<long>> deathsByName = new(StringComparer.OrdinalIgnoreCase);
-      foreach (var d in facts.Deaths)
-      {
-        AddTime(deathsByName, facts.NameOf(d.KilledIdx), d.TimeS);
-      }
-
-      foreach (var (name, t0) in charmStarts)
-      {
-        var end = double.PositiveInfinity;
-        if (deathsByName.TryGetValue(name, out var deaths))
-        {
-          foreach (var dt in deaths)
-          {
-            if (dt >= t0 && dt < end) end = dt;
-          }
-        }
-        charmWindows.Add((name, t0, end));
-        timeline.AddAffiliation(AffiliationKind.Friendly, name, t0, end, RuleStrength.Certain, "R9-charm");
       }
 
       // Target-frame ladder (Certain beats everything behavioral, regardless of arrival order):
@@ -327,8 +305,6 @@ namespace EQLogParser.Mirror
           timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Certain, "R1-target", double.NegativeInfinity);
         }
       }
-
-      return charmWindows;
     }
 
     private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline)
