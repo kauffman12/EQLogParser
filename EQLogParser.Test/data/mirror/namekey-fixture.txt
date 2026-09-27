@@ -1,0 +1,4 @@
+[Sun Apr 26 17:50:00 2026] You hit a namekey pet for 900 points of damage.
+[Sun Apr 26 17:50:04 2026] A namekey pet hits You for 300 points of damage.
+[Sun Apr 26 18:00:07 2026] a namekey pet has been charmed.
+[Sun Apr 26 18:00:20 2026] A namekey pet hits Bob for 250 points of damage.

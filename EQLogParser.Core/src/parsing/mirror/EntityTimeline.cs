@@ -69,8 +69,23 @@ namespace EQLogParser.Mirror
   // (rules/manual) before derivation; reads during derivation are lock-free.
   internal sealed class EntityTimeline
   {
-    private readonly Dictionary<string, List<IdentityAssignment>> _identity = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.Ordinal);
+    /*
+     * BOTH name keys are case-INSENSITIVE, and that is a rule rather than a detail.
+     *
+     * Every name the parser hands out goes through ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain, which
+     * finish with TextUtils.CapitalizeFirst — a fact calls it "A Bone Walker". The evidence lines do not go
+     * through those at all: "a bone walker has been charmed.", "Targeted (NPC): a bone walker", a wear-off or a
+     * tell, all lower-case. Ordinal keys therefore split one entity into two spellings — and the miss is
+     * invisible, because the side that reads the other spelling just gets Unknown and carries on with its
+     * fallback instead of failing.
+     *
+     * EQ itself treats names as case-insensitive (two entities that differ only by letter case cannot coexist
+     * in a zone), which is why PlayerRegistry has always been OrdinalIgnoreCase; the timeline is the same
+     * entity store and had not caught up. Canonicalising on read keeps display strings untouched (rows show the
+     * spelling the log wrote) while every lookup meets.
+     */
+    private readonly Dictionary<string, List<IdentityAssignment>> _identity = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.OrdinalIgnoreCase);
 
     // ---- evidence input ----
 

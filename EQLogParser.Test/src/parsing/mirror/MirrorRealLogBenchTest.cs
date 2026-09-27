@@ -130,6 +130,7 @@ public class MirrorRealLogBenchTest
             var rules = ClassificationRules.Apply(facts, timeline);
             classSw.Stop();
 
+            PrintNamePoolReport(facts);
             PrintCharmReport(facts, rules.Charms);
             PrintProjectionReport(facts, timeline);
 
@@ -157,6 +158,28 @@ public class MirrorRealLogBenchTest
      * the number that matters when a charm rule changes — it is what that rule is worth in HP, not how
      * many lines it touches (25 windows in a night is nothing; the credit inside them is the fight).
      */
+    /*
+     * How much of the interned name pool is ONE entity spelled two ways. Facts arrive capitalized
+     * (ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain all finish with CapitalizeFirst) while evidence lines
+     * keep whatever EQ wrote, so "A bone walker" and "a bone walker" hold two ids. EntityTimeline meets them
+     * anyway — its keys are case-insensitive — but every structure keyed by name ID still sees two entities, and
+     * the pool pays for both. This is the number that decides whether the pool itself should canonicalise.
+     */
+    private static void PrintNamePoolReport(DamageFactTable facts)
+    {
+        var names = facts.InternedNames;
+        var all = new HashSet<string>(names, StringComparer.Ordinal);
+        var halves = 0;
+        foreach (var n in names)
+        {
+            if (n.Length < 2 || !char.IsUpper(n[0])) continue;
+            if (all.Contains(char.ToLowerInvariant(n[0]) + n[1..])) halves++;
+        }
+
+        Console.WriteLine($"[names] pool={names.Count:N0} upper-halves-with-lower-twin={halves:N0} " +
+                          $"({(names.Count == 0 ? 0 : (double)halves / names.Count):P1} of the pool)");
+    }
+
     private static void PrintCharmReport(DamageFactTable facts, List<CharmWindow> charms)
     {
         if (charms.Count == 0)

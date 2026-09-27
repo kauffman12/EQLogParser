@@ -265,14 +265,11 @@ namespace EQLogParser.Mirror
 
           case EvidenceFact.EvCharmStart:
             // A charmed mob is an NPC that is temporarily on your side (identity Npc stays the
-            // stable answer; the Friendly interval is time-scoped, per D3) — stamped under both spellings of
-            // the name, because a charm confirm line writes "a skeleton" and every line where that mob is the
-            // SUBJECT writes "A skeleton". Identity is ordinal-keyed, and SideAt consults identity before it
-            // ever looks at a charm interval: miss the attacker spelling and the window flips nothing.
-            // CharmWindowPolicy.Apply repeats the same trick for its intervals (docs/combat-mirror-design.md).
+            // stable answer; the Friendly interval is time-scoped, per D3). One write is enough even though a
+            // charm confirm line writes "a skeleton" and every line where that mob is the SUBJECT writes
+            // "A skeleton": EntityTimeline keys identity case-insensitively, so SideAt finds this assignment
+            // whichever spelling it was asked with (docs/combat-mirror-design.md).
             timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
-            if (TextUtils.CapitalizeFirst(name) is { Length: > 0 } capitalized && capitalized != name)
-              timeline.SetIdentity(capitalized, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCharmEnd:

@@ -17,8 +17,9 @@ namespace EQLogParser;
  *     folds an evening of charming `an imbued whipgrass` into one pet entry in that player's damage board.
  *
  * Name spelling note, because it bites every assertion here: records carry sentence-case names ("A bone
- * walker") while the charm confirm line writes "a bone walker". CharmWindowPolicy.Apply registers R9 under
- * both spellings; without that, all of the below silently does nothing on real logs.
+ * walker") while the charm confirm line writes "a bone walker". The two meet because EntityTimeline keys entity
+ * names case-insensitively — see EntityNameKeyTest for that law; registering both spellings by hand was the old
+ * workaround at this seam and is gone.
  */
 [TestClass]
 public class CharmRowProjectionTest

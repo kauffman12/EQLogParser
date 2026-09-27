@@ -120,6 +120,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   legacy placed reading identically: two pets whose owner the registry never learned contribute nothing to the legacy
   board at all, while the line's own ownership word (`ClassificationRules.OwnerInName` → `AttackerOwner`) folds them under
   their raiders here. Do not force the two sides into agreement — the gap is the experiment; the test pins its shape.
+- **Entity names are looked up without case**: the parser capitalizes every name it hands out (`ParserUtil.UpdateAttacker`/
+  `UpdateDefender`/`UpdateSlain` all finish with `TextUtils.CapitalizeFirst`), so a fact says `A bone walker`; evidence lines keep
+  what EQ wrote — `a bone walker has been charmed.`, a wear-off, a tell. So **every entity lookup is case-insensitive**:
+  `EntityTimeline`'s identity and affiliation keys and `PlayerRegistry` (which always was `OrdinalIgnoreCase`). An ordinal key at
+  this seam does not throw — the reader gets Unknown/hostile and quietly uses its fallback, which is how R9's charm flipped nothing
+  in the fight list while its own case-insensitive window tables went on reporting credit. Canonicalising happens on read, never in
+  storage, so rows still display the spelling the log wrote; `EntityNameKeyTest` pins identity, affiliation, ownership and "one
+  entity per name" across spellings.
 - **A charm window is the NPC's death; its pet's death is not one**: `DerivedFight.EndReason` says *why* a row ended while
   `Dead` stays the flag every consumer reads (overlay, grid styling, `MirrorSummaryFights`). A `has been charmed.` sighting closes that name's row as `Charmed`
   (status word `dead, charmed`) — the raid finished that encounter by taking the mob off the enemy list — and a death **inside** a window is skipped by dead-marking
@@ -127,10 +135,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   must not hand out two kills, and the skip is what stops a pet dying in custody from dead-marking whichever same-named row happened to be open. Inside the window the
   mob's damage reaches the board as `AttackerOwner = OwnerOf(name, t)` (so `+Pets` folds an evening of charming one mob type under its charmer), an **ownerless**
   window leaves that field null rather than picking a raider, and a flipped *defender* is exempt from the friendly-fire drop — deleting the raid's own stray swings
-  onto their pet would shrink their meter. Two keying laws, both measured: R9 stamps identity **and** affiliation under the capitalised spelling as well, because
-  records read `A bone walker` while the confirm line writes `a bone walker`, and an ordinal miss flips nothing *silently* (`CharmWindowPolicy`'s own tables are
-  case-insensitive and go on reporting credit — this is how the feature looked finished while doing nothing); and a charm closes only a row whose last fact sits inside
-  `EngagementGapS`, so another pull of the same name cannot be ended retroactively. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
+  onto their pet would shrink their meter. Two measured laws: name spelling is settled by the case-insensitive entity keys (bullet
+  above) rather than by registering `A bone walker` beside `a bone walker` — with ordinal keys nothing flipped *silently* while
+  `CharmWindowPolicy`'s own case-insensitive tables went on reporting credit, which is how the feature looked finished while doing
+  nothing; and a charm closes only a row whose last fact sits inside `EngagementGapS`, so another pull of the same name cannot be
+  ended retroactively. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
   `Gap` counts that used to hide them; charmed-owned rows **0→6** and **0→5** once the exemption landed) and reasoning:
   docs/combat-mirror-design.md → "What a window does to the list and the board"; pinned by `CharmRowProjectionTest`.
 - **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name

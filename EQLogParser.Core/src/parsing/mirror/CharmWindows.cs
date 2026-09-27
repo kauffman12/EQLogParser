@@ -167,26 +167,19 @@ namespace EQLogParser.Mirror
         // One interval per OWNER SEGMENT rather than one per window: when a second charmer takes the mob
         // over mid-span, the credit has to move at that moment. The segments tile [T0, T1), so the flip
         // itself covers exactly what one window-wide interval would have.
-        // …under BOTH spellings of the name. The charm line writes "an imbued whipgrass has been charmed.";
-        // the same mob is "An imbued whipgrass" wherever it begins a sentence, which is most of the places the
-        // projection asks (attackers, slain lines). Affiliation names are ordinal keys, so registering only the
-        // spelling the confirm line used would leave every charmed mob unflipped in the display list while its
-        // own accounting — CharmWindowPolicy's tables are case-insensitive — happily credited it. A general
-        // case-insensitive name key is the right long-term answer and wants its own measurement; this is the
-        // seam where R9 needs it. Cost: a few dozen duplicate intervals per log.
-        for (var n = 0; n < 2; n++)
-        {
-          var key = n == 0 ? w.Name : TextUtils.CapitalizeFirst(w.Name);
-          if (string.IsNullOrEmpty(key)) continue;
+        // The spelling here is the one the confirm line used ("an imbued whipgrass"), which is NOT the spelling
+        // the projection asks with ("An imbued whipgrass", capitalized by the parser wherever the mob starts a
+        // sentence). That meets for free now that EntityTimeline keys names case-insensitively — registering both
+        // spellings by hand was this seam's local workaround, and it is gone.
+        if (string.IsNullOrEmpty(w.Name)) continue;
 
-          if (w.Segments.Count == 0)
-          {
-            timeline.AddAffiliation(AffiliationKind.Friendly, key, w.T0, w.T1, RuleStrength.Certain, "R9-charm", w.Owner);
-            continue;
-          }
-          foreach (var seg in w.Segments)
-            timeline.AddAffiliation(AffiliationKind.Friendly, key, seg.FromS, seg.ToS, RuleStrength.Certain, "R9-charm", seg.Owner);
+        if (w.Segments.Count == 0)
+        {
+          timeline.AddAffiliation(AffiliationKind.Friendly, w.Name, w.T0, w.T1, RuleStrength.Certain, "R9-charm", w.Owner);
+          continue;
         }
+        foreach (var seg in w.Segments)
+          timeline.AddAffiliation(AffiliationKind.Friendly, w.Name, seg.FromS, seg.ToS, RuleStrength.Certain, "R9-charm", seg.Owner);
       }
 
       return windows;
