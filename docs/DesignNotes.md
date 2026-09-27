@@ -3575,3 +3575,33 @@ at all, so the board could only have filed them under an unknown healer. The dam
 lost — `` X`s pet `` parses as attacker and as defender. What would flip this is a capture where pet lines heal
 *raiders*, which is why the counts are written down rather than reasoned about; a fix should arrive with them
 re-measured, and `MirrorHealCaptureTest` re-asserts each shape against the parser's actual behaviour.
+
+## The NPC registry in `data/npcs.txt`
+
+The file is 38,461 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
+`_allNpcs`, a `ConcurrentDictionary` built with `StringComparer.OrdinalIgnoreCase`, so `IsKnownNpc("A Shadowstone
+Grabber")` answers for a row written in lowercase. The lowercase convention (117 rows still start capital) is tidiness,
+not behaviour — but it means **dedupe has to be done case-insensitively**, or the same mob goes in twice.
+
+What an entry buys: R6 (`R6-npcdb`) identity — **Medium** when the name contains a space, only **Weak** for a bare word,
+which is why `Mite`, `Fade` and `Umber` stay overridable by line evidence — plus NPC-side fight edges through
+`IsKnownNpc` in `FightDeriver`/`FightManager` and kill labelling in `EventViewer`.
+
+Eighty-seven names came from the six captures (Sep 2022 → Sep 2026): every name no rule placed *and* absent from the
+file case-insensitively, each then checked against `everquest.allakhazam.com/search.html?q=<name>` — the Mobs tab is a
+`Name | Level | Type | Locations` table. A name was accepted only when a row's name equalled the searched name (under
+both possessive spellings) and the type was **Monster, Undead, Animal, Raid Encounter** (including the compound
+`Named|Raid Encounter`, which is how `Kratakel, Lord Misery` is filed — without that allowance the single largest name
+in the set fell out) **or `a rare creature`**, the label they give rares. Refused on type: Quest NPC, Object, Banker.
+Refused for shape: rows whose DB name carries decoration (`Rufus Invictus [ Unbeatable Force ]`,
+`Captain Edraneth [ Raid ]`) do not equal the log's name, and 43 names are simply not in their index — some visibly
+worded differently there (`a blazing emberfang` vs their `a fiery emberfang`, `a supercharged octodrone` vs
+`an overcharged octodrone`), so absence from Allakhazam is *not* evidence a name is not a mob. Short names that only
+appear as the tail of a longer entry (`Boner` → `a mastruq bonereader`, `Trick`, `Link`) are the log's own truncations,
+which is how the pet nicknames were told apart from mobs.
+
+One trap in the shipped data: **corpse rows are written with a backtick** (``commander b`drabits`s corpse``, 40 of them)
+while the client writes corpses with an **apostrophe** — across the six captures, `'s corpse` appears in 6,748 lines and
+`` `s corpse `` in 4 — and nothing normalises either form, so those rows can never match by exact name. Do not "fix" it
+with a blanket replace: pets genuinely use the backtick (`` Kazcro`s pet ``). R13 takes the stripped base name for
+corpse identity anyway, which is why nothing has noticed.
