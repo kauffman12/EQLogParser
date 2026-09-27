@@ -3578,7 +3578,7 @@ re-measured, and `MirrorHealCaptureTest` re-asserts each shape against the parse
 
 ## The NPC registry in `data/npcs.txt`
 
-The file is 38,461 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
+The file is 38,462 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
 `_allNpcs`, a `ConcurrentDictionary` built with `StringComparer.OrdinalIgnoreCase`, so `IsKnownNpc("A Shadowstone
 Grabber")` answers for a row written in lowercase. The lowercase convention (117 rows still start capital) is tidiness,
 not behaviour — but it means **dedupe has to be done case-insensitively**, or the same mob goes in twice.
@@ -3587,18 +3587,43 @@ What an entry buys: R6 (`R6-npcdb`) identity — **Medium** when the name contai
 which is why `Mite`, `Fade` and `Umber` stay overridable by line evidence — plus NPC-side fight edges through
 `IsKnownNpc` in `FightDeriver`/`FightManager` and kill labelling in `EventViewer`.
 
-Eighty-seven names came from the six captures (Sep 2022 → Sep 2026): every name no rule placed *and* absent from the
+Eighty-eight names came from the six captures (Sep 2022 → Sep 2026): every name no rule placed *and* absent from the
 file case-insensitively, each then checked against `everquest.allakhazam.com/search.html?q=<name>` — the Mobs tab is a
 `Name | Level | Type | Locations` table. A name was accepted only when a row's name equalled the searched name (under
 both possessive spellings) and the type was **Monster, Undead, Animal, Raid Encounter** (including the compound
 `Named|Raid Encounter`, which is how `Kratakel, Lord Misery` is filed — without that allowance the single largest name
 in the set fell out) **or `a rare creature`**, the label they give rares. Refused on type: Quest NPC, Object, Banker.
-Refused for shape: rows whose DB name carries decoration (`Rufus Invictus [ Unbeatable Force ]`,
-`Captain Edraneth [ Raid ]`) do not equal the log's name, and 43 names are simply not in their index — some visibly
-worded differently there (`a blazing emberfang` vs their `a fiery emberfang`, `a supercharged octodrone` vs
-`an overcharged octodrone`), so absence from Allakhazam is *not* evidence a name is not a mob. Short names that only
-appear as the tail of a longer entry (`Boner` → `a mastruq bonereader`, `Trick`, `Link`) are the log's own truncations,
-which is how the pet nicknames were told apart from mobs.
+
+A `[ … ]` inside an Allakhazam name is **their annotation, never part of an EQ name** — `Rufus Invictus [ Unbeatable
+Force ]` says which raid instance the row belongs to, and no log line anywhere carries ` [` within a name. Comparing the
+text before the first bracket is therefore legitimate, and it rescued exactly one name: `Rufus Invictus`, level 129 Raid
+Encounter in *Elddar Forest: Raid Instance*, with 840 lines where it hits `Foob`, `Dextris Kanghammer` and players'
+pets. It did not rescue `Gartik`: their row is `Commander Gartik`, a *22nd Anniversary: Blackburrow* ally, and all 664 of
+the log's `Gartik` attacks land on `Aten Ha Ra`, a mob — an NPC **on our side**, which is the part worth remembering:
+
+**The registry answers "is this name a player?" and nothing else — never hostility.** `an unknowing civilian`,
+`a duressed civilian`, `A Rallosian recruit` and a raid boss sit in the same file, and registering a friendly NPC does not
+make it a foe. Side comes from target-frame evidence and R15, not from `IsKnownNpc`; any rule that reads the registry as
+"hostile" is wrong on its face.
+
+What the batch says about our own rules, measured over those 88 names: **65 already arrive with the client's own
+`Targeted (NPC):` line** and **0 ever appear under a `Targeted (Player):` line**, so not one of them was mislabelled in
+these captures — the registry buys *provenance* (R6, plus fight edges in the live path) for names that would otherwise
+rest on a shape guess whenever nobody targets them. Shape coverage: **40 are article-shaped** (what R14 reads), **9 are
+bare words** (`Fade`, `Firethorn`, `Gwark`, `Lich`, `Magmath`, `Mite`, `NeuroKraken`, `Umber`, `Windshear`) — invisible to
+every shape rule, and precisely the shape a player is free to choose, which is why R6 caps a spaceless name at Weak and
+why the collision policy (a registry hit never outranks player evidence; see the `Terror` case in the mirror notes) has
+to stay. **Three carry a comma title** (`Kratakel, Lord Misery`, `Keltakun, Last Word`, `Ogna, Artisan of War`) and one of
+them is the biggest name in the set at 68,416 attack edges: no grammar rule can see that shape, so either a name list or
+the client's own target line is the only road to it. **Twelve have no combat line at all** (civilians, shades,
+`The Headsman`, `Defense Unit CDL`) — they were never going to reach a fight list, and "no rule placed it" meant *no
+identity claim*, not *no evidence*.
+
+Absence from Allakhazam proves nothing either: 43 candidates are simply missing from their index, some visibly worded
+differently there (`a blazing emberfang` vs their `a fiery emberfang`, `a supercharged octodrone` vs `an overcharged
+octodrone`). And short names that match only as the tail of a longer entry (`Boner` → `a mastruq bonereader`, `Trick`,
+`Link`) turned out to be player-named pets and mercs, not log truncations — a substring is a hint to go look, never a
+verdict.
 
 One trap in the shipped data: **corpse rows are written with a backtick** (``commander b`drabits`s corpse``, 40 of them)
 while the client writes corpses with an **apostrophe** — across the six captures, `'s corpse` appears in 6,748 lines and
