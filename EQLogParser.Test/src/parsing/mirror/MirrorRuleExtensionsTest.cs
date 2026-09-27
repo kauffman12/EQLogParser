@@ -157,7 +157,8 @@ public class MirrorRuleExtensionsTest
     /*
      * Fifty hits on a target-frame NPC plus exactly one hit on an unnamed something is a raid-side melee main,
      * not an ambiguous pile. Before this change those 50 edges were vetoed by the one thing the rules had not
-     * named — on the real captures that is how `Squirticus` (8,909 edges, 4 unnamed) stayed unclassified while
+     * named — on the real captures that is how `Squirticus` (8,909 attack edges, a handful of them aimed at
+     * names nothing had classified yet) stayed unclassified while
      * everything next to it got classified. Two unnamed edges out of 52 is over the allowance and stays
      * Unknown: a melee pile that is mostly unnamed proves nothing either way.
      */

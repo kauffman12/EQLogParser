@@ -143,14 +143,24 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the only thing stopping this rule from relabelling every database hit as a guess about grammar), never claims a name the spell DB
   answers for, and loses to line evidence. **R7's unknown allowance is a share (2 %) of that attacker's own edges**, while opposition
   from the other side stays an absolute veto — that veto is what keeps a charmed raid from inventing NPCs out of players; one unnamed
-  defender used to be enough to leave `Squirticus` (8,909 edges, 4 unnamed) unclassified for a whole capture. **R15 (our side keeps
+  defender used to be enough to leave `Squirticus` (8,909 attack edges, a handful pointing at names nothing had
+  yet named) unclassified for a whole capture. **R15 (our side keeps
   healing it) accepts a healer only at ≥ Strong**, so no Medium inference can launder a name onto our side; it needs ≥10 heal lines
   from ≥2 such casters, and any swing back above the friendly-fire share vetoes it, because raid AoE waters the mob stack too
   ("Yokii healed an arcborn wraith for 2 hit points") and a boss answers for itself by swinging at the raid. R15 alone moves **6-14 %**
   of each capture's damage facts onto a side with **zero** overlap against `Targeted (NPC)` or `npcs.txt`; derived-vs-legacy parity is
-  unchanged (2024: 691/691 field-matched, Incogitable: 4,473/4,473). Known and accepted: an article-named ally summon (`A good egg`,
-  healed 36× for 11.1 M HP) stays on the enemy column — its correct fix is a time-scoped `Friendly` interval like R9's charm windows,
-  not a rename. Numbers and the reading procedure: docs/combat-mirror-design.md → "Fourth audit".
+  unchanged (2024: 691/691 field-matched, Incogitable: 4,473/4,473). **`Targeted (NPC)` means "not a player", never "not ours"** — it
+  fires on pets: `Useless` reads `Npc:R1-target` in Incogitable with 303,554 attack edges while the raid healed it 47,752 times from 52
+  casters (`Dragon`, `Bark`, `Dangle`, `Speedbump`, `Cutie`, `Funky` likewise; 0.4-18.8 % of a capture's facts sit on the enemy column this
+  way). What tells a pet from a mob that merely gets raid AoE is WHO heals it: pets take heals from **19-52 distinct casters**, and every
+  genuine hostile measured (Zelnithak, Captain Kar, Rufus Invictus, Tallongast, `an echo`) tops out at **10** — so heal volume alone must never
+  flip an NPC verdict, caster breadth is the discriminator. Which also means R15's yield is mostly custom-named pets, not unverified people
+  (20 of the 25 registry pets in the 2026 capture read `R15-healed`; petmapping.txt holds 96 owner pairs while the log's own possessive lines
+  prove 18) — `Player` is written as "raid-side, never verified", and owner attribution needs the registry. Tests are cold by construction:
+  `PipelineHarness` calls `PlayerRegistry.Instance.Clear()` and only `MainWindow` ever calls its `Init()`, so `RegistrySeed` contributes nothing
+  in any measurement here; one unfixable-by-registry case is a pet *named like a raider* (`Sancus`: in players.txt, owns `Sancus`s pet`, and
+  stamped Pet Certain by "Sancus is called to it owner.") because identity is keyed on the name, not the owner. Numbers and the reading
+  procedure: docs/combat-mirror-design.md → "Fourth audit".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

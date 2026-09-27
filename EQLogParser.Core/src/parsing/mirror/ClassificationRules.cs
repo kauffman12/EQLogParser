@@ -53,8 +53,13 @@ namespace EQLogParser.Mirror
      *   familiar       171 /        12
      *   mount           28 /         0
      * Everything else that turned up (`s corpse, `s Acolyte, `s Heart) is an NPC's own possessive text,
-     * not ownership, so it stays out. Matching is case-insensitive: the logs do print `` `s Warder ``
-     * (1 line in Incogitable) and a case-sensitive list loses it.
+     * not ownership, so it stays out. Matching is case-insensitive, and not for decoration: all 28 of
+     * Incogitable's mount possessives are printed `` `s Mount `` (a case-sensitive sweep finds zero of them),
+     * and the logs also print `` `s Warder ``.
+     *
+     * What this list CANNOT do is name a pet whose owner never appears in the text. Over the six captures,
+     * the log's own possessive lines prove 18/96 of the owners the operator's registry knows (petmapping.txt),
+     * because most pets are given custom names (``Dangle``, ``Bigboned``, ``Useless``) that print bare.
      *
      * This list is also what CombatMirror flags on facts, and what FightDeriver's PetOwner and a
      * materialized record's AttackerOwner cut with - one copy, in OwnerInName, on purpose.
@@ -74,8 +79,9 @@ namespace EQLogParser.Mirror
     /*
      * How much unclassified opposition an inference may tolerate (R7). It used to be none at all: ONE
      * defender the rules had not named vetoed the whole aggregation, which read as a hair trigger on real
-     * logs - `Squirticus` carries 8,909 attack edges of which exactly 4 point at an unclassified name, and
-     * those four left it unclassified for the entire capture while its mercenaries next to it got nothing.
+     * logs - `Squirticus` carries 8,909 attack edges, a handful of which pointed at names nothing had yet
+     * classified, and those few left it unclassified for the entire capture (they read as 0 unknown now, the
+     * shape and heal rules having named them since).
      * A share (not a count) keeps the guard's purpose: a melee pile that is mostly unclassified still
      * proves nothing. Measured over the six captures, the names this lets through have unknown shares of
      * 0.0-2 % and their raid-side opposition is friendly fire (cleave), not combat.
@@ -413,8 +419,23 @@ namespace EQLogParser.Mirror
      * (docs/combat-mirror-design.md → "Fourth audit"): the unfiltered heal graph offers 38 names in Kizant 2026
      * and 217 in Incogitable; the gates below keep 23 and 65 of them, and what they take is 19-23 names per raid
      * day carrying 6-14 % of that capture's damage facts. None of the claimed names on any of the six files is a
-     * known NPC or ever carried the target frame's `Targeted (NPC)` verdict - which is the check that this rule
-     * agrees with the one piece of text the game cannot get wrong.
+     * known NPC or ever carried the target frame's `Targeted (NPC)` verdict.
+     *
+     * What they ARE, checked against the operator's own registry: CUSTOM-NAMED PETS far more often than
+     * mercenaries. Sep-2026 has 25 petmapping.txt names in the log and 20 of them read `R15-healed`
+     * (Bigboned=Goruuk, Heisenberg=Coas, Triumph=Jazrakhan, Xena=Rahoul, Dangle=Strangle); Incogitable gives
+     * 16 of 59, and Squirticus is filed under `Unknown Pet Owner`. `Player` is therefore the least wrong label
+     * a name-keyed timeline can write - "raid-side, never verified as a person" - and the owner stays unknown
+     * unless the registry says it.
+     *
+     * The mirror image of that, and the reason heal volume alone must not move an NPC verdict: `Targeted (NPC)`
+     * FIRES ON PETS. `Useless` reads `Npc:R1-target` in Incogitable with 303,554 attack edges while the raid
+     * healed it 47,752 times from 52 casters; `Dragon`, `Bark`, `Dangle`, `Speedbump`, `Cutie`, `Funky` are the
+     * same story (0.4-18.8 % of each capture's facts sit on the enemy column this way). What separates a pet
+     * from a mob that merely gets raid AoE is WHO heals it: pets take heals from 19-52 distinct casters, while
+     * every genuine hostile in the same lists - `Zelnithak`, `Captain Kar the Unmovable`, `Rufus Invictus`,
+     * `Tallongast, The Egg`, `an echo` - tops out at 10. Two statements are true at once ("not a player",
+     * "ours"), which is what R9's time-scoped `Friendly` interval exists to carry.
      *
      * The healer must be ours by EVIDENCE, not by guess: strength >= Strong (line-intrinsic or behaviour -
      * roster, joins, guild/group/raid speech, ownership, target frame). A Medium name healing a Medium name
