@@ -1,5 +1,25 @@
 namespace EQLogParser.Mirror
 {
+  /*
+   * How a row stopped being an engagement. `Dead` stays the flag every consumer already reads — the list
+   * styles it, the overlay counts encounters — and this says WHY, because two of these four are kills and
+   * one of them is not:
+   *
+   *   Slain    the name died to the raid.
+   *   Charmed  "<name> has been charmed." The raid stopped fighting this mob by making it theirs, which is
+   *            counted as its death (the encounter with it is over, and the alternative — a row that runs on
+   *            until an inactivity gap swallows it — hides what happened). If the charmed mob then dies, that
+   *            second death belongs to OUR side of the ledger: it dies like a party member does, and the
+   *            projection skips it so one corpse cannot hand the raid two kills with the same name.
+   */
+  internal enum DerivedFightEnd : byte
+  {
+    Open = 0,      // still open when the list was built (live capture), or the log ran out
+    Gap = 1,       // inactivity past FightProjection.EngagementGapS
+    Slain = 2,     // the name died to the raid
+    Charmed = 3,   // charmed away: counted as this NPC's death, see above
+  }
+
   // Per-name roll-up inside a derived fight (Phase 1: damage/hits; Phase 2 adds by-type).
   internal sealed class NameAgg
   {
@@ -39,6 +59,9 @@ namespace EQLogParser.Mirror
     public double BeginTime = double.PositiveInfinity;
     public double LastTime = double.NegativeInfinity;
     public bool Dead;
+
+    // Why the row ended. Only meaningful next to a row that ended: an open (live) row reports Open.
+    public DerivedFightEnd EndReason;
 
     // Projection-only: the row exists because a charm window put this name on the enemy side
     // (charmed raider), or its facts were owned while such a window was open. Rendered as a

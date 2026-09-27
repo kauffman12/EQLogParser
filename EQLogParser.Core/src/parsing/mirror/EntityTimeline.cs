@@ -259,6 +259,36 @@ namespace EQLogParser.Mirror
       return owner;
     }
 
+    /*
+     * Earliest charm-window start strictly after `afterS` for this name, NaN when there is none.
+     *
+     * The display list asks R9 exactly this one question — "did the raid take this mob off the enemy list
+     * partway through?" — because that moment ENDS the NPC's engagement (DerivedFightEnd.Charmed) instead of
+     * letting the row run on until an inactivity gap swallows it. A cursor/interval query would answer
+     * "friendly at t", which is not what a closing row needs: by the time the projection notices, the name is
+     * long since friendly again (or hostile again after the pet died).
+     */
+    public double CharmStartAfter(string name, double afterS)
+    {
+      if (!_affiliation.TryGetValue(name, out var list)) return double.NaN;
+
+      // Sorted by T0, so the first charm interval past afterS is the answer — no scan to the end.
+      foreach (var iv in list)
+      {
+        if (iv.T0 <= afterS) continue;
+        if (iv.Kind == AffiliationKind.Friendly && iv.Source is not null
+            && iv.Source.StartsWith("R9-charm", StringComparison.Ordinal)) return iv.T0;
+      }
+      return double.NaN;
+    }
+
+    // True when a charm window has this name on our side at t. Same test the projection flips rows with,
+    // exposed because "did this name die to the raid, or did it die while it was ours" is a question the
+    // death bookkeeping has to ask too.
+    public bool IsCharmedAt(string name, double t)
+      => AffiliationAt(name, t, out var source) == AffiliationKind.Friendly
+         && source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
+
     // One cursor per name over a time-ordered fact stream — the pointer sweep §6 asks for.
     // Yields AffiliationAt without re-walking from the start each call.
     public AffiliationCursor OpenAffiliationCursor(string name) => new(this, name);

@@ -131,6 +131,7 @@ public class MirrorRealLogBenchTest
             classSw.Stop();
 
             PrintCharmReport(facts, rules.Charms);
+            PrintProjectionReport(facts, timeline);
 
             var deriveSw = Stopwatch.StartNew();
             var derived = FightDeriver.Derive(facts);
@@ -201,6 +202,20 @@ public class MirrorRealLogBenchTest
             Console.WriteLine($"[charm]   {e.Name,-36} windows={e.Windows} sightings={e.Sightings} " +
                               $"dmg={e.Damage:N0} owners=[{e.Owners}] closes=[{e.Closes}]");
         }
+    }
+
+    /*
+     * The DISPLAY list over the same classification, counted by how each row ended. This is where a charm rule
+     * becomes visible UI state: "Charmed" rows are mob encounters the raid finished by taking them (counted as
+     * deaths), and a Gap count that shrinks while Charmed grows is the point of the boundary — those rows were
+     * previously indistinguishable from "we stopped hitting it for five minutes".
+     */
+    private static void PrintProjectionReport(DamageFactTable facts, EntityTimeline timeline)
+    {
+        var rows = FightProjection.Build(facts, timeline);
+        Console.WriteLine($"[rows] list={rows.Count:N0}  charmed-owned={rows.Count(static r => r.CharmedOwned)}");
+        foreach (var g in rows.GroupBy(static r => r.EndReason).OrderByDescending(static g => g.Count()))
+            Console.WriteLine($"[rows]   ended {g.Key}: {g.Count()}");
     }
 
     private sealed class MirrorChatSink : IChatSink

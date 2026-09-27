@@ -95,12 +95,30 @@ namespace EQLogParser
           Duration = DateUtil.FormatGeneralTime(Math.Max(0, fight.EndTime - fight.BeginTime)),
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,
-          Status = $"{(fight.Dead ? "dead" : string.Empty)}{(fight.Dead && fight.CharmedOwned ? ", " : string.Empty)}{(fight.CharmedOwned ? "charmed" : string.Empty)}",
+          Status = StatusOf(fight),
           Fight = fight,
         });
       }
 
       return snapshot;
     }
+
+    /*
+     * The status column: how the row ended, and who owned it when it did. A charm close says "dead, charmed"
+     * because that is what it is — the raid finished that mob by taking it off the enemy list, and this column
+     * is the only way the grid has of showing a death at all (agreed 2026-10: keep the charm as the REASON and
+     * treat the row like the death it replaced, rather than inventing a third visual state).
+     *
+     * A row that merely stopped — an inactivity gap, or still open on a live capture — stays blank exactly as
+     * before, and "charmed" alone is a charmed raider's row: she is here because a charm put her on the enemy
+     * side, which is not a death and must not look like one.
+     */
+    private static string StatusOf(DerivedFight fight)
+      => fight.EndReason switch
+      {
+        DerivedFightEnd.Charmed => "dead, charmed",
+        DerivedFightEnd.Slain => fight.CharmedOwned ? "dead, charmed" : "dead",
+        _ => fight.Dead ? "dead" : fight.CharmedOwned ? "charmed" : string.Empty,
+      };
   }
 }

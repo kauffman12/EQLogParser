@@ -36,9 +36,11 @@ namespace EQLogParser.Mirror
    *   reading HIGH the moment one of those filters was switched off. It cost no memory: the four bytes it now
    *   occupies were spent on DamageFact.OverTotal, a field damage never wrote (see DamageFact).
    *   A heal's mask is captured the same way (HealFact.ModMask) for when the healing board is fed from facts.
-   *   AttackerOwner comes from the line's own ownership word (ClassificationRules.OwnerInName), not from the
-   *   registry: a pet the manager never mapped still lands under its owner here, which is a difference in what
-   *   the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same field.
+   *   AttackerOwner comes from the line's own ownership word (ClassificationRules.OwnerInName) or from an R9
+   *   charm window covering the fact (MirrorDamageIndex.OwnerOf), never from the registry: a pet the manager
+   *   never mapped still lands under its owner here, and so does a mob somebody charmed, which is a difference
+   *   in what the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same
+   *   field, so every charm of the same mob name across a night folds into one pet entry under its charmer.
    *   PlayerDamageTotals stays empty — only DamageOverlayStatsBuilder reads it, and the overlay is fed
    *   straight from FightManager, never from a selection.
    *   SubType is filled in when the fact has none (RecordFrom's helper): the summary's melee counters look the
@@ -52,6 +54,15 @@ namespace EQLogParser.Mirror
    */
   internal sealed class MirrorDamageIndex
   {
+    /*
+     * The classification this index belongs to, for one question only: was this attacker inside an R9 charm
+     * window, i.e. somebody's pet for this span? Null (the default) means "nobody is anyone's pet here", which
+     * keeps every other caller and test behaving exactly as before.
+     */
+    private readonly EntityTimeline _charmers;
+
+    public MirrorDamageIndex(EntityTimeline charmOwners = null) => _charmers = charmOwners;
+
     private readonly object _gate = new();
 
     // fight -> ordinals into DamageFactTable.Facts, in table order (= arrival order), aimed at the owner only.
@@ -107,6 +118,24 @@ namespace EQLogParser.Mirror
       }
     }
 
+    /*
+     * Whose pet this attacker's damage belongs to. Two sources, in order of how well they are evidenced:
+     *
+     *   the ownership word inside the line itself ("Sancus`s pet" -> "Sancus"), which is what makes
+     *   DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet — the
+     *   legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
+     *   this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test;
+     *   otherwise the charmer named by an R9 window covering THIS fact, which is how a night of charming
+     *   `an imbued whipgrass` arrives as one pet entry under whoever cast the charm instead of as an NPC that hit
+     *   things. OwnerOf answers null outside a window (so nothing else changes) and null for a window no cast
+     *   was attributed to, which leaves those mobs as plain hostile-side credit rather than picking a raider.
+     *
+     * Charm owners are never persisted anywhere: the window is time-scoped, so the same mob name charmed by a
+     * different necro next pull credits that necro instead.
+     */
+    private string OwnerOf(DamageFact fact, string attacker)
+      => fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : _charmers?.OwnerOf(attacker, fact.TimeS);
+
     private Fight BuildFight(DerivedFight fight, DamageFactTable facts)
     {
       var summary = new Fight
@@ -150,7 +179,7 @@ namespace EQLogParser.Mirror
            * legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
            * this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test.
            */
-          AttackerOwner = fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : null,
+          AttackerOwner = OwnerOf(fact, attacker),
           Defender = facts.NameOf(fact.DefIdx),
           AttackerIsSpell = fact.AttackerIsSpell,
           Total = fact.Total,

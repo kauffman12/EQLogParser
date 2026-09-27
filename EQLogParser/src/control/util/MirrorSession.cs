@@ -99,8 +99,10 @@ namespace EQLogParser
             ClassificationRules.Apply(_facts, timeline, _heals);
 
             // The index is filled DURING the projection: it needs the same direction decision the rows split
-            // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler).
-            var damageIndex = new MirrorDamageIndex();
+            // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler). It
+            // also gets the timeline, so a charmed mob's damage is credited to its charmer in the stats board
+            // (MirrorDamageIndex.OwnerOf) instead of sitting under the mob's own name.
+            var damageIndex = new MirrorDamageIndex(timeline);
 
             // Display list = facts projected over the classification above. Rows self-correct:
             // a name that gains player-side evidence between passes loses its row to the NPC it

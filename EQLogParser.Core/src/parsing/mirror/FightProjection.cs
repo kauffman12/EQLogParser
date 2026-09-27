@@ -30,6 +30,9 @@ namespace EQLogParser.Mirror
     // idempotent equivalent - and never invents a boundary inside one continuous brawl.)
     public const double EngagementGapS = 300;
 
+    // How far BEFORE a death to look for the charm window that death closed. See DiedWhileCharmed.
+    private const double CharmDeathSlackS = 1;
+
     private enum Side : byte { Unknown, Player, Npc }
 
     /*
@@ -60,6 +63,17 @@ namespace EQLogParser.Mirror
       foreach (var death in facts.Deaths)
       {
         var killed = facts.NameOf(death.KilledIdx);
+
+        /*
+         * A name that dies WHILE charmed does not die to the raid. Its NPC row was already closed at the
+         * charm itself (DerivedFightEnd.Charmed — the raid got that mob by taking it), so letting this death
+         * mark a row as slain would hand out a second kill for one corpse, and would do so on whichever row
+         * of that name happened to be open — possibly a different instance three pulls away. It is skipped
+         * here exactly as a party member's death is not a raid kill. Nothing is lost: the charm window itself
+         * records this death as the reason it closed (CharmEndReason.Death on MirrorRuleOutcome.Charms).
+         */
+        if (DiedWhileCharmed(timeline, killed, death.TimeS)) continue;
+
         if (!deathsByName.TryGetValue(killed, out var q)) deathsByName[killed] = q = new Queue<long>();
         q.Enqueue(death.TimeS);
       }
@@ -81,9 +95,24 @@ namespace EQLogParser.Mirror
         bool creditAttacker;  // attacker was player-side: it gets damage credit in the owner's roll-up
         bool charmed = false;
 
-        if (atkSide == Side.Player && defSide == Side.Player) continue; // friendly fire
-
-        if (atkSide == Side.Player && (defSide == Side.Npc || defSide == Side.Unknown))
+        if (atkSide == Side.Player && defSide == Side.Player)
+        {
+          /*
+           * Friendly fire is dropped — EXCEPT when the defender is a charmed mob. A mob under charm reads
+           * player-side, but it is not a raider: swings that land on it come from the raid's own mistake (AoE
+           * splash, or an add the charm did not take out of the fight) and they are real damage a meter has to
+           * keep. Silently deleting them would shrink a player's total for the crime of hitting their own pet,
+           * which is how this looked before charm windows could be seen at all. They key on the mob's name, so
+           * the row that opens is the mob's post-charm half; nobody gets credit for being hit by their allies.
+           *
+           * A charmed RAIDER attacking us reads the other way (her identity flips to Npc-side, she owns her own
+           * row), and a pet damaging its own side stays dropped — the log gives us no story to tell about it.
+           */
+          if (!IsFlipped(timeline, defName, t) || IsFlipped(timeline, atkName, t)) continue;
+          key = defName;
+          creditAttacker = true;
+        }
+        else if (atkSide == Side.Player && (defSide == Side.Npc || defSide == Side.Unknown))
         {
           key = defName; creditAttacker = true;
         }
@@ -126,11 +155,24 @@ namespace EQLogParser.Mirror
         // combat mid-second: the first same-second fact consumed the death, closed the row at
         // the previous second, and every remaining hit of the kill - including the killing blow
         // itself - opened a zero-length live row behind the dead one.
+        // A charm sighting closes this name's NPC engagement the way a slain line does — as a death, with
+        // the reason kept so the list can say "charmed" instead of implying a killing blow. Checked before
+        // the death boundary on purpose: when both happened, the charm came first.
+        if (row is not null && ClosesForCharm(timeline, key, row.LastTime, t))
+        {
+          row.Dead = true;
+          row.EndReason = DerivedFightEnd.Charmed;
+          rows.Add(row);
+          open.Remove(key);
+          row = null;
+        }
+
         if (row is not null && deathsByName.TryGetValue(key, out var deaths)
             && deaths.TryPeek(out var dt) && dt < t)
         {
           deaths.Dequeue();
           row.Dead = true;
+          row.EndReason = DerivedFightEnd.Slain;
           rows.Add(row);
           open.Remove(key);
           row = null;   // any further deaths wait for a later fact of this name
@@ -138,6 +180,7 @@ namespace EQLogParser.Mirror
 
         if (row is not null && t - row.LastTime > EngagementGapS)
         {
+          row.EndReason = DerivedFightEnd.Gap;
           rows.Add(row);
           open.Remove(key);
           row = null;
@@ -197,7 +240,16 @@ namespace EQLogParser.Mirror
           {
             deaths.Dequeue();
             row.Dead = true;
+            row.EndReason = DerivedFightEnd.Slain;
           }
+
+        // The usual fate of a charmed mob's row: the raid charms it and never swings again, so there is no
+        // later fact to notice the boundary in. Same rule as the in-loop check, at the end of the list.
+        if (!row.Dead && ClosesForCharm(timeline, row.Name, row.LastTime, double.PositiveInfinity))
+        {
+          row.Dead = true;
+          row.EndReason = DerivedFightEnd.Charmed;
+        }
         rows.Add(row);
       }
 
@@ -223,8 +275,31 @@ namespace EQLogParser.Mirror
 
     // True when a charm interval has this name on the opposite of its identity side at t.
     private static bool IsFlipped(EntityTimeline timeline, string name, double t)
-      => timeline.AffiliationAt(name, t, out var source) == AffiliationKind.Friendly
-         && source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
+      => timeline.IsCharmedAt(name, t);
+
+    /*
+     * Was this death ours rather than the raid's? A charm that ends AT a death writes its interval up to that
+     * instant, and interval bounds are exclusive — so the killing moment itself reads as "not charmed" unless
+     * the question is also asked a moment earlier. The slack costs one thing worth naming: a real kill of a
+     * DIFFERENT mob with the same name in the second after a window closes is skipped too, which is the
+     * same-name ambiguity this feature already accepts (CharmWindowPolicy reports that share instead of
+     * pretending to resolve it).
+     */
+    private static bool DiedWhileCharmed(EntityTimeline timeline, string name, double t)
+      => timeline.IsCharmedAt(name, t) || timeline.IsCharmedAt(name, t - CharmDeathSlackS);
+
+    /*
+     * Does a charm sighting end this row? It has to be a sighting of THIS engagement: the charm begins after
+     * the row's last fact and within the same engagement window that keeps rows apart (EngagementGapS), so a
+     * raid charming a mob of the same name three pulls from now cannot retroactively kill this row. That also
+     * means the ambiguity is inherited, not invented — two live mobs called `a skeleton` are one name to this
+     * log, and CharmWindowPolicy reports that share (SameNameFactCount) rather than pretending otherwise.
+     */
+    private static bool ClosesForCharm(EntityTimeline timeline, string key, double lastTimeS, double nowS)
+    {
+      var start = timeline.CharmStartAfter(key, lastTimeS);
+      return !double.IsNaN(start) && start <= nowS && start - lastTimeS <= EngagementGapS;
+    }
 
   }
 }
