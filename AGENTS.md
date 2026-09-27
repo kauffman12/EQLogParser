@@ -125,9 +125,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   what EQ wrote — `a bone walker has been charmed.`, a wear-off, a tell. So **every entity lookup is case-insensitive**:
   `EntityTimeline`'s identity and affiliation keys and `PlayerRegistry` (which always was `OrdinalIgnoreCase`). An ordinal key at
   this seam does not throw — the reader gets Unknown/hostile and quietly uses its fallback, which is how R9's charm flipped nothing
-  in the fight list while its own case-insensitive window tables went on reporting credit. Canonicalising happens on read, never in
-  storage, so rows still display the spelling the log wrote; `EntityNameKeyTest` pins identity, affiliation, ownership and "one
-  entity per name" across spellings.
+  in the fight list while its own case-insensitive window tables went on reporting credit. The same rule runs through **storage**:
+  `DamageFactTable.InternName` keys `OrdinalIgnoreCase` and stores `CapitalizeFirst(name)`, because an ordinal pool gave one mob two
+  ids — per-id evidence, rollups and fight rows each held half of it, and the id's string *is* the row's displayed name, so "a bone
+  walker" vs "A bone walker" was decided by which line arrived first (merging is exactly the measured split: pool **2,721 → 2,436** and
+  **558 → 518**, i.e. −285 / −40 twins, with `classify`/`derive` unmoved and `[rows]`, `[charm]` and legacy fight counts identical).
+  Only the first letter is touched — inner capitals arrive as written — and that is enough because the pipeline's two spellings are
+  `raw` and `CapitalizeFirst(raw)`, which differ only at index 0. Subtype/label tables stay ordinal (they are vocabulary words that
+  settings and `Labels` constants compare against). `EntityNameKeyTest` pins identity, affiliation, ownership and "one entity per name"
+  across spellings; `NamePoolTest` pins one-id-per-entity, order-independent display and that the heal stream interns into the same pool.
 - **A charm window is the NPC's death; its pet's death is not one**: `DerivedFight.EndReason` says *why* a row ended while
   `Dead` stays the flag every consumer reads (overlay, grid styling, `MirrorSummaryFights`). A `has been charmed.` sighting closes that name's row as `Charmed`
   (status word `dead, charmed`) — the raid finished that encounter by taking the mob off the enemy list — and a death **inside** a window is skipped by dead-marking

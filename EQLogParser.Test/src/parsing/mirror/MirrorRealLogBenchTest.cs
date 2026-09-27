@@ -159,25 +159,27 @@ public class MirrorRealLogBenchTest
      * many lines it touches (25 windows in a night is nothing; the credit inside them is the fight).
      */
     /*
-     * How much of the interned name pool is ONE entity spelled two ways. Facts arrive capitalized
-     * (ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain all finish with CapitalizeFirst) while evidence lines
-     * keep whatever EQ wrote, so "A bone walker" and "a bone walker" hold two ids. EntityTimeline meets them
-     * anyway — its keys are case-insensitive — but every structure keyed by name ID still sees two entities, and
-     * the pool pays for both. This is the number that decides whether the pool itself should canonicalise.
+     * The name pool's health over a real capture. It used to report how much of the pool was ONE entity spelled two
+     * ways (facts arrive capitalized via ParserUtil's CapitalizeFirst, evidence lines keep what EQ wrote), which
+     * measured 285 of 2,721 on Incogitable and 40 of 558 on 9-18-22; the pool has since merged them and the size came
+     * down by exactly those amounts.
+     *
+     * The two numbers that matter now are both zeros: no stored string may still start lower-case
+     * (every entry went through CapitalizeFirst, so a row's name does not depend on which line arrived first), and no
+     * two entries may be the same name in different cases (one entity, one id). `pool=` is the cost line, read
+     * against the pre-change measurements above.
      */
     private static void PrintNamePoolReport(DamageFactTable facts)
     {
         var names = facts.InternedNames;
-        var all = new HashSet<string>(names, StringComparer.Ordinal);
-        var halves = 0;
+        var nonCanonical = 0;
         foreach (var n in names)
-        {
-            if (n.Length < 2 || !char.IsUpper(n[0])) continue;
-            if (all.Contains(char.ToLowerInvariant(n[0]) + n[1..])) halves++;
-        }
+            if (n.Length > 0 && char.IsLower(n[0])) nonCanonical++;
 
-        Console.WriteLine($"[names] pool={names.Count:N0} upper-halves-with-lower-twin={halves:N0} " +
-                          $"({(names.Count == 0 ? 0 : (double)halves / names.Count):P1} of the pool)");
+        var ignoreCaseDistinct = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase).Count;
+
+        Console.WriteLine($"[names] pool={names.Count:N0} non-canonical={nonCanonical} " +
+                          $"case-collisions={names.Count - ignoreCaseDistinct}");
     }
 
     private static void PrintCharmReport(DamageFactTable facts, List<CharmWindow> charms)

@@ -18,8 +18,9 @@ namespace EQLogParser;
  * same entities. R9's charm windows are where this was found — a charmed mob stayed an enemy row in the fight
  * list while its own accounting happily credited it (docs/combat-mirror-design.md).
  *
- * Canonicalising happens on READ only, never in storage or in the name pool, so a row still displays the spelling
- * the log wrote and the interning cost is unchanged.
+ * Lookups canonicalise. Storage used to keep every spelling; it no longer does — `DamageFactTable.InternName` is
+ * ignore-case too and displays one form per entity, because an ordinal pool gave one mob two ids and left each
+ * per-id structure holding half of it. That half is `NamePoolTest`; this class pins the lookups.
  */
 [TestClass]
 public class EntityNameKeyTest

@@ -309,7 +309,8 @@ namespace EQLogParser.Mirror
     private int _evidenceCount;
 
     private readonly List<string> _names = [];
-    private readonly Dictionary<string, short> _nameMap = new(StringComparer.Ordinal);
+    // Ignore-case: see InternName. Same comparer rule as EntityTimeline's identity/affiliation keys.
+    private readonly Dictionary<string, short> _nameMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _subtypes = [];
     private readonly Dictionary<string, ushort> _subtypeMap = new(StringComparer.Ordinal);
     // Secondary strings for evidence facts (spell/class/channel names) - small, shared namespace.
@@ -339,13 +340,31 @@ namespace EQLogParser.Mirror
     public int EvidenceCount => _evidenceCount;
     public ReadOnlySpan<EvidenceFact> Evidence => _evidences.AsSpan(0, _evidenceCount);
 
-    // Names are interned with ordinal exactness — the same keying the current pipeline uses for
-    // fight map keys (ParserUtil normalization happens upstream in the parsers).
+    /*
+     * One entity, one id, whatever spelling arrived — and one DISPLAY form derived from the name itself.
+     *
+     * The keys are ignore-case for the reason the timeline and `PlayerRegistry` give (EQ itself cannot hold two
+     * entities whose names differ only by letter case), and because the two halves of the pipeline spell things
+     * differently on purpose: `ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain` finish with
+     * `CapitalizeFirst`, while the evidence lines never pass through them (`a bone walker has been charmed.`).
+     * With ordinal keys that was two ids for one mob, which is worse than a cosmetic split: per-name evidence,
+     * per-name rollups and fight rows each saw half the entity, and 10.5 % of the table was spelling.
+     *
+     * The stored string is `CapitalizeFirst` of whatever came in — not the first spelling that got there. That
+     * matters because the id's string IS the row's name: before this, whether the fight list read "a bone walker"
+     * or "A Bone Walker" depended on whether a charm line or a damage line touched the name first, and no amount
+     * of sorting fixes a decision that was made by arrival order. Capitalising the first letter is the same
+     * finishing touch the parsers already apply to every damage line, so nothing about EQ's own names changes
+     * beyond that letter; inner capitals (`Tik`Tick`) come through exactly as written.
+     *
+     * Subtype and label tables deliberately stay ordinal: those strings are vocabulary words the user's
+     * settings and `Labels` constants compare against.
+     */
     public short InternName(string name)
     {
       if (_nameMap.TryGetValue(name, out var idx)) return idx;
       if (_names.Count >= short.MaxValue) throw new InvalidOperationException("mirror: name table exceeded 65535 entries");
-      _names.Add(name);
+      _names.Add(TextUtils.CapitalizeFirst(name));
       idx = (short)(_names.Count - 1);
       _nameMap[name] = idx;
       return idx;

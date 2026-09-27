@@ -81,8 +81,12 @@ namespace EQLogParser.Mirror
      *
      * EQ itself treats names as case-insensitive (two entities that differ only by letter case cannot coexist
      * in a zone), which is why PlayerRegistry has always been OrdinalIgnoreCase; the timeline is the same
-     * entity store and had not caught up. Canonicalising on read keeps display strings untouched (rows show the
-     * spelling the log wrote) while every lookup meets.
+     * entity store and had not caught up.
+     *
+     * Storage agrees instead of keeping every spelling: `DamageFactTable.InternName` keys the same way and holds one
+     * id per entity, displayed as `CapitalizeFirst`. An ordinal pool was the worse half of this split — it gave one
+     * mob two ids, so every structure keyed by id carried half of it and the row's displayed name depended on which
+     * line arrived first (`NamePoolTest`).
      */
     private readonly Dictionary<string, List<IdentityAssignment>> _identity = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.OrdinalIgnoreCase);
