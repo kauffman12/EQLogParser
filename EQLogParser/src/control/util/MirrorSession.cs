@@ -94,7 +94,9 @@ namespace EQLogParser
             // overrides and mid-log registry changes re-apply cleanly (idempotent by design).
             var timeline = new EntityTimeline();
             RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
-            ClassificationRules.Apply(_facts, timeline);
+            // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
+            // see a mercenary or custom-named pet that never speaks, never joins and owns nothing.
+            ClassificationRules.Apply(_facts, timeline, _heals);
 
             // The index is filled DURING the projection: it needs the same direction decision the rows split
             // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler).

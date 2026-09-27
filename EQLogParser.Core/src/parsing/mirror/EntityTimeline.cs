@@ -153,6 +153,31 @@ namespace EQLogParser.Mirror
       return best;
     }
 
+    // Same resolution as IdentityAt, but reporting the WINNING STRENGTH too. A rule that must not reason
+    // from its own weaker inferences (R15 will only accept a healer that line evidence or behaviour put on
+    // our side, never one a Medium guess placed there) reads this instead of trusting the kind alone.
+    public IdentityKind IdentityAt(string name, double t, out int strength, out string source)
+    {
+      strength = int.MinValue;
+      source = null;
+      if (!_identity.TryGetValue(name, out var list) || list.Count == 0) return IdentityKind.Unknown;
+
+      var best = IdentityKind.Unknown;
+      var bestTime = double.NegativeInfinity;
+      foreach (var a in list)
+      {
+        if (a.EffectiveFrom > t) break;   // sorted by effective time
+        if (a.Strength > strength || (a.Strength == strength && a.EffectiveFrom >= bestTime))
+        {
+          best = a.Kind;
+          strength = a.Strength;
+          bestTime = a.EffectiveFrom;
+          source = a.Source;
+        }
+      }
+      return best;
+    }
+
     public bool HasIdentity(string name) => _identity.ContainsKey(name);
 
     // Strongest assignment at +infinity, with its provenance (Phase 2 report input).

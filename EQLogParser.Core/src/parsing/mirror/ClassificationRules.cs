@@ -44,9 +44,22 @@ namespace EQLogParser.Mirror
       ChatChannels.Guild, ChatChannels.Group, ChatChannels.Raid, ChatChannels.Fellowship
     };
 
-    // Attacker name suffixes that carry ownership inside the line (R5). Matches the shapes
-    // CombatMirror.HasOwnershipInLine flags on damage facts.
-    private static readonly string[] OwnerSuffixes = ["`s pet", "`s warder"];
+    /*
+     * Name suffixes that carry ownership inside the name itself (R5). The vocabulary is CLOSED and
+     * measured: two sweeps over six captures (2022-2026, ~3.7 GB) counting every `` `s <word> `` run give
+     *   pet        343,078 (Incogitable) / 1,884,906 (Kizant 2026)
+     *   ward        11,354 /    96,250   <- the summon word in the 2025/2026 logs
+     *   warder      42,915 /        43   <- the older spelling of the same thing, nearly extinct
+     *   familiar       171 /        12
+     *   mount           28 /         0
+     * Everything else that turned up (`s corpse, `s Acolyte, `s Heart) is an NPC's own possessive text,
+     * not ownership, so it stays out. Matching is case-insensitive: the logs do print `` `s Warder ``
+     * (1 line in Incogitable) and a case-sensitive list loses it.
+     *
+     * This list is also what CombatMirror flags on facts, and what FightDeriver's PetOwner and a
+     * materialized record's AttackerOwner cut with - one copy, in OwnerInName, on purpose.
+     */
+    private static readonly string[] OwnerSuffixes = ["`s pet", "`s warder", "`s ward", "`s familiar", "`s mount"];
 
     // R7 tunables (increment 3): opponent breadth counts INSTANCES, not distinct names — raid
     // pulls reuse names constantly ("a skeleton" dies, the next "a skeleton" is a new instance,
@@ -58,13 +71,43 @@ namespace EQLogParser.Mirror
     private const double BurstGapS = 30;       // gap that splits one name into separate instances
     private const double MinSpanS = 60;        // evidence must spread over a real engagement
 
-    public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline)
+    /*
+     * How much unclassified opposition an inference may tolerate (R7). It used to be none at all: ONE
+     * defender the rules had not named vetoed the whole aggregation, which read as a hair trigger on real
+     * logs - `Squirticus` carries 8,909 attack edges of which exactly 4 point at an unclassified name, and
+     * those four left it unclassified for the entire capture while its mercenaries next to it got nothing.
+     * A share (not a count) keeps the guard's purpose: a melee pile that is mostly unclassified still
+     * proves nothing. Measured over the six captures, the names this lets through have unknown shares of
+     * 0.0-2 % and their raid-side opposition is friendly fire (cleave), not combat.
+     */
+    private const double MaxUnknownEdgeShare = 0.02;
+
+    /*
+     * R15 (healed by our side) tunables. A raid AoE heal waters the mob stack too - "Yokii healed an
+     * arcborn wraith for 2 hit points by Summer's Deluge Rk. II." - so one edge is not evidence; a
+     * *population* of heals from more than one caster is. Crumb heals run at 1-2 hit points from a single
+     * caster, while the mercs/pets this rule exists for are healed thousands of times by half the raid.
+     */
+    private const int HealEdgeMinLines = 10;      // heal lines aimed at the name
+    private const int HealEdgeMinHealers = 2;     // from at least two different our-side healers
+    private const double HealEdgeMaxRaidAttackShare = 0.02;   // its own swings at our side, same rationale as above
+
+    // heals is optional: the damage stream alone classifies exactly as it did before this table existed.
+    public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable heals = null)
     {
       var outcome = new MirrorRuleOutcome();
       ApplyLocalPlayer(timeline);
       var charmWindows = ApplyEvidence(facts, timeline, outcome);
       ApplyOwnershipFlags(facts, timeline);
       ApplyNpcDatabase(facts, timeline);
+
+      // Name shape before the graph, because the graph reads it: an article-shaped defender is no longer an
+      // unknown edge, so attackers that were starved by "a skeleton" being unclassified get their evidence.
+      ApplyNameShape(facts, timeline);
+
+      // Before R7 for the same reason - our-side defenders are what R7-side needs to call an attacker hostile.
+      if (heals is not null) ApplyHealedByRaidSide(facts, heals, timeline);
+
       ApplyGraphInference(facts, timeline, charmWindows);
       return outcome;
     }
@@ -120,12 +163,25 @@ namespace EQLogParser.Mirror
      */
     internal static string OwnerInName(string name)
     {
+      if (string.IsNullOrEmpty(name)) return null;
       foreach (var suffix in OwnerSuffixes)
       {
-        if (name.EndsWith(suffix, StringComparison.Ordinal)) return name[..^suffix.Length];
+        if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return name[..^suffix.Length];
       }
 
       return null;
+    }
+
+    /*
+     * The owner a name names, or null when the cut is not a person: "Akini, Xanathan`s Warder" is one summon
+     * named after two masters, and the text in front of the word is "Akini, Xanathan". Claiming a player by
+     * that string would invent a raid member with a comma in it - the pet claim stands on its own (R5 proves
+     * ownership, and an owned summon is player-side whatever its name is), so only the OWNER claim is dropped.
+     */
+    private static string UsableOwnerInName(string name)
+    {
+      var owner = OwnerInName(name);
+      return string.IsNullOrEmpty(owner) || owner.Contains(',') ? null : owner;
     }
 
     // Returns the charm (Friendly) intervals for the graph pass; windows close on wear-off or death.
@@ -267,31 +323,159 @@ namespace EQLogParser.Mirror
 
     private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline)
     {
-      // The verdict depends only on the attacker name - one pass per distinct name, not per fact
-      // (a busy pet contributes tens of thousands of flagged lines for one identity).
-      var seen = new HashSet<string>(StringComparer.Ordinal);
+      // The verdict depends only on the NAME, so it is taken from the name pool: one pass per distinct name.
+      // Sweeping names rather than facts is what lets a summon that never swung a weapon be owned too -
+      // "Tuona`s ward" appears in these captures only as something a raid member heals, and a ward nobody
+      // owns is a stray row in the display list forever.
+      var claimed = new HashSet<string>(StringComparer.Ordinal);
+      foreach (var name in facts.InternedNames)
+      {
+        if (OwnerInName(name) is null) continue;
+        ClaimOwnedSummon(timeline, name, claimed);
+      }
+
+      // Explicit "Owner: X" annotations: the line says ownership without saying it in the name, and only the
+      // flag knows. (Heal lines have no raw text on the fact, so they carry the name-shape case above.)
       foreach (var f in facts.Facts)
       {
         if ((f.Flags & DamageFact.FlagOwnerInLine) == 0) continue;
-
-        var attacker = facts.NameOf(f.AtkIdx);
-        if (!seen.Add(attacker)) continue;
-
-        var source = "R5-owner";
-        var owner = OwnerInName(attacker);
-
-        timeline.SetIdentity(attacker, IdentityKind.Pet, RuleStrength.Certain, owner is null ? source : $"{source}:{owner}", double.NegativeInfinity);
-        if (owner != null)
-        {
-          // The named owner gets corroboration only: the line proves the pet, not the person.
-          timeline.SetIdentity(owner, IdentityKind.Player, RuleStrength.Medium, source);
-
-          // Owner-keyed pet claim: registry petmapping keys are pet NAMES, but log evidence is
-          // often only "X`s pet" - scoring pairs through the owner side is what makes the pet
-          // metric measurable (docs increment 3).
-          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, attacker, double.NegativeInfinity, double.PositiveInfinity, RuleStrength.Certain, $"{source}:{owner}");
-        }
+        ClaimOwnedSummon(timeline, facts.NameOf(f.AtkIdx), claimed);
       }
+    }
+
+    private static void ClaimOwnedSummon(EntityTimeline timeline, string name, HashSet<string> claimed)
+    {
+      if (string.IsNullOrEmpty(name) || !claimed.Add(name)) return;
+
+      var source = "R5-owner";
+      var owner = UsableOwnerInName(name);
+
+      timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Certain, owner is null ? source : $"{source}:{owner}", double.NegativeInfinity);
+      if (owner != null)
+      {
+        // The named owner gets corroboration only: the line proves the pet, not the person.
+        timeline.SetIdentity(owner, IdentityKind.Player, RuleStrength.Medium, source);
+
+        // Owner-keyed pet claim: registry petmapping keys are pet NAMES, but log evidence is
+        // often only "X`s pet" - scoring pairs through the owner side is what makes the pet
+        // metric measurable (docs increment 3).
+        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, double.PositiveInfinity, RuleStrength.Certain, $"{source}:{owner}");
+      }
+    }
+
+    /*
+     * R14 - the article IS the game's own marker. A name the client writes as "a skeleton", "an aetherial
+     * hydra" or "The Custodian" is a thing, not a person: player names never take an article, and custom pet
+     * names are printed bare ("Useless", never "a Useless"). Measured across the six captures, of 872 names
+     * the existing rules already call Npc in Incogitable, 681 are article-shaped; among the 772 article-shaped
+     * names only two read as Player, and both were Medium guesses, not line evidence.
+     *
+     * Strong? No - Medium, with two guards, because the shape has measured counterexamples:
+     *   - "A good egg" (healed by raiders 36 times, "has died." four times) is a player's pet-rock, and
+     *     summon names can be sentences.
+     *   - spell names land in the name pool through the attacker field of dot/feedback lines, and calling one
+     *     an NPC would hand the graph a friendly target to score against. Anything the spell DB answers for
+     *     is therefore left alone (it stays Unknown, exactly as it was before this rule).
+     * Medium also means every piece of line evidence - Targeted (NPC/Player), /who, joins, guild speech,
+     * ownership words - still outranks it, which is the whole point of a shape rule.
+     */
+    private static void ApplyNameShape(IFactTable facts, EntityTimeline timeline)
+    {
+      var store = EQDataStore.Instance;
+      foreach (var name in facts.InternedNames)
+      {
+        if (!HasIndefiniteArticle(name)) continue;
+        if (OwnerInName(name) is not null) continue;                    // somebody's summon: R5 owns it
+        if (store.GetDamagingSpellByName(name) is not null) continue;   // a spell is not a combatant
+
+        // Same kind, better reason: npcs.txt already naming this creature says WHY it is an NPC, and the
+        // report should carry that. Tie-breaking at equal strength is "last writer wins", so the shape rule
+        // yields to whatever already spoke at Medium or above instead of overwriting its provenance.
+        timeline.IdentityAt(name, double.PositiveInfinity, out var held, out _);
+        if (held >= RuleStrength.Medium) continue;
+
+        timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Medium, "R14-shape", double.NegativeInfinity);
+      }
+    }
+
+    // The client writes the article in front of the name, lower-case at line start and mid-sentence alike.
+    internal static bool HasIndefiniteArticle(string name)
+      => !string.IsNullOrEmpty(name)
+         && (name.StartsWith("a ", StringComparison.OrdinalIgnoreCase)
+             || name.StartsWith("an ", StringComparison.OrdinalIgnoreCase)
+             || name.StartsWith("the ", StringComparison.OrdinalIgnoreCase));
+
+    /*
+     * R15 - a verified member of our side healing an unclassified name says more about the name than the
+     * name says about itself. This is how a mercenary or a pet with a custom name and no owner line shows up:
+     * it never speaks, never joins, owns nothing and casts nothing the DB can name - but half the raid keeps
+     * topping it up ("Trelania healed Triumph for 47587 … by Symbol of Sharosh"). Measured over six captures
+     * (docs/combat-mirror-design.md → "Fourth audit"): the unfiltered heal graph offers 38 names in Kizant 2026
+     * and 217 in Incogitable; the gates below keep 23 and 65 of them, and what they take is 19-23 names per raid
+     * day carrying 6-14 % of that capture's damage facts. None of the claimed names on any of the six files is a
+     * known NPC or ever carried the target frame's `Targeted (NPC)` verdict - which is the check that this rule
+     * agrees with the one piece of text the game cannot get wrong.
+     *
+     * The healer must be ours by EVIDENCE, not by guess: strength >= Strong (line-intrinsic or behaviour -
+     * roster, joins, guild/group/raid speech, ownership, target frame). A Medium name healing a Medium name
+     * would be an inference reasoning from itself, and that is how a charmed raid turns into an army.
+     */
+    private static void ApplyHealedByRaidSide(IFactTable facts, IHealFactTable heals, EntityTimeline timeline)
+    {
+      var candidates = new Dictionary<string, HealEdgeAgg>(StringComparer.Ordinal);
+      foreach (var h in heals.Heals)
+      {
+        var healer = heals.NameOf(h.HealerIdx);
+        var healed = heals.NameOf(h.HealedIdx);
+        if (healer == healed) continue;                       // self-heal proves nothing about anybody else
+
+        var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
+        if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
+
+        if (!candidates.TryGetValue(healed, out var agg))
+        {
+          // Only names nothing has classified yet; stronger evidence elsewhere wins by strength anyway.
+          if (timeline.IdentityAt(healed, h.TimeS) is not IdentityKind.Unknown) continue;
+          agg = candidates[healed] = new HealEdgeAgg();
+        }
+        agg.Lines++;
+        agg.AddHealer(healer);
+      }
+
+      if (candidates.Count == 0) return;
+
+      // Veto: a name that hits our side is not ours, however gently it was healed. A boss rained on by raid
+      // AoE heals is the exact trap, and it answers for itself by swinging back.
+      foreach (var f in facts.Facts)
+      {
+        var atk = facts.NameOf(f.AtkIdx);
+        if (!candidates.TryGetValue(atk, out var agg)) continue;
+        agg.Edges++;
+        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) agg.RaidSideEdges++;
+      }
+
+      foreach (var (name, agg) in candidates)
+      {
+        if (agg.Lines < HealEdgeMinLines || agg.Healers.Count < HealEdgeMinHealers) continue;
+        if (agg.Edges > 0 && (double)agg.RaidSideEdges / agg.Edges > HealEdgeMaxRaidAttackShare) continue;
+
+        timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Medium, "R15-healed", double.NegativeInfinity);
+      }
+    }
+
+    // Pet/Player/Merc = our side of the board (the projection's own reading; a Friendly interval is a
+    // separate question and callers that care ask AffiliationAt themselves).
+    private static bool IsRaidSideKind(IdentityKind kind)
+      => kind is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Pet;
+
+    private sealed class HealEdgeAgg
+    {
+      public int Lines;
+      public int Edges;
+      public int RaidSideEdges;
+      public readonly HashSet<string> Healers = new(StringComparer.Ordinal);
+
+      public void AddHealer(string healer) => Healers.Add(healer);
     }
 
     // R6: every log name that is an exact NPC-database entry (engine's own npcs.txt load).
@@ -310,10 +494,12 @@ namespace EQLogParser.Mirror
 
     // R7: fight-graph inference for names nothing else could classify (melee mains with no joins,
     // chat or spire casts; named custom pets like `Useless` that never show an owner line).
-    // Snapshot semantics: subjects must be Unknown and defenders already classified ONE side by
-    // everything prior (including R6). Ambiguous defenders (Unknown) poison the aggregation -
-    // a melee pile of unclassified names proves nothing either way, which is exactly the guard
-    // that keeps charmed-player raids from inventing NPCs out of players.
+    // Snapshot semantics: subjects must be Unknown and the defenders they face must already be
+    // classified ONE side by everything prior (including R6/R14/R15). Opposition from the other side
+    // is still an absolute veto - that is the guard keeping a charmed-player raid from inventing NPCs
+    // out of players. Unclassified defenders are allowed up to MaxUnknownEdgeShare of the attacker's
+    // edges: a handful of unnamed trash in a night of named ones used to be enough to leave a real
+    // mercenary unclassified for the whole capture.
     private static void ApplyGraphInference(IFactTable facts, EntityTimeline timeline, List<(string Name, double T0, double T1)> friendlyWindows)
     {
       var kinds = new Dictionary<string, IdentityKind>(StringComparer.Ordinal);
@@ -361,19 +547,21 @@ namespace EQLogParser.Mirror
         switch (dk)
         {
           case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;
-          case IdentityKind.Unknown: agg.SawUnknown = true; break;
+          case IdentityKind.Unknown: agg.UnknownEdges++; break;
           default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
         }
       }
 
       foreach (var (atk, agg) in aggByAttacker)
       {
-        if (!agg.SawUnknown && agg.NpcInstances >= OpponentInstances && agg.NpcSpan >= MinSpanS && !agg.SawPlayer)
+        if (agg.UnknownShare > MaxUnknownEdgeShare) continue;
+
+        if (agg.NpcInstances >= OpponentInstances && agg.NpcSpan >= MinSpanS && !agg.SawPlayer)
         {
           timeline.SetIdentity(atk, IdentityKind.Player, RuleStrength.Medium, "R7-graph");
           continue;
         }
-        if (!agg.SawUnknown && agg.PlayerInstances >= OpponentInstances && agg.PlayerSpan >= MinSpanS && !agg.SawNpc)
+        if (agg.PlayerInstances >= OpponentInstances && agg.PlayerSpan >= MinSpanS && !agg.SawNpc)
         {
           timeline.SetIdentity(atk, IdentityKind.Npc, RuleStrength.Medium, "R7-side");
         }
@@ -382,7 +570,10 @@ namespace EQLogParser.Mirror
 
     private sealed class SideAgg
     {
-      public bool SawUnknown;
+      // Unclassified defenders, counted rather than flagged: see MaxUnknownEdgeShare.
+      public int UnknownEdges;
+      public int KnownEdges { get; set; }
+      public double UnknownShare => UnknownEdges + KnownEdges == 0 ? 1 : (double)UnknownEdges / (UnknownEdges + KnownEdges);
       public bool SawNpc => _npcTimes.Count > 0;
       public bool SawPlayer => _playerTimes.Count > 0;
 
@@ -396,8 +587,8 @@ namespace EQLogParser.Mirror
       public double NpcSpan => Span(_npcTimes);
       public double PlayerSpan => Span(_playerTimes);
 
-      public void AddNpc(string def, long timeS) => AddTime(_npcTimes, def, timeS);
-      public void AddPlayerSide(string def, long timeS) => AddTime(_playerTimes, def, timeS);
+      public void AddNpc(string def, long timeS) { KnownEdges++; AddTime(_npcTimes, def, timeS); }
+      public void AddPlayerSide(string def, long timeS) { KnownEdges++; AddTime(_playerTimes, def, timeS); }
 
       private static int CountInstances(Dictionary<string, List<long>> times)
       {

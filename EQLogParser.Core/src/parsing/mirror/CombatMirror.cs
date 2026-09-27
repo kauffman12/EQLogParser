@@ -253,11 +253,13 @@ namespace EQLogParser.Mirror
       return HasOwnershipInName(attacker);
     }
 
-    // The ownership word inside the name itself. Both streams read it — a pet that heals is still somebody's
-    // pet — and one copy of the two spellings means the heal side cannot drift behind the damage side.
-    private static bool HasOwnershipInName(string name)
-      => !string.IsNullOrEmpty(name)
-         && (name.EndsWith("`s pet", StringComparison.Ordinal) || name.EndsWith("`s warder", StringComparison.Ordinal));
+    /*
+     * The ownership word inside the name itself. Both streams read it — a pet that heals is still somebody's
+     * pet — and the word list lives in exactly one place (ClassificationRules.OwnerSuffixes) so the flag on a
+     * fact and the rule that reads it can never disagree about what counts as owned. Adding a word there adds
+     * it here; HitStatSplitTest-style, the vocabulary is asserted at its size.
+     */
+    private static bool HasOwnershipInName(string name) => ClassificationRules.OwnerInName(name) is not null;
 
     // the parser's dotnet-epoch seconds (year 0001 origin, ~6.4e10 in the 2020s) — long, or the
     // cast silently wraps and every derived timestamp is garbage
