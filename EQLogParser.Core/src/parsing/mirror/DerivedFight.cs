@@ -68,6 +68,21 @@ namespace EQLogParser.Mirror
     // status word so "Illuminai" in the list is never mistaken for a mob.
     public bool CharmedOwned;
 
+    /*
+     * Projection-only: this row is OUR PET — the name's identity is an NPC and a charm window had it on our side,
+     * so what the row holds is a pet's output (and the raid's stray swings on it). Pets get no fight-list row
+     * (CharmPetRows), unlike a charmed raid member, who is an encounter the raid has to fight: her row carries
+     * `CharmedOwned` without `RaidPet`, stays in the list and reads "charmed" in the status column.
+     * See CharmRowProjectionTest.
+     */
+    public bool RaidPet;
+
+    // The listed encounter this pet row continues: the same name's row that the charm itself closed. Null when the
+    // raid never fought the mob before taking it, and the entry point CharmPetRows uses to hand a hidden row back
+    // to a stats build (its span starts AFTER this row's ends, so overlap alone can never reach it).
+    public DerivedFight EncounterRow;
+
+
     // Direction split of DamageTotal (hits only): damage received by the row's owner versus
     // damage it dealt. DamageTotal stays the engagement sum.
     public long DamageToOwner;

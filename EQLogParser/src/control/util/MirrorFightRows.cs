@@ -55,6 +55,13 @@ namespace EQLogParser
      * against the same pass that made its rows (the damage index above exists for exactly that reason).
      */
     internal HealFactTable Heals;
+
+    /*
+     * The projection in full, including the rows the grid hides (CharmPetRows: a charmed mob's own output is our
+     * pet's work, not an encounter). Rows are shown from Visible() but a click's stats build has to see all of
+     * them, or hiding would delete the charmer's +Pets damage.
+     */
+    internal IReadOnlyList<DerivedFight> AllFights = [];
   }
 
   internal static class MirrorFightRows
@@ -71,7 +78,9 @@ namespace EQLogParser
         DamageIndex = damageIndex,
       };
 
-      foreach (var (isDivider, gapFrom, gapTo, fight) in Sectionizer.ToDisplayRows(fights))
+      snapshot.AllFights = fights;
+
+      foreach (var (isDivider, gapFrom, gapTo, fight) in Sectionizer.ToDisplayRows(CharmPetRows.Visible(fights)))
       {
         if (isDivider)
         {
@@ -110,15 +119,15 @@ namespace EQLogParser
      * treat the row like the death it replaced, rather than inventing a third visual state).
      *
      * A row that merely stopped — an inactivity gap, or still open on a live capture — stays blank exactly as
-     * before, and "charmed" alone is a charmed raider's row: she is here because a charm put her on the enemy
-     * side, which is not a death and must not look like one.
+     * before, and "charmed" alone is a charmed raid member's row: she is here because a charm put her on the enemy
+     * side, which is not a death and must not look like one. A charmed MOB in that same state never reaches this
+     * column at all — it is our pet, and CharmPetRows keeps pets off the list.
      */
     private static string StatusOf(DerivedFight fight)
       => fight.EndReason switch
       {
         DerivedFightEnd.Charmed => "dead, charmed",
-        DerivedFightEnd.Slain => fight.CharmedOwned ? "dead, charmed" : "dead",
-        _ => fight.Dead ? "dead" : fight.CharmedOwned ? "charmed" : string.Empty,
+        _ => fight.Dead ? "dead" : fight.CharmedOwned && !fight.RaidPet ? "charmed" : string.Empty,
       };
   }
 }

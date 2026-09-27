@@ -180,7 +180,12 @@ namespace EQLogParser
       var snapshot = _snapshot;
       if (snapshot is null || selected is not { Count: > 0 }) return new MirrorSummaryInput([], new TimeRange());
 
-      return MirrorSummaryFights.Build(selected, snapshot.DamageIndex, snapshot.Facts);
+      // The grid hides a charmed mob's own rows (CharmPetRows: that is a pet, and pets have no fight row), so a
+      // selection can never contain them. Put back the ones whose span overlaps what was clicked — otherwise the
+      // hiding would take the charmer's +Pets damage, and the raid's own stray swings on their pet, out of every
+      // board built from a selection.
+      return MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
+        snapshot.DamageIndex, snapshot.Facts);
     }
 
     /*

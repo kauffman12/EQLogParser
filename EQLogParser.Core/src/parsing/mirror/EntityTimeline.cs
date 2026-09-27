@@ -203,6 +203,27 @@ namespace EQLogParser.Mirror
 
     public bool HasIdentity(string name) => _identity.ContainsKey(name);
 
+    /*
+     * Does this name have a reason of its own to be this kind — an assignment whose source is not a charm line?
+     * "X has been charmed" registers X as an NPC at R9-charm's own strength, and that stamp outranks most real
+     * ones, so "which assignment won?" cannot answer the question. A charmed MOB has npc.txt, its article shape or
+     * its own violence behind it; a raid member who is in this log chiefly because a boss charmed her has nothing
+     * but the charm. FightProjection asks before calling a row a pet — pets have no fight-list row, she does.
+     */
+    public bool HasIndependentIdentity(string name, IdentityKind kind, double t)
+    {
+      if (!_identity.TryGetValue(name, out var list)) return false;
+
+      foreach (var a in list)
+      {
+        if (a.EffectiveFrom > t) break;   // sorted by effective time
+        if (a.Kind != kind) continue;
+        if (a.Source is not null && a.Source.StartsWith("R9-charm", StringComparison.Ordinal)) continue;
+        return true;
+      }
+      return false;
+    }
+
     // Strongest assignment at +infinity, with its provenance (Phase 2 report input).
     public IdentityKind IdentityWithSource(string name, out string source)
     {

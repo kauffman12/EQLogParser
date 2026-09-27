@@ -142,6 +142,20 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   ended retroactively. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
   `Gap` counts that used to hide them; charmed-owned rows **0→6** and **0→5** once the exemption landed) and reasoning:
   docs/combat-mirror-design.md → "What a window does to the list and the board"; pinned by `CharmRowProjectionTest`.
+- **A charmed mob is a pet, and a pet has no fight row**: `CharmPetRows.Visible` keeps `DerivedFight.RaidPet` rows off the
+  grid (`MirrorFightRows`) while the encounter row the charm closed stays listed as `dead, charmed` — same rule that keeps
+  ``Ziggy`s pet`` out of the legacy table. **Hiding is display-only**: `MirrorSnapshot.AllFights` keeps every row and
+  `MirrorSession.BuildSummaryInput` hands back the hidden ones through `CharmPetRows.WithHiddenPets`, because a board is
+  built from whatever a click selected and 6 hidden rows on Incogitable carry up to **90,646,488** damage between them.
+  A pet row's span begins *after* its encounter closes, so overlap can never reach it — that is what `DerivedFight.EncounterRow`
+  (the row the charm closed, chained across a pull's reopening) is for; rows whose mob was charmed without ever being fought
+  have no link (**3 of Incogitable's 6**) and come back on span overlap alone. `RaidPet` is **not** `CharmedOwned`: a charmed
+  raid member carries `CharmedOwned`, stays listed, and reads `charmed` — because `"X has been charmed."` registers X as an NPC
+  at R9-charm's *Strong* strength, the winning identity says NPC for her too, so the question FightProjection asks is whether
+  the name has an NPC reason that is not the charm line (`EntityTimeline.HasIndependentIdentity`). Numbers: visible **4,076 of
+  4,082** and **1,037 of 1,041**, every hidden row an article-shaped mob; reasoning in the same design-doc section. Pinned by
+  `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`, `HidingAPetRowDoesNotDeleteItsDamage`,
+  `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
 - **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name
   pool and its sequence counter (`IFactTable.NextSeq()`), and nothing else. One array of the union (42 B) sat **57 % full of
   zeros** at capacity — measured with a temporary probe, not estimated — because each side's tail fields are words the other's

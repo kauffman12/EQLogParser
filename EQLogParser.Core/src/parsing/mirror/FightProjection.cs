@@ -57,6 +57,11 @@ namespace EQLogParser.Mirror
       // Open row per name; a gap (or a slain line) closes it and the next exchange opens a fresh
       // row under the same key. Rows keep arrival order until the final sort.
       Dictionary<string, DerivedFight> open = new(StringComparer.Ordinal);
+
+      // The last CLOSED row per name, so a pet row can point at the encounter its charm closed. CharmPetRows needs
+      // that link: the pet's facts begin after the encounter ends, so "does it overlap the selection?" alone can
+      // never bring a hidden pet row back into a stats build — and hiding must not delete damage.
+      Dictionary<string, DerivedFight> lastClosed = new(StringComparer.Ordinal);
       List<DerivedFight> rows = [];
 
       Dictionary<string, Queue<long>> deathsByName = new(StringComparer.Ordinal);
@@ -164,6 +169,7 @@ namespace EQLogParser.Mirror
           row.EndReason = DerivedFightEnd.Charmed;
           rows.Add(row);
           open.Remove(key);
+          lastClosed[key] = row;
           row = null;
         }
 
@@ -175,6 +181,7 @@ namespace EQLogParser.Mirror
           row.EndReason = DerivedFightEnd.Slain;
           rows.Add(row);
           open.Remove(key);
+          lastClosed[key] = row;
           row = null;   // any further deaths wait for a later fact of this name
         }
 
@@ -183,6 +190,7 @@ namespace EQLogParser.Mirror
           row.EndReason = DerivedFightEnd.Gap;
           rows.Add(row);
           open.Remove(key);
+          lastClosed[key] = row;
           row = null;
         }
         if (row is null)
@@ -197,7 +205,33 @@ namespace EQLogParser.Mirror
           };
           open[key] = row;
         }
-        if (charmed || IsFlipped(timeline, key, t)) row.CharmedOwned = true;
+        if (charmed || IsFlipped(timeline, key, t))
+        {
+          row.CharmedOwned = true;
+
+          /*
+           * Two different things are inside that condition, and only one of them is a pet: a charmed RAID MEMBER is
+           * an encounter the raid has to fight (she stays in the list, badge and all), while a charmed MOB is ours —
+           * a pet, and pets have no fight row (CharmPetRows).
+           *
+           * The answer is "does this name have an NPC reason of its own", and it has to be asked that way: the
+           * charm confirm registers its OWN target as an NPC at R9-charm's strength, which outranks most real ones,
+           * so the winning assignment says "NPC" for a raid member too. Hiding her would delete an encounter the
+           * raid fought and took back; a charmed mob has npc.txt, its article shape or its own violence behind it.
+           */
+          if (timeline.HasIndependentIdentity(key, IdentityKind.Npc, t))
+          {
+            row.RaidPet = true;
+            if (lastClosed.TryGetValue(key, out var prev))
+            {
+              // Chain forward: a second pet row of the same pull (the raid stopped swinging at it for ten minutes
+              // and it reopened) belongs to the same encounter as the first, not to itself.
+              row.EncounterRow = prev.RaidPet ? prev.EncounterRow
+                                 : prev.EndReason == DerivedFightEnd.Charmed ? prev
+                                 : null;
+            }
+          }
+        }
 
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison

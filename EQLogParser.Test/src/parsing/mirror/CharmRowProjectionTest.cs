@@ -216,4 +216,99 @@ public class CharmRowProjectionTest
         Assert.AreEqual(1, pet.Count);
         Assert.IsNull(pet[0].AttackerOwner, "an unattributed charm claimed a charmer");
     }
+
+    [TestMethod]
+    public void APetRowIsNotOnTheFightList()
+    {
+        // The list shows encounters, not pets (agreed 2026-10, same rule that keeps `Ziggy`s pet` out of the
+        // legacy table). The mob's own row stays — closed as the charm, which is how that encounter ended — and
+        // the post-charm row about the same animal does not appear.
+        _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:40:00 2026] You hit a cave bear for 900 points of damage.",
+            "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
+            "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
+
+        var rows = FightProjection.Build(facts, timeline);
+        Assert.AreEqual(2, rows.Count, "the projection lost the pre/post-charm split");
+
+        var visible = CharmPetRows.Visible(rows);
+        Assert.AreEqual(1, visible.Count, "a pet row reached the fight list");
+        Assert.IsTrue(visible[0].Dead && visible[0].EndReason == DerivedFightEnd.Charmed,
+                      "the row that stayed listed is not the encounter");
+    }
+
+    [TestMethod]
+    public void HidingAPetRowDoesNotDeleteItsDamage()
+    {
+        // Why hiding is a display rule and not a projection rule: those swings are real raid damage, and a board
+        // is built from whatever selection a click produced. Hand the hidden row back and the player who swung
+        // keeps both halves.
+        _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:40:00 2026] You hit a cave bear for 900 points of damage.",
+            "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
+            "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
+
+        var index = new MirrorDamageIndex(timeline);
+        var rows = FightProjection.Build(facts, timeline, index.OnFact);
+        var visible = CharmPetRows.Visible(rows);
+
+        Assert.AreEqual(1, Records(visible, index, facts).Count(a => a.Attacker == Self),
+                        "the visible rows alone were not the smaller number");
+
+        var actions = Records(CharmPetRows.WithHiddenPets(visible, rows), index, facts);
+        Assert.AreEqual(2, actions.Count(a => a.Attacker == Self), "hiding the pet row lost the raid's swings");
+        Assert.AreEqual(1200, actions.Where(a => a.Attacker == Self).Sum(a => (long)a.Total),
+                        "the stray swings changed total on the way to the board");
+    }
+
+    [TestMethod]
+    public void WithHiddenPetsAddsPairedOrOverlappingRowsOnly()
+    {
+        // Two ways a hidden pet row belongs to a click, and one way it does not. Synthetic rows because this is
+        // arithmetic on links and spans rather than parsing.
+        static DerivedFight RowAt(string name, double from, double to, bool pet)
+            => new() { Name = name, BeginTime = from, LastTime = to, RaidPet = pet };
+
+        var encounter = RowAt("a cave bear", 100, 200, false);
+        var itsOwnPet = RowAt("a cave bear", 210, 400, true);      // starts after the encounter ends: link only
+        var insideWindow = RowAt("a bone walker", 150, 180, true); // no encounter of its own, but overlaps
+        var elsewhere = RowAt("a skeleton", 900, 990, true);       // another pull entirely
+        itsOwnPet.EncounterRow = encounter;
+        var all = new[] { encounter, itsOwnPet, insideWindow, elsewhere };
+
+        var back = CharmPetRows.WithHiddenPets([encounter], all);
+        Assert.IsTrue(back.Contains(itsOwnPet), "the clicked encounter lost its own pet half");
+        Assert.IsTrue(back.Contains(insideWindow), "the pet inside the clicked window did not come back");
+        Assert.IsFalse(back.Contains(elsewhere), "a pet row from another pull was dragged in");
+
+        // Asking again adds nothing: every row once, still in engagement order.
+        var again = CharmPetRows.WithHiddenPets(back, all);
+        Assert.AreEqual(back.Count, again.Count, "a hidden row was added twice");
+        Assert.AreEqual(100, again[0].BeginTime, "the merged selection lost projection order");
+
+        // And the link is what makes the pair work — strip it and the same rows say no.
+        itsOwnPet.EncounterRow = null;
+        Assert.IsFalse(CharmPetRows.WithHiddenPets([encounter], all).Contains(itsOwnPet),
+                       "a pet row came back with neither a link nor an overlap");
+    }
+
+    [TestMethod]
+    public void ACharmedRaidMemberStaysOnTheList()
+    {
+        // The trap on the other side of hiding: "has been charmed" registers its target as an NPC at R9's own
+        // strength, so a raid member who gets charmed looks exactly like a mob by kind alone. She is an encounter —
+        // the raid fights her and takes her back — so her row stays listed with the "charmed" status, which is why
+        // FightProjection requires an NPC reason stronger than the charm line before calling a row a pet.
+        _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:50:00 2026] Bithika hits a grodog thug for 500 points of damage.",
+            "[Sun Apr 26 18:50:05 2026] bithika has been charmed.",
+            "[Sun Apr 26 18:50:20 2026] You hit Bithika for 300 points of damage.");
+
+        var rows = FightProjection.Build(facts, timeline);
+        var raider = Row(rows, "Bithika");
+        Assert.IsNotNull(raider, "the raid's fight with their own charmed member disappeared from the list");
+        Assert.IsTrue(raider.CharmedOwned, "the row does not say a window put her on the enemy side");
+        Assert.IsFalse(raider.RaidPet, "a raid member was classified as the raid's pet");
+        Assert.IsTrue(CharmPetRows.Visible(rows).Contains(raider), "a charmed raid member was hidden from the list");
+    }
 }

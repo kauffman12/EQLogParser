@@ -236,7 +236,10 @@ public class MirrorRealLogBenchTest
     private static void PrintProjectionReport(DamageFactTable facts, EntityTimeline timeline)
     {
         var rows = FightProjection.Build(facts, timeline);
-        Console.WriteLine($"[rows] list={rows.Count:N0}  charmed-owned={rows.Count(static r => r.CharmedOwned)}");
+        // The displayed list is not the projection: CharmPetRows keeps a charmed mob's own rows off it (a pet has
+        // no fight row), and that difference is what a user reads as "fights".
+        Console.WriteLine($"[rows] list={rows.Count:N0}  visible={CharmPetRows.Visible(rows).Count:N0}"
+                          + $"  charmed-owned={rows.Count(static r => r.CharmedOwned)}");
         foreach (var g in rows.GroupBy(static r => r.EndReason).OrderByDescending(static g => g.Count()))
             Console.WriteLine($"[rows]   ended {g.Key}: {g.Count()}");
     }
