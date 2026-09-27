@@ -29,9 +29,6 @@ namespace EQLogParser
     internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
     internal static event Action<string, double> EventsCalledToOwner;       // pet name, time
     internal static event Action<string, double, bool> EventsCharm;         // name, time, is-start
-    internal static event Action<string, string, double> EventsServantRaise; // corpse name, the player it serves, time
-    internal static event Action<string, double> EventsFallsInBattle;        // name, time (a summon dying)
-
 
     private static string _randomPlayer;
     private static long _lastLine = -1;
@@ -44,38 +41,9 @@ namespace EQLogParser
     private const string Charmed2Suffix = " is charmed.";
     private const string CharmEndMarker = " spell has worn off of ";
 
-    // "Suleka`s corpse rises to serve Coas." - a necro raising a corpse names BOTH the servant and its
-    // owner on one line (catalog R16). The middle-marker shape rather than a suffix because the owner is
-    // whatever the raising player is called.
-    private const string RisesToServeMarker = " rises to serve ";
-
-    // "A malicious husk's corpse wordlessly falls in battle." - the only death line a raised servant ever
-    // gets, and it is an OPTION rather than a guarantee (measured: 0 of 23 raise lines have one). The adverb
-    // sits between the name and the verb, so the subject is read up to the marker and one trailing -ly word
-    // is taken back off; no EQ name ends that way, and the only adverb in six captures is "wordlessly".
-    private const string FallsInBattleSuffix = " falls in battle.";
-
     private static void ScanMirrorEvidence(string action, double beginTime)
     {
       if (string.IsNullOrEmpty(action)) return;
-
-      var raise = action.IndexOf(RisesToServeMarker, StringComparison.OrdinalIgnoreCase);
-      if (raise > 0)
-      {
-        var servant = action[..raise].Trim();
-        var owner = action[(raise + RisesToServeMarker.Length)..].Trim().TrimEnd('.').Trim();
-        if (servant.Length > 0 && owner.Length > 0) EventsServantRaise?.Invoke(servant, owner, beginTime);
-        return;
-      }
-
-      if (action.EndsWith(FallsInBattleSuffix, StringComparison.OrdinalIgnoreCase))
-      {
-        var fallen = action[..^FallsInBattleSuffix.Length].Trim();
-        var space = fallen.LastIndexOf(' ');
-        if (space > 0 && fallen.EndsWith("ly", StringComparison.OrdinalIgnoreCase)) fallen = fallen[..space];
-        if (fallen.Length > 0) EventsFallsInBattle?.Invoke(fallen, beginTime);
-        return;
-      }
 
       if (action.EndsWith(CalledToOwnerSuffix, StringComparison.OrdinalIgnoreCase))
       {

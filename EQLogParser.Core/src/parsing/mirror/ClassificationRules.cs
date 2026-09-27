@@ -18,11 +18,6 @@ namespace EQLogParser.Mirror
     // frame never contradicts itself in measured logs, so any hit here is genuine conflict
     // material (illusion state, log bug) for the comparison report. NPC wins the tie.
     public List<string> Conflicts { get; } = [];
-
-    // R16: one entry per raise LINE (corpse, the player it serves, and the seconds its ownership lasts), in
-    // the order the raises arrived. Entries rather than a name->owner map on purpose — see
-    // AffiliationInterval.Owner: a re-raise is a second servant, not a correction of the first.
-    public List<(string Servant, string Owner, double FromS, double ToS)> Servants { get; } = [];
   }
 
   // Phase 2 rules (identity slice): turn the captured evidence facts into retroactive identity
@@ -69,33 +64,7 @@ namespace EQLogParser.Mirror
      * This list is also what CombatMirror flags on facts, and what FightDeriver's PetOwner and a
      * materialized record's AttackerOwner cut with - one copy, in OwnerInName, on purpose.
      */
-    /*
-     * The ownership word a name carries inside itself. "`s pets" (plural) is the label R16 gives a raised
-     * corpse — see ServantPetLabel — and it is in this list so the fold that already moves `Sirmr`s pet onto
-     * Sirmr's row moves a wake-the-dead stack onto its necro's without a second mechanism. No log line writes
-     * the plural: these are labels the mirror mints, and the cut has to understand them.
-     */
-    private static readonly string[] OwnerSuffixes = ["`s pet", "`s pets", "`s warder", "`s ward", "`s familiar", "`s mount"];
-
-    // One entry per necro, not one per corpse: a raid meter with nineteen raider-corpse names in it is
-    // unreadable and the player reading it wants "what did Coas's raising contribute". Same shape as the
-    // swarm-pet entries the boards already show, so nothing new has to be taught to render it.
-    internal static string ServantPetLabel(string owner) => owner + "`s pets";
-
-    // The two spellings a corpse name arrives in, and the name the damage facts keep. UpdateAttacker cuts nine
-    // characters off the end and capitalises, so "Vexmaw's corpse hits …" is stored as "Vexmaw": identical to
-    // what the living player is called. R16 files its window under that spelling too, flagged as a corpse-form
-    // key, and only a fact carrying FlagCorpseAttacker may read it.
-    internal const string CorpseSuffixApostrophe = "'s corpse";
-    internal const string CorpseSuffixBacktick = "`s corpse";
-
-    internal static string CorpseFormAlias(string name)
-    {
-      if (string.IsNullOrEmpty(name)) return null;
-      var cut = name.EndsWith(CorpseSuffixApostrophe, StringComparison.OrdinalIgnoreCase)
-                || name.EndsWith(CorpseSuffixBacktick, StringComparison.OrdinalIgnoreCase);
-      return cut ? TextUtils.CapitalizeFirst(name[..^CorpseSuffixApostrophe.Length]) : null;
-    }
+    private static readonly string[] OwnerSuffixes = ["`s pet", "`s warder", "`s ward", "`s familiar", "`s mount"];
 
     // R7 tunables (increment 3): opponent breadth counts INSTANCES, not distinct names — raid
     // pulls reuse names constantly ("a skeleton" dies, the next "a skeleton" is a new instance,
@@ -106,8 +75,6 @@ namespace EQLogParser.Mirror
     private const int OpponentInstances = 3;   // three waves of "a skeleton" count as three
     private const double BurstGapS = 30;       // gap that splits one name into separate instances
     private const double MinSpanS = 60;        // evidence must spread over a real engagement
-
-
 
     /*
      * How much unclassified opposition an inference may tolerate (R7). It used to be none at all: ONE
@@ -230,8 +197,6 @@ namespace EQLogParser.Mirror
       // Re-charm without a close leaves the earlier window open until the next close (last-open wins).
       var charmStarts = new Dictionary<string, double>(StringComparer.Ordinal);
       var charmWindows = new List<(string, double, double)>();
-      var servantRaises = new List<(string Name, string Owner, double T)>();
-      var falls = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
 
       // Target-frame verdicts and player-side behavior are collected per name and applied AFTER
       // the sweep as a deterministic ladder (order of evidence arrival must not matter).
@@ -285,23 +250,6 @@ namespace EQLogParser.Mirror
             timeline.AddAffiliation(AffiliationKind.Friendly, name, e.TimeS, double.PositiveInfinity, RuleStrength.Certain, "R5-called");
             break;
 
-          case EvidenceFact.EvServantRaise:
-            // R16 — "Suleka`s corpse rises to serve Coas." names the servant AND its master, which is the
-            // only ownership a raised corpse ever gets: nothing else in the log mentions it again. The name
-            // keeps whatever identity it had (a corpse is not a person, and this name shape also carries
-            // 488 M HP of lingering boss damage that belongs to nobody's pet) - what changes is who it
-            // fights for, and only for the window this line opens.
-            servantRaises.Add((name, facts.AuxOf(e.AuxIdx), e.TimeS));
-            break;
-
-          case EvidenceFact.EvFallsInBattle:
-            // Only ever a window CLOSER (R16). Nothing may be inferred from a name that fell: the shape is
-            // shared with plain mobs — every one of the 23 such lines in six captures belongs to a respawning
-            // husk mob whose name happens to end in "'s corpse".
-            if (!falls.TryGetValue(name, out var fallList)) falls[name] = fallList = [];
-            fallList.Add(e.TimeS);
-            break;
-
           case EvidenceFact.EvCharmStart:
             // A charmed mob is an NPC that is temporarily on your side (identity Npc stays the
             // stable answer; the Friendly interval is time-scoped, per D3).
@@ -351,69 +299,6 @@ namespace EQLogParser.Mirror
         }
         charmWindows.Add((name, t0, end));
         timeline.AddAffiliation(AffiliationKind.Friendly, name, t0, end, RuleStrength.Certain, "R9-charm");
-      }
-
-      /*
-       * R16 - close each raise into a window and stamp ownership on the WINDOW, not on the name: the same
-       * corpse comes back up later (measured: `Nniki's corpse` raised 5,769 s apart in one capture), so a
-       * name-keyed owner would let whichever necro read the log last claim every servant that ever wore it.
-       *
-       * Two closers, both from the log; there is no third thing to use. (1) The next raise line naming the
-       * same corpse - whoever raises it next owns it from that second, which is the hand-over case. (2) A
-       * "<name> falls in battle." line after the raise: the only death line a servant ever gets, and an
-       * optional one (0 of 23 raises in six captures have it). With neither, ownership simply runs to the end
-       * of the log - the servant has no other ending, and every one of those corpse names appears in no other
-       * line at all, so there is nothing for an over-long window to misattribute.
-       *
-       * What keeps the NAME out of it entirely: "X's corpse" is also 2,201 lines / 488 M HP of lingering boss
-       * damage (scalewrought blood poison, knife flurry, drones) and a handful of husk mobs whose names end
-       * that way - none of those 29 names was ever raised. The raise line is the only thing that opens a
-       * window. Matching is case-insensitive because the raise line and a later fact may disagree on a leading
-       * article's case, exactly like the charm/slain pair above; identity keys stay ordinal.
-       */
-      if (servantRaises.Count > 0)
-      {
-        var raisesByName = new Dictionary<string, List<(string Owner, double T)>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var r in servantRaises)
-        {
-          if (!raisesByName.TryGetValue(r.Name, out var list)) raisesByName[r.Name] = list = [];
-          list.Add((r.Owner, r.T));
-        }
-
-        foreach (var (servant, raises) in raisesByName)
-        {
-          raises.Sort(static (a, b) => a.T.CompareTo(b.T));
-          for (var i = 0; i < raises.Count; i++)
-          {
-            var (owner, from) = raises[i];
-            var to = i + 1 < raises.Count ? raises[i + 1].T : double.PositiveInfinity;
-            if (falls.TryGetValue(servant, out var fallTimes))
-            {
-              // Earliest death after this raise - the corpse's own window ends with it, and a later raise of
-              // the same name (a respawning husk raised again) opens a fresh one.
-              foreach (var ft in fallTimes)
-              {
-                if (ft > from && ft < to) to = ft;
-              }
-            }
-            timeline.AddOwnedAffiliation(AffiliationKind.PetOfPlayer, servant, from, to,
-                RuleStrength.Certain, "R16-servant", owner);
-
-            // …and under the stripped spelling the damage facts actually carry, gated on the fact knowing it
-            // came from a corpse line (AffiliationInterval.CorpseNameForm): Vexmaw resurrected and swinging is
-            // Vexmaw's own damage, not Coaswin's pet.
-            if (CorpseFormAlias(servant) is { } alias
-                && !string.Equals(alias, servant, StringComparison.Ordinal))
-            {
-              timeline.AddOwnedAffiliation(AffiliationKind.PetOfPlayer, alias, from, to,
-                  RuleStrength.Certain, "R16-servant", owner, corpseNameForm: true);
-            }
-
-            outcome.Servants.Add((servant, owner, from, to));
-          }
-        }
-
-        outcome.Servants.Sort(static (a, b) => a.FromS.CompareTo(b.FromS));
       }
 
       // Target-frame ladder (Certain beats everything behavioral, regardless of arrival order):

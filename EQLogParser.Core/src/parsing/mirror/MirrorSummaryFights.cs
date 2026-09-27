@@ -95,19 +95,19 @@ namespace EQLogParser.Mirror
      * arrive on the dispatcher while materializing happens on a worker task, and two clicks must not both
      * build the same fight.
      */
-    internal Fight SummaryFightFor(DerivedFight fight, DamageFactTable facts, EntityTimeline timeline = null)
+    internal Fight SummaryFightFor(DerivedFight fight, DamageFactTable facts)
     {
       lock (_gate)
       {
         if (_summaries.TryGetValue(fight, out var cached)) return cached;
 
-        var built = BuildFight(fight, facts, timeline);
+        var built = BuildFight(fight, facts);
         _summaries[fight] = built;
         return built;
       }
     }
 
-    private Fight BuildFight(DerivedFight fight, DamageFactTable facts, EntityTimeline timeline)
+    private Fight BuildFight(DerivedFight fight, DamageFactTable facts)
     {
       var summary = new Fight
       {
@@ -141,33 +141,16 @@ namespace EQLogParser.Mirror
         }
 
         var attacker = facts.NameOf(fact.AtkIdx);
-
-        /*
-         * Window-owned (R16): a corpse raised by Wake the Dead fights for the necro its raise line names, and
-         * all of that necro's corpses are reported under ONE entry - `Coas`s pets` - because nineteen
-         * raider-corpse names in a raid meter read as noise while the question anybody asks is what the raising
-         * contributed. The label is cut back to Coas by the same OwnerInName the line-owned case below uses
-         * ("`s pets" is in that list), so no consumer learns a second mechanism - and the fact table keeps the
-         * name exactly as the log wrote it, which is what keeps the parity ledger counting the same facts.
-         */
-        var attackerOwner = fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : null;
-        if (attackerOwner is null && timeline?.PetOwnerAt(attacker, time, out _, fact.CorpseAttacker) is { } servantOwner)
-        {
-          attacker = ClassificationRules.ServantPetLabel(servantOwner);
-          attackerOwner = servantOwner;
-        }
-
         var record = new DamageRecord
         {
           Attacker = attacker,
-
           /*
            * The owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), which is what makes
            * DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet. The
            * legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
            * this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test.
            */
-          AttackerOwner = attackerOwner,
+          AttackerOwner = fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : null,
           Defender = facts.NameOf(fact.DefIdx),
           AttackerIsSpell = fact.AttackerIsSpell,
           Total = fact.Total,
@@ -231,14 +214,7 @@ namespace EQLogParser.Mirror
 
   internal static class MirrorSummaryFights
   {
-    /*
-     * `timeline` is what lets a raised corpse's damage be reported as its necro's pet entry (R16): sides and
-     * ownership are per-second facts that live only in the classification of the pass that made these rows,
-     * so a caller that has one passes it, and a caller that does not (the parity tests, which compare against
-     * legacy records with no such concept) leaves it null and gets the names exactly as written.
-     */
-    public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index,
-        DamageFactTable facts, EntityTimeline timeline = null)
+    public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index, DamageFactTable facts)
     {
       var result = new List<Fight>(selected.Count);
       var allRanges = new TimeRange();
@@ -255,7 +231,7 @@ namespace EQLogParser.Mirror
           continue;
         }
 
-        var built = index.SummaryFightFor(fight, facts, timeline);
+        var built = index.SummaryFightFor(fight, facts);
 
         // Legacy's _allRanges: the wall-clock span of each selected fight, inactivity included.
         if (!double.IsNaN(built.BeginTime) && !double.IsNaN(built.LastTime))
