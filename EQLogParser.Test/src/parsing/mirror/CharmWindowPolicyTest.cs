@@ -200,6 +200,70 @@ public class CharmWindowPolicyTest
     }
 
     [TestMethod]
+    public void AWindowClosingInTheSecondItOpenedStillKnowsWhoCastIt()
+    {
+        // Segments are spans, and a hold that begins and ends in the same timestamp spans nothing — if the
+        // window's owner were read back out of the segment list it would come out null and the only charmer
+        // the log ever named would be lost. (This is how one whipgrass window in eqlog_Kizant_xegony-01-06-24
+        // reads, and dropping the fallback measured 5 owned windows → 4.)
+        var outcome = Run(out _, out _,
+            "[Sun Apr 26 19:20:04 2026] a feral gulet has been charmed.",
+            "[Sun Apr 26 19:20:04 2026] Incogitable`s Charm IV spell has worn off of a feral gulet.");
+
+        Assert.AreEqual(1, outcome.Charms.Count);
+        var w = outcome.Charms[0];
+        Assert.AreEqual(CharmEndReason.WearOff, w.Reason);
+        Assert.AreEqual(w.T0, w.T1, "a same-second charm and end should span nothing");
+        Assert.AreEqual("Incogitable", w.Owner, "the wear-off line named the charmer and the window forgot it");
+
+        // And a cast we saw outranks the name on the end line: the earlier evidence is the better one.
+        var ours = Run(out _, out _,
+            "[Sun Apr 26 19:30:00 2026] You begin casting Charm XVII.",
+            "[Sun Apr 26 19:30:04 2026] a feral gulet has been charmed.",
+            "[Sun Apr 26 19:30:04 2026] Incogitable`s Charm IV spell has worn off of a feral gulet.");
+        Assert.AreEqual(Self, ours.Charms[0].Owner);
+    }
+
+    [TestMethod]
+    public void ARecharmByAnotherPlayerMovesTheCreditNotTheWindow()
+    {
+        // The case that made ownership per SEGMENT instead of per window: two necros, one mob name, one
+        // evening. A second charm takes the mob off whoever held it, so the credit has to move at that
+        // second — while the ROW stays one entry (the merge rule above) and nothing is written to
+        // petmapping.txt, because a charmed mob is never a long-term pet assignment.
+        var outcome = Run(out var timeline, out _,
+            "[Sun Apr 26 19:00:00 2026] You begin casting Charm XVII.",
+            "[Sun Apr 26 19:00:04 2026] a feral gulet has been charmed.",
+            "[Sun Apr 26 19:02:30 2026] Incogitable begins casting Charm IX.",
+            "[Sun Apr 26 19:02:34 2026] a feral gulet has been charmed.");
+
+        Assert.AreEqual(1, outcome.Charms.Count, "a change of hands split the pet row");
+        var w = outcome.Charms[0];
+        Assert.AreEqual(2, w.Starts);
+        Assert.AreEqual(Self, w.Owner, "the window answers with the first charmer it identified");
+
+        Assert.AreEqual(2, w.Segments.Count, "the hold did not split at the steal");
+        Assert.AreEqual(T("[Sun Apr 26 19:02:34 2026]"), w.Segments[0].ToS);
+        Assert.AreEqual(Self, timeline.OwnerOf("a feral gulet", T("[Sun Apr 26 19:01:00 2026]")));
+        Assert.AreEqual("Incogitable", timeline.OwnerOf("a feral gulet", T("[Sun Apr 26 19:03:00 2026]")),
+                        "the second charmer never got the mob it cast for");
+
+        // The other direction: the same caster re-charming is not a change of hands, and a sighting with no
+        // cast in range proves nothing — neither may open a new hold.
+        var same = Run(out var sameTimeline, out _,
+            "[Sun Apr 26 19:00:00 2026] You begin casting Charm XVII.",
+            "[Sun Apr 26 19:00:04 2026] a feral gulet has been charmed.",
+            "[Sun Apr 26 19:02:30 2026] You begin casting Charm XVII.",
+            "[Sun Apr 26 19:02:34 2026] a feral gulet has been charmed.",
+            "[Sun Apr 26 19:04:00 2026] a feral gulet has been charmed.");
+
+        Assert.AreEqual(1, same.Charms.Count);
+        Assert.AreEqual(3, same.Charms[0].Starts);
+        Assert.AreEqual(1, same.Charms[0].Segments.Count, "the same charmer re-casting handed the mob to somebody new");
+        Assert.AreEqual(Self, sameTimeline.OwnerOf("a feral gulet", T("[Sun Apr 26 19:05:00 2026]")));
+    }
+
+    [TestMethod]
     public void ReCharmsOfTheSameMobAreOneWindow()
     {
         // The point of keying on the name: an evening of charming "an exiled bloodhound" is one entry in

@@ -17,6 +17,11 @@ namespace EQLogParser.Mirror
   // One span during which a name (an NPC identity, always) was somebody's charmed pet. Re-charms of the
   // same mob name merge into the window they overlap, so six charms of "an exiled bloodhound" across an
   // evening are one entry in the pet list rather than six rows.
+  // One charmer's hold on a name. A window can contain several: in EQ a second charm takes the mob off
+  // whoever held it, so "two necros share one evening's pet" is one span with two credit segments — not
+  // one name attached to the whole thing, and not a long-term assignment written to disk anywhere.
+  internal readonly record struct CharmOwnerSegment(double FromS, double ToS, string Owner);
+
   internal sealed class CharmWindow
   {
     public string Name;
@@ -29,7 +34,18 @@ namespace EQLogParser.Mirror
     public int SameNameFactCount; // …against another mob with the SAME name: genuinely ambiguous credit
     public ulong CreditedTotal;   // sum of those facts — what moves from the NPC row to the owner's pet row
 
+    public List<CharmOwnerSegment> Segments = [];   // per-charmer holds; their union is [T0, T1)
+
     public bool Owned => !string.IsNullOrEmpty(Owner);
+
+    // Who held it at t — the segment that had begun and not yet ended. Null means "friendly, but no
+    // charmer was identified", which is the honest answer for a log with no cast text in it.
+    public string OwnerAt(double t)
+    {
+      for (var i = Segments.Count - 1; i >= 0; i--)
+        if (Segments[i].FromS <= t && t < Segments[i].ToS) return Segments[i].Owner;
+      return null;
+    }
   }
 
   /*
@@ -147,7 +163,17 @@ namespace EQLogParser.Mirror
         // ON our side for this span. Kind stays Friendly rather than PetOfPlayer on purpose — a window is
         // not an ownership claim, and when no caster is named there is nobody to be owned by. Where a
         // caster IS named it rides in Owner, which is what OwnerOf(name, t) answers with.
-        timeline.AddAffiliation(AffiliationKind.Friendly, w.Name, w.T0, w.T1, RuleStrength.Certain, "R9-charm", w.Owner);
+        //
+        // One interval per OWNER SEGMENT rather than one per window: when a second charmer takes the mob
+        // over mid-span, the credit has to move at that moment. The segments tile [T0, T1), so the flip
+        // itself covers exactly what one window-wide interval would have.
+        if (w.Segments.Count == 0)
+        {
+          timeline.AddAffiliation(AffiliationKind.Friendly, w.Name, w.T0, w.T1, RuleStrength.Certain, "R9-charm", w.Owner);
+          continue;
+        }
+        foreach (var seg in w.Segments)
+          timeline.AddAffiliation(AffiliationKind.Friendly, w.Name, seg.FromS, seg.ToS, RuleStrength.Certain, "R9-charm", seg.Owner);
       }
 
       return windows;
@@ -194,17 +220,40 @@ namespace EQLogParser.Mirror
       var starts = 0;
       var owner = (string)null;
       var open = false;
+      var segs = new List<CharmOwnerSegment>();
+      var segStart = 0d;
+
+      // Closes the hold in progress. The ceiling/re-charm bookkeeping updates lastStart, not the hold:
+      // the same charmer re-casting does not hand the mob to itself as a new owner.
+      void EndHold(double at)
+      {
+        if (!open || at <= segStart) return;
+        segs.Add(new CharmOwnerSegment(segStart, at, owner));
+      }
 
       void Close(double at, CharmEndReason reason, string closeOwner)
       {
         if (!open) return;
-        // The wear-off line is the one place a third-party charm says whose it was; adopt it when the
-        // success line left the window unowned.
-        var finalOwner = owner ?? closeOwner;
+        EndHold(at);
+        // The wear-off line is the one place a charm says whose it was. It lands at the END of the hold,
+        // so it claims every stretch that named no charmer; a stretch that already names somebody else
+        // keeps them — two necros are not merged into one owner by the second one's log lines.
+        if (closeOwner is not null)
+          for (var i = 0; i < segs.Count; i++)
+            if (segs[i].Owner is null) segs[i] = segs[i] with { Owner = closeOwner };
+        var finalOwner = null as string;
+        foreach (var s in segs)
+          if (s.Owner is not null) { finalOwner = s.Owner; break; }
+        // A hold that closed in the same second it opened records no span, so the segments cannot answer
+        // who cast it — but the window still knows, and dropping it here would lose the only owner a
+        // sighting ever had (measured: one whipgrass window in eqlog_Kizant_xegony-01-06-24).
+        finalOwner ??= owner ?? closeOwner;
         windows.Add(new CharmWindow
         {
-          Name = name, Owner = finalOwner, T0 = t0, T1 = at, Reason = reason, Starts = starts
+          Name = name, Owner = finalOwner ?? closeOwner, T0 = t0, T1 = at, Reason = reason,
+          Starts = starts, Segments = segs
         });
+        segs = [];   // the next window of this name must not share the list just handed out
         open = false;
       }
 
@@ -220,9 +269,19 @@ namespace EQLogParser.Mirror
           var t = startTimes[si++];
           if (open && t < lastStart + MaxWindowS)
           {
-            // Re-charm inside the open span: one entry, clock resets from this sighting.
+            // Re-charm inside the open span: one entry, clock resets from this sighting. But a cast by
+            // somebody ELSE is a steal — the mob changes hands at that second, so the credit splits while
+            // the window stays one row. A sighting with no cast in range proves nothing and leaves the
+            // current holder alone.
             lastStart = t;
             starts++;
+            var recast = OwnerFromCast(charmCasts, t);
+            if (recast is not null && !string.Equals(recast, owner, StringComparison.Ordinal))
+            {
+              EndHold(t);
+              owner = recast;
+              segStart = t;
+            }
             continue;
           }
 
@@ -233,6 +292,7 @@ namespace EQLogParser.Mirror
           lastStart = t;
           starts = 1;
           owner = OwnerFromCast(charmCasts, t);
+          segStart = t;
           open = true;
         }
         else
