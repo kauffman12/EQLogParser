@@ -29,7 +29,7 @@ namespace EQLogParser
 
     internal DamageStatsBuilder()
     {
-      FightManager.Instance.EventsClearedActiveData += (bool serverChanged) =>
+      CombatEvents.ActiveDataCleared += (bool serverChanged) =>
       {
         lock (_lock)
         {

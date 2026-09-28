@@ -18,7 +18,6 @@ namespace EQLogParser
     internal event Action<Fight> EventsNewNonTankingFight;
     internal event Action<Fight> EventsUpdateFight;
     internal event Action<Fight> EventsNewOverlayFight;
-    internal event Action<bool> EventsClearedActiveData;
     internal const int MaxTimeout = 60;
     internal const int FightTimeout = 30;
 
@@ -177,7 +176,8 @@ namespace EQLogParser
         StringCache.Clear();
       }
 
-      EventsClearedActiveData?.Invoke(serverChanged);
+      // The signal belongs to the app, not to whichever pipeline produced the fights (CombatEvents).
+      CombatEvents.FireActiveDataCleared(serverChanged);
     }
 
     public void Shutdown() => Clear();

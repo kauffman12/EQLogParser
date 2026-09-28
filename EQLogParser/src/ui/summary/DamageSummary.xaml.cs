@@ -929,7 +929,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
         RaidRosterStore.EventsRosterUpdated += OnRosterUpdated;
@@ -950,7 +950,7 @@ namespace EQLogParser
     public void HideContent()
     {
       DamageStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;
       MainActions.EventsChartOpened -= EventsChartOpened;
       RaidRosterStore.EventsRosterUpdated -= OnRosterUpdated;

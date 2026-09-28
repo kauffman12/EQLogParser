@@ -354,7 +354,7 @@ namespace EQLogParser
       {
         SizeChanged += ContentSizeChanged;
         ThemeConfig.EventsThemeChanged += EventsThemeChanged;
-        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         StatsManager.EventsGenerationStatus += EventsGenerationStatus;
 
         // use existing or generate data
@@ -375,7 +375,7 @@ namespace EQLogParser
     {
       SizeChanged -= ContentSizeChanged;
       ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
-      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
       _ready = false;
     }

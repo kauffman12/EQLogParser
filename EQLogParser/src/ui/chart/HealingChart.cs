@@ -32,7 +32,7 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.FireChartOpened("Healing");
         _ready = true;
       }
@@ -40,7 +40,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
-      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       _ready = false;
     }
   }

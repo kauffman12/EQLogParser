@@ -28,7 +28,7 @@ namespace EQLogParser
     {
       lock (_lock)
       {
-        FightManager.Instance.EventsClearedActiveData += (_) =>
+        CombatEvents.ActiveDataCleared += (_) =>
         {
           Reset();
         };

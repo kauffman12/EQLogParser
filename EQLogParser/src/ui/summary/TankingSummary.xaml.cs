@@ -448,7 +448,7 @@ namespace EQLogParser
       {
         TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
         HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
         EventsTankingSummaryOptionsChanged();
@@ -465,7 +465,7 @@ namespace EQLogParser
     {
       TankingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       MainActions.EventsTankingSelectionChanged -= EventsTankingSelectionChanged;
       ClearData();

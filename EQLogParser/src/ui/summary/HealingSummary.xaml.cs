@@ -310,7 +310,7 @@ namespace EQLogParser
       if (VisualParent != null && !_ready)
       {
         HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
-        FightManager.Instance.EventsClearedActiveData += EventsClearedActiveData;
+        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
         EventsHealingSummaryOptionsChanged();
@@ -321,7 +321,7 @@ namespace EQLogParser
     public void HideContent()
     {
       HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
-      FightManager.Instance.EventsClearedActiveData -= EventsClearedActiveData;
+      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
       ClearData();
 
