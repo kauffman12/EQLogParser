@@ -438,11 +438,18 @@ namespace EQLogParser
           if (rejected.Length > 2) _rejectedPlayers[StringCache.GetOrAdd(rejected)] = 1;
         }
 
-        // The operator's own character is a player by definition, so this one name is not allowed to be in
-        // shadow: You-mapping across the whole app reads IsVerifiedPlayer("You"'s target).
-        _rejectedPlayers.TryRemove(ConfigUtil.PlayerName, out _);
+        /*
+         * The operator's own character is a player by definition, so this one name is not allowed to be in shadow:
+         * You-mapping across the whole app reads IsVerifiedPlayer("You"'s target). With no log open there IS no such
+         * character - ConfigUtil.PlayerName is null before MainWindow picks a file (and in any headless run) - and
+         * ConcurrentDictionary takes that as a null key and throws, which would read as "loading the roster died".
+         */
+        if (!string.IsNullOrEmpty(ConfigUtil.PlayerName))
+        {
+          _rejectedPlayers.TryRemove(ConfigUtil.PlayerName, out _);
 
-        AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
+          AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
+        }
 
         foreach (var player in saved)
         {

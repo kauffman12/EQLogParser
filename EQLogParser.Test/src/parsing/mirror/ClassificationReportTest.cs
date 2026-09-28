@@ -40,6 +40,9 @@ public class ClassificationReportTest
     Directory.CreateDirectory(_tempDir);
     ConfigUtil.ConfigDir = _tempDir;
     ConfigUtil.ServerName = "Census Test";
+    // A real session gets this from FileUtil.ParseFileName when a log is picked (fallback "You"); set it so the
+    // registry sees the same shape of state it sees in the app.
+    ConfigUtil.PlayerName = "Censustester";
 
     // Cold identity on both sides: the capture itself is parsed once and reused (it is slow), so each test starts by
     // emptying what that parse taught the process-wide registry, then loads an override file of its own.
@@ -90,15 +93,28 @@ public class ClassificationReportTest
     return totals.OrderByDescending(kvp => kvp.Value).First().Key;
   }
 
+  /*
+   * The same three steps, in the same order, that MirrorSession.RunDeriveAsync runs on every derive: seed from what
+   * the registry already knows, replay the rules over the facts from scratch, then put the operator's file on top.
+   * Order matters twice over - the seed is what turns a saved players.txt name into a Player before any rule has to
+   * guess, and R10 has to be last because this timeline was built from nothing and the verdict must survive it.
+   */
   private static ClassificationReport Census()
   {
     var capture = Capture();
+    var facts = capture.Facts;
     var timeline = new EntityTimeline();
-    ClassificationRules.Apply(capture.Facts, timeline, capture.HealFacts);
+    RegistrySeed.Apply(timeline, facts, LogStartS(), LogEndS());
+    ClassificationRules.Apply(facts, timeline, capture.HealFacts);
     MirrorOverrideStore.Instance.Apply(timeline);
-    return ClassificationReport.Build(timeline, capture.Facts, capture.HealFacts,
+    return ClassificationReport.Build(timeline, facts, capture.HealFacts,
                                       MirrorOverrideStore.Instance, PlayerRegistry.Instance);
   }
+
+  // Facts are appended in arrival order, so the ends of the table are the ends of the capture (the mirror keeps the
+  // same pair; a test has no mirror object to ask).
+  private static double LogStartS() => Capture().Facts.FactCount > 0 ? Capture().Facts.Facts[0].TimeS : double.NaN;
+  private static double LogEndS() => Capture().Facts.FactCount > 0 ? Capture().Facts.Facts[Capture().Facts.FactCount - 1].TimeS : double.NaN;
 
   [TestMethod]
   public void EveryInternedNameGetsARow()
@@ -208,6 +224,34 @@ public class ClassificationReportTest
     Assert.IsTrue(MirrorOverrideStore.Instance.TryGet(name, out var kind), "the verdict never reached the file");
     Assert.AreEqual(IdentityKind.Merc, kind);
     Assert.AreEqual(1, Census().Rows.Count(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)));
+  }
+
+  /*
+   * Cold is the TEST condition, not the app's: opening a file makes MainWindow read the server and character out of
+   * the name, set ConfigUtil.ServerName/PlayerName, then PlayerRegistry.Init() + MirrorOverrideStore.Init(server)
+   * (MainWindow.xaml.cs:1335-1345) - so every real session is warmed from that server's players.txt and pet pairs
+   * before the first derive. This test walks that same path on purpose: save a roster entry, load it back from the
+   * file, and require the census to show the name as a Player seeded by the registry rather than guessed.
+   */
+  [TestMethod]
+  public void WhatWasSavedToPlayersTxtStillNamesAPlayer()
+  {
+    var name = BusiestAttacker();
+    Assert.AreEqual(IdentityKind.Unknown, Census().Find(name)!.Kind,
+                    "control: this fixture is no longer cold, so the warm half proves nothing");
+
+    ConfigUtil.ServerName = "Warm Test";
+    PlayerRegistry.Instance.Init();
+    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+    PlayerRegistry.Instance.Save();
+    PlayerRegistry.Instance.Init();
+
+    var row = Census().Find(name)!;
+    Assert.AreEqual(IdentityKind.Player, row.Kind, "a name serialized to players.txt did not come back as a player");
+    Assert.AreEqual("RegistrySeed", row.Reason, "it reached Player by some route other than the saved roster");
+    Assert.IsTrue(row.LegacySaysPlayer);
+    Assert.IsFalse(row.TypedEntry, "an entry with an evidence timestamp loaded as hand-typed");
+    Assert.IsFalse(row.IsDisagreement);
   }
 
   [TestMethod]
