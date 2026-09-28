@@ -39,26 +39,31 @@ namespace EQLogParser;
  *   - **Healing: exact.** 403,742 heals inside the requested spans, 373 healers on each side, and ZERO mismatched
  *     (person, column) pairs across Total/Hits/SpellHits/Extra/Max/MaxPotentialHit. The record seam is not where the
  *     two engines differ — which is the point of making this one strict.
- *   - **Damage: renamed more than lost.** Raid total 578,233,842,799 → 580,856,919,600 (+0.45 %), rows 422 → 491,
- *     with 384 shared names; the 38 legacy-only entries (`Virul`, `Amengi`s warder`, …) and 107 derived-only ones
+ *   - **Damage: renamed more than lost.** Raid total 578,233,842,799 → 581,343,395,690 (+0.54 %), rows 422 → 437,
+ *     with 374 shared names; the 48 legacy-only entries (`Virul`, `Amengi`s warder`, …) and 63 derived-only ones
  *     (every one of them `X +Pets`) are two views of the same facts. The mechanism is `DamageStatsBuilder`
  *     `.UpdatePetMapping`, which folds by `record.AttackerOwner`: a derived record carries that from the line's own
- *     possessive word, so a ward legacy left as its own row arrives here under its owner with `+Pets`. Only 23 of the
- *     384 people both sides name move at all. `DiagnoseRealLogNames` answers "folded or lost" for any one of them.
- *   - **Tanking: the number was mostly not about people.** Legacy groups by `record.Defender` with no filter, so its
- *     7,114,675,399 of "damage taken" contains 5,120,176,037 across 80 PET rows and 410,382,351 across 108 names
- *     nobody ever identified. Cut both boards to the population the report is about: legacy 1,994,499,362 over 227
- *     rows against derived 1,880,948,516 over 214 — every derived name present on legacy's board (derivedOnly = 0),
- *     and only **10 of 214** people differing at all, the worst being five hits and 1.7 M on one raider, the size of a
- *     fight boundary falling on another second. What derived drops is the 13 NPC rows (`An abyssal terror`, `Bloose`,
- *     `Snack`, `Sabretooth tiger`): mobs taking hits inside a tanking window, which "list what the players received"
- *     has no use for.
+ *     possessive word, so a ward legacy left as its own row arrives here under its owner with `+Pets`. Only 22 of the
+ *     374 people both sides name move at all. `DiagnoseRealLogNames` answers "folded or lost" for any one of them.
+ *   - **Tanking: legacy's number was mostly not about people.** Legacy groups by `record.Defender` with no filter, so
+ *     its 7,114,675,399 of "damage taken" is 4,823,236,582 across 21 names the classification calls NPC, 428,146,449
+ *     across 75 pets and 27,895,838 across 48 names nobody ever placed. Cut both boards to the population the report
+ *     is about — legacy 1,863,292,368 over 211 rows against derived **1,850,853,404 over 166**, sharing 165 — and only
+ *     **3 of 165** people differ on Total at all. The 46 legacy-only rows are names no rule placed (`Batvar`, `Worthless`,
+ *     `Boner`), and derived adds exactly one (`Rallosian Goblin Defender`, also unplaced): the two boards disagree about
+ *     the residue, not about the raid.
  *
- * The `[boards] derived tanking facts with a … defender` print is what made this visible: split the tanking half by
- * what its defenders ARE and Incogitable reads 84,398 facts / 1.576 B Player against 18,022 / 304 M Unknown (and,
- * before the routing was fixed, 287,674 / 6.16 B Pet). The Unknown share stays in on purpose — it is the size of the
- * guess inside `EntityTimeline.IsRaidVictimAt`, whose sibling test measured what demanding proof instead would cost:
- * 90 % of the board gone, because an identity usually arrives later than the hits it describes.
+ * The `[boards] derived tanking facts with a … defender` print is what made this visible: split the tanking half by what
+ * its defenders ARE and Incogitable reads 91,036 facts / 1.6389 B on Players and 9,480 / 196.4 M on Mercs against **86 /
+ * 15.6 M Unknown** — no Pet rows at all, which is the routing (`RaidSide`) doing its job. That 86 is also the whole cost
+ * of `EntityTimeline.IsRaidVictimAt` being exclusion rather than proof (0.85 % of the board), and `HitByNpcCensusTest`
+ * is where the idea that "a mob hitting it proves it is a player" could add anything to it was measured and found dead.
+ *
+ * Every number above is measured on `Classified(run)`, the timeline the app derives against. The first run of this test
+ * used the timeline `PipelineHarness` hands back, which carries registry seeds only: on that state R6 (npcs.txt), R14
+ * (article shape) and R15 (healed by our side) have placed nothing, "unplaced defenders" reads 1,525,786 facts instead
+ * of 4,323, and every identity-dependent figure in the comparison is fiction. Classify before asking an identity
+ * question — AGENTS.md keeps that law because it cost a whole rule proposal.
  */
 [TestClass]
 [DoNotParallelize]
@@ -94,6 +99,25 @@ public class MirrorRealLogBoardsTest
         typeof(PlayerSubStats).GetProperty(nameof(PlayerSubStats.Max))!,
         typeof(PlayerSubStats).GetProperty(nameof(PlayerSubStats.MaxPotentialHit))!,
     ];
+
+    /*
+     * The classification the product runs before it derives anything: MirrorSession builds a fresh timeline, seeds it
+     * from the registry and replays the rule table inside every derive. PipelineHarness hands back a timeline with the
+     * registry seeds ONLY, which is fine for questions about facts and wrong for questions about identity — measured
+     * on Incogitable, "how many damage facts have a defender nothing has placed" reads 1,525,786 on a seeded-only
+     * timeline against 4,323 once the rules have run, because that is how many mobs R6/R14/R15 place out of the way.
+     * Anything that touches IsRaidVictimAt, pet folding or charm ownership has to be measured on this, not on the seed.
+     */
+    private static EntityTimeline Classified(PipelineHarness.MirrorRunResult run)
+    {
+        var timeline = new EntityTimeline();
+        var first = run.Facts.Facts.Length > 0 ? run.Facts.Facts[0].TimeS : 0;
+        var last = run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0;
+
+        RegistrySeed.Apply(timeline, run.Facts, first, last);
+        ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
+        return timeline;
+    }
 
     private static long Field(PlayerStats stats, PropertyInfo field) => Convert.ToInt64(field.GetValue(stats)!);
 
@@ -217,8 +241,9 @@ public class MirrorRealLogBoardsTest
                           + $"legacyFights={run.Fights.Count} derivedRows={run.DerivedFights.Count} "
                           + $"damageFacts={run.Facts.Facts.Length:N0} healFacts={run.HealFacts.HealCount:N0}");
 
-        var index = new MirrorDamageIndex(run.Timeline);
-        var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
+        var timeline = Classified(run);
+        var index = new MirrorDamageIndex(timeline);
+        var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
 
         // The same thing the app does with a select-all click, hidden charm pets included.
@@ -275,7 +300,7 @@ public class MirrorRealLogBoardsTest
             {
                 var fact = run.Facts.Facts[ordinal];
                 var defender = run.Facts.NameOf(fact.DefIdx) ?? "<none>";
-                var kind = run.Timeline.Identity(defender).ToString();
+                var kind = timeline.Identity(defender).ToString();
                 var (count, sum) = byKind.GetValueOrDefault(kind);
                 byKind[kind] = (count + 1, sum + fact.Total);
             }
@@ -295,14 +320,14 @@ public class MirrorRealLogBoardsTest
 
 
         var byKindLegacy = (legacyTanking ?? [])
-            .GroupBy(kv => run.Timeline.Identity(kv.Key).ToString())
+            .GroupBy(kv => timeline.Identity(kv.Key).ToString())
             .ToDictionary(g => g.Key, g => (g.Count(), g.Sum(kv => kv.Value.Total)));
         foreach (var (kind, (count, sum)) in byKindLegacy.OrderByDescending(kv => kv.Value.Item2))
             Console.WriteLine($"[boards] legacy tank rows with a {kind} name: {count} worth {sum:N0}");
 
-        var legacyVictims = (legacyTanking ?? []).Where(kv => run.Timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
+        var legacyVictims = (legacyTanking ?? []).Where(kv => timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
                                                  .ToDictionary(kv => kv.Key, kv => kv.Value);
-        var derivedVictims = (derivedTanking ?? []).Where(kv => run.Timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
+        var derivedVictims = (derivedTanking ?? []).Where(kv => timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
                                                    .ToDictionary(kv => kv.Key, kv => kv.Value);
         Console.WriteLine($"[boards] raid damage taken BY PEOPLE legacy={legacyVictims.Values.Sum(p => p.Total):N0} "
                           + $"derived={derivedVictims.Values.Sum(p => p.Total):N0}");
@@ -357,8 +382,9 @@ public class MirrorRealLogBoardsTest
         PlayerRegistry.Instance.Clear();
 
         var run = PipelineHarness.RunFileWithMirror(path);
-        var index = new MirrorDamageIndex(run.Timeline);
-        var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
+        var timeline = Classified(run);
+        var index = new MirrorDamageIndex(timeline);
+        var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
         var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
 
@@ -366,8 +392,8 @@ public class MirrorRealLogBoardsTest
         {
             Console.WriteLine($"[diag] === {name} :: verifiedPet={PlayerRegistry.Instance.IsVerifiedPet(name)} "
                               + $"ownerKnownFor={PlayerRegistry.Instance.GetPlayerFromPet(name)} "
-                              + $"identity={run.Timeline.Identity(name)} "
-                              + $"({run.Timeline.IdentityWithSource(name, out var source)}{source})");
+                              + $"identity={timeline.Identity(name)} "
+                              + $"({timeline.IdentityWithSource(name, out var source)}{source})");
 
             foreach (var row in run.Fights.Where(r => r.PlayerDamageTotals.ContainsKey(name) || r.PlayerTankTotals.ContainsKey(name)))
             {
@@ -381,7 +407,7 @@ public class MirrorRealLogBoardsTest
             // groups its records — so what a row can say here is its own span, its owner and its two totals.
             foreach (var row in input.Fights.Where(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)))
                 Console.WriteLine($"[diag] derived row '{row.Name}' [{row.BeginTime:F0}->{row.LastTime:F0}] damage={row.DamageTotal:N0} "
-                                  + $"taken={row.TankTotal:N0} charmOwnerAtStart={run.Timeline.OwnerOf(row.Name, row.BeginTime)}");
+                                  + $"taken={row.TankTotal:N0} charmOwnerAtStart={timeline.OwnerOf(row.Name, row.BeginTime)}");
 
             // Every name in the capture that shares this one's shape: pet suffixes, the +Pets grouping, spellings.
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -391,8 +417,8 @@ public class MirrorRealLogBoardsTest
                 {
                     if (candidate is null || !candidate.Contains(name, StringComparison.OrdinalIgnoreCase) || !seen.Add(candidate)) continue;
 
-                    Console.WriteLine($"[diag] pooled name '{candidate}' identity={run.Timeline.Identity(candidate)} "
-                                      + $"ownerOf={run.Timeline.OwnerOf(candidate, double.PositiveInfinity)} "
+                    Console.WriteLine($"[diag] pooled name '{candidate}' identity={timeline.Identity(candidate)} "
+                                      + $"ownerOf={timeline.OwnerOf(candidate, double.PositiveInfinity)} "
                                       + $"verifiedPet={PlayerRegistry.Instance.IsVerifiedPet(candidate)}");
                 }
             }

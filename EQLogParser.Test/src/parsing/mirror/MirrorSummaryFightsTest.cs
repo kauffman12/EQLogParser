@@ -159,8 +159,9 @@ public class MirrorSummaryFightsTest
      * NPC row, and only one of them survives the question:
      *
      *   a mob hitting a raider            → RaidSide, on the row the exchange opened
-     *   a mob hitting somebody's pet      → Neither. Pet incoming was 77 % of this half on Incogitable (6.16 B of
-     *                                       8.05 B); keeping it made the raid's damage-taken unauditable.
+     *   a mob hitting somebody's pet      → Neither. Legacy's unfiltered board carries 428,146,449 of it across 75 pet
+     *                                       names on Incogitable (and 4.82 B on NPC names); keeping it made the raid's
+     *                                       damage-taken unauditable.
      *   a mob hitting another mob/corpse  → Neither, same reason.
      *
      * A charmed raider is the fourth shape and deliberately not RaidSide: while the window holds, identity says Npc,

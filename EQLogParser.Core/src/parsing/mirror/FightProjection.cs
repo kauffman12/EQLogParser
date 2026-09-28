@@ -45,8 +45,10 @@ namespace EQLogParser.Mirror
      * The three targets are described next to FactTarget. Two of them are directions inside the row, and the third
      * exists because "not aimed at the row" is NOT the same question as "landed on one of us": it used to be one
      * bool, which quietly made every away-from-owner fact a tanking-report fact, and most of what an NPC row aims
-     * away from itself lands on a pet or another mob (measured on Incogitable: of 8.05 B of away-from-owner damage,
-     * 6.16 B had a Pet defender and 0.30 B an unknown one, against 1.58 B with a Player behind it).
+     * away from itself lands on a pet or another mob. Measured on Incogitable against the classification the app runs:
+     * legacy's unfiltered "damage taken" is 7,114,675,399, of which 4,823,236,582 sits on names classified as NPC and
+     * 428,146,449 on pets; what the three targets leave is 1,850,853,404 — 91,036 facts with a Player behind them and
+     * 9,480 a Merc (`MirrorRealLogBoardsTest` prints that census, `HitByNpcCensusTest` the residue around it).
      *
      * AtOwner is the same test that splits DamageToOwner from DamageByOwner — the split legacy draws too, with
      * FightManager putting everything aimed at the npc in DamageBlocks and the mob's own output in TankingBlocks.

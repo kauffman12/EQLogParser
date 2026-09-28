@@ -83,13 +83,25 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   builders twice over one capture and censuses every column per raider, because a grid is per person — two tables can
   agree on a fight's total while disagreeing about who did it, and a fight-row check cannot see that. Measured on
   Incogitable (344 MB): **healing is exact** (403,742 heals, 373 healers, zero mismatched person-column pairs) so that
-  board is asserted strictly; **damage is renamed more than lost** (+0.45 % raid, 422 → 491 rows, 38 legacy-only names
-  against 107 derived-only `X +Pets`) because `DamageStatsBuilder.UpdatePetMapping` folds by `record.AttackerOwner`,
-  which a derived record carries from the line's own possessive word while legacy needs its registry to have learned
-  the pair; **tanking is the report of what people received** — legacy groups by `record.Defender` unfiltered, so its
-  7.11 B contains 5.12 B of pet rows; cut to people it is 1.994 B over 227 rows against derived 1.881 B over 214 with
-  every derived name present and 10 of 214 differing. Don't average these into one "parity %": the findings need
-  different actions.
+  board is asserted strictly; **damage is renamed more than lost** (+0.54 % raid, 422 → 437 rows, 48 legacy-only names
+  against 63 derived-only `X +Pets`, 22 of 374 shared people moving on Total) because `DamageStatsBuilder.UpdatePetMapping`
+  folds by `record.AttackerOwner`, which a derived record carries from the line's own possessive word while legacy needs
+  its registry to have learned the pair; **tanking is the report of what people received** — legacy groups by
+  `record.Defender` unfiltered, so its 7.11 B contains 4.82 B of NPC names and 428 M of pets; cut to people it is
+  1.863 B over 211 rows against derived **1.851 B over 166**, sharing 165 with 3 of 165 differing on Total (the two
+  sides disagree about the unplaced residue, not about the raid). Don't average these into one "parity %": the findings
+  need different actions.
+- **Classify before asking an identity question in a test**: `PipelineHarness.RunFileWithMirror` hands back a timeline
+  with `RegistrySeed` on it and **no rule table** — R6 (npcs.txt), R14 (article shape), R15 (healed by our side) and the
+  graph run only inside the app's derive (`MirrorSession`), or in a test that calls them. Measured on Incogitable:
+  "damage facts whose defender no rule placed" reads **1,525,786 / 583 B** on the seeded timeline against **4,323 /
+  1.69 B (0.25 % of hit facts)** after `ClassificationRules.Apply` — a 350× difference, because that is how many mobs the
+  rules place out of the way. Two documents were written on the wrong side of this before it was caught (`HitByNpcCensusTest`
+  proposed a rule from it; `IsRaidVictimAt` quoted its numbers from it), and the proposal died once the rules ran: with a
+  classified timeline, "a mob keeps hitting it" identifies **zero** roster players and its top names are mobs the NPC
+  database does not know (`Herald of the Outer Brood`, `War Trainer Prime`), so no such rule exists. Build the timeline
+  the way `MirrorRealLogBoardsTest.Classified` does — fresh `EntityTimeline`, `RegistrySeed.Apply`,
+  `ClassificationRules.Apply(facts, timeline, heals)` — for anything that reads identity, pets, charm or ownership.
 - **The tank board is damage our people received, decided by three fact targets, not two directions**:
   `FightProjection.FactTarget` is `AtOwner` (aimed at the row's anchor — the raid's output), `RaidSide` (landed on one
   of us — the tanking half) or `Neither` (mob on mob, mob on somebody's pet: captured, counted in
@@ -98,13 +110,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   unidentified mob satisfies "not known to be a pet or a mob", so testing that first files the raid's own opening
   swings as someone's damage taken; and when a row is keyed on a raider herself (legacy's defender-key tiebreak for an
   unclassified attacker) her incoming hits must still be `RaidSide`, not the outgoing side of her own number. (2)
-  **`IsRaidVictimAt` is exclusion, not proof**: `IdentityAt is not Npc and not Pet`. Written as `== Player` it passed
-  every unit test and lost 90 % of the real board — 17,104 facts / 172.8 M against 84,398 / 1.58 B — because identity
-  arrives from evidence that postdates the hits it describes (and the harness clears `PlayerRegistry`, so players.txt
-  seeds nothing). The Unknown residue (18,022 facts / 304 M here) stays in: something a mob keeps hitting is one of
-  ours. (3) **A pet's incoming damage is not a player's**, by decision and with its number attached (6.16 B on
-  Incogitable); if it is ever wanted it arrives as its own choice — owner-folded like `X +Pets`, or as pet rows — never
-  as a widened predicate that silently moves every tank column. A charmed raider reads Npc while the window holds, so
+  **`IsRaidVictimAt` is exclusion, not proof**: `IdentityAt is not Npc and not Pet`, and the price of that choice is
+  measured small — on Incogitable against a classified timeline the board is 91,036 facts / 1.6389 B Player plus 9,480 /
+  196 M Merc, and proof would keep every one of those; exclusion adds **86 facts / 15.6 M (0.85 %)**. That is what buys a
+  raider who never casts a database spell, never speaks and joined before the log opened: she stays Unknown all evening
+  and her damage taken is the reason the board exists. (The claim this bullet used to carry — "proof loses 90 % of the
+  board" — was measured on an unclassified timeline; see the rule above.) (3) **A pet's incoming damage is not a
+  player's**, by decision: with the routing in place the derived board holds **zero** Pet facts where legacy carries
+  428 M of them (plus 4.82 B on NPC names); if pet damage taken is ever wanted it arrives as its own choice —
+  owner-folded like `X +Pets`, or as pet rows — never as a widened predicate that silently moves every tank column. A charmed raider reads Npc while the window holds, so
   her incoming hits are not raid damage taken either; `IsRaidVictimAt` deliberately does not undo the flip.
 - **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
   sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**

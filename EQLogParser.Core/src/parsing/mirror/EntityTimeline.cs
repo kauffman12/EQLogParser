@@ -328,9 +328,10 @@ namespace EQLogParser.Mirror
      * it lists what each of our people had to absorb — and answering it with `!Npc` would be wrong in two directions
      * that both show up as a raid total nobody can audit:
      *
-     *   - A PET is not one of our people. On Incogitable, 287,674 away-from-owner facts (6.16 B of 8.05 B) had a
-     *     defender whose identity is Pet: mobs swatting somebody's swarm. It is real damage and it stays in the
-     *     capture; it is not what a player received. If it is ever wanted it arrives as its own decision — folded
+     *   - A PET is not one of our people: mobs swatting somebody's swarm is real damage, it stays in the capture, and
+     *     it is not what a player received. Legacy's unfiltered board carries 428,146,449 of it across 75 pet names on
+     *     Incogitable; the derived board carries none, and the only non-Person facts left in it are the 86 Unknowns
+     *     described below. If it is ever wanted it arrives as its own decision — folded
      *     under the owner the way the damage board does `X +Pets`, or as pet rows — with a settings word, not as a
      *     widened predicate that silently changes every tank number.
      *   - A CHARMED raider is, for those seconds, fighting against us. Identity says Npc while the window holds, so
@@ -338,17 +339,23 @@ namespace EQLogParser.Mirror
      *     used in. This predicate deliberately does not undo the flip.
      *
      * So the rule is exclusion rather than proof: a hit counts unless we KNOW the name is not one of our people —
-     * Pet or Npc at that second (a name can join, die, and be raised as a servant mid capture). Judging it the other
-     * way, as `Identity == Player`, was tried first and lost 90 % of the board: on Incogitable only 17,104 facts
-     * worth 172.8 M passed that test, against 84,398 / 1.58 B whose defender is a Player by the end of the capture.
-     * The reason is timing, not truth — identity arrives from evidence that may be minutes later than the hit, and
-     * the tank report would otherwise show a raider only the seconds after the parser happened to learn her name.
-     * (In the app players.txt seeds most of them; the harness clears the registry, which is why the number is this
-     * dramatic in a test run.)
+     * Pet or Npc at that second (a name can join, die, and be raised as a servant mid capture).
      *
-     * The residue is Unknown defenders — 18,022 facts / 304 M here, names with no evidence either way. They stay in,
-     * because "some NPC is hitting this name" is itself the evidence that it is a person, and the census prints them
-     * separately so the size of that guess is never invisible.
+     * Measured on eqlog_Incogitable_xegony.txt through the classification the app actually runs (registry seed + rule
+     * table, which is what MirrorSession builds inside every derive), the derived tank population is 91,036 facts /
+     * 1.6389 B on names called Player and 9,480 / 196.4 M on Merc, and proof — `Identity is Player or Merc` — would
+     * keep every one of those. What exclusion adds is **86 facts worth 15.6 M** (0.85 % of the board): defenders no
+     * rule ever placed. That is the whole price, and it buys the case proof cannot see: a raid member who never
+     * casts a database spell, never speaks and joined before the log opened stays Unknown all evening, and her damage
+     * taken is precisely what this board exists to show. The trade is deliberately lopsided the other way too — the
+     * same capture has only 4,323 unplaced-defender facts out of 1,727,942 hit facts (0.25 %) once R6/R14/R15 have run, so mob
+     * noise leaking in through an Unknown defender is bounded by that residue, not by how many mobs exist.
+     *
+     * An earlier version of this note justified exclusion with a 90 % loss for proof. That was measured against the
+     * timeline `PipelineHarness` hands back, which carries the registry seeds and NOT the rule table — on that state
+     * R6 (npcs.txt), R14 (article shape) and R15 (healed by our side) have placed nothing, so nearly every mob reads
+     * Unknown and both numbers were fiction. Ask identity questions of a classified timeline; `MirrorRealLogBoardsTest.Classified`
+     * is the helper that does it.
      */
     public bool IsRaidVictimAt(string name, double t)
     {
