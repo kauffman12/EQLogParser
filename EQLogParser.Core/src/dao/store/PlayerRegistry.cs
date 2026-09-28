@@ -69,6 +69,28 @@ namespace EQLogParser
     internal bool IsRejectedPlayer(string name) => !string.IsNullOrEmpty(name) && _rejectedPlayers.ContainsKey(name);
     internal List<string> GetRejectedPlayers() => [.. _rejectedPlayers.Keys];
 
+    /*
+     * Drops a rejection WITHOUT claiming anything. AddVerifiedPlayerByOperator also lifts a rejection, but it adds the
+     * name to the player roster on the way through - wrong for the operator who just said "that is an NPC" or "that is
+     * somebody's pet" on the mirror. A verdict supersedes "make no claim"; it does not imply "is a raider".
+     */
+    internal void ClearRejectedPlayer(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+      lock (_lock) { _rejectedPlayers.TryRemove(name, out _); }
+    }
+
+    /// <summary>The roster's evidence stamp for a name: true with the unix seconds it was last confirmed, false when
+    /// the roster does not know it. A TRUE result with 0 means a hand-typed (or legacy-file) entry - nothing has ever
+    /// observed this name in a line. Read by ClassificationReport to tell learned rows from typed ones.</summary>
+    internal bool TryGetVerifiedEntry(string name, out double lastSeenUnix)
+    {
+      lastSeenUnix = 0;
+      if (string.IsNullOrEmpty(name) || !_verifiedPlayers.TryGetValue(name, out var seen)) return false;
+      lastSeenUnix = seen;
+      return true;
+    }
+
     // name -> log time the player-side evidence appeared (used by the combat mirror's Phase 1
     // seed so ingest-time identity replay matches what IsPetOrPlayerOrMerc saw at each line)
     internal IReadOnlyDictionary<string, double> GetVerifiedPlayerTimes() => _verifiedPlayers;

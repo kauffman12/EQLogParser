@@ -3682,3 +3682,42 @@ One cross-platform fix fell out of making those paths work: `CacheDir` concatena
 `"\\petmapping.txt"`), which on Linux produced one filename per server with a literal backslash inside it rather than
 a file in the server's folder — so nothing in this repository's CI could ever have exercised the read-back path. Both
 now go through `Path.Combine`, and the test asserts the files land *in* the server directory.
+
+## The name census: what the Names window reads, and what an override costs
+
+`ClassificationReport` (Core, `src/parsing/mirror/`) is a snapshot of "what did this pipeline decide about every name
+this capture mentioned", built for one purpose: letting a person audit classification instead of noticing one mistake
+mid-fight. The fight grids' right-click stays (that is where mistakes get noticed) but both it and the window go through
+`ClassificationCommands`, because before this there were two verbs writing two files — "Add player" went to
+`players.txt`, "Set as Pet" to `mirror-overrides.txt`, at different strengths.
+
+Four decisions, each because the obvious version was wrong:
+
+- **The row set is the name pool, not "names that did something".** Interning happens when a name appears on ANY line,
+  so `DamageFactTable.InternedNames` already answers "which names did this log mention" — including a boss that only
+  ever got hit and a pet that only ever got healed (heal facts share that one pool: `HealFactTable` interns through the
+  damage table, so index N is the same string in both streams). Filtering to attackers would hide the rows an auditor
+  comes to look at.
+- **Operator-only names are listed even with zero facts**: a rejection, a typed alt, and — the one that mattered — a
+  verdict on a name this particular capture doesn't contain. Without it the window contradicts its own file and looks
+  like it ignored the override; there is simply nothing to apply it to.
+- **Totals are summed from the facts, never taken from a summary board.** The census answers "how busy was this name"
+  for the whole capture; a board number carries the current fight selection into an audit list. Cost: one pass per
+  stream writing into arrays indexed by name id (no hashing, no per-fact allocation), then ~6k timeless
+  `IdentityWithSource` calls — tens of milliseconds on a 7.98 M fact capture, and nothing re-parsed or re-derived.
+- **A disagreement is `players.txt` says raider AND the classifier says NPC. Absence is not a contradiction.** Unknown
+  means "this capture has no opinion", which is what every guild alt who sat this log out reads, alongside the 12–42 %
+  of facts whose names legacy never verified; flagging absence would paint the list red and bury the real rows. Pets and
+  mercs are excluded because `players.txt` legitimately holds pet *owner* names, and a pet verdict costs its owner
+  nothing. `AbsenceIsNotAContradiction` states it as a law over the whole census rather than pinning one row's kind, so
+  it survives the rules getting better at placing names.
+
+The as-of policy is "whatever the strongest claim says" (`IdentityWithSource` is timeless: strongest wins, ties go
+later). A name whose kind genuinely changed mid-capture — charmed, un-petted, R13 resurrected — gets ONE row and no
+history; its charm keys stay in `EntityTimeline`, and nicer treatment of those is deferred by decision, not oversight.
+
+Tests are **cold** (registry emptied per test, no seed), which is why they assert the two kinds grammar and the shipped
+database can settle from lines alone — `X`s pet` → Pet (R5), a name in `npcs.txt` → NPC (R6) — and expect raid members
+to read Unknown. A census test that demanded Player verdicts from a cold run would only be testing the seed. Command
+tests park `ConfigUtil.ConfigDir` in a temp folder, re-`Init` the store to prove a verdict reached disk, and leave both
+singletons empty on the way out (`AGENTS`: no parallelization, this is process state).
