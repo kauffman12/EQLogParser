@@ -29,6 +29,20 @@ namespace EQLogParser.Mirror
    *   BeginDamageTime/LastDamageTime/DamageTotal/DamageHits — from the facts themselves, not copied from
    *                   the row, so a fight whose blocks and roll-up ever drift apart is visible as a
    *                   mismatch instead of silently agreeing.
+   *   TankingBlocks / TankSegments / TankSubSegments / BeginTankingTime / LastTankingTime / TankHits /
+   *                   TankTotal — the same row's facts read the other way: the ones where the row's own name
+   *                   was the ATTACKER and a raider took the hit. FightManager keeps that half in its own block
+   *                   list on the same Fight object and TankingStatsBuilder walks exactly that list, so one
+   *                   derived row now feeds the damage board and the tanking board with neither builder knowing
+   *                   anything new — which is the point of the whole seam.
+   *
+   * What makes splitting one row into two boards safe is the partition: FightProjection hands each fact to
+   * exactly ONE row together with its direction, rows are keyed on the non-raider name, and OnFact files the
+   * ordinal into the damage list or the tanking list by that flag. A selected set of rows therefore neither
+   * counts a hit twice nor loses one. Legacy is not partitioned that way — its Get() keys a tanking record on
+   * the DEFENDER, so a mob hitting a raider opens a fight row named after the raider. The derived list has no
+   * player-named tank rows: damage taken belongs to the encounter that dealt it, and the per-player roll-up is
+   * the builder's job off record.Defender, exactly as it is for legacy blocks.
    *
    *   ModifiersMask comes off the fact, which copies it off the record. That byte is why the six modifier
    *   settings (assassinate, headshot, slay-undead, ...) exclude the same damage on both boards: DamageValidator
@@ -41,8 +55,10 @@ namespace EQLogParser.Mirror
    *   never mapped still lands under its owner here, and so does a mob somebody charmed, which is a difference
    *   in what the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same
    *   field, so every charm of the same mob name across a night folds into one pet entry under its charmer.
-   *   PlayerDamageTotals stays empty — only DamageOverlayStatsBuilder reads it, and the overlay is fed
-   *   straight from FightManager, never from a selection.
+   *   PlayerDamageTotals/PlayerTankTotals stay empty — only DamageOverlayStatsBuilder reads them, and the
+   *   overlay is still fed straight from FightManager, never from a selection. Filling them here would mean
+   *   running DamageValidator a second time (the damage builder filters with the same call) and two copies of
+   *   that six-setting filter drifting apart; they arrive with the overlay's own change of source.
    *   SubType is filled in when the fact has none (RecordFrom's helper): the summary's melee counters look the
    *   subtype up in a ConcurrentDictionary, which throws on a null key — so a null there does not degrade the
    *   board, it empties it, with the exception swallowed inside DamageStatsBuilder's own catch.
@@ -67,33 +83,57 @@ namespace EQLogParser.Mirror
 
     // fight -> ordinals into DamageFactTable.Facts, in table order (= arrival order), aimed at the owner only.
     private readonly Dictionary<DerivedFight, List<int>> _damageOrdinals = new();
+
+    /*
+     * The same rows' facts aimed AWAY from the owner — the tanking half. Its own list rather than one list with
+     * a direction flag re-tested at materializing time, because each board's blocks have to be built from a run
+     * that is ascending in time: FightManager.AddAction groups "consecutive actions sharing a timestamp", and
+     * interleaving the two directions would split one second's block into two on both boards.
+     */
+    private readonly Dictionary<DerivedFight, List<int>> _tankingOrdinals = new();
+
     private readonly Dictionary<DerivedFight, Fight> _summaries = new();
 
     public long DamageFactCount { get; private set; }
+    public long TankingFactCount { get; private set; }
     public int FightsWithDamage => _damageOrdinals.Count;
+    public int FightsWithTanking => _tankingOrdinals.Count;
 
 
     // Four bytes of ordinal per captured fact: on a 5.3 M-fact log where roughly three quarters are
     // player-side, that is ~16 MB held for the life of the snapshot. It buys selection-time materializing
-    // (no re-scan of the whole table on every click) and it dies with the snapshot it belongs to.
-    public long EstimatedBytes => DamageFactCount * 4L;
+    // (no re-scan of the whole table on every click) and it dies with the snapshot it belongs to. Both lists
+    // count: every fact lands in exactly one of them, so this is still "one ordinal per damage fact".
+    public long EstimatedBytes => (DamageFactCount + TankingFactCount) * 4L;
 
     // Passed to FightProjection.Build as its owner sink — see the delegate's comment for why the answer
     // has to come from the projection rather than be recomputed here.
     internal void OnFact(DamageFact fact, int ordinal, DerivedFight owner, bool towardOwner)
     {
-      if (!towardOwner) return;
+      var store = towardOwner ? _damageOrdinals : _tankingOrdinals;
 
-      if (!_damageOrdinals.TryGetValue(owner, out var ordinals))
+      if (!store.TryGetValue(owner, out var ordinals))
       {
-        _damageOrdinals[owner] = ordinals = [];
+        store[owner] = ordinals = [];
       }
 
       ordinals.Add(ordinal);
-      DamageFactCount++;
+      if (towardOwner) DamageFactCount++;
+      else TankingFactCount++;
     }
 
     internal bool HasDamage(DerivedFight fight) => _damageOrdinals.ContainsKey(fight);
+
+    /*
+     * A row whose facts all point away from it — a charmed raider's own output is the ordinary case, and so is
+     * the mob of an exchange nobody could place the other way. Nothing for the damage board, everything for the
+     * tanking one, which is why this cannot be answered as !HasDamage: asking that way silently dropped a
+     * player's damage taken whenever the raid never landed a hit on whatever was hitting them.
+     */
+    internal bool HasTanking(DerivedFight fight) => _tankingOrdinals.ContainsKey(fight);
+
+    internal IReadOnlyList<int> TankingOrdinalsFor(DerivedFight fight)
+      => _tankingOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
 
     // The ordinals behind a row, in table order — for the tests that hold this index to its contract, so
     // they can check a row against the fact table itself instead than against another copy of my bookkeeping.
@@ -148,9 +188,13 @@ namespace EQLogParser.Mirror
         LastTime = double.IsNegativeInfinity(fight.LastTime) ? double.NaN : fight.LastTime,
       };
 
-      if (!_damageOrdinals.TryGetValue(fight, out var ordinals) || ordinals.Count == 0) return summary;
-
+      /*
+       * Two passes over one row, in this order: what the raid did to this name (the damage board's half) and
+       * what this name did to the raid (the tanking board's). A row can have either, both, or — for a selection
+       * that only ever got hit — only the second, so neither pass is allowed to decide whether the Fight exists.
+       */
       var allFacts = facts.Facts;
+      List<int> ordinals = _damageOrdinals.TryGetValue(fight, out var damageRun) ? damageRun : [];
       ActionGroup block = null;
       var lastBlockTime = double.NaN;
       var beginDamage = double.NaN;
@@ -169,29 +213,7 @@ namespace EQLogParser.Mirror
           lastBlockTime = time;
         }
 
-        var attacker = facts.NameOf(fact.AtkIdx);
-        var record = new DamageRecord
-        {
-          Attacker = attacker,
-          /*
-           * The owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), which is what makes
-           * DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet. The
-           * legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
-           * this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test.
-           */
-          AttackerOwner = OwnerOf(fact, attacker),
-          Defender = facts.NameOf(fact.DefIdx),
-          AttackerIsSpell = fact.AttackerIsSpell,
-          Total = fact.Total,
-
-          // Straight off the fact. Without it DamageValidator excludes nothing and the board disagrees with
-          // legacy on every modifier-filtered run; the mask is also what makes a derived record comparable in
-          // HitLogViewer, which shows the same column for stored records.
-          ModifiersMask = fact.ModMask,
-          Type = LabelTypes.LabelOf(fact.TypeId),
-          SubType = SubTypeOf(fact, facts),
-        };
-
+        var record = RecordFrom(fact, facts);
         block.Actions.Add(record);
 
         // The per-spell activity key comes from the same helper FightManager uses. It cannot be null here:
@@ -218,7 +240,87 @@ namespace EQLogParser.Mirror
       summary.BeginDamageTime = beginDamage;
       summary.LastDamageTime = lastDamage;
 
+      /*
+       * The tanking half, built the same way off the away-facing ordinals. FightManager's own tank branch is the
+       * spec: block per run of one second, activity windows keyed by the SAME record-key helper and attributed to
+       * record.Defender (the raider who took it — the damage pass attributes them to record.Attacker), then
+       * Begin/LastTankingTime and TankHits/TankTotal.
+       *
+       * Note what is NOT gated here. The damage pass counts hits and total only for LabelTypes.IsHit facts,
+       * because legacy gates them on StatsUtil.IsHitType; the tank branch in FightManager is unconditional, so
+       * a resisted spell that dealt zero still counts as a hit a player took. Copying that asymmetry is the
+       * point — "tidying" it would move the tank board's # Hits column away from legacy for no reason.
+       */
+      if (_tankingOrdinals.TryGetValue(fight, out var tankRun) && tankRun.Count > 0)
+      {
+        ActionGroup tankBlock = null;
+        var lastTankBlockTime = double.NaN;
+
+        foreach (var ordinal in tankRun)
+        {
+          var fact = allFacts[ordinal];
+          var time = (double)fact.TimeS;
+
+          if (tankBlock is null || !lastTankBlockTime.Equals(time))
+          {
+            tankBlock = new ActionGroup { BeginTime = time };
+            summary.TankingBlocks.Add(tankBlock);
+            lastTankBlockTime = time;
+          }
+
+          var record = RecordFrom(fact, facts);
+          tankBlock.Actions.Add(record);
+
+          StatsUtil.UpdateTimeSegments(summary.TankSegments, summary.TankSubSegments,
+            StatsUtil.CreateRecordKey(record.Type, record.SubType), record.Defender, time);
+
+          if (double.IsNaN(summary.BeginTankingTime)) summary.BeginTankingTime = time;
+          summary.LastTankingTime = time;
+          summary.TankHits++;
+          summary.TankTotal += fact.Total;
+        }
+      }
+
+      // FightManager rebuilds this string on every record; the last write is what the tooltip shows, so one
+      // write at the end of materializing gives the identical text for the identical fight.
+      if (!double.IsNaN(summary.BeginTime) && !double.IsNaN(summary.LastTime))
+      {
+        summary.TooltipText = $"#Hits To Players: {summary.TankHits}, #Hits From Players: {summary.DamageHits}, "
+                              + $"Time Alive: {(long)(summary.LastTime - summary.BeginTime + 1)}s";
+      }
+
       return summary;
+    }
+
+    /*
+     * One fact, one record — shared by both boards so a damage record and the tanking record of the same line
+     * cannot disagree about who hit whom, how much, or which modifier filters apply.
+     */
+    private DamageRecord RecordFrom(DamageFact fact, DamageFactTable facts)
+    {
+      var attacker = facts.NameOf(fact.AtkIdx);
+
+      return new DamageRecord
+      {
+        Attacker = attacker,
+        /*
+         * The owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), which is what makes
+         * DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet. The
+         * legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
+         * this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test.
+         */
+        AttackerOwner = OwnerOf(fact, attacker),
+        Defender = facts.NameOf(fact.DefIdx),
+        AttackerIsSpell = fact.AttackerIsSpell,
+        Total = fact.Total,
+
+        // Straight off the fact. Without it DamageValidator excludes nothing and the board disagrees with
+        // legacy on every modifier-filtered run; the mask is also what makes a derived record comparable in
+        // HitLogViewer, which shows the same column for stored records.
+        ModifiersMask = fact.ModMask,
+        Type = LabelTypes.LabelOf(fact.TypeId),
+        SubType = SubTypeOf(fact, facts),
+      };
     }
 
     /*
@@ -251,11 +353,15 @@ namespace EQLogParser.Mirror
 
       foreach (var fight in selected)
       {
-        if (!index.HasDamage(fight))
+        if (!index.HasDamage(fight) && !index.HasTanking(fight))
         {
-          // A row nothing is aimed at — a charmed raider's own output, or an exchange whose facts all point
-          // the other way — has nothing to show in a damage summary. Counting it keeps the status line
-          // honest instead of the selected list silently shrinking.
+          /*
+           * A row with no facts in EITHER direction has nothing to show on either board, and counting it keeps
+           * the status line honest instead of the selected list silently shrinking. Rows that only get hit are
+           * NOT in this branch any more: they carry the damage-taken half of the selection, and legacy feeds its
+           * own tank-only rows to both builders too — which is also why their span now reaches AllRanges, the way
+           * legacy's does, so the DPS clock matches instead of quietly running narrower.
+           */
           withoutDamage++;
           continue;
         }

@@ -782,18 +782,34 @@ namespace EQLogParser
 
     /*
      * The same question ComputeStats asks of FightManager state, asked of the combat mirror instead: the
-     * builder gets ordinary Fight objects whose DamageBlocks were rebuilt from captured facts, so the board
-     * shows what the derived list thinks happened without the summary knowing anything new. Heal and tanking
-     * boards are deliberately untouched — the derived side has no equivalent blocks for them yet, and a half
-     * populated comparison reads as a bug in whichever side looks empty.
+     * builders get ordinary Fight objects whose blocks were rebuilt from captured facts, so the boards show what
+     * the derived list thinks happened without any summary knowing anything new. Damage and tanking are both fed
+     * here, off the same materialized rows — a derived row carries what the raid did to it in DamageBlocks and
+     * what it did to the raid in TankingBlocks, which is the split TankingStatsBuilder already reads.
      *
-     * An empty selection still reaches the builder: zero npcs is how it is told to clear the board, which is
-     * what the legacy list does with an empty selection too.
+     * The healing board is still NOT fed from here: HealingStatsBuilder does not read Fight objects at all, it
+     * pulls the whole heal store and filters by time (see HealingStatsBuilder's GetAllHeals call), so a derived
+     * heal board needs a source seam rather than another builder call. Until that exists the healing tab keeps
+     * showing legacy numbers whatever list was clicked, which is the one honest gap left in this path.
+     *
+     * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
+     * is what the legacy list does with an empty selection too.
      */
     private void MirrorDerivedSelectionChanged(IReadOnlyList<DerivedFight> selected)
     {
       var session = _mirrorSession;
       if (session is null) return;
+
+      /*
+       * Read the tanking board's NPC filter off the open window BEFORE leaving the UI thread — ComputeStats does
+       * the same lookup for the legacy path, and the dock site is not something a worker task may walk.
+       */
+      var tankingDamageType = 0;
+      if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue((tankingSummaryIcon.Tag as string)!, out var tankControl)
+          && tankControl != null)
+      {
+        tankingDamageType = ((TankingSummary)tankControl.Content).DamageType;
+      }
 
       /*
        * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the
@@ -812,10 +828,22 @@ namespace EQLogParser
           damageStatsOptions.MinSeconds = 0;
 
           var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
-          Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s)"
-                   + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) nothing is aimed at" : string.Empty));
+          var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
+          Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s), "
+                   + $"{tankRecords:N0} taken"
+                   + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty));
 
           DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
+
+          // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
+          // activity window from TankSegments, both of which the materializer fills off the same facts.
+          GenerateStatsOptions tankingStatsOptions = new();
+          tankingStatsOptions.Npcs.AddRange(input.Fights);
+          tankingStatsOptions.AllRanges = input.AllRanges;
+          tankingStatsOptions.MinSeconds = 0;
+          tankingStatsOptions.DamageType = tankingDamageType;
+
+          TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
         }
         catch (Exception ex)
         {
