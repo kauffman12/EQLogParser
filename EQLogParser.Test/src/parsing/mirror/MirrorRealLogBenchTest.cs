@@ -38,6 +38,14 @@ public class MirrorRealLogBenchTest
             ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
         }
 
+        // A separate ladder of stops between "bytes on disk" and "a meter row", so a suggestion about making the
+        // load faster can be sized instead of guessed at. See RunStageLadder.
+        var stage = Environment.GetEnvironmentVariable("EQLP_MIRROR_BENCH_STAGE");
+        if (!string.IsNullOrEmpty(stage))
+        {
+            Assert.Inconclusive(RunStageLadder(path, stage) ? "ladder ran" : "unknown EQLP_MIRROR_BENCH_STAGE");
+        }
+
         /*
          * `EQLP_MIRROR_BENCH_TAP=off` runs the SAME ingest with the fact capture not subscribed, which is the only way
          * to answer "does the new table cost more to load than the one it replaces" — the number has to come from one
@@ -266,6 +274,106 @@ public class MirrorRealLogBenchTest
                           + $"  charmed-owned={rows.Count(static r => r.CharmedOwned)}");
         foreach (var g in rows.GroupBy(static r => r.EndReason).OrderByDescending(static g => g.Count()))
             Console.WriteLine($"[rows]   ended {g.Key}: {g.Count()}");
+    }
+
+    /*
+     * Stops along the way from a file to a fight row, each one the previous plus a stage of the real pipeline:
+     *   floor  — read the file and turn the timestamp column into a double (the IO + date floor nothing beats)
+     *   chat   — + what ChatLineParser costs for EVERY line, combat or not (LogProcessor asks it first)
+     *   pre    — + the double-line detection and PreLineParser.NeedProcessing gate
+     *   parsers— + Split and the four combat parsers, i.e. everything legacy does, with no fact capture
+     * The gap between two stops is what that stage costs; the last stop should land near the TAP=off ingest time.
+     */
+    private static bool RunStageLadder(string path, string stage)
+    {
+        DamageLineParser.ResetProcessState();
+        PlayerRegistry.Instance.Clear();
+
+        long total = 0, skipped = 0, chat = 0, gated = 0, parsed = 0, splitOnly = 0, splitBytes = 0;
+        var composition = new Dictionary<string, int>();
+        var gen0Before = GC.CollectionCount(0);
+        var allocatedBefore = GC.GetTotalAllocatedBytes(true);
+        var sw = Stopwatch.StartNew();
+
+        foreach (var line in File.ReadLines(path))
+        {
+            if (line.Length <= 28) { skipped++; continue; }
+            var dt = DateUtil.ParseStandardDate(line);
+            if (dt == DateTime.MinValue) { skipped++; continue; }
+            var ts = DateUtil.ToDotNetSeconds(dt);
+            total++;
+            var key = LineShape(line);
+            composition.TryGetValue(key, out var seen);
+            composition[key] = seen + 1;
+
+            if (stage == "floor") continue;
+
+            var action = line[27..];
+            if (ChatLineParser.ParseChatType(action) is { } chatType)
+            {
+                chat++;
+                continue;
+            }
+
+            if (stage == "chat") continue;
+
+            var lineData = new LineData { Action = action, BeginTime = ts, LineNumber = total };
+            if (action.IndexOf('[') is var index and > -1 && action.Length > (index + 28) &&
+                action[index + 25] == ']' && char.IsDigit(action[index + 24]))
+            {
+                lineData.Action = action[..index];
+            }
+
+            if (!PreLineParser.NeedProcessing(lineData,
+                    (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time),
+                    PlayerRegistry.IsPossiblePlayerName, PlayerRegistry.Instance.AddMerc))
+            {
+                continue;
+            }
+            gated++;
+
+            if (stage == "pre") continue;
+
+            // The same chain LogProcessor runs, one line at a time. `split` stops after the tokenization that
+            // LogProcessor does for every line that passes the gate, so the allocation cost of Split(' ') is a number
+            // of its own rather than a suspicion inside the parsers' total.
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+            lineData.Split = lineData.Action.Split(' ');
+            splitBytes += GC.GetAllocatedBytesForCurrentThread() - allocated;
+            if (stage == "split") { splitOnly++; continue; }
+
+            // `damage` and `damageheal` stop the chain early, so the 8 s inside the parsers can be attributed to a
+            // parser instead of blamed on "parsing".
+            DamageLineParser.Process(lineData);
+            if (stage == "damage") { parsed++; continue; }
+            if (!HealingLineParser.Process(lineData))
+            {
+                if (stage == "damageheal") { parsed++; continue; }
+                if (!MiscLineParser.Process(lineData)) CastLineParser.Process(lineData);
+            }
+            parsed++;
+        }
+
+        sw.Stop();
+        Console.WriteLine($"[ladder] stage={stage} file={Path.GetFileName(path)} ms={sw.ElapsedMilliseconds:N0} " +
+                          $"lines={total:N0} skipped={skipped:N0} chat={chat:N0} pastGate={gated:N0} parsed={parsed:N0}");
+        Console.WriteLine($"[ladder]   split(' ') allocated={splitBytes / (1024 * 1024):N0} MB over {(stage == "split" ? total : parsed):N0} lines; " +
+                          $"whole run allocated={(GC.GetTotalAllocatedBytes(true) - allocatedBefore) / (1024 * 1024):N0} MB, " +
+                          $"gen0={GC.CollectionCount(0) - gen0Before}, gen1={GC.CollectionCount(1)}, gen2={GC.CollectionCount(2)}");
+        foreach (var kv in composition.OrderByDescending(static k => k.Value).Take(12))
+            Console.WriteLine($"[ladder]   {kv.Key}: {kv.Value:N0}");
+        return stage is "floor" or "chat" or "pre" or "split" or "damage" or "damageheal" or "parsers";
+    }
+
+    // What kind of line this is, for the composition print: the parser that will be asked first plus the second word
+    // (the first token alone lumps 94 % of a raid log into one bucket, which told us nothing).
+    private static string LineShape(string line)
+    {
+        if (line.Length <= 28) return "short";
+        var action = line[27..];
+        var words = action.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 2) return words.Length == 0 ? "empty" : $"{words[0]}<eol>";
+        return $"{words[0]} {words[1]}";
     }
 
     private sealed class MirrorChatSink : IChatSink
