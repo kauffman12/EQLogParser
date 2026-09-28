@@ -8,9 +8,10 @@ namespace EQLogParser;
  * rebuilds them as DamageRecord objects inside Fight.DamageBlocks.
  *
  * What these tests hold:
- *   - the index holds ONLY damage dealt TO the row's owner (that is what legacy puts in DamageBlocks;
- *     a mob hitting a raider belongs to the tanking side, and mixing them would credit a boss with its
- *     own damage output);
+ *   - the index splits each row's facts by direction: damage dealt TO the row's owner lands on the damage
+ *     side (that is what legacy puts in DamageBlocks) and everything else on the tanking side, and NO fact is
+ *     on both — a boss must never be credited with its own damage output, and a selected set of rows must
+ *     neither lose the hits its raiders took nor count one twice;
  *   - materialized records are their facts, field for field — nothing re-spelled, nothing re-timed;
  *   - blocks are maximal runs of one second, which is FightManager.AddAction's grouping rule, because the
  *     builder merges same-BeginTime blocks across fights and a split run would double-count an instant;
@@ -56,6 +57,9 @@ public class MirrorSummaryFightsTest
 
     private static List<DamageRecord> Records(Fight fight)
         => fight.DamageBlocks.SelectMany(b => b.Actions).Cast<DamageRecord>().ToList();
+
+    private static List<DamageRecord> TankRecords(Fight fight)
+        => fight.TankingBlocks.SelectMany(b => b.Actions).Cast<DamageRecord>().ToList();
 
     // ---- what the index is allowed to hold ----
 
@@ -264,11 +268,13 @@ public class MirrorSummaryFightsTest
     // ---- selection ----
 
     [TestMethod]
-    public void ARowNothingIsAimedAtIsCountedNotSilentlyDropped()
+    public void ARowNothingIsAimedAtStillFeedsTheTankingBoard()
     {
         // A classified mob hitting a classified raider: the row exists (that is the mirror's identity-aware
-        // list doing its job) and every fact in it points the other way, so a damage summary over it has
-        // nothing to show. The count is what stops the grid from looking like it ignored the click.
+        // list doing its job) and every fact in it points the other way, so a DAMAGE summary over it has nothing
+        // to show. Skipping the row outright — which is what this used to do — deleted the damage those players
+        // took from the tanking board too, and narrowed AllRanges while it was at it. Legacy hands its own
+        // hit-only rows to both builders; so does this.
         var facts = BuildFacts(("Echohead", "Illuminai", 100, 0, LabelTypes.Melee));
 
         var timeline = new EntityTimeline();
@@ -277,13 +283,178 @@ public class MirrorSummaryFightsTest
 
         var (rows, index, table) = Derive(facts, timeline);
         Assert.AreEqual(1, rows.Count);
-        Assert.IsFalse(index.HasDamage(rows[0]));
+        Assert.IsFalse(index.HasDamage(rows[0]), "nothing was aimed AT this row");
+        Assert.IsTrue(index.HasTanking(rows[0]), "and yet this row is where the damage taken lives");
 
         var input = MirrorSummaryFights.Build(rows, index, table);
 
-        Assert.AreEqual(0, input.Fights.Count);
-        Assert.AreEqual(1, input.WithoutDamage);
-        Assert.AreEqual(0, input.AllRanges.TimeSegments.Count);
+        Assert.AreEqual(1, input.Fights.Count, "a hit-only row still reaches the boards");
+        Assert.AreEqual(0, input.WithoutDamage);
+        Assert.AreEqual(0, input.Fights[0].DamageBlocks.Count, "but it contributes no damage-dealt records");
+
+        var taken = TankRecords(input.Fights[0]);
+        Assert.AreEqual(1, taken.Count);
+        Assert.AreEqual("Echohead", taken[0].Attacker);
+        Assert.AreEqual("Illuminai", taken[0].Defender, "the raider who took it, which is what the board rolls up by");
+        Assert.AreEqual(100L, input.Fights[0].TankTotal);
+        Assert.AreEqual(1L, input.Fights[0].TankHits);
+        Assert.AreEqual(T0, input.Fights[0].BeginTankingTime, "the builder takes its raid window from these bounds");
+        Assert.AreEqual(T0, input.Fights[0].LastTankingTime);
+        CollectionAssert.AreEqual(new List<double> { T0, T0 }, input.AllRanges.TimeSegments.Select(s => new List<double> { s.BeginTime, s.EndTime }).First());
+    }
+
+    [TestMethod]
+    public void EveryFactOfARowLandsOnExactlyOneOfItsTwoBoards()
+    {
+        // The partition law, and the reason one selection can feed two boards without double counting:
+        // FightProjection gives each fact one row AND one direction, OnFact files it in exactly one list.
+        var facts = BuildFacts(
+            ("Illuminai", "Echohead", 500, 0, LabelTypes.Melee),
+            ("Echohead", "Illuminai", 120, 1, LabelTypes.Melee),
+            ("Echohead", "Kilsa", 80, 2, LabelTypes.Dot),
+            ("Kilsa", "Echohead", 60, 3, LabelTypes.Dd));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Kilsa", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var echo = Row(rows, "Echohead");
+
+        CollectionAssert.AreEqual(
+            index.DamageOrdinalsFor(echo).Concat(index.TankingOrdinalsFor(echo)).OrderBy(x => x).ToList(),
+            index.DamageOrdinalsFor(echo).Union(index.TankingOrdinalsFor(echo)).OrderBy(x => x).ToList(),
+            "no ordinal sits on both sides of its row");
+
+        var input = MirrorSummaryFights.Build(rows, index, table);
+        var built = input.Fights.Single();
+
+        Assert.AreEqual(4, Records(built).Count + TankRecords(built).Count,
+            "the row's materialized records are its facts: nothing dropped, nothing counted twice");
+        Assert.AreEqual(2, Records(built).Count);
+        Assert.AreEqual(2, TankRecords(built).Count);
+        Assert.AreEqual(index.DamageFactCount + index.TankingFactCount,
+            input.Fights.Sum(f => f.DamageBlocks.Sum(b => b.Actions.Count) + f.TankingBlocks.Sum(b => b.Actions.Count)),
+            "across a whole selection: one materialized record per captured fact");
+    }
+
+    /*
+     * The cross-engine check for damage taken, over a real-shaped log rather than synthetic facts.
+     *
+     * The comparison is per RAIDER over each engine's own block input, and the reason why is worth writing down:
+     * a mob hitting Rune does not open a row named Rune in legacy either. FightManager.Get keys a row with
+     * `defender ? record.Defender : record.Attacker`, and the combo flag for a monster swinging at a raider comes
+     * out false, so the row is the MONSTER's — on this fixture legacy makes exactly one row, "an ice giant priest",
+     * and its own
+     * TankTotal (834) is what that mob dealt, not what anybody took. `Fight.TankTotal`/`PlayerTankTotals` only
+     * fill in for a defender when the row's name IS the defender, which is why the legacy tank board never reads
+     * them: TankingStatsBuilder groups records by record.Defender and re-sums. So that is the comparison here —
+     * legacy's records grouped by defender against the derived blocks, raider by raider — plus a pinned assertion
+     * of the row-level difference, so if anyone ever "fixes" one side to look like the other this test notices.
+     */
+    [TestMethod]
+    public void DamageTakenMatchesTheLegacyBoardForEveryRaider()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "tank-fight.txt");
+        Assert.IsTrue(File.Exists(path), $"missing fixture: {path}");
+
+        var run = PipelineHarness.RunFileWithMirror(path);
+
+        ClassificationRules.Apply(run.Facts, run.Timeline);
+        var index = new MirrorDamageIndex();
+        var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
+        Sectionizer.StampGroupIds(rows);
+
+        var input = MirrorSummaryFights.Build(rows, index, run.Facts);
+        Assert.IsTrue(input.Fights.Any(static f => f.TankingBlocks.Count > 0),
+            "the fixture produced no damage taken at all — this test would prove nothing");
+        Assert.IsTrue(rows.All(static r => r.Name != "Rune"),
+            "a raider who only got hit must not become a fight row; her damage belongs to the encounter");
+
+        // The fixture's own truth, in numbers rather than engine terms: 234 + 88 onto Rune (the miss line writes
+        // no record in either engine), 512 onto Kilsa, and the priest took 300 + 210.
+        var fromBlocks = input.Fights.SelectMany(static f => f.TankingBlocks)
+          .SelectMany(static b => b.Actions).Cast<DamageRecord>()
+          .GroupBy(static r => r.Defender)
+          .ToDictionary(static g => g.Key, static g => g.Sum(static r => (long)r.Total));
+
+        var fromLegacy = run.Fights.SelectMany(f => TankRecords(f))
+          .GroupBy(static r => r.Defender)
+          .ToDictionary(static g => g.Key, static g => g.Sum(static r => (long)r.Total));
+
+        Assert.AreEqual(fromLegacy["Rune"], fromBlocks["Rune"], "Rune's damage taken disagrees between the two engines");
+        Assert.AreEqual(fromLegacy["Kilsa"], fromBlocks["Kilsa"], "Kilsa's damage taken disagrees between the two engines");
+        Assert.AreEqual(fromLegacy.Values.Sum(static v => v), fromBlocks.Values.Sum(), "the raid-wide total disagrees");
+        Assert.AreEqual(322L, fromBlocks["Rune"]);
+        Assert.AreEqual(512L, fromBlocks["Kilsa"]);
+
+        // The row-level difference, pinned rather than smoothed over.
+        Assert.AreEqual(0L, run.Fights.Where(f => f.Name == "Rune").Sum(f => f.TankTotal),
+            "legacy has no raider row for a mob's victim; if it ever grows one, re-read this test");
+        Assert.AreEqual(834L, run.Fights.Sum(static f => f.TankTotal),
+            "and legacy's only row counts the mob's own swings as its 'tank' total");
+
+        var priest = Row(rows, "An ice giant priest");
+        Assert.AreEqual(510L, priest.DamageToOwner, "the same row still carries what the raid did to it");
+        Assert.AreEqual(834L, priest.DamageByOwner, "and what it did to the raid: the projection's own split");
+    }
+
+    [TestMethod]
+    public void DamageTakenGivesEachRaiderTheirOwnActivityWindow()
+    {
+        /*
+         * TankSegments/TankSubSegments are the tank board's denominator: TankingStatsBuilder feeds them to
+         * StatsUtil.UpdateRaidTimeRanges and each player's SDPS divides by THEIR window, not the raid's. An
+         * empty dictionary here does not fail loudly — every raider reads the raid-wide seconds and looks fine.
+         * So this asserts names and bounds, and asserts them non-empty.
+         */
+        var facts = BuildFacts(
+            ("Echohead", "Illuminai", 100, 5, LabelTypes.Melee),
+            ("Echohead", "Illuminai", 100, 9, LabelTypes.Melee),
+            ("Echohead", "Kilsa", 50, 20, LabelTypes.Melee));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Kilsa", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var built = MirrorSummaryFights.Build(rows, index, table).Fights.Single();
+
+        Assert.AreEqual(2, built.TankSegments.Count, "one entry per raider who was hit");
+        Assert.IsTrue(built.TankSegments.ContainsKey("Illuminai"));
+        Assert.IsTrue(built.TankSegments.ContainsKey("Kilsa"));
+        Assert.AreEqual(T0 + 5, built.TankSegments["Illuminai"].BeginTime,
+            "Illuminai's window starts at the first hit she took, not at the fight's start");
+        Assert.AreEqual(T0 + 9, built.TankSegments["Illuminai"].EndTime);
+        Assert.AreEqual(T0 + 20, built.TankSegments["Kilsa"].BeginTime);
+        Assert.IsTrue(built.TankSubSegments.Count > 0, "and the per-spell sub-windows the breakdown reads");
+        Assert.IsFalse(built.DamageSegments.ContainsKey("Echohead"),
+            "being hit is not activity for the damage board's denominators");
+    }
+
+    [TestMethod]
+    public void EveryOutcomeTakenCountsAsAHitEvenWithNoDamage()
+    {
+        // FightManager's tank branch increments TankHits/TankTotal unconditionally, while its damage branch
+        // counts only IsHitType records. A resisted or zero-total outcome therefore counts as a hit a player
+        // took, and the derived side has to be just as lopsided or the # Hits column disagrees for no reason.
+        var facts = BuildFacts(
+            ("Echohead", "Illuminai", 0, 1, LabelTypes.Rs),
+            ("Echohead", "Illuminai", 120, 1, LabelTypes.Melee));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var built = MirrorSummaryFights.Build(rows, index, table).Fights.Single();
+
+        Assert.AreEqual(2L, built.TankHits, "a zero-total outcome is still a swing that found somebody");
+        Assert.AreEqual(120L, built.TankTotal);
+        Assert.AreEqual(2, built.TankingBlocks[0].Actions.Count,
+            "both outcomes share one second-run block, the same grouping rule the damage side uses");
     }
 
     [TestMethod]
@@ -411,14 +582,38 @@ public class MirrorSummaryFightsTest
                 .Sum(o => (long)run.Facts.Facts[o].Total);
             Assert.AreEqual(fight.DamageToOwner, fromFacts, $"{fight.Name}: index and row disagree");
 
-            if (!index.HasDamage(fight)) continue;
+            if (!index.HasDamage(fight) && !index.HasTanking(fight)) continue;
 
             var summary = index.SummaryFightFor(fight, run.Facts);
             Assert.AreEqual(fight.DamageToOwner, summary.DamageTotal, $"{fight.Name}: blocks and row disagree");
-            Assert.IsTrue(summary.DamageBlocks.Count > 0, $"{fight.Name}: no damage blocks for a selectable row");
-            Assert.IsTrue(Records(summary).All(r => r.Defender == fight.Name), $"{fight.Name}: a block holds something aimed elsewhere");
-            Assert.IsTrue(summary.DamageSegments.Keys.All(k => Records(summary).Any(r => r.Attacker == k)),
-                $"{fight.Name}: an activity window for someone who never swung at it");
+            if (index.HasDamage(fight))
+            {
+                Assert.IsTrue(summary.DamageBlocks.Count > 0, $"{fight.Name}: no damage blocks for a selectable row");
+                Assert.IsTrue(Records(summary).All(r => r.Defender == fight.Name), $"{fight.Name}: a block holds something aimed elsewhere");
+                Assert.IsTrue(summary.DamageSegments.Keys.All(k => Records(summary).Any(r => r.Attacker == k)),
+                    $"{fight.Name}: an activity window for someone who never swung at it");
+            }
+            else
+            {
+                Assert.AreEqual(0, summary.DamageBlocks.Count, $"{fight.Name}: nothing aimed at it, yet it carries damage");
+            }
+
+            /*
+             * The tanking half of the same row. Held against the FACTS rather than against DerivedFight.TankTotal:
+             * FightProjection sums both directions into DamageTotal and splits them into DamageToOwner /
+             * DamageByOwner, and it does not fill TankTotal/TankHits/TankRollup at all (those belong to the older
+             * FightDeriver pass, which the app never runs) — so comparing a materialized tank total to the row's
+             * TankTotal would compare a real number to a zero that nothing writes, and pass on any log with no
+             * damage taken in it. Which is exactly how this test stayed green before the tanking side existed.
+             */
+            var takenFromFacts = index.TankingOrdinalsFor(fight).Sum(o => (long)run.Facts.Facts[o].Total);
+            Assert.AreEqual(takenFromFacts, summary.TankTotal, $"{fight.Name}: tank blocks and facts disagree");
+            Assert.AreEqual(index.TankingOrdinalsFor(fight).Count, TankRecords(summary).Count,
+                $"{fight.Name}: every fact aimed away from the row must reach a block");
+            Assert.IsTrue(TankRecords(summary).All(r => r.Attacker == fight.Name),
+                $"{fight.Name}: a tanking block holds somebody else's swing");
+            Assert.IsTrue(summary.TankSegments.Keys.All(k => TankRecords(summary).Any(r => r.Defender == k)),
+                $"{fight.Name}: a damage-taken window for someone who was never hit by it");
         }
     }
 

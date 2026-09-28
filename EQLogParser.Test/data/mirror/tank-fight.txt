@@ -1,0 +1,10 @@
+[Sun Apr 26 18:41:00 2026] Rune joined the raid.
+[Sun Apr 26 18:41:00 2026] Kilsa joined the raid.
+[Sun Apr 26 18:41:01 2026] Chiefoc is now the leader of your raid.
+[Sun Apr 26 18:41:02 2026] Rune slashes an ice giant priest for 300 points of damage.
+[Sun Apr 26 18:41:03 2026] An ice giant priest slashes Rune for 234 points of damage.
+[Sun Apr 26 18:41:04 2026] Kilsa slams an ice giant priest for 210 points of damage.
+[Sun Apr 26 18:41:05 2026] An ice giant priest backstabs Kilsa for 512 points of damage. (Critical)
+[Sun Apr 26 18:41:06 2026] An ice giant priest misses Rune.
+[Sun Apr 26 18:41:07 2026] An ice giant priest kicks Rune for 88 points of damage.
+[Sun Apr 26 18:41:12 2026] An ice giant priest falls to the ground, dead.

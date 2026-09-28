@@ -181,6 +181,40 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   reproduced row needs. This is the `HitRecord` rule applied one layer down: a field belongs to the type whose lines can write it.
   Numbers and the refused heal shapes (10,194 pet self-heals / 2,688 pet-healed-passive / 120 HoT = 2.9 % of heal-action lines, all
   healer-less or self-directed): docs/DesignNotes.md → "The byte that filters live in", "Healing joins the capture".
+- **Damage taken is a second ordinal set on the index, never extra columns on the damage one**: `MirrorDamageIndex`
+  keeps `_damageOrdinals` (facts aimed AT the row's owner) and `_tankingOrdinals` (facts that owner dealt), routed by
+  the flag from the single `ownerSink?.Invoke(fact, ordinal, row, key == defName)` call in `FightProjection` — the
+  same expression that splits `DamageToOwner` from `DamageByOwner`, which is what keeps a materialized block sum
+  unable to drift from the row it belongs to. A derived row then carries both sides on one `Fight`:
+  `DamageBlocks` / `DamageSegments` and `TankingBlocks` / `TankSegments` (+ `Begin/LastTankingTime`, `TankHits`,
+  `TankTotal`), because the two boards key a row differently: raid-on-mob facts are away-facing, a player being
+  beaten on is toward-facing. `PlayerDamageTotals`/`PlayerTankTotals` stay empty — only
+  `DamageOverlayStatsBuilder` reads those, and it is not fed from this path yet. Three laws, all pinned by
+  `MirrorSummaryFightsTest`. (1) **A row with no incoming damage still gets an empty tanking section** so the board
+  lists every row it lists; the group id comes from `Sectionizer` and rides the row, so one walk stamps both sides
+  of a mixed selection. (2) **An outcome taken with no number is still an outcome**: `TankHits` counts
+  unconditionally, like `FightManager`'s — assert the hit COUNT for zero-total shapes, never `> 0` on the total,
+  because zero passes every magnitude test (that is how half of R9's friendly-fire exemption nearly shipped).
+  (3) **Every fact of a row lands on exactly one of its two boards**, and a tank block's `Attacker` is always the
+  row's own name — that is why `+Pets` folds a pet's output on either board.
+- **Two numbers here are traps, both measured on `data/mirror/tank-fight.txt`.** (a) `FightProjection` sums BOTH
+  directions into `DerivedFight.DamageTotal` and splits them into `DamageToOwner` / `DamageByOwner`; it never fills
+  `TankTotal`/`TankHits`/`TankRollup` on the *derived* row (those belong to `FightDeriver`, whose legacy-keyed list
+  is retired from display and lives on only in the parity tests). So "materialized tank total == row `TankTotal`"
+  compares a real number against a zero nothing writes, and passes on any log that happens to contain no damage
+  taken — hold materialized totals against `MirrorDamageIndex.TankingOrdinalsFor` instead. That is exactly how the
+  real-log test stayed green before the tanking side existed. (b) Legacy does not hand a mob's victim her own row:
+  `FightManager.Get` keys on `defender ? record.Defender : record.Attacker`, so on this fixture legacy produces one
+  row, "an ice giant priest", whose `TankTotal` (834 = the mob's own three swings) is damage dealt, not taken, and
+  `PlayerTankTotals` stays empty for Rune. Which is why `TankingStatsBuilder` groups by `record.Defender`
+  (`StatsUtil.CreatePlayerStats(individualStats, record.Defender)`) rather than reading either rollup, and why the
+  derived-vs-legacy check is per raider over each engine's own block input — both read Rune 322 / Kilsa 512, with
+  the row-level difference asserted rather than smoothed over. Related: `FightManager` answers a spell line naming a
+  defender by re-deciding it (`record.AttackerIsSpell && defender` → `!IsPetOrPlayerOrMerc(record.Defender)`,
+  line ~255), which is the one non-melee shape that reaches the tanking side at all. And **the attempt columns are
+  still legacy-only**: `# Attempts` binds `MeleeAttempts`, filled from `Attempt` counters in `StatsUtil`, and the
+  mirror captures no swing outcomes — a derived tank row's `TankHits` is hits *taken*, not attempts, so `% Hit`,
+  `% Rampage`, `% Fumble` and friends stay empty until misses are captured at ingest.
 - **Identity rules read a closed vocabulary and never reason from their own guesses**: the four rules added after reading six
   captures (2022-2026) cold are pinned by `MirrorRuleExtensionsTest`, and each has a shape that looked safe until it was measured.
   **R5 ownership is five words, in one list** — `OwnerSuffixes` = `` `s pet``, `` `s warder``, `` `s ward``, `` `s familiar``,
