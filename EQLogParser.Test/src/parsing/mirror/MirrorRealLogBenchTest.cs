@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 using EQLogParser.Mirror;
 
@@ -37,6 +38,14 @@ public class MirrorRealLogBenchTest
             ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
         }
 
+        /*
+         * `EQLP_MIRROR_BENCH_TAP=off` runs the SAME ingest with the fact capture not subscribed, which is the only way
+         * to answer "does the new table cost more to load than the one it replaces" — the number has to come from one
+         * build, one machine, one file, with the tap as the only difference. Run both modes as separate processes: a
+         * second pass in the same process pays for the heap the first one filled, and that would be blamed on the tap.
+         */
+        var tapOff = Environment.GetEnvironmentVariable("EQLP_MIRROR_BENCH_TAP") == "off";
+
         DamageLineParser.ResetProcessState();
         PlayerRegistry.Instance.Clear();
 
@@ -54,7 +63,7 @@ public class MirrorRealLogBenchTest
 
         var facts = new DamageFactTable(100_000);
         var mirror = new CombatMirror(facts);
-        mirror.Start();
+        if (!tapOff) mirror.Start();
 
         var totalSw = Stopwatch.StartNew();
         try
@@ -65,7 +74,7 @@ public class MirrorRealLogBenchTest
             var ingestSw = Stopwatch.StartNew();
             using (var items = new System.Collections.Concurrent.BlockingCollection<LogReaderItem>(
                        new System.Collections.Concurrent.ConcurrentQueue<LogReaderItem>(), 100_000))
-            using (var processor = new LogProcessor(path, new MirrorChatSink(mirror), new NoOpHook()))
+            using (var processor = new LogProcessor(path, tapOff ? new NoOpChat() : (IChatSink)new MirrorChatSink(mirror), new NoOpHook()))
             {
                 processor.LinkTo(items);
 
@@ -117,8 +126,20 @@ public class MirrorRealLogBenchTest
             Console.WriteLine($"[bench] ingest: {ingestSw.ElapsedMilliseconds:N0} ms  captured={captured:N0} " +
                               $"(damage={facts.FactCount:N0} death={facts.DeathCount:N0} taunt={facts.TauntCount:N0} " +
                               $"identity={facts.IdentityEventCount:N0} evidence={facts.EvidenceCount:N0})");
+            Console.WriteLine($"[bench] heap after ingest={(GC.GetTotalMemory(forceFullCollection: true) / (1024 * 1024)):N0} MB, "
+                              + $"damage facts alone={(long)facts.FactCount * Unsafe.SizeOf<DamageFact>() / (1024 * 1024):N0} MB"
+                              + (tapOff ? "  [TAP OFF: this is what the legacy pipeline costs to load]" : ""));
 
             mirror.Stop();
+
+            // The phases below are what the derived fight list adds between "file read" and "list on screen".
+            if (tapOff)
+            {
+                totalSw.Stop();
+                Console.WriteLine($"[bench] TOTAL wall={totalSw.ElapsedMilliseconds:N0} ms (tap off)");
+                return;
+            }
+
 
             var timeline = new EntityTimeline();
 
@@ -141,6 +162,7 @@ public class MirrorRealLogBenchTest
             totalSw.Stop();
             Console.WriteLine($"[bench] seed={seedSw.ElapsedMilliseconds:N0} ms  classify={classSw.ElapsedMilliseconds:N0} ms  " +
                               $"derive={deriveSw.ElapsedMilliseconds:N0} ms  fights={derived.Count:N0}  legacy-fights={legacyFights:N0}");
+            Console.WriteLine($"[bench] heap after classify+derive={(GC.GetTotalMemory(forceFullCollection: true) / (1024 * 1024)):N0} MB");
             Console.WriteLine($"[bench] TOTAL wall={totalSw.ElapsedMilliseconds:N0} ms");
         }
         finally
@@ -252,6 +274,13 @@ public class MirrorRealLogBenchTest
         public MirrorChatSink(CombatMirror mirror) => _mirror = mirror;
         public void Init() { }
         public void Add(ChatType chat) => _mirror.HandleChat(chat);
+    }
+
+    // Used by the tap-off baseline: the parser must not see the mirror on either channel.
+    private sealed class NoOpChat : IChatSink
+    {
+        public void Init() { }
+        public void Add(ChatType chat) { }
     }
 
     private sealed class NoOpHook : ITriggerHook

@@ -241,16 +241,25 @@ public class MirrorRealLogBoardsTest
                           + $"legacyFights={run.Fights.Count} derivedRows={run.DerivedFights.Count} "
                           + $"damageFacts={run.Facts.Facts.Length:N0} healFacts={run.HealFacts.HealCount:N0}");
 
+        /*
+         * Timed in the order a user feels them: classify+project is the wait before the fight list can be drawn, and
+         * materialize is what the WORST click costs — select everything and build a board over an evening. The
+         * projection is what the list itself needs; materialization never runs for the list alone.
+         */
+        var step = Stopwatch.StartNew();
         var timeline = Classified(run);
         var index = new MirrorDamageIndex(timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
+        Console.WriteLine($"[boards] classify+project={step.ElapsedMilliseconds:N0} ms for {rows.Count} fight rows");
+        step.Restart();
 
         // The same thing the app does with a select-all click, hidden charm pets included.
         var selected = CharmPetRows.WithHiddenPets(rows, rows);
         var input = MirrorSummaryFights.Build(selected, index, run.Facts);
         Console.WriteLine($"[boards] projected={rows.Count} rows (pet rows hidden by the grid are added back: {selected.Count}), "
-                          + $"materialized={input.Fights.Count}, skippedForNoFacts={input.WithoutDamage}");
+                          + $"materialized={input.Fights.Count}, skippedForNoFacts={input.WithoutDamage}, "
+                          + $"materialize={step.ElapsedMilliseconds:N0} ms");
 
         Assert.IsTrue(run.Fights.Count > 0, "legacy produced no fights from this log");
         Assert.IsTrue(rows.Count > 0, "the projection produced no rows from this capture");
