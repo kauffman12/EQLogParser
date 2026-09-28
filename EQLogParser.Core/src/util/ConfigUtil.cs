@@ -24,6 +24,7 @@ namespace EQLogParser
     // Same shape as petmapping.txt - name=Kind - and the same folder, because it is the same kind of claim:
     // something the operator knows that the log does not say.
     private const string MirrorOverrideFile = "mirror-overrides.txt";
+    private const string IdentityPriorFile = "identity-priors.txt";
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
@@ -176,6 +177,30 @@ namespace EQLogParser
       // where a backslash is a filename character, and the mirror's rule tests run there.
       LoadProperties(overrides, ReadList(Path.Combine(ConfigDir, serverName, MirrorOverrideFile)));
       return overrides;
+    }
+
+    /*
+     * The cross-log sighting ledger (identity-priors.txt): what a PREVIOUS capture's rules concluded about a name,
+     * with the rule code that concluded it and how many captures agreed. Per server like every other identity file -
+     * "this name is an NPC" is a claim about One's Everfrost, not about eqmc - and read with the same tolerance: a
+     * malformed line is skipped, never guessed at, so a hand-edited file cannot invent a verdict.
+     */
+    internal static Dictionary<string, string> ReadIdentityPriors(string serverName)
+    {
+      var priors = new Dictionary<string, string>();
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir)) return priors;
+
+      LoadProperties(priors, ReadList(Path.Combine(ConfigDir, serverName, IdentityPriorFile)));
+      return priors;
+    }
+
+    internal static void SaveIdentityPriors(List<KeyValuePair<string, string>> list, string serverName)
+    {
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir)) return;
+
+      var priorDir = Path.Combine(ConfigDir, serverName);
+      Directory.CreateDirectory(priorDir);
+      SaveProperties(Path.Combine(priorDir, IdentityPriorFile), list);
     }
 
     // pass server name to avoid issue where it was changed before save completes

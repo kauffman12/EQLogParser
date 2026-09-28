@@ -88,6 +88,11 @@ namespace EQLogParser
         try
         {
           var sw = Stopwatch.StartNew();
+
+          // The classification this pass reached, kept out here so the sighting ledger can read it AFTER the derive
+          // instead of inside it: Record() writes a file, and nothing that writes belongs between the rules and the
+          // snapshot the grid is waiting on.
+          EntityTimeline? classified = null;
           var snapshot = _mirror.DeriveQuiescent(() =>
           {
             // Fresh timeline each pass: rules replay over the facts from scratch, so manual
@@ -105,6 +110,7 @@ namespace EQLogParser
              * re-derive it asked for. Manual strength means nothing above can outvote it, order included.
              */
             MirrorOverrideStore.Instance.Apply(timeline);
+            classified = timeline;
 
             // The index is filled DURING the projection: it needs the same direction decision the rows split
             // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler). It
@@ -129,6 +135,16 @@ namespace EQLogParser
           sw.Stop();
 
           snapshot.ElapsedMs = sw.Elapsed.TotalMilliseconds;
+
+          /*
+           * Cross-log memory (identity-priors.txt): fold what THIS capture's rules read off lines into the server's
+           * ledger, so a later log that says nothing about a name can still show what was concluded before. Display
+           * input only — ClassificationReport borrows from it where this log reached no verdict, and nothing in the
+           * derive above reads it, which is deliberate: R7 decides sides from what the timeline already knows, so
+           * yesterday's conclusion arriving as evidence would let the rules argue with their own memory.
+           */
+          IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
+                                             (long)_mirror.LastEventTime);
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.

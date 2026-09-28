@@ -57,6 +57,7 @@ public class ClassificationReportTest
     // Both stores are process singletons: load an empty override file so a verdict written here cannot answer for
     // another test class that runs afterwards.
     MirrorOverrideStore.Instance.Init("census-cleanup-" + Guid.NewGuid().ToString("N"));
+    IdentityPriorStore.Instance.Init("census-cleanup-" + Guid.NewGuid().ToString("N"));
     ConfigUtil.ConfigDir = _savedConfigDir;
     ConfigUtil.ServerName = _savedServerName;
     ConfigUtil.PlayerName = _savedPlayerName;
@@ -99,7 +100,7 @@ public class ClassificationReportTest
    * Order matters twice over - the seed is what turns a saved players.txt name into a Player before any rule has to
    * guess, and R10 has to be last because this timeline was built from nothing and the verdict must survive it.
    */
-  private static ClassificationReport Census()
+  private static ClassificationReport Census(IdentityPriorStore? priors = null)
   {
     var capture = Capture();
     var facts = capture.Facts;
@@ -108,7 +109,7 @@ public class ClassificationReportTest
     ClassificationRules.Apply(facts, timeline, capture.HealFacts);
     MirrorOverrideStore.Instance.Apply(timeline);
     return ClassificationReport.Build(timeline, facts, capture.HealFacts,
-                                      MirrorOverrideStore.Instance, PlayerRegistry.Instance);
+                                      MirrorOverrideStore.Instance, PlayerRegistry.Instance, priors);
   }
 
   // Facts are appended in arrival order, so the ends of the table are the ends of the capture (the mirror keeps the
@@ -276,6 +277,56 @@ public class ClassificationReportTest
     }
 
     Assert.IsTrue(report.Find(busiest)!.LegacySaysPlayer, "the roster never took the name it was verified with");
+  }
+
+  /*
+   * Cross-log memory, and the three ways it must NOT be allowed to speak. A prior fills a name this capture's rules
+   * could not place; it never overrides a verdict this log reached from lines; a rejection borrows nothing ("no claim"
+   * is about exactly this); and an operator verdict outranks it, since both are claims and only one came from a human.
+   */
+  [TestMethod]
+  public void ALedgerFillsSilenceAndNeverContradictsEvidence()
+  {
+    var silent = BusiestAttacker();                              // this capture cannot place it cold
+    var placed = Census().Rows.First(r => r.Kind == IdentityKind.Pet).Name;   // ...and this one from a line
+
+    var ledger = IdentityPriorStore.Instance;
+    var remembered = new EntityTimeline();
+    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity(placed, IdentityKind.Player, RuleStrength.Certain, "R1-target");
+    ledger.Record(remembered, [silent, placed], PlayerRegistry.Instance, 1_700_000_000);
+
+    var borrowed = Census(ledger).Find(silent)!;
+    Assert.AreEqual(IdentityKind.Npc, borrowed.Kind, "the ledger did not fill the gap");
+    Assert.IsTrue(borrowed.IsPrior, "a remembered verdict was shown as this capture's own");
+    Assert.AreEqual("Prior:R6-npcdb", borrowed.Reason);
+    Assert.AreEqual(1, borrowed.PriorSightings);
+
+    var itsOwn = Census(ledger).Find(placed)!;
+    Assert.AreEqual(IdentityKind.Pet, itsOwn.Kind, "yesterday's answer outvoted a line read today");
+    Assert.IsFalse(itsOwn.IsPrior);
+
+    // A rejection is the operator speaking about this exact situation: no memory fills it in.
+    PlayerRegistry.Instance.RemoveVerifiedPlayer(silent);
+    var rejected = Census(ledger).Find(silent)!;
+    Assert.AreEqual(IdentityKind.Unknown, rejected.Kind, "a rejected name came back wearing the ledger");
+    Assert.IsFalse(rejected.IsPrior);
+  }
+
+  [TestMethod]
+  public void AnOperatorVerdictOutranksTheLedger()
+  {
+    var ledger = IdentityPriorStore.Instance;
+    var remembered = new EntityTimeline();
+    remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    ledger.Record(remembered, ["Zzquietname"], PlayerRegistry.Instance, 1_700_000_000);
+
+    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Zzquietname", IdentityKind.Merc);
+
+    var row = Census(ledger).Find("Zzquietname")!;
+    Assert.AreEqual(IdentityKind.Merc, row.Kind);
+    Assert.IsTrue(row.IsOperatorVerdict);
+    Assert.IsFalse(row.IsPrior, "a row the operator owns was attributed to last season");
   }
 
   [TestMethod]

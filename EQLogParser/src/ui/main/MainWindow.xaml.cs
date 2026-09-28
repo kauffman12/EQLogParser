@@ -1343,6 +1343,10 @@ namespace EQLogParser
               // R10: the operator's own verdicts on names are per server too (mirror-overrides.txt), and they
               // have to be loaded before the mirror's first derive or the rules answer alone.
               MirrorOverrideStore.Instance.Init(server);
+
+              // Same per-server reasoning for the sighting ledger (identity-priors.txt): what older logs on THIS
+              // server concluded, kept for names a later capture has no evidence about.
+              IdentityPriorStore.Instance.Init(server);
               MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
                 PlayerRegistry.Instance.GetVerifiedPets());
               MainActions.LoadPetOwners(petMappingWindow, PlayerRegistry.Instance.GetPetMappings());

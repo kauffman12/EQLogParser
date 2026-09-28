@@ -3721,3 +3721,40 @@ database can settle from lines alone — `X`s pet` → Pet (R5), a name in `npcs
 to read Unknown. A census test that demanded Player verdicts from a cold run would only be testing the seed. Command
 tests park `ConfigUtil.ConfigDir` in a temp folder, re-`Init` the store to prove a verdict reached disk, and leave both
 singletons empty on the way out (`AGENTS`: no parallelization, this is process state).
+
+## The sighting ledger: what this server's older logs concluded (2026-08-12)
+
+Asked whether the classifier's data should be serialized and built up across log files. Splitting the question was the
+whole answer, because two different things hide inside it. **Verdicts are already persisted** where a person said them:
+`mirror-overrides.txt` (Manual strength), `players.txt` (membership + rejections), `petmapping.txt`, npcs.db — all read in
+by R10/RegistrySeed on every open. What was NOT kept is the rules' own conclusions, and persisting those would create a
+truth with no line evidence behind it while making the census's *why* column lie. Concretely: R7 builds sides out of what
+the timeline already knows (`kinds[]` over every defender edge), so yesterday's conclusion arriving as input lets the
+rules argue with their own memory until it looks corroborated — the same failure mode this file already documents for
+players.txt (ClassificationRules.cs:330-337, ~45 min poisoned on names-as-"people"). So the ledger is a **display
+fallback and nothing else**: `ClassificationReport.Build(..., priors)` borrows a verdict only where THIS log's rules said
+nothing, and `FightProjection`/the board never see the file. Graduating it into the derive is possible but has to arrive
+with mirror-vs-legacy parity tests, not as a convenience.
+
+Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
+
+- **Only what a rule read off a line is recorded**, with the rule code stored beside it (`R6-npcdb`, `R5-owner:X`).
+  Manual, `RegistrySeed`/`You` and this file's own reasons are filtered out at write time (`FromLineEvidence`) — an input
+  must not become a statistic about itself. Operator rejections are skipped outright: "no claim" outranks memory.
+- **Agreement is idempotent per capture.** The mirror re-derives whenever a filter or override changes, so sighting time
+  is the LOG's last event (not the clock) and the counter advances only on a strictly newer capture — five derives of one
+  evening report one sighting, not five.
+- **A changed verdict restarts the count**, so nothing advertises forty confirmations of a belief held for one.
+- **It expires** against the newest entry (90 days) plus a 25k cap, keeping the most recently seen — using the newest
+  entry rather than `DateTimeOffset.UtcNow` means replaying last season's backups does not nuke the ledger.
+
+Census rows carry `IsPrior` with `Reason = "Prior:<code>"`, `PriorSightings`, `PriorSeenAtS`; an operator verdict beats a
+prior, a line read in this capture beats it, and a rejected name borrows nothing (`ALedgerFillsSilenceAndNeverContradictsEvidence`,
+`AnOperatorVerdictOutranksTheLedger`). Storage is `<ConfigDir>/<server>/identity-priors.txt` as
+`Name=Kind|Reason|SeenAtS|Sightings`; `LoadProperties` splits on `=` and needs exactly two parts, so recorded reasons are
+written with any `=` stripped, and a line that does not parse is dropped rather than repaired (`MalformedLinesAreDroppedNotRepaired`).
+
+**Correction recorded honestly**: two commit messages (3d19b15a, a64042a3) describe a census count of "names with no claim
+at all" (`UnresolvedInCapture`, `Row.IsUnresolved`, `ClassificationCommands.SetUnresolved`). That code is NOT in the tree —
+`grep -rn Unresolved` returns nothing in either source or tests; it was lost when ClassificationReport.cs was rewritten from
+a stale buffer. It is a ~20-line addition with three tests, deliberately not re-added silently here.

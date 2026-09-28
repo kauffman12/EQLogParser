@@ -62,6 +62,17 @@ namespace EQLogParser.Mirror
       /// <summary>True when the name appears in neither fact stream — an operator/roster-only row.</summary>
       public bool HasFacts { get; init; }
 
+      /*
+       * The verdict came from THIS server's earlier logs, not from this capture. Set only where this log's own rules
+       * reached no conclusion and nobody has overridden the name: a prior never competes with evidence, it fills the
+       * silence, and the UI has to be able to say so (reason reads "Prior:R6-npcdb" with the count and date beside it).
+       */
+      public bool IsPrior { get; init; }
+
+      /// <summary>How many captures agreed on the remembered verdict, and the log time of the newest one.</summary>
+      public int PriorSightings { get; init; }
+      public long PriorSeenAtS { get; init; }
+
       /// <summary>Sum of this name's damage facts (its own hits; a defender gets no credit for being hit).</summary>
       public double Damage { get; init; }
 
@@ -132,9 +143,15 @@ namespace EQLogParser.Mirror
      * fact capture the passes are tens of milliseconds; the per-name work is ~6,000 IdentityWithSource calls against
      * lists of one or two claims. Nothing here re-parses or re-derives.
      */
+    /*
+     * `priors` is optional and only ever FILLS A GAP: a name this capture's rules could not place may borrow what an
+     * earlier capture on the same server concluded (IdentityPriorStore). That is the whole extent of cross-log memory
+     * in this build — fight rows and every other consumer still see a timeline derived from this file alone, because R7
+     * builds sides out of what the timeline knows and yesterday's guess must not become today's evidence.
+     */
     public static ClassificationReport Build(EntityTimeline? timeline, DamageFactTable? damageFacts,
                                              HealFactTable? healFacts, MirrorOverrideStore? overrides,
-                                             PlayerRegistry? registry)
+                                             PlayerRegistry? registry, IdentityPriorStore? priors = null)
     {
       var names = damageFacts?.InternedNames;
       var count = names?.Count ?? 0;
@@ -167,7 +184,7 @@ namespace EQLogParser.Mirror
       {
         for (short i = 0; i < names.Count; i++)
         {
-          AddRow(rows, names[i], timeline, overrides, registry, damage[i], healing[i], events[i], hasFacts: true);
+          AddRow(rows, names[i], timeline, overrides, registry, priors, damage[i], healing[i], events[i], hasFacts: true);
         }
       }
 
@@ -181,14 +198,14 @@ namespace EQLogParser.Mirror
       {
         foreach (var entry in overrides.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
         }
       }
       if (registry is not null)
       {
         foreach (var name in RosterNames(registry))
         {
-          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -237,7 +254,7 @@ namespace EQLogParser.Mirror
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
-                              MirrorOverrideStore? overrides, PlayerRegistry? registry,
+                              MirrorOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               double damage, double healing, long events, bool hasFacts)
     {
       var kind = IdentityKind.Unknown;
@@ -259,6 +276,23 @@ namespace EQLogParser.Mirror
       }
 
       var rejected = registry?.IsRejectedPlayer(name) ?? false;
+
+      // Last resort, and deliberately behind both the rules and the operator: borrow yesterday's verdict only when
+      // this capture said nothing about the name AND nobody has claimed it. A rejected name gets nothing at all -
+      // "no claim" is the operator speaking about exactly this situation.
+      int priorSightings = 0;
+      long priorSeenAt = 0;
+      var isPrior = false;
+      if (kind == IdentityKind.Unknown && !isOperator && !rejected
+          && priors is not null && priors.TryGet(name, out var prior))
+      {
+        kind = prior.Kind;
+        source = $"Prior:{prior.Reason}";
+        isPrior = true;
+        priorSightings = prior.Sightings;
+        priorSeenAt = prior.SeenAtS;
+      }
+
       var playerClass = NullIfEmpty(registry?.GetDefaultPlayerClass(name));
       var petOwner = NullIfEmpty(registry?.GetPlayerFromPet(name));
       var legacyPlayer = registry?.IsVerifiedPlayer(name) ?? false;
@@ -280,6 +314,9 @@ namespace EQLogParser.Mirror
         PetOwner = petOwner,
         LegacySaysPlayer = legacyPlayer,
         HasFacts = hasFacts,
+        IsPrior = isPrior,
+        PriorSightings = priorSightings,
+        PriorSeenAtS = priorSeenAt,
         Damage = damage,
         Healing = healing,
         Events = events,
@@ -327,6 +364,11 @@ namespace EQLogParser.Mirror
     /// <summary>"I was wrong, let the rules answer again." The rules' own conclusion comes back on the next derive;
     /// a roster entry learned from loot lines is NOT deleted by this — that is what Reject is for.</summary>
     public static void ClearVerdict(MirrorOverrideStore overrides, string name) => overrides.Remove(name);
+
+    /// <summary>"Forget what this server's older logs concluded about this name." Removes the ledger row only —
+    /// verdicts, roster membership and pet mappings are separate files and stay as they are. With no entry left the
+    /// name reads Unknown again on a capture whose own lines say nothing.</summary>
+    public static void ClearPrior(IdentityPriorStore priors, string name) => priors.Remove(name);
 
     /// <summary>"Not a player, and stop guessing." No identity claim at all (see Row.IsRejected), so the rules can
     /// still conclude something from evidence in this log; pet mappings are left alone.</summary>
