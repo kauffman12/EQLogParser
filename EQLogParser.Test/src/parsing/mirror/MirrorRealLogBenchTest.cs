@@ -289,7 +289,24 @@ public class MirrorRealLogBenchTest
         DamageLineParser.ResetProcessState();
         PlayerRegistry.Instance.Clear();
 
-        long total = 0, skipped = 0, chat = 0, gated = 0, parsed = 0, splitOnly = 0, splitBytes = 0;
+        /*
+         * `EQLP_MIRROR_BENCH_RANGE=start:end` (line indices into the VALID lines) parses only that slice. It exists to
+         * answer the scaling question before any of it is designed: run N workers over N disjoint ranges in N processes
+         * and compare wall time with one worker over all of them. NOTE every worker still reads the WHOLE file, so the
+         * I/O floor is duplicated across them — a real shard would seek to a byte offset and skip that, which makes the
+         * prototype's speedup an UNDER-estimate, never an over-estimate.
+         */
+        var range = Environment.GetEnvironmentVariable("EQLP_MIRROR_BENCH_RANGE");
+        var from = 0L;
+        var to = long.MaxValue;
+        if (!string.IsNullOrEmpty(range))
+        {
+            var parts = range.Split(':');
+            from = long.Parse(parts[0]);
+            to = parts.Length > 1 && parts[1].Length > 0 ? long.Parse(parts[1]) : long.MaxValue;
+        }
+
+        long total = 0, skipped = 0, chat = 0, gated = 0, parsed = 0, splitOnly = 0, splitBytes = 0, outside = 0;
         var composition = new Dictionary<string, int>();
         var gen0Before = GC.CollectionCount(0);
         var allocatedBefore = GC.GetTotalAllocatedBytes(true);
@@ -302,6 +319,7 @@ public class MirrorRealLogBenchTest
             if (dt == DateTime.MinValue) { skipped++; continue; }
             var ts = DateUtil.ToDotNetSeconds(dt);
             total++;
+            if (total <= from || total > to) { outside++; continue; }
             var key = LineShape(line);
             composition.TryGetValue(key, out var seen);
             composition[key] = seen + 1;
@@ -356,7 +374,8 @@ public class MirrorRealLogBenchTest
 
         sw.Stop();
         Console.WriteLine($"[ladder] stage={stage} file={Path.GetFileName(path)} ms={sw.ElapsedMilliseconds:N0} " +
-                          $"lines={total:N0} skipped={skipped:N0} chat={chat:N0} pastGate={gated:N0} parsed={parsed:N0}");
+                          $"lines={total:N0} skipped={skipped:N0} chat={chat:N0} pastGate={gated:N0} parsed={parsed:N0} " +
+                          $"outsideRange={outside:N0} range={range ?? "all"}");
         Console.WriteLine($"[ladder]   split(' ') allocated={splitBytes / (1024 * 1024):N0} MB over {(stage == "split" ? total : parsed):N0} lines; " +
                           $"whole run allocated={(GC.GetTotalAllocatedBytes(true) - allocatedBefore) / (1024 * 1024):N0} MB, " +
                           $"gen0={GC.CollectionCount(0) - gen0Before}, gen1={GC.CollectionCount(1)}, gen2={GC.CollectionCount(2)}");
