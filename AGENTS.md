@@ -78,6 +78,17 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   corpse belongs in the fight list only because facts put it there (raid members hitting it keeps it; defender names keep the suffix), and a
   corpse DoT that hits us is an ordinary hostile under its stripped name — `EQLogParser.Test/src/parsing/mirror/RaisedCorpseTest.cs` pins all
   four cases. Reasoning: docs/combat-mirror-design.md → "Corpses need no rule".
+- **Compare boards, not just rows, before replacing a grid**: `MirrorRealLogBoardsTest` (gated on
+  `EQLP_MIRROR_BOARDS=<log>`, with `EQLP_MIRROR_DIAG=name,name` for "folded under another key or lost?") runs the real
+  builders twice over one capture and censuses every column per raider, because a grid is per person — two tables can
+  agree on a fight's total while disagreeing about who did it, and a fight-row check cannot see that. Measured on
+  Incogitable (344 MB): **healing is exact** (403,742 heals, 373 healers, zero mismatched person-column pairs) so that
+  board is asserted strictly; **damage is renamed more than lost** (+0.45 % raid, 422 → 491 rows, 38 legacy-only names
+  against 107 derived-only `X +Pets`) because `DamageStatsBuilder.UpdatePetMapping` folds by `record.AttackerOwner`,
+  which a derived record carries from the line's own possessive word while legacy needs its registry to have learned
+  the pair; **tanking has a shape the index cannot emit** — legacy lists the enemies hitting the raid (13 NPC-named
+  rows) and both ordinal sets in `MirrorDamageIndex` are organized around the row's owner, so that grouping is missing
+  rather than merely different. Don't average these into one "parity %": the three findings need different actions.
 - **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
   sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**
   process state, so a test asserting that two parsed heals share an instance has to call `HealingLineParser.ClearCaches()` in setup — otherwise it
