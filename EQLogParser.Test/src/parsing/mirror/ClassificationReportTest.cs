@@ -279,6 +279,66 @@ public class ClassificationReportTest
     Assert.IsTrue(report.Find(busiest)!.LegacySaysPlayer, "the roster never took the name it was verified with");
   }
 
+  /* Three counts that are easy to conflate, and expensive to get wrong: every name listed, the names THIS capture's
+   * lines could not place, and the names held up by an earlier log. An operator deciding where to spend an override
+   * reads them as "how much of this file am I going to have to correct?" - so a count that includes waited-on alts or
+   * prior-backed rows tells them the classifier is failing when it is merely reading a sparse log. */
+  [TestMethod]
+  public void WhatAHandfulOfUnknownsLooksLike()
+  {
+    var census = Census();
+    Assert.AreEqual(census.Rows.Count, census.TotalNames);
+    Assert.AreEqual(census.Rows.Count(static r => r.HasFacts && r.IsUnresolved), census.UnresolvedInCapture);
+    Assert.IsTrue(census.UnresolvedInCapture > 0,
+                  "the fixture now places every name cold - this test measures nothing, update it");
+
+    var row = census.Rows.First(static r => r.HasFacts && r.IsUnresolved);
+    Assert.AreEqual(IdentityKind.Unknown, row.Kind);
+    Assert.IsFalse(row.IsRejected, "a decision was counted as an absence");
+    Assert.IsNull(row.Class);
+    Assert.IsFalse(row.IsDisagreement, "absence is not a contradiction - see Row.IsDisagreement");
+  }
+
+  [TestMethod]
+  public void AnAltWhoSatTheFightOutIsNotAnUnresolvedName()
+  {
+    var before = Census();
+
+    // Roster membership without a single fact: Unknown in kind, but the roster HAS a claim.
+    PlayerRegistry.Instance.AddVerifiedPlayer("Absenty", LogEndS());
+    var after = Census();
+
+    var row = after.Find("Absenty");
+    Assert.IsNotNull(row);
+    Assert.IsTrue(after.TotalNames == before.TotalNames + 1, "the roster-only row never reached the census list at all");
+    Assert.IsFalse(row!.HasFacts, "a name with no facts in this capture counted as part of it");
+
+    // Roster membership is itself a claim (the row reads Player), so IsUnresolved excludes it by construction - and
+    // UnresolvedInCapture excludes it twice over, because it also demands the name appear in a fact stream.
+    Assert.AreEqual(IdentityKind.Player, row.Kind);
+    Assert.IsFalse(row.IsUnresolved);
+    Assert.AreEqual(before.UnresolvedInCapture, after.UnresolvedInCapture,
+                    "a name nobody is confused about raised the classifier's failure count");
+  }
+
+  [TestMethod]
+  public void ARowHeldUpByAPriorIsNoLongerUnresolved()
+  {
+    var silent = BusiestAttacker();
+    var before = Census();
+    Assert.IsTrue(before.Find(silent)!.IsUnresolved);
+
+    var ledger = IdentityPriorStore.Instance;
+    var remembered = new EntityTimeline();
+    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    ledger.Record(remembered, [silent], PlayerRegistry.Instance, 1_700_000_000);
+
+    var after = Census(ledger);
+    Assert.IsTrue(after.Find(silent)!.IsPrior);
+    Assert.IsFalse(after.Find(silent)!.IsUnresolved, "a row with an answer on screen still counted as unanswered");
+    Assert.AreEqual(before.UnresolvedInCapture - 1, after.UnresolvedInCapture);
+  }
+
   /*
    * Cross-log memory, and the three ways it must NOT be allowed to speak. A prior fills a name this capture's rules
    * could not place; it never overrides a verdict this log reached from lines; a rejection borrows nothing ("no claim"

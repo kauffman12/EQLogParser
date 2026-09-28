@@ -93,10 +93,21 @@ namespace EQLogParser.Mirror
        * legitimately holds pet OWNER names, and a pet/merc verdict costs its owner nothing.
        */
       public bool IsDisagreement => LegacySaysPlayer && Kind == IdentityKind.Npc;
+
+      /*
+       * Nothing has any claim on this name: no kind from this capture's lines, no operator verdict, not in the roster,
+       * and NOT rejected (a rejection is a decision, this is an absence). These are the rows the Names window sorts last
+       * and the only ones worth spending an override on - a busy name nobody can place is where the rules are missing
+       * something, while an Unknown guild alt who sat the fight out is just an alt.
+       */
+      public bool IsUnresolved => Kind == IdentityKind.Unknown && !IsRejected && Class is null;
     }
 
     /// <summary>Rows in display order: raid-side kinds first, then busiest, then by name.</summary>
     public IReadOnlyList<Row> Rows { get; }
+
+    /// <summary>Every name the census lists: fact pool plus every hand-written row.</summary>
+    public int TotalNames { get; }
 
     public int TotalFacts { get; }
     public int Players { get; }
@@ -108,9 +119,20 @@ namespace EQLogParser.Mirror
     public int OperatorVerdicts { get; }
     public int Disagreements { get; }
 
+    /*
+     * Names the capture itself could not place, counting only rows that appear in the fact streams. The distinction is
+     * the whole point: Unnamed spans the roster too (a verified player absent from this fight reads Unknown), so a plain
+     * "unknown" count overstates the classifier's gap by every alt and idle pet. Rows held up by a prior are excluded -
+     * those got an answer, just not from this file - which is why IsPrior exists separately.
+     */
+    public int UnresolvedInCapture { get; }
+
     private ClassificationReport(IReadOnlyList<Row> rows, int totalFacts, int players, int pets, int mercs, int npcs,
-                                 int unknown, int rejected, int operatorVerdicts, int disagreements)
+                                 int unknown, int rejected, int operatorVerdicts, int disagreements,
+                                 int totalNames, int unresolvedInCapture)
     {
+      TotalNames = totalNames;
+      UnresolvedInCapture = unresolvedInCapture;
       Rows = rows;
       TotalFacts = totalFacts;
       Players = players;
@@ -228,7 +250,9 @@ namespace EQLogParser.Mirror
         unknown: Count(list, IdentityKind.Unknown),
         rejected: list.Count(static r => r.IsRejected),
         operatorVerdicts: list.Count(static r => r.IsOperatorVerdict),
-        disagreements: list.Count(static r => r.IsDisagreement));
+        disagreements: list.Count(static r => r.IsDisagreement),
+        totalNames: list.Count,
+        unresolvedInCapture: list.Count(static r => r.HasFacts && r.IsUnresolved));
       return report;
     }
 
