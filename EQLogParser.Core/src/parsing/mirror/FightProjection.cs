@@ -113,7 +113,9 @@ namespace EQLogParser.Mirror
            * A charmed RAIDER attacking us reads the other way (her identity flips to Npc-side, she owns her own
            * row), and a pet damaging its own side stays dropped — the log gives us no story to tell about it.
            */
-          if (!IsFlipped(timeline, defName, t) || IsFlipped(timeline, atkName, t)) continue;
+          // Our pet reads player-side by ownership rather than by charm, and gets the same exemption: see the
+          // comment above - the raid's swings on its own pet are real damage and stay counted.
+          if ((!IsFlipped(timeline, defName, t) && !timeline.IsOurPetAt(defName, t)) || IsFlipped(timeline, atkName, t)) continue;
           key = defName;
           creditAttacker = true;
         }
@@ -233,6 +235,12 @@ namespace EQLogParser.Mirror
           }
         }
 
+        // A row keyed on one of OUR pets (the raid's stray swings landed on it) is not an encounter: same
+        // display rule as a charmed mob's half-row - off the list, its damage still reachable by the stats
+        // builds it belongs to (CharmPetRows.WithHiddenPets brings these back on span overlap; they have no
+        // EncounterRow because there was never an encounter to pair with).
+        else if (timeline.IsOurPetAt(key, t)) row.RaidPet = true;
+
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison
         // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
@@ -294,17 +302,31 @@ namespace EQLogParser.Mirror
       return list;
     }
 
-    // Which side was this name fighting on at time t - identity, then CHARM reversal only.
-    // A Friendly interval from R5-called (a summoned pet) is a static statement of allegiance,
-    // not a flip: only R9-charm windows reverse a name's side for their duration. Source names
-    // are the rule tags stamped by ClassificationRules; "R9-charm" prefixes both charm variants.
+    /*
+     * Which side was this name fighting on at time t - identity, then CHARM reversal, then OWNERSHIP.
+     *
+     * A Friendly interval from R5-called (a summoned pet) is a static statement of allegiance, not a flip:
+     * only R9-charm windows reverse a name's side for their duration. Source names are the rule tags stamped
+     * by ClassificationRules; "R9-charm" prefixes both charm variants.
+     *
+     * Ownership (EntityTimeline.IsOurPetAt) is neither of those. The target frame's `Targeted (NPC)` verdict on
+     * `Useless` or `Dangle` is correct - it is not a player - and it is Certain, so inference may not relabel it;
+     * but "not a player" is not "the enemy's", and the raid healing it from fifteen directions says whose side it
+     * is on. So its identity stays NPC and the interval moves its DAMAGE: player-side, into whatever mob row it
+     * swings at, instead of keying a monster row in the enemy column (R18, design doc §"Targeted (NPC) means not
+     * a player"). A name whose identity is already raid-side needs no interval to be ours, which is why this is
+     * asked only of NPC-side names.
+     */
     private static Side SideAt(EntityTimeline timeline, string name, double t)
     {
       var kind = timeline.IdentityAt(name, t);
       if (kind is IdentityKind.Unknown) return Side.Unknown;
-      return IsFlipped(timeline, name, t)
-        ? kind is IdentityKind.Npc ? Side.Player : Side.Npc
-        : kind is IdentityKind.Npc ? Side.Npc : Side.Player;
+
+      if (IsFlipped(timeline, name, t))
+        return kind is IdentityKind.Npc ? Side.Player : Side.Npc;
+      if (kind is not IdentityKind.Npc)
+        return Side.Player;
+      return timeline.IsOurPetAt(name, t) ? Side.Player : Side.Npc;
     }
 
     // True when a charm interval has this name on the opposite of its identity side at t.

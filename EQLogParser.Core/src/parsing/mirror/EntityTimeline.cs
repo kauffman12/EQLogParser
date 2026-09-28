@@ -300,6 +300,30 @@ namespace EQLogParser.Mirror
     }
 
     /*
+     * True while an OWNERSHIP interval covers t - one that says the name fights for us: a possessive
+     * owner line (R5-owner), a pet the operator mapped in petmapping.txt (RegistrySeed) or a bare custom
+     * name the whole raid keeps healing
+     * (R18-healedpet). Deliberately its own scan rather than `AffiliationAt(...) == PetOfPlayer`: a name can
+     * hold a stronger `Friendly` at the same time (R5-called writes one), and "somebody owns this" is a
+     * different question from "which kind won the interval table".
+     *
+     * This is NOT `IsCharmedAt`. A charm is a temporary flip of a name that is normally the enemy's; these
+     * intervals say the name was never the enemy's. The projection reads both, and the fight list hides rows
+     * this predicate covers while a char RAID MEMBER stays listed (CharmPetRows).
+     */
+    public bool IsOurPetAt(string name, double t)
+    {
+      if (!_affiliation.TryGetValue(name, out var list)) return false;
+
+      foreach (var iv in list)
+      {
+        if (iv.T0 > t) break;   // sorted by T0
+        if (iv.Kind == AffiliationKind.PetOfPlayer && t < iv.T1) return true;
+      }
+      return false;
+    }
+
+    /*
      * Earliest charm-window start strictly after `afterS` for this name, NaN when there is none.
      *
      * The display list asks R9 exactly this one question — "did the raid take this mob off the enemy list

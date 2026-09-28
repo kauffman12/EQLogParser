@@ -75,6 +75,14 @@ namespace EQLogParser.Mirror
    * another mob of the same species walking into the span is indistinguishable from the pet. SameNameFactCount
    * counts exactly that (pet-vs-same-name hits) so the UI can show the share rather than pretend to certainty.
    */
+  /*
+   * One-sided on purpose, and now measured: this reads the charms OUR raid casts (`has been charmed.`), because
+   * that is all the log writes. The hostile-side shape the design doc lists as unparsed - "Raidman is under the
+   * influence of ..." - occurs ZERO times across the 2022, 2024 and 2026 captures (censused alongside R18), so
+   * there is nothing to recognize; building it from a spell-name guess would flip raid members on text that only
+   * exists in trivia. If a capture ever does write one, the rule arrives with the sample line and a closed spell
+   * vocabulary (this file's CharmSpells precedent), never with a heuristic.
+   */
   internal static class CharmWindowPolicy
   {
     /*

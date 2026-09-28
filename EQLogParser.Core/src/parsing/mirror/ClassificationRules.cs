@@ -23,6 +23,10 @@ namespace EQLogParser.Mirror
     // reason and the same-name ambiguity count. Report/tooltip input; the affiliation intervals derived
     // from these are what the deriver reads.
     public List<CharmWindow> Charms { get; } = [];
+
+    // Names R18 put an ownership interval on: the target frame called them an NPC, and the raid's healing
+    // says otherwise. Each one is damage that used to sit in the enemy column of the fight list.
+    public List<string> OurPets { get; } = [];
   }
 
   // Phase 2 rules (identity slice): turn the captured evidence facts into retroactive identity
@@ -103,6 +107,34 @@ namespace EQLogParser.Mirror
     private const int HealEdgeMinHealers = 2;     // from at least two different our-side healers
     private const double HealEdgeMaxRaidAttackShare = 0.02;   // its own swings at our side, same rationale as above
 
+    /*
+     * R18 (our pet, not their mob) tunables. R15 can only speak for names that are still UNKNOWN, and the
+     * expensive case is the one it is forbidden to touch: a name carrying `Targeted (NPC)` is Certain(100), so no
+     * amount of healing inference may relabel it - which is exactly why `Useless`, `Dangle`, `Bigboned`, `Muavanne`,
+     * `Breshanna` and `Zarpog` keep their own fight-list rows and ~36% of the branch's cross-check mismatch mass.
+     * R18 therefore never touches IDENTITY. It writes an ownership INTERVAL, which is the thing the projection
+     * already has for saying "this NPC is ours right now" (R9-charm being the other writer).
+     *
+     * The gate is the discriminator the fourth audit measured, and it is BREADTH, not volume: pets take heals
+     * from 19-52 distinct raid casters while every genuine hostile in the same six captures tops out at 10
+     * (`Zelnithak`, `Captain Kar the Unmovable`, `Rufus Invictus`, `Tallongast, The Egg`, `an echo`), and the crumb
+     * -heal shape this must not fire on - `Hand of the King`, 377 lines of 1-2 point raid-AoE overheal - sits at 8.
+     * 15 is above every hostile ever measured, including the crumb case, and below the weakest pet (19) with room
+     * for a smaller raid. Volume alone would be the wrong dial: a boss rained on by raid AoE out-lines a pet.
+     *
+     * What the gate deliberately MISSES, measured on eqlog_Kizant_xegony-09-03-26 (4.8 M damage facts, 2.67 M
+     * heals): the `X`s pet` names that R5 already owns bottom out at 11-12 distinct casters, so a CUSTOM-named pet
+     * at that breadth is left on the enemy side rather than guessed at — the two names this rule does claim there
+     * sit at 22 (`Stormclaw`, a wolf in npcs.txt buffed by the whole raid and biting The Colossus of Skylance,
+     * 12.3 G across 62,208 edges) and 17 (`Funky`, `Targeted (NPC)`, 2.6 G). A dial at 10 would take those two and
+     * every hostile that ever got raid AoE with them; a pet being missed is a row in the wrong column, a hostile
+     * being claimed is a hole in the meter nobody can find.
+     */
+    private const int OurPetMinCasters = 15;                  // distinct our-side healers, ever
+    private const int OurPetMinHealLines = HealEdgeMinLines;  // same floor as R15: one line proves nothing
+    private const double OurPetMaxRaidAttackShare = 0.02;     // a name that swings at us is not ours
+    private const double OurPetTailS = 300;                   // keeps our own trailing facts folded after the top-ups stop
+
     // heals is optional: the damage stream alone classifies exactly as it did before this table existed.
     public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable heals = null)
     {
@@ -129,6 +161,13 @@ namespace EQLogParser.Mirror
       outcome.Charms.AddRange(charms);
 
       ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))]);
+
+      // Last, because it reads everything above: which NPC-verdict names are actually ours. It has to run
+      // after the charm pass to know which names a window already explains, and after the graph because a
+      // name R7 could classify as an attacker is not one the raid owns.
+      if (heals is not null)
+        outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline, [.. charms.Select(w => w.Name)]));
+
       return outcome;
     }
 
@@ -145,35 +184,17 @@ namespace EQLogParser.Mirror
       }
     }
 
-    // R10 seed: the Phase 3 UI ("set as player / merc / npc from t0") calls through here.
-    // Manual strength outranks every rule, retroactively.
+    // R10: the override UI ("set as player / merc / pet / npc") calls through here, and MirrorOverrideStore
+    // replays what the operator saved on every rebuild. Manual strength outranks every rule, retroactively:
+    // this is the one input that is allowed to reason "the rules are wrong about this name".
     public static void ApplyManualOverride(EntityTimeline timeline, string name, IdentityKind kind)
       => timeline.SetIdentity(name, kind, RuleStrength.Manual, "R10-manual");
 
-    // R12: operator history files (players.txt / petmapping.txt of a zone registry) as corroboration.
-    // Not part of Apply - cold-mode rebuild must not see them; warm runs opt in explicitly.
-    // Strong (not Certain) on purpose: the accumulated registry demonstrably contains false
-    // players (mercs auto-verified by legacy join-line handling), and a run's own Targeted (NPC)
-    // Certain evidence must still win - those names surface as "registry suspects" in the report.
-    public static void ApplyHistory(EntityTimeline timeline, IEnumerable<string> knownPlayers, IEnumerable<(string Pet, string Owner)> knownPets)
-    {
-      if (knownPlayers != null)
-      {
-        foreach (var name in knownPlayers)
-        {
-          timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R12-player");
-        }
-      }
-
-      if (knownPets != null)
-      {
-        foreach (var (pet, owner) in knownPets)
-        {
-          timeline.SetIdentity(pet, IdentityKind.Pet, RuleStrength.Strong, "R12-pet");
-          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, pet, double.NegativeInfinity, double.PositiveInfinity, RuleStrength.Strong, $"R12-pet:{owner}");
-        }
-      }
-    }
+    // R12 (operator history: players.txt / petmapping.txt) is NOT a method here on purpose. It lives in
+    // RegistrySeed.Apply, which the app AND the measurement harness call, so there is exactly one warm path and
+    // cold-mode rebuild still sees nothing but rules. An earlier ApplyHistory(knownPlayers, knownPets) sat here
+    // unread by anybody and disagreed with RegistrySeed on both kind (Player vs Pet) and strength (60 vs 8);
+    // two seeding paths that disagree are how a later reader gets the pet question wrong twice.
 
     /*
      * R5's ownership word: the owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), null
@@ -534,9 +555,96 @@ namespace EQLogParser.Mirror
       public int Lines;
       public int Edges;
       public int RaidSideEdges;
+      public double LastS;   // latest heal seen (R18 ends its ownership interval from this)
       public readonly HashSet<string> Healers = new(StringComparer.Ordinal);
 
       public void AddHealer(string healer) => Healers.Add(healer);
+    }
+
+    /*
+     * R18 - an NPC-verdict name that the whole raid keeps healing is OURS, and its damage belongs on our column.
+     *
+     * Why a rule can say this at all: `Targeted (NPC)` means "not a player", which is true of a pet and does not
+     * mean "the enemy's" (design doc §"Targeted (NPC) means not a player"). Identity is the wrong place to fix it -
+     * Certain evidence outranks inference by design, and it should - so this writes an AffiliationKind.PetOfPlayer
+     * interval over the heal span instead of relabelling the name. The projection reads the interval, sides the
+     * name with the raid, and its damage stops keying a mob row: that is the ~4% of Incogitable-style captures and
+     * roughly a third of the cross-check mismatch mass this branch carries.
+     *
+     * Gates, in order, each one a measured false positive:
+     *   - IDENTITY MUST READ NPC. Names still Unknown are R15's job; raid-side names need no interval.
+     *   - NO CHARM WINDOW for the name (charmExplained). A charmed boss is healed by half the raid inside its
+     *     window, and minting a whole-span ownership interval from those heals would keep a hostile mob on our
+     *     side before and after the charm. R9 owns those names.
+     *   - HEAL BREADTH >= OurPetMinCasters (see the tunables above), over OurPetMinHealLines lines from casters
+     *     whose OWN identity is raid-side at Strong or better - the same rule R15 refuses to break: a Medium
+     *     healer is a guess, and a guess reasoning about a guess is how a charmed raid becomes an army.
+     *   - ITS OWN SWINGS AT OUR SIDE stay under OurPetMaxRaidAttackShare. A pet hits mobs; a boss answers for
+     *     itself by hitting the raid back, and that veto survives however much healing it received.
+     *
+     * Measured over eqlog_Incogitable_xegony (1.89 M damage facts, 420 k heals) on the first run of this rule:
+     * ONE claim, `Useless`, at 34 distinct casters and 3,637 heal lines, moving 7,254,740,918 damage across
+     * 303,554 attack edges off the enemy column - the exact name the audit named, and nothing else. In the whole
+     * 6-14 caster neighbourhood of the gate there was not one NPC-verdict name: every near-miss was a raid member
+     * (Odin 12, Kizant 10) or a possessive-named pet (`Virul`s pet` 14), neither of which this rule is allowed to
+     * speak for. The charm gate below fired on nothing there, because these captures hold no hostile-side charm
+     * text at all - "is under the influence of" appears ZERO times across the 2022, 2024 and 2026 captures, which
+     * is why no rule parses one: R9's one-sidedness is what the log actually writes.
+     *
+     * The interval is retroactive to the start of the log and ends at the last qualifying heal plus a tail: the
+     * breadth gate means the raid never fought this thing, so "it was ours the whole time" is the honest reading
+     * (R15 is retroactive for the same reason), while capping T1 means a pet that gets dismissed and later turns
+     * up hostile again opens its own row from that moment. No owner is written: which raider owns `Dangle` is
+     * history the rules cannot see, and RegistrySeed supplies it in warm runs from petmapping.txt - an ownerless interval
+     * leaves AttackerOwner null rather than inventing a raider.
+     */
+    private static List<string> ApplyHealedPetIntervals(IFactTable facts, IHealFactTable heals, EntityTimeline timeline,
+                                                        IReadOnlyCollection<string> charmExplained)
+    {
+      var minted = new List<string>();
+      var candidates = new Dictionary<string, HealEdgeAgg>(StringComparer.Ordinal);
+      foreach (var h in heals.Heals)
+      {
+        var healer = heals.NameOf(h.HealerIdx);
+        var healed = heals.NameOf(h.HealedIdx);
+        if (healer == healed) continue;                          // self-heal proves nothing about anybody else
+
+        var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
+        if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
+
+        if (!candidates.TryGetValue(healed, out var agg))
+        {
+          // Only names an NPC verdict is holding on the wrong side; anything else is explained already.
+          if (timeline.IdentityWithSource(healed, out _) is not IdentityKind.Npc) continue;
+          agg = candidates[healed] = new HealEdgeAgg();
+        }
+        agg.Lines++;
+        agg.AddHealer(healer);
+        if (h.TimeS > agg.LastS) agg.LastS = h.TimeS;
+      }
+
+      if (candidates.Count == 0) return minted;
+
+      // The swing-back veto, aggregated over the same damage stream R15 reads.
+      foreach (var f in facts.Facts)
+      {
+        var atk = facts.NameOf(f.AtkIdx);
+        if (!candidates.TryGetValue(atk, out var agg)) continue;
+        agg.Edges++;
+        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) agg.RaidSideEdges++;
+      }
+
+      foreach (var (name, agg) in candidates)
+      {
+        if (charmExplained.Contains(name)) continue;
+        if (agg.Lines < OurPetMinHealLines || agg.Healers.Count < OurPetMinCasters) continue;
+        if (agg.Edges > 0 && (double)agg.RaidSideEdges / agg.Edges > OurPetMaxRaidAttackShare) continue;
+
+        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, agg.LastS + OurPetTailS,
+                               RuleStrength.Strong, "R18-healedpet");
+        minted.Add(name);
+      }
+      return minted;
     }
 
     // R6: every log name that is an exact NPC-database entry (engine's own npcs.txt load).
