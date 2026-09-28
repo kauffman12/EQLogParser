@@ -3782,3 +3782,36 @@ Design points worth keeping:
 Also added to the census: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the correction note above — written
 for real this time). Four new WPF-assembly tests (`EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`) pin the flag
 sentences; they **compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run.
+
+## The one calculation a scope asks (MirrorStats)
+
+The requirement came from how the damage meter is used: if I watch a log, kill ten mobs inside my reset window, then
+open the fight list and select the fights from that session, the two numbers must be **identical**. Legacy gets that
+for free — `FightManager._overlayFights` holds the *same* `Fight` objects the list displays, and both surfaces print a
+builder-produced `CombinedStats`. The mirror keeps the property by making it structural instead: monitoring stores
+(lines → facts → rows, nothing else), and every surface is a **reader** that asks one function about the rows it shows.
+
+`MirrorStats.For(rows, index, facts, heals)` = `MirrorSummaryFights.Build` (facts aimed at each row's own name) +
+`MirrorSummaryHeals.Materialize` (windowed by the rows' span, because a heal opens no fight) → a **fresh**
+`DamageStatsBuilder` instance → its `StatsGenerationEvent`. `MirrorSession.BuildScopeStats(rows)` adds the grid's
+hidden-pet rule and is what the overlay will call.
+
+The load-bearing part is the private builder. `DamageStatsBuilder.Instance` is what an open summary, the charts and
+copy-to-clipboard all read as "last built", so a meter refreshing at 1 Hz through the singleton would repaint the
+operator's summary with the meter's window — the two numbers this exists to unify would diverge *by construction*. One
+object plus dictionaries per scope replaces millions of always-on per-line accumulations, so the cost lands wherever it
+should. (`ARefreshLeavesTheBoardsLastAnswerAlone` primes the singleton with a different scope and asserts the scope run
+left it alone.)
+
+Two measured things, both from writing the tests rather than reading code:
+
+- **The raid row's own `Hits` comes back 0** out of the damage builder while each player row carries its counts. So
+  anything wanting a raid-wide hit count sums player rows — which is what the meter's list already does; asserted where
+  it bit, so nobody "fixes" the scope by reading a field that was never filled.
+- **Scopes add.** `For(A ∪ B)` totals exactly `For(A) + For(B)` for disjoint row sets, because `FightProjection` files
+  each fact into exactly one row. That is what turns "the session so far" into "select-all in the list" without any
+  reconciling code — and it is a tripwire: if a fact ever lands on two rows this reads high, if onto none, low.
+
+Not built yet (deliberately, in this order): the overlay's session rule feeding `BuildScopeStats` instead of
+`GetOverlayFights`, and its refresh cadence. Also still owed before leaning on "these rows = the whole window": a
+census of facts that file into **no** row, which would show in a time-window sum but in no selection.

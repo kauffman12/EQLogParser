@@ -268,6 +268,27 @@ namespace EQLogParser
     }
 
     /*
+     * Numbers for a SCOPE: the rows a surface is showing right now, which for the damage overlay means "the fights
+     * this session has touched". Same hidden-pet rule as a click (a charmed mob's own row carries damage the charmer
+     * gets credit for, and the grid hides that row), same one calculation — so the overlay's running total and
+     * "select these fights, press summary" are the same call on the same rows and cannot disagree.
+     *
+     * Null means there is no scope: no snapshot yet (the derive has not landed, so the rows a caller holds came from a
+     * list that no longer exists), or the session has touched nothing. What to display for either is the surface's call.
+     */
+    internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
+    {
+      var snapshot = _snapshot;
+      if (snapshot is null || rows is not { Count: > 0 })
+      {
+        return null;
+      }
+
+      return MirrorStats.For(CharmPetRows.WithHiddenPets(rows, snapshot.AllFights), snapshot.DamageIndex,
+        snapshot.Facts, snapshot.Heals);
+    }
+
+    /*
      * Every fact stream counts, heals included. Two reasons the heals belong in the quiescence signal rather
      * than beside it: a healing-only stretch (a raid regrouping while everyone recovers) would otherwise read
      * as quiet and fire a derive over facts that are still arriving; and "capturing… N", which is the one
