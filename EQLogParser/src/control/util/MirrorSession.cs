@@ -9,6 +9,13 @@ using System.Windows.Threading;
 
 using EQLogParser.Mirror;
 
+/*
+ * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional
+ * strings/kinds because a name legitimately has no class, no owner and no verdict. Stating that is not the same as
+ * switching on warnings across code written before nullable existed.
+ */
+#nullable enable annotations
+
 namespace EQLogParser
 {
   // Owns the combat mirror for one log-open: taps the pipeline statics, receives the chat fan-out,
@@ -75,6 +82,38 @@ namespace EQLogParser
       Active = this;
       ActiveChanged?.Invoke();
       _quietTimer.Start();
+    }
+
+    /*
+     * The name census for the Names window. Built on demand rather than carried in the snapshot: a derive lands every
+     * few seconds while a log loads and a census nobody has open would be thrown away each time. The timeline is
+     * assembled exactly as a derive assembles it - roster seed, rules, operator overrides last - so what the window
+     * shows is what the boards were classified with, including the roster (docs/combat-mirror-design.md).
+     *
+     * Facts can arrive while this walks them. That is acceptable here and nowhere else: a census is display data, and
+     * a name whose damage shifts by one fact between two passes costs nobody a decision, whereas a lock on the capture
+     * path would be paid for by every event. A table that refuses the walk outright leaves the previous list on screen.
+     */
+    public ClassificationReport? BuildNameCensus()
+    {
+      if (_disposed) return null;
+
+      try
+      {
+        var timeline = new EntityTimeline();
+        RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
+        ClassificationRules.Apply(_facts, timeline, _heals);
+        MirrorOverrideStore.Instance.Apply(timeline);
+
+        return ClassificationReport.Build(timeline, _facts, _heals, MirrorOverrideStore.Instance,
+                                         PlayerRegistry.Instance, IdentityPriorStore.Instance);
+      }
+      catch (Exception ex)
+      {
+        // A stale census beats no census, but not a silent one.
+        Log.Error("Name census skipped; keeping the previous list", ex);
+        return null;
+      }
     }
 
     public void RederiveAsync()

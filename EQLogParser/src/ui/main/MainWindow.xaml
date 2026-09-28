@@ -270,19 +270,15 @@
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
-            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick">
+            <!-- One window for everything the old three panes held, plus what they could never show: what the rules
+                 concluded and which line said so. The panes themselves stay in the layout (an operator's saved
+                 EQLogParserLayout.xml still names them) but their menu entries are gone - two surfaces for the same
+                 names is how a stale list stays trusted. -->
+            <MenuItem x:Name="namesWindowMenuItem" Header="_Names" Click="MenuItemNamesClick"
+                      ToolTip="Every name in this capture: what it was called, which rule said so, and what to do about it" />
+            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners (legacy)" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="petMappingIcon" Tag="petMappingWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="verifiedPetsWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_ets">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPetsIcon" Tag="verifiedPetsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="verifiedPlayersWindowMenuItem" Click="MenuItemWindowClick" Header="Verified P_layers">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="verifiedPlayersIcon" Tag="verifiedPlayersWindow"  Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
@@ -549,6 +545,11 @@
         <ContentControl x:Name="mirrorFightWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List (Derived)" syncfusion:DockingManager.State="Hidden"
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:MirrorFightTable />
+        </ContentControl>
+        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Names" syncfusion:DockingManager.State="Hidden"
+                      syncfusion:DockingManager.SideInDockedMode="Tabbed" syncfusion:DockingManager.TargetNameInDockedMode="mirrorFightWindow"
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
+          <local:NamesTable />
         </ContentControl>
         <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">

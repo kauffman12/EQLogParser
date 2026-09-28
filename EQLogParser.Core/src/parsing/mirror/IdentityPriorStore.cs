@@ -1,6 +1,13 @@
 using System;
 using System.Collections.Generic;
 
+/*
+ * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional
+ * strings/kinds because a name legitimately has no class, no owner and no verdict. Stating that is not the same as
+ * switching on warnings across code written before nullable existed.
+ */
+#nullable enable annotations
+
 namespace EQLogParser.Mirror
 {
   /*

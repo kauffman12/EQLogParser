@@ -3758,3 +3758,27 @@ written with any `=` stripped, and a line that does not parse is dropped rather 
 at all" (`UnresolvedInCapture`, `Row.IsUnresolved`, `ClassificationCommands.SetUnresolved`). That code is NOT in the tree —
 `grep -rn Unresolved` returns nothing in either source or tests; it was lost when ClassificationReport.cs was rewritten from
 a stale buffer. It is a ~20-line addition with three tests, deliberately not re-added silently here.
+
+## The Names window, and why the flag column is the feature (2026-08-12)
+
+`NamesTable` (View → **_Names**, docked beside the derived fight list) replaces the three hand-maintained panes. The
+panes could show what somebody typed; they could not show what the classifier concluded, so a wrong verdict had no
+surface to be noticed on — only a meter that looked odd. Its menu entries are gone (nothing in code referenced them);
+the `ContentControl`s stay so an existing `EQLogParserLayout.xml` still loads.
+
+Design points worth keeping:
+
+- **Built on demand, off the UI thread.** A derive lands every few seconds while a log loads and a census nobody has
+  open would be discarded each time, so `MirrorSession.BuildNameCensus()` assembles the timeline exactly as a derive does
+  (roster seed → rules → overrides last) and is called on open / Re-scan / a derive that lands while visible. Facts can
+  arrive mid-walk: a census is display data, so one row shifting by one fact between passes is accepted rather than
+  putting a lock on the capture path; a refused walk keeps the previous list and logs.
+- **No second source of truth.** Every verb goes through `ClassificationCommands` into the same per-server files (verdicts,
+  roster, rejections) plus the ledger; nothing is stored in the window.
+- **The Notes column carries the action, not the kind.** "your verdict" / "no claim (you took it back)" / "older logs on
+  this server, x2" / "roster says player, rules say NPC" / "not in this log". Each sentence answers *should I act*, which
+  the Kind and Why columns cannot: `Prior:R6-npcdb` in Why must not read as if this capture produced it.
+
+Also added to the census: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the correction note above — written
+for real this time). Four new WPF-assembly tests (`EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`) pin the flag
+sentences; they **compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run.
