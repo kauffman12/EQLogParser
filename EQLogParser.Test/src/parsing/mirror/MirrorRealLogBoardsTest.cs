@@ -45,11 +45,20 @@ namespace EQLogParser;
  *     `.UpdatePetMapping`, which folds by `record.AttackerOwner`: a derived record carries that from the line's own
  *     possessive word, so a ward legacy left as its own row arrives here under its owner with `+Pets`. Only 23 of the
  *     384 people both sides name move at all. `DiagnoseRealLogNames` answers "folded or lost" for any one of them.
- *   - **Tanking: a shape the derived index does not produce yet.** Raid damage taken 7,114,675,399 →
- *     8,045,935,322 (+13 %), and 13 of legacy's rows are ENEMY names (`An abyssal terror`, `A scalewrought
- *     craftsman`, …): the legacy tank board lists who is hitting the raid, which needs a per-ATTACKER grouping the
- *     index does not keep — its two ordinal sets are both organized around the row's owner. That is the one finding
- *     here that is a missing feature rather than a different opinion, and it is the next thing to build.
+ *   - **Tanking: the number was mostly not about people.** Legacy groups by `record.Defender` with no filter, so its
+ *     7,114,675,399 of "damage taken" contains 5,120,176,037 across 80 PET rows and 410,382,351 across 108 names
+ *     nobody ever identified. Cut both boards to the population the report is about: legacy 1,994,499,362 over 227
+ *     rows against derived 1,880,948,516 over 214 — every derived name present on legacy's board (derivedOnly = 0),
+ *     and only **10 of 214** people differing at all, the worst being five hits and 1.7 M on one raider, the size of a
+ *     fight boundary falling on another second. What derived drops is the 13 NPC rows (`An abyssal terror`, `Bloose`,
+ *     `Snack`, `Sabretooth tiger`): mobs taking hits inside a tanking window, which "list what the players received"
+ *     has no use for.
+ *
+ * The `[boards] derived tanking facts with a … defender` print is what made this visible: split the tanking half by
+ * what its defenders ARE and Incogitable reads 84,398 facts / 1.576 B Player against 18,022 / 304 M Unknown (and,
+ * before the routing was fixed, 287,674 / 6.16 B Pet). The Unknown share stays in on purpose — it is the size of the
+ * guess inside `EntityTimeline.IsRaidVictimAt`, whose sibling test measured what demanding proof instead would cost:
+ * 90 % of the board gone, because an identity usually arrives later than the hits it describes.
  */
 [TestClass]
 [DoNotParallelize]
@@ -254,13 +263,60 @@ public class MirrorRealLogBoardsTest
                           + $"derived={derivedDamage.Values.Sum(p => p.Total):N0}");
         var damageDiffs = ReportBoard("damage", legacyDamage, derivedDamage, DamageFields, 20);
 
+        /*
+         * What is actually inside the derived tanking half, by what the timeline says the DEFENDER is. The board is
+         * "damage the raid took", so everything but Player should be noise — and noise here is not cosmetic: it is
+         * damage attributed to a name that will never appear on the grid, inflating a raid total nobody can audit.
+         */
+        var byKind = new Dictionary<string, (long Facts, long Total)>();
+        foreach (var row in selected)
+        {
+            foreach (var ordinal in index.TankingOrdinalsFor(row))
+            {
+                var fact = run.Facts.Facts[ordinal];
+                var defender = run.Facts.NameOf(fact.DefIdx) ?? "<none>";
+                var kind = run.Timeline.Identity(defender).ToString();
+                var (count, sum) = byKind.GetValueOrDefault(kind);
+                byKind[kind] = (count + 1, sum + fact.Total);
+            }
+        }
+
+        foreach (var (kind, (count, sum)) in byKind.OrderByDescending(kv => kv.Value.Total))
+            Console.WriteLine($"[boards] derived tanking facts with a {kind} defender: {count:N0} worth {sum:N0}");
+
+        /*
+         * Both boards, then BOTH cut to the people the tank report is about. Legacy's board has no such filter — it
+         * groups by record.Defender whatever that name is, so pets and mobs sit on it (that is where its 7.11 B
+         * lives) — and comparing a raid-taken total across two different populations would be the kind of number that
+         * looks like a finding and means nothing. So: report each side's raw total, then census the intersection.
+         */
         var legacyTanking = By(BuildTanking(run.Fights, legacyRange));
         var derivedTanking = By(BuildTanking(input.Fights, derivedRange));
+
+
+        var byKindLegacy = (legacyTanking ?? [])
+            .GroupBy(kv => run.Timeline.Identity(kv.Key).ToString())
+            .ToDictionary(g => g.Key, g => (g.Count(), g.Sum(kv => kv.Value.Total)));
+        foreach (var (kind, (count, sum)) in byKindLegacy.OrderByDescending(kv => kv.Value.Item2))
+            Console.WriteLine($"[boards] legacy tank rows with a {kind} name: {count} worth {sum:N0}");
+
+        var legacyVictims = (legacyTanking ?? []).Where(kv => run.Timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
+                                                 .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var derivedVictims = (derivedTanking ?? []).Where(kv => run.Timeline.IsRaidVictimAt(kv.Key, double.PositiveInfinity))
+                                                   .ToDictionary(kv => kv.Key, kv => kv.Value);
+        Console.WriteLine($"[boards] raid damage taken BY PEOPLE legacy={legacyVictims.Values.Sum(p => p.Total):N0} "
+                          + $"derived={derivedVictims.Values.Sum(p => p.Total):N0}");
+        ReportBoard("tanking-people", legacyVictims, derivedVictims, DamageFields, 12);
+
         Console.WriteLine($"[boards] heal scope: raid healing legacy={legacyHeals.Values.Sum(p => p.Total):N0}, "
                           + $"derived spans cover {SumSpans(input.Fights):N0} s against legacy's {SumSpans(run.Fights):N0} s");
         Console.WriteLine($"[boards] raid damage taken legacy={legacyTanking?.Values.Sum(p => p.Total):N0} "
                           + $"derived={derivedTanking?.Values.Sum(p => p.Total):N0}");
         var tankingDiffs = ReportBoard("tanking", legacyTanking ?? [], derivedTanking ?? [], DamageFields, 20);
+
+        // The same census restricted to names the mirror calls people at the end of the capture: the population the
+        // derived board is defined over. What is left out of this line is legacy's pet and mob traffic.
+
 
         Console.WriteLine($"[boards] done in {sw.ElapsedMilliseconds:N0} ms — damage diffs={damageDiffs:N0}, "
                           + $"tanking diffs={tankingDiffs:N0}, healing diffs={healDiffs}");

@@ -146,11 +146,78 @@ public class MirrorSummaryFightsTest
 
         var calls = new List<string>();
         var rows = FightProjection.Build(facts, timeline,
-            (fact, ordinal, owner, credited) => calls.Add($"{ordinal}:{owner.Name}:{credited}"));
+            (fact, ordinal, owner, target) => calls.Add($"{ordinal}:{owner.Name}:{target}"));
 
-        CollectionAssert.AreEqual(new List<string> { "0:Echohead:True" }, calls,
+        CollectionAssert.AreEqual(new List<string> { $"0:Echohead:{FightProjection.FactTarget.AtOwner}" }, calls,
             "one call per row-owning fact, and only for facts that own a row");
         Assert.AreEqual(1, rows.Count);
+    }
+
+    /*
+     * The tanking half means "damage one of our people received", which is what the tank report lists — it groups by
+     * record.Defender. Three shapes that all used to be filed as tanking because they merely pointed away from an
+     * NPC row, and only one of them survives the question:
+     *
+     *   a mob hitting a raider            → RaidSide, on the row the exchange opened
+     *   a mob hitting somebody's pet      → Neither. Pet incoming was 77 % of this half on Incogitable (6.16 B of
+     *                                       8.05 B); keeping it made the raid's damage-taken unauditable.
+     *   a mob hitting another mob/corpse  → Neither, same reason.
+     *
+     * A charmed raider is the fourth shape and deliberately not RaidSide: while the window holds, identity says Npc,
+     * she is fighting against us, and the hits landing on her belong to that encounter instead of to her meter.
+     */
+    [TestMethod]
+    public void TheTankingHalfIsDamageOurPeopleReceived()
+    {
+        var facts = BuildFacts(
+            ("Illuminai", "Echohead", 500, 0, LabelTypes.Melee),   // raid on the mob: AtOwner
+            ("Echohead", "Illuminai", 120, 1, LabelTypes.Melee),   // mob on a raider: RaidSide
+            ("Echohead", "Swarmik`s pet", 90, 2, LabelTypes.Melee),   // mob on a pet: nobody's damage taken
+            ("Echohead", "A gnawed corpse", 70, 3, LabelTypes.Melee), // mob on a mob: same
+            ("Illuminai", "Mysteryhost", 30, 4, LabelTypes.Melee));   // raider on an UNCLASSIFIED name
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+        timeline.SetIdentity("Swarmik", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Swarmik`s pet", IdentityKind.Pet, RuleStrength.Strong, "R5-summon");
+        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, "Swarmik`s pet", T0 - 10, T0 + 100, RuleStrength.Strong, "R5-summon", "Swarmik");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var echo = Row(rows, "Echohead");
+
+        var tanking = index.TankingOrdinalsFor(echo)
+            .Select(o => $"{table.Facts[o].Total}->{table.NameOf(table.Facts[o].DefIdx)}")
+            .ToList();
+        CollectionAssert.AreEqual(new List<string> { "120->Illuminai" }, tanking,
+            "the tanking half carries the hits that landed on a person, and nothing else");
+
+        Assert.AreEqual(120L, index.SummaryFightFor(echo, table).TankTotal, "the row's damage-taken is the same one number as its blocks");
+        // One unrouted, not two: mob-on-mob never reaches a row at all (the projection drops it before the sink),
+        // while a mob hitting OUR pet does — it is part of the encounter — and is then refused by both boards.
+        Assert.AreEqual(1L, index.UnroutedFactCount, "the pet hit is captured but belongs to nobody's board");
+        Assert.AreEqual(4L, index.DamageFactCount + index.TankingFactCount + index.UnroutedFactCount,
+            "every fact that reached a row is accounted for exactly once, in one of three places");
+
+        // The fourth shape, asserted at the predicate rather than through a row: a charmed raider's identity reads
+        // Npc while the window holds, and this deliberately does not undo the flip to hand her a tank number.
+        timeline.SetIdentity("Turncoat", IdentityKind.Npc, RuleStrength.Strong, "R9-charm");
+        Assert.IsFalse(timeline.IsRaidVictimAt("Turncoat", T0 + 4),
+            "a raider fighting for the other side is not one of us getting hit");
+        Assert.IsTrue(timeline.IsRaidVictimAt("Illuminai", T0 + 1));
+
+        /*
+         * The precedence, which is the trap in this whole rule: "Mysteryhost" has no identity at all, so it passes
+         * IsRaidVictimAt — and it is the thing a raider is hitting, i.e. the raid's own damage. Aimed at the row wins,
+         * so her 30 is on the damage side of her row and this row has no tanking half whatsoever.
+         */
+        var mystery = Row(rows, "Mysteryhost");
+        Assert.IsNotNull(mystery, "an unclassified exchange still opens a row, keyed on the defender as legacy does");
+        Assert.AreEqual(1, index.DamageOrdinalsFor(mystery).Count);
+        Assert.AreEqual(0, index.TankingOrdinalsFor(mystery).Count,
+            "a raid swing at an unknown name is not someone receiving damage, however unknown that name is");
+        Assert.IsFalse(timeline.IsRaidVictimAt("Swarmik`s pet", T0 + 2), "a pet is not a person");
+        Assert.IsFalse(timeline.IsRaidVictimAt(null, T0 + 2));
     }
 
     // ---- materialization: records are their facts ----

@@ -42,15 +42,37 @@ namespace EQLogParser.Mirror
      * a second copy of these rules would drift the moment a rule changes, and the drift would show up
      * as a summary that disagrees with the row it was opened from.
      *
-     * `towardOwner` is the fact's direction inside its row: true when the row's own name was the DEFENDER,
-     * i.e. the fact is damage done TO that entity rather than by it — the same test that splits DamageToOwner
-     * from DamageByOwner, and the split a damage summary needs (FightManager puts everything aimed at the npc
-     * in DamageBlocks and the mob's own output in TankingBlocks). Note it is not the same as "the attacker was
-     * player-side": an unclassified name hitting a known NPC aims at the owner too, and belongs in those
-     * blocks even while its per-player credit waits for a classification pass. Consumers cannot re-derive this
-     * later, because which side a name was on depends on the timeline at the fact's own second.
+     * The three targets are described next to FactTarget. Two of them are directions inside the row, and the third
+     * exists because "not aimed at the row" is NOT the same question as "landed on one of us": it used to be one
+     * bool, which quietly made every away-from-owner fact a tanking-report fact, and most of what an NPC row aims
+     * away from itself lands on a pet or another mob (measured on Incogitable: of 8.05 B of away-from-owner damage,
+     * 6.16 B had a Pet defender and 0.30 B an unknown one, against 1.58 B with a Player behind it).
+     *
+     * AtOwner is the same test that splits DamageToOwner from DamageByOwner — the split legacy draws too, with
+     * FightManager putting everything aimed at the npc in DamageBlocks and the mob's own output in TankingBlocks.
+     * Note it is not "the attacker was player-side": an unclassified name hitting a known NPC aims at the owner
+     * too, and belongs in those blocks even while its per-player credit waits for a classification pass. Consumers
+     * cannot re-derive any of this later, because which side a name was on depends on the timeline at the fact's
+     * own second.
      */
-    internal delegate void FactOwnershipHandler(DamageFact fact, int ordinal, DerivedFight owner, bool towardOwner);
+    /*
+     * Which half of the row's record set a fact belongs to, decided once here because the two boards must be
+     * fillable from ONE answer:
+     *
+     *   AtOwner  — damage aimed at the entity the row is keyed on, i.e. the raid's output on that fight.
+     *              Same comparison DamageToOwner is built from, so an index filled here cannot drift from the row.
+     *   RaidSide — a hit that landed on one of OUR people: the tanking half, "damage the raid received".
+     *              Asked as identity rather than as "everything else", because most facts that point away from an NPC
+     *              row land on something that is not a person at all (see EntityTimeline.IsRaidVictimAt). AtOwner is
+     *              tested before this one, and that order is load-bearing: an unclassified mob being hit by a raider
+     *              satisfies "not known to be a pet or mob" and must not become somebody's damage taken.
+     *   Neither  — everything else: a mob biting another mob, a boss hitting somebody's pet. Real events kept in the
+     *              capture, but they are nobody's damage and nobody's damage-taken, so filing them anywhere would
+     *              inflate a number no grid can account for.
+     */
+    internal enum FactTarget : byte { AtOwner = 0, RaidSide = 1, Neither = 2 }
+
+    internal delegate void FactOwnershipHandler(DamageFact fact, int ordinal, DerivedFight owner, FactTarget target);
 
     public static List<DerivedFight> Build(DamageFactTable facts, EntityTimeline timeline, FactOwnershipHandler ownerSink = null)
     {
@@ -244,7 +266,34 @@ namespace EQLogParser.Mirror
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison
         // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
-        ownerSink?.Invoke(fact, ordinal, row, string.Equals(key, defName, StringComparison.Ordinal));
+        /*
+         * AtOwner is asked FIRST, and the order carries meaning. A player swinging at an unclassified name is the
+         * common case in a fresh pull — and "the defender is not known to be a pet or a mob" is true of exactly that
+         * mob, so testing the victim question first would file the raid's own opening damage as damage somebody
+         * received. Aimed at the row's anchor wins; only what points away from the anchor can be someone getting hit.
+         */
+        FactTarget target;
+        if (timeline.IsConfirmedRaidPersonAt(defName, t))
+        {
+            // A person got hit. True even when the row is keyed on her own name, which is what legacy's
+            // defender-key tiebreak does to an attack from a mob nobody has classified yet — filing that as the
+            // row's damage would move her incoming hits onto the outgoing side of her own number.
+            target = FactTarget.RaidSide;
+        }
+        else if (string.Equals(key, defName, StringComparison.Ordinal))
+        {
+            // Aimed at the anchor: the raid's output on this fight. Asked before the victim question below, because
+            // an unidentified mob satisfies "not known to be a pet or a mob" and must not become damage taken.
+            target = FactTarget.AtOwner;
+        }
+        else
+        {
+            // Points away from the anchor at a name we have never called a pet or a mob — the Unknown residue, in on
+            // the reasoning that whatever is taking a mob's hits is one of ours (EntityTimeline.IsRaidVictimAt).
+            target = timeline.IsRaidVictimAt(defName, t) ? FactTarget.RaidSide : FactTarget.Neither;
+        }
+
+        ownerSink?.Invoke(fact, ordinal, row, target);
 
         var isHit = LabelTypes.IsHit(fact.TypeId);
         if (isHit)

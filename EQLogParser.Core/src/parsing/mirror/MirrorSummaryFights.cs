@@ -85,17 +85,28 @@ namespace EQLogParser.Mirror
     private readonly Dictionary<DerivedFight, List<int>> _damageOrdinals = new();
 
     /*
-     * The same rows' facts aimed AWAY from the owner — the tanking half. Its own list rather than one list with
-     * a direction flag re-tested at materializing time, because each board's blocks have to be built from a run
-     * that is ascending in time: FightManager.AddAction groups "consecutive actions sharing a timestamp", and
-     * interleaving the two directions would split one second's block into two on both boards.
+     * The same rows' facts that landed ON ONE OF OUR PEOPLE — the tanking half, which is what the tank report
+     * actually lists (TankingStatsBuilder groups by record.Defender). Not "aimed away from the owner": most of an
+     * NPC row's outgoing facts hit a pet or another mob, and the projection's third target says so instead of
+     * letting this list quietly mean everything else.
+     *
+     * Its own list rather than one list with a direction flag re-tested at materializing time, because each board's
+     * blocks have to be built from a run that is ascending in time: FightManager.AddAction groups "consecutive
+     * actions sharing a timestamp", and interleaving the two directions would split one second's block into two on
+     * both boards.
      */
     private readonly Dictionary<DerivedFight, List<int>> _tankingOrdinals = new();
 
     private readonly Dictionary<DerivedFight, Fight> _summaries = new();
 
     public long DamageFactCount { get; private set; }
+
+    // Facts the tank board carries: hits that landed on one of our people (EntityTimeline.IsRaidVictimAt).
     public long TankingFactCount { get; private set; }
+
+    // Captured, real, and belonging to no board — see OnFact. DamageFactCount + TankingFactCount + this = the
+    // facts that reached a row.
+    public long UnroutedFactCount { get; private set; }
     public int FightsWithDamage => _damageOrdinals.Count;
     public int FightsWithTanking => _tankingOrdinals.Count;
 
@@ -103,14 +114,23 @@ namespace EQLogParser.Mirror
     // Four bytes of ordinal per captured fact: on a 5.3 M-fact log where roughly three quarters are
     // player-side, that is ~16 MB held for the life of the snapshot. It buys selection-time materializing
     // (no re-scan of the whole table on every click) and it dies with the snapshot it belongs to. Both lists
-    // count: every fact lands in exactly one of them, so this is still "one ordinal per damage fact".
+    // count: a fact lands in at most one of them — the rest are unrouted and cost nothing but a counter.
     public long EstimatedBytes => (DamageFactCount + TankingFactCount) * 4L;
 
     // Passed to FightProjection.Build as its owner sink — see the delegate's comment for why the answer
     // has to come from the projection rather than be recomputed here.
-    internal void OnFact(DamageFact fact, int ordinal, DerivedFight owner, bool towardOwner)
+    internal void OnFact(DamageFact fact, int ordinal, DerivedFight owner, FightProjection.FactTarget target)
     {
-      var store = towardOwner ? _damageOrdinals : _tankingOrdinals;
+      // Neither means "no board wants this": a mob biting another mob, a boss clearing somebody's swarm. It is
+      // counted so the routing can be audited (UnroutedFactCount is the only sign of how much of a capture is
+      // nobody's damage) and filed nowhere, which is what keeps TankTotal meaning "damage a person took".
+      if (target == FightProjection.FactTarget.Neither)
+      {
+        UnroutedFactCount++;
+        return;
+      }
+
+      var store = target == FightProjection.FactTarget.AtOwner ? _damageOrdinals : _tankingOrdinals;
 
       if (!store.TryGetValue(owner, out var ordinals))
       {
@@ -118,7 +138,7 @@ namespace EQLogParser.Mirror
       }
 
       ordinals.Add(ordinal);
-      if (towardOwner) DamageFactCount++;
+      if (target == FightProjection.FactTarget.AtOwner) DamageFactCount++;
       else TankingFactCount++;
     }
 

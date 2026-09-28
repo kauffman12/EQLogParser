@@ -324,6 +324,55 @@ namespace EQLogParser.Mirror
     }
 
     /*
+     * Would a hit landing on this name count as damage THE RAID TOOK? That is the tanking report's only question —
+     * it lists what each of our people had to absorb — and answering it with `!Npc` would be wrong in two directions
+     * that both show up as a raid total nobody can audit:
+     *
+     *   - A PET is not one of our people. On Incogitable, 287,674 away-from-owner facts (6.16 B of 8.05 B) had a
+     *     defender whose identity is Pet: mobs swatting somebody's swarm. It is real damage and it stays in the
+     *     capture; it is not what a player received. If it is ever wanted it arrives as its own decision — folded
+     *     under the owner the way the damage board does `X +Pets`, or as pet rows — with a settings word, not as a
+     *     widened predicate that silently changes every tank number.
+     *   - A CHARMED raider is, for those seconds, fighting against us. Identity says Npc while the window holds, so
+     *     her incoming hits are not raid damage taken; they belong to whichever row owns the encounter she is being
+     *     used in. This predicate deliberately does not undo the flip.
+     *
+     * So the rule is exclusion rather than proof: a hit counts unless we KNOW the name is not one of our people —
+     * Pet or Npc at that second (a name can join, die, and be raised as a servant mid capture). Judging it the other
+     * way, as `Identity == Player`, was tried first and lost 90 % of the board: on Incogitable only 17,104 facts
+     * worth 172.8 M passed that test, against 84,398 / 1.58 B whose defender is a Player by the end of the capture.
+     * The reason is timing, not truth — identity arrives from evidence that may be minutes later than the hit, and
+     * the tank report would otherwise show a raider only the seconds after the parser happened to learn her name.
+     * (In the app players.txt seeds most of them; the harness clears the registry, which is why the number is this
+     * dramatic in a test run.)
+     *
+     * The residue is Unknown defenders — 18,022 facts / 304 M here, names with no evidence either way. They stay in,
+     * because "some NPC is hitting this name" is itself the evidence that it is a person, and the census prints them
+     * separately so the size of that guess is never invisible.
+     */
+    public bool IsRaidVictimAt(string name, double t)
+    {
+      if (name is null) return false;
+
+      var kind = IdentityAt(name, t);
+      return kind is not IdentityKind.Npc and not IdentityKind.Pet;
+    }
+
+    /*
+     * AFFIRMATIVE evidence that this name is one of our people at t — Player or Merc by identity, not merely "we have
+     * never said otherwise". `IsRaidVictimAt` is the exclusion test that decides what the tank board carries; this
+     * one answers the sharper question, needed where a row happens to be keyed on the person herself (an unclassified
+     * attacker hitting a known raider keeps the legacy defender key), because there "aimed at the row" and "one of us
+     * got hit" are both true and only the second one describes what the number is for.
+     *
+     * Kept apart from `IsRaidVictimAt` so neither test quietly absorbs the other: widening this to Unknown would
+     * route the raid's own opening swings at an unidentified mob into somebody's damage taken, which is the mistake
+     * `IsRaidVictimAt` exists to avoid in the opposite direction.
+     */
+    internal bool IsConfirmedRaidPersonAt(string name, double t)
+      => name is not null && IdentityAt(name, t) is IdentityKind.Player or IdentityKind.Merc;
+
+    /*
      * Earliest charm-window start strictly after `afterS` for this name, NaN when there is none.
      *
      * The display list asks R9 exactly this one question — "did the raid take this mob off the enemy list

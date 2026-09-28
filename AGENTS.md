@@ -86,9 +86,26 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   board is asserted strictly; **damage is renamed more than lost** (+0.45 % raid, 422 → 491 rows, 38 legacy-only names
   against 107 derived-only `X +Pets`) because `DamageStatsBuilder.UpdatePetMapping` folds by `record.AttackerOwner`,
   which a derived record carries from the line's own possessive word while legacy needs its registry to have learned
-  the pair; **tanking has a shape the index cannot emit** — legacy lists the enemies hitting the raid (13 NPC-named
-  rows) and both ordinal sets in `MirrorDamageIndex` are organized around the row's owner, so that grouping is missing
-  rather than merely different. Don't average these into one "parity %": the three findings need different actions.
+  the pair; **tanking is the report of what people received** — legacy groups by `record.Defender` unfiltered, so its
+  7.11 B contains 5.12 B of pet rows; cut to people it is 1.994 B over 227 rows against derived 1.881 B over 214 with
+  every derived name present and 10 of 214 differing. Don't average these into one "parity %": the findings need
+  different actions.
+- **The tank board is damage our people received, decided by three fact targets, not two directions**:
+  `FightProjection.FactTarget` is `AtOwner` (aimed at the row's anchor — the raid's output), `RaidSide` (landed on one
+  of us — the tanking half) or `Neither` (mob on mob, mob on somebody's pet: captured, counted in
+  `MirrorDamageIndex.UnroutedFactCount`, filed nowhere). Three rules, each learned the
+  expensive way. (1) **Ask `AtOwner` before the Unknown-victim test, but `IsConfirmedRaidPersonAt` before both** — an
+  unidentified mob satisfies "not known to be a pet or a mob", so testing that first files the raid's own opening
+  swings as someone's damage taken; and when a row is keyed on a raider herself (legacy's defender-key tiebreak for an
+  unclassified attacker) her incoming hits must still be `RaidSide`, not the outgoing side of her own number. (2)
+  **`IsRaidVictimAt` is exclusion, not proof**: `IdentityAt is not Npc and not Pet`. Written as `== Player` it passed
+  every unit test and lost 90 % of the real board — 17,104 facts / 172.8 M against 84,398 / 1.58 B — because identity
+  arrives from evidence that postdates the hits it describes (and the harness clears `PlayerRegistry`, so players.txt
+  seeds nothing). The Unknown residue (18,022 facts / 304 M here) stays in: something a mob keeps hitting is one of
+  ours. (3) **A pet's incoming damage is not a player's**, by decision and with its number attached (6.16 B on
+  Incogitable); if it is ever wanted it arrives as its own choice — owner-folded like `X +Pets`, or as pet rows — never
+  as a widened predicate that silently moves every tank column. A charmed raider reads Npc while the window holds, so
+  her incoming hits are not raid damage taken either; `IsRaidVictimAt` deliberately does not undo the flip.
 - **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
   sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**
   process state, so a test asserting that two parsed heals share an instance has to call `HealingLineParser.ClearCaches()` in setup — otherwise it
