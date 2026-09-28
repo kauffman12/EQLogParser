@@ -174,6 +174,21 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   splits her in half; **quiescence counts heals too** (`MirrorSession.CapturedTotal`), else a healing-only stretch reads as quiet
   and fires a derive over facts still arriving. `HealFact.OverTotal` keeps the log's two meanings apart — with a paren it is the
   amount *after* over-heal, without one it is `0` = "the line said no more", never "zero was asked".
+- **The healing board's derived door is a record seam, not another Fight**: `HealingStatsBuilder` never reads a
+  `Fight` — it takes `(time, HealRecord)` pairs and windows them itself against `AllRanges`, so the mirror reaches it
+  through `GenerateStatsOptions.Heals`, filled by `MirrorSummaryHeals.Materialize`. Four rules. (1) **null means "say
+  nothing about healing" (read the record store), a non-null EMPTY list means "there was none"** — inverting that is a
+  derived selection quietly keeping last click's grid. (2) The window is the selection's own `AllRanges`, because a heal
+  belongs to no fight (`HealFactTable` has no fight id, by design): a derived click means "every heal in this span",
+  which is exactly what legacy does with the whole store. (3) The list must be **time ascending** — the builder locates
+  its window with `FindIndex(first >= begin)` and walks forward, so an unordered input loses part of a segment without
+  complaining; fact order is ingest order, which is why nothing sorts. (4) Materialize `OverTotal` **verbatim** (never
+  `AskedFor`, or `MaxPotentialHit` doubles on every plain heal line) and fall back to `Labels.SelfHeal` for the spell,
+  because that is what `HealingLineParser` stores when the line has none. Measured on `heal-board.txt`: raid **3,401**,
+  Rune **2,776** across 5 heals with **2,388** overheal and a **4,012** ask, Kilsa **625** across 2 — identical through
+  either door (`MirrorHealBoardTest`). That test clears `RecordsStore` + `HealingLineParser.ClearCaches()` in setup like
+  `MirrorHealCaptureTest`: re-parsing a fixture inside one process doubles the board, and 3,401 becoming **6,802** is what
+  that looks like when you forget.
 - **A record's modifier mask is captured on the fact, because filters read it**: `DamageFact.ModifiersMask` rides in the padding
   bytes that `OverTotal` (a heal-only amount) had spent on damage, so `DamageFact` stays **32 B** — and a materialized record with
   mask `0` would have excluded *nothing*, making every derived total read high the moment one of the six `DamageValidator` settings

@@ -341,6 +341,15 @@ namespace EQLogParser.Mirror
   internal sealed record MirrorSummaryInput(IReadOnlyList<Fight> Fights, TimeRange AllRanges)
   {
     public int WithoutDamage { get; init; }
+
+    /*
+     * The healing board's input for the same click, deliberately NOT filled by MirrorSummaryFights.Build: heals
+     * carry no fight id (a heal opens no encounter — that is why they are their own table), so the honest derived
+     * heal input is "every heal in this selection's time window", which only a caller holding the heal table can
+     * make. Null here means "this input says nothing about healing" and leaves the board on the record store;
+     * MirrorSession.BuildSummaryInput fills it, including with an empty list.
+     */
+    public List<(double, HealRecord)> Heals { get; init; }
   }
 
   internal static class MirrorSummaryFights

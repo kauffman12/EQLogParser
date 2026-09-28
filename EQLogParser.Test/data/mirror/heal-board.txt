@@ -1,0 +1,13 @@
+[Sun Apr 26 18:52:00 2026] Rune joined the raid.
+[Sun Apr 26 18:52:00 2026] Kilsa joined the raid.
+[Sun Apr 26 18:52:01 2026] Chiefoc is now the leader of your raid.
+[Sun Apr 26 18:52:02 2026] An ice giant priest slashes Kilsa for 410 points of damage.
+[Sun Apr 26 18:52:03 2026] Rune healed Kilsa for 1204 hit points by Call of Flame Rk. XII.
+[Sun Apr 26 18:52:04 2026] Rune healed Kilsa for 812 (3200) hit points by Healing Rain Rk. IX.
+[Sun Apr 26 18:52:05 2026] Kilsa healed Rune over time for 450 (900) hit points by Spirit of the Wood XXXIV.
+[Sun Apr 26 18:52:06 2026] Rune healed Kilsa for 300 hit points by Call of Flame Rk. XII. (Critical)
+[Sun Apr 26 18:52:07 2026] Rune healed Kilsa for 250 hit points by Call of Flame Rk. XII.
+[Sun Apr 26 18:52:07 2026] Kilsa healed Rune for 175 hit points by Healing Breeze Rk. XI.
+[Sun Apr 26 18:52:08 2026] Rune healed himself for 210 hit points by Bandage Wounds.
+[Sun Apr 26 18:52:09 2026] An ice giant priest slashes Kilsa for 388 points of damage.
+[Sun Apr 26 18:52:10 2026] An ice giant priest falls to the ground, dead.

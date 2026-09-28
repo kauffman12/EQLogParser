@@ -186,14 +186,30 @@ namespace EQLogParser
     internal MirrorSummaryInput BuildSummaryInput(IReadOnlyList<DerivedFight> selected)
     {
       var snapshot = _snapshot;
-      if (snapshot is null || selected is not { Count: > 0 }) return new MirrorSummaryInput([], new TimeRange());
+      if (snapshot is null || selected is not { Count: > 0 })
+      {
+        // An empty selection clears every board, so healing arrives as an empty list rather than null: null
+        // would mean "say nothing about healing" and the board would keep last click's numbers.
+        return new MirrorSummaryInput([], new TimeRange()) { Heals = [] };
+      }
 
       // The grid hides a charmed mob's own rows (CharmPetRows: that is a pet, and pets have no fight row), so a
       // selection can never contain them. Put back the ones whose span overlaps what was clicked — otherwise the
       // hiding would take the charmer's +Pets damage, and the raid's own stray swings on their pet, out of every
       // board built from a selection.
-      return MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
+      var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
         snapshot.DamageIndex, snapshot.Facts);
+
+      /*
+       * The healing half of the same click. A heal belongs to no fight (it opens no encounter), so this is not
+       * "the selected rows' heals" but "every heal inside the selection's own time window" — which is precisely
+       * how the legacy board works, since HealingStatsBuilder windows the whole heal store by AllRanges and never
+       * asks which fight anything was in. Same window object, so both boards answer to one clock.
+       *
+       * Cost is parity, not overhead: a legacy summary request allocates the same list out of RecordsStore on
+       * every click (GetAllHeals().ToList()), and this replaces it rather than adding to it.
+       */
+      return input with { Heals = MirrorSummaryHeals.Materialize(snapshot.Heals, input.AllRanges) };
     }
 
     /*

@@ -787,10 +787,10 @@ namespace EQLogParser
      * here, off the same materialized rows — a derived row carries what the raid did to it in DamageBlocks and
      * what it did to the raid in TankingBlocks, which is the split TankingStatsBuilder already reads.
      *
-     * The healing board is still NOT fed from here: HealingStatsBuilder does not read Fight objects at all, it
-     * pulls the whole heal store and filters by time (see HealingStatsBuilder's GetAllHeals call), so a derived
-     * heal board needs a source seam rather than another builder call. Until that exists the healing tab keeps
-     * showing legacy numbers whatever list was clicked, which is the one honest gap left in this path.
+     * The healing board arrives by a different door, because it reads records rather than fights: the session
+     * materializes the heal facts inside this selection's window and hands them in as options.Heals (see
+     * MirrorSummaryHeals). Same click, same AllRanges window, so all three boards answer to one clock — and when
+     * no fight is selected each of them is told to clear, healing included.
      *
      * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
      * is what the legacy list does with an empty selection too.
@@ -844,6 +844,17 @@ namespace EQLogParser
           tankingStatsOptions.DamageType = tankingDamageType;
 
           TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
+
+          // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
+          // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
+          // so the healing tab stops being the one board that ignored which list was clicked.
+          GenerateStatsOptions healingStatsOptions = new();
+          healingStatsOptions.Npcs.AddRange(input.Fights);
+          healingStatsOptions.AllRanges = input.AllRanges;
+          healingStatsOptions.MinSeconds = 0;
+          healingStatsOptions.Heals = input.Heals;
+
+          HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
         }
         catch (Exception ex)
         {
