@@ -188,7 +188,7 @@ namespace EQLogParser
       if (dataGrid.SelectedItem is PlayerStats stats)
       {
         var name = stats.OrigName;
-        PlayerRegistry.Instance.AddVerifiedPlayer(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
       }
     }
 

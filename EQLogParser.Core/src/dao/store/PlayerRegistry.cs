@@ -37,6 +37,12 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
+
+    /* Names the operator took back out of the player list (`!Name` in players.txt). Ignore-case on purpose:
+     * the parser capitalizes every name it hands out (TextUtils.CapitalizeFirst) while this file is typed by
+     * hand, and a rejection that misses because of one letter silently un-rejects the name. */
+    private readonly ConcurrentDictionary<string, byte> _rejectedPlayers = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly ConcurrentDictionary<string, byte> _mercs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Timer _saveTimer;
     private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
@@ -58,6 +64,10 @@ namespace EQLogParser
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || CombatRecordLookup.IsPlayerSpell(name);
     internal bool IsMerc(string name) => _mercs.TryGetValue(StringCache.GetOrAdd(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
+
+    // "The operator said this one is not one of ours, and it is not to be re-learned." See RejectVerifiedPlayer.
+    internal bool IsRejectedPlayer(string name) => !string.IsNullOrEmpty(name) && _rejectedPlayers.ContainsKey(name);
+    internal List<string> GetRejectedPlayers() => [.. _rejectedPlayers.Keys];
 
     // name -> log time the player-side evidence appeared (used by the combat mirror's Phase 1
     // seed so ingest-time identity replay matches what IsPetOrPlayerOrMerc saw at each line)
@@ -82,6 +92,7 @@ namespace EQLogParser
           _takenPetOrPlayerAction.Clear();
           _verifiedPets.Clear();
           _verifiedPlayers.Clear();
+          _rejectedPlayers.Clear();
           _mercs.Clear();
           _playersUpdated = false;
           _petMappingUpdated = false;
@@ -178,6 +189,12 @@ namespace EQLogParser
 
       lock (_lock)
       {
+        // An operator rejection outranks evidence, permanently: every one of the parser paths that learn players
+        // (loot lines, who rosters, class-ability words, owner-printed-in-line) lands here, so without this gate
+        // a deleted name is back in the list on the next log and the removal means nothing.
+        if (_rejectedPlayers.ContainsKey(name))
+          return;
+
         if (_verifiedPlayers.TryGetValue(name, out var lastTime))
         {
           if (playerTime > lastTime)
@@ -220,6 +237,28 @@ namespace EQLogParser
 
       if (needPlayerEvent) EventsNewVerifiedPlayer?.Invoke(name);
       if (needPetEvent) EventsRemoveVerifiedPet?.Invoke(name);
+    }
+
+    /*
+     * An operator assertion - the "Set as Player" menus and nothing else. It differs from AddVerifiedPlayer by
+     * clearing a rejection first: someone who deleted a name and later decides it was wrong has to be able to put
+     * it back, and "the file says !Name" must not be the thing that argues with them.
+     */
+    internal void AddVerifiedPlayerByOperator(string name, double playerTime)
+    {
+      if (string.IsNullOrEmpty(name))
+        return;
+
+      if (name.Equals("You", StringComparison.OrdinalIgnoreCase))
+        name = ConfigUtil.PlayerName;
+
+      lock (_lock)
+      {
+        if (_rejectedPlayers.TryRemove(name, out _))
+          _playersUpdated = true;
+      }
+
+      AddVerifiedPlayer(name, playerTime);
     }
 
     internal string GetDefaultPlayerClass(string name)
@@ -325,28 +364,29 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(name))
         return;
 
-      var needEvent = false;
-
       lock (_lock)
       {
-        if (_verifiedPlayers.TryRemove(name, out _))
-        {
-          var toRemove = new List<string>();
-          foreach (var kv in _petToPlayer)
-          {
-            if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
-              toRemove.Add(kv.Key);
-          }
-
-          foreach (var pet in toRemove)
-            TryRemovePetMappingNoLock(pet);
-
-          _playersUpdated = true;
-          needEvent = true;
-        }
+        /*
+         * The removal is a verdict, not a cache eviction, so it is remembered: players.txt keeps `!Name` and the
+         * learning paths are refused from here on (AddVerifiedPlayer). Deleting quietly did not work - the first
+         * loot line of the next parse put the name straight back, which made the operator's edit last about one
+         * log.
+         *
+         * It deliberately does NOT reach into _petToPlayer any more. "Ziggy is not a player" and "Fluffy belongs
+         * to Ziggy" are separate statements, and the old cascade threw away rows of petmapping.txt that the
+         * operator would otherwise have to retype - including, because Init() seeds every mapping owner into
+         * _verifiedPlayers at time 0, the mappings of perfectly good raiders whose only evidence was the file.
+         *
+         * "No claim" is all this says. When the operator means "that is the enemy", that is an assertion and it
+         * belongs on the mirror's manual override (R10, IdentityKind.Npc), where it feeds opposition instead of
+         * merely silencing a guess.
+         */
+        _rejectedPlayers[name] = 1;
+        _verifiedPlayers.TryRemove(name, out _);
+        _playersUpdated = true;
       }
 
-      if (needEvent) EventsRemoveVerifiedPlayer?.Invoke(name);
+      EventsRemoveVerifiedPlayer?.Invoke(name);
     }
 
     internal void Init()
@@ -359,15 +399,32 @@ namespace EQLogParser
         _takenPetOrPlayerAction.Clear();
         _verifiedPets.Clear();
         _verifiedPlayers.Clear();
+        _rejectedPlayers.Clear();
         _mercs.Clear();
         _playersUpdated = false;
         _petMappingUpdated = false;
 
+        var saved = ConfigUtil.ReadPlayers();
+
+        // Pass one: the rejections. Before anything is claimed, and in its own pass so `!Name` wins whichever
+        // order the two lines were written in.
+        foreach (var line in saved)
+        {
+          if (!line.StartsWith('!')) continue;
+
+          var rejected = line.Substring(1).Trim();
+          if (rejected.Length > 2) _rejectedPlayers[StringCache.GetOrAdd(rejected)] = 1;
+        }
+
+        // The operator's own character is a player by definition, so this one name is not allowed to be in
+        // shadow: You-mapping across the whole app reads IsVerifiedPlayer("You"'s target).
+        _rejectedPlayers.TryRemove(ConfigUtil.PlayerName, out _);
+
         AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
 
-        ConfigUtil.ReadPlayers().ForEach(player =>
+        foreach (var player in saved)
         {
-          if (!string.IsNullOrEmpty(player) && player.Length > 2)
+          if (!string.IsNullOrEmpty(player) && player.Length > 2 && !player.StartsWith('!'))
           {
             var parsed = 0d;
             string name;
@@ -392,15 +449,21 @@ namespace EQLogParser
               name = player;
             }
 
+            // Hand-edited files may carry the literal "You"; it means whoever is playing now. (The old code
+            // assigned to the ForEach parameter here, which was then never read - a foreach variable cannot be
+            // reassigned, so the remap happens on `name`, where it does something.)
             if ("You".Equals(name, StringComparison.OrdinalIgnoreCase))
             {
-              player = ConfigUtil.PlayerName;
+              name = ConfigUtil.PlayerName;
             }
+
+            // A rejection also withholds the class: `!Goruuk,Wizard` should not leave a class opinion behind.
+            if (_rejectedPlayers.ContainsKey(name)) continue;
 
             AddVerifiedPlayer(name, parsed, true);
             SetDefaultPlayerClass(name, className, true);
           }
-        });
+        }
 
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
@@ -438,25 +501,48 @@ namespace EQLogParser
         {
           playerList = [];
           var now = DateTime.Now;
-          foreach (var kv in _verifiedPlayers)
-          {
-            if (!string.IsNullOrEmpty(kv.Key) && IsPossiblePlayerName(kv.Key) && !"You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase))
-            {
-              if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays < 200)
-              {
-                var output = kv.Key + "=" + Math.Round(kv.Value);
-                if (_defaultPlayerClass.TryGetValue(kv.Key, out var className))
-                {
-                  output += "," + className;
-                }
 
-                playerList.Add(output);
-              }
-              else
-              {
-                _petToPlayer.TryRemove(kv.Key, out _);
-              }
+          /*
+           * Rejections are written unfiltered. The plain rows go through IsPossiblePlayerName, which keeps the
+           * junk out of the player list - but a rejection is usually about a name that test has no useful opinion
+           * on ("that thing is not one of ours", said of a mob), and dropping the row would silently un-reject it.
+           * Both halves come out sorted because this file is hand-edited: a stable order is what makes it
+           * diffable, and an operator who cannot see what changed cannot audit a classifier.
+           */
+          foreach (var name in _rejectedPlayers.Keys.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+          {
+            if (!string.IsNullOrEmpty(name) && !"You".Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+              playerList.Add("!" + name);
             }
+          }
+
+          foreach (var kv in _verifiedPlayers.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+          {
+            if (string.IsNullOrEmpty(kv.Key) || !IsPossiblePlayerName(kv.Key) ||
+              "You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase) || _rejectedPlayers.ContainsKey(kv.Key))
+            {
+              continue;
+            }
+
+            /*
+             * A row with no time is a statement rather than an observation - hand-typed, or an owner seeded from
+             * petmapping.txt - so it has no age to expire. Only evidence-dated rows retire.
+             *
+             * The expiry used to be the entire rule (kv.Value != 0 && seen recently), which deleted every
+             * hand-typed name on the next save AND reached into _petToPlayer to drop its pet mapping with it:
+             * Init() loads plain names at time 0, so one newly learned name was enough to cost an operator both
+             * their curated entries and their ownership rows, silently.
+             */
+            if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays >= 200)
+            {
+              continue;
+            }
+
+            var hasClass = _defaultPlayerClass.TryGetValue(kv.Key, out var className);
+            playerList.Add(kv.Value == 0 && !hasClass
+              ? kv.Key
+              : kv.Key + "=" + Math.Round(kv.Value) + (hasClass ? "," + className : ""));
           }
 
           _playersUpdated = false;

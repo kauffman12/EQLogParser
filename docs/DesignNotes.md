@@ -3630,3 +3630,55 @@ while the client writes corpses with an **apostrophe** — across the six captur
 `` `s corpse `` in 4 — and nothing normalises either form, so those rows can never match by exact name. Do not "fix" it
 with a blanket replace: pets genuinely use the backtick (`` Kazcro`s pet ``). R13 takes the stripped base name for
 corpse identity anyway, which is why nothing has noticed.
+
+## The raid roster in `players.txt`: what Save() is allowed to throw away
+
+`PlayerRegistry` keeps four things and saves only two of them, which is the whole background for this note:
+`_defaultPlayerClass` (name → class, persisted), `_verifiedPlayers` (name → the **unix time** it was last
+auto-confirmed, persisted), `_petMappings` (pet → owner pairs, persisted to `petmapping.txt`) and `_mercs`
+(**memory only** — no timestamp, no file). Both persisted dictionaries are keyed per server
+(`CacheDir/players.txt`, `CacheDir/petmapping.txt`), because a name that means "our raid" on one server is not the
+same claim on another.
+
+Auto-confirmation comes from fourteen call sites: five loot paths in `MiscLineParser` (roll, `receives N … from X's
+corpse`, dragon scale / rune / currency splits), four ability-word paths in `LineModifiersParser` (`(Assassinate)`,
+`(Headshot)`/`(Double Bow Shot)`, `(Slay Undead)`, twincast on a heal — the only ones that also carry a class),
+two pet paths (`X's pet` seen attacking, and a petmap hit), `RegisterRaidPlayerFromWindow` (the `who` block: name +
+level + class + guild), `TryGetConsumer` (the `Glug, glug… X takes a drink` actor, R17), and two merc paths. A name
+hand-typed into the file has no timestamp at all and is kept for that reason.
+
+**The bug this section exists for: every save used to delete the operator's own entries.** The window filter was
+
+    if (!string.IsNullOrWhiteSpace(entry.Key) && (entry.Value > cutOff || !_defaultPlayerClass.ContainsKey(entry.Key)))
+
+`_defaultPlayerClass` holds a class only where an ability word or the roster supplied one, so a typed name — no class,
+no timestamp — failed both halves and vanished from the file at the next `Save()`, which runs on every window close and
+on the ~5 minute auto-save while any other entry keeps it fresh. The file was therefore slowly eating exactly the rows
+nobody but the operator could write: guild alts, a mainsurname-only entry. Persistence for a name that survives only
+while something else re-confirms it is not persistence.
+
+The filter is now `entry.Value > cutOff || IsManualEntry(entry.Key) || IsRejected(entry.Key)`, and three more rules
+came with it, all of them about not spending operator data on inference:
+
+- **A hand-typed name keeps its claim for the lifetime of the file.** `AddVerifiedPlayer` no longer stamps names that
+  have no timestamp, so a typed entry never becomes "stale" and cannot be reaped; only evidence-dated entries age.
+- **Removal writes a tombstone** (`!Name`) instead of letting the row disappear, and `Init` reads `!Name`, an empty
+  value and a malformed timestamp as "rejection marker": the name stops being auto-confirmed AND stops claiming
+  `Player` identity in `RegistrySeed`. A user who deletes a raid boss off their list gets what they asked for on the
+  next derive rather than watching it come back a minute later.
+- **A rejected owner loses ownership, not the mapping.** `petmapping.txt` stays intact because "Goruuk's pet" being
+  somebody's pet is a different fact from Goruuk being on this server's roster — cascading into the pairs would throw
+  away learned structure to express doubt about one name. The registry simply stops claiming the owner as a raider, and
+  `RegistrySeed` refuses an ownership edge whose target was rejected; R5 still reads the line's own possessive text
+  (`ClassificationRules.OwnerInName`) for the pet itself.
+
+Round-trip coverage lives in `EQLogParser.Test/src/store/PlayerRegistryPersistenceTest.cs` — there was none: no test
+constructed a registry with a `ConfigDir`, so every `Init`/`Save`/re-`Init` path (including that filter) was untested
+while the WPF code called them on every window close. The class swaps `ConfigUtil.ConfigDir` to a temp directory, and
+notes in passing that `CombatRecordLookup.IsValidClassName` is injected by `App.xaml.cs` and defaults to "no class name
+is valid" headless — an assertion about a stored class needs the hook wired, and restored, because it is process state.
+
+One cross-platform fix fell out of making those paths work: `CacheDir` concatenated `"\\players.txt"` (and
+`"\\petmapping.txt"`), which on Linux produced one filename per server with a literal backslash inside it rather than
+a file in the server's folder — so nothing in this repository's CI could ever have exercised the read-back path. Both
+now go through `Path.Combine`, and the test asserts the files land *in* the server directory.

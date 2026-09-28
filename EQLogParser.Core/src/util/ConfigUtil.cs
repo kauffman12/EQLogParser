@@ -147,16 +147,23 @@ namespace EQLogParser
     internal static Dictionary<string, string> ReadPetMapping()
     {
       var petMapping = new Dictionary<string, string>();
-      var fileName = ConfigDir + @"\" + ServerName + @"\" + PetMappingFile;
-      LoadProperties(petMapping, ReadList(fileName));
+      LoadProperties(petMapping, ReadList(ServerFilePath(PetMappingFile, ServerName)));
       return petMapping;
     }
 
     internal static List<string> ReadPlayers()
     {
-      var fileName = ConfigDir + @"\" + ServerName + @"\" + PlayersFile;
-      return ReadList(fileName);
+      return ReadList(ServerFilePath(PlayersFile, ServerName));
     }
+
+    /*
+     * One per-server file under the config dir. Path.Combine, not the `@"\"` concatenation these used to use:
+     * ReadList normalized separators on the way in while the writers did not, so on a host where a backslash is
+     * an ordinary filename character the two halves did not name the same path - players.txt and petmapping.txt
+     * were written somewhere unreadable and read back as empty, which reads like memory loss rather than a bug.
+     * Same reasoning already recorded on ReadMirrorOverrides below. Windows output is unchanged.
+     */
+    private static string ServerFilePath(string file, string serverName) => Path.Combine(ConfigDir ?? "", serverName ?? "", file);
 
     // Takes the server name for the same reason Save does: the caller owns which server's verdicts it wants,
     // and ConfigUtil.ServerName may already point at the next log by the time this runs.
@@ -184,23 +191,23 @@ namespace EQLogParser
     // pass server name to avoid issue where it was changed before save completes
     internal static void SavePlayers(List<string> list, string serverName)
     {
-      if (string.IsNullOrEmpty(serverName))
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir))
         return;
 
-      var playerDir = ConfigDir + @"\" + serverName;
+      var playerDir = Path.Combine(ConfigDir ?? "", serverName);
       Directory.CreateDirectory(playerDir);
-      SaveList(playerDir + @"\" + PlayersFile, list);
+      SaveList(Path.Combine(playerDir, PlayersFile), list);
     }
 
     // pass server name to avoid issue where it was changed before save completes
     internal static void SavePetMapping(List<KeyValuePair<string, string>> list, string serverName)
     {
-      if (string.IsNullOrEmpty(serverName))
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir))
         return;
 
-      var petDir = ConfigDir + @"\" + serverName;
+      var petDir = Path.Combine(ConfigDir ?? "", serverName);
       Directory.CreateDirectory(petDir);
-      SaveProperties(petDir + @"\" + PetMappingFile, list);
+      SaveProperties(Path.Combine(petDir, PetMappingFile), list);
     }
 
     internal static void Save()

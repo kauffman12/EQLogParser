@@ -249,7 +249,7 @@ namespace EQLogParser
         var name = npc.Name;
         var dateTime = DateUtil.ToDotNetSeconds(DateTime.Now);
         await Task.Delay(120);
-        PlayerRegistry.Instance.AddVerifiedPlayer(name, dateTime);
+        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, dateTime);
         RemoveFight(name); // force in case already in the player list for some reason
       }
     }
