@@ -211,10 +211,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   derived-vs-legacy check is per raider over each engine's own block input — both read Rune 322 / Kilsa 512, with
   the row-level difference asserted rather than smoothed over. Related: `FightManager` answers a spell line naming a
   defender by re-deciding it (`record.AttackerIsSpell && defender` → `!IsPetOrPlayerOrMerc(record.Defender)`,
-  line ~255), which is the one non-melee shape that reaches the tanking side at all. And **the attempt columns are
-  still legacy-only**: `# Attempts` binds `MeleeAttempts`, filled from `Attempt` counters in `StatsUtil`, and the
-  mirror captures no swing outcomes — a derived tank row's `TankHits` is hits *taken*, not attempts, so `% Hit`,
-  `% Rampage`, `% Fumble` and friends stay empty until misses are captured at ingest.
+  line ~255), which is the one non-melee shape that reaches the tanking side at all. **A swing that makes no number
+  is already in the capture** — do not go build one. The `X tries to <verb> Y, but …` family (`blocks!`, `dodges!`,
+  `miss!`/`misses!`, `parries!`, `INVULNERABLE!`, `riposte[s]!`, `… absorbs the blow!`) is parsed into a record with
+  total 0 and its own label, so it rides the same `EventsDamageProcessed` seam as damage and lands in `DamageFact`
+  with the verb kept as subtype; `StatsUtil.UpdateDamageStats` then fills `MeleeAttempts`/`Misses`/`Blocks`/`Dodges`/
+  `Parries`/`RiposteHits`/`Absorbs`/`Invulnerable` from that label on either engine, and the mask-dwellers (`Crit`,
+  `Flurry`, `Rampage`, `Strikethrough`) follow because `DamageFact.ModifiersMask` came along. `MirrorOutcomeParityTest`
+  pins both boards per raider, legacy vs derived, **with the absolute counts asserted first** — an equality alone
+  would also pass on a capture bug that zeroed both sides. Two traps. (a) A row's `# Hits` is *not* its attempt count:
+  damage-side `DamageHits` filters on `LabelTypes.IsHit`, which counts `Block` as a hit type and excludes the other
+  five outcomes, while `FightManager`'s tank branch counts unconditionally (5 vs 7 on that fixture). (b) A column whose
+  word the log never writes reads 0 on both engines — Kicker/Fumble/Vex are absent from the 2024 capture (Flurry 94,453,
+  Riposte 13,709, Rampage 1,151), and that is the capture being faithful, not a gap to fill.
 - **Identity rules read a closed vocabulary and never reason from their own guesses**: the four rules added after reading six
   captures (2022-2026) cold are pinned by `MirrorRuleExtensionsTest`, and each has a shape that looked safe until it was measured.
   **R5 ownership is five words, in one list** — `OwnerSuffixes` = `` `s pet``, `` `s warder``, `` `s ward``, `` `s familiar``,

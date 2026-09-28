@@ -1,0 +1,20 @@
+[Sun Apr 26 18:51:00 2026] Rune joined the raid.
+[Sun Apr 26 18:51:00 2026] Kilsa joined the raid.
+[Sun Apr 26 18:51:01 2026] Chiefoc is now the leader of your raid.
+[Sun Apr 26 18:51:02 2026] Rune slashes an ice giant priest for 300 points of damage.
+[Sun Apr 26 18:51:03 2026] Rune tries to bash an ice giant priest, but Rune misses!
+[Sun Apr 26 18:51:04 2026] Rune tries to slash an ice giant priest, but an ice giant priest dodges!
+[Sun Apr 26 18:51:05 2026] Rune tries to crush an ice giant priest, but an ice giant priest blocks!
+[Sun Apr 26 18:51:06 2026] Kilsa tries to hit an ice giant priest, but an ice giant priest parries!
+[Sun Apr 26 18:51:07 2026] Kilsa tries to hit an ice giant priest, but an ice giant priest ripostes!
+[Sun Apr 26 18:51:08 2026] An ice giant priest tries to hit Rune, but Rune blocks!
+[Sun Apr 26 18:51:09 2026] An ice giant priest tries to smash Kilsa, but Kilsa dodges!
+[Sun Apr 26 18:51:10 2026] An ice giant priest tries to punch Rune, but Rune parries!
+[Sun Apr 26 18:51:11 2026] An ice giant priest tries to hit Rune, but Rune's magical skin absorbs the blow!
+[Sun Apr 26 18:51:12 2026] An ice giant priest tries to hit Kilsa, but Kilsa is INVULNERABLE!
+[Sun Apr 26 18:51:13 2026] An ice giant priest slashes Rune for 234 points of damage.
+[Sun Apr 26 18:51:14 2026] Rune slams an ice giant priest for 150 points of damage. (Rampage)
+[Sun Apr 26 18:51:14 2026] Kilsa slams an ice giant priest for 96 points of damage. (Flurry)
+[Sun Apr 26 18:51:14 2026] Kilsa slams an ice giant priest for 210 points of damage.
+[Sun Apr 26 18:51:15 2026] An ice giant priest backstabs Kilsa for 512 points of damage. (Critical)
+[Sun Apr 26 18:51:16 2026] An ice giant priest falls to the ground, dead.
