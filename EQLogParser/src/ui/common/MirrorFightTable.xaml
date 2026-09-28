@@ -61,6 +61,7 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
                            RowStyle="{DynamicResource MirrorRowStyle}"
+                           ContextMenuOpening="MirrorContextMenuOpening"
                            SelectionChanged="MirrorSelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"
@@ -76,6 +77,26 @@
         <syncfusion:GridNumericColumn MappingName="Hits" HeaderText="Hits" NumberDecimalDigits="0" Width="65" />
         <syncfusion:GridTextColumn MappingName="Status" HeaderText=" " Width="50" />
       </syncfusion:SfDataGrid.Columns>
+      <!--
+        R10 (docs/combat-mirror-design.md): the rules are inference, and a name whose evidence never crosses a
+        gate needs a human to say what it is. Applies to every selected row, saves per server, and re-derives -
+        see MirrorFightTable.ApplyOverride for why that is a re-read of the facts rather than an edit of the row.
+      -->
+      <syncfusion:SfDataGrid.ContextMenu>
+        <ContextMenu>
+          <MenuItem x:Name="overridePlayerItem" Header="Set as Player" Click="OverridePlayerClick"
+                    ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)"/>
+          <MenuItem x:Name="overrideMercItem" Header="Set as Mercenary" Click="OverrideMercClick"
+                    ToolTip="Raid-side mercenary; stays its own entry on the board unless it is a pet of somebody"/>
+          <MenuItem x:Name="overridePetItem" Header="Set as Pet" Click="OverridePetClick"
+                    ToolTip="Raid-side summon: off the fight list, its damage counted with the raid's"/>
+          <MenuItem x:Name="overrideNpcItem" Header="Set as NPC" Click="OverrideNpcClick"
+                    ToolTip="Hostile: this name gets its own fight row again"/>
+          <Separator/>
+          <MenuItem x:Name="overrideClearItem" Header="Clear Override" Click="OverrideClearClick"
+                    ToolTip="Forget what was saved and let the rules answer for this name"/>
+        </ContextMenu>
+      </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>
   </Grid>
 </UserControl>

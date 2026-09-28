@@ -19,6 +19,11 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
     private const string PetMappingFile = "petmapping.txt";
     private const string PlayersFile = "players.txt";
+
+    // R10: "set as player / merc / pet / npc" from the derived fight list, per server (MirrorOverrideStore).
+    // Same shape as petmapping.txt - name=Kind - and the same folder, because it is the same kind of claim:
+    // something the operator knows that the log does not say.
+    private const string MirrorOverrideFile = "mirror-overrides.txt";
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
@@ -151,6 +156,29 @@ namespace EQLogParser
     {
       var fileName = ConfigDir + @"\" + ServerName + @"\" + PlayersFile;
       return ReadList(fileName);
+    }
+
+    // Takes the server name for the same reason Save does: the caller owns which server's verdicts it wants,
+    // and ConfigUtil.ServerName may already point at the next log by the time this runs.
+    internal static Dictionary<string, string> ReadMirrorOverrides(string serverName)
+    {
+      var overrides = new Dictionary<string, string>();
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir)) return overrides;
+
+      // Path.Combine rather than the `@"\"` concatenation its neighbours use: this has to round-trip on a host
+      // where a backslash is a filename character, and the mirror's rule tests run there.
+      LoadProperties(overrides, ReadList(Path.Combine(ConfigDir, serverName, MirrorOverrideFile)));
+      return overrides;
+    }
+
+    // pass server name to avoid issue where it was changed before save completes
+    internal static void SaveMirrorOverrides(List<KeyValuePair<string, string>> list, string serverName)
+    {
+      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir)) return;
+
+      var overrideDir = Path.Combine(ConfigDir, serverName);
+      Directory.CreateDirectory(overrideDir);
+      SaveProperties(Path.Combine(overrideDir, MirrorOverrideFile), list);
     }
 
     // pass server name to avoid issue where it was changed before save completes

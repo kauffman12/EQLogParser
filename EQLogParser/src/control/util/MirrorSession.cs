@@ -95,8 +95,16 @@ namespace EQLogParser
             var timeline = new EntityTimeline();
             RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
             // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
-            // see a mercenary or custom-named pet that never speaks, never joins and owns nothing.
+            // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
+            // same stream for an NPC-verdict name the whole raid keeps topping up.
             ClassificationRules.Apply(_facts, timeline, _heals);
+
+            /*
+             * R10 last, and it has to be last: this timeline is built from nothing on every pass (see above), so
+             * what the operator saved has to be replayed into each one or an override would vanish at the very
+             * re-derive it asked for. Manual strength means nothing above can outvote it, order included.
+             */
+            MirrorOverrideStore.Instance.Apply(timeline);
 
             // The index is filled DURING the projection: it needs the same direction decision the rows split
             // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler). It

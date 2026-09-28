@@ -12,8 +12,9 @@ namespace EQLogParser
 {
   // The derived-fight-list twin of FightTable: same grid, different data source (CombatMirror →
   // ClassificationRules → FightDeriver → Sectionizer). Selection is the one interactive seam today:
-  // it feeds the damage summary from derived facts (see DerivedSelectionChanged). Identity overrides
-  // and cross-grid selection sync land on top of it later.
+  // it feeds the damage summary from derived facts (see DerivedSelectionChanged), and it is where R10 lives:
+  // right-click a row and say what that name actually is (Set as Player / Mercenary / Pet / NPC), which saves
+  // per server and re-derives. Cross-grid selection sync with the legacy list is still ahead of it.
   public partial class MirrorFightTable
   {
     /*
@@ -38,6 +39,22 @@ namespace EQLogParser
     // if they were new, and a grid that re-raises SelectionChanged with the same selection (or with none,
     // when an ItemsSource swap lands) must not clear stats nobody changed.
     private List<int> _announcedIds = [];
+
+    /*
+     * The names the last right-click wrote, kept until the derive they asked for finishes so the panel can say
+     * what actually became of them. Setting a name to Pet or Player takes its row OFF the list by design (only
+     * hostile-side names key an encounter), which otherwise reads as "my click deleted the fight".
+     */
+    private List<string> _pendingOverride;
+
+    /*
+     * What a row IS, across derives. DerivedFight.Id cannot say that: FightProjection renumbers the list on every
+     * pass (Id = i + 1 over the rows of THAT pass), so one override - which removes rows on purpose - shifts
+     * every number after it, and restoring by id would highlight whatever fight moved into the old slot while
+     * showing its numbers underneath. A section of a name is identified by the name and the moment it began;
+     * both come out of the same facts on every pass.
+     */
+    private readonly record struct FightKey(string Name, double BeginTime);
 
     private MirrorSession _session;
     private bool _currentShowBreaks;
@@ -88,23 +105,76 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        /*
+         * What the user had selected, remembered by name + start time and put back on the new rows.
+         *
+         * A derive is not a rare event on this panel - every identity override re-derives on purpose - so a
+         * swap that dropped the selection would make the feature feel like it deleted the user's work: they set
+         * `Dangle` to Pet, and the row they were looking at plus the board under it both vanish. Name and start
+         * time are read off the same facts on every pass, so the fight (with this pass's numbers in it) is found
+         * again - see FightKey for why the row number cannot be that key.
+         *
+         * The one case not restored is a user-sorted grid: the keys survive but their new positions depend on how
+         * the sort landed, and guessing at row indices to restore a selection would put the highlight on some
+         * other fight. Better to lose the highlight than to lie about it.
+         */
+        var keep = new HashSet<FightKey>();
+        foreach (var fight in GetSelectedFights()) keep.Add(KeyOf(fight));
+        var restorable = keep.Count > 0 && mirrorGrid.SortColumnDescriptions.Count == 0;
+
         // The rows the last announcement pointed at no longer exist: forget them rather than let the swap's
         // selection reset look like a change and clear a summary nobody touched. What is on that board now
-        // came from the previous pass, and stays there until the next click.
+        // came from the previous pass, and stays there until the next click - or until the selection below
+        // comes back, which re-announces with THIS pass's numbers.
         _selectionTimer.Stop();
         _announcedIds = [];
 
         _rows = new ObservableCollection<MirrorFightRow>(snapshot.Rows);
         mirrorGrid.ItemsSource = _rows;
 
+        if (restorable)
+        {
+          RestoreSelection(keep);
+          AnnounceSelection();
+        }
+
+        // The verdict sentence goes on the end of the derive line, not in front of it: "which of my names moved"
+        // is the question, and the counts under it are the context for the answer.
         mirrorStatus.Text = $"Derived {snapshot.DerivedAt:HH:mm:ss} - {snapshot.FightCount} fights, " +
-                            $"{snapshot.FactCount:N0} facts, {snapshot.ElapsedMs:F0} ms";
+                            $"{snapshot.FactCount:N0} facts, {snapshot.ElapsedMs:F0} ms" + OverrideOutcome();
       });
     }
 
     private void OnDeriveFailed(string message)
     {
+      _pendingOverride = null;
       Dispatcher.InvokeAsync(() => mirrorStatus.Text = $"Derive failed: {message}");
+    }
+
+    /*
+     * What became of the names the user just ruled on, phrased by what the list actually does now. Nothing here
+     * guesses: a name still has a row if a row carrying its name came out of this pass, and "left the list" is
+     * the honest wording for a name that is raid-side now (its damage still counts, inside whatever it hit).
+     */
+    private string OverrideOutcome()
+    {
+      if (_pendingOverride is not { Count: > 0 } names) return string.Empty;
+      _pendingOverride = null;
+
+      var listed = 0;
+      foreach (var row in _rows)
+      {
+        if (row.Fight is not { } fight) continue;
+        for (var i = 0; i < names.Count; i++)
+          if (string.Equals(fight.Name, names[i], StringComparison.OrdinalIgnoreCase)) listed++;
+      }
+
+      var gone = names.Count - listed;
+      if (gone == 0)
+        return $" - override applied, all {names.Count} name{(names.Count == 1 ? "" : "s")} still listed";
+
+      return $" - override applied: {gone} name{(gone == 1 ? "" : "s")} left the list"
+             + (listed > 0 ? $", {listed} still on it" : string.Empty);
     }
 
     // Capture heartbeat (dispatcher thread already). Only fires while no snapshot covers the
@@ -199,12 +269,109 @@ namespace EQLogParser
       }
     }
 
+  /*
+     * R10 - the operator's verdict on a name, entered here and kept by MirrorOverrideStore.
+     *
+     * Actions go to every selected row at once (ctrl-click twenty rows, "all pets"), write ONE file, then ask
+     * for a re-derive instead of editing the grid. That is the whole design: an override is a new reading of the
+     * facts, and a reading changes more than the row's badge - which side its damage sits on, whether it keys a
+     * row at all, and which raider its output folds under. Patching the visible row would leave the board, the
+     * roll-ups and the next pass disagreeing with the label.
+     *
+     * The selection outlives the re-derive (see OnDerived), so the sequence reads as "that row changed shape",
+     * not "my click cleared the window".
+     */
+    private void OverridePlayerClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Player);
+
+    private void OverrideMercClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Merc);
+
+    private void OverridePetClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Pet);
+
+    private void OverrideNpcClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Npc);
+
+    private void OverrideClearClick(object sender, RoutedEventArgs e) => ApplyOverride(null);
+
+    // Names of the selected fights (dividers select nothing), written as one batch.
+    private void ApplyOverride(IdentityKind? kind)
+    {
+      var names = new List<string>();
+      foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
+      if (names.Count == 0) return;
+
+      // Remembered so the derive that follows can say what became of these names (see OverrideOutcome).
+      _pendingOverride = names;
+      MirrorOverrideStore.Instance.Apply(names, kind);
+
+      mirrorStatus.Text = kind is { } k
+        ? $"Override: {names.Count} name{(names.Count == 1 ? "" : "s")} set to {k} - re-deriving"
+        : $"Override cleared for {names.Count} name{(names.Count == 1 ? "" : "s")} - re-deriving";
+      _session?.RederiveAsync();
+    }
+
+    // Greyed out unless the grid has a real fight selected; clearing is offered even with nothing selected,
+    // because "what did I save?" is asked most often right after a name stops appearing in the list at all
+    // (set as Pet and its row is gone by design, so there is nothing left to click).
+    private void MirrorContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+    {
+      var hasFight = GetSelectedFights().Count > 0;
+      overridePlayerItem.IsEnabled = hasFight;
+      overrideMercItem.IsEnabled = hasFight;
+      overridePetItem.IsEnabled = hasFight;
+      overrideNpcItem.IsEnabled = hasFight;
+
+      // How many verdicts are on file for this server, so "Clear" says whether it has anything to do - the
+      // question gets asked most often about a name that no longer has a row to click (set as Pet hides it by
+      // design), where the menu is the only place left that can answer.
+      var saved = MirrorOverrideStore.Instance.Count;
+      overrideClearItem.IsEnabled = saved > 0 || hasFight;
+      overrideClearItem.Header = saved > 0 ? $"Clear Override ({saved} saved)" : "Clear Override";
+    }
+
     // Same shape as FightTable: one always-on predicate, toggled by flag, refreshed via the view.
     private void ApplyFilter()
     {
       if (mirrorGrid?.View == null) return;
-      mirrorGrid.View.Filter = item => !(_currentShowBreaks is false && ((MirrorFightRow)item).IsDivider);
+      mirrorGrid.View.Filter = item => IsShown((MirrorFightRow)item);
       mirrorGrid.View.RefreshFilter();
+    }
+
+    // The filter's own question, asked out loud so selection restore counts the same rows the grid shows.
+    private bool IsShown(MirrorFightRow row) => _currentShowBreaks || !row.IsDivider;
+
+    /*
+     * Put the highlight back on the rows whose fight ids survived the swap.
+     *
+     * SelectRows wants CONTIGUOUS grid-row ranges, so the kept set is walked as runs. Positions are counted over
+     * the shown rows only (a hidden divider takes no grid row), and offset by wherever this grid's records
+     * actually start rather than by an assumed header height.
+     */
+    private static FightKey KeyOf(DerivedFight fight) => new(fight.Name, fight.BeginTime);
+
+    private void RestoreSelection(HashSet<FightKey> keepKeys)
+    {
+      var first = FirstRecordRow();
+      var runStart = -1;
+      for (var i = 0; i <= _rows.Count; i++)
+      {
+        var hit = i < _rows.Count && IsShown(_rows[i]) && _rows[i].Fight is { } fight && keepKeys.Contains(KeyOf(fight));
+        if (hit && runStart < 0) runStart = i;
+        else if (!hit && runStart >= 0)
+        {
+          mirrorGrid.SelectRows(first + runStart, first + i - 1);
+          runStart = -1;
+        }
+      }
+    }
+
+    // Where the data rows begin, read off the grid instead of assumed: a row that is not a record (header,
+    // filter row, footer) resolves to no record at all, so the first index answering 0 IS the first row.
+    private int FirstRecordRow()
+    {
+      for (var i = 0; i < 8; i++)
+      {
+        if (mirrorGrid.ResolveToRecordIndex(i) == 0) return i;
+      }
+      return 1;
     }
   }
 }

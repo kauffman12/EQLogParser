@@ -1300,6 +1300,10 @@ namespace EQLogParser
             {
               // update pet/player windows all at once
               PlayerRegistry.Instance.Init();
+
+              // R10: the operator's own verdicts on names are per server too (mirror-overrides.txt), and they
+              // have to be loaded before the mirror's first derive or the rules answer alone.
+              MirrorOverrideStore.Instance.Init(server);
               MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
                 PlayerRegistry.Instance.GetVerifiedPets());
               MainActions.LoadPetOwners(petMappingWindow, PlayerRegistry.Instance.GetPetMappings());
