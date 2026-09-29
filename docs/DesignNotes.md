@@ -3897,3 +3897,71 @@ sees it (`Incogitable -> A candlefolk flame worshipper` 90.5 M; `A candlefolk fl
 mistake, and it is the next thing to measure rather than widen the exemption for. Also still owed: re-running
 `MirrorRealLogBoardsTest`'s parity bars now that derived sees this damage — the +19-20 % read as derived-running-high
 should move toward legacy on the captures where a seed pet shared a spell name.
+
+## Re-review of the legacy-replacement workstream (requirements vs what shipped)
+
+Reviewed against what the operator actually asked for across this workstream, with the evidence that answers each. Two
+things were found wrong by measuring after claiming — both corrected below rather than quietly — and one requirement is
+deliberately not built yet because its safe shape needs a Windows run.
+
+**1. "Load a log, watch the fight list fill, and it must not get slower."** The mirror is an append-only capture plus a
+quiescent derive; nothing recalculates on the parse path. Re-measured during this review: `eqlog_Incogitable_xegony.txt`
+(344 MB) ingest **20.8 s**, classify+project **822 ms** for 4,174 rows, materialize 4,078 rows in 404 ms; 2024 capture
+ingest 45.9 s. `8ec9cc93` kept the last of the eager arithmetic off the hot path by making every board a reader.
+
+**2. "The overlay and the fight list must be the same numbers, exactly."** `MirrorStats.For(rows, index, facts, heals)`
+is now the only calculation, `MirrorSession.BuildScopeStats(rows)` the one wrapper (it applies the grid's hidden-pet rule
+so a scope and a click see the same population). Pinned structurally: `ScopesAddUpToTheSameTotalAsTheirUnion`
+(`For(A ∪ B) == For(A) + For(B)`, the property that makes "the session so far" identical to "select-all"),
+`TenPullsInOneWindowTotalTheSameAsTheRowsOneByOne` (the operator's stated scenario), and
+`ARefreshLeavesTheBoardsLastAnswerAlone` (a 1 Hz meter refresh runs on its own `DamageStatsBuilder`, so an open summary
+is never repainted with the meter's window). **Not done:** the overlay still reads `FightManager.GetOverlayFights()`; that
+UI swap is mechanical now but needs to be watched on Windows, and it must ride the existing `EnableCombatMirror` gate.
+
+**3. "Pet damage counts for the player, shown as `X +Pets`, in the meter and in the summary of the same fights."**
+Pinned end to end by `ARaidSideNameThatIsAlsoASelfTargetSpellStillGetsItsRows`: hits reach the mob's row, the raid total
+includes them, no phantom caster named after a spell appears, and they arrive on the owner's line via `AttackerOwner`
+(the `MirrorDamageIndex(timeline)` → `OwnerOf` seam `DamageStatsBuilder` folds by). The parity print confirms this is
+what real boards do: derived-only rows on Incogitable are literally `Virul +Pets`, `Amengi +Pets`, …, while legacy keeps
+those pets as their own rows or drops them.
+
+**4. "Monitoring must not calculate DPS just because a meter could be open."** Monitoring appends facts and derives rows;
+`MirrorStats` runs only when a surface asks, on the asking surface's own builder instance (§"The one calculation a scope
+asks"). Legacy still accumulates per line inside `BattleRow`; deleting that is late in the map, but nothing new pays it.
+
+**5. "Keep the operator's knowledge; don't launder the model's guesses into it."** Rosters stay inputs forever;
+`identity-priors.txt` (`972f8cfa`) carries cross-log warmth as a *display fallback only*, and classifier verdicts are
+never persisted — every row still answers "why" from this log's lines. The Names window (`3b92e096`) replaced the three
+hand-maintained panes as a surface.
+
+**6. "Don't break what works."** `EQLogParser.Test` **1,463 pass / 5 opt-in skipped**, app + Core + both test assemblies
+at **0 warnings**. Parity bars re-read after the gate fix: Incogitable unchanged (healing 373 healers exact with zero
+mismatched (person, column) pairs; raid damage legacy 578,233,842,799 → derived 581,343,395,690, +0.54 %; 22 of 374
+shared people move on Total), and — the sign that the dropped-fact hole closed rather than shifted things — **derived row
+count now equals legacy's exactly (4,471 / 4,471; it was 4,312)**. On the 2024 capture: healing 104 healers exact,
+derived raid damage **+0.12 %** vs legacy over a 5.9 M-fact evening. Arithmetic from the same two measurements, flagged
+as arithmetic: without the fix that capture's derived board would read ≈0.5 % *low* (the pet's 5,644,042,553 was simply
+missing), so the correction moved it from silently-under to slightly-over, in the same direction as every other known
+difference (legacy dropping records whose attacker it cannot place).
+
+**Two claims I had to take back.** (a) The first write-up named `FightProjection`'s `Npc vs Npc` gate as the mechanism
+behind the missing pet damage; printing `IdentityAt`/`IsCharmedAt`/`IsOurPetAt` for both names at the fact's own second
+showed the facts routed normally and the deletion happened in the spell-name feedback skip, which asked a question of a
+string instead of of a combatant. The diagnostic stays in the census for exactly this reason. (b) An earlier roadmap said
+the three boards still needed legacy fights; measurement showed they were already reading materialized derived rows, which
+is why only one event (`EventsClearedActiveData`, `180ff710`) had to move before `FightManager` could go.
+
+**Outstanding, in the order that makes them safe:**
+- **Windowed scope** (the operator's "I can reset the meter at any time", so its window is often a *slice* of a row).
+  Needs `MirrorSummaryFights` materialization to accept `[from,to]` — and the trap to respect is its per-row `Fight`
+  cache (`_summaries`, keyed by `DerivedFight`): a sliced `Fight` must never be served to an unwindowed selection, or a
+  cleared meter would silently lower a summary. So: a separate non-cached windowed path, cost measured against a session's
+  (small) ordinal runs, not slipped into the cached one.
+- **Overlay UI swap** onto `BuildScopeStats` behind `EnableCombatMirror`, keeping the timeout rule inside overlay code,
+  then removing `GetOverlayFights`/`HasOverlayFights`/`EventsNewOverlayFight`. Watch on Windows: this is the first change
+  in the workstream whose behavior `dotnet test` on Linux cannot observe.
+- **The 0.06–0.11 % residue**: raid-side swings onto a name the seed calls a pet whose ownership interval does not answer
+  `IsOurPetAt` at that second. Belongs to seed interval consistency; do not widen a gate exemption to hide it.
+- Remaining legacy readers stay in `docs/legacy-replacement-map.md` order: overlay → `EventViewer`'s `IsLifetimeNpc` →
+  `LineChart`'s `FightTimeout` constant → `FightTable` → parse-time stat accumulation (`HitRecord`/`RecordsStore` last,
+  until the line viewers read fact tables). Roster files never go away.
