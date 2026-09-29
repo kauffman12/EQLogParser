@@ -330,7 +330,7 @@ public class ClassificationReportTest
 
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
-    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, [silent], PlayerRegistry.Instance, 1_700_000_000);
 
     var after = Census(ledger);
@@ -354,7 +354,7 @@ public class ClassificationReportTest
   {
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
-    remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_700_000_000);
     ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_800_000_000);
 
@@ -376,14 +376,14 @@ public class ClassificationReportTest
 
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
-    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     remembered.SetIdentity(placed, IdentityKind.Player, RuleStrength.Certain, "R1-target");
     ledger.Record(remembered, [silent, placed], PlayerRegistry.Instance, 1_700_000_000);
 
     var borrowed = Census(ledger).Find(silent)!;
     Assert.AreEqual(IdentityKind.Npc, borrowed.Kind, "the ledger did not fill the gap");
     Assert.IsTrue(borrowed.IsPrior, "a remembered verdict was shown as this capture's own");
-    Assert.AreEqual("Prior:R6-npcdb", borrowed.Reason);
+    Assert.AreEqual("Prior:R7-graph", borrowed.Reason);
     Assert.AreEqual(1, borrowed.PriorSightings);
 
     var itsOwn = Census(ledger).Find(placed)!;
@@ -402,7 +402,7 @@ public class ClassificationReportTest
   {
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
-    remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, ["Zzquietname"], PlayerRegistry.Instance, 1_700_000_000);
 
     ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Zzquietname", IdentityKind.Merc);

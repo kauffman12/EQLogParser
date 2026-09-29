@@ -1,5 +1,7 @@
+using log4net;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 /*
  * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional
@@ -24,19 +26,25 @@ namespace EQLogParser.Mirror
    *
    * Three rules keep the file honest:
    *
-   *   - ONLY LINE EVIDENCE IS RECORDED. An entry means "some rule read this name off a line in a real log": the rule
-     *   code is stored with it. Operator verdicts live in mirror-overrides.txt (Manual) and roster membership in
-     players.txt; copying either in here would launder an assertion into statistics. Names the operator rejected are
-     skipped outright - "no claim" outranks our memory.
-   *   - AGREEMENT IS IDEMPOTENT PER CAPTURE. The mirror re-derives whenever a filter or an override changes, so a
-     counter bumped per pass would report "41 captures agreed" for one evening re-derived 41 times. Sighting time is
-     the LOG's last event, not the clock, and the count advances only on a strictly newer capture.
-   *   - IT EXPIRES. Pruned against the newest entry in the file (not the wall clock, so replaying old backups does
-     not nuke the ledger) plus a size cap. Seasons change and mob names get reused by players; an old confident NPC
-     row must be able to die of age rather than needing someone to notice it.
+   * - ONLY WHAT A LATER LOG MIGHT NOT ANSWER AGAIN IS RECORDED. An entry means "some rule read this name off an
+   * EVENT in a real log" - a target frame, a /who roster, guild speech, a charm line, the graph - and the rule code
+   * is stored with it. A verdict whose input the app owns forever is not memory, it is a restatement; see
+   * WorthRemembering for that vocabulary. Operator verdicts live in mirror-overrides.txt (Manual), roster membership
+   * in players.txt and pet mappings in petmapping.txt: copying any of those in here would launder an assertion into
+   * statistics. Names the operator rejected are skipped outright - "no claim" outranks our memory.
+   *
+   * - AGREEMENT IS IDEMPOTENT PER CAPTURE. The mirror re-derives whenever a filter or an override changes, so a
+   * counter bumped per pass would report "41 captures agreed" for one evening re-derived 41 times. Sighting time is
+   * the LOG's last event, not the clock, and the count advances only on a strictly newer capture.
+   *
+   * - IT EXPIRES. Pruned against the newest entry in the file (not the wall clock, so replaying old backups does
+   * not nuke the ledger) plus a size cap. Seasons change and mob names get reused by players; an old confident NPC
+   * row must be able to die of age rather than needing someone to notice it.
    */
   internal sealed class IdentityPriorStore
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     public static IdentityPriorStore Instance { get; } = new();
 
     /// <summary>One remembered verdict, with the reason that produced it and how often it was agreed.</summary>
@@ -57,6 +65,7 @@ namespace EQLogParser.Mirror
     public void Init(string serverName)
     {
       var loaded = new Dictionary<string, Prior>(StringComparer.OrdinalIgnoreCase);
+      var dropped = 0;                       // rows the gate below refused, see the log line at the end
       _serverName = serverName ?? string.Empty;
 
       if (!string.IsNullOrEmpty(_serverName))
@@ -69,6 +78,12 @@ namespace EQLogParser.Mirror
           if (parts.Length != 4 || string.IsNullOrEmpty(name)) continue;
           if (!Enum.TryParse<IdentityKind>(parts[0], out var kind) || kind == IdentityKind.Unknown) continue;
           if (!long.TryParse(parts[2], out var seenAt) || !int.TryParse(parts[3], out var sightings)) continue;
+
+          // Files written before the gate below existed carry restated-database rows ("Name=Npc|R6-npcdb|..."). They
+          // are not read back, and the load writes what is left so the noise leaves the FILE instead of being quietly
+          // dropped again every start: whoever opens this file should find only entries worth arguing about.
+          if (!WorthRemembering(parts[1])) { dropped++; continue; }
+
           loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(1, sightings));
         }
       }
@@ -78,6 +93,15 @@ namespace EQLogParser.Mirror
         _byName.Clear();
         foreach (var (name, prior) in loaded) _byName[name] = prior;
       }
+
+      // One line per log opened, because "did the memory load?" is otherwise unanswerable from a player's log file:
+      // the census just quietly shows more names. The dropped count says what this rewrite took out, so an operator who
+      // hand-edited the file can see whether their edit was read or refused.
+      if (loaded.Count > 0 || dropped > 0)
+        Log.Info($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
+                 + (dropped > 0 ? $", {dropped} rows refused as restatements and rewritten out of the file" : string.Empty));
+
+      if (dropped > 0) Save();
     }
 
     public int Count
@@ -136,7 +160,12 @@ namespace EQLogParser.Mirror
           if (registry is not null && registry.IsRejectedPlayer(name)) continue;
 
           var kind = timeline.IdentityWithSource(name, out var reason);
-          if (kind == IdentityKind.Unknown || !FromLineEvidence(reason)) continue;
+
+          // Asked before the Unknown test, and it also governs an entry the ledger ALREADY holds: a capture that can
+          // only restate npcs.txt must not downgrade "R7-graph" to "R6-npcdb", nor spend a sighting on saying nothing
+          // new. The remembered reason then stays the strongest thing any log has actually witnessed.
+          if (!WorthRemembering(reason)) continue;
+          if (kind == IdentityKind.Unknown) continue;
 
           _byName.TryGetValue(name, out var existing);
           if (existing.Kind != kind)
@@ -162,16 +191,53 @@ namespace EQLogParser.Mirror
     }
 
     /*
-     * What counts as having READ something off a line. Manual is R10 (the operator), RegistrySeed / "You" are this
-     * session's roster files, and "Prior" is this file talking to itself - recording any of them would turn an input
-     * into statistics about itself, which is how a wrong name becomes permanently right.
+     * THE GATE: what this file is allowed to remember. An ALLOWLIST of rule families, one per EVENT a log had to
+     * contain for the rule to speak - a target frame (R1), a /who roster (R2), chat and zone presence (R3), a
+     * recognisable cast (R4), "X is called to it owner" (R5-called), the opposition graph (R7), a charm line (R9), the
+     * merc signature (R13), heals from our side (R15/R18), a drink or a bite (R17). Those are exactly the things a
+     * future log might not say again, which is the only reason to write one down.
+     *
+     * What stays out, and why each is noise rather than memory:
+     *
+     *   R6-npcdb    npcs.txt ships with the program, so it answers for that name in EVERY capture that mentions it -
+     *               remembering the answer adds a row and no knowledge. Worse, if somebody later corrects that file,
+     *               the ledger keeps contradicting the correction until the entry dies of age.
+     *   R14-shape   "a bone walker" takes an article: the input is the name's own spelling, which travels with it.
+     *   R16-comma   "Teknaz, Lord Misery" carries a title: same, the shape is the whole input.
+     *   R5-owner    "X`s pet" states its owner inside the name, and the durable half of that claim (who owns what)
+     *               belongs to petmapping.txt, where the operator can actually see and edit it.
+     *   R0-local    this session's own character, from settings - present by construction.
+     *   R10/Manual  the operator's verdict: mirror-overrides.txt IS that file, and copying it in here would report a
+     *               human assertion as "N captures agreed".
+     *   RegistrySeed / "You"  this session's roster inputs, not evidence.
+     *   Prior       this file reading itself. Recording it is how a wrong name becomes permanently right.
+     *
+     * An allowlist rather than a blocklist because the two failure modes are not equal weight: leave a rule that reads
+     * LINES off this list and we simply remember nothing about those names until someone adds it (small, self-healing,
+     * and today's census still shows the live verdict); put a rule on it whose input is permanent and every log on
+     * earth starts filing its built-in answers as experience. So a new rule has to ASK to be remembered, and
+     * IdentityPriorStoreTest asserts the vocabulary at its size.
      */
-    private static bool FromLineEvidence(string? reason)
-      => !string.IsNullOrEmpty(reason)
-         && !reason.StartsWith("Manual", StringComparison.Ordinal)
-         && !reason.StartsWith("RegistrySeed", StringComparison.Ordinal)
-         && !reason.Equals("You", StringComparison.Ordinal)
-         && !reason.StartsWith("Prior", StringComparison.Ordinal);
+    private static readonly string[] RememberedRules =
+    [
+      "R1-", "R2-", "R3-", "R4-", "R5-called", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-",
+    ];
+
+    /// <summary>True when a rule code names an event only the capture could have supplied, i.e. worth remembering.</summary>
+    internal static bool WorthRemembering(string? reason)
+    {
+      if (string.IsNullOrEmpty(reason)) return false;
+
+      foreach (var rule in RememberedRules)
+      {
+        // Ordinal: these are vocabulary words written by ClassificationRules, never text lifted from the log. A trailing
+        // separator on each entry is what keeps "R1-" from matching "R10-manual", and lets suffixed codes through
+        // ("R5-owner:Sancus" style reasons carry the owner after a colon, so matching is a prefix test by design).
+        if (reason.StartsWith(rule, StringComparison.Ordinal)) return true;
+      }
+
+      return false;
+    }
 
     // Caller holds the gate. Returns true when something left the dictionary.
     private bool PruneLocked()

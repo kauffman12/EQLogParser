@@ -84,14 +84,14 @@ public class NamesTableTest
   {
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
-    remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_700_000_000);
     ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_800_000_000);
 
     var row = NamesTable.RowFrom(CensusWithoutACapture(ledger).Find("Rememb")!);
 
     Assert.AreEqual("Npc", row.Kind);
-    StringAssert.Contains(row.Why, "Prior:R6-npcdb", "the reason column must not claim this capture produced it");
+    StringAssert.Contains(row.Why, "Prior:R7-graph", "the reason column must not claim this capture produced it");
     StringAssert.Contains(row.Flags, "x2");
   }
 

@@ -3738,9 +3738,26 @@ with mirror-vs-legacy parity tests, not as a convenience.
 
 Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
 
-- **Only what a rule read off a line is recorded**, with the rule code stored beside it (`R6-npcdb`, `R5-owner:X`).
-  Manual, `RegistrySeed`/`You` and this file's own reasons are filtered out at write time (`FromLineEvidence`) — an input
-  must not become a statistic about itself. Operator rejections are skipped outright: "no claim" outranks memory.
+- **Only what a later log might not answer again is recorded** (`IdentityPriorStore.WorthRemembering`), with the rule
+  code stored beside it. The gate is an **allowlist of event-shaped rules** — `R1-`, `R2-`, `R3-`, `R4-`, `R5-called`,
+  `R7-`, `R9-`, `R13-`, `R15-`, `R17-`, `R18-` — because the question is not "did a line say this" but "would next
+  season's log be able to say it again". What stays out and why: `R6-npcdb` (npcs.txt ships with the program, so it
+  answers for that name in every capture that mentions it — remembering it buys a row and no knowledge, and keeps
+  contradicting a corrected database until the entry dies of age), `R14-shape`/`R16-comma` (the name's own spelling
+  travels with it), `R5-owner` (the possessive is in the name; the durable claim belongs to petmapping.txt where the
+  operator can edit it), `R0-local` (this session's character), `Manual`/`R10` (mirror-overrides.txt is that file),
+  `RegistrySeed`/`You`, and `Prior` — this file reading itself is how a wrong name becomes permanently right.
+  An allowlist because the failures are unequal: forgetting an event rule costs memory until someone adds it; admitting
+  a permanent-input rule makes every log on earth file its built-in answers as experience, which no UI can show. A new
+  rule has to ask (`TheRememberedVocabularyIsExactlyWhatItIs`). Measured on `mini-fight.txt`: **a cold capture writes an
+  empty ledger**, because all four names that fixture places come from npcs.txt and pet grammar.
+- **A restatement never downgrades a witnessed verdict.** A capture that can only say "it is in npcs.txt" leaves an
+  existing `R7-graph` entry's reason and count alone (`ARestatementDoesNotDowngradeWhatALineWitnessed`) — the remembered
+  reason stays the strongest thing any log actually saw, and no sighting is spent saying nothing new.
+- **The file self-cleans on load.** Rows written before the gate existed (e.g. `Npc|R6-npcdb|…`) are not read back, and
+  the load rewrites what is left rather than dropping them invisibly forever (`OldRowsThatRestOnTheDatabaseAreNotLoadedBack`).
+  `Init` logs one INFO line — `Identity priors for <Server>: N remembered verdicts[, M rows refused as restatements…]` —
+  because "did the memory load?" is otherwise unanswerable from a player's log file.
 - **Agreement is idempotent per capture.** The mirror re-derives whenever a filter or override changes, so sighting time
   is the LOG's last event (not the clock) and the counter advances only on a strictly newer capture — five derives of one
   evening report one sighting, not five.
