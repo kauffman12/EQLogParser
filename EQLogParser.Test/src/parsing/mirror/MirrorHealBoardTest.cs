@@ -58,7 +58,7 @@ public class MirrorHealBoardTest
 
     // One builder run, and only that builder's answer — GetLastStats is per-builder, so the two boards cannot be
     // read from one shared field.
-    private static CombinedStats BuildHeals(IReadOnlyList<Fight> rows, TimeRange range, List<(double, HealRecord)>? heals)
+    private static CombinedStats? BuildHeals(IReadOnlyList<Fight> rows, TimeRange range, List<(double, HealRecord)>? heals)
     {
         var options = new GenerateStatsOptions { AllRanges = range, MinSeconds = 0, Heals = heals };
         foreach (var row in rows) options.Npcs.Add(row);

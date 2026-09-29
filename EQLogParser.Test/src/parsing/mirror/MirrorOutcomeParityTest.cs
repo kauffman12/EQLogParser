@@ -41,7 +41,7 @@ public class MirrorOutcomeParityTest
 
     // One board out of one engine: the real builder, with every row of that side handed to it the way a
     // whole-table request would.
-    private static CombinedStats BuildDamage(IEnumerable<Fight> rows, TimeRange range)
+    private static CombinedStats? BuildDamage(IEnumerable<Fight> rows, TimeRange range)
     {
         var options = new GenerateStatsOptions { AllRanges = range };
         foreach (var row in rows) options.Npcs.Add(row);
@@ -52,12 +52,12 @@ public class MirrorOutcomeParityTest
 
     // The tanking builder reports through its generation event instead of a last-stats getter, so the
     // subscription has to be open while it runs (and closed after, or the next test inherits this one's board).
-    private static CombinedStats BuildTanking(IEnumerable<Fight> rows, TimeRange range)
+    private static CombinedStats? BuildTanking(IEnumerable<Fight> rows, TimeRange range)
     {
         var options = new GenerateStatsOptions { AllRanges = range };
         foreach (var row in rows) options.Npcs.Add(row);
 
-        CombinedStats captured = null;
+        CombinedStats? captured = null;
         void OnGeneration(StatsGenerationEvent e)
         {
           if (e.CombinedStats is not null) captured = e.CombinedStats;
@@ -86,12 +86,15 @@ public class MirrorOutcomeParityTest
     // Both engines' boards, keyed by raider.
     private sealed class Boards
     {
-        public Dictionary<string, PlayerStats> LegacyDamage { get; init; }
-        public Dictionary<string, PlayerStats> DerivedDamage { get; init; }
-        public Dictionary<string, PlayerStats> LegacyTanking { get; init; }
-        public Dictionary<string, PlayerStats> DerivedTanking { get; init; }
-        public Fight LegacyRow { get; init; }
-        public Fight DerivedRow { get; init; }
+        public required Dictionary<string, PlayerStats> LegacyDamage { get; init; }
+        public required Dictionary<string, PlayerStats> DerivedDamage { get; init; }
+        public required Dictionary<string, PlayerStats> LegacyTanking { get; init; }
+        public required Dictionary<string, PlayerStats> DerivedTanking { get; init; }
+
+        // Optional because a fixture can produce no legacy fight row at all (a log with nothing to open an encounter
+        // with), which the tests below assert on rather than assume away.
+        public Fight? LegacyRow { get; init; }
+        public Fight? DerivedRow { get; init; }
     }
 
     private static Boards RunBoards(string fixture)
@@ -109,7 +112,7 @@ public class MirrorOutcomeParityTest
         Sectionizer.StampGroupIds(rows);
         var summary = MirrorSummaryFights.Build(rows, index, run.Facts);
 
-        Dictionary<string, PlayerStats> By(CombinedStats stats) =>
+        Dictionary<string, PlayerStats> By(CombinedStats? stats) =>
             (stats?.StatsList ?? []).ToDictionary(p => p.Name, p => p);
 
         return new Boards
