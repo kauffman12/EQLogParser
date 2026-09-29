@@ -79,9 +79,15 @@ fight list beside the legacy table. Then load a log and let it finish ("capturin
 6. **Names window** (View -> Names): every name in the capture, what it was called (Player/Npc/Pet/Merc/Unknown) and which
    rule said so; operator edits in players.txt/npcs.txt/petmapping.txt take effect on the next derive and show their
    provenance instead of the rule's.
-7. **Meter comparison is NOT available yet.** The overlay still reads `FightManager.GetOverlayFights()`, so today it can be
-   compared against nothing derived — which is exactly the equality to check once step 3 lands: same window (reset the
-   meter, note its total, then select the same fights in the mirror list for the same seconds).
+7. **Derived damage meter** (opt-in): add `OverlayDamageFromMirror` to settings.txt and restart. Same overlay, same
+   settings (`OverlayDamageMode` still decides when a quiet board zeroes: 0 = on kill, else N seconds), but its numbers
+   come from the mirrored facts inside `[reset, now]` instead of the overlay's own running totals. What to look for:
+   the same fight measured by both paths should agree; if it does not, that is a bug, because both halves are built by
+   `MirrorStats` — the same code a mirror-list select-all calls. Two honest differences in feel: it updates per derive
+   (the mirror derives when the log goes quiet) rather than per parsed line, so during a live pull it can trail the
+   legacy meter by a few seconds; and if the mirror has nothing for the window it holds the last board instead of
+   flickering to zero. Anything on this path that throws falls back to the legacy tally for that tick and logs
+   "Damage meter: derived build failed", so a live pull is never blanked by the new code. Off = byte-identical to before.
 
 Report anything where a *derived* board disagrees with itself (click A+B, then click A and B separately — those must add
 up exactly), because that is a bug rather than a known legacy difference.

@@ -276,6 +276,40 @@ namespace EQLogParser
      * Null means there is no scope: no snapshot yet (the derive has not landed, so the rows a caller holds came from a
      * list that no longer exists), or the session has touched nothing. What to display for either is the surface's call.
      */
+    public MirrorSnapshot Snapshot => _snapshot;
+
+    /*
+     * The damage meter's own question: every row this capture holds that was still alive when the window opened,
+     * measured through the window. No hidden-pet re-adding is needed because the scope is already every row (a pet's
+     * row is in it), which is also why a mirror-fed meter and a mirror-list select-all can be compared at all.
+     *
+     * Null means the mirror has nothing to say yet (no derive landed, or nothing fought since the window opened);
+     * what to paint for that is the overlay's call, exactly as it is today.
+     */
+    internal DamageOverlayStats BuildOverlayStats(double fromT, double toT, out double lastFactT)
+    {
+      lastFactT = double.NaN;
+      var snapshot = _snapshot;
+      if (snapshot is null)
+      {
+        return null;
+      }
+
+      var rows = new List<DerivedFight>();
+      foreach (var row in snapshot.AllFights)
+      {
+        // LastTime is the last second this name did anything, so a row that finished before the reset drops out and a
+        // running one stays (its seconds before the reset are cut by the window, not by the row).
+        if (row.LastTime >= fromT)
+        {
+          rows.Add(row);
+          if (double.IsNaN(lastFactT) || row.LastTime > lastFactT) lastFactT = row.LastTime;
+        }
+      }
+
+      return MirrorStats.ForOverlay(rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, fromT, toT);
+    }
+
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
       => BuildScopeStats(rows, double.NegativeInfinity, double.PositiveInfinity);
 

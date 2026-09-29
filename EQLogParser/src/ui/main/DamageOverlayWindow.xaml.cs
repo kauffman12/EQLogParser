@@ -1,3 +1,4 @@
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,6 +18,7 @@ namespace EQLogParser
     private const double DamageModeZeroTimeout = TimeSpan.TicksPerSecond * 7; // with 3 second slain queue delay
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private static readonly object StatsLock = new();
+    private static readonly ILog Log = LogManager.GetLogger(typeof(DamageOverlayWindow));
     private static DamageOverlayStatsBuilder _statsBuilder = new();
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
@@ -27,6 +29,20 @@ namespace EQLogParser
     private int _savedMaxRows;
     private int _currentDamageMode;
     private int _savedDamageMode;
+
+    /*
+     * Opt-in mirror-fed meter (settings.txt: `OverlayDamageFromMirror`). Off by default, so nothing changes unless it
+     * is asked for; the legacy tally below stays the shipped path until this has been watched on live pulls.
+     *
+     * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
+     * (MirrorStats), instead of the overlay's own running totals. The meter's policy stays here, because it always was
+     * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. FightTimeout,
+     * otherwise N seconds), and the window starting at the reset. That is why the mirror holds no "current fight": the
+     * seconds a board covers is this component's business.
+     */
+    private readonly bool _mirrorMeter = ConfigUtil.IfSet("OverlayDamageFromMirror");
+    private bool _mirrorMeterWarned;
+    private double _mirrorWindowT = -1;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -300,6 +316,63 @@ namespace EQLogParser
 
     internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false);
 
+    /*
+     * The same board, derived. Window = [reset moment, now]; a row that went quiet for longer than the meter's own
+     * timeout expires the board (legacy zeroes it, and the next window starts here rather than at the old reset), which
+     * is the display rule DamageMeterConfigState.DamageResetMode always encoded — kept on this side of the seam so the
+     * mirror stays free of "what a meter is showing right now".
+     *
+     * Any problem on the mirror path falls back to the legacy tally for that tick rather than blanking a running
+     * meter: an operator watching pulls should be able to turn this on without risking the board they read.
+     */
+    private DamageOverlayStats BuildMirrorUpdate()
+    {
+      var session = MirrorSession.Active;
+      if (session is null)
+      {
+        if (!_mirrorMeterWarned)
+        {
+          _mirrorMeterWarned = true;
+          Log.Info("Damage meter: OverlayDamageFromMirror is set but no capture is being mirrored; using the legacy tally.");
+        }
+
+        return _statsBuilder.Build(_stats == null, _currentDamageMode, _currentMaxRows, _currentSelectedClass);
+      }
+
+      try
+      {
+        // Same clock the derived facts carry: their TimeS is seconds from DateTime.MinValue, which is what every
+        // legacy Fight bound uses too (the overlay's own expiry does DateTime.MinValue.AddSeconds(...)).
+        var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        if (_mirrorWindowT < 0) _mirrorWindowT = nowT;
+
+        var timeout = _currentDamageMode == 0 ? FightManager.FightTimeout : _currentDamageMode;
+        var update = session.BuildOverlayStats(_mirrorWindowT, nowT, out var lastFactT);
+
+        // The meter's own expiry, unchanged: quiet for longer than the board allows (mode > 0 is that many seconds,
+        // mode == 0 is FightTimeout) and it zeroes — with the window reopening here, so the next pull is counted from
+        // now rather than from an old reset.
+        if (!double.IsNaN(lastFactT) && nowT - lastFactT > timeout)
+        {
+          _mirrorWindowT = nowT;
+          return null;
+        }
+
+        /*
+         * Nothing in the window yet: hold what is on screen. A mirror pass runs when the log goes quiet, so a fight in
+         * progress can be a few seconds from landing, and flickering an empty board between passes would read as "the
+         * raid stopped doing damage". This is also the one place where the derived meter differs in FEEL from the
+         * legacy one second-to-second: legacy accumulates per line as they parse, this updates per derive.
+         */
+        return update ?? _stats;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Damage meter: derived build failed, using the legacy tally for this tick", ex);
+        return _statsBuilder.Build(_stats == null, _currentDamageMode, _currentMaxRows, _currentSelectedClass);
+      }
+    }
+
     private async void UpdateTimerTick(object sender, EventArgs e)
     {
       // if turned off
@@ -323,7 +396,7 @@ namespace EQLogParser
           lock (StatsLock)
           {
             damageOverlayStats = _stats;
-            var update = _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
+            var update = _mirrorMeter ? BuildMirrorUpdate() : _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
 
             if (update == null)
             {
@@ -886,6 +959,7 @@ namespace EQLogParser
         _stats = null;
         _statsBuilder = new();
         FightManager.Instance.ResetOverlayFights();
+      _mirrorWindowT = -1; // an explicit reset moves the derived window's start to the next tick too
       }
     }
 

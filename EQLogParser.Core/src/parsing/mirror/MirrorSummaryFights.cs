@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 
+// Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in
+// optional rows/fights because a scope legitimately has nothing to show.
+#nullable enable annotations
 namespace EQLogParser.Mirror
 {
   /*

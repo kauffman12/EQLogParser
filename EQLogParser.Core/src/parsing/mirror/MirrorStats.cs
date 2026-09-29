@@ -22,6 +22,9 @@
  * the hop happens is a property of the consumer (MainWindow.OnGenerationStatus queues at Background), and doing it
  * here would put a UI assumption inside code the overlay, the summary and a test all share.
  */
+// Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in
+// optional rows/fights because a scope legitimately has nothing to show.
+#nullable enable annotations
 namespace EQLogParser.Mirror;
 
 using System.Collections.Generic;
@@ -50,6 +53,53 @@ internal static class MirrorStats
    * Slicing is exact in the way that matters: For(rows, a, b) + For(rows, b, c) totals the same as For(rows, a, c),
    * because a fact is either inside the window or not, and nothing is counted twice or lost in the seam.
    */
+  /*
+   * The damage meter's shape for the same scope: damage and tanking halves, each built on its OWN builder instance,
+   * returned in the container the overlay already paints. A window is expected here ("since I zeroed the meter") and
+   * both halves get the same one, so a tank column cannot show seconds the damage column excluded.
+   *
+   * Null means "this scope has nothing to show", which is also legacy's contract for the overlay builder: it returns
+   * null when neither half produced anything and the window blanks itself. One half being null is normal too — the
+   * legacy builder does the same, a raid that only healed has no tank board.
+   */
+  internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, MirrorDamageIndex index,
+    DamageFactTable facts, HealFactTable heals, double fromT, double toT)
+  {
+    if (rows is not { Count: > 0 })
+    {
+      return null;
+    }
+
+    var input = MirrorSummaryFights.Build(rows, index, facts, fromT, toT);
+    if (input.Fights.Count == 0)
+    {
+      return null;
+    }
+
+    CombinedStats? damage = null;
+    var damageScope = new DamageStatsBuilder();
+    var damageOptions = new GenerateStatsOptions { AllRanges = input.AllRanges, MinSeconds = 0 };
+    damageOptions.Npcs.AddRange(input.Fights);
+    damageScope.EventsGenerationStatus += generated => damage = generated.CombinedStats;
+    damageScope.BuildTotalStats(damageOptions);
+
+    CombinedStats? tanking = null;
+    var tankScope = new TankingStatsBuilder();
+    var tankingOptions = new GenerateStatsOptions { AllRanges = input.AllRanges, MinSeconds = 0 };
+    tankingOptions.Npcs.AddRange(input.Fights);
+    tankScope.EventsGenerationStatus += generated => tanking = generated.CombinedStats;
+    tankScope.BuildTotalStats(tankingOptions);
+
+    if (damage is null && tanking is null)
+    {
+      return null;
+    }
+
+    // Healing deliberately not built here: the meter has never shown a heal column from this call, and building a
+    // third board per refresh would be new work on a once-a-second path for a number nothing paints.
+    return new DamageOverlayStats { DamageStats = damage, TankStats = tanking };
+  }
+
   internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight> rows, MirrorDamageIndex index,
     DamageFactTable facts, HealFactTable heals, double fromT = double.NegativeInfinity, double toT = double.PositiveInfinity)
   {

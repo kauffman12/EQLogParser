@@ -4008,3 +4008,21 @@ matter and I had them backwards):
 Suite **1,467 pass** (5 opt-in), solution and `EQLogParser.Wpf.Test` at **0 warnings**. The unwindowed path is
 unchanged by construction (delegation + a null case that cannot arise when unbounded), so the real-log parity bars
 measured earlier still stand; they get re-run with the overlay swap, which is the next step and needs a Windows run.
+
+## The meter reads the mirror now (opt-in), and only its source moved
+
+`OverlayDamageFromMirror` (settings.txt, off by default) points `DamageOverlayWindow`'s once-a-second build at
+`MirrorStats.ForOverlay(rows, index, facts, heals, fromT, toT)` — damage and tanking halves, each on its own builder
+instance, returned as the `DamageOverlayStats` container the overlay already paints. What did NOT move: the meter's
+policy. `_mirrorWindowT` is stamped at open/reset (`ResetOverlayFights` moves it too), and the expiry test is still
+legacy's — quiet for longer than `mode == 0 ? FightManager.FightTimeout : mode` and the board zeroes with the window
+reopening here. That split is the whole point of the seam: *which seconds* is the surface's business, *what they add up
+to* is the mirror's, and it is why no "current fight" concept had to be invented inside the capture.
+
+Two decisions worth keeping: a scope with nothing in it **holds the previous board** rather than painting zero (a derive
+runs when the log goes quiet, so an in-progress fight can be seconds from landing, and a blank board would read as
+"nobody is doing damage"); and any exception on this path falls back to the legacy tally for that tick plus one log line,
+because the thing being watched mid-pull must not be the thing under test. Known gap: `ForOverlay` itself has no unit
+test yet — the window arithmetic underneath it does (`AMeterSliceCountsOnlyTheSecondsSinceItsReset`,
+`AdjacentSlicesOfTheSameRowsAddUpToTheWhole`), so this is the first piece of the workstream whose topmost inch is
+verified by watching it on Windows rather than by an assertion here.
