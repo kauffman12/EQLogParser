@@ -53,3 +53,35 @@ each one needs, and the order deletions become safe.
   "The sighting ledger"). If they enter, `MirrorRuleExtensionsTest` and every parity number must be re-measured.
 - The FCT/stat globals (`FctScale.*`, `FctLayout.*`) and `[assembly: DoNotParallelize]` obligations are unchanged by any
   of this; new mirror-touching tests inherit them.
+
+## What is clickable today (Windows pass, in this order)
+
+Everything below runs on mirror data already; the live damage overlay does not (step 3), so skip it until then.
+Enable the mirror first: View / toolbar **EnableCombatMirror** (`EnableCombatMirror` in settings.txt) docks the derived
+fight list beside the legacy table. Then load a log and let it finish ("capturing…" -> derive done).
+
+1. **Does the mirror cost me anything while loading?** Watch the status line and scroll the legacy tables during a big
+   load with the mirror on vs off. Expected: no visible difference; the derive fires once the log goes quiet
+   (`Combat mirror derive done: N fights, M ms`), measured 0.8 s project + 0.4 s materialize on a 344 MB capture.
+2. **One fight, two lists.** In the legacy Fight table select one mob's row -> Damage Summary; then find the same mob in
+   the mirror list and click it. Expected: raid damage equal for that fight, hits equal per player, tanking tab populated
+   from the same facts. Known intentional differences: pets appear folded into their owner as `Name +Pets` (legacy shows
+   the pet as its own row or drops it), and derived totals may read slightly *high* where legacy dropped records whose
+   attacker it could not place.
+3. **Many fights, one number.** Select 10-20 consecutive rows in the mirror list (the grid settles one announcement per
+   drag) and compare against selecting the equivalent range in the legacy table. Expected: same damage to within the pet
+   question above; healing tab equal, since both window healing by the selection's own span.
+4. **+Pets specifically.** Find a raider with a pet (petmapping.txt or an own-pet line in the log). Expected on the derived
+   board: one row `Name +Pets` whose damage includes the pet; the raid total unchanged by the folding (it moves, not grows).
+5. **Charmed mobs.** On a capture with `X has been charmed.` (Incogitable): the mob's own rows are off the list, the
+   encounter row reads `dead, charmed`, and selecting it still includes the hidden pet rows' damage — the list is shorter
+   but no board is smaller. Selecting nothing/deselecting clears all three boards rather than leaving stale numbers.
+6. **Names window** (View -> Names): every name in the capture, what it was called (Player/Npc/Pet/Merc/Unknown) and which
+   rule said so; operator edits in players.txt/npcs.txt/petmapping.txt take effect on the next derive and show their
+   provenance instead of the rule's.
+7. **Meter comparison is NOT available yet.** The overlay still reads `FightManager.GetOverlayFights()`, so today it can be
+   compared against nothing derived — which is exactly the equality to check once step 3 lands: same window (reset the
+   meter, note its total, then select the same fights in the mirror list for the same seconds).
+
+Report anything where a *derived* board disagrees with itself (click A+B, then click A and B separately — those must add
+up exactly), because that is a bug rather than a known legacy difference.
