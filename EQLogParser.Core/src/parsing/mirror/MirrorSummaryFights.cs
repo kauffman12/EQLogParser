@@ -172,11 +172,27 @@ namespace EQLogParser.Mirror
       {
         if (_summaries.TryGetValue(fight, out var cached)) return cached;
 
-        var built = BuildFight(fight, facts);
+        var built = BuildFight(fight, facts, double.NegativeInfinity, double.PositiveInfinity);
         _summaries[fight] = built;
         return built;
       }
     }
+
+    /*
+     * The same row materialized through a TIME window: the damage meter's "since I zeroed it" slice of a fight that
+     * ran on either side of that moment. Legacy keeps such a slice as its own state (DamageOverlayStatsBuilder holds
+     * per-player totals plus a TimeRange of when each player was active, and zeroes them on reset), which is exactly
+     * the bookkeeping this mirror exists to stop duplicating — so a window asks the SAME materializer for the records
+     * whose seconds fall inside it, and the activity segments, hit counts and bounds that come back are the slice's.
+     *
+     * NOT CACHED, and that is the load-bearing decision. _summaries is keyed by DerivedFight alone, so storing a
+     * sliced Fight under the same row would let a meter that was just zeroed serve its truncated numbers to an
+     * unwindowed summary click — the one mistake where both surfaces still agree while one of them is wrong.
+     * Rebuilding costs one walk over this row's own ordinal run (the runs are per-row, not per-capture), which a
+     * once-a-second meter can pay; the cache it saves is correctness.
+     */
+    internal Fight? SummaryFightInWindow(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
+      => BuildFight(fight, facts, fromT, toT);
 
     /*
      * Whose pet this attacker's damage belongs to. Two sources, in order of how well they are evidenced:
@@ -196,7 +212,7 @@ namespace EQLogParser.Mirror
     private string OwnerOf(DamageFact fact, string attacker)
       => fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : _charmers?.OwnerOf(attacker, fact.TimeS);
 
-    private Fight BuildFight(DerivedFight fight, DamageFactTable facts)
+    private Fight? BuildFight(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
     {
       var summary = new Fight
       {
@@ -207,6 +223,15 @@ namespace EQLogParser.Mirror
         BeginTime = double.IsPositiveInfinity(fight.BeginTime) ? double.NaN : fight.BeginTime,
         LastTime = double.IsNegativeInfinity(fight.LastTime) ? double.NaN : fight.LastTime,
       };
+
+      /*
+       * Clamp the row's own span to the window. These two are the DPS clock (Build hands them to AllRanges, which is
+       * also what windows the healing board), so an unclamped BeginTime would divide the slice's damage by seconds
+       * the slice never had — legacy's overlay measures against the segments it accumulated since the reset, not
+       * against the encounter's birth.
+       */
+      if (!double.IsNaN(summary.BeginTime) && summary.BeginTime < fromT) summary.BeginTime = fromT;
+      if (!double.IsNaN(summary.LastTime) && summary.LastTime > toT) summary.LastTime = toT;
 
       /*
        * Two passes over one row, in this order: what the raid did to this name (the damage board's half) and
@@ -224,6 +249,10 @@ namespace EQLogParser.Mirror
       {
         var fact = allFacts[ordinal];
         var time = (double)fact.TimeS;
+
+        // Outside the meter's window: not carried, not counted, not a second of activity. Bounds and segments below
+        // are computed from what survives, which is why no other line here needs to know about the window.
+        if (time < fromT || time > toT) continue;
 
         // Same rule as FightManager.AddAction: consecutive actions sharing a timestamp share a block.
         if (block is null || !lastBlockTime.Equals(time))
@@ -281,6 +310,8 @@ namespace EQLogParser.Mirror
           var fact = allFacts[ordinal];
           var time = (double)fact.TimeS;
 
+          if (time < fromT || time > toT) continue;
+
           if (tankBlock is null || !lastTankBlockTime.Equals(time))
           {
             tankBlock = new ActionGroup { BeginTime = time };
@@ -308,6 +339,13 @@ namespace EQLogParser.Mirror
         summary.TooltipText = $"#Hits To Players: {summary.TankHits}, #Hits From Players: {summary.DamageHits}, "
                               + $"Time Alive: {(long)(summary.LastTime - summary.BeginTime + 1)}s";
       }
+
+      /*
+       * Nothing inside the window is not "zero damage", it is "this row is not part of this scope". Handing back an
+       * empty Fight would widen AllRanges (so the DPS clock runs on seconds nobody fought in) and, on the healing
+       * side, pull heals that belong to no contributed row into the board. Null, and Build counts it aside.
+       */
+      if (summary.DamageBlocks.Count == 0 && summary.TankingBlocks.Count == 0) return null;
 
       return summary;
     }
@@ -375,8 +413,18 @@ namespace EQLogParser.Mirror
   internal static class MirrorSummaryFights
   {
     public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index, DamageFactTable facts)
+      => Build(selected, index, facts, double.NegativeInfinity, double.PositiveInfinity);
+
+    /*
+     * The same selection through a time window — "these rows, from the moment the meter was zeroed until now". The
+     * three-argument overload above is this one unbounded, so the click-a-row path keeps its cached materialization
+     * untouched and cannot be affected by a meter that was reset mid-pull.
+     */
+    public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index,
+      DamageFactTable facts, double fromT, double toT)
     {
       var result = new List<Fight>(selected.Count);
+      var bounded = fromT > double.NegativeInfinity || toT < double.PositiveInfinity;
       var allRanges = new TimeRange();
       var withoutDamage = 0;
 
@@ -395,7 +443,15 @@ namespace EQLogParser.Mirror
           continue;
         }
 
-        var built = index.SummaryFightFor(fight, facts);
+        var built = bounded ? index.SummaryFightInWindow(fight, facts, fromT, toT) : index.SummaryFightFor(fight, facts);
+
+        // A row with nothing inside the window contributes no numbers, so it must not contribute a clock or a heal
+        // span either; counted the same way as a row with no facts at all.
+        if (built is null)
+        {
+          withoutDamage++;
+          continue;
+        }
 
         // Legacy's _allRanges: the wall-clock span of each selected fight, inactivity included.
         if (!double.IsNaN(built.BeginTime) && !double.IsNaN(built.LastTime))

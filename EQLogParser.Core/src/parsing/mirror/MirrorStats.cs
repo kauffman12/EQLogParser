@@ -37,15 +37,28 @@ internal static class MirrorStats
    * with no rows has no scope at all, and showing an empty board for that would be the same lie as showing stale
    * numbers — which of the two to display is the surface's decision, made with the session it owns.
    */
+  /*
+   * The optional window is the meter's reset. Zeroing a damage meter does not choose a different set of fights, it
+   * asks the same fights about a slice of their seconds, and legacy models that by accumulating its own totals since
+   * the reset (DamageOverlayStatsBuilder: per-player sums with an activity TimeRange, zeroed on reset, expired after
+   * `mode` seconds — or FightTimeout when mode is 0, i.e. "on kill"). Here the slice is an argument to the one
+   * calculation instead: same rows, facts whose seconds lie in [fromT, toT], and therefore damage, hit counts and
+   * activity segments that all belong to the window together. A surface's zero point, its timeout and its blank-board
+   * rule stay where legacy put them — in the overlay — because they are a display policy; what arrives here is the
+   * window they decided on.
+   *
+   * Slicing is exact in the way that matters: For(rows, a, b) + For(rows, b, c) totals the same as For(rows, a, c),
+   * because a fact is either inside the window or not, and nothing is counted twice or lost in the seam.
+   */
   internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight> rows, MirrorDamageIndex index,
-    DamageFactTable facts, HealFactTable heals)
+    DamageFactTable facts, HealFactTable heals, double fromT = double.NegativeInfinity, double toT = double.PositiveInfinity)
   {
     if (rows is not { Count: > 0 })
     {
       return null;
     }
 
-    var input = MirrorSummaryFights.Build(rows, index, facts);
+    var input = MirrorSummaryFights.Build(rows, index, facts, fromT, toT);
     var options = new GenerateStatsOptions
     {
       AllRanges = input.AllRanges,

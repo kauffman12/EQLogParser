@@ -3965,3 +3965,46 @@ is why only one event (`EventsClearedActiveData`, `180ff710`) had to move before
 - Remaining legacy readers stay in `docs/legacy-replacement-map.md` order: overlay → `EventViewer`'s `IsLifetimeNpc` →
   `LineChart`'s `FightTimeout` constant → `FightTable` → parse-time stat accumulation (`HitRecord`/`RecordsStore` last,
   until the line viewers read fact tables). Roster files never go away.
+
+## A meter reset is a window, not a different set of rows
+
+The requirement's loose end was "I can clear/reset the damage meter at any time", so its numbers are often a *slice* of
+a fight row rather than the row. Read the original before designing anything, and it turned out to be a small, legible
+rule set (`DamageOverlayStatsBuilder.ComputeOverlayDamageStats` + `DamageMeterConfigState.DamageResetMode`, saved as
+`OverlayDamageMode`): the overlay accumulates **its own** per-player totals with an activity `TimeRange` each, and
+
+- `timeout = mode == 0 ? FightManager.FightTimeout : mode` — "on kill" versus "N seconds of quiet then zero";
+- the whole board prints only while the newest accumulated second is within `timeout` of now (`diff >= 0` guards the
+  autumn clock-change bug), and a row prints only while its own last second is within `FightManager.MaxTimeout`;
+- DPS is damage divided by **accumulated active seconds** (`TimeRange.GetTotal()`), never by wall clock since the fight.
+
+So three things, and only one of them belongs to the mirror: the accumulation and the expiry are display policy and stay
+in the overlay; what the mirror had to supply was *the arithmetic of a slice*. `MirrorStats.For(rows, index, facts, heals,
+fromT, toT)` is that argument (`MirrorSession.BuildScopeStats(rows, fromT, toT)` is its wrapper): same rows, only facts
+whose seconds lie inside the window, and — because the two materialization loops filter at the top and compute their
+bounds and activity segments from what survives — damage, hit counts and activity seconds all belong to the window
+together. Slicing is exact: a fact is in or out, so `For(rows,a,b) + For(rows,b,c) == For(rows,a,c)`
+(`AdjacentSlicesOfTheSameRowsAddUpToTheWhole`: 800 + 950 = the whole 1,750).
+
+**The hazard that decided the shape:** `MirrorDamageIndex._summaries` caches one `Fight` per `DerivedFight`, so a sliced
+`Fight` stored under the same key would let a meter that was just zeroed serve its truncated numbers to the next
+unwindowed click on that row — both surfaces still agreeing perfectly, one of them wrong. Windowed materialization
+therefore goes through `SummaryFightInWindow`, which reuses the whole builder but never touches the cache; the 3-argument
+`MirrorSummaryFights.Build` delegates to the windowed one unbounded, so the click path keeps its cached materialization
+and a reset meter cannot influence it at all. Pinned from both directions by `ASlicedRowIsNeverCachedAsTheRow`.
+
+**Two expectations I wrote and the log corrected** (both are now the assertions, because they are the properties that
+matter and I had them backwards):
+
+- *A window with nothing in it is not a zero.* It is "this row is not in this scope", so `BuildFight` returns null and
+  `Build` counts it aside. Handing back an empty `Fight` would widen `AllRanges` — the DPS clock — with seconds nobody
+  fought in, and drag heals from rows that contributed no numbers onto the heal board.
+- *A window does not stretch a clock, and the clock is spans rather than wall clock.* Clamping only pulls a row's
+  `BeginTime` forward to a reset that landed mid-fight (`T0+41` → damage 250, the 700 was before), which is what makes
+  the meter's DPS honest; and because healing is windowed by the selection's **own spans**, a heal between two pulls
+  belongs to neither, exactly as legacy's `HealingStatsBuilder` behaves. My first test put a heal in that gap at `t=5`
+  and expected it inside a window ending at `t=39.5` — measured 0, and the measurement was right.
+
+Suite **1,467 pass** (5 opt-in), solution and `EQLogParser.Wpf.Test` at **0 warnings**. The unwindowed path is
+unchanged by construction (delegation + a null case that cannot arise when unbounded), so the real-log parity bars
+measured earlier still stand; they get re-run with the overlay swap, which is the next step and needs a Windows run.

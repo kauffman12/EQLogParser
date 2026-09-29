@@ -277,6 +277,16 @@ namespace EQLogParser
      * list that no longer exists), or the session has touched nothing. What to display for either is the surface's call.
      */
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
+      => BuildScopeStats(rows, double.NegativeInfinity, double.PositiveInfinity);
+
+    /*
+     * The same scope through a time window: what the damage meter asks when it was zeroed partway through the fights
+     * it is still showing. The overlay owns its zero point and its expiry rule (legacy's `OverlayDamageMode`: 0 = on
+     * kill, otherwise N seconds of quiet before the board zeroes) and hands the resulting seconds here, so the numbers
+     * are the same arithmetic the fight list uses — sliced, not re-tallied. Healing follows automatically, since the
+     * heal window is this scope's AllRanges.
+     */
+    internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows, double fromT, double toT)
     {
       var snapshot = _snapshot;
       if (snapshot is null || rows is not { Count: > 0 })
@@ -285,7 +295,7 @@ namespace EQLogParser
       }
 
       return MirrorStats.For(CharmPetRows.WithHiddenPets(rows, snapshot.AllFights), snapshot.DamageIndex,
-        snapshot.Facts, snapshot.Heals);
+        snapshot.Facts, snapshot.Heals, fromT, toT);
     }
 
     /*

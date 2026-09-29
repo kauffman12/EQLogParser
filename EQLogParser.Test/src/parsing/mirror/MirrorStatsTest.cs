@@ -203,4 +203,114 @@ public class MirrorStatsTest
           "a heal-less scope says 'nothing healed', not 'nothing to say about healing'");
         Assert.IsNotNull(MirrorStats.For([row], index, facts, NoHeals(facts))?.CombinedStats);
     }
+
+  /*
+   * A meter reset is a TIME question, not a row question: zeroing the overlay does not choose different fights, it
+   * asks the same fights about the seconds since the reset. Legacy answers that by keeping its own running totals
+   * (DamageOverlayStatsBuilder, with `OverlayDamageMode` deciding expiry: 0 = on kill, else N seconds of quiet);
+   * the mirror answers it with one extra argument to the calculation it already had. These four tests are what keeps
+   * that argument honest — a slice that silently double-counted its seam, widened its own clock, or got cached under
+   * the unwindowed row would each look plausible on screen.
+   */
+
+  private static HealFactTable HealsAt(DamageFactTable facts, params (string Healer, string Healed, uint Amount, double T)[] heals)
+  {
+      var table = new HealFactTable(facts);
+      var seq = 0;
+      foreach (var (healer, healed, amount, t) in heals)
+      {
+          // Names come from the damage table's pool on purpose: one name, one id, both streams (the law in
+          // MirrorHealCaptureTest), so a raider is the same person on the heal board as on the damage one.
+          table.AddHeal(new HealFact(seq++, (long)(T0 + t), facts.InternName(healer), facts.InternName(healed),
+            amount, overTotal: 0, LabelTypes.Heal, flags: 0, modMask: 0, subIdx: HealFact.NoSpell));
+      }
+      return table;
+  }
+
+  [TestMethod]
+  public void AMeterSliceCountsOnlyTheSecondsSinceItsReset()
+  {
+      var (rows, index, facts) = TwoPulls();
+
+      // Zeroed at t=30, i.e. after the Grimling fight and during the Skeleton one. The earlier row contributes
+      // nothing at all - not even a row - because a slice in which a mob did no work is not part of this scope.
+      var sliced = MirrorStats.For(rows, index, facts, NoHeals(facts), T0 + 30, double.PositiveInfinity)?.CombinedStats;
+      var skeletonOnly = MirrorStats.For([Row(rows, "Skeleton")], index, facts, NoHeals(facts))?.CombinedStats;
+
+      Assert.IsNotNull(sliced);
+      Assert.IsNotNull(skeletonOnly);
+      Assert.AreEqual((long)skeletonOnly.RaidStats.Total, (long)sliced.RaidStats.Total,
+        "the window since a reset is exactly the work done since it");
+      Assert.AreEqual(950L, (long)sliced.RaidStats.Total, "700 + 250, and none of the 800 from before the reset");
+
+      // A window opening in the middle of a running fight: the clock starts at the window, not at the mob's birth,
+      // because DPS divided by seconds nobody fought in would understate the meter — legacy measures against the
+      // activity it accumulated since the reset. Measured, not assumed: the same row from its own birth reads 950.
+      var mid = MirrorSummaryFights.Build([Row(rows, "Skeleton")], index, facts, T0 + 41, double.PositiveInfinity);
+      Assert.AreEqual(1, mid.Fights.Count);
+      Assert.AreEqual(T0 + 41, mid.Fights[0].BeginTime, "a reset mid-fight moves the clock's start to the reset");
+      Assert.AreEqual(250L, mid.Fights[0].DamageTotal, "and only the hit landed after it (the 700 was before)");
+  }
+
+  [TestMethod]
+  public void AdjacentSlicesOfTheSameRowsAddUpToTheWhole()
+  {
+      var (rows, index, facts) = TwoPulls();
+      var whole = (long)MirrorStats.For(rows, index, facts, NoHeals(facts))!.CombinedStats.RaidStats.Total;
+
+      // Split at 39.5: no fact sits in the seam, so the two windows partition every fact exactly once - which is the
+      // property that makes a meter's per-reset totals sum to what select-all says over the same rows.
+      var before = (long)MirrorStats.For(rows, index, facts, NoHeals(facts), double.NegativeInfinity, T0 + 39.5)!
+        .CombinedStats.RaidStats.Total;
+      var after = (long)MirrorStats.For(rows, index, facts, NoHeals(facts), T0 + 39.5, double.PositiveInfinity)!
+        .CombinedStats.RaidStats.Total;
+
+      Assert.AreEqual(800L, before, "the pull that finished before the reset");
+      Assert.AreEqual(950L, after, "the pull still running when it was zeroed");
+      Assert.AreEqual(whole, before + after, "and a fact is either inside a window or outside it, never twice");
+  }
+
+  [TestMethod]
+  public void ASlicedRowIsNeverCachedAsTheRow()
+  {
+      var (rows, index, facts) = TwoPulls();
+      var grim = Row(rows, "Grimling");
+
+      // Slice first: a window holding no second of this row's work says nothing about it...
+      Assert.AreEqual(0, MirrorSummaryFights.Build([grim], index, facts, T0 + 500, double.PositiveInfinity).Fights.Count,
+        "a window with nothing in it contributes no fight");
+      // ...and must not have left that emptiness under the row itself, because the next click on the same row is
+      // unwindowed and would be handed a summary of nothing. This is the hazard of threading a window through the
+      // per-row cache: both surfaces still agree, and one of them is wrong.
+      var afterSlice = (long)MirrorStats.For([grim], index, facts, NoHeals(facts))!.CombinedStats.RaidStats.Total;
+      Assert.AreEqual(800L, afterSlice, "the unwindowed row still reports its whole damage after a slice ran");
+
+      // Other direction too: build the cached full row first, then slice; the cache must stay the full one.
+      var sliced = MirrorSummaryFights.Build([grim], index, facts, T0 + 0.5, T0 + 1.5).Fights;
+      Assert.AreEqual(1, sliced.Count, "one second of this row's work is inside that window");
+      Assert.AreEqual(300L, sliced[0].DamageTotal, "only the hit at t=1");
+      Assert.AreEqual(800L, (long)MirrorStats.For([grim], index, facts, NoHeals(facts))!.CombinedStats.RaidStats.Total,
+        "and the cached whole row is still whole");
+  }
+
+  [TestMethod]
+  public void TheHealWindowIsTheMetersWindow()
+  {
+      var (rows, index, facts) = TwoPulls();
+      // Both heals sit inside a row's own span, since that is what windows them: the selection's spans, not wall
+      // clock to now (the same reason a heal landed between two pulls belongs to neither board).
+      var heals = HealsAt(facts, ("Bithika", "Illuminai", 400, 1), ("Bithika", "Illuminai", 600, 41));
+
+      var whole = MirrorStats.For(rows, index, facts, heals)?.CombinedStats;
+      Assert.IsNotNull(whole);
+
+      // Healing is windowed, never selected (a heal opens no encounter), and the window it gets is this scope's own
+      // sliced span - so zeroing the meter mid-fight moves the heal board with the damage board instead of showing
+      // the whole evening's healing beside a slice of its damage.
+      var before = MirrorSummaryFights.Build(rows, index, facts, double.NegativeInfinity, T0 + 39.5);
+      Assert.AreEqual(1, MirrorSummaryHeals.Materialize(heals, before.AllRanges).Count,
+        "the heal before the reset leaves when the window does");
+      var after = MirrorSummaryFights.Build(rows, index, facts, T0 + 39.6, double.PositiveInfinity);
+      Assert.AreEqual(1, MirrorSummaryHeals.Materialize(heals, after.AllRanges).Count, "and the later one stays");
+  }
 }
