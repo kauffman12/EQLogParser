@@ -4021,8 +4021,9 @@ to* is the mirror's, and it is why no "current fight" concept had to be invented
 
 Two decisions worth keeping: a scope with nothing in it **holds the previous board** rather than painting zero (a derive
 runs when the log goes quiet, so an in-progress fight can be seconds from landing, and a blank board would read as
-"nobody is doing damage"); and any exception on this path falls back to the legacy tally for that tick plus one log line,
-because the thing being watched mid-pull must not be the thing under test. Known gap: `ForOverlay` itself has no unit
+"nobody is doing damage"); and an exception on this path blanks the board and logs it (first at once, then every 30th tick with a count),
+because — as the operator put it — a fallback to code we intend to delete hides errors: a derived board that quietly became
+a legacy board looks exactly like a correct one. `OverlayDamageFromMirror` therefore means "derived numbers or nothing". Known gap: `ForOverlay` itself has no unit
 test yet — the window arithmetic underneath it does (`AMeterSliceCountsOnlyTheSecondsSinceItsReset`,
 `AdjacentSlicesOfTheSameRowsAddUpToTheWhole`), so this is the first piece of the workstream whose topmost inch is
 verified by watching it on Windows rather than by an assertion here.

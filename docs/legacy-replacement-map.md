@@ -86,8 +86,11 @@ fight list beside the legacy table. Then load a log and let it finish ("capturin
    `MirrorStats` — the same code a mirror-list select-all calls. Two honest differences in feel: it updates per derive
    (the mirror derives when the log goes quiet) rather than per parsed line, so during a live pull it can trail the
    legacy meter by a few seconds; and if the mirror has nothing for the window it holds the last board instead of
-   flickering to zero. Anything on this path that throws falls back to the legacy tally for that tick and logs
-   "Damage meter: derived build failed", so a live pull is never blanked by the new code. Off = byte-identical to before.
+   flickering to zero (the expiry rule eventually zeroes that too, so a stale board cannot outlive the timeout).
+   **There is no fallback to legacy on this path.** If the derived build throws, the board goes empty and the log says so
+   (first failure at once, then every 30th tick with a running count); if nothing is being mirrored, same thing plus a
+   one-time warning. A derived board that quietly became a legacy board would be indistinguishable from a correct one.
+   Off = byte-identical to before.
 
 Report anything where a *derived* board disagrees with itself (click A+B, then click A and B separately — those must add
 up exactly), because that is a bug rather than a known legacy difference.

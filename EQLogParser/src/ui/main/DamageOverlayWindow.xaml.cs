@@ -42,6 +42,7 @@ namespace EQLogParser
      */
     private readonly bool _mirrorMeter = ConfigUtil.IfSet("OverlayDamageFromMirror");
     private bool _mirrorMeterWarned;
+    private int _mirrorFailures;
     private double _mirrorWindowT = -1;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
@@ -322,22 +323,29 @@ namespace EQLogParser
      * is the display rule DamageMeterConfigState.DamageResetMode always encoded — kept on this side of the seam so the
      * mirror stays free of "what a meter is showing right now".
      *
-     * Any problem on the mirror path falls back to the legacy tally for that tick rather than blanking a running
-     * meter: an operator watching pulls should be able to turn this on without risking the board they read.
+     * There is no fallback to the legacy tally anywhere on this path. A derived board that quietly became a legacy one
+     * is indistinguishable from correct numbers, which is the worst failure a meter can have — so failures blank the
+     * board and say so in the log instead.
      */
     private DamageOverlayStats BuildMirrorUpdate()
     {
       var session = MirrorSession.Active;
       if (session is null)
       {
+        // Loud, not legacy. `OverlayDamageFromMirror` means "the derived numbers, or nothing": an empty board plus one
+        // line saying why. Falling back to the old tally would put two engines' numbers on one screen with no hint of
+        // which one is being read, and the moment the legacy path goes away that fallback becomes a silent blank.
         if (!_mirrorMeterWarned)
         {
           _mirrorMeterWarned = true;
-          Log.Info("Damage meter: OverlayDamageFromMirror is set but no capture is being mirrored; using the legacy tally.");
+          Log.Warn("Damage meter: OverlayDamageFromMirror is set but no capture is being mirrored, so the board stays "
+                   + "empty until a log is opened (remove the setting to use the legacy tally).");
         }
 
-        return _statsBuilder.Build(_stats == null, _currentDamageMode, _currentMaxRows, _currentSelectedClass);
+        return null;
       }
+
+      _mirrorMeterWarned = false;
 
       try
       {
@@ -368,8 +376,20 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        Log.Error("Damage meter: derived build failed, using the legacy tally for this tick", ex);
-        return _statsBuilder.Build(_stats == null, _currentDamageMode, _currentMaxRows, _currentSelectedClass);
+        /*
+         * No legacy substitute here either: a derived board that quietly became a legacy board is the one outcome worse
+         * than an empty one, because it is indistinguishable from correct numbers. So the board blanks and the failure
+         * says so — first time immediately, then every 30th tick with the running count so a fault that repeats at timer
+         * rate cannot bury the log while still being visible as a growing number.
+         */
+        _mirrorFailures++;
+        if (_mirrorFailures == 1 || _mirrorFailures % 30 == 0)
+        {
+          Log.Error($"Damage meter: derived build failed ({_mirrorFailures} time(s)); the board is empty until it works",
+            ex);
+        }
+
+        return null;
       }
     }
 
