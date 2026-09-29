@@ -101,7 +101,15 @@ namespace EQLogParser
           Source = source ?? string.Empty,
           Begin = fight.BeginTimeString,
           Last = DateUtil.FormatDotNetDateSeconds(fight.LastTime),
-          Duration = DateUtil.FormatGeneralTime(Math.Max(0, fight.EndTime - fight.BeginTime)),
+          /*
+           * Seconds, not words. FormatGeneralTime is the fuzzy "5 minutes" formatter, and on this column it was
+           * worse than approximate: under a minute it returns an empty string (so the 46-second first life of
+           * Waxwork Abolishion showed no duration at all), and 112 s and 162 s both read "1 minute"/"2 minutes",
+           * which is no way to compare two pulls. The legacy grid has no duration column — the seconds lived in the
+           * row tooltip (`Time Alive: 46s`) — so this is the mirror's own number and it might as well be exact.
+           */
+          Duration = DateUtil.FormatTicks(TimeSpan.FromSeconds(Math.Max(0, fight.EndTime - fight.BeginTime)).Ticks,
+                                         DateUtil.TimeFormat.HMSCompact),
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,
           Status = StatusOf(fight),

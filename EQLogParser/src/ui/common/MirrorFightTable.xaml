@@ -72,7 +72,7 @@
         <syncfusion:GridTextColumn MappingName="Source" HeaderText="Rule" Width="110" />
         <syncfusion:GridTextColumn MappingName="Begin" HeaderText="Begin" Width="145" />
         <syncfusion:GridTextColumn MappingName="Last" HeaderText="Last" Width="145" />
-        <syncfusion:GridTextColumn MappingName="Duration" HeaderText="Dur" Width="70" />
+        <syncfusion:GridTextColumn MappingName="Duration" HeaderText="Dur" Width="85" />
         <syncfusion:GridNumericColumn MappingName="Damage" HeaderText="Damage" NumberDecimalDigits="0" Width="95" />
         <syncfusion:GridNumericColumn MappingName="Hits" HeaderText="Hits" NumberDecimalDigits="0" Width="65" />
         <syncfusion:GridTextColumn MappingName="Status" HeaderText=" " Width="50" />
