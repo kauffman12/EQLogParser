@@ -3813,5 +3813,46 @@ Two measured things, both from writing the tests rather than reading code:
   reconciling code — and it is a tripwire: if a fact ever lands on two rows this reads high, if onto none, low.
 
 Not built yet (deliberately, in this order): the overlay's session rule feeding `BuildScopeStats` instead of
-`GetOverlayFights`, and its refresh cadence. Also still owed before leaning on "these rows = the whole window": a
-census of facts that file into **no** row, which would show in a time-window sum but in no selection.
+`GetOverlayFights`, and its refresh cadence. And the precondition the next section measures: some captured facts
+reach no row at all, so "select these fights" and "everything in the window" are not automatically the same set.
+
+## What a session cannot see: facts that reach no row (census)
+
+Pointing the damage meter at derived rows makes the meter's total and the list's select-all one function. That is only
+honest if "the union of the rows" ≈ "everything in the window", so `MirrorUnrowedFactsTest` puts a spy in front of
+`FightProjection`'s ownership sink (which ordinals did ANY row claim?) and subtracts. Note this is one level outside
+`UnroutedFactCount`: *unrouted* facts reached a row and neither board wanted them; *unrowed* facts never reached one.
+
+CI pins the definition on two synthetic cases (raid-only facts = the residue, counted not vanished; an ordinary pull =
+zero gap, so `DamageFactCount + TankingFactCount + UnroutedFactCount` accounts for the whole capture). The real numbers
+come from `EQLP_MIRROR_UNROWED=<log>[;<log>]`, and they found a hole worth more than the tool:
+
+| capture | facts | unrowed | share | damage in the gap | one name owns |
+|---|---|---|---|---|---|
+| Kizant 2024-03-01 | 5,906,606 | 48,284 | 0.82 % | 5,838,413,554 | **`Darkside`, 5,644,042,553 = 96.7 %** |
+| Kizant 2022-09-18 | 6,042,978 | 46,288 | 0.77 % | 4,327,198,414 | same shape (one pet, every boss) |
+| Incogitable 2026 | 1,891,875 | 2,120 | 0.11 % | 181,332,891 | no single owner; mob-vs-mob self-DoT + raid-on-"pet" |
+
+`Darkside` prints as **`Pet / RegistrySeed`, our pet at the time: True**, hitting `Commander Zoraxmen`,
+`Hand of the King`, `Zelnithak`, `Aten Ha Ra` — the raid's own registered pet swinging at bosses, and it lands in no
+fight row at all. Mechanism, in `FightProjection`'s gate cascade: side-ness comes from the *line's* evidence, so a pet
+with no possessive in the text (`Darkside`, custom-named) reads mob-side, and the `Npc vs Npc` branch closes with
+`if (!IsFlipped(timeline, atkName, t)) continue;` — "two mobs on each other is not a raid fight". The charm flip is the
+only exemption; **ownership known from the seed/registry is not consulted there**, so the fact is dropped before it can
+be filed. The second, smaller shape is its mirror image in the friendly-fire branch: `Incogitable -> A candlefolk flame
+worshipper` (90.5 M) and `A candlefolk flame worshipper` itself (`Pet / RegistrySeed`, but `our pet at the time: False`)
+— the raid's swings on a name the seed calls somebody's pet, whose ownership interval does not answer `IsOurPetAt` at
+that second, get dropped as allied fire.
+
+Why this matters for the meter (and for the +19–20 % derived-vs-legacy gap): legacy folds a mapped pet under its owner,
+so its board *contains* this damage, while every derived board — fight list, summary, and the meter once it reads rows —
+omits it. "Meter ≡ list" would hold; both would be quietly wrong together, which is the failure mode sharing one
+calculation cannot protect against.
+
+A fix is a gate change, not a counter change, and it wants its own pass: at `Npc vs Npc` (and at the friendly-fire
+branch), consult ownership (`EntityTimeline.IsOurPetAt` / `PlayerRegistry` pet map) rather than only the charm flip;
+key such a fact on the **mob** (the defender here, since our pet is the attacker), credit it as damage aimed at that
+row's anchor, and carry `AttackerOwner = OwnerOf(name, t)` so the board folds it under the raider with `+Pets` exactly
+as a possessive-named pet does. Boss-vs-boss noise stays out — the exemption is ownership, not "attacker unknown". Then
+re-measure: this census, `MirrorRealLogBoardsTest`'s parity bars (Incogitable 4,473/4,473 field-matched, 2024
+691/691), and the charm tests, because flipping which side a pet is on touches `CharmedOwned`/`RaidPet` labeling.
