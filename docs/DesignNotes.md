@@ -4181,3 +4181,59 @@ Pinned by `DerivedFightTest` — `AFightInsideASingleSecondLivedOneSecond`,
 `new TimeSegment(begin, end).Total`, so the two conventions cannot drift apart quietly),
 `TheDurationCellPrintsTheTooltipsNumber` (the same format expression the grid uses, asserted where it runs on Linux) and
 `ARowWithoutBoundsSaysNothing`; `MirrorFightRowsTest` in the Windows assembly covers the row end to end.
+
+## How often the mirror re-derives (2026-10)
+
+Symptom reported from live use: a derived damage meter had to be coaxed open with **Re-derive**, and then sat showing
+the same numbers for the whole encounter, moving only when Re-derive was clicked again. The fight list had the same
+disease and the summaries inherited it — they all read one `MirrorSnapshot`, and no new snapshot was arriving.
+
+The trigger was quiescence alone:
+
+```csharp
+if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();   // two equal ticks, 1 s apart
+else _lastTickCount = count;
+```
+
+That is the right question for a **file being loaded** ("have you stopped yet?") and the wrong one for a **live log**:
+during a raid a line arrives every fraction of a second, so two consecutive equal ticks never happen, and the mirror
+faithively declined to derive for the entire fight. Quiescence is a completion detector; it was being used as a refresh
+clock.
+
+**What one pass costs,** measured on the largest capture on file (`eqlog_Kizant_xegony.txt`, 2,931,939 facts including
+heals), timing exactly what `RederiveAsync` does inside the gate — roster seed, `ClassificationRules.Apply`,
+`FightProjection.Build`, `Sectionizer.StampGroupIds`: **660 ms / 653 ms / 610 ms**, of which classification is
+200-250 ms. Refreshing while data is dirty is therefore cheap enough that not doing it was a bug rather than a saving.
+A pass does park ingest (`CombatMirror.DeriveQuiescent` is a `lock (_gate)`), so the cadence has to pay for that too.
+
+**The rule now** lives in `MirrorDeriveCadence` (Core, decided apart from the session because a `DispatcherTimer` is not
+a test harness) and keeps both triggers:
+
+| situation | decision |
+|---|---|
+| count held still between two ticks | derive — end of load, still the fast path |
+| nothing new since the last pass | never — an idle log must cost zero |
+| growth ≥ 25,000 facts in a tick | **not yet** — that is a file being read; quiescence catches its end |
+| small growth (a live tail) | derive once `sinceLastPass ≥ clamp(4 × lastPassSeconds, 3 s, 15 s)` |
+
+The bulk-load guard is what keeps the fix from slowing the one moment throughput matters: reading a file through the
+pipeline runs at roughly **170,000 facts/second**, tailing live at tens, so the threshold separates them by three
+orders of magnitude rather than by guesswork. The throttle scales with measured cost — the 650 ms pass above lands on
+the 3 s floor (≈20% of wall time parked at the gate while a raid is fighting, which buys a meter that moves); a 10 s
+pass would be spaced to the ceiling instead of running back to back.
+
+**The ceiling has a reason.** `BuildMirrorUpdate` applies the meter's own expiry to whatever it has: quiet for longer
+than `_currentDamageMode` (or `FightManager.FightTimeout` = 30 s in the default mode 0) and the board zeroes, because
+that is how a meter is supposed to behave after a pull. It measures quietness against *the last fact the snapshot knows
+about*, so a cadence allowed to let a snapshot age past 30 s would blank the board on a raid that was fighting the whole
+time — the refresh rule and the expiry rule arguing, with the expiry winning every time. 15 s is "inside 30 s with room
+for two ticks", and `TheCadenceStaysInsideTheMetersOwnQuietRule` refuses a change that lets them cross.
+
+**Opening a derived meter also asks for a pass directly** (`DamageOverlayWindow`, live branch). The board reads a
+snapshot rather than the live pipeline, so without that nudge the first thing a user sees is an empty window until the
+cadence happens to fire — precisely the "I had to click Re-derive" complaint, in a milder form.
+
+Pinned by `MirrorDeriveCadenceTest`: quiet still fires, idle costs nothing, a tailing count refreshes without silence and
+not before the floor, the first pass does not wait for silence, a bulk load is left alone until it stops, the interval
+scales with measured cost (floor/middle/ceiling/NaN), and the ceiling stays under `FightManager.FightTimeout`. The
+session's feeding of the rule and the meter's open-nudge sit in the WPF assembly, so they build here and run on Windows.

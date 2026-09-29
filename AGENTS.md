@@ -207,6 +207,16 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **237→289** (visible **215→267**) vs legacy **262**; reasoning and fixtures: docs/DesignNotes.md → "One row per life"; pinned by
   `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
   `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne` and (Windows) `MirrorFightRowsTest`.
+- **Quiescence is a completion detector, not a refresh clock**: the mirror derives when the captured count holds still for two ticks,
+  which answers "is the file done loading" and nothing else — a live raid tail never offers two silent ticks, so every surface reading the
+  snapshot (fight list, click summaries, the damage meter) froze for the whole encounter and moved only on Re-derive. `MirrorDeriveCadence`
+  (Core, so it is testable without a dispatcher) keeps quiescence AND adds a cost-aware live cadence: refresh when
+  `sinceLastPass >= clamp(4 x lastPassSeconds, 3 s, 15 s)`, and never while one tick's growth reaches `BulkFactsPerTick` (25,000 — a file is
+  being read at ~170k facts/s against tens/s while tailing, so re-deriving there would park ingest at the gate during the only moment throughput
+  matters). The ceiling is load-bearing: `BuildMirrorUpdate` zeroes the board after `FightManager.FightTimeout` (30 s) of quiet measured against
+  *the snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. One pass
+  over the largest capture (2.9M facts) costs ~650 ms — measured, which is why waiting was the bug. Opening a derived meter also calls
+  `RederiveAsync()` directly, since an empty window reads as broken. Pinned by `MirrorDeriveCadenceTest`.
 - **A fight's duration counts seconds inclusively**: `DerivedFight.DurationSeconds` is `Math.Max(1, LastTime - BeginTime + 1)` because
   that +1 is what the product already calls a duration — `TimeSegment.Total` (`end - begin + 1`) is the DPS denominator of every board number, and
   `FightManager`'s tooltip (`Time Alive: Ns`) uses it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its
