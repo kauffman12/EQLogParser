@@ -4045,3 +4045,70 @@ the same rows per player and in total; its tank half counts the 120 + 90 the mob
 sliced meter equals a sliced list) and `TheMeterBuildsOnItsOwnBuilders` (a refresh leaves the shared damage builder's answer
 alone and never announces on the shared tank board). What still needs watching on Windows is not the arithmetic but the
 wiring: that the timer's window advances, that expiry zeroes the board, and whether a real pull's numbers look like the pulls.
+
+## One row per life: what the engagement gap splits, and what a duration column owes (2026-10)
+
+Reported on `local/eqlog_Kizant_xegony.txt` (the pull is `Waxwork Abolishion`, with an h): the old fight list showed the
+boss twice — 46 s, then 163 s after the adds died — while the derived list showed it once for "5 minutes", one entry
+short of the encounter the raid actually fought. Both lists were looking at the same facts; they disagreed about what a
+silence means.
+
+```
+LEGACY   18:34:08 → 18:34:53   46s   5.74B / 12,773 hits      "Time Alive: 46s"
+LEGACY   18:37:08 → 18:39:50  163s  25.50B / 57,651 hits      "Time Alive: 163s"
+LEGACY   18:39:52 → 18:40:16   25s   corpse DoT on raiders, no damage dealt
+
+BEFORE   18:34:08 → 18:39:50  342s  31.70B / 85,831 hits      Dur = "5 minutes"   dmgwin = 0
+AFTER    18:34:08 → 18:34:53   45s   5.81B / 15,190 hits      Dur = "00:45"       end = Gap
+AFTER    18:37:08 → 18:39:50  162s  25.89B / 70,641 hits      Dur = "02:42"       end = Slain
+```
+
+**The split gap is legacy's expiry: 30 seconds, one number.** `FightProjection.EngagementGapS` was 300, chosen so a
+continuous brawl would never be cut into invented boundaries. What it actually did was swallow encounters: a boss that
+fades for 135 s while its adds are beaten dies in the same row as its own respawn. Legacy expires a name at
+`FightManager.FightTimeout` (30 s), or 60 s for a fight that had never landed boss-directed damage — and only one of
+those two numbers is kept here. A row that has not hurt anybody for half a minute is over either way, and a threshold
+that depends on which side the first hit went makes a row's boundaries a function of damage direction rather than of
+what happened. (Nothing in the six captures has ever been observed needing the 60 s one.)
+
+The quiet cost of the merged row was the DPS clock, not the row count. Legacy totals a selection through `TimeRange.Add`,
+which drops silences of 6 s and over, so its three rows summed to **324 s** of span where one merged row charged **343 s**
+for the same click — the fade welded into "fight duration". A gap rule that swallows an encounter is not being
+conservative about brawls; it is inventing one.
+
+**Event→row matching keeps a wider window (`EventTailWindowS` = 300).** Those used to be one constant, and they are not
+one question. Splitting rows asks "did this fight stop", which a silence answers. Matching asks "is this slain line (or
+charm sighting) *about* this row", and the acts are performed by different people on different clocks — the raid's last
+swing and a mesmerist's charm on the same mob need not be within half a minute of each other. Tightening the tail with
+the split would have left rows reading "still going" long after their mob became the raid's pet (12 such rows on
+Incogitable). `ACharmSightingLongAfterTheLastSwingStillClosesTheRow` holds the two apart; if someone re-merges them,
+that test fails rather than a fight list.
+
+**Each row keeps two time windows, written by the same comparison as its damage split.** `BeginDamageTime/LastDamageTime`
+were stamped at row creation and never advanced afterwards, so every projected row reported a zero-length damage window
+equal to its own birth second — and `Sectionizer` walks `LastDamageTime` to place the non-tanking divider list, so the
+lie had a consumer. They are now maintained like `FightManager` maintains them (`Begin…` on the first fact in that
+direction, `Last…` on every one), split by direction using the same `aimedAtAnchor` comparison that separates
+`DamageToOwner` from `DamageByOwner` and files `MirrorDamageIndex`, so no two seams can disagree about which way a fact
+pointed. `NaN` is load-bearing: it means "this never happened", and a row nobody hit must not report a damage time of
+zero. That in turn exposed `Sectionizer`: `Math.Max(x, NaN)` is NaN, and one such row silenced every later "Fight N"
+divider in the list — an empty window is now skipped rather than folded in. (Legacy could never step on this: its
+`DamageHits` counts only hits that landed on the NPC, so every row its non-tanking walk considered had a damage time by
+construction; a projected row counts both directions.)
+
+**The duration column prints seconds.** `DateUtil.FormatTicks(…, HMSCompact)` → `00:46`, `02:42`, `01:02:04`. It used to
+run through `FormatGeneralTime`, the fuzzy words formatter, which returns an **empty string** under a minute (so the
+first life of this boss showed no duration at all) and collapses 112 s and 162 s into "1 minute"/"2 minutes". The legacy
+grid has no duration column whatsoever — its seconds lived in the row tooltip, `Time Alive: 46s` — so this is the
+mirror's own number, and it might as well be exact. The inactivity divider keeps the words formatter on purpose: that
+text is legacy's ("Inactivity > 5 minutes") and matching it is the point.
+
+Cost of the tighter split, measured on the same capture: rows **237 → 289** (visible after hiding pet rows:
+**215 → 267**) against legacy's **262** for 1,929,949 damage facts. The derived list runs a few rows long because it
+also keys names legacy's registry-gated rollup never placed; the finer split is the deliberate part.
+
+Pinned by `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
+`ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne`,
+`ACharmSightingLongAfterTheLastSwingStillClosesTheRow` (all `EQLogParser.Test`) and `MirrorFightRowsTest`
+(`EQLogParser.Wpf.Test`, Windows-only). `OurPetTest`'s fixture had to be re-timed: its pet swing was written a full
+minute after the raid's, which the old gap folded into one row and the new one correctly calls two encounters.

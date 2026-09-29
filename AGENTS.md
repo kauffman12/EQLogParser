@@ -186,10 +186,27 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   onto their pet would shrink their meter. Two measured laws: name spelling is settled by the case-insensitive entity keys (bullet
   above) rather than by registering `A bone walker` beside `a bone walker` — with ordinal keys nothing flipped *silently* while
   `CharmWindowPolicy`'s own case-insensitive tables went on reporting credit, which is how the feature looked finished while doing
-  nothing; and a charm closes only a row whose last fact sits inside `EngagementGapS`, so another pull of the same name cannot be
-  ended retroactively. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
+  nothing; and a charm closes only a row whose last fact sits inside `EventTailWindowS`, so another pull of the same name cannot be
+  ended retroactively — **that** window, never the 30 s that splits rows (next bullet): the raid's last swing and somebody else's
+  charm spell are two acts on two clocks, and tightening the tail with the split leaves rows reading "still going" after their mob
+  became the raid's pet. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
   `Gap` counts that used to hide them; charmed-owned rows **0→6** and **0→5** once the exemption landed) and reasoning:
   docs/combat-mirror-design.md → "What a window does to the list and the board"; pinned by `CharmRowProjectionTest`.
+- **A row is one life, and the split gap is legacy's expiry (30 s)**: `FightProjection.EngagementGapS = FightManager.FightTimeout`,
+  one number for both lists — not legacy's pair (60 s until boss-directed damage lands), because a row that has not hurt anybody for
+  half a minute is over either way, and a threshold keyed on which side the first hit went makes boundaries a function of damage
+  direction. It was **300** until one pull was read off `eqlog_Kizant_xegony.txt`: `Waxwork Abolishion` fades at 18:34:53 after 46 s and
+  respawns 135 s later, and the wide gap made both lives ONE row ("5 minutes", one entry short of the encounter) while also welding the
+  fade into the DPS clock — legacy's `TimeRange.Add` drops silences ≥6 s, so its three rows summed to 324 s where the merged span charged
+  343 s. Two consequences that must not be "simplified" back: a row's **direction windows** (`Begin/LastDamageTime`,
+  `Begin/LastTankingTime`) are written by the same `aimedAtAnchor` comparison as `DamageToOwner`/`DamageByOwner` and `MirrorDamageIndex`,
+  with **NaN meaning "never happened"** (a row nobody hit must not report a zero damage time; `Sectionizer` skips an empty window, since
+  `Math.Max(x, NaN)` is NaN and one such row would silence every later "Fight N" divider), and the grid's **duration column prints seconds**
+  (`FormatTicks`, `HMSCompact`) because `FormatGeneralTime` returns an *empty string* under a minute and collapses 112 s and 162 s into
+  "1 minute"/"2 minutes" — only the inactivity divider keeps the words, where matching legacy is the point. Cost on that capture: rows
+  **237→289** (visible **215→267**) vs legacy **262**; reasoning and fixtures: docs/DesignNotes.md → "One row per life"; pinned by
+  `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
+  `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne` and (Windows) `MirrorFightRowsTest`.
 - **A charmed mob is a pet, and a pet has no fight row**: `CharmPetRows.Visible` keeps `DerivedFight.RaidPet` rows off the
   grid (`MirrorFightRows`) while the encounter row the charm closed stays listed as `dead, charmed` — same rule that keeps
   ``Ziggy`s pet`` out of the legacy table. **Hiding is display-only**: `MirrorSnapshot.AllFights` keeps every row and
