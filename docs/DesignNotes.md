@@ -4103,12 +4103,47 @@ grid has no duration column whatsoever — its seconds lived in the row tooltip,
 mirror's own number, and it might as well be exact. The inactivity divider keeps the words formatter on purpose: that
 text is legacy's ("Inactivity > 5 minutes") and matching it is the point.
 
-Cost of the tighter split, measured on the same capture: rows **237 → 289** (visible after hiding pet rows:
-**215 → 267**) against legacy's **262** for 1,929,949 damage facts. The derived list runs a few rows long because it
-also keys names legacy's registry-gated rollup never placed; the finer split is the deliberate part.
+Cost of the tighter split, measured on the same capture: rows **237 → 289**, and the stale-death rule below then
+deleted **19** of those as fabrications, leaving **270** (visible after hiding pet rows: **267**) against legacy's
+**262** for 1,929,949 damage facts. The remainder runs a few rows long because the derived list also keys names
+legacy's registry-gated rollup never placed.
 
 Pinned by `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
 `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne`,
 `ACharmSightingLongAfterTheLastSwingStillClosesTheRow` (all `EQLogParser.Test`) and `MirrorFightRowsTest`
 (`EQLogParser.Wpf.Test`, Windows-only). `OurPetTest`'s fixture had to be re-timed: its pet swing was written a full
 minute after the raid's, which the old gap folded into one row and the new one correctly calls two encounters.
+
+## A death closes only a row that was alive when it happened (2026-10)
+
+`A corrupted egg`, same capture, 18:52:58. The grid listed the name twice with the same beginning: one row living until
+18:53:02 and the next line showing 0 seconds. Legacy lists that window once (18:52:58 → 18:53:02, 6,316,561 damage),
+and it is right — two rows for a name means two mobs, and no mob was alive in both.
+
+The slain queue is keyed by **name**, but one name carries many mobs in a night. This one is slain at 18:52:40, :45,
+:46, :52, :56, :56, then 18:53:02 — the raid is already swinging at the next egg when the previous corpse's line
+arrives. The projection had inherited one rule from legacy ("a death ends the row once a strictly later timestamp
+arrives", because the killing blow and its `was slain` line share a second-resolution stamp) and nothing checked
+whether the death was inside the row it was being applied to. So when a death sat in the queue that **predated** the
+row created after it, that brand-new row died at its own first second — `18:52:58 .. 18:52:58`, holding one hit
+(2,573,017) while the row above it lost it (3,743,544 instead of 6,316,561). Nineteen such rows on this capture.
+
+**The rule:** a queued death may close a row only if it landed inside that row (`dt >= row.BeginTime`). An older death
+describes an earlier holder of the name — one whose facts already went to an earlier row, or to none at all — so it is
+dropped and the next entry in the queue is asked. The same guard applies to the end-of-stream pass that marks trailing
+deaths, and the consequence is stated rather than hidden: a row with no death inside it gets **no** death marker. It says
+"still open" because the log gave no evidence that its mob died during it; inventing one from a line about a different
+mob is what produced the row that looked like a fight of zero seconds.
+
+Verified on the real pull (projection vs legacy, `A corrupted egg`, 18:52:20-18:53:40): six rows each, identical begin,
+end and damage — 35,026,061 / 207,505,806 / 36,588,567 / 211,571,124 / 37,914,248 / 6,316,561. Note the legitimate
+zero-span row in that list (18:52:46, 36.5M damage in one second): a mob hit and killed inside the same second is real,
+and looks identical to the fabrication on the span column alone — which is why the pinned tests assert *who died inside
+which row* rather than "no zero-length rows". Pinned by `ADeathOlderThanARowCannotCloseIt` (with the assertion that the
+next holder stays unmarked) and `ANameReusedBySuccessiveMobs_ClosesOneRowPerDeath`.
+
+**Do not go hunting zero-span rows afterwards.** 43 remain on this capture, and they are what the log says: a name with
+exactly one timestamp in it — `A strengthening foodstuff` (one hit, then silence), `Wickflame Wax Snare`, a `petrified vile
+egg` nudged once before the raid moved on. Legacy prints the same shape (`A corrupted egg` at 18:52:46 is 0 seconds and
+36.5M damage in both lists). The defect was never a short row; it was **two rows sharing one beginning**, which claimed a
+second mob existed when one was still alive.

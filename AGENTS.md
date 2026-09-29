@@ -207,6 +207,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **237→289** (visible **215→267**) vs legacy **262**; reasoning and fixtures: docs/DesignNotes.md → "One row per life"; pinned by
   `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
   `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne` and (Windows) `MirrorFightRowsTest`.
+- **A death closes only a row that was alive when it happened**: the slain queue is keyed by NAME while one name carries many mobs
+  (`A corrupted egg` is slain at 18:52:40/:45/:46/:52/:56/:56 on one capture), so a queued death can predate the row created after it.
+  Applying it anyway killed that newborn row at its own first second — the grid listed the same name twice with the same begin, one row
+  living 0 s and holding the killing blow's damage (legacy: one row of 6.32M; derived: 3.74M + a 0-second row of 2.57M). So a death closes a
+  row only when `dt >= row.BeginTime`; an older entry is dropped and the next is asked, and **a row with no death inside it gets no death
+  marker** — "still open" is the honest word, while inventing one is what wrote the fake fight. This guard is separate from legacy's inherited
+  same-second rule (`dt < t`, so the killing blow lands in the dying fight) and both are needed. 19 fabricated rows removed on that capture
+  (projected 289 → 270 vs legacy 262). Pinned by `ADeathOlderThanARowCannotCloseIt`, `ANameReusedBySuccessiveMobs_ClosesOneRowPerDeath` — assert
+  who died inside which row, never "no zero-length rows": a mob hit and killed in the same second is real and looks identical on the span column.
 - **A charmed mob is a pet, and a pet has no fight row**: `CharmPetRows.Visible` keeps `DerivedFight.RaidPet` rows off the
   grid (`MirrorFightRows`) while the encounter row the charm closed stays listed as `dead, charmed` — same rule that keeps
   ``Ziggy`s pet`` out of the legacy table. **Hiding is display-only**: `MirrorSnapshot.AllFights` keeps every row and
