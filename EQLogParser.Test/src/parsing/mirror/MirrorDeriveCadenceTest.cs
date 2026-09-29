@@ -32,22 +32,31 @@ public class MirrorDeriveCadenceTest
         Assert.AreEqual(15d, MirrorDeriveCadence.LiveIntervalSeconds(10.0), 0.01,
             "however expensive, a snapshot may not age past the ceiling");
 
-        // No measurement yet is the FASTEST answer, not the slowest: the first board should arrive promptly.
-        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(0), 0.01);
-        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(-1), 0.01);
-        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds,
-            MirrorDeriveCadence.LiveIntervalSeconds(double.NaN), 0.01);
+        /*
+         * No measurement yet is the FASTEST answer, not the slowest: at the top of a fresh log there is no cost to
+         * scale, and asking the player to wait for a pass that has never run would be the old behaviour back.
+         */
+        foreach (var unmeasured in new[] { 0d, -1d, double.NaN })
+        {
+            var interval = MirrorDeriveCadence.LiveIntervalSeconds(unmeasured);
+            Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, interval, 0.01,
+                $"an unknown cost ({unmeasured}) must not be guessed as a slow pass");
+        }
     }
 
     // The ceiling is the meter's quiet rule, not a taste for round numbers.
     [TestMethod]
     public void TheCadenceStaysInsideTheMetersOwnQuietRule()
     {
-        Assert.IsTrue(MirrorDeriveCadence.CeilingSeconds < FightManager.FightTimeout,
+        // Read through LiveIntervalSeconds rather than comparing the constants to each other: what matters is that the
+        // interval the session actually arms its timer with stays inside the window the meter tolerates.
+        var cheap = MirrorDeriveCadence.LiveIntervalSeconds(1.0);
+        var ruinous = MirrorDeriveCadence.LiveIntervalSeconds(1_000d);
+
+        Assert.IsTrue(ruinous < FightManager.FightTimeout - 10,
             "a snapshot older than the meter's own expiry makes its board blank itself");
-        Assert.IsTrue(MirrorDeriveCadence.FloorSeconds < MirrorDeriveCadence.CeilingSeconds);
-        Assert.IsTrue(MirrorDeriveCadence.CostMultiplier > 1d,
-            "the whole point is that a more expensive pass waits proportionally longer");
+        Assert.IsTrue(cheap < ruinous,
+            "a more expensive pass waits proportionally longer — that is the whole mechanism");
     }
 
     // Idle is free: nothing captured, or nothing the grid does not already show.
@@ -134,16 +143,32 @@ public class MirrorDeriveCadenceTest
                            MirrorDeriveCadence.QuietSeconds * 0.5, 0, 0, 0.65),
             "half the quiet window is not the quiet window, whatever the poll rate");
 
-        // And no threshold may be expressed in ticks at all — the constants are durations and rates.
-        Assert.IsTrue(MirrorDeriveCadence.QuietSeconds > 0 && MirrorDeriveCadence.BulkFactsPerSecond > 0);
+        /*
+         * And the two verdicts stay independent in the way only a time-based rule can be: BULK parks whatever the clock
+         * says (a file being read is left to quiescence, even immediately after a pass), while QUIET goes whatever the
+         * rate is. A tick-counting version of either one flips when the poll rate changes, which is the bug this shape
+         * exists to make impossible.
+         */
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, 0.001, MirrorDeriveCadence.BulkFactsPerSecond,
+                        0, 0),
+            "bulk parks even one millisecond after the previous pass — a load ends in quiet, not on the interval");
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 1, Derived, MirrorDeriveCadence.QuietSeconds, 0,
+                        double.PositiveInfinity, 0),
+            "a single new fact after the quiet window goes now, with no rate to compare against");
     }
 
     // Live-tail floor: refreshes fast enough to feel live, but every pass parks ingest while it runs.
     [TestMethod]
     public void TheFloorLimitsHowOftenIngestIsParked()
     {
-        Assert.IsTrue(MirrorDeriveCadence.FloorSeconds >= 1d,
-            "a pass re-derives the whole capture on a worker thread; below a second the pump is the workload");
+        /*
+         * At reference cost (650 ms measured) a pass is a fifth of the floor: below that ratio the derive pump stops
+         * being background work and becomes the workload, since ingest waits at the gate for the whole pass. Asserted
+         * through the interval a session would arm, so the number has to move if either side changes.
+         */
+        var interval = MirrorDeriveCadence.LiveIntervalSeconds(0.65);
+        Assert.IsTrue(interval >= 3 * 0.65,
+            $"a {interval}s cadence against a measured 0.65 s pass leaves too little of the cycle for parsing");
     }
 
     // A session's counters include heals, deaths and identity events — see MirrorSession.CapturedTotal.
