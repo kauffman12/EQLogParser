@@ -4237,3 +4237,106 @@ Pinned by `MirrorDeriveCadenceTest`: quiet still fires, idle costs nothing, a ta
 not before the floor, the first pass does not wait for silence, a bulk load is left alone until it stops, the interval
 scales with measured cost (floor/middle/ceiling/NaN), and the ceiling stays under `FightManager.FightTimeout`. The
 session's feeding of the rule and the meter's open-nudge sit in the WPF assembly, so they build here and run on Windows.
+
+## A mirror pass that starts where the last one stopped (2026-10)
+
+"How often the mirror re-derives" above settled *when* a pass runs; this is about what a pass costs, because the two
+together decide how live the meter feels. The old meter never recomputed anything — `FightManager.ProcessRecord`
+increments totals as each line parses, so its numbers are ~0 s stale and only the repaint is throttled. A derived board
+computes rows from facts, and computing them every refresh is what buys rows that re-key themselves as evidence arrives,
+charm windows, pets folded under owners. The honest goal was therefore not to match legacy's per-line freshness but to
+stop paying for work that had already been done.
+
+Two plumbing wins went first (commit "Mirror: paint on the pass, and poll faster than the refresh rate"), because they
+were pure latency rather than throughput: a derive finishing between two of the overlay's 1 s polls used to wait for the
+next poll to be *seen*, and the session asked the cadence once a second, so every threshold could fire up to a whole
+second late. The overlay now queues a repaint when `Derived` fires, and the session polls at 250 ms with the thresholds
+themselves rewritten from tick counts into seconds and facts/**second** (`MirrorDeriveCadence`) — rewritten, not just
+re-scaled, or a finer timer would have silently shortened the quiet window and the bulk-load guard.
+
+Then the projection itself. Measured on `eqlog_Incogitable_xegony.txt` (1,891,875 damage facts + 420,115 heals, 4,644
+rows) by `MirrorIncrementBenchmarkTest`:
+
+| pass | projection | classification (rule replay) | total |
+|---|---|---|---|
+| full rebuild | 433 ms | 299 ms | **732 ms** |
+| continued, +1,891 new facts (0.1 %) | **0 ms** | 268 ms | 268 ms |
+| continued, +18,918 new facts (1.0 %) | **5 ms** | 265 ms | 270 ms |
+| quiet tick, nothing arrived | **0 ms** | 275 ms | 275 ms |
+| re-arrived burst of 94,593 (5 %) | 490 ms *(rebuilt)* | 273 ms | 763 ms |
+
+A live raid tail offers a few hundred to a few thousand facts between refreshes, so the useful line is the second and
+third: **the fold went from 433 ms to single-digit milliseconds**, and the pass now costs what classification costs.
+
+**Why carrying state is sound rather than merely fast.** The fold is a forward-only sweep, and everything it must not
+forget lives in `ProjectionState`, which the cache owns: the open row per name (a fight spanning the pass boundary), the
+last *closed* row per name (`CharmPetRows` needs the pet→encounter chain, and a pet's facts begin after that row ends),
+the completed rows, and the per-name death queues — name-keyed because one name carries many mobs, which is the same
+reason a death must be applied to a row only if it falls inside it. The damage index travels with the rows it was filled
+beside: its ordinal lists describe that walk (`FactOwnershipHandler` is called from inside the projection), so a carried
+list with a fresh index would point at ordinals from a different walk, and both are rebuilt together or neither is.
+
+Two gates decide whether a pass may continue:
+
+1. **The watermark has to still name the same facts.** Not "same length" — a table swapped out at the same count would
+   satisfy that. `ProjectionState.Covers` checks the boundary facts (`ACoincidentallyEqualTableIsNotAContinuation`).
+2. **The classification stamp has to match the one the carried rows were folded under.** A moved verdict means the rows
+   are wrong, so this buys a full rebuild — it is not a fallback that hides anything, and it is why the meter never shows
+   a row from a reading the classifier has since abandoned.
+
+**The stamp is where the other quarter-second was hiding.** Its first version hashed every name and entry by walking both
+stores: ~250 ms per pass on this capture, *more than the fold it was guarding*, which made continuing pointless (the
+first numbers out of the benchmark read "continued in 263 ms" with a 0 ms projection). It is now summed in at insert time:
+each accepted insertion adds a term over (store, name, kind, strength, T0, T1, source, owner) and `StateStamp()` reads an
+accumulator. Three properties matter, all pinned by `EntityTimelineDigestTest`:
+
+- **Replaying evidence must not move it.** The rule book runs from scratch on every pass; the timeline's mutators already
+  drop re-assertions of what is recorded, so a night whose evidence has not changed stamps identically. This is the whole
+  reason a quiet tick is free — and the way it fails silently: a timestamp in a source string, or dedupe removed
+  upstream, and every pass rebuilds while everything still looks correct.
+- **Content must move it, not just volume.** Same number of verdicts with different verdicts still differs; an insertion
+  *count* would read "unchanged" and carry rows across a reclassification
+  (`TheSameNumberOfVerdictsCanBeDifferentVerdicts`).
+- **Order must not move it.** The term is *added* (commutative) rather than chained, because `RegistrySeed` walks
+  `PlayerRegistry`, whose enumeration order is unspecified and shifts as the registry grows — a chained digest would
+  rebuild on a reordering that changes no verdict. Added rather than XOR'd because one tuple can legitimately be recorded
+  in both stores, where an XOR pair would cancel to nothing.
+
+**The law this leans on:** classification is append-deterministic — replaying the rules over a longer prefix of the same
+fact stream reproduces every earlier insertion, so new verdicts only ever add terms. Anything that breaks that (a rule
+that *revises* an earlier conclusion in place, or a removal/revision API on `EntityTimeline`) has to move the digest
+itself; nothing else would notice, and the failure is a stale row on screen with plausible numbers. The reflection guard
+in `EntityTimelineDigestTest` refuses a third store appearing without this being told for the same reason.
+
+**Where the remaining ~270 ms goes.** `RegistrySeed.Apply` measures **0-1 ms**; the whole rest is `ClassificationRules.Apply`
+running its rules over every fact and heal again. Split by rule (same capture, steady state):
+
+| stage | ms |
+|---|---|
+| R9 charm windows | 83 |
+| R18 healed-pet intervals | 67 |
+| R15 healed-by-raid-side | 54 |
+| R7 graph inference | 36 |
+| line evidence (R1-R4) | 15-25 |
+| R5 ownership flag sweep | 15 |
+| npc database, name shape, comma title | ~0 each |
+
+Each of the top three is an aggregate over the whole night — charm lines, heal casters per name — so caching it means
+giving that rule its own watermark and its own persistent accumulator, fed only with what arrived since, plus a second
+gate for the cases where classification inputs move without any new facts (a roster edit, an override, an npcs.txt
+change). That is a change to the rules AGENTS pins hardest, and note the asymmetry that makes it a poor trade at first
+blush: when those rules *do* find something new, the projection rebuilds anyway and the pass costs 730 ms. What is saved
+is the ~250 ms of work whose result we cannot know without doing it. Not in here; the tables above are the argument for
+doing it if a 3 s refresh floor still reads as slow, and the honest framing for the user is "1 s instead of 3 s, at the
+cost of six rules that each need their own incremental proof".
+
+**What "rebuilt" means on the 5 % line.** The benchmark manufactures arrivals by rewriting existing hits one hour on, so
+ninety thousand duplicates genuinely re-write the edge counts and a verdict really does change — rebuilding is the
+correct answer, which is why that row is reported rather than demanded. What every share must satisfy is that the list
+ends up identical to a rebuild of the same facts.
+
+Correctness is asserted at split points rather than argued (`FightProjectionIncrementTest`): a damage-only pass continues
+where the last stopped; a death arriving in a later pass still splits the row one pass would; a row published dead and hit
+again matches one full pass; a gap landing exactly on the boundary matches; a charm arriving later closes the row it
+closed in one pass; the index travels with its rows; and `GrowingAParsedLogOnePassAtATimeEndsAtTheSameFightList` replays
+each fixture log tick by tick against the single-pass list.

@@ -211,12 +211,35 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   which answers "is the file done loading" and nothing else — a live raid tail never offers two silent ticks, so every surface reading the
   snapshot (fight list, click summaries, the damage meter) froze for the whole encounter and moved only on Re-derive. `MirrorDeriveCadence`
   (Core, so it is testable without a dispatcher) keeps quiescence AND adds a cost-aware live cadence: refresh when
-  `sinceLastPass >= clamp(4 x lastPassSeconds, 3 s, 15 s)`, and never while one tick's growth reaches `BulkFactsPerTick` (25,000 — a file is
+  `sinceLastPass >= clamp(4 x lastPassSeconds, 3 s, 15 s)`, and never while the growth **rate** reaches `BulkFactsPerSecond` (25,000/s — a file is
   being read at ~170k facts/s against tens/s while tailing, so re-deriving there would park ingest at the gate during the only moment throughput
   matters). The ceiling is load-bearing: `BuildMirrorUpdate` zeroes the board after `FightManager.FightTimeout` (30 s) of quiet measured against
   *the snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. One pass
   over the largest capture (2.9M facts) costs ~650 ms — measured, which is why waiting was the bug. Opening a derived meter also calls
-  `RederiveAsync()` directly, since an empty window reads as broken. Pinned by `MirrorDeriveCadenceTest`.
+  `RederiveAsync()` directly, since an empty window reads as broken. Every threshold is a duration or a rate rather than a tick count, because
+  the session now polls at **250 ms** (a 1 s poll made each threshold fire up to a second late) and a per-check allowance would shorten the
+  quiet window and the bulk guard purely by asking more often; the overlay also repaints when `Derived` fires instead of waiting for its own 1 s
+  poll. Pinned by `MirrorDeriveCadenceTest` (`TheRuleDoesNotDependOnHowOftenItIsAsked`) — note bulk **parks**, it does not fire: a load ends in quiet.
+- **A mirror pass continues where the last one stopped, and exactly two gates open the carry**: `FightProjectionCache` (held by `MirrorSession`)
+  keeps `ProjectionState` *and* the `MirrorDamageIndex` from pass to pass — the fold is forward-only, so the open row per name, the last **closed**
+  row per name (the pet→encounter chain `CharmPetRows` needs, since a pet's facts begin after that row ends), the completed rows and the name-keyed
+  death queues all have to travel, and the index must travel *with* the rows it was filled beside or its ordinal lists describe a different walk.
+  A carry is allowed when (1) `ProjectionState.Covers(facts)` still recognises the facts under the watermark — not "same length", a swapped table
+  satisfies that (`ACoincidentallyEqualTableIsNotAContinuation`) — and (2) `EntityTimeline.StateStamp()` matches the stamp the carried rows were
+  folded under; a moved verdict buys a **full rebuild**, never a stale row. **The stamp is an incremental content digest, summed in at insert time:**
+  the walking version hashed 2,436 names for ~250 ms, more than the 433 ms fold it guarded (measured on `eqlog_Incogitable_xegony.txt`, 1.89M facts:
+  full pass **732 ms** → continued pass **0-5 ms of projection**, with the unchanged rule replay's ~265 ms left as the floor). Three properties are
+  load-bearing, all pinned by `EntityTimelineDigestTest`: replaying the same evidence must **not** move it (the rule book re-runs every pass and the
+  mutators drop re-assertions — put a timestamp in a `source` string, or remove that dedupe, and every pass rebuilds while still looking fine);
+  *content* must move it, not volume (an insertion **count** would carry rows across a reclassification); and **order must not** — the term is
+  *added* (commutative) because `RegistrySeed` walks `PlayerRegistry`, whose enumeration order shifts as the registry grows, and added rather than
+  XOR'd because one tuple can legitimately be recorded in both stores where an XOR pair cancels to nothing. **This leans on classification being
+  append-deterministic**: replaying over a longer fact prefix reproduces every earlier insertion, so a rule that *revises* a conclusion in place, or
+  any removal/revision API on `EntityTimeline`, must move the digest itself — nothing else would notice and the failure is a stale row with plausible
+  numbers. `MirrorIncrementBenchmarkTest` (gated `EQLP_MIRROR_INCREMENT=<log>`) prints the projection/classification split; classification is what is
+  left, and it is not one thing — on Incogitable: **R9 charm windows 83 ms, R18 healed-pet intervals 67, R15 heal breadth 54, R7 graph 36, line evidence
+  15-25, R5 ownership sweep 15**, and the rest ~0. Making those incremental means a per-rule watermark plus a gate for roster/override/npcs.txt edits, which
+  move verdicts without adding facts — and note that when a rule does find something new the projection rebuilds anyway, so only a 3 s→1 s floor is at stake. Numbers and reasoning: docs/DesignNotes.md → "A mirror pass that starts where the last one stopped".
 - **A fight's duration counts seconds inclusively**: `DerivedFight.DurationSeconds` is `Math.Max(1, LastTime - BeginTime + 1)` because
   that +1 is what the product already calls a duration — `TimeSegment.Total` (`end - begin + 1`) is the DPS denominator of every board number, and
   `FightManager`'s tooltip (`Time Alive: Ns`) uses it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its
