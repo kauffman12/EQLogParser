@@ -195,6 +195,69 @@ public class FightProjectionTest
     }
 
     /*
+     * A death may only close a row that was open when the death happened. The slain queue is keyed by NAME, and one
+     * name carries many mobs in a night: on `eqlog_Kizant_xegony.txt` `A corrupted egg` is slain at 18:52:52, then
+     * 18:52:56, then again at 18:52:56 while the raid is already swinging at the next egg that answers to that name.
+     * Applying a queued death without asking whether its mob was ever alive inside the row killed a newborn row at its
+     * own first second, and the grid printed two `A corrupted egg` rows both beginning 18:52:58 - one of them living
+     * 0 seconds, holding the killing blow's damage while the row above it lost it (3.74M + 2.57M where legacy has one
+     * row of 6.32M). 19 such rows on this capture.
+     */
+    [TestMethod]
+    public void ADeathOlderThanARowCannotCloseIt()
+    {
+        var facts = BuildFacts(
+            ("Raidman", "an egg", 10, 0, LabelTypes.Melee),
+            ("Raidman", "an egg", 11, 5, LabelTypes.Melee),      // first holder of the name
+            ("Raidman", "an egg", 12, 8, LabelTypes.Melee),      // the raid is already on the next one
+            ("Raidman", "an egg", 13, 9, LabelTypes.Melee),
+            ("Raidman", "an egg", 14, 12, LabelTypes.Melee));
+        // Two of this name die in the same second; only the first of those can belong to a row that existed.
+        facts.AddDeath(new DeathFact(0, (long)(T0 + 6), facts.InternName("an egg"), -1));
+        facts.AddDeath(new DeathFact(0, (long)(T0 + 6), facts.InternName("an egg"), -1));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var rows = FightProjection.Build(facts, timeline);
+
+        Assert.AreEqual(2, rows.Count, "two mobs of this name, two rows - not a third born dead");
+        Assert.IsTrue(rows.All(r => r.EndTime > r.BeginTime),
+                      "the stale line used to kill the new row at its own first second: 18:52:58 to 18:52:58");
+        Assert.AreEqual(21, rows[0].DamageTotal, "the first egg: 10 + 11");
+        Assert.AreEqual(12 + 13 + 14, rows[1].DamageTotal,
+                        "the killing blow's damage was being handed to the row born behind it");
+        Assert.IsTrue(rows[0].Dead, "the death that belonged to this row closed it");
+        Assert.IsFalse(rows[1].Dead,
+                       "and no death marker for the next holder: the only slain line for this name predates it, and "
+                     + "manufacturing a kill out of that line is exactly what wrote the zero-length row");
+    }
+
+    [TestMethod]
+    public void ANameReusedBySuccessiveMobs_ClosesOneRowPerDeath()
+    {
+        // The healthy shape of the same situation: each death arrives while its own mob's row is open.
+        var facts = BuildFacts(
+            ("Raidman", "an egg", 10, 0, LabelTypes.Melee),
+            ("Raidman", "an egg", 11, 3, LabelTypes.Melee),
+            ("Raidman", "an egg", 12, 5, LabelTypes.Melee),
+            ("Raidman", "an egg", 13, 7, LabelTypes.Melee),
+            ("Raidman", "an egg", 14, 9, LabelTypes.Melee),
+            ("Raidman", "an egg", 15, 11, LabelTypes.Melee));
+        facts.AddDeath(new DeathFact(0, (long)(T0 + 4), facts.InternName("an egg"), -1));
+        facts.AddDeath(new DeathFact(0, (long)(T0 + 8), facts.InternName("an egg"), -1));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var rows = FightProjection.Build(facts, timeline);
+
+        Assert.AreEqual(3, rows.Count, "two deaths hand out two boundaries, no more");
+        Assert.IsTrue(rows[0].Dead && rows[0].EndReason == DerivedFightEnd.Slain && rows[0].DamageTotal == 21, "the first egg: 10 + 11");
+        Assert.IsTrue(rows[1].Dead && rows[1].DamageTotal == 25, "the second egg: 12 + 13");
+        Assert.IsFalse(rows[2].Dead, "the third is still alive at the end of the capture");
+        Assert.AreEqual(14 + 15, rows[2].DamageTotal);
+    }
+
+    /*
      * The gap that splits rows is legacy's expiry (FightManager.FightTimeout = 30 s), and the number was 300 until
      * one pull was read off `local/eqlog_Kizant_xegony.txt`. `Waxwork Abolishion` is hit from 18:34:08 to 18:34:53,
      * the raid spends 135 s on the adds that came out of it, and the boss returns at 18:37:08 for a 162 s second

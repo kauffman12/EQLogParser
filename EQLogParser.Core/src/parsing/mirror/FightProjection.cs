@@ -241,16 +241,31 @@ namespace EQLogParser.Mirror
           row = null;
         }
 
-        if (row is not null && deathsByName.TryGetValue(key, out var deaths)
-            && deaths.TryPeek(out var dt) && dt < t)
+        /*
+         * A death may only close a row that was OPEN when it happened. The queue is keyed by NAME, and one name
+         * carries many mobs in a night: on the Egg pull of `eqlog_Kizant_xegony.txt` `A corrupted egg` is slain at
+         * 18:52:52, then 18:52:56, then again 18:52:56 while the raid is already swinging at the next egg that
+         * answers to that name. A death sitting in the queue can therefore PREDATE the row created after it, and
+         * applying it anyway killed that newborn row at its own first second - the grid showed two `A corrupted
+         * egg` rows both beginning 18:52:58, one of them living 0 seconds. That is not a fight, and the list has
+         * no honest word for it. A death older than the row's own beginning describes an earlier holder of the
+         * name (whose facts already went to an earlier row, or to none at all), so it is dropped and the next one
+         * is asked.
+         */
+        if (row is not null && deathsByName.TryGetValue(key, out var deaths))
         {
-          deaths.Dequeue();
-          row.Dead = true;
-          row.EndReason = DerivedFightEnd.Slain;
-          rows.Add(row);
-          open.Remove(key);
-          lastClosed[key] = row;
-          row = null;   // any further deaths wait for a later fact of this name
+          while (deaths.TryPeek(out var stale) && stale < row.BeginTime) deaths.Dequeue();
+
+          if (deaths.TryPeek(out var dt) && dt < t)
+          {
+            deaths.Dequeue();
+            row.Dead = true;
+            row.EndReason = DerivedFightEnd.Slain;
+            rows.Add(row);
+            open.Remove(key);
+            lastClosed[key] = row;
+            row = null;   // any further deaths wait for a later fact of this name
+          }
         }
 
         if (row is not null && t - row.LastTime > EngagementGapS)
@@ -390,12 +405,18 @@ namespace EQLogParser.Mirror
         // Deaths after the last exchange still mark the engagement they follow.
         // A slain line lands shortly after the final exchange - inside one engagement's tail.
         if (deathsByName.TryGetValue(row.Name, out var deaths))
+        {
+          // Same law as in the loop: a death from before this row began belongs to an earlier holder of the name.
+          // Draining it here (rather than stopping) is what lets a later, genuine one still mark the row dead.
+          while (deaths.TryPeek(out var stale) && stale < row.BeginTime) deaths.Dequeue();
+
           while (deaths.TryPeek(out var dt) && dt <= row.LastTime + EventTailWindowS)
           {
             deaths.Dequeue();
             row.Dead = true;
             row.EndReason = DerivedFightEnd.Slain;
           }
+        }
 
         // The usual fate of a charmed mob's row: the raid charms it and never swings again, so there is no
         // later fact to notice the boundary in. Same rule as the in-loop check, at the end of the list.
