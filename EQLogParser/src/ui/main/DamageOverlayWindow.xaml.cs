@@ -198,6 +198,14 @@ namespace EQLogParser
         Background = null;
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
         _updateTimer.Start();
+
+        /*
+         * Ask for a pass the moment a derived meter is opened. The board reads a snapshot, not the live pipeline, so
+         * without this the first thing a user sees after enabling it is an empty window until the cadence happens to
+         * fire (up to a few seconds, longer if a bulk load is still running and quiescence has not arrived). One extra
+         * pass on an open click is nothing; an empty board that looks broken is not nothing.
+         */
+        if (_mirrorMeter) MirrorSession.Active?.RederiveAsync();
       }
     }
 

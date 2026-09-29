@@ -24,9 +24,10 @@ namespace EQLogParser
   // when the log closes, mirroring the harness lifecycle (RunCore) that proved this wiring.
   //
   // Derivation is quiescent: CombatMirror.DeriveQuiescent parks ingest at its gate for the pass,
-  // so a snapshot never races mid-append fact mutation and no tail line is lost. The first derive
-  // fires automatically once the initial bulk load goes quiet (fact count stable across two ticks);
-  // the mirror window's Re-derive button repeats it on demand.
+  // so a snapshot never races mid-append fact mutation and no tail line is lost. A load that stops moving gets its
+  // pass on the next tick, and a live tail that never stops moving gets one on MirrorDeriveCadence's clock — waiting
+  // for silence alone meant a raid-length freeze on every surface reading the snapshot. The Re-derive button stays for
+  // the moment somebody wants an answer right now.
   internal sealed class MirrorSession : IDisposable
   {
     public static MirrorSession Active { get; private set; }
@@ -61,6 +62,14 @@ namespace EQLogParser
     private int _deriveInFlight;
     private long _lastTickCount = -1;
     private long _lastDerivedCount = -1;
+
+    /*
+     * The two measurements the cadence needs: how long the last pass took (which is what the capture costs, so it sets
+     * how often another one is affordable) and how long ago it finished. A Stopwatch rather than DateTime because a pass
+     * spacing is an interval, not a moment, and a clock adjustment must not buy a free re-derive or hold one off.
+     */
+    private readonly Stopwatch _sinceLastPass = Stopwatch.StartNew();
+    private double _lastPassSeconds;
     private volatile bool _autoDeriveDisabled;
     private bool _disposed;
 
@@ -188,6 +197,7 @@ namespace EQLogParser
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
           _snapshot = snapshot;
+          _lastPassSeconds = sw.Elapsed.TotalSeconds;
           _lastDerivedCount = CapturedTotal;
           Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms");
           Derived?.Invoke(snapshot);
@@ -207,6 +217,9 @@ namespace EQLogParser
         }
         finally
         {
+          // Counted as an interval even when the pass threw: the wait belongs to the cost of a pass, and a failing
+          // derive that restarted its own stopwatch would be re-attempted at the floor cadence forever.
+          _sinceLastPass.Restart();
           Interlocked.Exchange(ref _deriveInFlight, 0);
         }
       });
@@ -345,26 +358,32 @@ namespace EQLogParser
       _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount
       + _facts.IdentityEventCount + _facts.EvidenceCount;
 
-    // Quiescence proxy without touching LogReader internals: derive once the captured-fact count
-    // has been stable for two ticks AND differs from the last derived count. Not a one-shot EOF
-    // latch — a damage-free stretch during bulk load (raid gap in a recorded log, GC pause) may
-    // fire an early pass, but any later growth re-arms the trigger, so the visible snapshot
-    // converges to end-of-file and tailing refreshes whenever the log goes quiet. Derivation
-    // itself parks ingest at the gate, so a completed pass always leaves count == lastDerivedCount.
+    /*
+     * The trigger, decided by MirrorDeriveCadence (where the rule and its measurements live). This method only feeds it
+     * the three counters and the clock. Quiescence is still the fast path — a load that stops moving gets its pass on
+     * the next tick — but it is no longer the ONLY path: waiting for two silent ticks meant that a live raid tail,
+     * which never offers two silent ticks, held one snapshot for the whole encounter, and every surface reading it (the
+     * fight list, a click's summary, the damage meter) showed the same frozen numbers until somebody pressed Re-derive.
+     *
+     * Derivation itself parks ingest at the gate, so a completed pass always leaves count == lastDerivedCount.
+     */
     private void QuietTick(object sender, EventArgs e)
     {
       if (_disposed || _autoDeriveDisabled) return;
 
       var count = CapturedTotal;
+      var previousCount = _lastTickCount;
+      _lastTickCount = count;
 
       // Dirty-while-idle feedback doubles as field diagnostics: "capturing… 0 captured" separates
       // an empty log from a stalled pipeline without needing a debugger.
       if (count != _lastDerivedCount) Capturing?.Invoke(count);
 
-      if (count == 0) return;
-
-      if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();
-      else _lastTickCount = count;
+      if (MirrorDeriveCadence.ShouldDerive(count, previousCount, _lastDerivedCount,
+            _sinceLastPass.Elapsed.TotalSeconds, _lastPassSeconds))
+      {
+        RederiveAsync();
+      }
     }
 
     private sealed class MirrorChatSink : IChatSink
