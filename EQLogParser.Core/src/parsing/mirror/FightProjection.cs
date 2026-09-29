@@ -113,12 +113,28 @@ namespace EQLogParser.Mirror
         var fact = allFacts[ordinal];
         if (fact.AtkIdx == fact.DefIdx) continue;                    // self damage
         var atkName = facts.NameOf(fact.AtkIdx);
-        if (ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue; // spell feedback
 
         var defName = facts.NameOf(fact.DefIdx);
         var t = fact.TimeS;
         var atkSide = SideAt(timeline, atkName, t);
         var defSide = SideAt(timeline, defName, t);
+
+        /*
+         * Spell feedback, and the ORDER this is asked in matters more than it looks. "You have taken N damage from X."
+         * leaves a SPELL in the attacker field, and when the DB says that spell only hits its caster the fact is nobody
+         * swinging at a mob — side evidence from it would fabricate an NPC out of the operator's own cast, and as a row
+         * it would be a fight against a verb. But the test is on the NAME, and names collide with spells: on
+         * eqlog_Kizant_xegony-03-01-2024.txt every fact of `Darkside` (44,553 hits, 5,644,042,554 damage, the raid's own
+         * registered pet per the seed) vanished here before a single row could be opened, because the spell DB carries a
+         * self-target damaging spell by that name and the name is what got looked up. A meter reading rows would have
+         * dropped that player's whole evening — silently, and identically in the fight list and the summary, so nothing
+         * downstream could see it.
+         *
+         * So the question is asked of the COMBATANT, not just the string: a name that already reads as one of ours at
+         * this second is fighting, and its damage counts. Unknown names (the feedback case, where nothing else ever
+         * claimed the name) stay dropped exactly as before.
+         */
+        if (atkSide != Side.Player && ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue;
 
         string key;
         bool creditAttacker;  // attacker was player-side: it gets damage credit in the owner's roll-up

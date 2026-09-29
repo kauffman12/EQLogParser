@@ -3856,3 +3856,44 @@ row's anchor, and carry `AttackerOwner = OwnerOf(name, t)` so the board folds it
 as a possessive-named pet does. Boss-vs-boss noise stays out — the exemption is ownership, not "attacker unknown". Then
 re-measure: this census, `MirrorRealLogBoardsTest`'s parity bars (Incogitable 4,473/4,473 field-matched, 2024
 691/691), and the charm tests, because flipping which side a pet is on touches `CharmedOwned`/`RaidPet` labeling.
+
+## Correction: the pet hole was not the side gate — it was a name looked up in the spell DB
+
+The section above named a mechanism read off `FightProjection`'s branch cascade (`Npc vs Npc` → `continue`). That
+hypothesis was wrong, and printing five of the offending facts killed it: every one reads `Darkside` **kind Pet, ourPet
+True** attacking a defender whose kind is `Unknown`, which routes to the mob's row under the branch order as written. So
+the diagnostic prints `IdentityAt`/`IsCharmedAt`/`IsOurPetAt` for BOTH names at the fact's own second, and the real skip
+was two lines earlier:
+
+```csharp
+if (ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue;   // spell feedback
+```
+
+That question is asked of the **string**, before anything asks whether the string is a combatant. `Darkside` is also a
+self-target damaging spell in the DB, so every one of that pet's 44,553 facts was deleted from the projection before a
+row could open — a raider's whole evening missing from the fight list, every board, and (once it reads rows) the damage
+meter, silently and identically on all three, which is exactly why "meter ≡ list" would never have caught it.
+
+Fix: compute sides first and drop feedback only when the attacker isn't already one of ours at that second
+(`atkSide != Side.Player && IsSelfTargetDamageSpell(atkName)`). Unknown names — the case the guard exists for, `"You
+have taken N damage from X."` leaving a spell in the attacker field — still open nothing, pinned by
+`ANameThatIsOnlyASpellStillOpensNoFight`. Measured on the same three captures: Kizant 2024-03-01 goes **48,284 unrowed
+facts / 5,838,413,554 damage → 3,731 / 194,371,001** (0.82 % → **0.06 %**), and the damage-side count rises by exactly
+the pet's 44,553 facts — all of it recovered, nothing else moved.
+
+`ARaidSideNameThatIsAlsoASelfTargetSpellStillGetsItsRows` pins what the meter needs, using a spell name from the DB as
+the combatant: its hits reach the boss's row, the board's raid total includes them, no caster row appears under the
+spell's name, and the damage arrives **on the owner's line** — `AttackerOwner` comes from `_charmers?.OwnerOf(...)` (the
+timeline the index carries, `MirrorDamageIndex(timeline)`), which is what `DamageStatsBuilder` folds by to print
+`Bithika +Pets`. Two fixture traps learned here: the ownership interval must cover the facts' seconds (an interval of
+`0..100` against facts at `t=1001` silently means "no owner at that time", and the board grows a row named after the
+pet instead of folding), and the CI spell-DB fixture asserts `Inconclusive` rather than passing vacuously when the DB
+lacks the name.
+
+What is left in the residue is now 0.06-0.11 % and has one shape: raid-side attackers hitting a defender that reads
+player-side while being neither charm-flipped nor answered by `IsOurPetAt` at that second — friendly fire as the gate
+sees it (`Incogitable -> A candlefolk flame worshipper` 90.5 M; `A candlefolk flame worshipper` itself is
+`Pet / RegistrySeed` with `ourPet False`). That is an interval/ownership-consistency question in the seed, not a gate
+mistake, and it is the next thing to measure rather than widen the exemption for. Also still owed: re-running
+`MirrorRealLogBoardsTest`'s parity bars now that derived sees this damage — the +19-20 % read as derived-running-high
+should move toward legacy on the captures where a seed pet shared a spell name.
