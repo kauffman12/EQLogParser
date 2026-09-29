@@ -102,21 +102,181 @@ namespace EQLogParser.Mirror
 
     internal delegate void FactOwnershipHandler(DamageFact fact, int ordinal, DerivedFight owner, FactTarget target);
 
+    /*
+     * What a pass has to remember about the walk it already did, so the NEXT pass can continue instead of re-walking.
+     *
+     * This is not a cache of ANSWERS but the fold's own accumulators: which row each name is mid-engagement with, which
+     * row each name last closed (the charm→pet pairing needs that link), the rows already finished, the deaths queued per
+     * name, and how far through each event stream the walk got. `Continue` below resumes with them; `Build` starts from a
+     * fresh one, so the full pass and the incremental pass run THE SAME LOOP BODY over the same facts and cannot drift —
+     * which is the whole reason the state is carried rather than a second, faster implementation being written beside it.
+     *
+     * Carrying is only valid while the classification is the one these rows were projected over, and the caller checks
+     * that with EntityTimeline.StateStamp (`Stamp` here records what was used). A fact table that shrank under us (a log
+     * reopened, a cache cleared) also invalidates it — see Covers.
+     */
+    internal sealed class ProjectionState
+    {
+      internal readonly Dictionary<string, DerivedFight> Open = new(StringComparer.Ordinal);
+      internal readonly Dictionary<string, DerivedFight> LastClosed = new(StringComparer.Ordinal);
+      internal readonly List<DerivedFight> Completed = [];
+      internal readonly Dictionary<string, Queue<long>> DeathsByName = new(StringComparer.Ordinal);
+
+      /*
+       * How far each event stream has been folded in. Facts and deaths are append-only within a log-open, but ordinal 500
+       * of one table is not ordinal 500 of another, so the watermark records the identity of the fact it stopped on: an
+       * unrelated (or rebuilt) table whose prefix happens to be the same length would otherwise be accepted, and its facts
+       * would then be routed into rows — and into ordinal lists — that describe a different log.
+       */
+      internal int ThroughOrdinal;
+      internal int ThroughDeath;
+
+      // The classification these rows were projected over (EntityTimeline.StateStamp).
+      internal long Stamp = long.MinValue;
+
+      private long _factWatermark;
+      private long _deathWatermark;
+
+      internal void MarkWatermark(DamageFactTable facts)
+      {
+        _factWatermark = ThroughOrdinal > 0 ? FactWatermark(facts, ThroughOrdinal - 1) : 0;
+        _deathWatermark = ThroughDeath > 0 ? DeathWatermark(facts, ThroughDeath - 1) : 0;
+      }
+
+      internal bool Covers(DamageFactTable facts)
+      {
+        if (ThroughOrdinal > facts.Facts.Length || ThroughDeath > facts.Deaths.Length) return false;
+        if (ThroughOrdinal > 0 && FactWatermark(facts, ThroughOrdinal - 1) != _factWatermark) return false;
+        if (ThroughDeath > 0 && DeathWatermark(facts, ThroughDeath - 1) != _deathWatermark) return false;
+        return true;
+      }
+
+      /*
+       * Back to a walk that has not started. A rebuild is not the same thing as a continuation with the watermarks moved
+       * back to zero: every row in here was folded under the classification that was current when its facts were walked,
+       * and re-walking facts into those same rows would leave per-row work (the player roll-up above all) computed under
+       * verdicts this pass no longer holds. Measured on rules-fixture.txt: a raider classified mid-log left her damage in
+       * the row totals but not in that row's roll-up, because the fold happened before she was anybody.
+       */
+      internal void Reset()
+      {
+        Open.Clear();
+        LastClosed.Clear();
+        Completed.Clear();
+        DeathsByName.Clear();
+        ThroughOrdinal = 0;
+        ThroughDeath = 0;
+        _factWatermark = 0;
+        _deathWatermark = 0;
+      }
+
+      /*
+       * The identity of the fact each stream stopped on. Ordinals and sequence numbers are not enough by themselves: a
+       * table numbers its own facts and its name pool numbers its own names, so two unrelated captures can agree on both
+       * while being completely different nights (two pulls of the same shape; an R16 reparse that rebuilt the tables from
+       * scratch). So the boundary fact is named by what it IS — sequence, time, label, and the two NAMES. The name texts
+       * are hashed here, once per pass at the boundary, never per fact.
+       *
+       * A genuine continuation still passes: the same first N lines of the same log intern the same names in the same
+       * order, which is the only reason an ordinal from the previous pass means anything at all.
+       */
+      private static long NameHash(DamageFactTable facts, short idx)
+        => idx >= 0 && idx < facts.InternedNames.Count
+             ? StringComparer.Ordinal.GetHashCode(facts.NameOf(idx)) : -1;
+
+      private static long FactWatermark(DamageFactTable facts, int ordinal)
+      {
+        ref readonly var f = ref facts.Facts[ordinal];
+        var h = (long)f.Seq << 40 ^ (uint)f.DefIdx << 8 ^ f.TypeId;
+        h = h * 31 + f.TimeS;
+        return h * 31 + NameHash(facts, f.AtkIdx) * 7 + NameHash(facts, f.DefIdx);
+      }
+
+      private static long DeathWatermark(DamageFactTable facts, int ordinal)
+      {
+        ref readonly var d = ref facts.Deaths[ordinal];
+        return (((long)d.Seq << 32) ^ d.TimeS) * 31 + NameHash(facts, d.KilledIdx);
+      }
+    }
+
+    /*
+     * The derive pass's memory: it holds one ProjectionState and the damage index built with it, and decides whether the
+     * next projection may continue that state or has to start over. MirrorSession holds one of these per log-open; tests
+     * drive it directly, which is why the decision lives here rather than inline in the session's derive lambda.
+     *
+     * The gate has two halves and both have to hold (see ProjectionState):
+     *
+     *   The FACTS still line up — the watermarks name the same facts they did last pass, so continuing means appending
+     *   rather than re-walking. Rows carry names and totals rather than ordinals, but the index carries ordinals.
+     *
+     *   The CLASSIFICATION is the same one these rows were projected under. Rows migrate when evidence arrives: a name
+     *   that turns out to be a raider loses its row to the mob it was fighting, a charm window re-attributes an evening,
+     *   an override moves a name across the board. So any change in the timeline stamps differently and buys a full
+     *   rebuild — which is precisely what every pass used to be, and remains the answer whenever anything about identity
+     *   moved.
+     *
+     * Being wrong the safe way is cheap (one extra full pass); being wrong the other way would show plausible numbers from
+     * stale rows. FightProjectionIncrementTest asserts the two paths agree at every boundary a fixture can produce.
+     */
+    internal sealed class FightProjectionCache
+    {
+      private readonly ProjectionState _state = new();
+      private MirrorDamageIndex _index;
+
+      // Diagnostics for the derive report: what the last pass did, and why.
+      public bool LastPassContinued { get; private set; }
+
+      public MirrorDamageIndex Index => _index;
+      public long Stamp => _state.Stamp;
+
+      public IReadOnlyList<DerivedFight> Project(DamageFactTable facts, EntityTimeline timeline)
+      {
+        var stamp = timeline.StateStamp();
+        var canContinue = _index is not null && _state.Stamp == stamp && _state.Covers(facts);
+
+        _state.Stamp = stamp;
+        if (!canContinue)
+        {
+          // Both halves of the rebuild: a fresh index (its ordinal lists would otherwise describe the old walk) and a
+          // state with nothing in it, because rows are the accumulated work of the verdicts they were folded under.
+          _state.Reset();
+          _index = new MirrorDamageIndex(timeline);
+        }
+
+        var rows = FightProjection.Continue(_state, facts, timeline, _index.OnFact);
+        _state.MarkWatermark(facts);
+        LastPassContinued = canContinue;
+        return rows;
+      }
+    }
+
     public static List<DerivedFight> Build(DamageFactTable facts, EntityTimeline timeline, FactOwnershipHandler ownerSink = null)
+      => Continue(new ProjectionState(), facts, timeline, ownerSink);
+
+    /*
+     * Fold every fact from state.ThroughOrdinal onward into the carried state and publish the row list. Returns the same
+     * list Build would have returned for these facts and this classification — see the class comment on ProjectionState
+     * for when that is true, and FightProjectionIncrementTest for the property being asserted at split points rather
+     * than argued.
+     */
+    public static List<DerivedFight> Continue(ProjectionState state, DamageFactTable facts, EntityTimeline timeline,
+                                              FactOwnershipHandler ownerSink = null)
     {
       // Open row per name; a gap (or a slain line) closes it and the next exchange opens a fresh
       // row under the same key. Rows keep arrival order until the final sort.
-      Dictionary<string, DerivedFight> open = new(StringComparer.Ordinal);
+      Dictionary<string, DerivedFight> open = state.Open;
 
       // The last CLOSED row per name, so a pet row can point at the encounter its charm closed. CharmPetRows needs
       // that link: the pet's facts begin after the encounter ends, so "does it overlap the selection?" alone can
       // never bring a hidden pet row back into a stats build — and hiding must not delete damage.
-      Dictionary<string, DerivedFight> lastClosed = new(StringComparer.Ordinal);
-      List<DerivedFight> rows = [];
+      Dictionary<string, DerivedFight> lastClosed = state.LastClosed;
+      List<DerivedFight> rows = state.Completed;
 
-      Dictionary<string, Queue<long>> deathsByName = new(StringComparer.Ordinal);
-      foreach (var death in facts.Deaths)
+      Dictionary<string, Queue<long>> deathsByName = state.DeathsByName;
+      var allDeaths = facts.Deaths;
+      for (var d = state.ThroughDeath; d < allDeaths.Length; d++)
       {
+        var death = allDeaths[d];
         var killed = facts.NameOf(death.KilledIdx);
 
         /*
@@ -133,8 +293,10 @@ namespace EQLogParser.Mirror
         q.Enqueue(death.TimeS);
       }
 
+      state.ThroughDeath = allDeaths.Length;
+
       var allFacts = facts.Facts;
-      for (var ordinal = 0; ordinal < allFacts.Length; ordinal++)
+      for (var ordinal = state.ThroughOrdinal; ordinal < allFacts.Length; ordinal++)
       {
         var fact = allFacts[ordinal];
         if (fact.AtkIdx == fact.DefIdx) continue;                    // self damage
@@ -400,22 +562,26 @@ namespace EQLogParser.Mirror
         }
       }
 
+      /*
+       * Publish. A row still open here is NOT finished - the next fact of that name continues it - so it stays out of
+       * state.Completed, and the death queues are READ rather than drained. Draining here would steal a boundary from the
+       * in-loop check: `A corrupted egg` slain at :52 and swung at again at :58 must be two rows (the law the loop's
+       * stale-death handling exists for), and a row already dead-marked with its death consumed would weld them into one.
+       * Marking Dead/EndReason on the live row is safe: it says what a full pass over these facts would say at this
+       * moment, and if it turns out premature the loop re-decides the boundary when the next fact of that name arrives.
+       */
+      state.ThroughOrdinal = allFacts.Length;
+
+      var published = new List<DerivedFight>(rows.Count + open.Count);
+      published.AddRange(rows);
       foreach (var row in open.Values)
       {
         // Deaths after the last exchange still mark the engagement they follow.
         // A slain line lands shortly after the final exchange - inside one engagement's tail.
-        if (deathsByName.TryGetValue(row.Name, out var deaths))
+        if (!row.Dead && DeathWithinTail(deathsByName, row))
         {
-          // Same law as in the loop: a death from before this row began belongs to an earlier holder of the name.
-          // Draining it here (rather than stopping) is what lets a later, genuine one still mark the row dead.
-          while (deaths.TryPeek(out var stale) && stale < row.BeginTime) deaths.Dequeue();
-
-          while (deaths.TryPeek(out var dt) && dt <= row.LastTime + EventTailWindowS)
-          {
-            deaths.Dequeue();
-            row.Dead = true;
-            row.EndReason = DerivedFightEnd.Slain;
-          }
+          row.Dead = true;
+          row.EndReason = DerivedFightEnd.Slain;
         }
 
         // The usual fate of a charmed mob's row: the raid charms it and never swings again, so there is no
@@ -425,14 +591,31 @@ namespace EQLogParser.Mirror
           row.Dead = true;
           row.EndReason = DerivedFightEnd.Charmed;
         }
-        rows.Add(row);
+        published.Add(row);
       }
 
       // Engagement order is the display order; Ids are 1-based positions after sorting.
-      var list = new List<DerivedFight>(rows);
-      list.Sort(static (a, b) => a.BeginTime.CompareTo(b.BeginTime));
-      for (var i = 0; i < list.Count; i++) list[i].Id = i + 1;
-      return list;
+      published.Sort(static (a, b) => a.BeginTime.CompareTo(b.BeginTime));
+      for (var i = 0; i < published.Count; i++) published[i].Id = i + 1;
+      return published;
+    }
+
+    /*
+     * Does this row have a slain line inside its tail? A death from before the row began belongs to an earlier holder of
+     * the name and is SKIPPED rather than consumed (Publish above is why consumption belongs to the loop alone); any
+     * later one within EventTailWindowS says this engagement ended in death.
+     */
+    private static bool DeathWithinTail(Dictionary<string, Queue<long>> deathsByName, DerivedFight row)
+    {
+      if (!deathsByName.TryGetValue(row.Name, out var deaths)) return false;
+
+      foreach (var dt in deaths)
+      {
+        if (dt < row.BeginTime) continue;                 // an earlier holder of this name
+        return dt <= row.LastTime + EventTailWindowS;
+      }
+
+      return false;
     }
 
     /*

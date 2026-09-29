@@ -58,6 +58,14 @@ namespace EQLogParser
     // The snapshot currently on screen (see MirrorSnapshot.Facts): a selection is materialized against
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
     private MirrorSnapshot _snapshot;
+
+    /*
+     * The projection carried from pass to pass, together with the index its facts went into. Whether a pass may continue it
+     * is decided inside (FightProjectionCache) on two gates: the watermarks still name the same facts, and the
+     * classification stamp matches the one the carried rows were projected under.
+     */
+    private readonly FightProjection.FightProjectionCache _projection = new();
+
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
     private long _lastTickCount = -1;
@@ -175,17 +183,17 @@ namespace EQLogParser
             MirrorOverrideStore.Instance.Apply(timeline);
             classified = timeline;
 
-            // The index is filled DURING the projection: it needs the same direction decision the rows split
-            // DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler). It
-            // also gets the timeline, so a charmed mob's damage is credited to its charmer in the stats board
-            // (MirrorDamageIndex.OwnerOf) instead of sitting under the mob's own name.
-            var damageIndex = new MirrorDamageIndex(timeline);
-
-            // Display list = facts projected over the classification above. Rows self-correct:
-            // a name that gains player-side evidence between passes loses its row to the NPC it
-            // was actually fighting (FightDeriver's legacy-keyed list is retired from display and
-            // lives on only in the parity tests/bench).
-            var fights = FightProjection.Build(_facts, timeline, damageIndex.OnFact);
+            /*
+             * Rows and damage index come from ONE walk: the index needs the same direction decision the rows split
+             * DamageToOwner by, and that decision exists only inside FightProjection (FactOwnershipHandler) — which is why
+             * the cache below owns both and hands them back together rather than an index built afterwards.
+             *
+             * The pass continues where the previous one stopped whenever it may (FightProjectionCache: the watermarks still
+             * name the same facts, and the classification stamp matches the one the carried rows were projected under). A
+             * charmed mob's damage is credited to its charmer on the stats board through the same timeline (MirrorDamageIndex).
+             */
+            var fights = _projection.Project(_facts, timeline);
+            var damageIndex = _projection.Index;
 
             // "Fight N" numbers for a stats run reading GroupId, from the same walk that draws the
             // dividers in this grid.
@@ -214,7 +222,10 @@ namespace EQLogParser
           _snapshot = snapshot;
           _lastPassSeconds = sw.Elapsed.TotalSeconds;
           _lastDerivedCount = CapturedTotal;
-          Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms");
+          // "continued" is the interesting half of the cost story: a continuing pass walked only what arrived since the
+          // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
+          Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
+                   $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
           Derived?.Invoke(snapshot);
         }
         catch (Exception ex) when (!_disposed)

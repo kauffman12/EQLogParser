@@ -91,6 +91,23 @@ namespace EQLogParser.Mirror
     private readonly Dictionary<string, List<IdentityAssignment>> _identity = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.OrdinalIgnoreCase);
 
+    /*
+     * An INCREMENTAL digest of everything this store holds, summed in at insert time. Both mutators below drop a
+     * re-assertion of something already recorded (identical kind + strength + time + source + owner returns early, because
+     * it adds no read-time information), so this value moves exactly when the answer to any lookup could have changed —
+     * which is what StateStamp reports, in O(1) instead of walking every name.
+     *
+     * The per-insertion term is ADDED (commutative) rather than chained, so the order evidence happened to arrive in does
+     * not move the stamp: RegistrySeed walks a dictionary whose enumeration order is unspecified, and a digest that read
+     * that order would rebuild every time the registry grew without any verdict changing. Addition rather than XOR because
+     * one tuple can legitimately be recorded twice (the same name, strength and span as both an identity and an interval);
+     * XOR would let the pair cancel to nothing.
+     *
+     * Nothing else writes these two dictionaries: no removals, no in-place edits (grep for `.T1 =`/`.Strength =` finds
+     * none). If a removal or a revision API is ever added, it has to move this digest too.
+     */
+    private long _digest;
+
     // ---- evidence input ----
 
     public void SetIdentity(string name, IdentityKind kind, int strength, string source, double effectiveFrom = double.NegativeInfinity)
@@ -113,6 +130,7 @@ namespace EQLogParser.Mirror
       // keep the list sorted by effective time so AffiliationAt-style lookups can sweep;
       // conflicts are resolved at read time by (strength, effectiveFrom) — nothing is silently dropped.
       InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
+      _digest = unchecked(_digest + Term(0, name, (long)kind, strength, effectiveFrom, 0d, source, null));
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
@@ -130,6 +148,7 @@ namespace EQLogParser.Mirror
       }
 
       InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source, owner), static a => a.T0);
+      _digest = unchecked(_digest + Term(1, name, (long)kind, strength, t0, t1, source, owner));
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -414,6 +433,56 @@ namespace EQLogParser.Mirror
     public AffiliationCursor OpenAffiliationCursor(string name) => new(this, name);
 
     public IReadOnlyCollection<string> NamesWithIdentity() => _identity.Keys;
+
+    /*
+     * "Did classification reach the same conclusions as last time?" The one user is the incremental fight projection
+     * (FightProjection.Continue — see MirrorSession): rows carried across passes stay valid only while the classification
+     * they were projected over is unchanged, and every question the projection asks (IdentityAt, IsCharmedAt, IsOurPetAt,
+     * CharmStartAfter, HasIndependentIdentity, OwnerOf) reads these two dictionaries and nothing else.
+     *
+     * It is an INCREMENTAL digest: every accepted insertion adds a term to `_digest` (see that field), so reading this
+     * costs O(1) instead of walking every name and entry — which was not academic, hashing 2,436 names on Incogitable
+     * measured ~250 ms per pass, more than the fold it was guarding (docs/DesignNotes.md → "Continuing a projection").
+     * The two mutators are the only writers and both drop re-assertions, so rules replaying the same evidence over and
+     * over leave it alone, which is precisely what lets a live refresh skip re-projection.
+     *
+     * So THE LAW stays, in the form that matters: these two stores are the whole state, and any THIRD store added here
+     * would be invisible to this stamp and let a stale row survive a verdict that should have moved it — silently, with
+     * plausible numbers. `EntityTimelineDigestTest` refuses a third dictionary appearing without this being told, and pins
+     * both directions of the version: new evidence moves it, the same evidence again does not.
+     */
+    public long StateStamp()
+    {
+      var hash = unchecked((long)14695981039346656037UL);   // FNV-1a offset basis (wraps past long.MaxValue)
+
+      static long Mix(long h, long v) => unchecked((h ^ v) * 1099511628211L);
+
+      hash = Mix(hash, _digest);
+      hash = Mix(hash, _identity.Count);      // redundant with the digest, kept so a mismatch shows in a diff
+      return Mix(hash, _affiliation.Count);
+    }
+
+    /*
+     * One insertion's contribution to `_digest`. Names hash CASE-INSENSITIVELY because that is how the stores key them
+     * (a `bone walker` and `A bone walker` are one entity, so recording either spelling must land on the same term);
+     * sources hash ordinally because they are vocabulary words (`R9-charm`, a Labels constant), not names.
+     */
+    private static long Term(int storeKind, string name, long kind, int strength, double t0, double t1,
+                             string source, string owner)
+    {
+      var h = unchecked((long)14695981039346656037UL);
+
+      static long Mix(long v, long x) => unchecked((v ^ x) * 1099511628211L);
+
+      h = Mix(h, storeKind);
+      h = Mix(h, StringComparer.OrdinalIgnoreCase.GetHashCode(name));
+      h = Mix(h, kind);
+      h = Mix(h, strength);
+      h = Mix(h, t0.GetHashCode());
+      h = Mix(h, t1.GetHashCode());
+      h = Mix(h, source?.GetHashCode(StringComparison.Ordinal) ?? 0);
+      return Mix(h, owner is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(owner));
+    }
 
     internal sealed class AffiliationCursor
     {
