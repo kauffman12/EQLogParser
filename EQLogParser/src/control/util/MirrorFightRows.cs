@@ -107,8 +107,13 @@ namespace EQLogParser
            * Waxwork Abolishion showed no duration at all), and 112 s and 162 s both read "1 minute"/"2 minutes",
            * which is no way to compare two pulls. The legacy grid has no duration column — the seconds lived in the
            * row tooltip (`Time Alive: 46s`) — so this is the mirror's own number and it might as well be exact.
+           *
+           * And it counts them the way the product counts them: INCLUSIVE (DerivedFight.DurationSeconds), which is
+           * what makes this cell agree with the tooltip of the legacy row above it and, one click away, with the
+           * damage summary's DPS denominator. An exclusive span here would print "00:00" for a mob hit once inside a
+           * second while its own board says "Time Alive: 1s" and divides by one second.
            */
-          Duration = DateUtil.FormatTicks(TimeSpan.FromSeconds(Math.Max(0, fight.EndTime - fight.BeginTime)).Ticks,
+          Duration = DateUtil.FormatTicks(TimeSpan.FromSeconds(fight.DurationSeconds).Ticks,
                                          DateUtil.TimeFormat.HMSCompact),
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,

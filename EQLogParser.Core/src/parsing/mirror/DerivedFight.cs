@@ -114,6 +114,21 @@ namespace EQLogParser.Mirror
 
     public double EndTime => LastTime;
 
+    /*
+     * How long this row covers, in the unit the rest of the product counts seconds in: INCLUSIVE, so a fight whose
+     * first and last fact share one timestamp lived ONE second and not zero. That convention is not ours to drop - it
+     * is TimeSegment.Total (`EndTime - BeginTime + 1`), which is the denominator every DPS number on the damage board
+     * is divided by, and it is what FightManager writes into the legacy tooltip (`var ttl = LastTime - BeginTime + 1`)
+     * and what MirrorSummaryFights reproduces from it. Print this span exclusive and the grid contradicts the board
+     * one click away: a name hit once at 18:56:18 would read "00:00" here while its summary says "Time Alive: 1s" and
+     * divides its damage by one second - and a duration of 0 is a DPS of infinity.
+     *
+     * Zero only when the row has no span to speak of (an unset bound), because TimeSpan.FromSeconds would rather
+     * throw than format a NaN.
+     */
+    public double DurationSeconds
+      => double.IsFinite(BeginTime) && double.IsFinite(LastTime) ? Math.Max(1d, LastTime - BeginTime + 1d) : 0d;
+
     public string BeginTimeString => DateUtil.FormatDotNetDateSeconds(BeginTime);
   }
 }
