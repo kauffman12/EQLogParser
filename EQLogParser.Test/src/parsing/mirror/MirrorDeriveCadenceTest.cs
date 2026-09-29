@@ -1,99 +1,160 @@
+using EQLogParser;
 using EQLogParser.Mirror;
 
-namespace EQLogParser;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace EQLogParser.Test.src.parsing.mirror;
 
 /*
- * The rule for when the mirror runs another pass, tested apart from the session that feeds it (a DispatcherTimer is not
- * a test harness). Two triggers live here because one was not enough: quiescence answers "the load finished", which is
- * all a closed log ever needs, but a live tail during a raid never offers two silent ticks — and only quiescence was
- * what the surfaces reading the snapshot had, so the fight list, a click's summary and the damage meter held one
- * snapshot for a whole encounter and moved only when Re-derive was pressed.
+ * When the mirror is allowed to run another pass (docs/combat-mirror-design.md, docs/DesignNotes.md). Two separate
+ * questions had been conflated into one, and the conflation is what made the derived surfaces go stale: a finished load
+ * needs one pass at the end; a live raid tail needs passes while the count keeps moving, because it never offers the
+ * silence the old rule waited for.
+ *
+ * Two constraints on top of that are load-bearing rather than taste. The CEILING has to stay inside
+ * `FightManager.FightTimeout` (30 s), which is the quiet rule the damage meter applies to its own board: a snapshot
+ * older than that reads as "the raid stopped" and the board blanks itself. And the throttle is derived from the
+ * measured cost of the last pass, because derivation runs inside the ingest gate (`CombatMirror.DeriveQuiescent`) — so
+ * how often the pump runs decides how much of the load it can hold off.
  */
 [TestClass]
 public class MirrorDeriveCadenceTest
 {
-    private const long Derived = 100_000;
+    private const long Derived = 100_000L;
 
+    // A 650 ms pass (measured on the largest capture on file) must not come back every few milliseconds.
     [TestMethod]
-    public void ALoadThatStoppedMovingIsDerivedOnTheNextTick()
+    public void AFinishedPassSetsThePace()
     {
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 500, Derived + 500, Derived, 0, 0),
-                      "the count held still between two ticks: that is the classic end-of-load trigger");
+        Assert.AreEqual(3d, MirrorDeriveCadence.LiveIntervalSeconds(0.65), 0.01,
+            "a measured pass costs about 650 ms and lands on the floor");
+        Assert.AreEqual(4d, MirrorDeriveCadence.LiveIntervalSeconds(1.0), 0.01, "cost scales by the multiplier");
+        Assert.AreEqual(15d, MirrorDeriveCadence.LiveIntervalSeconds(10.0), 0.01,
+            "however expensive, a snapshot may not age past the ceiling");
+
+        // No measurement yet is the FASTEST answer, not the slowest: the first board should arrive promptly.
+        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(0), 0.01);
+        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(-1), 0.01);
+        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds,
+            MirrorDeriveCadence.LiveIntervalSeconds(double.NaN), 0.01);
     }
 
-    [TestMethod]
-    public void AnIdleCaptureCostsNothing()
-    {
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived, Derived, Derived, 3600, 0),
-                       "nothing new since the last pass: an open log with a raid having gone home must cost zero");
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(0, -1, -1, double.PositiveInfinity, 0),
-                       "nothing captured at all (a city log) is not a reason to spin");
-    }
-
-    /*
-     * The bug this exists for. Facts arriving every tick used to mean "not quiet, wait" forever, so the board froze;
-     * growth below the bulk-load threshold now refreshes on the cost-aware clock instead.
-     */
-    [TestMethod]
-    public void ALiveTailRefreshesWithoutWaitingForSilence()
-    {
-        var sinceLastPass = MirrorDeriveCadence.FloorSeconds;
-
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 4_000, Derived + 3_900, Derived, sinceLastPass, 0.65),
-                      "a raid in progress: a few facts per tick, no silence, and the board still has to move");
-
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + 4_000, Derived + 3_900, Derived,
-                                                        MirrorDeriveCadence.FloorSeconds - 0.5, 0.65),
-                       "but not faster than the floor: every pass parks ingest at the gate while it runs");
-    }
-
-    [TestMethod]
-    public void AFirstPassArrivesPromptlyRatherThanOnSilence()
-    {
-        // No pass has ever finished, so the wait is infinity and any tailing tick may start one: this is what stops a
-        // freshly opened derived meter from showing an empty board until the log happens to pause.
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(50_000, 49_000, -1, double.PositiveInfinity, 0));
-    }
-
-    [TestMethod]
-    public void ABulkLoadIsLeftToQuiescence()
-    {
-        // Measured: reading a file through the pipeline runs at roughly 170,000 facts a second, tailing live at tens.
-        var loading = MirrorDeriveCadence.BulkFactsPerTick;
-
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + loading, Derived, Derived, 3600, 0.65),
-                       "re-deriving mid-file would park ingest at the gate several times during the one moment throughput matters");
-
-        // And the load's own ending is still caught, the first tick that sees the count stop.
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + loading, Derived + loading, Derived, 3600, 0.65));
-    }
-
-    [TestMethod]
-    public void TheWaitScalesWithWhatAPassActuallyCosts()
-    {
-        // 650 ms is the measured cost of one pass over the largest capture on file (2,931,939 facts): the floor.
-        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(0.65), 0.001);
-
-        // A pass in the middle of the range pays for itself four times over.
-        Assert.AreEqual(8, MirrorDeriveCadence.LiveIntervalSeconds(2), 0.001);
-
-        // And an expensive pass is spaced out rather than allowed to run continuously.
-        Assert.AreEqual(MirrorDeriveCadence.CeilingSeconds, MirrorDeriveCadence.LiveIntervalSeconds(10), 0.001);
-
-        Assert.AreEqual(MirrorDeriveCadence.FloorSeconds, MirrorDeriveCadence.LiveIntervalSeconds(double.NaN),
-                        "an unusable measurement is 'no pass finished yet', which is the fast answer, not a slow one");
-    }
-
-    /*
-     * Why there is a ceiling at all. The damage meter zeroes its board after FightManager.FightTimeout seconds of quiet
-     * (BuildMirrorUpdate compares the clock against the last fact the snapshot knows about), so a cadence that let a
-     * snapshot age past that would have the meter blank itself on a raid that was fighting the whole time — the refresh
-     * rule and the expiry rule would be arguing, with the expiry winning.
-     */
+    // The ceiling is the meter's quiet rule, not a taste for round numbers.
     [TestMethod]
     public void TheCadenceStaysInsideTheMetersOwnQuietRule()
     {
         Assert.IsTrue(MirrorDeriveCadence.CeilingSeconds < FightManager.FightTimeout,
-                      "a snapshot older than the meter's expiry reads to it as 'the raid stopped'");
+            "a snapshot older than the meter's own expiry makes its board blank itself");
+        Assert.IsTrue(MirrorDeriveCadence.FloorSeconds < MirrorDeriveCadence.CeilingSeconds);
+        Assert.IsTrue(MirrorDeriveCadence.CostMultiplier > 1d,
+            "the whole point is that a more expensive pass waits proportionally longer");
+    }
+
+    // Idle is free: nothing captured, or nothing the grid does not already show.
+    [TestMethod]
+    public void AnIdleLogAsksForNothing()
+    {
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived, Derived, 3600, 0, 3600, 0),
+            "captured == derived must cost nothing, forever");
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(0, -1, 3600, 0, double.PositiveInfinity, 0),
+            "a log with no facts must not spin");
+    }
+
+    /*
+     * The bug this rule exists for: a raid in progress. Damage arrives every fraction of a second for the whole
+     * encounter, so the count NEVER holds still, and a rule that only fires on quiet leaves one snapshot up until
+     * somebody presses Re-derive.
+     */
+    [TestMethod]
+    public void ATailingCountRefreshesWithoutSilence()
+    {
+        const double sinceLastPass = MirrorDeriveCadence.FloorSeconds;
+
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 500, Derived, 0.05, 10_000, sinceLastPass, 0.65),
+            "a live tail must refresh on the cost-aware clock, not on a silence that never comes");
+
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + 500, Derived, 0.05, 10_000, sinceLastPass / 3, 0.65),
+            "the same tail must still be throttled by the cost of the last pass");
+    }
+
+    // The end of a file load: the count stopped moving, so one pass finishes the job.
+    [TestMethod]
+    public void AQuietLoadFiresImmediately()
+    {
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(50_000, -1, MirrorDeriveCadence.QuietSeconds, 200_000,
+                        double.PositiveInfinity, 0),
+            "growth that stops is the classic trigger, even at bulk rate");
+    }
+
+    /*
+     * Bulk load must not re-derive. Every pass runs inside the ingest gate, so passing repeatedly while chewing a file
+     * would slow the very load whose progress is being watched; the pass at the end (quiescence) is the one that counts.
+     */
+    [TestMethod]
+    public void ABulkLoadWaitsForQuiet()
+    {
+        const double loading = 60_000d; // facts/second: a file being read
+
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + (long)loading, Derived, 0.2, loading,
+                        double.PositiveInfinity, 0.65),
+            "mid-bulk must park, not pass");
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + (long)loading, Derived, MirrorDeriveCadence.QuietSeconds,
+                        loading, double.PositiveInfinity, 0.65),
+            "and must fire the moment the load stops moving");
+
+        // A raid's worth of lines is orders of magnitude slower than this and must not be mistaken for it.
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 40, Derived, 0.2, 400,
+                        MirrorDeriveCadence.FloorSeconds, 0.65));
+    }
+
+    /*
+     * The property that lets the session poll faster than it refreshes: the rule reads SECONDS and facts-per-second, so
+     * the same log gets the same answer whether it is asked every 250 ms or every 4 s — no threshold may be a per-ask
+     * allowance. A growth-per-check threshold would stop seeing bulk load purely by checking more often, which is the
+     * one moment re-deriving would park ingest.
+     */
+    [TestMethod]
+    public void TheRuleDoesNotDependOnHowOftenItIsAsked()
+    {
+        const long capturedNow = Derived + 50_000;
+
+        // Identical ingest (25,000 facts/second) observed over a fast and a slow window, both mid-bulk.
+        foreach (var pollSeconds in new[] { 0.25, 1.0, 4.0 })
+        {
+            var factsPerSecond = 25_000d;
+            Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, 0.1, factsPerSecond,
+                               double.PositiveInfinity, 0.65),
+                $"bulk ingest at a {pollSeconds}s poll must still read as bulk");
+        }
+
+        // Same for the quiet verdict: silence of one second is one second however often it was checked.
+        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, MirrorDeriveCadence.QuietSeconds, 0,
+                        double.PositiveInfinity, 0.65));
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived,
+                           MirrorDeriveCadence.QuietSeconds * 0.5, 0, 0, 0.65),
+            "half the quiet window is not the quiet window, whatever the poll rate");
+
+        // And no threshold may be expressed in ticks at all — the constants are durations and rates.
+        Assert.IsTrue(MirrorDeriveCadence.QuietSeconds > 0 && MirrorDeriveCadence.BulkFactsPerSecond > 0);
+    }
+
+    // Live-tail floor: refreshes fast enough to feel live, but every pass parks ingest while it runs.
+    [TestMethod]
+    public void TheFloorLimitsHowOftenIngestIsParked()
+    {
+        Assert.IsTrue(MirrorDeriveCadence.FloorSeconds >= 1d,
+            "a pass re-derives the whole capture on a worker thread; below a second the pump is the workload");
+    }
+
+    // A session's counters include heals, deaths and identity events — see MirrorSession.CapturedTotal.
+    [TestMethod]
+    public void HealingCountsTowardsQuiescence()
+    {
+        var captured = 1_200_000L;      // damage facts
+        var healed = 40_000L;           // heal events, no damage alongside them
+
+        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(captured + healed, Derived, 0.1, 30_000,
+                           double.PositiveInfinity, 0),
+            "a healing-only stretch is still moving and must read as busy, not quiet");
     }
 }

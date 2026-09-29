@@ -205,8 +205,58 @@ namespace EQLogParser
          * fire (up to a few seconds, longer if a bulk load is still running and quiescence has not arrived). One extra
          * pass on an open click is nothing; an empty board that looks broken is not nothing.
          */
-        if (_mirrorMeter) MirrorSession.Active?.RederiveAsync();
+        if (_mirrorMeter)
+        {
+          MirrorSession.Active?.RederiveAsync();
+
+          /*
+           * Paint when the pump publishes, not on the next poll. The 1 s tick above is a repaint interval that happens to
+           * share its number with the capture's cadence, and stacking it on a pass costs up to a second of visible delay for
+           * no reason: `Derived` says exactly when the board changed. The poll stays as the path back for a window that was
+           * hidden through a derive, and for the legacy meter, which has nothing to announce.
+           *
+           * A session belongs to one log-open, so it is listened to through ActiveChanged rather than grabbed once: the
+           * overlay can be opened before a session exists, and survives one being swapped under it.
+           */
+          MirrorSession.ActiveChanged += FollowActiveSession;
+          FollowActiveSession();
+        }
       }
+    }
+
+    private MirrorSession _derivedFrom;
+
+    // Re/listens to whichever session is current. Detached in WindowClosing: ActiveChanged is static and outlives the window.
+    private void FollowActiveSession()
+    {
+      var session = MirrorSession.Active;
+      if (ReferenceEquals(session, _derivedFrom)) return;
+
+      if (_derivedFrom is not null) _derivedFrom.Derived -= OnMirrorDerived;
+      _derivedFrom = session;
+      if (session is not null) session.Derived += OnMirrorDerived;
+    }
+
+    /*
+     * `Derived` is raised by the pump on its own thread, inside the session's gate, and this window belongs to the UI
+     * thread — so the repaint is queued there rather than run inline. No priority is specified: default (Normal) lands it
+     * behind whatever input is already queued but ahead of the Background poll, which is what a user-visible refresh wants.
+     */
+    private void OnMirrorDerived(MirrorSnapshot snapshot)
+    {
+      var dispatcher = Dispatcher;
+      if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) return;
+
+      dispatcher.BeginInvoke(new Action(RepaintAfterDerive));
+    }
+
+    private void RepaintAfterDerive()
+    {
+      // A hidden window gets no reason to build a board it will not show; the poll picks it up when it comes back.
+      // The tick's own `_lastUpdateTask` guard keeps a derive landing mid-repaint from starting a second one.
+      if (_preview || !IsLoaded || !IsVisible) return;
+
+      UpdateTimerTick(null, EventArgs.Empty);
     }
 
     // staged-config working set (mirrors _saved* until the setup window restages it) and its companion window
@@ -998,6 +1048,10 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, CancelEventArgs e)
     {
+      if (_derivedFrom is not null) _derivedFrom.Derived -= OnMirrorDerived;
+      MirrorSession.ActiveChanged -= FollowActiveSession;
+      _derivedFrom = null;
+
       _updateTimer?.Stop();
       damageContent.Children.Clear();
       tankContent.Children.Clear();

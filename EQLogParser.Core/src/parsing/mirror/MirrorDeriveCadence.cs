@@ -35,8 +35,21 @@ namespace EQLogParser.Mirror
     // A pass costs roughly what the last one cost, so leave that much room per unit of work before asking again.
     public const double CostMultiplier = 4d;
 
-    // Growth this size in one tick is a file being read, not a raid fighting: leave it to quiescence.
-    public const long BulkFactsPerTick = 25_000L;
+    /*
+     * How still the captured count has to sit before a load counts as finished. Measured in SECONDS rather than in timer
+     * ticks because the timer's granularity is a plumbing detail (see MirrorSession.TimerIntervalMs): counted in ticks,
+     * a finer timer would decide "finished" after a shorter silence, so the same log would get its end-of-load pass at
+     * different moments depending on how often somebody happens to check.
+     */
+    public const double QuietSeconds = 1d;
+
+    /*
+     * Ingest this fast is a file being read, not a raid fighting (measured ~170,000 facts/second while chewing
+     * `eqlog_Kizant_xegony.txt` against tens per second live): leave it to quiescence. A RATE rather than a growth-per-
+     * check, for the same reason as above — a per-check allowance would stop seeing bulk load purely by checking more
+     * often, which is the one moment re-deriving would park ingest.
+     */
+    public const double BulkFactsPerSecond = 25_000d;
 
     /*
      * How long a live tail waits between passes, given what the last pass cost. Measured pass of 650 ms (the largest
@@ -52,21 +65,24 @@ namespace EQLogParser.Mirror
     }
 
     /*
-     * The decision itself. `count` is what the capture holds now, `previousCount` what it held at the previous tick,
-     * `lastDerivedCount` what the last finished pass covered, and `sinceLastPassS` how long ago that pass ended (callers
-     * measure it monotonically; positive infinity means "no pass has ever run", so the first board arrives promptly).
+     * The decision itself. `count` is what the capture holds now, `lastDerivedCount` what the last finished pass
+     * covered, `quietSeconds` how long the count has held still, `factsPerSecond` how fast it was growing over the
+     * observation window, and `sinceLastPassS` how long ago that pass ended (callers measure all of these
+     * monotonically; positive infinity means "no pass has ever run", so the first board arrives promptly).
+     *
+     * No argument is a tick count, on purpose: the whole rule has to read the same however often it is asked.
      */
-    public static bool ShouldDerive(long count, long previousCount, long lastDerivedCount,
-                                    double sinceLastPassS, double lastPassSeconds)
+    public static bool ShouldDerive(long count, long lastDerivedCount, double quietSeconds,
+                                    double factsPerSecond, double sinceLastPassS, double lastPassSeconds)
     {
       // Nothing captured, or nothing the grid does not already show: an idle log must cost exactly nothing.
       if (count <= 0 || count == lastDerivedCount) return false;
 
-      // The count held still between two ticks: the load stopped moving, which is the classic trigger.
-      if (count == previousCount) return true;
+      // The load stopped moving, which is the classic trigger and what a finished file needs.
+      if (quietSeconds >= QuietSeconds) return true;
 
       // A file being read. Bulk load ends in quiet, and the rule above catches it there.
-      if (count - previousCount >= BulkFactsPerTick) return false;
+      if (factsPerSecond >= BulkFactsPerSecond) return false;
 
       // A live tail: refresh on the cost-aware clock rather than waiting for a silence that a raid never offers.
       return sinceLastPassS >= LiveIntervalSeconds(lastPassSeconds);

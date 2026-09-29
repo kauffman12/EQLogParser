@@ -64,11 +64,23 @@ namespace EQLogParser
     private long _lastDerivedCount = -1;
 
     /*
-     * The two measurements the cadence needs: how long the last pass took (which is what the capture costs, so it sets
-     * how often another one is affordable) and how long ago it finished. A Stopwatch rather than DateTime because a pass
-     * spacing is an interval, not a moment, and a clock adjustment must not buy a free re-derive or hold one off.
+     * How often the cadence is asked. It is a POLLS rate, not the refresh rate — MirrorDeriveCadence takes seconds and
+     * facts-per-second precisely so this number can be changed without moving any threshold — and it is fine-grained so
+     * a pass lands on its moment instead of on the next whole second: the end-of-load pass up to a full interval
+     * earlier, and a live tail's floor read within a quarter of it. A dispatcher timer at Background priority, so this
+     * costs a wakeup behind layout when nothing else is queued and never competes with rendering.
+     */
+    private const int TimerIntervalMs = 250;
+
+    /*
+     * The measurements the cadence needs, all monotonic intervals rather than DateTime moments (a clock adjustment must
+     * not buy a free re-derive or hold one off): how long the last pass took — which is what the capture costs, so it
+     * sets how often another one is affordable — how long ago it finished, how long this count has held still, and how
+     * wide the observation window behind the growth RATE was.
      */
     private readonly Stopwatch _sinceLastPass = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceFactChange = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceTick = Stopwatch.StartNew();
     private double _lastPassSeconds;
     private volatile bool _autoDeriveDisabled;
     private bool _disposed;
@@ -78,7 +90,10 @@ namespace EQLogParser
       _heals = new HealFactTable(_facts);
       _mirror = new CombatMirror(_facts, _heals);
       ChatSink = new MirrorChatSink(_mirror);
-      _quietTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
+      _quietTimer = new DispatcherTimer(DispatcherPriority.Background)
+      {
+        Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
+      };
       _quietTimer.Tick += QuietTick;
     }
 
@@ -372,15 +387,22 @@ namespace EQLogParser
       if (_disposed || _autoDeriveDisabled) return;
 
       var count = CapturedTotal;
-      var previousCount = _lastTickCount;
+
+      // Growth over the window since the last ask, as a rate: the same ingest reads the same however often it is polled.
+      var windowS = _sinceTick.Elapsed.TotalSeconds;
+      var grown = count - Math.Max(0, _lastTickCount);
       _lastTickCount = count;
+      var factsPerSecond = windowS > 0 ? grown / windowS : 0d;
+      _sinceTick.Restart();
+
+      if (grown > 0) _sinceFactChange.Restart();
 
       // Dirty-while-idle feedback doubles as field diagnostics: "capturing… 0 captured" separates
       // an empty log from a stalled pipeline without needing a debugger.
       if (count != _lastDerivedCount) Capturing?.Invoke(count);
 
-      if (MirrorDeriveCadence.ShouldDerive(count, previousCount, _lastDerivedCount,
-            _sinceLastPass.Elapsed.TotalSeconds, _lastPassSeconds))
+      if (MirrorDeriveCadence.ShouldDerive(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
+            factsPerSecond, _sinceLastPass.Elapsed.TotalSeconds, _lastPassSeconds))
       {
         RederiveAsync();
       }
