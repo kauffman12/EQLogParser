@@ -24,7 +24,6 @@
     <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="1"
                            AllowResizingColumns="True"
                            AutoGenerateColumns="False"
-                           ColumnSizer="Star"
                            CurrentCellBorderThickness="0"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
@@ -43,17 +42,24 @@
                     ToolTip="Removes this server's remembered verdict. Operator verdicts, roster membership and pet mappings are untouched"/>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
+      <!--
+        Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being
+        created and takes the whole window (and the app, which docks it at startup) down with a XamlParseException that
+        points at a line of markup and never says what it disliked. Proportion came for free before via ColumnSizer=Star
+        above, so dropping it means these numbers are now the layout: roomy where the reading is (Why, Notes, Name),
+        tight where the value is short, right-aligned where it is a number - the same shape HealingBreakdown uses.
+      -->
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="1.6*"/>
-        <syncfusion:GridTextColumn HeaderText="Kind" MappingName="Kind" Width="0.7*"/>
+        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="170"/>
+        <syncfusion:GridTextColumn HeaderText="Kind" MappingName="Kind" Width="80"/>
         <!-- The whole point of the window: which rule read what, and when. A verdict with no reason beside it is
              something to guess about; with the code, it is something to check against the log and correct. -->
-        <syncfusion:GridTextColumn HeaderText="Why" MappingName="Why" Width="1.7*"/>
-        <syncfusion:GridTextColumn HeaderText="Class" MappingName="PlayerClass" Width="0.8*"/>
-        <syncfusion:GridTextColumn HeaderText="Owner" MappingName="PetOwner" Width="1*"/>
-        <syncfusion:GridTextColumn HeaderText="Notes" MappingName="Flags" Width="1.5*"/>
-        <syncfusion:GridNumericColumn HeaderText="Damage" MappingName="Damage" NumberDecimalDigits="0" Width="0.9*"/>
-        <syncfusion:GridNumericColumn HeaderText="Healing" MappingName="Healing" NumberDecimalDigits="0" Width="0.9*"/>
+        <syncfusion:GridTextColumn HeaderText="Why" MappingName="Why" Width="260"/>
+        <syncfusion:GridTextColumn HeaderText="Class" MappingName="PlayerClass" Width="95"/>
+        <syncfusion:GridTextColumn HeaderText="Owner" MappingName="PetOwner" Width="130"/>
+        <syncfusion:GridTextColumn HeaderText="Notes" MappingName="Flags" Width="240"/>
+        <syncfusion:GridNumericColumn HeaderText="Damage" MappingName="Damage" NumberDecimalDigits="0" Width="110" TextAlignment="Right"/>
+        <syncfusion:GridNumericColumn HeaderText="Healing" MappingName="Healing" NumberDecimalDigits="0" Width="110" TextAlignment="Right"/>
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>
