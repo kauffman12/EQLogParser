@@ -313,4 +313,77 @@ public class MirrorStatsTest
       var after = MirrorSummaryFights.Build(rows, index, facts, T0 + 39.6, double.PositiveInfinity);
       Assert.AreEqual(1, MirrorSummaryHeals.Materialize(heals, after.AllRanges).Count, "and the later one stays");
   }
+
+  /*
+   * The meter and the list are the same question, so they must print the same digits. This is the assertion behind the
+   * opt-in damage overlay (OverlayDamageFromMirror): the overlay gets DamageOverlayStats, a click gets an event, and if
+   * either shape were built from a different population — hidden pet rows in one and not the other, healing included
+   * on one side — this is where it shows. Measured values below are asserted twice: once against the list's number,
+   * once written out, so that a change to the calculation cannot move both sides of the comparison together.
+   */
+
+  [TestMethod]
+  public void TheMeterAndASelectionOfTheSameRowsPrintTheSameNumber()
+  {
+      var (rows, index, facts) = TwoPulls();
+      var heals = NoHeals(facts);
+
+      var meter = MirrorStats.ForOverlay(rows, index, facts, heals, double.NegativeInfinity, double.PositiveInfinity);
+      var list = MirrorStats.For(rows, index, facts, heals)?.CombinedStats;
+
+      Assert.IsNotNull(meter?.DamageStats, "a scope with fights in it paints a damage board");
+      Assert.IsNotNull(list);
+      Assert.AreEqual(1750L, (long)list.RaidStats.Total, "both rows, both raiders, every hit aimed at those rows");
+      Assert.AreEqual((long)list.RaidStats.Total, (long)meter.DamageStats.RaidStats.Total,
+        "the meter's damage column is the same total a select-all of these rows prints");
+      Assert.AreEqual((long)list.StatsList.Sum(p => (long)p.Total), (long)meter.DamageStats.StatsList.Sum(p => (long)p.Total),
+        "and it is the same per-player rows, not merely the same sum");
+
+      // The other direction of the same facts: the meter shows a tank column too, and it comes from the very same rows.
+      Assert.IsNotNull(meter.TankStats, "the meter's tanking half is built from the same scope");
+      Assert.AreEqual(210L, (long)meter.TankStats.StatsList.Sum(p => (long)p.Total),
+        "120 + 90: the two hits the mobs landed, which is what the tank column counts");
+
+      // A meter window with no seconds in it paints nothing rather than a zeroed board; the caller decides what an empty
+      // board means for the surface (the overlay holds its last one until the expiry rule says otherwise).
+      Assert.IsNull(MirrorStats.ForOverlay(rows, index, facts, heals, T0 + 9_000, double.PositiveInfinity),
+        "a window with nothing inside it is no scope at all");
+
+      // And a windowed meter agrees with a windowed list, which is the equality to check against the fight list after a
+      // reset: same rows, same seconds, one arithmetic.
+      var slicedMeter = MirrorStats.ForOverlay(rows, index, facts, heals, T0 + 39.6, double.PositiveInfinity);
+      var slicedList = MirrorStats.For(rows, index, facts, heals, T0 + 39.6, double.PositiveInfinity)?.CombinedStats;
+      Assert.AreEqual((long)slicedList!.RaidStats.Total, (long)slicedMeter!.DamageStats.RaidStats.Total,
+        "after a reset the meter still equals the list measured over the same seconds");
+      Assert.AreEqual(950L, (long)slicedMeter.DamageStats.RaidStats.Total, "the pull that was running when it zeroed");
+  }
+
+  [TestMethod]
+  public void TheMeterBuildsOnItsOwnBuilders()
+  {
+      var (rows, index, facts) = TwoPulls();
+
+      // Prime both shared builders with a different scope, then run a meter refresh: neither board an open summary is
+      // showing may move, because a refresh happens about once a second and would otherwise repaint the tabs through
+      // the meter's window. Same law as ARefreshLeavesTheBoardsLastAnswerAlone, now for both halves.
+      DamageStatsBuilder.Instance.BuildTotalStats(SummaryForRow(Row(rows, "Grimling"), index, facts));
+      var damageBefore = (long)DamageStatsBuilder.Instance.GetLastStats()!.CombinedStats.RaidStats.Total;
+
+      var tankAnnouncements = 0;
+      void WatchTank(StatsGenerationEvent _) => tankAnnouncements++;
+      TankingStatsBuilder.Instance.EventsGenerationStatus += WatchTank;
+      try
+      {
+          _ = MirrorStats.ForOverlay(rows, index, facts, NoHeals(facts), double.NegativeInfinity, double.PositiveInfinity);
+      }
+      finally
+      {
+          TankingStatsBuilder.Instance.EventsGenerationStatus -= WatchTank;
+      }
+
+      Assert.AreEqual(damageBefore, (long)DamageStatsBuilder.Instance.GetLastStats()!.CombinedStats.RaidStats.Total,
+        "the shared damage builder still holds the summary's answer");
+      Assert.AreEqual(0, tankAnnouncements,
+        "and the shared tank board never announced anything - a meter refresh is invisible to open tabs");
+  }
 }

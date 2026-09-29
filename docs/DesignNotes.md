@@ -4023,7 +4023,8 @@ Two decisions worth keeping: a scope with nothing in it **holds the previous boa
 runs when the log goes quiet, so an in-progress fight can be seconds from landing, and a blank board would read as
 "nobody is doing damage"); and an exception on this path blanks the board and logs it (first at once, then every 30th tick with a count),
 because — as the operator put it — a fallback to code we intend to delete hides errors: a derived board that quietly became
-a legacy board looks exactly like a correct one. `OverlayDamageFromMirror` therefore means "derived numbers or nothing". Known gap: `ForOverlay` itself has no unit
-test yet — the window arithmetic underneath it does (`AMeterSliceCountsOnlyTheSecondsSinceItsReset`,
-`AdjacentSlicesOfTheSameRowsAddUpToTheWhole`), so this is the first piece of the workstream whose topmost inch is
-verified by watching it on Windows rather than by an assertion here.
+a legacy board looks exactly like a correct one. `OverlayDamageFromMirror` therefore means "derived numbers or nothing". `ForOverlay` is pinned by `TheMeterAndASelectionOfTheSameRowsPrintTheSameNumber` (the meter's column equals a select-all of
+the same rows per player and in total; its tank half counts the 120 + 90 the mobs landed; an empty window is no scope; a
+sliced meter equals a sliced list) and `TheMeterBuildsOnItsOwnBuilders` (a refresh leaves the shared damage builder's answer
+alone and never announces on the shared tank board). What still needs watching on Windows is not the arithmetic but the
+wiring: that the timer's window advances, that expiry zeroes the board, and whether a real pull's numbers look like the pulls.
