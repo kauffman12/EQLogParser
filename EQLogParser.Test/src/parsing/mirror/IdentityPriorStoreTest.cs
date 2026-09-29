@@ -318,6 +318,7 @@ public class IdentityPriorStoreTest
              {
                "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-merc", "R3-presence", "R4-spell",
                "R5-called", "R7-graph", "R7-side", "R9-charm", "R13-merc", "R15-healed", "R17-selffeed", "R18-healedpet",
+               "R19-eyeowner",
              })
       Assert.IsTrue(IdentityPriorStore.WorthRemembering(remembered), $"{remembered} reads lines and was refused");
 
@@ -332,6 +333,10 @@ public class IdentityPriorStoreTest
     // the trailing separator on every entry is what stops "R1-" swallowing the operator's word two digits along.
     Assert.IsTrue(IdentityPriorStore.WorthRemembering("R7-graph:8"));
     Assert.IsFalse(IdentityPriorStore.WorthRemembering("R10-manual"));
+
+    // The trailing separator also has to hold two digits in: "R1-" remembering "R12-history" would file the roster
+    // (R12 is RegistrySeed's) as witnessed experience without anybody asking.
+    Assert.IsFalse(IdentityPriorStore.WorthRemembering("R12-history"));
   }
 
   [TestMethod]

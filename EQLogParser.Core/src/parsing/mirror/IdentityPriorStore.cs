@@ -194,8 +194,10 @@ namespace EQLogParser.Mirror
      * THE GATE: what this file is allowed to remember. An ALLOWLIST of rule families, one per EVENT a log had to
      * contain for the rule to speak - a target frame (R1), a /who roster (R2), chat and zone presence (R3), a
      * recognisable cast (R4), "X is called to it owner" (R5-called), the opposition graph (R7), a charm line (R9), the
-     * merc signature (R13), heals from our side (R15/R18), a drink or a bite (R17). Those are exactly the things a
-     * future log might not say again, which is the only reason to write one down.
+     * merc signature (R13), heals from our side (R15/R18), a drink or a bite (R17), an eye of their own to hit (R19). Those are exactly the things a future log might not say again, which is the only reason to write one down —
+     * R19 belongs in the list even though it decided nothing on the eight reference captures (design doc, "An eye
+     * is not a combatant"): a name whose ONLY sighting is the eye bearing it is exactly the kind of thing the next
+     * log may never restate.
      *
      * What stays out, and why each is noise rather than memory:
      *
@@ -220,7 +222,7 @@ namespace EQLogParser.Mirror
      */
     private static readonly string[] RememberedRules =
     [
-      "R1-", "R2-", "R3-", "R4-", "R5-called", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-",
+      "R1-", "R2-", "R3-", "R4-", "R5-called", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-", "R19-",
     ];
 
     /// <summary>True when a rule code names an event only the capture could have supplied, i.e. worth remembering.</summary>

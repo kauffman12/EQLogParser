@@ -9,6 +9,16 @@ namespace EQLogParser
     // legacy pipeline behaves exactly as before. Kind values are EvidenceFact.Ev* (mirror module).
     internal static event Action<string, double, byte> EventsEvidence;
 
+    /*
+     * The evidence wire every parser reports onto, so a recognition anywhere in the pipeline can be remembered
+     * without adding an event to the class that found it. DamageLineParser uses it for the one thing worth keeping
+     * off a line this pipeline refuses to count: the owner of a summoned eye (R19).
+     */
+    internal static void ReportEvidence(string name, double time, byte kind)
+    {
+      if (!string.IsNullOrEmpty(name)) EventsEvidence?.Invoke(name, time, kind);
+    }
+
     // Process things that can easily identify a player
     private PreLineParser()
     {

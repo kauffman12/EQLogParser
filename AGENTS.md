@@ -319,6 +319,24 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   in any measurement here; one unfixable-by-registry case is a pet *named like a raider* (`Sancus`: in players.txt, owns `Sancus`s pet`, and
   stamped Pet Certain by "Sancus is called to it owner.") because identity is keyed on the name, not the owner. Numbers and the reading
   procedure: docs/combat-mirror-design.md → "Fourth audit".
+- **An eye is not a combatant; hitting your own eye says the striker is a player.** `Eye of <name>` is the magian
+  summon (`Eye of Zamul`, ranks named after people: `Eye of Zomm`) and it never acts — **0** hostile lines in eight
+  captures, all **348** damage lines against one worth exactly **1 point**, **346 / 348** of them struck by the raider
+  whose name the eye carries. So eyes are refused at the door of **both** fact tables (damage always was, through
+  `DamageValidator.InIgnoreList`; heals were not, which is how one `Jondolar healed Eye of Shennron for 148 points`
+  line left an `Eye of X | Unknown` row in the identity list), and the eye branch of `DamageLineParser` reports
+  `EvEyeOwnedStrike` on `PreLineParser.ReportEvidence` → **R19** claims the *striker* Player at Strong. Two refusals,
+  both deliberate: the **cast line is not evidence** (`begins casting Eye of Zomm` prints even where no eye ever
+  materialises — Incogitable has 6 casters and 0 entities — and one magian can cast on another player's eye), and
+  **ownership is never modelled**, because anyone can kill an eye (5 of 376 eye deaths name a foreign raider) and a wrong
+  owner is what poisons R15. One recognizer, `ClassificationRules.EyeSummonOwnerInName`, is shared by the ignore gate and
+  the rule (a meter and a rule must never disagree about where an eye name begins), and it refuses **before**
+  `CheckOwner`/`CombatMirror.AddDamage` — leave the shape in the tables and the day a sixth word joins `OwnerSuffixes`,
+  R5's name-pool sweep adopts every eye in the raid. The three eyes that *do* count (`Veeshan`, `Despair`, `Mother`) are
+  legacy's own exceptions and the list is closed: `TheCountableEyeListIsThreeWordsNoMore`. Measured yield: R19 wins **2 names** (`Depravity`, `Pixnn`) and both also held an
+  equal-strength chat/presence claim, so nothing moved Unknown→Player on this corpus — it is a last resort plus a
+  ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
+  docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

@@ -75,6 +75,11 @@ namespace EQLogParser.Mirror
      */
     private static readonly string[] OwnerSuffixes = ["`s pet", "`s warder", "`s ward", "`s familiar", "`s mount"];
 
+    // R19's shape: the prefix a summoned eye carries in front of its owner's name, and the three eyes that are
+    // worth counting. See EyeSummonOwnerInName for both lists and what they are measured on.
+    private const string EyePrefix = "Eye of ";
+    private static readonly string[] CountableEyes = ["Veeshan", "Despair", "Mother"];
+
     // R7 tunables (increment 3): opponent breadth counts INSTANCES, not distinct names — raid
     // pulls reuse names constantly ("a skeleton" dies, the next "a skeleton" is a new instance,
     // separated by a combat-gap). Charmed-player raids are why inference only ever fires for
@@ -225,6 +230,41 @@ namespace EQLogParser.Mirror
       return string.IsNullOrEmpty(owner) || owner.Contains(',') ? null : owner;
     }
 
+    /*
+     * R19's shape: the eye a player summons is written as `Eye of <owner>` - the owner's own name carried inside
+     * the summon's name, with no possessive and no owner line anywhere in the file. Eight captures 2022-2026
+     * (~4.2 GB) say what one is good for: it is NEVER an attacker (0 lines in every capture), only the name inside
+     * it ever strikes it, all 348 of those hits land for exactly 1 point each, and it dies immediately (376
+     * `was/has been slain by` lines, plus `is rent by decrepit wrath.` / `looks pale.`). So it is not a combatant,
+     * and the one thing worth taking off such a line is the ownership fact it states for free.
+     *
+     * The suffix is accepted as any non-empty text, because owning is only ever CLAIMED when an entity attacked
+     * with exactly that string (see EvEyeOwnedStrike below). That is what keeps a strange suffix from inventing a
+     * raider: no match, no claim, and no guessing about where a name ends.
+     *
+     * Three eyes are worth counting and refuse membership here. Legacy's own guard (DamageLineParser.InIgnoreList)
+     * kept exactly Veeshan, Despair and Mother out of the ignore list, so this inherits that decision rather than
+     * re-litigating it from four years of logs that contain none of them. The list is CLOSED -
+     * TheCountableEyeListIsThreeWordsNoMore refuses a fourth, which arrives as data plus a test, never as a wider pattern.
+     *
+     * Ask this only about a NAME SLOT: an attacker, a defender, a heal target. `Eye of Zomm` is the spell that makes
+     * the eye, `activates Eye of the Storm Rk. III.` is a discipline and `Anyone need Eye of Mother in Theater?` is
+     * an item in guild chat - all three are in these logs, none of them is an entity.
+     */
+    /// <summary>The owner a summoned eye names, or null when this name is not an ignored summon.</summary>
+    internal static string EyeSummonOwnerInName(string name)
+    {
+      if (string.IsNullOrEmpty(name) || !name.StartsWith(EyePrefix, StringComparison.OrdinalIgnoreCase)) return null;
+
+      foreach (var keep in CountableEyes)
+      {
+        if (name.EndsWith(keep, StringComparison.OrdinalIgnoreCase)) return null;
+      }
+
+      var owner = name[EyePrefix.Length..].Trim();
+      return owner.Length == 0 ? null : owner;
+    }
+
     // Identity evidence only. Charm WINDOWS are not built here: they need settled sides to know when a
     // charm broke, so they come later in Apply through CharmWindowPolicy. What this pass does is stamp the
     // fact that a name was charmed at all (identity stays Npc — a charmed mob is an NPC on our side for a
@@ -285,6 +325,17 @@ namespace EQLogParser.Mirror
             // on the same name still wins (docs/combat-mirror-design.md R17).
             playerBehavior.Add(name);
             timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
+            break;
+
+          case EvidenceFact.EvEyeOwnedStrike:
+            /*
+             * R19: the eye named after you struck by YOU means you called it, and only a player character summons
+             * one. Strong, not Certain - the ownership is the line's own, but who swings at an eye is not (anybody
+             * can kill one: 5 of the 376 eye death lines name a killer who is not the owner, which is exactly why
+             * the parser only reports a striker whose name is INSIDE the eye).
+             */
+            playerBehavior.Add(name);
+            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCalledToOwner:

@@ -1,17 +1,16 @@
+using EQLogParser.Mirror;
 using log4net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 namespace EQLogParser
 {
-  internal static partial class DamageLineParser
+  internal static class DamageLineParser
   {
     public static event Action<DamageProcessedEvent> EventsDamageProcessed;
     public static event Action<TauntEvent> EventsNewTaunt;
     public static event Action<DeathEvent> EventsNewDeath;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Regex CheckEyeRegex = EyeRegex();
     private static readonly Dictionary<string, string> SpellTypeCache = [];
     private static readonly List<string> SlainQueue = [];
     private static double _slainTime = double.NaN;
@@ -990,6 +989,19 @@ namespace EQLogParser
           _delayCritRecord = null;
         }
 
+        /*
+         * The one fact worth keeping off an ignored eye, reported before the eye is dropped below: when the striker
+         * IS the name inside the eye (`Shennron hits Eye of Shennron`), that name owns a summon, and only a player
+         * character summons one - R19. A strike by anybody else is silently worthless here, because anyone can kill
+         * an eye (5 of the 376 eye death lines in these logs name a killer who is not the owner), so "killed an eye"
+         * must never read as "owns an eye". ClassificationRules.EyeSummonOwnerInName has the census.
+         */
+        if (!checkLineType && ClassificationRules.EyeSummonOwnerInName(defender) is { Length: > 0 } eyeOwner &&
+          string.Equals(eyeOwner, attacker, StringComparison.OrdinalIgnoreCase))
+        {
+          PreLineParser.ReportEvidence(eyeOwner, lineData.BeginTime, EvidenceFact.EvEyeOwnedStrike);
+        }
+
         if (!checkLineType && !InIgnoreList(defender))
         {
           if (resist != SpellResist.Undefined && defender != attacker &&
@@ -1215,14 +1227,15 @@ namespace EQLogParser
         return false;
       }
 
+      /*
+       * A summoned eye is not a combatant, so no record reaches FightManager, the store, the FCT feed or the mirror.
+       * The shape and the three eyes that DO count (a boss's eye, a scrystone) live in one place now -
+       * ClassificationRules.EyeSummonOwnerInName - because R19 has to spell an owner exactly the way this gate
+       * refuses the fight, and two copies of a name cut are how a rule claims a raider the meter refuses.
+       */
       var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) ||
-        ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0;
-      if (!ignore && CheckEyeRegex.IsMatch(name))
-      {
-        ignore = !name.EndsWith("Veeshan", StringComparison.OrdinalIgnoreCase)
-          && !name.EndsWith("Despair", StringComparison.OrdinalIgnoreCase) &&
-          !name.EndsWith("Mother", StringComparison.OrdinalIgnoreCase);
-      }
+        ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0 ||
+        ClassificationRules.EyeSummonOwnerInName(name) is not null;
       return ignore;
     }
 
@@ -1238,8 +1251,5 @@ namespace EQLogParser
       internal DamageRecord Record { get; init; }
       internal double BeginTime { get; init; }
     }
-
-    [GeneratedRegex(@"^Eye of (\w+)")]
-    private static partial Regex EyeRegex();
   }
 }

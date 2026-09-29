@@ -1,3 +1,4 @@
+using EQLogParser.Mirror;
 using System;
 using log4net;
 using System.Reflection;
@@ -39,14 +40,26 @@ namespace EQLogParser
         if (action.Length >= 23 && (index = action.LastIndexOf(" healed ", action.Length, StringComparison.Ordinal)) > -1 &&
           HandleHealed(action, index, lineData.BeginTime) is { } record)
         {
-          record = GetCachedHealRecord(record);
-          RecordsStore.Instance.Add(record, lineData.BeginTime);
-
-          // hoisted so the event object is not built per heal when nothing is listening (FCT off)
-          var healHandler = EventsHealProcessed;
-          if (healHandler is not null)
+          /*
+           * A heal spent on somebody's summoned eye is the same non-event as a hit on it: the summon takes one blow
+           * and dies, and the raid's answer to it is a wasted click, not healing. Legacy already refused the damage
+           * side (DamageLineParser.InIgnoreList) and this refuses the heal side, in the parser rather than in a
+           * viewer, because dropping it later would still intern the eye's name — and an ignored name that reaches
+           * the mirror's pool sits in the identity list as a permanent Unknown for a thing the pipeline has already
+           * decided not to count. The line is still a heal line: handled, just not stored (R19,
+           * ClassificationRules.EyeSummonOwnerInName).
+           */
+          if (ClassificationRules.EyeSummonOwnerInName(record.Healed) is null)
           {
-            healHandler(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+            record = GetCachedHealRecord(record);
+            RecordsStore.Instance.Add(record, lineData.BeginTime);
+
+            // hoisted so the event object is not built per heal when nothing is listening (FCT off)
+            var healHandler = EventsHealProcessed;
+            if (healHandler is not null)
+            {
+              healHandler(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
+            }
           }
 
           return true;
