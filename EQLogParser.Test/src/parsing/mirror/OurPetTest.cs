@@ -265,10 +265,14 @@ public class OurPetTest
       lines.Add($"[{Timestamp(18, 50, i)}] Targeted (Player): {who[i]}");
     lines.Add($"[{Timestamp(18, 52, 0)}] Targeted (NPC): {healedName}");
 
-    // The fight the raid is actually in.
+    /*
+     * The fight the raid is actually in — and it has to stay INSIDE one engagement gap (30 s, the split that
+     * starts a new fight row). Every assertion below reads a single mob row, so a pet's swing written a minute
+     * after the raid's would be a second encounter rather than folded damage: correct behaviour, different test.
+     */
     lines.Add($"[{Timestamp(19, 0, 0)}] You hit {Mob} for 900 points of damage.");
     lines.Add($"[{Timestamp(19, 0, 5)}] {Mob} hits You for 300 points of damage.");
-    lines.Add($"[{Timestamp(19, 1, 0)}] {Pet} hits {Mob} for 700 points of damage.");
+    lines.Add($"[{Timestamp(19, 0, 20)}] {Pet} hits {Mob} for 700 points of damage.");
 
     for (var round = 0; round < 2; round++)
       for (var i = 0; i < who.Length; i++)

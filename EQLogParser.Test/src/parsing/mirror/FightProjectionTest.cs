@@ -194,6 +194,96 @@ public class FightProjectionTest
         Assert.AreEqual(rows[0].Name, rows[1].Name);
     }
 
+    /*
+     * The gap that splits rows is legacy's expiry (FightManager.FightTimeout = 30 s), and the number was 300 until
+     * one pull was read off `local/eqlog_Kizant_xegony.txt`. `Waxwork Abolishion` is hit from 18:34:08 to 18:34:53,
+     * the raid spends 135 s on the adds that came out of it, and the boss returns at 18:37:08 for a 162 s second
+     * life. At 300 s that was ONE row of 342 s: one entry fewer in a list whose entire job is counting encounters,
+     * and a duration of "5 minutes" on a fight that ran 46 seconds. The quiet cost was the DPS clock — legacy's
+     * selection totalled 324 s of span for its three rows because TimeRange.Add drops silences of 6 s and over,
+     * while the merged row's single span charged 343 s for the same click.
+     *
+     * Matching an event to a row (a slain line, a charm sighting) keeps the wider window: that is a different
+     * question from "did this fight stop", and tightening it with the split silently un-closes real charm rows.
+     */
+    [TestMethod]
+    public void ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife()
+    {
+        var facts = BuildFacts(
+            ("Raidman", "Waxwork Abolishion", 100, 8, LabelTypes.Melee),
+            ("Raidman", "Waxwork Abolishion", 100, 30, LabelTypes.Melee),
+            ("Raidman", "Waxwork Abolishion", 100, 53, LabelTypes.Melee),
+            ("Raidman", "Waxwork Lancer", 100, 70, LabelTypes.Melee),        // the adds take over
+            ("Raidman", "Waxwork Lancer", 100, 95, LabelTypes.Melee),
+            ("Raidman", "Waxwork Lancer", 100, 120, LabelTypes.Melee),
+            ("Raidman", "Waxwork Lancer", 100, 145, LabelTypes.Melee),
+            ("Raidman", "Waxwork Lancer", 100, 170, LabelTypes.Melee),
+            ("Raidman", "Waxwork Abolishion", 100, 196, LabelTypes.Melee),   // the boss respawns
+            ("Raidman", "Waxwork Abolishion", 100, 226, LabelTypes.Melee),
+            ("Raidman", "Waxwork Abolishion", 100, 256, LabelTypes.Melee),
+            ("Raidman", "Waxwork Abolishion", 100, 286, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var lives = FightProjection.Build(facts, timeline)
+            .Where(r => r.Name == "Waxwork Abolishion").ToList();
+
+        Assert.AreEqual(2, lives.Count, "a fade and a respawn are two encounters, not one five-minute one");
+        Assert.AreEqual(45, lives[0].EndTime - lives[0].BeginTime, "the first life is the time it was hit, not the fade");
+        Assert.AreEqual(DerivedFightEnd.Gap, lives[0].EndReason, "and it ends as a silence, not as a kill");
+        Assert.AreEqual(90, lives[1].EndTime - lives[1].BeginTime, "and so is the second");
+    }
+
+    [TestMethod]
+    public void AQuarterMinuteOfQuietIsStillTheSameFight()
+    {
+        // The other side of the 30 s number: pulling the split tighter would cut one continuous fight into
+        // pieces every time a raid wipes its aggro list for half a minute, and each piece would be a row.
+        var facts = BuildFacts(
+            ("Raidman", "Grul", 100, 0, LabelTypes.Melee),
+            ("Raidman", "Grul", 100, 25, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        Assert.AreEqual(1, FightProjection.Build(facts, timeline).Count);
+    }
+
+    /*
+     * BeginDamageTime/LastDamageTime used to be stamped at row creation and never touched again, so every projected
+     * row claimed a zero-length damage window equal to its own birth second. Sectionizer walks LastDamageTime for the
+     * non-tanking divider list, so that was not cosmetic; and a row that was never hit has to say NaN, because "no
+     * damage time" and "damage time of zero seconds" are different statements about a fight.
+     */
+    [TestMethod]
+    public void ARowRemembersItsDamageTimeApartFromItsTankingTime()
+    {
+        var facts = BuildFacts(
+            ("Raidman", "Grul", 50, 10, LabelTypes.Melee),    // the raid's output on Grul
+            ("Grul", "Raidman", 500, 25, LabelTypes.Melee));  // what Grul did back
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var row = FightProjection.Build(facts, timeline).Single();
+        Assert.AreEqual("Grul", row.Name);
+        Assert.AreEqual(T0 + 10, row.BeginDamageTime, "damage time opens on the first hit LANDED ON this row");
+        Assert.AreEqual(T0 + 10, row.LastDamageTime, "and does not follow the row's own swings");
+        Assert.AreEqual(T0 + 25, row.BeginTankingTime, "the other direction keeps its own window");
+        Assert.AreEqual(T0 + 25, row.LastTankingTime);
+    }
+
+    [TestMethod]
+    public void ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne()
+    {
+        var facts = BuildFacts(("Grul", "Raidman", 500, 20, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+        var row = FightProjection.Build(facts, timeline).Single();
+        Assert.IsTrue(double.IsNaN(row.BeginDamageTime) && double.IsNaN(row.LastDamageTime),
+            "a row that never took a hit cannot report its own birth second as damage time");
+        Assert.IsFalse(double.IsNaN(row.LastTankingTime), "the direction that did happen is still timed");
+    }
+
     [TestMethod]
     public void SlainLine_ClosesTheRowMarkedDead_AndRespawnOpensANewOne()
     {

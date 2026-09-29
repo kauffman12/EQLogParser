@@ -23,12 +23,38 @@ namespace EQLogParser.Mirror
   //   both players                 -> dropped: friendly fire and spell feedback are not fights.
   internal static class FightProjection
   {
-    // A name's exchange stream splits into one row per engagement: two facts for the same owner
-    // separated by more than this gap start a new fight, the way re-engaging a boss hours later
-    // is a different fight from the legacy list's point of view. (The legacy list keyed those
-    // boundaries off reset/slain events it could see live; a time gap is the classification-free,
-    // idempotent equivalent - and never invents a boundary inside one continuous brawl.)
-    public const double EngagementGapS = 300;
+    /*
+     * A name's exchange stream splits into one row per engagement: two facts for the same owner separated by
+     * more than this gap start a new fight, the way re-engaging a boss hours later is a different fight from
+     * the legacy list's point of view. (The legacy list keyed those boundaries off reset/slain events it could
+     * see live; a time gap is the classification-free, idempotent equivalent - and never invents a boundary
+     * inside one continuous brawl.)
+     *
+     * It is legacy's own expiry number, and it was 300 until one pull was read off `eqlog_Kizant_xegony.txt`:
+     * `Waxwork Abolishion` takes hits from 18:34:08 to 18:34:53, the raid spends 135 s beating adds, and the
+     * boss comes back at 18:37:08 for a 162 s second life. At 300 s those two lives were ONE row of 342 s —
+     * one entry fewer in a list whose whole job is counting encounters, a duration column reading "5 minutes"
+     * for a 46-second fight, and (the quiet one) the fade welded into the DPS clock: `TimeRange.Add` drops
+     * silences of 6 s and over from a selection's total, so legacy's three runs summed to 324 s where the
+     * merged row's single span reached 343 s for the same click. A gap rule that swallows an encounter is not
+     * being conservative about brawls, it is inventing one.
+     *
+     * Legacy expired at 60 s flat, or 30 s once the fight had landed boss-directed damage (FightManager).
+     * One number here rather than two: nothing measured has ever needed the slower one — a row that has not
+     * hurt anybody for half a minute is over either way — and two thresholds would decide a row's boundaries
+     * from which side the first hit went, which is not a fact about the encounter.
+     */
+    public const double EngagementGapS = FightManager.FightTimeout;   // 30 s
+
+    /*
+     * How far AFTER a row's last fact an event can still be ABOUT that row: a slain line lands a second after
+     * the killing blow, and a charm sighting can trail the raid's last swing by more than silence worth
+     * splitting a fight over. These two tail questions used to ride on EngagementGapS's 300, and they are not
+     * the same question — tightening them with the split would have silently stopped closing charm rows that
+     * are measured real (12 of them on Incogitable), which is why they keep the wider window under a name
+     * that says what it is for.
+     */
+    public const double EventTailWindowS = 300;
 
     // How far BEFORE a death to look for the charm window that death closed. See DiedWhileCharmed.
     private const double CharmDeathSlackS = 1;
@@ -242,8 +268,6 @@ namespace EQLogParser.Mirror
             Name = key,
             BeginTime = t,
             LastTime = t,
-            BeginDamageTime = t,
-            LastDamageTime = t,
           };
           open[key] = row;
         }
@@ -290,6 +314,7 @@ namespace EQLogParser.Mirror
          * mob, so testing the victim question first would file the raid's own opening damage as damage somebody
          * received. Aimed at the row's anchor wins; only what points away from the anchor can be someone getting hit.
          */
+        var aimedAtAnchor = string.Equals(key, defName, StringComparison.Ordinal);
         FactTarget target;
         if (timeline.IsConfirmedRaidPersonAt(defName, t))
         {
@@ -298,7 +323,7 @@ namespace EQLogParser.Mirror
             // row's damage would move her incoming hits onto the outgoing side of her own number.
             target = FactTarget.RaidSide;
         }
-        else if (string.Equals(key, defName, StringComparison.Ordinal))
+        else if (aimedAtAnchor)
         {
             // Aimed at the anchor: the raid's output on this fight. Asked before the victim question below, because
             // an unidentified mob satisfies "not known to be a pet or a mob" and must not become damage taken.
@@ -320,11 +345,31 @@ namespace EQLogParser.Mirror
           row.DamageTotal += fact.Total;
           // Engagement totals in both directions land on DamageTotal; the split keeps the
           // legacy-comparable number (damage dealt TO the owner) readable next to it.
-          if (string.Equals(key, defName, StringComparison.Ordinal)) row.DamageToOwner += fact.Total;
+          if (aimedAtAnchor) row.DamageToOwner += fact.Total;
           else row.DamageByOwner += fact.Total;
         }
         if (t < row.BeginTime) row.BeginTime = t;
         if (t > row.LastTime) row.LastTime = t;
+
+        /*
+         * The per-direction windows, in legacy's shape: BeginDamageTime is written by the FIRST record aimed at
+         * this row's name and LastDamageTime by every one (FightManager does exactly this on its defender
+         * branch), and a row that was never hit stays NaN instead of claiming its own birth second as damage.
+         * Sectionizer walks LastDamageTime for the non-tanking divider list, so a zero-length window is not
+         * cosmetic - it decides where "Fight N" boundaries land for every row of the derived grid. The direction
+         * is the same `aimedAtAnchor` comparison that splits DamageToOwner from DamageByOwner and files the
+         * index, so no two seams can disagree about which way a fact pointed.
+         */
+        if (aimedAtAnchor)
+        {
+          row.BeginDamageTime = double.IsNaN(row.BeginDamageTime) ? t : row.BeginDamageTime;
+          row.LastDamageTime = t;
+        }
+        else
+        {
+          row.BeginTankingTime = double.IsNaN(row.BeginTankingTime) ? t : row.BeginTankingTime;
+          row.LastTankingTime = t;
+        }
 
         // Player roll-up: a player-side attacker gets credit under its raw name - stronger than
         // the legacy registry-gated rollup, which silently dropped unregistered players. A
@@ -345,7 +390,7 @@ namespace EQLogParser.Mirror
         // Deaths after the last exchange still mark the engagement they follow.
         // A slain line lands shortly after the final exchange - inside one engagement's tail.
         if (deathsByName.TryGetValue(row.Name, out var deaths))
-          while (deaths.TryPeek(out var dt) && dt <= row.LastTime + EngagementGapS)
+          while (deaths.TryPeek(out var dt) && dt <= row.LastTime + EventTailWindowS)
           {
             deaths.Dequeue();
             row.Dead = true;
@@ -413,15 +458,18 @@ namespace EQLogParser.Mirror
 
     /*
      * Does a charm sighting end this row? It has to be a sighting of THIS engagement: the charm begins after
-     * the row's last fact and within the same engagement window that keeps rows apart (EngagementGapS), so a
-     * raid charming a mob of the same name three pulls from now cannot retroactively kill this row. That also
-     * means the ambiguity is inherited, not invented — two live mobs called `a skeleton` are one name to this
-     * log, and CharmWindowPolicy reports that share (SameNameFactCount) rather than pretending otherwise.
+     * the row's last fact and within the event tail window (EventTailWindowS), so a raid charming a mob of the
+     * same name three pulls from now cannot retroactively kill this row. The tail window is deliberately wider
+     * than the 30 s that splits rows: the raid's LAST swing at a mob and the mesmerist's spell on it are two
+     * acts by two people, and a mob charmed a minute after anybody touched it is still the mob that row is
+     * about — while a minute of nothing in its own exchange stream is a fight that stopped. That also means the
+     * ambiguity is inherited, not invented — two live mobs called `a skeleton` are one name to this log, and
+     * CharmWindowPolicy reports that share (SameNameFactCount) rather than pretending otherwise.
      */
     private static bool ClosesForCharm(EntityTimeline timeline, string key, double lastTimeS, double nowS)
     {
       var start = timeline.CharmStartAfter(key, lastTimeS);
-      return !double.IsNaN(start) && start <= nowS && start - lastTimeS <= EngagementGapS;
+      return !double.IsNaN(start) && start <= nowS && start - lastTimeS <= EventTailWindowS;
     }
 
   }

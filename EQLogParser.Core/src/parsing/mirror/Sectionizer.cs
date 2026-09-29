@@ -43,7 +43,16 @@ namespace EQLogParser.Mirror
         }
 
         section.Fights.Add(fight);
-        lastTime = double.IsNaN(lastTime) ? reference : Math.Max(lastTime, reference);
+
+        /*
+         * An empty window is skipped rather than folded in. Math.Max with a NaN answers NaN, and one NaN ends the
+         * divider walk for the rest of the list (begin - NaN >= timeout is false forever). Legacy could not step on
+         * this: its DamageHits counts only hits that landed ON the NPC, so every row its non-tanking walk considered
+         * had a damage time by construction. A projected row counts both directions, so a row that was never hit —
+         * and has no damage window — is ordinary here, and contributes nothing to where the next "Fight N" starts.
+         */
+        if (!double.IsNaN(reference))
+          lastTime = double.IsNaN(lastTime) ? reference : Math.Max(lastTime, reference);
       }
 
       return sections;

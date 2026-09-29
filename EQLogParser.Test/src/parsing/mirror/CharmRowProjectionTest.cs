@@ -78,6 +78,28 @@ public class CharmRowProjectionTest
     }
 
     [TestMethod]
+    public void ACharmSightingLongAfterTheLastSwingStillClosesTheRow()
+    {
+        /*
+         * Matching an event to a row is a wider window than splitting rows, and this is the case that proves they
+         * must stay apart. The raid's last swing is a minute and change before the mesmerist lands the charm — the
+         * two acts are by different people, so the gap between them says nothing about whether the fight is over;
+         * what ends it is the charm. Under the 30 s that now splits rows this row would sit there reading "still
+         * going" while its mob was already the raid's pet (12 such rows on Incogitable).
+         */
+        var outcome = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:00:00 2026] You hit a rune-etched warblade for 900 points of damage.",
+            "[Sun Apr 26 18:01:15 2026] a rune-etched warblade has been charmed.");
+
+        var rows = FightProjection.Build(facts, timeline);
+        Assert.AreEqual(1, rows.Count, "one mob, one row");
+        var row = rows[0];
+        Assert.IsTrue(row.Dead && row.EndReason == DerivedFightEnd.Charmed,
+            "a charm that arrives after a long silence still belongs to the row it ended");
+        Assert.AreEqual(1, outcome.Charms.Count);
+    }
+
+    [TestMethod]
     public void ADeathWhileCharmedDoesNotGiveTheRaidAKill()
     {
         // The pet dies mid-charm (the raid's own AoE catches it, or the pull wipes it). The NPC row was already
