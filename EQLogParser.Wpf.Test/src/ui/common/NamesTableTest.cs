@@ -1,6 +1,8 @@
 using EQLogParser;
 using EQLogParser.Mirror;
 
+namespace EQLogParser.Wpf.Test;
+
 /*
  * The Names window's one piece of logic: turning a census row into what an operator reads. Nothing here needs WPF -
  * no element is constructed, so no Sta.Run - because the interesting part is which sentences the flag column composes,

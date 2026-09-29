@@ -344,6 +344,30 @@ public class ClassificationReportTest
    * could not place; it never overrides a verdict this log reached from lines; a rejection borrows nothing ("no claim"
    * is about exactly this); and an operator verdict outranks it, since both are claims and only one came from a human.
    */
+  /*
+   * A name the ledger knows and this capture never mentioned still has to be ON the list. Without it the ledger is
+   * invisible for exactly the case it exists for: someone looking up a mob they remember from an earlier night, whose
+   * species this log says nothing about — an empty search box would read as "no record", not as "record, from before".
+   */
+  [TestMethod]
+  public void ANameKnownOnlyFromOlderLogsIsStillOnTheList()
+  {
+    var ledger = IdentityPriorStore.Instance;
+    var remembered = new EntityTimeline();
+    remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
+    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_700_000_000);
+    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_800_000_000);
+
+    var row = Census(ledger).Find("Rememb");
+
+    Assert.IsNotNull(row, "a name held only by the ledger must still reach the list");
+    Assert.AreEqual(IdentityKind.Npc, row.Kind);
+    StringAssert.StartsWith(row.Reason, "Prior:", "the reason says which capture's rules answered, not this one's");
+    Assert.IsTrue(row.IsPrior);
+    Assert.AreEqual(2, row.PriorSightings, "and how many times it was seen, since that is what makes it worth showing");
+    Assert.IsFalse(row.HasFacts, "nothing in this log backs it, and the row has to say so");
+  }
+
   [TestMethod]
   public void ALedgerFillsSilenceAndNeverContradictsEvidence()
   {

@@ -238,6 +238,22 @@ namespace EQLogParser.Mirror
         }
       }
 
+      /*
+       * And the ledger's names, for the same reason. A name this server's earlier logs concluded on, which this capture
+       * never mentions, belongs on the list with its prior verdict beside it — that is the entire use of cross-log
+       * memory: an operator looking up a mob they have seen before gets an answer instead of an empty search box.
+       *
+       * Display only, exactly like every other prior: the rules ran without it (ClassificationRules never reads the
+       * ledger), and the row says where its Kind came from ("Prior:R6-npcdb") and that no fact in this log backs it.
+       */
+      if (priors is not null)
+      {
+        foreach (var entry in priors.All())
+        {
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
+        }
+      }
+
       var list = new List<Row>(rows.Values);
       list.Sort(static (a, b) =>
       {
