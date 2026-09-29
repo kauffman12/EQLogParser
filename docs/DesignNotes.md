@@ -4147,3 +4147,37 @@ exactly one timestamp in it — `A strengthening foodstuff` (one hit, then silen
 egg` nudged once before the raid moved on. Legacy prints the same shape (`A corrupted egg` at 18:52:46 is 0 seconds and
 36.5M damage in both lists). The defect was never a short row; it was **two rows sharing one beginning**, which claimed a
 second mob existed when one was still alive.
+
+## A fight's duration counts its seconds inclusively (2026-10)
+
+The fight list's duration column first shipped as `EndTime - BeginTime`, which is the span between two timestamps and
+not the number this product calls "how long it lasted". The convention lives in `TimeSegment.Total`:
+
+```csharp
+public double Total => EndTime - BeginTime + 1;   // EQLogParser.Utils/src/TimeRange.cs
+```
+
+That expression is not cosmetic — it is the **denominator of every DPS number on the damage board** (`TimeRange
+GetTotal()` → `TotalSeconds` → `Dps = Total / TotalSeconds`), and it is what `FightManager` writes into the legacy
+tooltip (`var ttl = fight.LastTime - fight.BeginTime + 1;` → `Time Alive: 46s`), which `MirrorSummaryFights` reproduces
+word for word for a derived row. Subtract instead of count and the grid argues with the surface one click away from it,
+worst on the rows that are already hard to read: `A corrupted egg` at 18:52:46 took 36,588,567 damage with both bounds
+inside one second, so an exclusive column printed `00:00` above a summary saying "Time Alive: 1s" and dividing by one
+second. A zero-length duration is not a short fight — it is an infinity-shaped hole in any rate built on it.
+
+**The rule:** `DerivedFight.DurationSeconds` = `Math.Max(1, LastTime - BeginTime + 1)`, or `0` when the row has no
+bounds at all (`BeginTime`/`LastTime` start at ±infinity and `TimeSpan.FromSeconds` refuses a NaN). The `+1` lives on
+the row, not in the formatter, so any other surface that needs "how long" takes the same arithmetic;
+`MirrorFightRows` only formats it. Waxwork Abolishion's first life (18:34:08 .. 18:34:53) reads `00:46`, the same 46 the
+legacy tooltip says for that row.
+
+Two things this does **not** touch. The grid's `Inactivity > mm:ss` divider is a gap *between* rows, nobody fought in
+it, and stays an exclusive difference. And `MirrorSummaryFights`' tooltip keeps its own copy of FightManager's
+expression rather than calling `DurationSeconds`: it is reproducing the text of a legacy `Fight`, whose bounds can be
+clipped to the requested window (`summary.BeginTime < fromT`), so the two numbers are not always the same number.
+
+Pinned by `DerivedFightTest` — `AFightInsideASingleSecondLivedOneSecond`,
+`SecondsAreCountedInclusivelyLikeTheBoardCountsThem` (asserts the row's seconds equal
+`new TimeSegment(begin, end).Total`, so the two conventions cannot drift apart quietly),
+`TheDurationCellPrintsTheTooltipsNumber` (the same format expression the grid uses, asserted where it runs on Linux) and
+`ARowWithoutBoundsSaysNothing`; `MirrorFightRowsTest` in the Windows assembly covers the row end to end.

@@ -207,6 +207,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **237→289** (visible **215→267**) vs legacy **262**; reasoning and fixtures: docs/DesignNotes.md → "One row per life"; pinned by
   `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
   `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne` and (Windows) `MirrorFightRowsTest`.
+- **A fight's duration counts seconds inclusively**: `DerivedFight.DurationSeconds` is `Math.Max(1, LastTime - BeginTime + 1)` because
+  that +1 is what the product already calls a duration — `TimeSegment.Total` (`end - begin + 1`) is the DPS denominator of every board number, and
+  `FightManager`'s tooltip (`Time Alive: Ns`) uses it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its
+  own summary said "Time Alive: 1s" and divided by it. Keep the arithmetic on the row, not in the formatter. Two exemptions: the
+  `Inactivity > mm:ss` divider is a gap nobody fought in (stays exclusive), and `MirrorSummaryFights`'s tooltip keeps FightManager's own expression
+  because that summary's bounds can be window-clipped. Pinned by `DerivedFightTest`, which cross-checks the row against `TimeSegment.Total` so the two
+  cannot drift apart quietly.
 - **A death closes only a row that was alive when it happened**: the slain queue is keyed by NAME while one name carries many mobs
   (`A corrupted egg` is slain at 18:52:40/:45/:46/:52/:56/:56 on one capture), so a queued death can predate the row created after it.
   Applying it anyway killed that newborn row at its own first second — the grid listed the same name twice with the same begin, one row
