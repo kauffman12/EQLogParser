@@ -756,7 +756,11 @@ namespace EQLogParser
       if (!AppSettings.IsCombatMirrorEnabled)
       {
         // The tap only sees lines from the moment it subscribes - stop cleanly rather than
-        // keep a half-log session; the next log open starts fresh.
+        // keep a half-log session; the next log open starts fresh. The overlay fights subscription is re-homed for
+        // whichever engine is on now (its mirror source is static, and legacy auto-open would otherwise stay dead
+        // until the next log open or power cycle).
+        UnsubscribeOverlayFights();
+        SubscribeOverlayFights();
         _mirrorSession?.Dispose();
         _mirrorSession = null;
       }
@@ -772,6 +776,12 @@ namespace EQLogParser
         _mirrorSession = new MirrorSession();
         _mirrorSession.Start();
         Log.Info($"combat mirror: session attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
+
+        // The auto-open announcement lives on a static event; this process may have subscribed for the OTHER engine
+        // (or not at all, if no log had finished loading before the tap). Re-home it for whichever is on now - the
+        // pair rather than a flag, so no bookkeeping can drift from the subscription itself.
+        UnsubscribeOverlayFights();
+        SubscribeOverlayFights();
       }
 
       DockingManager.SetState(mirrorFightWindow, AppSettings.IsCombatMirrorEnabled ? DockState.Dock : DockState.Hidden);

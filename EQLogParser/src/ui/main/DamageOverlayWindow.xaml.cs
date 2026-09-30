@@ -33,9 +33,10 @@ namespace EQLogParser
     private int _savedDamageMode;
 
     /*
-     * Opt-in mirror-fed meter (settings.txt: `OverlayDamageFromMirror`, read through MirrorMeter). Off by default, so
-     * nothing changes unless it is asked for; the legacy tally below stays the shipped path until this has been watched on
-     * live pulls.
+     * Which engine this window paints comes from ONE dial (`EnableCombatMirror`, read live through MirrorMeter), the same
+     * word the fight list docks on - so a mid-run toggle of that icon moves the list and this window together, and an open
+     * overlay can never sit on the other engine. Off by default: the legacy tally below stays the shipped path until the
+     * derived one has been watched on live pulls, and when the legacy path goes the dial itself goes with it.
      *
      * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
      * (MirrorStats), instead of the overlay's own running totals. The meter's policy stays here, because it always was
@@ -43,7 +44,6 @@ namespace EQLogParser
      * otherwise N seconds), and the window starting at the reset. That is why the mirror holds no "current fight": the
      * seconds a board covers is this component's business.
      */
-    private readonly bool _mirrorMeter = MirrorMeter.Enabled;
     private bool _mirrorMeterWarned;
     private int _mirrorFailures;
 
@@ -221,7 +221,7 @@ namespace EQLogParser
          * fire (up to a few seconds, longer if a bulk load is still running and quiescence has not arrived). One extra
          * pass on an open click is nothing; an empty board that looks broken is not nothing.
          */
-        if (_mirrorMeter)
+        if (MirrorMeter.Enabled)
         {
           MirrorSession.Active?.RederiveAsync();
 
@@ -406,14 +406,14 @@ namespace EQLogParser
       var session = MirrorSession.Active;
       if (session is null)
       {
-        // Loud, not legacy. `OverlayDamageFromMirror` means "the derived numbers, or nothing": an empty board plus one
-        // line saying why. Falling back to the old tally would put two engines' numbers on one screen with no hint of
-        // which one is being read, and the moment the legacy path goes away that fallback becomes a silent blank.
+        // Loud, not legacy. The dial means "the derived numbers, or nothing": an empty board plus one line saying why.
+        // Falling back to the old tally would put two engines' numbers on one screen with no hint of which one is being
+        // read, and the moment the legacy path goes away that fallback becomes a silent blank.
         if (!_mirrorMeterWarned)
         {
           _mirrorMeterWarned = true;
-          Log.Warn("Damage meter: OverlayDamageFromMirror is set but no capture is being mirrored, so the board stays "
-                   + "empty until a log is opened (remove the setting to use the legacy tally).");
+          Log.Warn("Damage meter: EnableCombatMirror is set but no capture is being mirrored, so the board stays "
+                   + "empty until a log is opened (clear the setting to use the legacy tally).");
         }
 
         return null;
@@ -494,7 +494,7 @@ namespace EQLogParser
           lock (StatsLock)
           {
             damageOverlayStats = _stats;
-            var update = _mirrorMeter ? BuildMirrorUpdate() : _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
+            var update = MirrorMeter.Enabled ? BuildMirrorUpdate() : _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
 
             if (update == null)
             {
@@ -612,7 +612,7 @@ namespace EQLogParser
          * window hidden between pulls closes instead of waiting out the log, and comes back on the next pull through
          * MirrorSession.NewFightObserved rather than lingering invisibly until the app restarts.
          */
-        var stillSomethingToShow = _mirrorMeter ? MirrorMeter.HasLiveFight(_currentDamageMode)
+        var stillSomethingToShow = MirrorMeter.Enabled ? MirrorMeter.HasLiveFight(_currentDamageMode)
                                                 : FightManager.Instance.HasOverlayFights();
         if (!stillSomethingToShow)
         {
@@ -1071,7 +1071,7 @@ namespace EQLogParser
          * window's start to the next tick. Touching legacy state on the derived path would be harmless and misleading — and
          * the day the legacy builder goes, "harmless" becomes a NullReference in the reset button.
          */
-        if (_mirrorMeter)
+        if (MirrorMeter.Enabled)
         {
           _mirrorWindowT = -1;
         }

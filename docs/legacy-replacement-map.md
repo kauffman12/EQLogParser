@@ -24,7 +24,7 @@ each one needs, and the order deletions become safe.
 |---|---|---|
 `HealingSummary`, `TankSummary`/`TankingSummary`, `DamageSummary`, `DamageChart`, `HealingChart`, `TankChart`, `ColumnChart` | **only** `FightManager.Instance.EventsClearedActiveData` — a "new log, blank your grid" signal; their data comes from the builders | one mirror event: `MirrorSession.CaptureCleared`. Six files, one line each. Cheapest win on the board and it removes the shared coupling that makes the other rows look bigger than they are |
 `EventViewer` | `FightManager.Instance.IsLifetimeNpc(name)` | ask the timeline (`EntityTimeline` kind + reason), same question `NamesTable` shows |
-|`DamageOverlayWindow` + `MainWindow` | `HasOverlayFights`, `ResetOverlayFights`, `EventsNewOverlayFight` — **ported behind `OverlayDamageFromMirror`**: the three questions now go through `MirrorMeter` (`LiveFights` answers "is a fight going on", `MirrorSession.LiveDamageObserved` replaces the new-fight event at derive rate rather than per line, and the board's start second is static so an X-then-back meter continues inside the dial instead of starting over) | what still keeps `FightManager` alive on this path is the legacy meter's own tally (`DamageOverlayStatsBuilder`), i.e. flipping the default and deleting that builder — not the show/reset/auto-open wiring any more |
+|`DamageOverlayWindow` + `MainWindow` | `HasOverlayFights`, `ResetOverlayFights`, `EventsNewOverlayFight` — **ported behind one dial** (`EnableCombatMirror`, which replaced `OverlayDamageFromMirror` in the burn-in consolidation; both surfaces flip together, read live): the three questions now go through `MirrorMeter` (`LiveFights` answers "is a fight going on", `MirrorSession.LiveDamageObserved` replaces the new-fight event at derive rate rather than per line, and the board's start second is static so an X-then-back meter continues inside the dial instead of starting over) | what still keeps `FightManager` alive on this path is the legacy meter's own tally (`DamageOverlayStatsBuilder`), i.e. flipping the default and deleting that builder — not the show/reset/auto-open wiring any more |
 |line viewers (`NpcStatsViewer`, `Timeline`, damage/heal/tank tables, `HitLogViewer`) | whatever they read off `RecordsStore`/`FightManager` today | the fact tables hold rows for these (damage, healing, outcomes, identity) but none of the per-name lifetimes; needs readers, not a rule — **the main real work left** |
 |`FightTable.xaml.cs` | `Clear`, `EventsClearedActiveData`, `EventsNewFight`, `EventsNewNonTankingFight` | delete with `mirrorFightWindow` as the only list; keep legacy docked behind the setting until the overlay moves, because today the overlay and this table are the same story told twice |
 |parse-time accumulation (`StatsUtil.UpdateDamageStats/UpdateHealStats`, `RecordsStore`) | feeds `BattleRow`/per-line stats the boards no longer need once all consumers are mirror-side | stop calling it once no consumer reads those rows; keep `HitRecord` construction (the fact tables and the line viewers need it) |
@@ -37,7 +37,7 @@ each one needs, and the order deletions become safe.
 3. **Live/current fight in the mirror** — done for the meter: `LiveFights` answers it over rows on the capture's own clock,
    `MirrorSession.NewFightObserved` announces it once per pull, and the overlay's open/hide/reset path asks `MirrorMeter`
    instead of `FightManager` (see docs/DesignNotes.md → "A fight that is still going: porting the meter's show/reset rule").
-   Still to move here: flip `OverlayDamageFromMirror` to the default and delete `DamageOverlayStatsBuilder`, then point
+   Still to move here: flip `EnableCombatMirror` to the default and delete `DamageOverlayStatsBuilder`, then point
    `FightTable`'s new-fight events at the same announcement (or delete the table, next step).
 4. **Delete `FightTable`** and the legacy list dock (setting goes away; `MirrorFightWindow` becomes the fight list).
 5. **Turn off parse-time stat accumulation**, then `BattleRow`, then `FightManager`'s display bookkeeping. Keep
@@ -83,7 +83,7 @@ fight list beside the legacy table. Then load a log and let it finish ("capturin
 6. **Names window** (View -> Names): every name in the capture, what it was called (Player/Npc/Pet/Merc/Unknown) and which
    rule said so; operator edits in players.txt/npcs.txt/petmapping.txt take effect on the next derive and show their
    provenance instead of the rule's.
-7. **Derived damage meter** (opt-in): add `OverlayDamageFromMirror` to settings.txt and restart. Same overlay, same
+7. **Derived damage meter** (one dial since the burn-in consolidation): `EnableCombatMirror=True` covers BOTH the list and the meter — the retired `OverlayDamageFromMirror` word is ignored, so a settings.txt carrying it needs its line deleted or renamed. Same overlay, same
    settings (`OverlayDamageMode` still decides when a quiet board zeroes: 0 = on kill, else N seconds), but its numbers
    come from the mirrored facts inside `[reset, now]` instead of the overlay's own running totals. What to look for:
    the same fight measured by both paths should agree; if it does not, that is a bug, because both halves are built by

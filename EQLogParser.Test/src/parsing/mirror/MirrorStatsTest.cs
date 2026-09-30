@@ -316,7 +316,7 @@ public class MirrorStatsTest
 
   /*
    * The meter and the list are the same question, so they must print the same digits. This is the assertion behind the
-   * opt-in damage overlay (OverlayDamageFromMirror): the overlay gets DamageOverlayStats, a click gets an event, and if
+   * opt-in damage overlay (one dial: EnableCombatMirror): the overlay gets DamageOverlayStats, a click gets an event, and if
    * either shape were built from a different population — hidden pet rows in one and not the other, healing included
    * on one side — this is where it shows. Measured values below are asserted twice: once against the list's number,
    * once written out, so that a change to the calculation cannot move both sides of the comparison together.

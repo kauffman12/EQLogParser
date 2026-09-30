@@ -4501,6 +4501,21 @@ Re-measure with `EQLP_MIRROR_LIVE=local/<log>.txt dotnet test --filter LiveFight
 What is left on this path is not the wiring but the default: flip `OverlayDamageFromMirror` on and delete
 `DamageOverlayStatsBuilder`, which is the legacy tally this bypasses.
 
+### One dial for both surfaces (2026-10, burn-in)
+
+`OverlayDamageFromMirror` is retired. The list's `EnableCombatMirror` is now the ONLY dial: `MirrorMeter.Enabled`
+reads `AppSettings.IsCombatMirrorEnabled` live (no static capture), and the overlay window reads it live at every
+decision site instead of capturing one at construction. The motivation was the exact failure mode this file keeps
+flagging: two words let a meter paint derived numbers while its open/close/reset rules still answered to legacy
+state, and a mid-run toggle of the list icon left an open overlay on the other engine until restart — the same
+half-ported surface that looks finished. One flip now moves the list AND the meter together, and the MainWindow
+toggle re-homes `SubscribeOverlayFights()` for whichever engine is on (a legacy-mode app no longer sits dead to the
+auto-open announcement until the next log open).
+
+The word is scaffolding for the side-by-side burn-in only: when the legacy engine is deleted it goes with it, and
+the fight window simply docks and toggles like the old one — no settings entry. Nothing on the OFF branch may do
+anything beyond "legacy runs exactly as before", or the deletion commit grows a behaviour migration inside it.
+
 ### The X closes a meter; it does not reset one (2026-09-29)
 
 Reported from use: the reset button behaves, but "the X is just supposed to close the window and it would open back up next time damage comes in
