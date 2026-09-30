@@ -51,6 +51,25 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual("00:01", Row(0, 0).Duration, "and never 00:00: the summary one click away divides by this many seconds");
     }
 
+    /*
+     * The tooltip is where this list's duration and hits live now - the grid shows only legacy's three columns,
+     * and the numbers they used to be columns ride the row tooltip in legacy's exact sentence (FightManager):
+     * "#Hits To Players: t, #Hits From Players: f, Time Alive: Ns". The counts are 0 here because this fixture's
+     * index holds no ordinals; what is pinned is the SHAPE and that Time Alive counts inclusively like legacy.
+     * The end status rides on the end when there is one, since the Status column is gone too.
+     */
+    [TestMethod]
+    public void ATooltipSaysWhatLegacySays()
+    {
+      Assert.AreEqual("#Hits To Players: 0, #Hits From Players: 0, Time Alive: 46s", Row(0, 45).TooltipText,
+        "the same 46 legacy's tooltip shows for Waxwork Abolishion's first life");
+      Assert.AreEqual("#Hits To Players: 0, #Hits From Players: 0, Time Alive: 1s, dead",
+        Row(0, 0, DerivedFightEnd.Slain).TooltipText);
+      Assert.AreEqual("#Hits To Players: 0, #Hits From Players: 0, Time Alive: 1s, dead, charmed",
+        Row(0, 0, DerivedFightEnd.Charmed).TooltipText);
+      Assert.IsFalse(Row(0, 0).TooltipText.EndsWith(","), "a fight that merely stopped says nothing extra");
+    }
+
     [TestMethod]
     public void DurationsDoNotCollapseIntoTheSameWord()
     {

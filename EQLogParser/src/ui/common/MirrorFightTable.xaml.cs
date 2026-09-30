@@ -10,11 +10,14 @@ using EQLogParser.Mirror;
 
 namespace EQLogParser
 {
-  // The derived-fight-list twin of FightTable: same grid, different data source (CombatMirror →
-  // ClassificationRules → FightDeriver → Sectionizer). Selection is the one interactive seam today:
-  // it feeds the damage summary from derived facts (see DerivedSelectionChanged), and it is where R10 lives:
-  // right-click a row and say what that name actually is (Set as Player / Mercenary / Pet / NPC), which saves
-  // per server and re-derives. Cross-grid selection sync with the legacy list is still ahead of it.
+  /*
+   * The derived-fight-list twin of FightTable: same grid, the same three columns in the legacy order (Initial Hit
+   * Time | HP | Name, with duration and hits on the row tooltip like legacy's), the same search/HP/Inactivity header -
+   * different data source (CombatMirror → ClassificationRules → FightDeriver → Sectionizer). Selection feeds the
+   * damage summary from derived facts (see DerivedSelectionChanged), and the right-click menu is where R10 lives:
+   * say what a name actually is (Set as Player / Mercenary / Pet / NPC), which saves per server and re-derives.
+   * Cross-grid selection sync with the legacy list is still ahead of it.
+   */
   public partial class MirrorFightTable
   {
     /*
@@ -58,6 +61,7 @@ namespace EQLogParser
 
     private MirrorSession _session;
     private bool _currentShowBreaks;
+    private bool _currentShowHp;
 
     // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
     private bool _searchPlaceholder;
@@ -73,6 +77,15 @@ namespace EQLogParser
 
       mirrorGrid.ItemsSource = _rows;
       mirrorShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
+
+      // HP is the legacy table's own knob reading its own saved setting: the two grids sit side by side to be
+      // compared, so one checkbox's meaning should not fork between them.
+      mirrorShowHp.IsChecked = _currentShowHp = ConfigUtil.IfSet("NpcShowHitPoints");
+      mirrorDamageColumn.IsHidden = !_currentShowHp;
+
+      // The time column takes the theme's date-time width like every other table that stamps a line, rather
+      // than a hand-picked number that stops fitting when the font scale changes.
+      mirrorBeginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
       ApplyFilter();
 
       _selectionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(SelectionSettleMs) };
@@ -277,6 +290,18 @@ namespace EQLogParser
       }
     }
 
+    // Show or hide the rounded-total column, like the legacy table's handler - except this one addresses its
+    // column by name: legacy reaches for dataGrid.Columns[1], which breaks the moment anyone reorders the XAML.
+    private void ShowHpChanged(object sender, RoutedEventArgs e)
+    {
+      if (mirrorShowHp.IsChecked.HasValue && mirrorShowHp.IsChecked != _currentShowHp)
+      {
+        _currentShowHp = mirrorShowHp.IsChecked == true;
+        ConfigUtil.SetSetting("NpcShowHitPoints", _currentShowHp);
+        mirrorDamageColumn.IsHidden = !_currentShowHp;
+      }
+    }
+
   /*
      * R10 - the operator's verdict on a name, entered here and kept by MirrorOverrideStore.
      *
@@ -363,9 +388,11 @@ namespace EQLogParser
     private bool NameMatches(MirrorFightRow row)
     {
       if (_searchPlaceholder) return true;
+      var text = mirrorSearchBox.Text;
+      // An empty box while focused means "no filter": blanking the whole list mid-edit would read as a crash.
+      if (text.Length == 0) return true;
       // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
-      return mirrorSearchBox.Text.Length > 0 &&
-             row.Name.Contains(mirrorSearchBox.Text, StringComparison.OrdinalIgnoreCase);
+      return row.Name.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     private void SearchBoxGotFocus(object sender, RoutedEventArgs e)

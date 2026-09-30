@@ -4,13 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:EQLogParser"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              xmlns:sfgrid="clr-namespace:Syncfusion.UI.Xaml.Grid;assembly=Syncfusion.SfGrid.WPF"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
   <Grid>
     <Grid.Resources>
-      <!-- Divider rows read as background text, not data (D5 inactivity separators). -->
+      <local:TotalFormatConverter x:Key="TotalFormatConverter"/>
       <!-- Same visual row numbering as the current Fight Table (its GridRowHeaderCell template):
            the number is the row's live position, so divider rows count like any row and hidden
            dividers renumber the list - identical semantics means the two grids line up. -->
@@ -40,18 +41,17 @@
       <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
+    <!-- Header order like the legacy table: search first, then the display checkboxes. Re-derive is this
+         window's own command and sits after them; it re-runs classification over every captured fact. -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Button x:Name="mirrorRederiveButton" Margin="4,2,0,2" Content="Re-derive" Padding="8,1" Click="RederiveClick"
-              ToolTip="Re-run classification and derivation over all captured facts"/>
-      <CheckBox x:Name="mirrorShowBreaks" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
-                IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
-      <!-- Live name filter (case-insensitive), like the search box on the other tables. A filter rather than
-           legacy's find-next cycling: with thousands of rows the useful answer is "show me only this name",
-           and divider rows drop out on their own because a gap never matches a name. -->
-      <TextBox x:Name="mirrorSearchBox" Margin="14,3,0,3" Width="150" VerticalAlignment="Center"
-               GotFocus="SearchBoxGotFocus" LostFocus="SearchBoxLostFocus" KeyDown="SearchBoxKeyDown"
-               TextChanged="SearchBoxTextChanged"
+      <TextBox x:Name="mirrorSearchBox" Margin="4,2,0,2" Width="130" GotFocus="SearchBoxGotFocus" LostFocus="SearchBoxLostFocus" KeyDown="SearchBoxKeyDown" TextChanged="SearchBoxTextChanged"
                ToolTip="Filter the list by fight name (case-insensitive)"/>
+      <CheckBox x:Name="mirrorShowHp" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowHpChanged" Unchecked="ShowHpChanged"
+                IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>
+      <CheckBox x:Name="mirrorShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
+                IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
+      <Button x:Name="mirrorRederiveButton" Margin="14,2,0,2" Content="Re-derive" Padding="8,1" Click="RederiveClick"
+              ToolTip="Re-run classification and derivation over all captured facts"/>
     </StackPanel>
     <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Mirror: no log" />
     <syncfusion:SfDataGrid x:Name="mirrorGrid"
@@ -73,16 +73,22 @@
                            SelectionMode="Extended"
                            ShowRowHeader="True"
                            SourceType="{x:Type local:MirrorFightRow}">
+      <!--
+        The same three columns the legacy table shows, in the legacy order (its Fight model keeps "SortId,
+        DamageTotal, Name in this order for display"). Duration and hits are not columns there and are not
+        columns here: they ride the row tooltip, formatted like legacy's ("Time Alive: Ns"). Identity and rule
+        source stay on the row object but off the grid — nearly every row is an NPC, and the columns made the
+        list read like a debug view. HP is the rounded damage total, exactly as the legacy header names it.
+      -->
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Fight" ColumnSizer="Star" />
-        <syncfusion:GridTextColumn MappingName="Identity" HeaderText="Identity" Width="70" />
-        <syncfusion:GridTextColumn MappingName="Source" HeaderText="Rule" Width="110" />
-        <syncfusion:GridTextColumn MappingName="Begin" HeaderText="Begin" Width="145" />
-        <syncfusion:GridTextColumn MappingName="Last" HeaderText="Last" Width="145" />
-        <syncfusion:GridTextColumn MappingName="Duration" HeaderText="Dur" Width="85" />
-        <syncfusion:GridNumericColumn MappingName="Damage" HeaderText="Damage" NumberDecimalDigits="0" Width="95" />
-        <syncfusion:GridNumericColumn MappingName="Hits" HeaderText="Hits" NumberDecimalDigits="0" Width="65" />
-        <syncfusion:GridTextColumn MappingName="Status" HeaderText=" " Width="50" />
+        <syncfusion:GridTextColumn x:Name="mirrorBeginColumn" MappingName="Begin" HeaderText="Initial Hit Time"
+                                   TextAlignment="Center" ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}"/>
+        <syncfusion:GridTextColumn x:Name="mirrorDamageColumn" MappingName="Damage" HeaderText="HP" ColumnSizer="Auto"
+                                   TextAlignment="Right" Padding="4,0,4,0" ShowToolTip="True"
+                                   ToolTipTemplate="{StaticResource TemplateToolTip}"
+                                   DisplayBinding="{Binding Path=Damage, Converter={StaticResource TotalFormatConverter}}"/>
+        <syncfusion:GridTextColumn MappingName="Name" HeaderText="Name" ColumnSizer="AutoLastColumnFill" Padding="4,0,0,0"
+                                   ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}"/>
       </syncfusion:SfDataGrid.Columns>
       <!--
         R10 (docs/combat-mirror-design.md): the rules are inference, and a name whose evidence never crosses a
@@ -91,35 +97,76 @@
       -->
       <syncfusion:SfDataGrid.ContextMenu>
         <!--
-          Selection items ported from the legacy list. Copy is the shared grid command (the GridCopyOption above
-          decides what it writes). Two legacy items are deliberately absent: Clear All wipes the legacy fight
-          store, and the derived list has no store - it is a projection of the facts, so there is nothing to wipe;
-          Refresh is the Re-derive button in the header, since a selection already rebuilds the board on its own.
+          Icons and gestures ported from the legacy list's menu. Two legacy items are deliberately absent:
+          Clear All wipes the legacy fight store, and the derived list has no store - it is a projection of
+          the facts, so there is nothing to wipe; Refresh is the Re-derive button in the header, since a
+          selection already rebuilds the board on its own.
         -->
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy"
                     Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}"
-                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}"/>
-          <MenuItem x:Name="selectAllItem" Header="Select All" Click="SelectAllClick"/>
-          <MenuItem x:Name="unselectAllItem" Header="Unselect All" Click="UnselectAllClick"/>
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Copy" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator/>
+          <MenuItem x:Name="selectAllItem" InputGestureText="Ctrl+A" Header="Select All" Click="SelectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem x:Name="unselectAllItem" Header="Unselect All" Click="UnselectAllClick">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
+            </MenuItem.Icon>
+          </MenuItem>
           <!-- Group = the right-clicked row's SECTION: every fight between its surrounding inactivity rows -
                legacy's group semantics, read off this display list (see SelectGroup for why not fight.GroupId). -->
           <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
-                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows"/>
+                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Clone" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="unselectGroupItem" Header="Unselect Group" Click="UnselectGroupClick"
-                    ToolTip="Remove every fight in the same section as the right-clicked row"/>
+                    ToolTip="Remove every fight in the same section as the right-clicked row">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Clone" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator/>
           <MenuItem x:Name="overridePlayerItem" Header="Set as Player" Click="OverridePlayerClick"
-                    ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)"/>
+                    ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="overrideMercItem" Header="Set as Mercenary" Click="OverrideMercClick"
-                    ToolTip="Raid-side mercenary; stays its own entry on the board unless it is a pet of somebody"/>
+                    ToolTip="Raid-side mercenary; stays its own entry on the board unless it is a pet of somebody">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ShieldAlt" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="overridePetItem" Header="Set as Pet" Click="OverridePetClick"
-                    ToolTip="Raid-side summon: off the fight list, its damage counted with the raid's"/>
+                    ToolTip="Raid-side summon: off the fight list, its damage counted with the raid's">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
+            </MenuItem.Icon>
+          </MenuItem>
           <MenuItem x:Name="overrideNpcItem" Header="Set as NPC" Click="OverrideNpcClick"
-                    ToolTip="Hostile: this name gets its own fight row again"/>
+                    ToolTip="Hostile: this name gets its own fight row again">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Skull" />
+            </MenuItem.Icon>
+          </MenuItem>
           <Separator/>
           <MenuItem x:Name="overrideClearItem" Header="Clear Override" Click="OverrideClearClick"
-                    ToolTip="Forget what was saved and let the rules answer for this name"/>
+                    ToolTip="Forget what was saved and let the rules answer for this name">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
+            </MenuItem.Icon>
+          </MenuItem>
         </ContextMenu>
       </syncfusion:SfDataGrid.ContextMenu>
     </syncfusion:SfDataGrid>

@@ -25,6 +25,17 @@ namespace EQLogParser
     public long Hits { get; init; }
     public string Status { get; init; } = string.Empty;
 
+    /*
+     * The row tooltip the grid's TemplateToolTip binds, in legacy's exact shape (FightManager):
+     *   "#Hits To Players: t, #Hits From Players: f, Time Alive: Ns"
+     * Duration and hits left the columns with this table's slim-down to the legacy three, so they live here.
+     * The hits-to-players number is not DerivedFight.TankHits - FightProjection never stamps that field - it
+     * is the count of facts aimed AT the name, which is what FightManager counted unconditionally (outcomes
+     * included), and the damage index already keeps those ordinals for the tank board. The end status rides
+     * on the end when there is one, since no column shows it any more either.
+     */
+    public string TooltipText { get; init; } = string.Empty;
+
     // The row's data, for the one thing the grid has to be able to DO right now: hand a selection to a
     // stats run. Formatted strings are what the grid shows; this is what a selection means.
     internal DerivedFight Fight { get; init; }
@@ -94,6 +105,11 @@ namespace EQLogParser
 
         snapshot.FightCount++;
         var identity = timeline.IdentityWithSource(fight.Name, out var source);
+        var status = StatusOf(fight);
+        var tooltip = $"#Hits To Players: {damageIndex.TankingOrdinalsFor(fight).Count}, "
+                    + $"#Hits From Players: {fight.DamageHits}, Time Alive: {(long)fight.DurationSeconds}s";
+        if (status.Length > 0)
+          tooltip += $", {status}";
         snapshot.Rows.Add(new MirrorFightRow
         {
           Name = fight.Name,
@@ -117,7 +133,8 @@ namespace EQLogParser
                                          DateUtil.TimeFormat.HMSCompact),
           Damage = fight.DamageTotal,
           Hits = fight.DamageHits,
-          Status = StatusOf(fight),
+          Status = status,
+          TooltipText = tooltip,
           Fight = fight,
         });
       }
