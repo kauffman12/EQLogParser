@@ -33,6 +33,10 @@
           <DataTrigger Binding="{Binding IsDivider}" Value="True">
             <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
           </DataTrigger>
+          <!-- The search highlight, legacy's own brush and binding name (Fight.IsSearchResult on the old grid). -->
+          <DataTrigger Binding="{Binding IsSearchResult}" Value="True">
+            <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
+          </DataTrigger>
         </Style.Triggers>
         <Setter Property="RowHoverForeground" Value="{DynamicResource ContentForeground}"/>
       </Style>
@@ -44,8 +48,10 @@
     <!-- Header order like the legacy table: search first, then the display checkboxes. Re-derive is this
          window's own command and sits after them; it re-runs classification over every captured fact. -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <!-- Find-next, not a filter: typing highlights and scrolls to the matching row so the user can fight
+           that event and select its group - hiding rows here would hide the very fights around it. -->
       <TextBox x:Name="mirrorSearchBox" Margin="4,2,0,2" Width="130" GotFocus="SearchBoxGotFocus" LostFocus="SearchBoxLostFocus" KeyDown="SearchBoxKeyDown" TextChanged="SearchBoxTextChanged"
-               ToolTip="Filter the list by fight name (case-insensitive)"/>
+               ToolTip="Find a fight by name (case-insensitive). Enter / Shift+Enter cycles, Esc clears the highlight"/>
       <CheckBox x:Name="mirrorShowHp" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowHpChanged" Unchecked="ShowHpChanged"
                 IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>
       <CheckBox x:Name="mirrorShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"

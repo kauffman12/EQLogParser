@@ -287,6 +287,46 @@ namespace EQLogParser.Mirror
          */
         if (double.IsNaN(beginDamage) || time < beginDamage) beginDamage = time;
         if (double.IsNaN(lastDamage) || time > lastDamage) lastDamage = time;
+
+        /*
+         * The per-spell boards read these dictionaries off the same Fight (SpellDamageStatsViewer): fill them with
+         * FightManager's own live-parse shape - same key, same switch, same Count/Max/Total arithmetic. The kind
+         * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
+         * re-map, and a miss never reaches the switch because a miss is not any of these three words.
+         */
+        var spellKey = record.Attacker + "++" + record.SubType;
+        SpellDamageStats stats = null;
+        switch (record.Type)
+        {
+          case Labels.Dd:
+            if (!summary.DdDamage.TryGetValue(spellKey, out stats))
+            {
+              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+              summary.DdDamage[spellKey] = stats;
+            }
+            break;
+          case Labels.Dot:
+            if (!summary.DoTDamage.TryGetValue(spellKey, out stats))
+            {
+              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+              summary.DoTDamage[spellKey] = stats;
+            }
+            break;
+          case Labels.Proc:
+            if (!summary.ProcDamage.TryGetValue(spellKey, out stats))
+            {
+              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+              summary.ProcDamage[spellKey] = stats;
+            }
+            break;
+        }
+
+        if (stats != null)
+        {
+          stats.Count += 1;
+          stats.Max = Math.Max(record.Total, stats.Max);
+          stats.Total += record.Total;
+        }
       }
 
       summary.BeginDamageTime = beginDamage;
@@ -341,6 +381,39 @@ namespace EQLogParser.Mirror
       {
         summary.TooltipText = $"#Hits To Players: {summary.TankHits}, #Hits From Players: {summary.DamageHits}, "
                               + $"Time Alive: {(long)(summary.LastTime - summary.BeginTime + 1)}s";
+      }
+
+      /*
+       * The taunt board reads TauntBlocks off these same fights (TauntStatsViewer): legacy attached every taunt to
+       * GetFight(npc) ?? Create(npc, t), so a fact belongs to this row when it names the row and its second sits
+       * inside the row's window. Same one-second block rule as the damage and tank passes - the builder merges
+       * same-BeginTime blocks across fights, and a split run would double-count an instant. The outcome words come
+       * back off the fact's bits exactly as the parser split them; nothing is re-inferred.
+       */
+      ActionGroup tauntBlock = null;
+      var lastTauntBlockTime = double.NaN;
+      foreach (var taunt in facts.Taunts)
+      {
+        var time = (double)taunt.TimeS;
+
+        if (time < fromT || time > toT) continue;
+        // Names are interned case-insensitively, so this is the same comparison the identity tables make.
+        if (!string.Equals(facts.NameOf(taunt.NpcIdx), fight.Name, StringComparison.OrdinalIgnoreCase)) continue;
+
+        if (tauntBlock is null || !lastTauntBlockTime.Equals(time))
+        {
+          tauntBlock = new ActionGroup { BeginTime = time };
+          summary.TauntBlocks.Add(tauntBlock);
+          lastTauntBlockTime = time;
+        }
+
+        tauntBlock.Actions.Add(new TauntRecord
+        {
+          Player = taunt.AttackerIdx >= 0 ? facts.NameOf(taunt.AttackerIdx) : string.Empty,
+          Npc = fight.Name,
+          Success = (taunt.Flags & TauntFact.TauntSuccess) != 0,
+          IsImproved = (taunt.Flags & TauntFact.TauntImproved) != 0,
+        });
       }
 
       /*

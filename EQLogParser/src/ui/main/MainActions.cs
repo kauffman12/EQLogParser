@@ -64,6 +64,10 @@ namespace EQLogParser
     internal static void CopyToEqClick(string label) => _mainWindow?.CopyToEqClick(label);
     internal static void CloseDamageOverlay(bool reopen) => _mainWindow?.CloseDamageOverlay(reopen);
     internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
+
+    // The scoped variant the death viewer wants - see MainWindow.GetFightsOverlapping for the rule.
+    internal static List<Fight> GetFightsOverlapping(double fromT, double toT) =>
+      _mainWindow?.GetFightsOverlapping(fromT, toT) ?? [];
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);

@@ -231,10 +231,18 @@ namespace EQLogParser.Mirror
     {
       if (string.IsNullOrEmpty(e.Record.Npc)) return;
       MarkTs(e.BeginTime);
+
+      // The outcome words ride the fact as bits: the taunt board counts them and the deriver ignores them.
+      var flags = 0;
+      if (e.Record.Success) flags |= TauntFact.TauntSuccess;
+      if (e.Record.IsImproved) flags |= TauntFact.TauntImproved;
+
       lock (_gate) _facts.AddTaunt(new TauntFact(
         seq: ++_sequence,
         timeS: ToTimeS(e.BeginTime),
-        npcIdx: _facts.InternName(e.Record.Npc)));
+        npcIdx: _facts.InternName(e.Record.Npc),
+        attackerIdx: string.IsNullOrEmpty(e.Record.Player) ? (short)-1 : _facts.InternName(e.Record.Player),
+        flags: (byte)flags));
     }
 
     private void HandleIdentity(byte kind, string name)

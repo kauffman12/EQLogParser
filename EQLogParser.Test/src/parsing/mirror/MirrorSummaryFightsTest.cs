@@ -847,4 +847,79 @@ public class MirrorSummaryFightsTest
         Assert.AreSame(index.SummaryFightFor(echo, table), index.SummaryFightFor(echo, table),
             "a row clicked twice must not allocate its records twice");
     }
+
+    // ---- what the fight-range readers (spell/taunt boards) read off a materialized fight ----
+
+    [TestMethod]
+    public void AMaterializedFightCarriesItsSpellBoards()
+    {
+        var facts = BuildFacts(
+            ("Illuminai", "Echohead", 400, 0, LabelTypes.Dd),
+            ("Illuminai", "Echohead", 150, 3, LabelTypes.Dot));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var summary = index.SummaryFightFor(Row(rows, "Echohead"), table);
+
+        // The key shape is FightManager's live one: caster ++ subtype word. These facts carry no modifier text,
+        // so the subtype falls back to the kind word itself (SubTypeOf's documented floor).
+        var ddKey = "Illuminai++" + LabelTypes.LabelOf(LabelTypes.Dd);
+        var dotKey = "Illuminai++" + LabelTypes.LabelOf(LabelTypes.Dot);
+
+        Assert.IsTrue(summary.DdDamage.TryGetValue(ddKey, out var dd), "the direct-damage entry is under its own key");
+        Assert.AreEqual("Illuminai", dd.Caster);
+        Assert.AreEqual(1u, dd.Count);
+        Assert.AreEqual(400ul, dd.Total);
+        Assert.AreEqual(400u, dd.Max);
+
+        Assert.IsTrue(summary.DoTDamage.TryGetValue(dotKey, out var dot), "the dot entry is under its own key");
+        Assert.AreEqual(150ul, dot.Total);
+
+        // Counting is per kind: one Dd fact and one Dot fact never land in the other dictionary.
+        Assert.AreEqual(1, summary.DdDamage.Count);
+        Assert.AreEqual(1, summary.DoTDamage.Count);
+    }
+
+    [TestMethod]
+    public void TauntsLandOnTheirNpcRowWithTheOutcomeWords()
+    {
+        var facts = BuildFacts(("Illuminai", "Echohead", 500, 0, LabelTypes.Melee));
+
+        // Two taunts on this row - a plain success at second 2 and an improved one at second 9 - plus one aimed
+        // at a name that is not this row, which must stay out of it.
+        var npc = facts.InternName("Echohead");
+        var player = facts.InternName("Illuminai");
+        var other = facts.InternName("Waxwork");
+        facts.AddTaunt(new TauntFact(900, (long)(T0 + 2), npc, player, TauntFact.TauntSuccess));
+        facts.AddTaunt(new TauntFact(901, (long)(T0 + 9), npc, player, TauntFact.TauntImproved));
+        facts.AddTaunt(new TauntFact(902, (long)(T0 + 3), other, player, TauntFact.TauntSuccess));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
+
+        var (rows, index, table) = Derive(facts, timeline);
+        var echo = Row(rows, "Echohead");
+        var summary = index.SummaryFightFor(echo, table);
+
+        var taunts = summary.TauntBlocks.SelectMany(b => b.Actions).Cast<TauntRecord>().ToList();
+        Assert.AreEqual(2, taunts.Count, "the taunt aimed at another name belongs to that row, not this one");
+        Assert.AreEqual("Illuminai", taunts[0].Player);
+        Assert.AreEqual("Echohead", taunts[0].Npc);
+        Assert.IsTrue(taunts[0].Success);
+        Assert.IsFalse(taunts[0].IsImproved);
+        Assert.IsTrue(taunts[1].IsImproved, "the improved word rides the fact back to the board");
+
+        // One second, one block - the same grouping rule the damage and tank passes live by.
+        Assert.AreEqual(2, summary.TauntBlocks.Count);
+        Assert.AreEqual(T0 + 2, summary.TauntBlocks[0].BeginTime);
+        Assert.AreEqual(T0 + 9, summary.TauntBlocks[1].BeginTime);
+
+        // And a windowed materialization keeps only what is inside the window: the second-9 taunt is out.
+        var bounded = MirrorSummaryFights.Build([echo], index, table, T0, T0 + 5).Fights.Single();
+        Assert.AreEqual(1, bounded.TauntBlocks.SelectMany(b => b.Actions).Count(), "the windowed row keeps one taunt");
+    }
 }

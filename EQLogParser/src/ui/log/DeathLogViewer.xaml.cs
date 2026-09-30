@@ -50,7 +50,9 @@ namespace EQLogParser
       var death = _deaths[deathList.SelectedIndex];
       var end = death.BeginTime;
       var start = end - 20;
-      var allFights = MainActions.GetFights(false);
+      // Scoped, not the whole store: a death click is a keystroke-scale action, and asking for every fight in
+      // the capture (let alone materializing one per fact) is a full board's cost the 20-second window never used.
+      var allFights = MainActions.GetFightsOverlapping(start, end + 1);
       var allHeals = RecordsStore.Instance.GetHealsDuring(start, end + 1);
       var allSpells = RecordsStore.Instance.GetSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();

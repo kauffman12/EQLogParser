@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 using EQLogParser.Mirror;
 
@@ -24,6 +25,24 @@ namespace EQLogParser
     public long Damage { get; init; }
     public long Hits { get; init; }
     public string Status { get; init; } = string.Empty;
+
+    // The row search highlighted. The one live property on an otherwise value-object row - it changes after
+    // construction, which is why the grid's DataTrigger reaches it through PropertyChanged (legacy's own
+    // Fight.IsSearchResult works the same way).
+    private bool _isSearchResult;
+
+    public bool IsSearchResult
+    {
+      get => _isSearchResult;
+      set
+      {
+        if (_isSearchResult == value) return;
+        _isSearchResult = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSearchResult)));
+      }
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
 
     /*
      * The row tooltip the grid's TemplateToolTip binds, in legacy's exact shape (FightManager):

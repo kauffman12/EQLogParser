@@ -332,14 +332,48 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The app's fight-range provider: the spell/taunt/death/export paths read fights from here. While the mirror
+     * is attached to a log it answers (legacy-shaped rows materialized off its facts - see
+     * MirrorSession.MaterializeFights); the legacy table keeps answering until the deletion pass removes both it
+     * and this second branch. Both windows cannot own one export, so the ordering is the rule, not an accident:
+     * mirror first, legacy while the mirror is off.
+     */
     internal List<Fight> GetFights(bool selected = false)
     {
+      if (mirrorFightWindow?.Content is MirrorFightTable mirror && mirror.SessionActive)
+      {
+        return mirror.GetFights(selected);
+      }
+
       if (npcWindow?.Content is FightTable table)
       {
         return selected ? table.GetSelectedFights() : table.GetFights();
       }
 
       return [];
+    }
+
+    // The scoped variant for consumers that only need fights overlapping a span (the death viewer's 20-second
+    // window around a kill). From the mirror this materializes only the rows whose activity windows touch it;
+    // from the legacy store it is the cheap old list plus the same predicate the viewer always applied.
+    internal List<Fight> GetFightsOverlapping(double fromT, double toT)
+    {
+      if (mirrorFightWindow?.Content is MirrorFightTable mirror && mirror.SessionActive)
+      {
+        return mirror.GetFightsOverlapping(fromT, toT);
+      }
+
+      var all = npcWindow?.Content is FightTable table ? table.GetFights() : [];
+      var overlapping = new List<Fight>();
+      foreach (var fight in all)
+      {
+        if ((fight.BeginDamageTime <= toT && fight.LastDamageTime >= fromT) ||
+            (fight.BeginTankingTime <= toT && fight.LastTankingTime >= fromT))
+          overlapping.Add(fight);
+      }
+
+      return overlapping;
     }
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)

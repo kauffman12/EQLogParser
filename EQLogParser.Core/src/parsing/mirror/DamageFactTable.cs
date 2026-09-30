@@ -250,17 +250,28 @@ namespace EQLogParser.Mirror
 
   // One taunt line. The current pipeline runs GetFight(npc) ?? Create(npc, t) on every taunt —
   // a taunt can therefore open a fight that no damage line ever touches.
+  //
+  // The fact keeps the taunter and the outcome words, not just the npc: MirrorSummaryFights rebuilds
+  // fight.TauntBlocks from these for the taunt board, and Player / Success / IsImproved are exactly the
+  // three fields TauntStatsViewer counts. The deriver still needs only the npc and the second.
   internal readonly struct TauntFact
   {
-    public readonly int Seq;
-    public readonly long TimeS;   // dotnet-epoch seconds — see DeathFact.TimeS
-    public readonly short NpcIdx;
+    public const byte TauntSuccess = 1;
+    public const byte TauntImproved = 2;
 
-    public TauntFact(int seq, long timeS, short npcIdx)
+    public readonly int Seq;
+    public readonly long TimeS;       // dotnet-epoch seconds — see DeathFact.TimeS
+    public readonly short NpcIdx;
+    public readonly short AttackerIdx; // the taunter; -1 when the line carried no name for them
+    public readonly byte Flags;        // TauntSuccess, TauntImproved
+
+    public TauntFact(int seq, long timeS, short npcIdx, short attackerIdx = -1, byte flags = 0)
     {
       Seq = seq;
       TimeS = timeS;
       NpcIdx = npcIdx;
+      AttackerIdx = attackerIdx;
+      Flags = flags;
     }
   }
 

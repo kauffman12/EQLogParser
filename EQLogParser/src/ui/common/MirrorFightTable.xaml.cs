@@ -1,7 +1,9 @@
 using Syncfusion.UI.Xaml.Grid;
+using Syncfusion.UI.Xaml.ScrollAxis;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -88,6 +90,17 @@ namespace EQLogParser
       mirrorBeginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
       ApplyFilter();
 
+      // Legacy's search debounce, same interval: a name typed at fight speed arrives in a few hundred ms.
+      _searchTextTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
+      _searchTextTimer.Tick += (_, _) =>
+      {
+        _searchTextTimer.Stop();
+        if (mirrorSearchBox.Text.Length > 0)
+        {
+          SearchForNpc();
+        }
+      };
+
       _selectionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(SelectionSettleMs) };
       _selectionTimer.Tick += (_, _) =>
       {
@@ -126,6 +139,9 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        // The mark is a reference to an OLD row that the swap discards: drop it with the rows, or a cleared
+        // highlight would sit on nothing and the next search would skip its own bookkeeping.
+        ClearSearchMark();
         /*
          * What the user had selected, remembered by name + start time and put back on the new rows.
          *
@@ -251,6 +267,23 @@ namespace EQLogParser
       return selected;
     }
 
+    // Whether this window has a live session behind it: the answer to "does the mirror answer for this log at
+    // all", which is what MainWindow asks before choosing who owns GetFights while both windows can exist.
+    internal bool SessionActive => _session != null;
+
+    /*
+     * The fights behind this window in the legacy shape the older consumers read: MainWindow.GetFights feeds
+     * these to the spell/taunt/death/export paths. `selected` is the grid's own selection; false is every row
+     * the list shows, in list order - the same set a "select all" would pick up.
+     */
+    internal List<Fight> GetFights(bool selected)
+        => _session?.MaterializeFights(selected ? GetSelectedFights() : null) ?? [];
+
+    // The scoped variant the death viewer wants per death click - see MirrorSession.MaterializeFightsOverlapping
+    // for why materializing everything would be a full board's cost paid per keystroke.
+    internal List<Fight> GetFightsOverlapping(double fromT, double toT)
+        => _session?.MaterializeFightsOverlapping(fromT, toT) ?? [];
+
     private void AnnounceSelection()
     {
       var selected = GetSelectedFights();
@@ -374,7 +407,13 @@ namespace EQLogParser
       overrideClearItem.Header = saved > 0 ? $"Clear Override ({saved} saved)" : "Clear Override";
     }
 
-    // Same shape as FightTable: one always-on predicate, toggled by flag, refreshed via the view.
+    /*
+     * The inactivity checkbox is this grid's only filter: search deliberately does NOT hide rows. The point of a
+     * name here is to fight that raid event - the row needs to be HIGHLIGHTED and IN VIEW so the user can right-
+     * click it and select the whole group, not removed from the list they were reading. That is the legacy table's
+     * behavior, ported whole: one current result at a time, found on a debounce while typing, cycled with Enter /
+     * Shift+Enter (SearchForNpc).
+     */
     private void ApplyFilter()
     {
       if (mirrorGrid?.View == null) return;
@@ -382,18 +421,14 @@ namespace EQLogParser
       mirrorGrid.View.RefreshFilter();
     }
 
-    // The filter's own question, asked out loud so selection restore counts the same rows the grid shows.
-    private bool IsShown(MirrorFightRow row) => (_currentShowBreaks || !row.IsDivider) && NameMatches(row);
+    private bool IsShown(MirrorFightRow row) => _currentShowBreaks || !row.IsDivider;
 
-    private bool NameMatches(MirrorFightRow row)
-    {
-      if (_searchPlaceholder) return true;
-      var text = mirrorSearchBox.Text;
-      // An empty box while focused means "no filter": blanking the whole list mid-edit would read as a crash.
-      if (text.Length == 0) return true;
-      // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
-      return row.Name.Contains(text, StringComparison.OrdinalIgnoreCase);
-    }
+    // The search's own state, walking the VISIBLE view (not _rows) both directions from the last hit - the same
+    // fields and arithmetic FightTable.SearchForNpc uses; ported, not re-invented.
+    private readonly DispatcherTimer _searchTextTimer;
+    private MirrorFightRow _searchEntry;
+    private int _searchIndex;
+    private int _searchDirection = 1;
 
     private void SearchBoxGotFocus(object sender, RoutedEventArgs e)
     {
@@ -410,7 +445,6 @@ namespace EQLogParser
         _searchPlaceholder = true;
         mirrorSearchBox.Text = Resource.NPC_SEARCH_TEXT;
         mirrorSearchBox.FontStyle = FontStyles.Italic;
-        ApplyFilter();
       }
     }
 
@@ -418,19 +452,122 @@ namespace EQLogParser
 
     private void SearchBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-      if (e.Key == System.Windows.Input.Key.Escape)
+      if (e.Key == System.Windows.Input.Key.Enter)
       {
-        mirrorSearchBox.Text = string.Empty;
-        RestoreSearchPlaceholder();
-        e.Handled = true;
+        // Explicit next / previous, legacy's Shift-Enter for backwards: cycle the same way while typing does not.
+        SearchForNpc(e.KeyboardDevice.IsKeyDown(System.Windows.Input.Key.RightShift)
+                     || e.KeyboardDevice.IsKeyDown(System.Windows.Input.Key.LeftShift));
+      }
+      else if (e.Key == System.Windows.Input.Key.Escape)
+      {
+        // Legacy's escape: clear the box to its placeholder, drop the highlight, hand focus to the grid - the
+        // next keystroke is a selection. The box text goes with it; there is nothing to cycle back to.
+        _searchPlaceholder = true;
+        mirrorSearchBox.Text = Resource.NPC_SEARCH_TEXT;
+        mirrorSearchBox.FontStyle = FontStyles.Italic;
+        ClearSearchMark();
+        mirrorGrid.Focus();
       }
     }
 
     private void SearchBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-      // The placeholder swap moves the text without meaning anything; the focus handlers own that transition.
+      _searchTextTimer?.Stop();
+
+      // Legacy's debounce fires only when something was ADDED: backspacing alone must not re-search, but it does
+      // drop the stale highlight so an old mark never sits on a row the text no longer names.
       if (_searchPlaceholder) return;
-      ApplyFilter();
+      if (e.Changes.FirstOrDefault(change => change.AddedLength > 0) != null)
+      {
+        _searchTextTimer?.Start();
+      }
+      else
+      {
+        ClearSearchMark();
+      }
+    }
+
+    private void ClearSearchMark()
+    {
+      if (_searchEntry != null)
+      {
+        _searchEntry.IsSearchResult = false;
+        _searchEntry = null;
+      }
+    }
+
+    /*
+     * The port of FightTable.SearchForNpc: walk the visible records from the last hit, in the last direction,
+     * mark the one row that matches and scroll it into view. The index arithmetic (the += 2 / -= 2 on a
+     * direction change, the two-pass wrap) is the legacy's word for word - it has lived with thousands of rows.
+     */
+    private void SearchForNpc(bool backwards = false)
+    {
+      ClearSearchMark();
+
+      // Legacy walks View.Records - the materialized item list, not the view itself.
+      var records = mirrorGrid.View.Records;
+      if (mirrorSearchBox.Text.Length == 0 || records.Count == 0) return;
+
+      int checksNeeded;
+      var direction = 1;
+      if (backwards)
+      {
+        direction = -1;
+        if (_searchDirection != direction)
+        {
+          _searchIndex -= 2;
+        }
+
+        if (_searchIndex < 0)
+        {
+          _searchIndex = records.Count - 1;
+        }
+
+        // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
+        checksNeeded = _searchIndex == (records.Count - 1) ? 1 : 2;
+      }
+      else
+      {
+        direction = 1;
+        if (_searchDirection != direction)
+        {
+          _searchIndex += 2;
+        }
+
+        if (_searchIndex >= records.Count)
+        {
+          _searchIndex = 0;
+        }
+
+        // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
+        checksNeeded = _searchIndex == 0 ? 1 : 2;
+      }
+
+      _searchDirection = direction;
+
+      while (checksNeeded-- > 0)
+      {
+        for (var i = _searchIndex; i < records.Count && i >= 0; i += 1 * direction)
+        {
+          // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
+          // A divider row's name is the gap label, never a fight, so it simply never matches.
+          if (records.GetItemAt(i) is MirrorFightRow { Name: not null } row &&
+              row.Name.IndexOf(mirrorSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+          {
+            row.IsSearchResult = true;
+            _searchEntry = row;
+            _searchIndex = i + (1 * direction);
+            Dispatcher.InvokeAsync(() => mirrorGrid.ScrollInView(new RowColumnIndex(mirrorGrid.ResolveToRowIndex(i), 0)));
+            return;
+          }
+        }
+
+        if (checksNeeded == 1)
+        {
+          _searchIndex = (direction == 1) ? 0 : records.Count - 1;
+        }
+      }
     }
 
     /*

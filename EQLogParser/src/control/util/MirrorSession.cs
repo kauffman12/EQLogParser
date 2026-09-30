@@ -2,6 +2,7 @@ using log4net;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -401,6 +402,46 @@ namespace EQLogParser
      * list that no longer exists), or the session has touched nothing. What to display for either is the surface's call.
      */
     public MirrorSnapshot Snapshot => _snapshot;
+
+    /*
+     * The fights this window answers for, as legacy-shaped rows: the door MainWindow.GetFights feeds to the
+     * spell, taunt, death and export paths while the mirror is attached. Materialization is the same pass a board
+     * click pays - records rebuilt from the facts - but nothing here is stored twice (the snapshot keeps the
+     * derived rows; this only hands out the legacy shape the older consumers read). `selected` is the grid's own
+     * selection; null means every visible row in list order, exactly what the display list shows.
+     */
+    internal List<Fight> MaterializeFights(IReadOnlyList<DerivedFight>? selected)
+    {
+      if (selected == null)
+      {
+        var visible = new List<DerivedFight>();
+        foreach (var row in _snapshot?.Rows ?? [])
+          if (row.Fight is not null) visible.Add(row.Fight);
+        selected = visible;
+      }
+
+      return MirrorSummaryFights.Build(selected, _projection.Index, _facts).Fights.ToList();
+    }
+
+    /*
+     * The scoped variant DeathLogViewer wants: on every death click only the rows whose activity windows touch
+     * [fromT, toT] are materialized. Materializing a whole night's snapshot per click would rebuild every record
+     * of the capture - a full board's cost paid per keystroke. A row with an empty (NaN) window fails both
+     * comparisons, which is exactly the row its viewer-side predicate used to drop anyway.
+     */
+    internal List<Fight> MaterializeFightsOverlapping(double fromT, double toT)
+    {
+      var overlapping = new List<DerivedFight>();
+      foreach (var row in _snapshot?.Rows ?? [])
+      {
+        if (row.Fight is not { } fight) continue;
+        if ((fight.BeginDamageTime <= toT && fight.LastDamageTime >= fromT) ||
+            (fight.BeginTankingTime <= toT && fight.LastTankingTime >= fromT))
+          overlapping.Add(fight);
+      }
+
+      return MirrorSummaryFights.Build(overlapping, _projection.Index, _facts).Fights.ToList();
+    }
 
     /*
      * The damage meter's own question: every row this capture holds that was still alive when the window opened,
