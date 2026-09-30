@@ -4417,3 +4417,86 @@ Incogitable (`Blizzak`) and one derived-only name on two captures, plus per-colu
 and the raid total sits inside +0.6 % everywhere. Legacy's removal is still gated on the surfaces that read `FightManager`
 rather than on parity: the overlay's show/reset path, the main grid's `ComputeStats`, and the line viewers (damage/heal/tank
 tables, `NpcStatsViewer`, `Timeline`), which are a separate workstream because the fact tables capture none of what they show.
+
+## A fight that is still going: porting the meter's show/reset rule (2026-10)
+
+The damage meter's *numbers* moved to the mirror first (`OverlayDamageFromMirror`, see "The meter reads the mirror now"),
+and that left the meter in the worst intermediate state a surface can be in: it painted derived numbers while the three
+questions that decide whether you ever see them were still answered by `FightManager` —
+
+1. **open on launch**: `OpenDamageOverlayIfEnabled` opened a window only `if (FightManager.Instance.HasOverlayFights())`;
+2. **close for real when hidden**: hiding the board called `HasOverlayFights()` again to decide whether to keep an invisible
+   window or close it;
+3. **open yourself on a pull**: `EventsNewOverlayFight` fired when FightManager created a fight object at a first hit, and
+   MainWindow opened a meter for a user who had none.
+
+None of those concepts exist in the capture. A derived row is not an object handed out at the moment a hit lands; it is a
+life reconstructed from facts on a pass. So the missing piece was not plumbing but a rule, written down in
+`EQLogParser.Core/src/parsing/mirror/LiveFights.cs`.
+
+### Which clock, and why the measurement matters more than the argument
+
+`LiveFights` reads the **capture's own newest event** as "now", not wall time. The argument is easy (a load at ~170k facts/s
+runs minutes behind the wall); the measurement is what kills the alternative. Census over three captures, damage facts only
+(`EQLP_MIRROR_LIVE=<log> dotnet test --filter LiveFights_RealLog`):
+
+| capture | rows | first→last damage fact inside the FILE | time with a fight live | dead stretches >30 s | announcements / rows with traffic |
+|---|---|---|---|---|---|
+| `eqlog_Kizant_xegony.txt` (2026) | 270 | 1,184,488 s = **329 h** | 105.3 min | 33 (longest 17,199 min) | **269 / 269** |
+| `eqlog_Incogitable_xegony.txt` | 4,644 | 53,262,821 s = **616 days** | 3,874.6 min | 1,251 (longest 221,543 min) | **4,542 / 4,519** (23 restarts) |
+| `eqlog_Kizant_xegony-09-20-25.txt` | 378 | 14,180 s = 3.0 h | 143.9 min | 39 (longest 11.6 min) | **377 / 377** |
+
+A player never rotates the log file: one "capture" spans 616 days of wall clock and 1,251 stretches where nothing was hit
+for half a minute. Any rule phrased against the wall clock is therefore a rule about when the raid logged out — it would say
+"a fight is going on" across a fortnight of an untouched file, and go quiet during a dense three-hour farm (`09-20-25`, where
+80 % of the file has a fight live in it). Keyed to the capture's newest event instead, "live" means *at the end of what we
+have*, which is the only thing a meter can act on: for a tailed live log that coincides with the wall clock; for a finished
+file it means the last moments, which is where a reader who reopened an old log wants to know whether there is anything to
+see. At the newest event of these captures the rule answered 1 live row (Kizant: the log ends mid-pull), 0 (Incogitable) and
+0 (09-20-25) — both zeros are honest: those files end after a kill, and `Dead` rows are not live however recent their last
+hit.
+
+### One announcement per life, which is what the auto-open rule needed
+
+`MirrorSession.NewFightObserved` fires once per derive that opens a fight which the previous pass did not report live —
+4,542 times over Incogitable's 4,519 traffic-carrying rows, 269 over 269 on Kizant: **~1.00 per life**. That is the number
+that decides whether MainWindow may open a window on it: if a pull announced every derive (a pass every few seconds inside a
+three-minute fight) it would be re-opening a meter the user closed seconds ago, and if it announced once a night the rule
+would be decorative. The 23 exceptions are real, not noise: **rows split on silence in ANY traffic while `LiveFights` reads
+only the two direction windows**, so a row can stay alive (heals and chat keep its span open) while its damage and tanking
+windows both go quiet — longest such pause measured 121 s — and its resumption is announced again. A raid that pauses a pull
+and resumes deserves to get its meter back; the alternative (remembering every name ever seen) would never re-open for that
+pull at all.
+
+### The two visible behaviour changes, stated plainly
+
+- **Launch.** Legacy opened an enabled meter if the log contained any fight with damage *ever*. Derived opens it only if the
+  capture's last moments hold a live row; otherwise `NewFightObserved` opens it on the next pull. That is a real difference,
+  chosen because "there was a fight somewhere in this 616-day file" is not information about now.
+- **Hiding.** A hidden derived meter closes for real when nothing is live and comes back on the next announcement, instead of
+  lingering invisibly for the rest of the process.
+- **Reset.** `FullResetClick` resets each engine the way that engine keeps a board: legacy discards its builder and
+  FightManager's overlay set (those hold running totals), derived moves its window start (`_mirrorWindowT = -1`) because a
+  derived board holds nothing at all.
+
+### The seam, and why it is one file
+
+`MirrorMeter` (app) is now the only reader of `OverlayDamageFromMirror`, and the only place that answers "which engine is the
+meter reading". Before this the key was read in two components and the second still asked `FightManager`, which is how a
+half-ported surface looks finished. It holds no policy: `TimeoutFor(mode)` maps the `OverlayDamageMode` dial (0 = on kill →
+the 30 s engagement gap, otherwise N seconds) so the board's expiry and the live question cannot drift into two different
+numbers. `LiveFights.GapS` is that same `FightProjection.EngagementGapS`, pinned as *behaviour* in `LiveFightsTest` (live at
+29 s, not at 31 s) because comparing two constant spellings of one number passes even when somebody edits it to 300.
+
+`NewFightObserved` is **static** on `MirrorSession` (like `ActiveChanged`) because its reader outlives a capture: the meter
+must auto-open for the next log too. It is unsubscribed with the legacy event's old call sites folded into
+`SubscribeOverlayFights()`/`UnsubscribeOverlayFights()`, so a window cannot be kept alive by a handler nobody remembers to
+detach — and it is raised in its own `try` after `Derived`, because an auto-open throwing must not make the *derive* look
+broken (the outer catch disables auto-derive; that decision belongs to the derive itself, not a subscriber).
+
+**No fallback, again.** "No session" answers `false`, and `HasLiveFight` never consults FightManager on the derived path: a
+meter that quietly started trusting legacy visibility rules looks exactly like a correct one.
+
+Re-measure with `EQLP_MIRROR_LIVE=local/<log>.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"`.
+What is left on this path is not the wiring but the default: flip `OverlayDamageFromMirror` on and delete
+`DamageOverlayStatsBuilder`, which is the legacy tally this bypasses.

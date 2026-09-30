@@ -398,7 +398,14 @@ namespace EQLogParser
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
-        if (FightManager.Instance.HasOverlayFights())
+        /*
+         * "Was anything happening?" asked of whichever engine is feeding the meter. On a derived meter this is LiveFights over
+         * the capture's rows rather than FightManager's overlay-fight set, so the window opens when the capture's last moments
+         * hold a fight instead of when the log ever contained one — and if nothing was live, NewFightObserved opens it on the
+         * next pull instead. No session running answers false: a mirror that is not capturing has no fights, and this path does
+         * not fall back to a second engine to have something to say.
+         */
+        if (MirrorMeter.Enabled ? MirrorMeter.HasLiveFight() : FightManager.Instance.HasOverlayFights())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
@@ -624,21 +631,45 @@ namespace EQLogParser
           _saveTimer?.Stop();
           ConfigUtil.Save();
           await TriggerManager.Instance.DisposeAsync();
-          FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+          UnsubscribeOverlayFights();
           CloseDamageOverlay(false);
           break;
         case PowerModes.Resume:
           Log.Warn("Resume");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
-          FightManager.Instance.ResetOverlayFights(true);
+          if (!MirrorMeter.Enabled) FightManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
-          FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+          SubscribeOverlayFights();
           break;
       }
     }
 
-    private void EventsNewOverlayFight(Fight e)
+    /*
+     * The auto-open rule, attached to whichever engine reports fights. Both engines raise on a worker thread (the parse
+     * thread for FightManager, the derive thread for the mirror), so the window is still created through the dispatcher and
+     * re-checked there — the meter opens once, at most, however many passes announce the same pull.
+     */
+    private void SubscribeOverlayFights()
+    {
+      if (MirrorMeter.Enabled) MirrorSession.NewFightObserved += OnMirrorNewFight;
+      else FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+    }
+
+    // Symmetric on purpose: MirrorSession.NewFightObserved is static and outlives a capture, so leaving it attached would
+    // keep this window (and its whole visual tree) alive across every log opened afterwards.
+    private void UnsubscribeOverlayFights()
+    {
+      if (MirrorMeter.Enabled) MirrorSession.NewFightObserved -= OnMirrorNewFight;
+      else FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+    }
+
+    private void EventsNewOverlayFight(Fight e) => AutoOpenMeter();
+
+    // The row that just started, which the meter does not look at: it opens and reads whatever the current snapshot says.
+    private void OnMirrorNewFight(DerivedFight e) => AutoOpenMeter();
+
+    private void AutoOpenMeter()
     {
       // another lazy optimization to avoid extra dispatches
       if (_damageOverlay == null && ConfigUtil.IfSet("IsDamageOverlayEnabled"))
@@ -1216,9 +1247,9 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-              FightManager.Instance.ResetOverlayFights(true);
+              if (!MirrorMeter.Enabled) FightManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
-              FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+              SubscribeOverlayFights();
             }, DispatcherPriority.DataBind);
 
             // The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
@@ -1420,7 +1451,7 @@ namespace EQLogParser
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;
-        FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+        UnsubscribeOverlayFights();
         CloseDamageOverlay(false);
         closeLogFile.IsEnabled = false;
         saveLogFile.IsEnabled = false;

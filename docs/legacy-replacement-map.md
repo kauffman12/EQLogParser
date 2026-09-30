@@ -24,7 +24,8 @@ each one needs, and the order deletions become safe.
 |---|---|---|
 `HealingSummary`, `TankSummary`/`TankingSummary`, `DamageSummary`, `DamageChart`, `HealingChart`, `TankChart`, `ColumnChart` | **only** `FightManager.Instance.EventsClearedActiveData` — a "new log, blank your grid" signal; their data comes from the builders | one mirror event: `MirrorSession.CaptureCleared`. Six files, one line each. Cheapest win on the board and it removes the shared coupling that makes the other rows look bigger than they are |
 `EventViewer` | `FightManager.Instance.IsLifetimeNpc(name)` | ask the timeline (`EntityTimeline` kind + reason), same question `NamesTable` shows |
-|`DamageOverlayWindow` + `MainWindow` | `HasOverlayFights`, `ResetOverlayFights`, `EventsNewOverlayFight` | the mirror has no notion of "the fight happening right now": rows are built from a quiescent snapshot. Needs a live/current-fight concept (open row whose last fact is recent) before the overlay can move — **the main real work left** |
+|`DamageOverlayWindow` + `MainWindow` | `HasOverlayFights`, `ResetOverlayFights`, `EventsNewOverlayFight` — **ported behind `OverlayDamageFromMirror`**: the three questions now go through `MirrorMeter` (`LiveFights` answers "is a fight going on", `MirrorSession.NewFightObserved` replaces the new-fight event, and a derived reset moves the board's window instead of clearing a tally) | what still keeps `FightManager` alive on this path is the legacy meter's own tally (`DamageOverlayStatsBuilder`), i.e. flipping the default and deleting that builder — not the show/reset/auto-open wiring any more |
+|line viewers (`NpcStatsViewer`, `Timeline`, damage/heal/tank tables, `HitLogViewer`) | whatever they read off `RecordsStore`/`FightManager` today | the fact tables hold rows for these (damage, healing, outcomes, identity) but none of the per-name lifetimes; needs readers, not a rule — **the main real work left** |
 |`FightTable.xaml.cs` | `Clear`, `EventsClearedActiveData`, `EventsNewFight`, `EventsNewNonTankingFight` | delete with `mirrorFightWindow` as the only list; keep legacy docked behind the setting until the overlay moves, because today the overlay and this table are the same story told twice |
 |parse-time accumulation (`StatsUtil.UpdateDamageStats/UpdateHealStats`, `RecordsStore`) | feeds `BattleRow`/per-line stats the boards no longer need once all consumers are mirror-side | stop calling it once no consumer reads those rows; keep `HitRecord` construction (the fact tables and the line viewers need it) |
 
@@ -33,8 +34,11 @@ each one needs, and the order deletions become safe.
 1. **`CaptureCleared` event** on the mirror; re-point the six boards/charts at it. Zero behaviour change, deletes the
    widest coupling.
 2. **`IsLifetimeNpc` → timeline** in `EventViewer`.
-3. **Live/current fight in the mirror** (`DerivedFight` span whose last fact is within N seconds + a cheap per-derive
-   "current" stamp) → overlay fights, then `FightTable`'s new-fight events.
+3. **Live/current fight in the mirror** — done for the meter: `LiveFights` answers it over rows on the capture's own clock,
+   `MirrorSession.NewFightObserved` announces it once per pull, and the overlay's open/hide/reset path asks `MirrorMeter`
+   instead of `FightManager` (see docs/DesignNotes.md → "A fight that is still going: porting the meter's show/reset rule").
+   Still to move here: flip `OverlayDamageFromMirror` to the default and delete `DamageOverlayStatsBuilder`, then point
+   `FightTable`'s new-fight events at the same announcement (or delete the table, next step).
 4. **Delete `FightTable`** and the legacy list dock (setting goes away; `MirrorFightWindow` becomes the fight list).
 5. **Turn off parse-time stat accumulation**, then `BattleRow`, then `FightManager`'s display bookkeeping. Keep
    `RecordsStore`/`HitRecord` until the line viewers (`HitLogViewer`, `EventViewer`) are re-pointed at the fact tables.

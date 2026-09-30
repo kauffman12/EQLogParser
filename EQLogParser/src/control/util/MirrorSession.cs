@@ -37,6 +37,18 @@ namespace EQLogParser
     // Raised on the derivation thread; subscribers marshal to the dispatcher themselves.
     public event Action<MirrorSnapshot> Derived;
 
+    /*
+     * "A fight just started", for the one surface that opens itself: the damage meter used to learn this from
+     * FightManager, which created a fight object at the moment a first hit landed. A derived list has no such instant — a
+     * row appears on a pass — so this says which row the last pass opened that is still going (LiveFights), on the derive
+     * thread.
+     *
+     * STATIC, unlike Derived, because its reader outlives a capture: MainWindow keeps one subscription for the whole run
+     * and the meter must auto-open for the next log too, not just the one open when it subscribed. Unsubscribed on window
+     * close, exactly like ActiveChanged.
+     */
+    public static event Action<DerivedFight> NewFightObserved;
+
     public event Action<string> DeriveFailed;
 
     // Liveness feedback while capture is dirty (raised on the timer, i.e. the dispatcher):
@@ -217,6 +229,17 @@ namespace EQLogParser
           IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
                                              (long)_mirror.LastEventTime);
 
+          /*
+           * Whether this pass opened a fight that was not live on the last one. Asked BEFORE the swap because the previous
+           * snapshot is what "new" means, and answered on the capture's own clock (its newest event) rather than wall time:
+           * during a bulk load of an old log the middle of the file must not count as a fight starting, and the tail of it —
+           * which does — is exactly where a reader who reopened yesterday's log wants the meter to appear.
+           */
+          var openedFight = ConfigUtil.IfSet("IsDamageOverlayEnabled")
+                              ? LiveFights.FindNewLive(_snapshot?.AllFights, snapshot.AllFights, _mirror.LastEventTime,
+                                                       LiveFights.GapS)
+                              : null;
+
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
           _snapshot = snapshot;
@@ -227,6 +250,17 @@ namespace EQLogParser
           Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
                    $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
           Derived?.Invoke(snapshot);
+
+          /*
+           * After Derived, so a meter already on screen has repainted before one that is not decides to open itself; and in
+           * its own try because an auto-open handler must never make the pass look like it failed (the catch below would
+           * disable auto-derive over somebody else's exception).
+           */
+          if (openedFight is not null)
+          {
+            try { NewFightObserved?.Invoke(openedFight); }
+            catch (Exception ex) { Log.Error("Mirror new-fight subscriber failed", ex); }
+          }
         }
         catch (Exception ex) when (!_disposed)
         {
@@ -325,6 +359,21 @@ namespace EQLogParser
      * Null means the mirror has nothing to say yet (no derive landed, or nothing fought since the window opened);
      * what to paint for that is the overlay's call, exactly as it is today.
      */
+    /*
+     * "Is there a fight going on?" — the question FightManager's overlay-fight set answered for the meter, asked here of
+     * derived rows (LiveFights) on the capture's own newest event. `gapS` comes from the caller because it is the meter's
+     * dial: the same number that zeroes its board, so a window cannot be kept open by one rule and blanked by another.
+     *
+     * True for as long as the capture keeps moving, which on an old log loaded and left alone means its last moments stay
+     * "live" — the clock is not advancing, and the legacy overlay behaved the same way for a different reason (its fights
+     * only expired while a board was being built). Nothing here decides what a hidden window should do about that.
+     */
+    public bool HasLiveFight(double gapS)
+    {
+      var snapshot = _snapshot;
+      return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _mirror.LastEventTime, gapS);
+    }
+
     internal DamageOverlayStats BuildOverlayStats(double fromT, double toT, out double lastFactT)
     {
       lastFactT = double.NaN;

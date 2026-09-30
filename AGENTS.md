@@ -228,13 +228,33 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (Core, so it is testable without a dispatcher) keeps quiescence AND adds a cost-aware live cadence: refresh when
   `sinceLastPass >= clamp(4 x lastPassSeconds, 3 s, 15 s)`, and never while the growth **rate** reaches `BulkFactsPerSecond` (25,000/s — a file is
   being read at ~170k facts/s against tens/s while tailing, so re-deriving there would park ingest at the gate during the only moment throughput
-  matters). The ceiling is load-bearing: `BuildMirrorUpdate` zeroes the board after `FightManager.FightTimeout` (30 s) of quiet measured against
-  *the snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. One pass
+  matters). The ceiling is load-bearing: `BuildMirrorUpdate` zeroes the board after the meter's quiet window (`LiveFights.TimeoutFor`,
+  30 s at the default dial) of quiet measured against *the snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. One pass
   over the largest capture (2.9M facts) costs ~650 ms — measured, which is why waiting was the bug. Opening a derived meter also calls
   `RederiveAsync()` directly, since an empty window reads as broken. Every threshold is a duration or a rate rather than a tick count, because
   the session now polls at **250 ms** (a 1 s poll made each threshold fire up to a second late) and a per-check allowance would shorten the
   quiet window and the bulk guard purely by asking more often; the overlay also repaints when `Derived` fires instead of waiting for its own 1 s
   poll. Pinned by `MirrorDeriveCadenceTest` (`TheRuleDoesNotDependOnHowOftenItIsAsked`) — note bulk **parks**, it does not fire: a load ends in quiet.
+- **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
+  mirror first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
+  close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of
+  `OverlayDamageFromMirror`, so "which engine is the meter reading" has one address and no legacy fallback anywhere on the path ("no session"
+  answers *false*, it does not consult FightManager) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
+  **either** direction window sits inside the gap). Three rules that must not be "simplified": (1) **now = the capture's newest event, never
+  wall time**, because a log file is never rotated — measured spans between first and last damage fact inside one file: **329 h**
+  (`eqlog_Kizant_xegony.txt`), **616 days** (Incogitable) — so a wall-clock rule is a rule about when the raid logged out, and it cannot see the
+  dense end of a farm night (09-20-25: 3.0 h file, 143.9 min of it live); keyed to the capture, "live" means *at the end of what we have*. A file
+  ending after a kill therefore answers **0 live rows**, which is correct — so `LiveFightsRealLogTest` reports that number and asserts each row is
+  live at its *own* last activity instead. (2) **the gap is the meter's dial** (`TimeoutFor`: `OverlayDamageMode` 0 = on kill = `EngagementGapS`,
+  else N seconds), so a window cannot be held open by one rule and blanked by another; pin it as *behaviour* (live at 29 s, dead at 31 s), since
+  comparing two constant spellings of 30 passes even after somebody edits it to 300. (3) **`NewFightObserved` is ~one announcement per life** —
+  269/269 on Kizant, 377/377 on 09-20-25, **4,542 over 4,519** on Incogitable (23 restarts, longest mid-row pause **121 s**, which exists because
+  rows split on silence in *any* traffic while the live rule reads only the two direction windows) — that is what makes it safe for MainWindow to
+  open a window on it; an event firing every derive would reopen a meter the user closed seconds ago. It is **static** on `MirrorSession` (like
+  `ActiveChanged`) because its reader outlives a capture, raised in its own `try` *after* `Derived` so a subscriber cannot make the derive look
+  broken, and unsubscribed through `Subscribe/UnsubscribeOverlayFights()` rather than at scattered call sites. Visible differences from legacy are
+  deliberate: launch opens only if the capture's last moments hold a fight (legacy opened if the 616-day file ever had one) and a hidden derived
+  meter closes instead of lingering. Numbers, reasoning and the re-measure command: docs/DesignNotes.md → "A fight that is still going".
 - **A mirror pass continues where the last one stopped, and exactly two gates open the carry**: `FightProjectionCache` (held by `MirrorSession`)
   keeps `ProjectionState` *and* the `MirrorDamageIndex` from pass to pass — the fold is forward-only, so the open row per name, the last **closed**
   row per name (the pet→encounter chain `CharmPetRows` needs, since a pet's facts begin after that row ends), the completed rows and the name-keyed

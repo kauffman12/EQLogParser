@@ -31,16 +31,17 @@ namespace EQLogParser
     private int _savedDamageMode;
 
     /*
-     * Opt-in mirror-fed meter (settings.txt: `OverlayDamageFromMirror`). Off by default, so nothing changes unless it
-     * is asked for; the legacy tally below stays the shipped path until this has been watched on live pulls.
+     * Opt-in mirror-fed meter (settings.txt: `OverlayDamageFromMirror`, read through MirrorMeter). Off by default, so
+     * nothing changes unless it is asked for; the legacy tally below stays the shipped path until this has been watched on
+     * live pulls.
      *
      * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
      * (MirrorStats), instead of the overlay's own running totals. The meter's policy stays here, because it always was
-     * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. FightTimeout,
+     * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. the engagement gap,
      * otherwise N seconds), and the window starting at the reset. That is why the mirror holds no "current fight": the
      * seconds a board covers is this component's business.
      */
-    private readonly bool _mirrorMeter = ConfigUtil.IfSet("OverlayDamageFromMirror");
+    private readonly bool _mirrorMeter = MirrorMeter.Enabled;
     private bool _mirrorMeterWarned;
     private int _mirrorFailures;
     private double _mirrorWindowT = -1;
@@ -412,7 +413,7 @@ namespace EQLogParser
         var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
         if (_mirrorWindowT < 0) _mirrorWindowT = nowT;
 
-        var timeout = _currentDamageMode == 0 ? FightManager.FightTimeout : _currentDamageMode;
+        var timeout = MirrorMeter.TimeoutFor(_currentDamageMode);
         var update = session.BuildOverlayStats(_mirrorWindowT, nowT, out var lastFactT);
 
         // The meter's own expiry, unchanged: quiet for longer than the board allows (mode > 0 is that many seconds,
@@ -585,7 +586,16 @@ namespace EQLogParser
         HideToolbarWindow();
         Visibility = Visibility.Collapsed;
 
-        if (!FightManager.Instance.HasOverlayFights())
+        /*
+         * Hiding a meter with nothing behind it closes it for real. The two engines are asked the same question in their own
+         * terms: legacy kept a set of overlay fights, the mirror asks whether any row is still going inside the window that
+         * zeroes this board (LiveFights). One consequence of the second phrasing is worth knowing: on a derived meter a
+         * window hidden between pulls closes instead of waiting out the log, and comes back on the next pull through
+         * MirrorSession.NewFightObserved rather than lingering invisibly until the app restarts.
+         */
+        var stillSomethingToShow = _mirrorMeter ? MirrorMeter.HasLiveFight(_currentDamageMode)
+                                                : FightManager.Instance.HasOverlayFights();
+        if (!stillSomethingToShow)
         {
           MainActions.CloseDamageOverlay(false);
         }
@@ -1035,9 +1045,22 @@ namespace EQLogParser
       lock (StatsLock)
       {
         _stats = null;
-        _statsBuilder = new();
-        FightManager.Instance.ResetOverlayFights();
-      _mirrorWindowT = -1; // an explicit reset moves the derived window's start to the next tick too
+
+        /*
+         * Each engine resets the way IT keeps a board. The legacy tally needs its builder and FightManager's overlay-fight
+         * set thrown away, because those hold the running totals; a derived board holds nothing, so its reset is moving the
+         * window's start to the next tick. Touching legacy state on the derived path would be harmless and misleading — and
+         * the day the legacy builder goes, "harmless" becomes a NullReference in the reset button.
+         */
+        if (_mirrorMeter)
+        {
+          _mirrorWindowT = -1;
+        }
+        else
+        {
+          _statsBuilder = new();
+          FightManager.Instance.ResetOverlayFights();
+        }
       }
     }
 
