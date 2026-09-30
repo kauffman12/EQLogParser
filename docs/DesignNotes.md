@@ -4581,3 +4581,51 @@ Probe kept as `EQLogParser.Test/src/parsing/mirror/MeterBoardCostRealLogTest.cs`
 EQLP_MIRROR_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
   --filter MeterBoardCost --logger "console;verbosity=detailed"
 ```
+
+### What was built from that list: the cheap lane, and 125 ms of overhead (2026-09-29)
+
+Took **(c) then (a)** from the options above. Both are in, and the numbers below are arithmetic over the measurements in that table — they
+are a prediction about *perceived* delay, which only a live raid can confirm.
+
+**The cadence answers two questions now, not one.** `MirrorDeriveCadence.Decide(...) → DeriveKind { None, ProjectionOnly, Full }` replaces
+`ShouldDerive`. `Full` classifies and projects (what the UI's Re-derive and every log opening ask for); `ProjectionOnly` folds the facts that
+arrived since over **the `EntityTimeline` instance the last full pass produced** and is paced by
+`FastFloorSeconds = 0.5`, while `Full` keeps exactly the cadence it always had — `clamp(4 × lastFullPassSeconds, 3 s, 15 s)`.
+
+Reusing the timeline *instance* is what makes the lane cheap twice over: no rule book runs, and `EntityTimeline.StateStamp()` comes back
+unchanged, which is precisely the answer `FightProjectionCache` needs to keep folding from its watermark instead of re-walking the night. The
+stamp gate did not need to learn about lanes — carrying the object is what makes it answer correctly.
+
+Order inside `Decide`, because each check is a different hazard:
+1. **nothing new since the last pass of either lane → `None`** (idle costs nothing);
+2. **count held still for `QuietSeconds` → `Full`**, deliberately the expensive lane even though a cheap one would be faster: the end of a load is
+   when the rules finally have the whole capture in front of them, which is when they learn what a cheap refresh cannot (a pet whose owner spoke once
+   at minute forty);
+3. **bulk rate → `None`** — *both* lanes park. The cheap one is nearly free to us and still holds the gate the loader needs;
+4. **full clock due → `Full`**, judged on `_sinceFullPass`, never on "since any pass";
+5. otherwise **cheap clock due → `ProjectionOnly`**.
+
+Point 4 is the one the session's bookkeeping can get wrong: if a cheap pass restarted the stopwatch that paces classification, a busy tail would run
+forever on the verdicts it happened to have at minute one and pets/charms would quietly stop folding. `ACheapPassNeverPushesTheExpensiveOneAway` pins
+the rule; `MirrorSession` keeps `_sinceAnyPass` and `_sinceFullPass` separately and restarts only the latter when a pass classified.
+
+**Fixed overheads**: `LogReader`'s tail delay 200 → **75 ms**, the session's pump 250 → **100 ms**. The first is not tunable by event — that loop's
+watcher ignores `Changed`, and EQ's own write buffering coalesces those notifications so an event wake-up would need this same poll behind it. No
+threshold moved (the cadence reads durations, which `TheRuleDoesNotDependOnHowOftenItIsAsked` holds), so these buy promptness only.
+
+**What a refresh costs now, per second of live raid**: ~2 cheap passes at 0–5 ms projection + row-building, plus one full pass per ≥3 s at
+186–261 ms → roughly **7–12 % of the ingest gate** against **6–9 %** before, in exchange for numbers moving in **~0.7–0.9 s** instead of ~3.4 s.
+The unknown term in that sum is `MirrorFightRows.Build`, which runs on every lane and formats four columns per row over *every row the capture ever
+produced* (4,644 on one capture); it lives in the app assembly, so its number is `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
+(Windows-only, 5,000 synthetic rows bound at 60 ms). If that ever climbs toward tens of milliseconds, widen the cheap lane by row count before
+touching either floor.
+
+**Two tests worth naming.** `TwoCheapPassesOverOneSetOfVerdictsMatchASingleFold` (increment suite) grows a capture in three folds under one timeline
+and compares against a single fold over the same swings: staleness in this lane is allowed to mean "a verdict the next full pass has not reached", never
+"facts that went missing" — and it also asserts the carry survives consecutive cheap passes, because a cheap lane that rebuilds every 500 ms would be
+slower than no cheap lane at all. The cadence suite now asserts *which* pass is due rather than "some pass": `IsFalse` on a live tail used to hide the
+fact that half a second later it would have been a perfectly good refresh.
+
+One consequence worth stating because somebody will try to "simplify" it away: an expensive pass writes two Info lines ("derive starting", "derive done");
+a cheap pass writes the same two at **Debug**. Two passes a second of Info logging would push the raid itself out of the file this app writes, which is the
+file anyone debugging a report is reading.

@@ -13,6 +13,10 @@ namespace EQLogParser.Mirror
    *                             one pass costs about 650 ms, so refreshing while data is dirty is affordable — and
    *                             therefore necessary, not a luxury.
    *
+   * WHICH pass runs is decided here too (`DeriveKind`), because one cadence cannot be both prompt and affordable: classification is most of
+   * a pass (measured 186-261 ms, against 0-5 ms to fold the facts that arrived since), so the expensive lane keeps the cadence described
+   * below while a cheap fold of new facts over the last expensive pass's verdicts rides in between on `FastFloorSeconds`.
+   *
    * The throttle on the second question is derived from the cost of the last pass rather than fixed, because a pass
    * costs what the capture costs: 4x the measured duration, clamped. And the ceiling is not arbitrary — it has to stay
    * inside `FightManager.FightTimeout` (30 s), which is the quiet rule the damage meter applies to its own board. A
@@ -65,27 +69,65 @@ namespace EQLogParser.Mirror
     }
 
     /*
-     * The decision itself. `count` is what the capture holds now, `lastDerivedCount` what the last finished pass
-     * covered, `quietSeconds` how long the count has held still, `factsPerSecond` how fast it was growing over the
-     * observation window, and `sinceLastPassS` how long ago that pass ended (callers measure all of these
-     * monotonically; positive infinity means "no pass has ever run", so the first board arrives promptly).
+     * How often the CHEAP lane may run: rows recomputed from the facts already captured, with the verdicts the last full pass
+     * produced. Measured cost of that on a live increment is **0-5 ms** of projection (docs/DesignNotes.md -> "How long a meter
+     * update takes"), against 186-261 ms for a pass that re-runs the classification rule book — and since a pass parks ingest at
+     * `CombatMirror._gate` while it runs, the price of a cadence is not CPU but how much of the cycle the parse thread spends
+     * waiting. Half a second costs about 1 % of that gate; lowering the FULL floor to half a second would cost a quarter of it.
+     *
+     * What the cheap lane buys and what it costs: numbers move in ~0.6-0.8 s instead of ~3.4 s, and an identity verdict learned
+     * from facts that arrived after the last full pass (a pet folding onto its raiders, a charm flipping a name) lands one full
+     * cadence later rather than on the same pass. That delay already exists today every time a pass is skipped; this makes it
+     * bounded and predictable instead of "whenever the pump next felt like it".
+     */
+    public const double FastFloorSeconds = 0.5d;
+
+    /*
+     * The decision itself, and it answers two questions rather than one: WHETHER to pass, and WHICH pass.
+     *
+     * `count` is what the capture holds now, `lastDerivedCount` what the last finished pass of either lane covered,
+     * `quietSeconds` how long the count has held still, `factsPerSecond` how fast it was growing over the observation window,
+     * `sinceAnyPassS`/`sinceFullPassS` how long ago the last pass of either lane / of the expensive lane ended, and
+     * `lastFullPassSeconds` what that expensive pass cost (callers measure all of these monotonically; positive infinity means
+     * "never happened", so the first board arrives promptly).
      *
      * No argument is a tick count, on purpose: the whole rule has to read the same however often it is asked.
      */
-    public static bool ShouldDerive(long count, long lastDerivedCount, double quietSeconds,
-                                    double factsPerSecond, double sinceLastPassS, double lastPassSeconds)
+    public static DeriveKind Decide(long count, long lastDerivedCount, double quietSeconds, double factsPerSecond,
+                                    double sinceAnyPassS, double sinceFullPassS, double lastFullPassSeconds)
     {
-      // Nothing captured, or nothing the grid does not already show: an idle log must cost exactly nothing.
-      if (count <= 0 || count == lastDerivedCount) return false;
+      // Nothing captured, or nothing the surfaces do not already show: an idle log must cost exactly nothing.
+      if (count <= 0 || count == lastDerivedCount) return DeriveKind.None;
 
-      // The load stopped moving, which is the classic trigger and what a finished file needs.
-      if (quietSeconds >= QuietSeconds) return true;
+      /*
+       * The load stopped moving. This is the classic trigger and what a finished file needs, and it asks for the EXPENSIVE lane
+       * on purpose: at the end of a load the rules have the whole capture in front of them, which is when they learn the things
+       * a cheap refresh cannot (a name nobody owns yet, a pet whose owner spoke once at minute forty).
+       */
+      if (quietSeconds >= QuietSeconds) return DeriveKind.Full;
 
-      // A file being read. Bulk load ends in quiet, and the rule above catches it there.
-      if (factsPerSecond >= BulkFactsPerSecond) return false;
+      // A file being read. Bulk load ends in quiet and the rule above catches it there; BOTH lanes park, because the cheap one
+      // still holds the gate that the loader needs.
+      if (factsPerSecond >= BulkFactsPerSecond) return DeriveKind.None;
 
-      // A live tail: refresh on the cost-aware clock rather than waiting for a silence that a raid never offers.
-      return sinceLastPassS >= LiveIntervalSeconds(lastPassSeconds);
+      /*
+       * A live tail. The expensive lane keeps the cadence it has always had — its cost is what sets the wait, and that wait is
+       * what keeps ingest affordable — and anything cheaper in between is the cheap lane.
+       */
+      if (sinceFullPassS >= LiveIntervalSeconds(lastFullPassSeconds)) return DeriveKind.Full;
+      return sinceAnyPassS >= FastFloorSeconds ? DeriveKind.ProjectionOnly : DeriveKind.None;
     }
+  }
+
+  /*
+   * Which pass the cadence is asking for. `Full` classifies and projects; `ProjectionOnly` reuses the verdicts the last full
+   * pass produced and folds the facts that arrived since, which is what makes a fast refresh affordable at all (Core measures:
+   * 0-5 ms against 186-261 ms). `None` means the surfaces keep the snapshot they have.
+   */
+  public enum DeriveKind
+  {
+    None,
+    ProjectionOnly,
+    Full,
   }
 }

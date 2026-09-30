@@ -222,19 +222,34 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **237→289** (visible **215→267**) vs legacy **262**; reasoning and fixtures: docs/DesignNotes.md → "One row per life"; pinned by
   `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
   `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne` and (Windows) `MirrorFightRowsTest`.
-- **Quiescence is a completion detector, not a refresh clock**: the mirror derives when the captured count holds still for two ticks,
-  which answers "is the file done loading" and nothing else — a live raid tail never offers two silent ticks, so every surface reading the
-  snapshot (fight list, click summaries, the damage meter) froze for the whole encounter and moved only on Re-derive. `MirrorDeriveCadence`
-  (Core, so it is testable without a dispatcher) keeps quiescence AND adds a cost-aware live cadence: refresh when
-  `sinceLastPass >= clamp(4 x lastPassSeconds, 3 s, 15 s)`, and never while the growth **rate** reaches `BulkFactsPerSecond` (25,000/s — a file is
-  being read at ~170k facts/s against tens/s while tailing, so re-deriving there would park ingest at the gate during the only moment throughput
-  matters). The ceiling is load-bearing: `BuildMirrorUpdate` zeroes the board after the meter's quiet window (`LiveFights.TimeoutFor`,
-  30 s at the default dial) of quiet measured against *the snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. One pass
-  over the largest capture (2.9M facts) costs ~650 ms — measured, which is why waiting was the bug. Opening a derived meter also calls
-  `RederiveAsync()` directly, since an empty window reads as broken. Every threshold is a duration or a rate rather than a tick count, because
-  the session now polls at **250 ms** (a 1 s poll made each threshold fire up to a second late) and a per-check allowance would shorten the
-  quiet window and the bulk guard purely by asking more often; the overlay also repaints when `Derived` fires instead of waiting for its own 1 s
-  poll. Pinned by `MirrorDeriveCadenceTest` (`TheRuleDoesNotDependOnHowOftenItIsAsked`) — note bulk **parks**, it does not fire: a load ends in quiet.
+- **Quiescence is a completion detector, and the cadence answers WHICH pass, not merely whether**: the mirror used to derive only when the captured
+  count held still for two ticks, which answers "is the file done loading" and nothing else — a live raid tail never offers two silent ticks, so every
+  surface reading the snapshot (fight list, click summaries, the damage meter) froze for the whole encounter and moved only on Re-derive.
+  `MirrorDeriveCadence.Decide(...) -> DeriveKind { None, ProjectionOnly, Full }` is the rule now (Core, so it is testable without a dispatcher; there is
+  no `ShouldDerive` anymore — assert *which* pass is due, or a legitimate half-second refresh reads as "no pass"). Check order is hazard by hazard: nothing
+  new since the last pass of **either** lane => `None`; count held still for `QuietSeconds` => **`Full`** (never answer that moment cheaply — the end of a
+  load is when the rules finally see the whole capture, which is when they learn what a refresh cannot); growth **rate** >= `BulkFactsPerSecond` (25,000/s;
+  a file reads at ~170k facts/s against tens/s while tailing) => `None`, and that parks **both** lanes because the cheap one still holds the
+  `CombatMirror._gate` the loader needs; full clock due => `Full`; else cheap clock due => `ProjectionOnly`. The ceiling stays load-bearing:
+  `BuildMirrorUpdate` zeroes the board after the meter's quiet window (`LiveFights.TimeoutFor`, 30 s at the default dial) of quiet measured against *the
+  snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. Opening a derived meter
+  also calls `RederiveAsync()` directly (the expensive lane), since an empty window reads as broken. Every threshold is a duration or a rate rather than a
+  tick count — the pump (now **100 ms**) only decides how close to its moment a pass lands, and a per-check allowance would shorten the quiet window and the
+  bulk guard purely by asking more often (`TheRuleDoesNotDependOnHowOftenItIsAsked`). Note bulk **parks**, it does not fire: a load ends in quiet.
+- **The cheap lane folds over the timeline INSTANCE the last full pass produced, on two clocks**: `ProjectionOnly` runs no rule book at all (measured:
+  classification is 186-261 ms of a pass, projection of a live increment 0-5 ms), so `MirrorSession` carries `_carriedTimeline` and hands that same object
+  to `FightProjection.Project`. Carrying the instance is what makes `EntityTimeline.StateStamp()` come back unchanged, so the existing stamp gate keeps
+  folding from its watermark and a re-classified full pass earns its rebuild by itself — the cache never learned that lanes exist. **Two traps.** (1)
+  `Full` is paced by `_sinceFullPass`, the cheap lane by `_sinceAnyPass`: if a cheap pass restarted the clock that paces classification, a busy tail would
+  run all night on the verdicts it happened to have at minute one and pets/charms would quietly stop folding (`ACheapPassNeverPushesTheExpensiveOneAway`).
+  (2) Only a pass that classified may restart that clock, store `_lastFullPassSeconds`, write `IdentityPriorStore`, leave verdicts behind **or write an Info log
+  line** — the cheap lane runs twice a second, and its bookkeeping would push the raid out of the file this app writes (`Note` above the passes). Accepted
+  staleness is bounded and stated in Core: a verdict readable only from newer facts lands one full cadence later — never "facts went missing", which is
+  what `TwoCheapPassesOverOneSetOfVerdictsMatchASingleFold` holds (three folds under one timeline == one fold, and the carry must survive consecutive cheap
+  passes or the cheap lane is slower than no cheap lane). With `LogReader`'s tail delay at 75 ms (that loop's watcher ignores `Changed`, so its poll *is*
+  the app's tail latency) a refresh lands in ~0.7-0.9 s instead of ~3.4 s, for ~7-12 % of the ingest gate. The unmeasured term is `MirrorFightRows.Build`,
+  which every lane pays over every row the capture ever made: its bound lives in `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
+  (Windows-only). Widen the cheap lane by row count before touching either floor. Numbers: docs/DesignNotes.md -> "How long a meter update takes".
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   mirror first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
   close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of

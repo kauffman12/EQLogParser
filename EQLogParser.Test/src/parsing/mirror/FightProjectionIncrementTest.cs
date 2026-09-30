@@ -111,6 +111,41 @@ public class FightProjectionIncrementTest
         Assert.AreEqual(300, rows.Single().DamageToOwner);
     }
 
+    /*
+     * The cheap lane of the live cadence (MirrorDeriveCadence.DeriveKind.ProjectionOnly): between expensive passes the session
+     * re-projects the new facts over the timeline INSTANCE the last full pass produced, because rebuilding verdicts is what costs
+     * 186-261 ms and folding is what costs 0-5. Two things have to be true for that to be a display rather than a fiction, and both
+     * are asserted here: the carry stays open across consecutive cheap folds (otherwise the "cheap" lane re-walks the night every
+     * half-second, which is slower than not having it), and the rows match a single fold over the same span under the same
+     * verdicts — staleness in this lane is about verdicts a later full pass has not reached yet, never about facts being missed.
+     */
+    [TestMethod]
+    public void TwoCheapPassesOverOneSetOfVerdictsMatchASingleFold()
+    {
+        // Both sides see the same four swings. The reference gets them in one fold with verdicts classified over all of them;
+        // the live side meets them as a growing capture, under the verdicts its FIRST pass classified.
+        var whole = new Capture();
+        foreach (var t in new[] { 0d, 4d, 8d, 12d }) whole.Hit("Zomm", "A corrupted skeleton", 100, t);
+        var reference = FightProjection.Build(whole.Facts, Classify(whole.Facts)).ToList();
+
+        var live = new Capture();
+        live.Hit("Zomm", "A corrupted skeleton", 100, 0);
+        live.Hit("Zomm", "A corrupted skeleton", 100, 4);
+
+        var cache = new FightProjection.FightProjectionCache();
+        var verdicts = Classify(live.Facts);
+        cache.Project(live.Facts, verdicts);                      // expensive pass, leaves its timeline behind
+
+        live.Hit("Zomm", "A corrupted skeleton", 100, 8);
+        cache.Project(live.Facts, verdicts);                      // cheap pass #1: the SAME timeline instance
+
+        live.Hit("Zomm", "A corrupted skeleton", 100, 12);
+        var rows = cache.Project(live.Facts, verdicts);           // cheap pass #2
+
+        Assert.IsTrue(cache.LastPassContinued, "the cheap lane is only cheap if the carry survives the previous cheap pass");
+        AssertSameRows(reference, rows, "folding in three steps must read exactly like folding once");
+    }
+
     [TestMethod]
     public void ANewIdentityVerdictBuysAFullRebuild()
     {

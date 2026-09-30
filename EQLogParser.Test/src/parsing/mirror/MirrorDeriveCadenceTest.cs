@@ -63,9 +63,11 @@ public class MirrorDeriveCadenceTest
     [TestMethod]
     public void AnIdleLogAsksForNothing()
     {
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived, Derived, 3600, 0, 3600, 0),
-            "captured == derived must cost nothing, forever");
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(0, -1, 3600, 0, double.PositiveInfinity, 0),
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(Derived, Derived, 3600, 0, 3600, 3600, 0),
+            "captured == derived must cost nothing, forever — neither lane, however long the log sits");
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(0, -1, 3600, 0, double.PositiveInfinity, double.PositiveInfinity, 0),
             "a log with no facts must not spin");
     }
 
@@ -79,20 +81,69 @@ public class MirrorDeriveCadenceTest
     {
         const double sinceLastPass = MirrorDeriveCadence.FloorSeconds;
 
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 500, Derived, 0.05, 10_000, sinceLastPass, 0.65),
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceLastPass, sinceLastPass, 0.65),
             "a live tail must refresh on the cost-aware clock, not on a silence that never comes");
 
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + 500, Derived, 0.05, 10_000, sinceLastPass / 3, 0.65),
-            "the same tail must still be throttled by the cost of the last pass");
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceLastPass / 20, sinceLastPass / 3, 0.65),
+            "the same tail must still be throttled — both lanes have a floor, and neither is now");
+    }
+
+    /*
+     * The cheap lane, which exists because classification (186-261 ms measured) is the whole cost of a pass while projection of
+     * the facts that arrived since costs 0-5 ms. Between expensive passes this is what moves the numbers: the meter gets rows over
+     * the verdicts it already has rather than waiting out the cadence that pays for rule re-evaluation.
+     */
+    [TestMethod]
+    public void TheCheapLaneRunsBetweenExpensivePasses()
+    {
+        Assert.AreEqual(DeriveKind.ProjectionOnly,
+            MirrorDeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, MirrorDeriveCadence.FastFloorSeconds,
+                                       MirrorDeriveCadence.FloorSeconds * 0.9, 0.65),
+            "past the cheap floor but before the expensive one is due: rows yes, rules no");
+
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, MirrorDeriveCadence.FastFloorSeconds * 0.5,
+                                       MirrorDeriveCadence.FloorSeconds * 0.9, 0.65),
+            "and the cheap lane still has a floor of its own — it holds the ingest gate too");
+    }
+
+    /*
+     * The law the session's bookkeeping has to keep honest: the expensive lane is paced by the clock that measures EXPENSIVE
+     * passes, so a stream of cheap ones can never postpone re-classification. If this ever returns ProjectionOnly, a busy raid
+     * would run forever on the verdicts it happened to have at minute one, and pets/charms would quietly stop folding.
+     */
+    [TestMethod]
+    public void ACheapPassNeverPushesTheExpensiveOneAway()
+    {
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceAnyPassS: 0.01,
+                                       sinceFullPassS: MirrorDeriveCadence.FloorSeconds, lastFullPassSeconds: 0.65),
+            "a cheap pass a hundred milliseconds ago must not buy the rule book another interval");
+    }
+
+    // Both lanes hold off while a file is being read: whichever one runs, it parks ingest while it runs.
+    [TestMethod]
+    public void BothLanesParkWhileAFileIsBeingRead()
+    {
+        const double loading = 60_000d;
+
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(Derived + (long)loading, Derived, 0.05, loading,
+                                       MirrorDeriveCadence.FastFloorSeconds * 10, MirrorDeriveCadence.CeilingSeconds * 2, 0.65),
+            "bulk parks the cheap lane even though it would be nearly free — the loader owns the gate");
     }
 
     // The end of a file load: the count stopped moving, so one pass finishes the job.
     [TestMethod]
     public void AQuietLoadFiresImmediately()
     {
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(50_000, -1, MirrorDeriveCadence.QuietSeconds, 200_000,
-                        double.PositiveInfinity, 0),
-            "growth that stops is the classic trigger, even at bulk rate");
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(50_000, -1, MirrorDeriveCadence.QuietSeconds, 200_000, double.PositiveInfinity,
+                                       double.PositiveInfinity, 0),
+            "growth that stops is the classic trigger, even at bulk rate — and it asks for the EXPENSIVE lane: at the end of a load "
+            + "the rules have the whole capture in front of them, which is when they learn what a cheap refresh cannot");
     }
 
     /*
@@ -104,16 +155,19 @@ public class MirrorDeriveCadenceTest
     {
         const double loading = 60_000d; // facts/second: a file being read
 
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(Derived + (long)loading, Derived, 0.2, loading,
-                        double.PositiveInfinity, 0.65),
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(Derived + (long)loading, Derived, 0.2, loading, double.PositiveInfinity,
+                                       double.PositiveInfinity, 0.65),
             "mid-bulk must park, not pass");
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + (long)loading, Derived, MirrorDeriveCadence.QuietSeconds,
-                        loading, double.PositiveInfinity, 0.65),
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(Derived + (long)loading, Derived, MirrorDeriveCadence.QuietSeconds, loading,
+                                       double.PositiveInfinity, double.PositiveInfinity, 0.65),
             "and must fire the moment the load stops moving");
 
         // A raid's worth of lines is orders of magnitude slower than this and must not be mistaken for it.
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 40, Derived, 0.2, 400,
-                        MirrorDeriveCadence.FloorSeconds, 0.65));
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(Derived + 40, Derived, 0.2, 400, MirrorDeriveCadence.FloorSeconds,
+                                       MirrorDeriveCadence.FloorSeconds, 0.65));
     }
 
     /*
@@ -131,16 +185,18 @@ public class MirrorDeriveCadenceTest
         foreach (var pollSeconds in new[] { 0.25, 1.0, 4.0 })
         {
             var factsPerSecond = 25_000d;
-            Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, 0.1, factsPerSecond,
-                               double.PositiveInfinity, 0.65),
+            Assert.AreEqual(DeriveKind.None,
+                MirrorDeriveCadence.Decide(capturedNow, Derived, 0.1, factsPerSecond, double.PositiveInfinity,
+                                           double.PositiveInfinity, 0.65),
                 $"bulk ingest at a {pollSeconds}s poll must still read as bulk");
         }
 
         // Same for the quiet verdict: silence of one second is one second however often it was checked.
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, MirrorDeriveCadence.QuietSeconds, 0,
-                        double.PositiveInfinity, 0.65));
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived,
-                           MirrorDeriveCadence.QuietSeconds * 0.5, 0, 0, 0.65),
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(capturedNow, Derived, MirrorDeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
+                                       double.PositiveInfinity, 0.65));
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(capturedNow, Derived, MirrorDeriveCadence.QuietSeconds * 0.5, 0, 0, 0, 0.65),
             "half the quiet window is not the quiet window, whatever the poll rate");
 
         /*
@@ -149,11 +205,12 @@ public class MirrorDeriveCadenceTest
          * rate is. A tick-counting version of either one flips when the poll rate changes, which is the bug this shape
          * exists to make impossible.
          */
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(capturedNow, Derived, 0.001, MirrorDeriveCadence.BulkFactsPerSecond,
-                        0, 0),
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(capturedNow, Derived, 0.001, MirrorDeriveCadence.BulkFactsPerSecond, 0, 0, 0),
             "bulk parks even one millisecond after the previous pass — a load ends in quiet, not on the interval");
-        Assert.IsTrue(MirrorDeriveCadence.ShouldDerive(Derived + 1, Derived, MirrorDeriveCadence.QuietSeconds, 0,
-                        double.PositiveInfinity, 0),
+        Assert.AreEqual(DeriveKind.Full,
+            MirrorDeriveCadence.Decide(Derived + 1, Derived, MirrorDeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
+                                       double.PositiveInfinity, 0),
             "a single new fact after the quiet window goes now, with no rate to compare against");
     }
 
@@ -178,8 +235,8 @@ public class MirrorDeriveCadenceTest
         var captured = 1_200_000L;      // damage facts
         var healed = 40_000L;           // heal events, no damage alongside them
 
-        Assert.IsFalse(MirrorDeriveCadence.ShouldDerive(captured + healed, Derived, 0.1, 30_000,
-                           double.PositiveInfinity, 0),
-            "a healing-only stretch is still moving and must read as busy, not quiet");
+        Assert.AreEqual(DeriveKind.None,
+            MirrorDeriveCadence.Decide(captured + healed, Derived, 0.1, 30_000, 0.2, double.PositiveInfinity, 0),
+            "a healing-only stretch is still moving and must read as busy, not quiet — 30k events/second is bulk, and bulk parks until the count stops");
     }
 }

@@ -95,19 +95,38 @@ namespace EQLogParser
      * a pass lands on its moment instead of on the next whole second: the end-of-load pass up to a full interval
      * earlier, and a live tail's floor read within a quarter of it. A dispatcher timer at Background priority, so this
      * costs a wakeup behind layout when nothing else is queued and never competes with rendering.
+     *
+     * A tenth of a second, down from a quarter: the cheap lane's interval is half a second, and a poll that coarse would add its
+     * own quarter-second of jitter on top of it. No threshold moves — the cadence reads durations, which
+     * `TheRuleDoesNotDependOnHowOftenItIsAsked` holds — so this buys only promptness.
      */
-    private const int TimerIntervalMs = 250;
+    private const int TimerIntervalMs = 100;
 
     /*
      * The measurements the cadence needs, all monotonic intervals rather than DateTime moments (a clock adjustment must
-     * not buy a free re-derive or hold one off): how long the last pass took — which is what the capture costs, so it
-     * sets how often another one is affordable — how long ago it finished, how long this count has held still, and how
-     * wide the observation window behind the growth RATE was.
+     * not buy a free re-derive or hold one off): how long this count has held still, how wide the observation window behind the
+     * growth RATE was, and TWO clocks for the two lanes (MirrorDeriveCadence.DeriveKind) — `_sinceFullPass` against the cost of
+     * the last pass that classified, `_sinceAnyPass` against the cheap floor. One stopwatch could not express "cheap now,
+     * expensive in two more seconds", which is the whole shape of a live raid refresh; see _lastFullPassSeconds for why only the
+     * expensive lane's clock may be restarted by an expensive pass.
      */
-    private readonly Stopwatch _sinceLastPass = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceAnyPass = Stopwatch.StartNew();
+    private readonly Stopwatch _sinceFullPass = Stopwatch.StartNew();
     private readonly Stopwatch _sinceFactChange = Stopwatch.StartNew();
     private readonly Stopwatch _sinceTick = Stopwatch.StartNew();
-    private double _lastPassSeconds;
+    private double _lastFullPassSeconds;
+
+    /*
+     * The verdicts the last full pass produced, kept for the cheap lane to project over. Carrying the INSTANCE rather than
+     * rebuilding it is what makes the cheap lane cheap twice over: no rule book runs, and `EntityTimeline.StateStamp()` comes back
+     * unchanged, which is exactly the answer FightProjectionCache needs to keep folding from its watermark instead of re-walking
+     * the night. Nothing mutates a timeline outside ClassificationRules/RegistrySeed/overrides, all of which build a fresh one,
+     * so this reference cannot be revised behind the pass that holds it.
+     *
+     * The staleness this accepts is stated in MirrorDeriveCadence: a verdict readable only from facts that arrived after the last
+     * full pass (a pet folding onto its raiders, a charm flipping a name) lands one full cadence later.
+     */
+    private EntityTimeline? _carriedTimeline;
     private volatile bool _autoDeriveDisabled;
     private bool _disposed;
 
@@ -166,11 +185,24 @@ namespace EQLogParser
       }
     }
 
-    public void RederiveAsync()
+    // A pass that classifies: what the UI asks for (a meter opening, a Re-derive click, a log opening).
+    public void RederiveAsync() => RederiveAsync(DeriveKind.Full);
+
+    public void RederiveAsync(DeriveKind kind)
     {
       if (_disposed || Interlocked.Exchange(ref _deriveInFlight, 1) == 1) return;
 
-      Log.Info($"Combat mirror derive starting over {CapturedTotal:N0} captured facts");
+      /*
+       * What reaches the player's own log. An expensive pass is an event worth a line; the cheap lane runs twice a second, and four
+       * lines of bookkeeping per second would push the raid out of the file this app writes (and out of the tail anyone reading it).
+       * Failures still log at their own level whatever the lane.
+       */
+      void Note(string message)
+      {
+        if (kind == DeriveKind.Full) Log.Info(message); else Log.Debug(message);
+      }
+
+      Note($"Combat mirror derive starting over {CapturedTotal:N0} captured facts");
 
       _ = Task.Run(() =>
       {
@@ -184,22 +216,13 @@ namespace EQLogParser
           EntityTimeline? classified = null;
           var snapshot = _mirror.DeriveQuiescent(() =>
           {
-            // Fresh timeline each pass: rules replay over the facts from scratch, so manual
-            // overrides and mid-log registry changes re-apply cleanly (idempotent by design).
-            var timeline = new EntityTimeline();
-            RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
-            // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
-            // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
-            // same stream for an NPC-verdict name the whole raid keeps topping up.
-            ClassificationRules.Apply(_facts, timeline, _heals);
-
             /*
-             * R10 last, and it has to be last: this timeline is built from nothing on every pass (see above), so
-             * what the operator saved has to be replayed into each one or an override would vanish at the very
-             * re-derive it asked for. Manual strength means nothing above can outvote it, order included.
+             * The expensive lane rebuilds the verdicts; the cheap lane takes the instance the last expensive pass left behind, so
+             * no rule book runs between the two folds. If no expensive pass has ever finished there is nothing to carry, and this
+             * pass becomes the expensive one whatever the cadence asked for — a first board cannot be built out of no verdicts.
              */
-            MirrorOverrideStore.Instance.Apply(timeline);
-            classified = timeline;
+            if (kind == DeriveKind.Full || _carriedTimeline is null) classified = Classify();
+            var timeline = classified ?? _carriedTimeline!;
 
             /*
              * Rows and damage index come from ONE walk: the index needs the same direction decision the rows split
@@ -232,8 +255,16 @@ namespace EQLogParser
            * derive above reads it, which is deliberate: R7 decides sides from what the timeline already knows, so
            * yesterday's conclusion arriving as evidence would let the rules argue with their own memory.
            */
-          IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
-                                             (long)_mirror.LastEventTime);
+          if (classified is not null)
+          {
+            // Only an expensive pass leaves verdicts behind, and only then does the full-pass clock restart: the cheap lane must
+            // not push the expensive one further away, or a busy tail would never re-classify.
+            _carriedTimeline = classified;
+            _lastFullPassSeconds = sw.Elapsed.TotalSeconds;
+            _sinceFullPass.Restart();
+            IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
+                                               (long)_mirror.LastEventTime);
+          }
 
           /*
            * Did damage arrive since the last announcement, with something still live? Asked on the capture's own clock (its
@@ -248,12 +279,11 @@ namespace EQLogParser
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
           _snapshot = snapshot;
-          _lastPassSeconds = sw.Elapsed.TotalSeconds;
           _lastDerivedCount = CapturedTotal;
           // "continued" is the interesting half of the cost story: a continuing pass walked only what arrived since the
           // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
-          Log.Info($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
-                   $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
+          Note($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
+               $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
           Derived?.Invoke(snapshot);
 
           /*
@@ -287,7 +317,7 @@ namespace EQLogParser
         {
           // Counted as an interval even when the pass threw: the wait belongs to the cost of a pass, and a failing
           // derive that restarted its own stopwatch would be re-attempted at the floor cadence forever.
-          _sinceLastPass.Restart();
+          _sinceAnyPass.Restart();
           Interlocked.Exchange(ref _deriveInFlight, 0);
         }
       });
@@ -303,6 +333,7 @@ namespace EQLogParser
       // The fact table is the biggest thing the mirror holds; a disposed session must not stay the reason
       // a closed log's records are still reachable.
       _snapshot = null;
+      _carriedTimeline = null;
       if (ReferenceEquals(Active, this))
       {
         Active = null;
@@ -442,8 +473,8 @@ namespace EQLogParser
       + _facts.IdentityEventCount + _facts.EvidenceCount;
 
     /*
-     * The trigger, decided by MirrorDeriveCadence (where the rule and its measurements live). This method only feeds it
-     * the three counters and the clock. Quiescence is still the fast path — a load that stops moving gets its pass on
+     * The trigger, decided by MirrorDeriveCadence (where the rule and its measurements live). This method only feeds it the counters
+     * and the two clocks, then dispatches whichever lane came back — a cheap fold or an expensive pass. Quiescence is still the fast path — a load that stops moving gets its pass on
      * the next tick — but it is no longer the ONLY path: waiting for two silent ticks meant that a live raid tail,
      * which never offers two silent ticks, held one snapshot for the whole encounter, and every surface reading it (the
      * fight list, a click's summary, the damage meter) showed the same frozen numbers until somebody pressed Re-derive.
@@ -469,11 +500,37 @@ namespace EQLogParser
       // an empty log from a stalled pipeline without needing a debugger.
       if (count != _lastDerivedCount) Capturing?.Invoke(count);
 
-      if (MirrorDeriveCadence.ShouldDerive(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
-            factsPerSecond, _sinceLastPass.Elapsed.TotalSeconds, _lastPassSeconds))
-      {
-        RederiveAsync();
-      }
+      var kind = MirrorDeriveCadence.Decide(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
+                                            factsPerSecond, _sinceAnyPass.Elapsed.TotalSeconds,
+                                            _sinceFullPass.Elapsed.TotalSeconds, _lastFullPassSeconds);
+      if (kind != DeriveKind.None) RederiveAsync(kind);
+    }
+
+    /*
+     * The expensive half of a pass: rebuild the verdicts from nothing. Fresh timeline each time, because the rules replay over the
+     * facts from scratch — that is what lets manual overrides and mid-log registry changes re-apply cleanly (idempotent by design).
+     *
+     * Runs inside the ingest gate, and its measured cost (186 ms on Kizant, 261 ms on Incogitable) is what paces it: rules that
+     * re-run without learning anything are the entire price of a refresh, which is why the cheap lane exists at all.
+     */
+    private EntityTimeline Classify()
+    {
+      var timeline = new EntityTimeline();
+      RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
+
+      // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
+      // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
+      // same stream for an NPC-verdict name the whole raid keeps topping up.
+      ClassificationRules.Apply(_facts, timeline, _heals);
+
+      /*
+       * R10 last, and it has to be last: this timeline is built from nothing on every pass (see above), so
+       * what the operator saved has to be replayed into each one or an override would vanish at the very
+       * re-derive it asked for. Manual strength means nothing above can outvote it, order included.
+       */
+      MirrorOverrideStore.Instance.Apply(timeline);
+
+      return timeline;
     }
 
     private sealed class MirrorChatSink : IChatSink
