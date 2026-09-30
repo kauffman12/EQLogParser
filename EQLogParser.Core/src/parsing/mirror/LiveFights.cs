@@ -56,37 +56,64 @@ namespace EQLogParser.Mirror
       return false;
     }
 
-    /*
-     * A fight the capture just opened: live on this pass, and not live on the one before. Keyed on name + begin, so the same
-     * row growing across passes is not news while another pull of the same name is. A row that had gone quiet and caught fire
-     * again counts as new too — what a caller wants to know is whether damage started moving, not whether this mob was seen
-     * once before. `previous` being null is the first pass over a capture, where anything live is news.
-     */
-    internal static DerivedFight FindNewLive(IReadOnlyList<DerivedFight> previous, IReadOnlyList<DerivedFight> current,
-                                             double nowT, double gapS)
+    // The newest activity anywhere in these rows (dead rows excluded: a corpse does not make a meter want to open).
+    // NaN when there is nothing to ask about — no rows, or none with a window.
+    internal static double LatestActivityAt(IReadOnlyList<DerivedFight> rows)
     {
-      if (current is null) return null;
+      if (rows is null) return double.NaN;
 
-      HashSet<string> seen = null;
-      if (previous is not null)
+      var newest = double.NaN;
+      for (var i = 0; i < rows.Count; i++)
       {
-        seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in previous)
-        {
-          if (IsLive(row, nowT, gapS)) seen.Add(KeyOf(row));
-        }
+        var row = rows[i];
+        if (row.Dead) continue;
+
+        var t = LastActivityAt(row);
+        if (!double.IsNaN(t) && (double.IsNaN(newest) || t > newest)) newest = t;
       }
 
-      foreach (var row in current)
-      {
-        if (IsLive(row, nowT, gapS) && seen?.Contains(KeyOf(row)) != true) return row;
-      }
-
-      return null;
+      return newest;
     }
 
-    // Begin time is seconds with a fraction; "R" keeps it exact and short. Names arrive in whatever case the log used, so the
-    // key follows every other entity lookup in this engine and ignores case (and \n cannot appear in a name).
-    private static string KeyOf(DerivedFight row) => $"{row.Name}\n{row.BeginTime:R}";
+    /*
+     * "Damage came in since you last looked" — the question a meter asks when it has NO window on screen and wants to know
+     * whether to open one. Two halves, and both are needed: something live on this capture, and newer row activity than the
+     * caller last acted on. Without the second half the event would fire every derive through an idle tail; without the first
+     * it would fire on the last hit of a kill and reopen a meter over a corpse.
+     *
+     * This is deliberately NOT "a new fight started": legacy's `EventsNewOverlayFight` fired on every damage line of a fight,
+     * which is why closing a meter with the X during a pull brought it back within a line or two rather than at the next pull.
+     */
+    internal static bool HasFreshDamage(IReadOnlyList<DerivedFight> rows, double lastAnnouncedActivityT, double nowT,
+                                        double gapS)
+    {
+      var newest = LatestActivityAt(rows);
+      return !double.IsNaN(newest) && newest > lastAnnouncedActivityT && AnyLive(rows, nowT, gapS);
+    }
+
+    /*
+     * The seconds a meter board covers, as a rule rather than as a field on a window.
+     *
+     * `storedStartT` is what the last tick used (-1 = never opened, or just cleared). The start survives everything except
+     * the two things that legitimately end it: an explicit clear (the caller passes -1) and quiet longer than `timeoutS`
+     * — the meter's own expiry dial. That survival is what makes a window CLOSED with the X come back "where it left off":
+     * legacy got this for free because its running totals lived in statics, so a reopened window kept painting the same
+     * accumulation. A derived board holds nothing between ticks, so if the start lived on the window instance it would be
+     * reborn at "now" and the seconds already spent on the pull would vanish from the numbers — not from the capture, but
+     * from the board. Note what does NOT age the stored start while no window is open: nothing runs out there, so the
+     * reopen asks this rule once and gets the answer the dial implies — still inside the range means the whole pull.
+     */
+    internal static double WindowStartFor(double storedStartT, double lastFactT, double nowT, double timeoutS)
+    {
+      if (storedStartT < 0) return nowT;
+      return Expired(nowT, lastFactT, timeoutS) ? nowT : storedStartT;
+    }
+
+    /* True when the board should zero: the newest fact predates `nowT` by more than the meter's quiet window. A window with
+     * no facts at all (NaN) has nothing to expire — there is no board showing, and inventing an expiry for it would move the
+     * start point forward on a capture that has not started yet. */
+    internal static bool Expired(double nowT, double lastFactT, double timeoutS) =>
+        !double.IsNaN(lastFactT) && nowT - lastFactT > timeoutS;
+
   }
 }

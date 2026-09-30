@@ -649,25 +649,30 @@ namespace EQLogParser
      * The auto-open rule, attached to whichever engine reports fights. Both engines raise on a worker thread (the parse
      * thread for FightManager, the derive thread for the mirror), so the window is still created through the dispatcher and
      * re-checked there — the meter opens once, at most, however many passes announce the same pull.
+     *
+     * This is also what gives the meter's X its meaning: closing the window does not disable anything, so damage brings the
+     * board back (and back to the same numbers — a closed window does not reset the meter's start). "Disable Meter" is how you
+     * keep it shut. Legacy announced on every damage line of a fight, which is why its X behaved that way; the mirror raises
+     * at derive rate instead, and AutoOpenMeter's already-open check swallows all but the first.
      */
     private void SubscribeOverlayFights()
     {
-      if (MirrorMeter.Enabled) MirrorSession.NewFightObserved += OnMirrorNewFight;
+      if (MirrorMeter.Enabled) MirrorSession.LiveDamageObserved += OnMirrorLiveDamage;
       else FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
     }
 
-    // Symmetric on purpose: MirrorSession.NewFightObserved is static and outlives a capture, so leaving it attached would
+    // Symmetric on purpose: MirrorSession.LiveDamageObserved is static and outlives a capture, so leaving it attached would
     // keep this window (and its whole visual tree) alive across every log opened afterwards.
     private void UnsubscribeOverlayFights()
     {
-      if (MirrorMeter.Enabled) MirrorSession.NewFightObserved -= OnMirrorNewFight;
+      if (MirrorMeter.Enabled) MirrorSession.LiveDamageObserved -= OnMirrorLiveDamage;
       else FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
     }
 
     private void EventsNewOverlayFight(Fight e) => AutoOpenMeter();
 
-    // The row that just started, which the meter does not look at: it opens and reads whatever the current snapshot says.
-    private void OnMirrorNewFight(DerivedFight e) => AutoOpenMeter();
+    // Damage arrived, and which row carries it is not the meter's business: it opens and reads whatever the snapshot says.
+    private void OnMirrorLiveDamage() => AutoOpenMeter();
 
     private void AutoOpenMeter()
     {

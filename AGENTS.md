@@ -247,10 +247,17 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   ending after a kill therefore answers **0 live rows**, which is correct — so `LiveFightsRealLogTest` reports that number and asserts each row is
   live at its *own* last activity instead. (2) **the gap is the meter's dial** (`TimeoutFor`: `OverlayDamageMode` 0 = on kill = `EngagementGapS`,
   else N seconds), so a window cannot be held open by one rule and blanked by another; pin it as *behaviour* (live at 29 s, dead at 31 s), since
-  comparing two constant spellings of 30 passes even after somebody edits it to 300. (3) **`NewFightObserved` is ~one announcement per life** —
-  269/269 on Kizant, 377/377 on 09-20-25, **4,542 over 4,519** on Incogitable (23 restarts, longest mid-row pause **121 s**, which exists because
-  rows split on silence in *any* traffic while the live rule reads only the two direction windows) — that is what makes it safe for MainWindow to
-  open a window on it; an event firing every derive would reopen a meter the user closed seconds ago. It is **static** on `MirrorSession` (like
+  comparing two constant spellings of 30 passes even after somebody edits it to 300. (3) **the X closes the window and disables nothing — so the next damage
+  brings the board back, onto the same seconds**: `MirrorSession.LiveDamageObserved` fires while damage is fresh (`LiveFights.HasFreshDamage` = activity newer than the
+  last announcement AND something still live), because legacy's `EventsNewOverlayFight` fired on **every damage line** of a fight (`UpdateIfNewFightMap` raises it whenever
+  `DamageHits > 0`, outside the new-fight branch) and that is what its X felt like. Continuity needs the other half: `DamageOverlayWindow._mirrorWindowT` (the second the board
+  adds up from) is **static**, since a derived board holds nothing between ticks and an instance field would be reborn at "now" — closing a window is not a reset, only the clear
+  button and the dial's own quiet rule (`LiveFights.WindowStartFor`) move it. Both halves were defects in the first port: announcing one row per life kept a closed meter shut
+  until the *next pull*, and the instance start made a reopened board forget the seconds already spent. Rate is per derive rather than per line, bounded by
+  `MirrorDeriveCadence` — measured **~421 to 2,107** announces over a night carrying 1.9 M damage facts, each one a window-already-open check while the board is up. The per-life
+  census still matters as the shape of a night: starts per life ≈ 1 (269/269 Kizant, 377/377 on 09-20-25, **4,542 over 4,519** on Incogitable with 23 restarts, longest mid-row
+  pause **121 s**, which exists because rows split on silence in *any* traffic while the live rule reads only the two direction windows), and coverage **105 min** of a 329 h file
+  (Kizant) / **3,875 min** (Incogitable). It is **static** on `MirrorSession` (like
   `ActiveChanged`) because its reader outlives a capture, raised in its own `try` *after* `Derived` so a subscriber cannot make the derive look
   broken, and unsubscribed through `Subscribe/UnsubscribeOverlayFights()` rather than at scattered call sites. Visible differences from legacy are
   deliberate: launch opens only if the capture's last moments hold a fight (legacy opened if the 616-day file ever had one) and a hidden derived

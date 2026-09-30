@@ -4500,3 +4500,35 @@ meter that quietly started trusting legacy visibility rules looks exactly like a
 Re-measure with `EQLP_MIRROR_LIVE=local/<log>.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"`.
 What is left on this path is not the wiring but the default: flip `OverlayDamageFromMirror` on and delete
 `DamageOverlayStatsBuilder`, which is the legacy tally this bypasses.
+
+### The X closes a meter; it does not reset one (2026-09-29)
+
+Reported from use: the reset button behaves, but "the X is just supposed to close the window and it would open back up next time damage comes in
+and it would continue where it left off if it were within the configured time range". Both halves were broken in the port, and the interesting part is that
+the previous section of these notes argued for the broken behaviour.
+
+**Reopen.** `FightManager.UpdateIfNewFightMap` raises `EventsNewOverlayFight` inside `if (fight.DamageHits > 0)`, *outside* the `TryAdd` branch: the event goes out on
+every damage line of a fight that has ever done damage. Legacy's X therefore lasted until the next line — milliseconds. My port announced one row per life, reasoning that
+"an event firing every derive would reopen a meter the user closed seconds ago". That reasoning mistook the player's intent for a bug: closing a board during a pull is
+"get it out of the way", and `Disable Meter` exists for "keep it shut". The trigger is now `LiveFights.HasFreshDamage` — newer row activity than the last announcement, with
+something still live — raised per derive. The rate question was measured rather than assumed: over the covered seconds of a night the reopen rule fires **~421 times at the 15 s
+cadence and ~2,107 at the 3 s ceiling on Kizant (105 covered minutes), ~15,498 / ~77,492 on Incogitable (3,875 minutes)**, against **1,929,949** and **1,891,875** damage facts —
+each of which fired legacy's event. Two to four orders of magnitude cheaper, and while a window is open every one of them is `_damageOverlay == null` returning false. The liveness
+half is not decoration: without it the last hit of a kill would pop a board over a corpse.
+
+**Continue where it left off.** Legacy got this without trying — its accumulation lives in statics (`DamageOverlayWindow._stats`/`_statsBuilder`) and in FightManager's fights, so
+a reopened window kept painting what it had not thrown away. A derived board holds nothing between ticks: it is recomputed from the facts inside `[windowT, now]`, so the only thing
+that can carry is `windowT`, and that field was an instance member — reborn at "now" with every reopen, which quietly deleted the seconds already spent on the pull from the numbers
+while the raid kept going. It is static now, and the decision is a rule (`LiveFights.WindowStartFor`): the stored start survives unless it is absent (first tick after a clear) or the
+capture has been quiet past the meter's own dial, in which case the board zeroes and starts here. Nothing runs while no window exists, so an X does not age the start either — a reopen
+inside the range gets the whole pull, a reopen after it gets one fresh board, and in both cases it is `OverlayDamageMode` deciding rather than a special case in the window.
+
+Two things in the code and the notes disagreed with themselves while I wrote this, which is worth keeping as a lesson: my earlier "starts per life" census (269/269, 4,542/4,519) was
+a correct measurement of *pull starts* that I had labelled "announcements" and built a product rule on. The census stays — it is the shape of a night, and 23 restarts with a 121 s pause
+inside a row is the gap rule working on a real capture — but the announcement rule moved off it. The test that asserted "not per second of fighting" is gone; `TheAnnouncementMeansNewerDamage_NotANewFight`
+pins the new one, including the dead-row and stale-activity refusals, and `AClosedMeterReopensOntoTheSecondsItLeft` pins the four combinations of stored start, quiet length and dial.
+
+```
+EQLP_MIRROR_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
+  --filter LiveFights_RealLog --logger "console;verbosity=detailed"     # prints [live] coverage, starts, restarts, reopen ceiling
+```

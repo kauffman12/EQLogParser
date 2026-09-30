@@ -38,16 +38,22 @@ namespace EQLogParser
     public event Action<MirrorSnapshot> Derived;
 
     /*
-     * "A fight just started", for the one surface that opens itself: the damage meter used to learn this from
-     * FightManager, which created a fight object at the moment a first hit landed. A derived list has no such instant — a
-     * row appears on a pass — so this says which row the last pass opened that is still going (LiveFights), on the derive
-     * thread.
+     * "Damage came in", for the one surface that opens itself: the meter. Legacy raised this on **every damage line** of a
+     * fight (`FightManager.UpdateIfNewFightMap` fires it whenever `fight.DamageHits > 0`, outside the new-fight branch), which
+     * is why closing a meter with the X during a pull brought it back within a line or two. A derived list has no per-line
+     * moment — rows appear on a pass — so this says "newer row activity than the last announcement, and something still live"
+     * (LiveFights.HasFreshDamage), at derive rate rather than line rate. The reader no-ops while a window exists, so the extra
+     * passes cost one null check; what they buy is that the reopen happens on the damage the player can see rather than at the
+     * next pull.
      *
      * STATIC, unlike Derived, because its reader outlives a capture: MainWindow keeps one subscription for the whole run
      * and the meter must auto-open for the next log too, not just the one open when it subscribed. Unsubscribed on window
      * close, exactly like ActiveChanged.
      */
-    public static event Action<DerivedFight> NewFightObserved;
+    public static event Action LiveDamageObserved;
+
+    // Newest row activity announced so far, so the announcement means "newer than last time" and not "still fighting".
+    private double _lastAnnouncedActivityT = double.NegativeInfinity;
 
     public event Action<string> DeriveFailed;
 
@@ -230,15 +236,14 @@ namespace EQLogParser
                                              (long)_mirror.LastEventTime);
 
           /*
-           * Whether this pass opened a fight that was not live on the last one. Asked BEFORE the swap because the previous
-           * snapshot is what "new" means, and answered on the capture's own clock (its newest event) rather than wall time:
-           * during a bulk load of an old log the middle of the file must not count as a fight starting, and the tail of it —
-           * which does — is exactly where a reader who reopened yesterday's log wants the meter to appear.
+           * Did damage arrive since the last announcement, with something still live? Asked on the capture's own clock (its
+           * newest event) rather than wall time: during a bulk load of an old log the middle of the file must not count as
+           * activity worth opening a meter for, while its tail — which does — is exactly where a reader who reopened yesterday's
+           * log wants one. Gated on the setting for the same lazy reason legacy gated its per-line event.
            */
-          var openedFight = ConfigUtil.IfSet("IsDamageOverlayEnabled")
-                              ? LiveFights.FindNewLive(_snapshot?.AllFights, snapshot.AllFights, _mirror.LastEventTime,
-                                                       LiveFights.GapS)
-                              : null;
+          var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
+                            && LiveFights.HasFreshDamage(snapshot.AllFights, _lastAnnouncedActivityT, _mirror.LastEventTime,
+                                                         LiveFights.GapS);
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
@@ -256,10 +261,13 @@ namespace EQLogParser
            * its own try because an auto-open handler must never make the pass look like it failed (the catch below would
            * disable auto-derive over somebody else's exception).
            */
-          if (openedFight is not null)
+          if (freshDamage)
           {
-            try { NewFightObserved?.Invoke(openedFight); }
-            catch (Exception ex) { Log.Error("Mirror new-fight subscriber failed", ex); }
+            // Recorded whether or not anyone listened: the announcement's meaning is "newer than the last one we made", and a
+            // meter that was open (and ignored this) must not make the NEXT pass look like news all over again.
+            _lastAnnouncedActivityT = LiveFights.LatestActivityAt(snapshot.AllFights);
+            try { LiveDamageObserved?.Invoke(); }
+            catch (Exception ex) { Log.Error("Mirror live-damage subscriber failed", ex); }
           }
         }
         catch (Exception ex) when (!_disposed)

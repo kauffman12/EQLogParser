@@ -95,63 +95,76 @@ public class LiveFightsTest
         Assert.IsFalse(LiveFights.AnyLive([Row("Boss", T0 - 31)], T0, LiveFights.TimeoutFor(0)));
     }
 
+    /*
+     * The announcement rule is "damage came in", NOT "a new fight started". Legacy raised EventsNewOverlayFight on EVERY
+     * damage line of a fight (FightManager.UpdateIfNewFightMap fires it whenever DamageHits > 0, outside the new-fight
+     * branch), which is why closing a meter with the X during a pull brought it back within a line or two. The first port of
+     * auto-open announced one row per life instead, and that is the defect this pins: close the meter mid-pull and it stayed
+     * shut until the next pull, minutes later.
+     */
     [TestMethod]
-    public void ANewFightIsOneTheLastPassDidNotReportLive()
+    public void TheAnnouncementMeansNewerDamage_NotANewFight()
     {
-        var running = Row("Boss", T0 - 20);
-        var secondPassBoss = Row("Boss", T0 - 2);                     // same name AND same begin: the same life, grown
-        var newborn = Row("Add", T0 - 1);
+        var sameLife = Row("Boss", T0 - 1);                 // same name, same begin as any earlier pass: not a new fight
 
-        Assert.AreEqual("Add", LiveFights.FindNewLive([running], [secondPassBoss, newborn], T0, LiveFights.GapS)?.Name,
-            "the row that grew is not news; the one that appeared is");
+        Assert.IsTrue(LiveFights.HasFreshDamage([sameLife], double.NegativeInfinity, T0, LiveFights.GapS),
+            "newer activity than the last announcement, with something still live, is the whole condition");
 
-        // A third pass over the same rows announces nothing: an auto-open rule that re-fired every derive would reopen a
-        // meter the user closed one second ago.
-        Assert.IsNull(LiveFights.FindNewLive([secondPassBoss, newborn], [secondPassBoss, newborn], T0, LiveFights.GapS));
+        // Nothing newer arrived: an idle tail says nothing, so a closed meter is not reopened over seconds nobody fought in.
+        Assert.IsFalse(LiveFights.HasFreshDamage([sameLife], T0 - 1, T0, LiveFights.GapS));
+        Assert.IsFalse(LiveFights.HasFreshDamage([sameLife], T0, T0, LiveFights.GapS));
+
+        // Fresh activity but nothing live any more: the last hit of a kill must not pop a board over a corpse.
+        var killed = Row("Boss", T0 - 1);
+        Assert.IsTrue(LiveFights.HasFreshDamage([killed], double.NegativeInfinity, T0, LiveFights.GapS));
+        killed.Dead = true;
+        Assert.IsFalse(LiveFights.HasFreshDamage([killed], double.NegativeInfinity, T0, LiveFights.GapS));
+
+        // Activity older than the gap says nothing even on a first look — a finished log must not open a meter on its tail.
+        Assert.IsFalse(LiveFights.HasFreshDamage([Row("Ancient", T0 - 400)], double.NegativeInfinity, T0, LiveFights.GapS));
+    }
+
+    // The clock the announcement compares against: newest across rows, in either direction (a mob beating a raider is
+    // traffic too), and dead rows contribute nothing.
+    [TestMethod]
+    public void TheNewestActivityIsTheNewestRow_ActivityOrTanking()
+    {
+        Assert.IsTrue(double.IsNaN(LiveFights.LatestActivityAt([])));
+        Assert.AreEqual(T0 - 2, LiveFights.LatestActivityAt([Row("Boss", T0 - 9), Row("Add", T0 - 2)]), 1e-6);
+
+        var beaten = new DerivedFight { Name = "Rune", BeginTime = T0 - 30, LastTime = T0 - 30, LastTankingTime = T0 - 4 };
+        Assert.AreEqual(T0 - 4, LiveFights.LatestActivityAt([Row("Boss", T0 - 9), beaten]), 1e-6,
+            "a raider being hit is the newest thing on the capture");
+
+        var slain = Row("Boss", T0 - 2);
+        slain.Dead = true;
+        Assert.IsTrue(double.IsNaN(LiveFights.LatestActivityAt([slain])), "a corpse is not activity");
     }
 
     /*
-     * Another pull of the same mob is a new fight — the raid pulled something, which is precisely what the meter wants to
-     * know. Name alone would swallow it (the name was already live), so the key carries the row's begin: the same law that
-     * gives one row per life in the fight list.
+     * "The X closes the window and it continues where it left off" — which for a derived board means the WINDOW START, since
+     * nothing else survives the close (the numbers are recomputed from facts inside those seconds). Legacy got the survival
+     * free from statics; here it has to be the rule, so the rule is what is asserted: inside the quiet range the same start,
+     * outside it a fresh one, and an explicit clear (no window at all) starting now.
      */
     [TestMethod]
-    public void AReopenedNameIsANewFight()
+    public void AClosedMeterReopensOntoTheSecondsItLeft()
     {
-        // Two lives of the same name alive on the same capture clock: an earlier row that has not aged out of the gap, and a
-        // second one the raid just started. Keyed on NAME alone the newcomer is "already seen" and the meter never opens;
-        // keyed on name + begin it is announced, which is the same law that gives one row per life in the fight list.
-        var stillWarm = new DerivedFight { Name = "Boss", BeginTime = T0 - 25, LastTime = T0 - 6, LastDamageTime = T0 - 6 };
-        var newborn = new DerivedFight { Name = "Boss", BeginTime = T0 - 1, LastTime = T0 - 1, LastDamageTime = T0 - 1 };
+        const double opened = T0 - 60;                       // the pull began a minute of facts ago
+        var midPull = T0 - 1;
 
-        Assert.AreEqual("Boss", LiveFights.FindNewLive([stillWarm], [stillWarm, newborn], T0, LiveFights.GapS)?.Name);
-        Assert.IsNull(LiveFights.FindNewLive([stillWarm, newborn], [stillWarm, newborn], T0, LiveFights.GapS),
-            "and once both are known, neither is news on the next pass");
-    }
+        Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, midPull, midPull + 1, LiveFights.TimeoutFor(0)),
+            "still inside the range the dial allows, so the reopened board covers the same seconds as before the X");
 
-    // First pass over a capture: nothing was reported before, so whatever is live counts as started. A log opened mid-raid
-    // should put a meter on screen, and the caller decides whether to act (MainWindow gates on its settings).
-    [TestMethod]
-    public void TheFirstPassAnnouncesWhateverIsLive()
-    {
-        Assert.AreEqual("Boss", LiveFights.FindNewLive(null, [Row("Boss", T0 - 3)], T0, LiveFights.GapS)?.Name);
-        Assert.IsNull(LiveFights.FindNewLive(null, [Row("Ancient", T0 - 400)], T0, LiveFights.GapS),
-            "a capture whose newest row is old news starts no fight — a finished log must not pop a meter open on a corpse");
-    }
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 20, T0, LiveFights.TimeoutFor(15)),
+            "a meter configured to expire after 15 quiet seconds starts over once the pull has been over that long");
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 100, T0, LiveFights.TimeoutFor(0)));
 
-    /*
-     * A row that had gone quiet and caught fire again IS announced: the raid resumed, and the closed meter should come back.
-     * Asserting this explicitly because the obvious implementation (remember every name ever seen) gets it wrong in the
-     * other direction — it would never re-open for the mob that paused mid-pull and resumed.
-     */
-    [TestMethod]
-    public void AFightThatResumedIsANewFight()
-    {
-        var quiet = Row("Boss", T0 - 90, double.NaN, lastTime: T0 - 90);   // live on the earlier capture clock
-        Assert.IsTrue(LiveFights.IsLive(quiet, T0 - 60, LiveFights.GapS), "it was going on a minute of facts ago");
+        // What the clear button contributes: no window at all, which begins now.
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(-1, midPull, T0, LiveFights.TimeoutFor(0)));
 
-        var resumed = Row("Boss", T0 - 1);                                 // same life, new damage
-        Assert.AreEqual("Boss", LiveFights.FindNewLive([quiet], [resumed], T0, LiveFights.GapS)?.Name);
+        // A capture with no facts cannot expire — nothing moves the start except a real reset.
+        Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, double.NaN, T0, LiveFights.TimeoutFor(0)));
     }
 
     // Pet rows count. CharmPetRows hides them from the LIST because a summon is not an encounter; the meter shows their

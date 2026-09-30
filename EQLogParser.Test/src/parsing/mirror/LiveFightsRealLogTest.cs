@@ -11,21 +11,23 @@ namespace EQLogParser;
  * FightManager owned a set that a log line added to. Once the mirror owns the answer, two questions become product
  * questions, and both are answerable from a capture:
  *
- *   1. **How noisy is "a fight just started"?** `MirrorSession.NewFightObserved` fires once per derive that opens a fight,
- *      and MainWindow opens a meter on it. If the announcement re-fired every few seconds through a pull, an auto-open rule
- *      would be reopening a window the user closed moments ago; if it fired only once a night, the auto-open is decorative.
- *   2. **How much of a raid night has no fight in it?** That is how long a hidden derived meter stays closed before the next
- *      announcement, and — since `HasLiveFight` also gates whether an enabled meter opens at all on launch — how often the
- *      app will refuse to open one until the next pull.
+ *   1. **How much of a raid night has no fight in it?** That is how long a closed meter stays closed: the announcement that
+ *      reopens it fires while damage is fresh, so the dark stretches are exactly the quiet ones. It is also how often the app
+ *      refuses to open a meter at all on launch, since `HasLiveFight` gates that too.
+ *   2. **How many pulls does a night contain, and how often does one resume after the gap?** Starts per life, restarts of the
+ *      same name after 30 quiet seconds, longest pause inside a row: the shape the board's own gap rule makes of a capture, and
+ *      what a player reads as "pulls". It is NOT the meter's open rate — that rule fires on fresh damage at derive rate
+ *      (LiveFights.HasFreshDamage), because legacy fired its event on every damage line of a fight, which is why a meter closed
+ *      with the X came straight back.
  *
  * Runs only when EQLP_MIRROR_LIVE names a log:
  *   EQLP_MIRROR_LIVE=local/eqlog_Kizant_xegony.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"
  *
- * The announcement count is taken off each row's two direction populations — `MirrorDamageIndex.DamageOrdinalsFor` and
- * `.TankingOrdinalsFor`, which are exactly what `LiveFights.LastActivityAt` reads — counting a fresh start after every
- * silence longer than the gap. Unrouted facts (mob on mob, mob on somebody's pet) sit inside the row's span but in neither
- * window, so they do not keep a fight live and do not appear here either; counting them would understate the restarts, which
- * is the number that decides how often an auto-open rule fires.
+ * The pull counts are taken off each row's two direction populations — `MirrorDamageIndex.DamageOrdinalsFor` and
+ * `.TankingOrdinalsFor`, which are exactly what `LiveFights.LastActivityAt` reads — counting a fresh start after every silence
+ * longer than the gap. Unrouted facts (mob on mob, mob on somebody's pet) sit inside the row's span but in neither window, so
+ * they do not keep a fight live and do not appear here either; counting them would understate the quiet stretches, which are
+ * what decide how long a closed meter stays shut.
  */
 [TestClass]
 [DoNotParallelize]
@@ -105,18 +107,18 @@ public class LiveFightsRealLogTest
         Console.WriteLine($"[live] {(last - first) / 3600:N1} h of file, of which {covered / 60:N1} min have a fight live in them; "
                           + $"{quietRuns} stretches of >{GapS:N0} s with nothing live, longest {longestQuiet / 60:N1} min");
 
-        // 2. Announcements: one when a row's windowed traffic starts, another each time it restarts after the gap. Both lists
+        // 2. Pull starts: one when a row's windowed traffic starts, another each time it restarts after the gap. Both lists
         //    are already ascending (the projection walks facts in order), so this is a two-pointer merge.
-        var announcedRows = 0;
-        var announcements = 0;
+        var startedRows = 0;
+        var starts = 0;
         var restarts = 0;
         double longestRowPause = 0;
         foreach (var row in rows)
         {
             if (!index.HasDamage(row) && !index.HasTanking(row)) continue;
 
-            announcedRows++;
-            announcements++;
+            startedRows++;
+            starts++;
             var prev = double.NegativeInfinity;
             var i = 0;
             var j = 0;
@@ -135,7 +137,7 @@ public class LiveFightsRealLogTest
                 {
                     if (!double.IsNegativeInfinity(prev))
                     {
-                        announcements++;
+                        starts++;
                         restarts++;
                         longestRowPause = Math.Max(longestRowPause, t - prev);
                     }
@@ -145,8 +147,8 @@ public class LiveFightsRealLogTest
             }
         }
 
-        Console.WriteLine($"[live] {announcements} announcements over {announcedRows} rows that carry traffic "
-                          + $"({announcements / (double)announcedRows:N2} per row; {restarts} restarts, longest mid-row pause "
+        Console.WriteLine($"[live] {starts} pull starts over {startedRows} rows that carry traffic "
+                          + $"({starts / (double)startedRows:N2} per row; {restarts} restarts, longest mid-row pause "
                           + $"{longestRowPause:N0} s)");
 
         // 3. Live right now, i.e. what a meter opening at this instant would be told, and the same question on the two dials.
@@ -156,11 +158,11 @@ public class LiveFightsRealLogTest
                           + $"live damage share on this capture = "
                           + $"{rows.Where(r => LiveFights.IsLive(r, last, GapS)).Sum(r => r.DamageTotal) / (double)Math.Max(1, rows.Sum(r => r.DamageTotal)) * 100:N1} %");
 
-        // Each row that carries anything announces at least once, and a capture measured this way must be non-trivial —
+        // Each row that carries anything starts at least once, and a capture measured this way must be non-trivial —
         // those are the collapse checks. Everything else above is a report for a human to read, deliberately un-thresholded:
         // a raid night's rhythm is not a constant to assert, and a red test that fires because a guild took a long break is
         // a test people delete.
-        Assert.IsTrue(announcements >= announcedRows, "a row with traffic never announced its own start");
+        Assert.IsTrue(starts >= startedRows, "a row with traffic never announced its own start");
         Assert.IsTrue(covered > 0 && covered <= last - first + GapS, "the quiet sweep ran outside the capture");
         /*
          * NOT asserted: that `liveNow` is above zero. It reads 1 on Kizant (that file ends mid-pull) and 0 on both Incogitable
@@ -177,6 +179,16 @@ public class LiveFightsRealLogTest
          * the overlay's dial would be decorative.
          */
         Assert.IsTrue(liveAtFive <= liveNow, "a tighter quiet window answered with MORE live fights");
+
+        /*
+         * What the reopen rule consumes. It fires per derive while damage stays inside the gap, so its rate is the CADENCE's,
+         * not the log's (MirrorDeriveCadence: 3..15 s). Printed against this capture's fact count so nobody has to wonder
+         * whether "announce on fresh damage" means an open-per-line like legacy's per-line event — it does not, and its reader
+         * no-ops while a window exists anyway.
+         */
+        Console.WriteLine($"[live] reopen-rule ceiling over the {covered / 60:N1} covered minutes: ~{covered / 3:N0} announces "
+                          + $"at the fastest cadence (3 s), ~{covered / 15:N0} at the slowest (15 s) — against "
+                          + $"{facts.Facts.Length:N0} damage facts, every one of which fired legacy's event");
     }
 
     private static string? Resolve(string? path)

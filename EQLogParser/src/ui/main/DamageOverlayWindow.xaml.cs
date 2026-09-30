@@ -11,6 +11,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
+using EQLogParser.Mirror;
+
 namespace EQLogParser
 {
   public partial class DamageOverlayWindow
@@ -44,7 +46,20 @@ namespace EQLogParser
     private readonly bool _mirrorMeter = MirrorMeter.Enabled;
     private bool _mirrorMeterWarned;
     private int _mirrorFailures;
-    private double _mirrorWindowT = -1;
+
+    /*
+     * The first second this board adds up, STATIC on purpose. Legacy got "the meter closed with the X and came back where it
+     * left off" for free: its running totals lived in `_stats`/`_statsBuilder` (also static) and in FightManager's fights,
+     * so a reopened window kept painting an accumulation it had not thrown away. A derived board holds nothing between ticks —
+     * it is recomputed from the facts inside these seconds — so if this start lived on the window instance it would be reborn
+     * at "now" and every second already spent on the pull would disappear from the numbers. Closing a window is not a reset;
+     * only two things legitimately move this: the clear button (explicit) and quiet longer than `OverlayDamageMode` (the
+     * meter's own expiry, applied by LiveFights.WindowStartFor below).
+     *
+     * Nothing runs while no window exists, so an X does not age the start either. A reopen inside the quiet range therefore
+     * shows the whole pull, and a reopen after it gets one fresh board — which is the dial deciding, not a special case here.
+     */
+    private static double _mirrorWindowT = -1;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -411,17 +426,21 @@ namespace EQLogParser
         // Same clock the derived facts carry: their TimeS is seconds from DateTime.MinValue, which is what every
         // legacy Fight bound uses too (the overlay's own expiry does DateTime.MinValue.AddSeconds(...)).
         var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
-        if (_mirrorWindowT < 0) _mirrorWindowT = nowT;
-
         var timeout = MirrorMeter.TimeoutFor(_currentDamageMode);
-        var update = session.BuildOverlayStats(_mirrorWindowT, nowT, out var lastFactT);
 
-        // The meter's own expiry, unchanged: quiet for longer than the board allows (mode > 0 is that many seconds,
-        // mode == 0 is FightTimeout) and it zeroes — with the window reopening here, so the next pull is counted from
-        // now rather than from an old reset.
-        if (!double.IsNaN(lastFactT) && nowT - lastFactT > timeout)
+        // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building).
+        var fromT = LiveFights.WindowStartFor(_mirrorWindowT, double.NaN, nowT, timeout);
+        var update = session.BuildOverlayStats(fromT, nowT, out var lastFactT);
+
+        /*
+         * Phase 2: the same rule again, this time with what the capture turned out to hold. Quiet for longer than the board
+         * allows (mode > 0 is that many seconds, mode == 0 is the engagement gap) and it zeroes — with the window reopening
+         * here, so the next pull counts from now rather than from an old reset. Otherwise the start carries forward, including
+         * across this window being closed and reopened.
+         */
+        _mirrorWindowT = LiveFights.WindowStartFor(_mirrorWindowT, lastFactT, nowT, timeout);
+        if (_mirrorWindowT != fromT)
         {
-          _mirrorWindowT = nowT;
           return null;
         }
 
