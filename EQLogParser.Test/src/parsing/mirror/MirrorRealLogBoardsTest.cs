@@ -119,7 +119,36 @@ public class MirrorRealLogBoardsTest
         return timeline;
     }
 
+    /* The test host's working directory is the output folder when it runs a rebuilt assembly, so a repo-relative log
+     * path only works if it is walked up to. Absolute paths pass straight through. (This file used to assume the
+     * invocation's directory, which made the same command work or skip depending on whether a rebuild happened.) */
+    private static string? Resolve(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path) || File.Exists(path)) return path;
+
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, path);
+            if (File.Exists(candidate)) return candidate;
+        }
+
+        return path;
+    }
+
     private static long Field(PlayerStats stats, PropertyInfo field) => Convert.ToInt64(field.GetValue(stats)!);
+
+    /* The person a damage row reports on. `X +Pets` IS X - the builder folds an owner's own hits into that aggregate
+     * once it knows her summons - and any other row reports on whoever its name says. */
+    private static string PersonOf(string rowName) =>
+        rowName.EndsWith(" +Pets", StringComparison.Ordinal) ? rowName[..^" +Pets".Length] : rowName;
+
+    /* The people a board is a report about, by the mirror's own final verdict: Player and Merc only. Pet rows are
+     * covered through PersonOf, and a name no rule placed is not evidence about the raid either way (it is still
+     * printed in the raw census above, where the reader can see what it did). */
+    private static HashSet<string> RaidSidePeople(Dictionary<string, PlayerStats> board, EntityTimeline timeline) =>
+        board.Keys.Select(PersonOf)
+            .Where(n => timeline.Identity(n) is IdentityKind.Player or IdentityKind.Merc)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static Dictionary<string, PlayerStats> By(CombinedStats? stats) =>
         (stats?.StatsList ?? []).GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.First());
@@ -226,7 +255,7 @@ public class MirrorRealLogBoardsTest
     [TestMethod]
     public void Boards_RealLog_PerRaiderParity()
     {
-        var path = Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS");
+        var path = Resolve(Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS"));
         if (string.IsNullOrEmpty(path)) Assert.Inconclusive("set EQLP_MIRROR_BOARDS=<path to log> to run");
         if (!File.Exists(path)) Assert.Fail($"EQLP_MIRROR_BOARDS points at nothing: {path}");
 
@@ -298,6 +327,25 @@ public class MirrorRealLogBoardsTest
         var damageDiffs = ReportBoard("damage", legacyDamage, derivedDamage, DamageFields, 20);
 
         /*
+         * Population, not names, because row names are not comparable between the two engines. Two reasons, both
+         * measured: legacy groups by record.Attacker whatever that name is, so its hostile-name list (npcs.txt) puts
+         * NPCs on its damage board - `Elmara Emberclaw` and `Dhakka Nogg` on eqlog_Kizant_xegony-09-08-24.txt, both
+         * Npc:R6-npcdb, dealing ~31 M TO the raid - while the derived side files that on the mob's row. And a PERSON is
+         * listed as `X +Pets` whenever the builder knows her summons: DamageStatsBuilder folds an owner's own hits into
+         * that aggregate and demotes her plain row below top level, and the derived side knows far more owners than the
+         * legacy registry ever learned because it reads the line's own possessive word (on eqlog_Kizant_xegony.txt
+         * every one of legacy's 8 person rows arrives as `X +Pets`). So this asks the question that is actually about
+         * loss: is there a raid member legacy lists who has no row of her own in the derived board under EITHER name?
+         */
+        var legacyPeople = RaidSidePeople(legacyDamage, timeline);
+        var derivedPeople = RaidSidePeople(derivedDamage, timeline);
+        var absentPeople = legacyPeople.Where(p => !derivedPeople.Contains(p)).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+        Console.WriteLine($"[boards] damage population (people, +Pets counted as the person): legacy={legacyPeople.Count} "
+                          + $"derived={derivedPeople.Count} shared={legacyPeople.Count(p => derivedPeople.Contains(p))} "
+                          + $"absentFromDerived={absentPeople.Count}"
+                          + (absentPeople.Count > 0 ? $": {string.Join(", ", absentPeople.Take(15))}" : ""));
+
+        /*
          * What is actually inside the derived tanking half, by what the timeline says the DEFENDER is. The board is
          * "damage the raid took", so everything but Player should be noise — and noise here is not cosmetic: it is
          * damage attributed to a name that will never appear on the grid, inflating a raid total nobody can audit.
@@ -317,6 +365,71 @@ public class MirrorRealLogBoardsTest
 
         foreach (var (kind, (count, sum)) in byKind.OrderByDescending(kv => kv.Value.Total))
             Console.WriteLine($"[boards] derived tanking facts with a {kind} defender: {count:N0} worth {sum:N0}");
+
+        /*
+         * Every fact the walk never announces, priced by which rule refused it. FightProjection has four `continue`s
+         * before the sink and each one is a decision about what a meter is allowed to forget: self damage, spell
+         * feedback (a verb sitting in the attacker field), raid-on-raid with no pet or charmed mob at the far end,
+         * and two mobs on each other. The fifth line is NOT a drop — it is the bucket the unplaced-victim branch now
+         * admits, kept because it measures how much of "damage our people received" rests on EXCLUSION (whatever takes
+         * a mob's hits is one of ours) rather than on evidence. Before that branch existed this bucket was dropped as
+         * mob-on-mob noise and the tank board lost raiders wholesale: on this capture `Worthless` 1,479,310,
+         * `Boner` 1,389,581, `Morris` 1,360,995, and 80 of Ddread's 85 incoming facts.
+         */
+        var unannounced = new Dictionary<string, (long Facts, long Total)>();
+        var unplacedDefenders = new Dictionary<string, long>();
+        void Drop(string bucket, DamageFact f)
+        {
+            var (count, sum) = unannounced.GetValueOrDefault(bucket);
+            unannounced[bucket] = (count + 1, sum + f.Total);
+        }
+
+        for (var i = 0; i < run.Facts.Facts.Length; i++)
+        {
+            var f = run.Facts.Facts[i];
+            if (f.AtkIdx == f.DefIdx) { Drop("self damage", f); continue; }
+
+            var atk = run.Facts.NameOf(f.AtkIdx);
+            var def = run.Facts.NameOf(f.DefIdx);
+            if (atk is null || def is null) continue;
+
+            var atkSide = FightProjection.SideAt(timeline, atk, f.TimeS);
+            var defSide = FightProjection.SideAt(timeline, def, f.TimeS);
+
+            if (atkSide != FightProjection.Side.Player && ClassificationRules.IsSelfTargetDamageSpell(atk))
+            {
+                Drop("spell feedback (a verb in the attacker field)", f); continue;
+            }
+
+            if (atkSide == FightProjection.Side.Player && defSide == FightProjection.Side.Player)
+            {
+                if ((!timeline.IsCharmedAt(def, f.TimeS) && !timeline.IsOurPetAt(def, f.TimeS)) || timeline.IsCharmedAt(atk, f.TimeS))
+                    Drop("friendly fire", f);
+                continue;
+            }
+
+            if (atkSide == FightProjection.Side.Npc && defSide == FightProjection.Side.Npc)
+            {
+                if (!timeline.IsCharmedAt(atk, f.TimeS)) Drop("mob on mob", f);
+            }
+
+            // Not a drop: what the tank board now owes to EXCLUSION rather than proof, which is the number worth
+            // watching across captures (it is how much of "damage our people received" is decided by reasoning
+            // about who takes a mob's hits instead of by evidence that the victim is one of us).
+            if (atkSide == FightProjection.Side.Npc && defSide == FightProjection.Side.Unknown && !timeline.IsCharmedAt(atk, f.TimeS))
+            {
+                Drop($"admitted: mob on unplaced -> final {timeline.Identity(def)}", f);
+                unplacedDefenders[def] = unplacedDefenders.GetValueOrDefault(def) + f.Total;
+            }
+        }
+
+        foreach (var (bucket, (count, sum)) in unannounced.OrderByDescending(kv => kv.Value.Total))
+            Console.WriteLine($"[boards] {bucket}: {count:N0} facts worth {sum:N0}");
+
+        var rosterInBucket = unplacedDefenders.Keys.Count(n => PlayerRegistry.Instance.IsVerifiedPlayer(n));
+        Console.WriteLine($"[boards] unplaced defenders hit by a mob: {unplacedDefenders.Count} names, "
+                          + $"{rosterInBucket} of them in the player list; top: "
+                          + string.Join(", ", unplacedDefenders.OrderByDescending(kv => kv.Value).Take(10).Select(kv => $"{kv.Key} {kv.Value:N0}")));
 
         /*
          * Both boards, then BOTH cut to the people the tank report is about. Legacy's board has no such filter — it
@@ -361,8 +474,229 @@ public class MirrorRealLogBoardsTest
         // never learned, and 38 names legacy lists (pets, warders) that the derived side folds away — while the raid
         // total sits within 0.5 %. Renaming is the experiment; loss would not be, so the bar here is "the board is
         // still about the raid" and every name difference gets printed.
-        Assert.IsTrue(derivedDamage.Keys.Count >= legacyDamage.Keys.Count * 0.9,
-            "the derived damage board covers far fewer people than legacy's — that looks like loss, not renaming");
+        Assert.IsTrue(absentPeople.Count == 0,
+            $"{absentPeople.Count} raid-side people legacy lists have no damage row at all in the derived board: "
+            + string.Join(", ", absentPeople.Take(15)));
+    }
+
+    /*
+     * "Where did THIS PERSON'S damage TAKEN go?" — the tanking half of the same question, and the one the boards census
+     * raises but cannot answer: it compares two per-raider numbers and prints the delta, which does not say whether the
+     * difference was skipped before it reached any row, routed to `Neither`, left on a hidden pet row, or lost in the
+     * materialization. The sink below is the projection's own, so the targets it reports are the ones the product used.
+     *
+     *   EQLP_MIRROR_TANK=Ddread,Worthless EQLP_MIRROR_BOARDS=<log> dotnet test --filter Census_TankingResiduePerPerson
+     */
+    [TestMethod]
+    public void Census_TankingResiduePerPerson()
+    {
+        var names = Environment.GetEnvironmentVariable("EQLP_MIRROR_TANK");
+        if (string.IsNullOrEmpty(names)) Assert.Inconclusive("set EQLP_MIRROR_TANK=<name,name> (with EQLP_MIRROR_BOARDS=<log>) to run");
+
+        var path = Resolve(Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS"));
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) Assert.Inconclusive("EQLP_MIRROR_BOARDS must name a log for the residue census");
+
+        var wanted = new HashSet<string>(names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            StringComparer.OrdinalIgnoreCase);
+
+        HealingLineParser.ClearCaches();
+        RecordsStore.Instance.Clear(false);
+        PlayerRegistry.Instance.Clear();
+
+        var run = PipelineHarness.RunFileWithMirror(path);
+        var facts = run.Facts;
+        var timeline = Classified(run);
+
+        /*
+         * `EQLP_MIRROR_TANK=unplaced` asks about the whole bucket instead of named individuals: every name a confirmed
+         * NPC hit while no rule had placed it. That is the set whose identity decides whether the walk's drop is right,
+         * and picking names off the boards census would only ever ask about the biggest ones.
+         */
+        if (wanted.Remove("unplaced"))
+        {
+            for (var i = 0; i < facts.Facts.Length; i++)
+            {
+                var f = facts.Facts[i];
+                var atk = facts.NameOf(f.AtkIdx);
+                var def = facts.NameOf(f.DefIdx);
+                if (atk is null || def is null) continue;
+
+                if (FightProjection.SideAt(timeline, atk, f.TimeS) == FightProjection.Side.Npc
+                    && FightProjection.SideAt(timeline, def, f.TimeS) == FightProjection.Side.Unknown
+                    && !timeline.IsCharmedAt(atk, f.TimeS)) wanted.Add(def);
+            }
+
+            Console.WriteLine($"[tank] unplaced defenders of a mob: {wanted.Count} names");
+        }
+
+        /*
+         * R7's own view of these names, recomputed after the fact. The graph rule is the one that should place a melee
+         * raider with no joins and no chat (three opponent INSTANCES over 60 s, up to 2 % unclassified opposition, and
+         * an absolute veto from the other side), so when a name that swings at the raid's enemies all night is still
+         * Unknown the question is which gate refused it - and the three gates look identical from the outside. Asked
+         * against the FINAL timeline: the only rule that runs after the graph is R18 (healed pets), so `unknown=` can
+         * read a shade high for a name that turned out to be somebody's summon.
+         */
+        const double BurstGapS = 30;
+        var npcTimes = new Dictionary<string, Dictionary<string, List<long>>>();
+        var sideTimes = new Dictionary<string, Dictionary<string, List<long>>>();
+        var unknownEdges = new Dictionary<string, int>();
+        for (var i = 0; i < facts.Facts.Length; i++)
+        {
+            var f = facts.Facts[i];
+            var atk = facts.NameOf(f.AtkIdx);
+            if (atk is null || !wanted.Contains(atk)) continue;
+
+            var def = facts.NameOf(f.DefIdx);
+            var map = timeline.IdentityAt(def!, f.TimeS) switch
+            {
+                IdentityKind.Npc => npcTimes,
+                IdentityKind.Unknown => null,
+                _ => sideTimes,
+            };
+            if (map is null) { unknownEdges[atk] = unknownEdges.GetValueOrDefault(atk) + 1; continue; }
+
+            if (!map.TryGetValue(atk, out var perDefender)) map[atk] = perDefender = new Dictionary<string, List<long>>();
+            if (!perDefender.TryGetValue(def!, out var times)) perDefender[def] = times = [];
+            times.Add((long)f.TimeS);
+        }
+
+        static int Instances(Dictionary<string, List<long>> byDefender)
+        {
+            var n = 0;
+            foreach (var list in byDefender.Values)
+            {
+                n++;
+                for (var i = 1; i < list.Count; i++) if (list[i] - list[i - 1] > BurstGapS) n++;
+            }
+
+            return n;
+        }
+
+        static double Span(Dictionary<string, List<long>> byDefender)
+        {
+            long min = long.MaxValue, max = long.MinValue;
+            foreach (var list in byDefender.Values)
+            {
+                if (list.Count == 0) continue;
+                min = Math.Min(min, list[0]); max = Math.Max(max, list[^1]);
+            }
+
+            return max > min ? max - min : 0;
+        }
+
+        // Watch every fact the projection files, through the projection's own sink, alongside the index that feeds
+        // the board — same call, so what is counted here is what the grid gets.
+        var index = new MirrorDamageIndex(timeline);
+        var seen = new Dictionary<string, (long Count, long Sum)>();
+        var byTarget = new Dictionary<string, (FightProjection.FactTarget Target, long Count, long Sum)>();
+        var rowKeys = new Dictionary<string, Dictionary<string, long>>();
+        void Sink(DamageFact fact, int ordinal, DerivedFight owner, FightProjection.FactTarget target)
+        {
+            index.OnFact(fact, ordinal, owner, target);
+            var def = facts.NameOf(fact.DefIdx);
+            if (def is null || !wanted.Contains(def)) return;
+
+            var c = seen.GetValueOrDefault(def);
+            seen[def] = (c.Count + 1, c.Sum + fact.Total);
+
+            var k = def + "\0" + target;
+            var e = byTarget.GetValueOrDefault(k);
+            byTarget[k] = (target, e.Count + 1, e.Sum + fact.Total);
+
+            if (!rowKeys.TryGetValue(def, out var rows2)) rowKeys[def] = rows2 = new Dictionary<string, long>();
+            rows2[owner.Name] = rows2.GetValueOrDefault(owner.Name) + fact.Total;
+        }
+
+        var rows = FightProjection.Build(facts, timeline, Sink);
+        Sectionizer.StampGroupIds(rows);
+        var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, facts);
+
+        var legacyTanking = By(BuildTanking(run.Fights, WindowOf(run.Fights)));
+        var derivedTanking = By(BuildTanking(input.Fights, input.AllRanges));
+
+        foreach (var name in wanted)
+        {
+            /*
+             * ONE pass over the capture per name. Both halves have to be read together: what landed on her (raw, and
+             * grouped by the state the walk actually saw at that second) and what she herself swung at is what
+             * separates "a raider nobody has evidence for yet" from "a mob that gets hit a lot". Grouping by the
+             * per-second verdict rather than the final one is deliberate - Identity() answers with the end of the
+             * capture, and a seed window that opens after the hits is exactly the thing under suspicion.
+             */
+            long rawCount = 0, rawSum = 0, outCount = 0, outSum = 0;
+            double firstOut = double.PositiveInfinity, firstIn = double.PositiveInfinity, identitySince = double.NaN;
+            var attackers = new Dictionary<string, long>();
+            var states = new Dictionary<string, (long Count, long Sum)>();
+            var outTargets = new Dictionary<string, long>();
+
+            for (var i = 0; i < facts.Facts.Length; i++)
+            {
+                var f = facts.Facts[i];
+                var atk = facts.NameOf(f.AtkIdx);
+                var def = facts.NameOf(f.DefIdx);
+                var hitsHer = string.Equals(def, name, StringComparison.OrdinalIgnoreCase);
+                if (!hitsHer && !string.Equals(atk, name, StringComparison.OrdinalIgnoreCase)) continue;
+
+                if (hitsHer)
+                {
+                    rawCount++; rawSum += f.Total;
+                    if (f.TimeS < firstIn) firstIn = f.TimeS;
+                    attackers[atk ?? "?"] = attackers.GetValueOrDefault(atk ?? "?") + f.Total;
+
+                    var k = $"victim={timeline.IdentityAt(name, f.TimeS)}/charmed={timeline.IsCharmedAt(name, f.TimeS)} "
+                            + $"attacker={timeline.IdentityAt(atk!, f.TimeS)}/attackerCharmed={timeline.IsCharmedAt(atk!, f.TimeS)}";
+                    var e = states.GetValueOrDefault(k);
+                    states[k] = (e.Count + 1, e.Sum + f.Total);
+                }
+                else
+                {
+                    outCount++; outSum += f.Total;
+                    if (f.TimeS < firstOut) firstOut = f.TimeS;
+                    if (double.IsNaN(identitySince) && timeline.IdentityAt(name, f.TimeS) is IdentityKind.Player or IdentityKind.Merc)
+                        identitySince = f.TimeS;
+                    if (timeline.IdentityAt(def!, f.TimeS) is IdentityKind.Npc) outTargets[def!] = outTargets.GetValueOrDefault(def!) + f.Total;
+                }
+            }
+
+            var (seenCount, seenSum) = seen.GetValueOrDefault(name);
+            legacyTanking.TryGetValue(name, out var lg);
+            derivedTanking.TryGetValue(name, out var dg);
+            Console.WriteLine($"[tank] === {name}: raw facts={rawCount:N0}/{rawSum:N0} reached a row={seenCount:N0}/{seenSum:N0} "
+                              + $"(never reached one={rawCount - seenCount:N0}/{rawSum - seenSum:N0})  "
+                              + $"board legacy={lg?.Total ?? 0:N0} derived={dg?.Total ?? 0:N0}");
+            Console.WriteLine($"[tank] {name}: identity={timeline.IdentityWithSource(name, out var src)}{src} "
+                              + $"isRaidVictim(late)={timeline.IsRaidVictimAt(name, double.PositiveInfinity)} "
+                              + $"confirmedRaidPerson(late)={timeline.IsConfirmedRaidPersonAt(name, double.PositiveInfinity)} "
+                              + $"ourPet(late)={timeline.IsOurPetAt(name, double.PositiveInfinity)}");
+            Console.WriteLine($"[tank] {name}: outgoing {outCount:N0} facts/{outSum:N0}, first swing at {firstOut:F0}, first hit taken at {firstIn:F0}, "
+                              + $"read raid-side from {(double.IsNaN(identitySince) ? "never" : identitySince.ToString("F0"))}, "
+                              + $"npc targets={outTargets.Count} "
+                              + $"({string.Join(", ", outTargets.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {kv.Value:N0}"))})");
+
+            var npc = npcTimes.GetValueOrDefault(name);
+            var ours = sideTimes.GetValueOrDefault(name);
+            var unk = unknownEdges.GetValueOrDefault(name);
+            var known = (npc?.Values.Sum(v => (long)v.Count) ?? 0) + (ours?.Values.Sum(v => (long)v.Count) ?? 0);
+            Console.WriteLine($"[tank] {name}: R7 view npcInstances={Instances(npc ?? [])} npcSpan={Span(npc ?? []):F0}s "
+                              + $"sawOurSide={(ours?.Count ?? 0) > 0} ourSideInstances={Instances(ours ?? [])} "
+                              + $"unknownEdges={unk:N0}/{unk + known:N0} "
+                              + $"({(unk + known == 0 ? 0 : (double)unk / (unk + known)) * 100:F2} %, gate 2 %, needs 3 instances over 60 s)");
+
+            foreach (var (state, v) in states.OrderByDescending(kv => kv.Value.Sum))
+                Console.WriteLine($"[tank] {name}: {state} count={v.Count:N0} sum={v.Sum:N0}");
+
+            foreach (var (k, v) in byTarget.Where(kv => kv.Key.StartsWith(name + "\0", StringComparison.OrdinalIgnoreCase))
+                                           .OrderByDescending(kv => kv.Value.Sum))
+                Console.WriteLine($"[tank] {name}: target={v.Target} count={v.Count:N0} sum={v.Sum:N0}");
+
+            if (rowKeys.TryGetValue(name, out var rk))
+                foreach (var (rowName, sum) in rk.OrderByDescending(kv => kv.Value).Take(4))
+                    Console.WriteLine($"[tank] {name}: filed on derived row '{rowName}' = {sum:N0}");
+
+            foreach (var (atk, sum) in attackers.OrderByDescending(kv => kv.Value).Take(5))
+                Console.WriteLine($"[tank] {name}: attacker '{atk}' {sum:N0} identity={timeline.Identity(atk)}");
+        }
     }
 
     /*
@@ -381,7 +715,7 @@ public class MirrorRealLogBoardsTest
         var names = Environment.GetEnvironmentVariable("EQLP_MIRROR_DIAG");
         if (string.IsNullOrEmpty(names)) Assert.Inconclusive("set EQLP_MIRROR_DIAG=<name,name> (with EQLP_MIRROR_BOARDS=<log>) to run");
 
-        var path = Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS");
+        var path = Resolve(Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS"));
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) Assert.Inconclusive("EQLP_MIRROR_BOARDS must name a log for the census to diagnose");
 
         var wanted = names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

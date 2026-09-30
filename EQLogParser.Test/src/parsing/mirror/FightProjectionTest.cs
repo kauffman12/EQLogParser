@@ -90,6 +90,52 @@ public class FightProjectionTest
         Assert.AreEqual(0, FightProjection.Build(facts, timeline).Count);
     }
 
+    /*
+     * A mob beating a name no rule placed is NOT mob-on-mob noise. Measured on eqlog_Incogitable_xegony.txt the names
+     * in that bucket are raiders — `Worthless` takes 159 facts / 1,479,310 while spending 322 of its own swings on
+     * `A cunning scrykin` and `A crazed flesh horror`, `Boner` 186 / 1,389,581, `Morris` 68 / 1,360,995 — and
+     * `Ddread`, who the roster knows, lost 80 of her 85 incoming facts there because her registry verification
+     * replays from mid-log. The assertion that matters is WHICH SIDE of the row the fact lands on: this damage was
+     * not dealt by the raid, so it must reach the tanking half rather than the mob's own output.
+     */
+    [TestMethod]
+    public void AMobBeatingAnUnplacedName_CountsAsDamageTaken_OnTheMobsRow()
+    {
+        var facts = BuildFacts(("A crazed flesh horror", "Worthless", 900, 0, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("A crazed flesh horror", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
+
+        var index = new MirrorDamageIndex(timeline);
+        var rows = FightProjection.Build(facts, timeline, index.OnFact);
+
+        Assert.AreEqual(1, rows.Count, "the raid's encounter with that mob is the row this belongs to");
+        var mob = rows[0];
+        Assert.AreEqual("A crazed flesh horror", mob.Name);
+        Assert.AreEqual(0, mob.DamageToOwner, "nobody on our side dealt this");
+        Assert.AreEqual(900, mob.DamageByOwner, "the mob's own swing");
+
+        var tanking = index.TankingOrdinalsFor(mob);
+        Assert.AreEqual(1, tanking.Count, "it has to be reachable as damage somebody received");
+        Assert.AreEqual(0, index.DamageOrdinalsFor(mob).Count, "and never on the raid's output side");
+        Assert.AreEqual("Worthless", facts.NameOf(facts.Facts[tanking[0]].DefIdx));
+        Assert.AreEqual(0, index.UnroutedFactCount, "IsRaidVictimAt admits an unplaced victim by exclusion");
+    }
+
+    // The other half of that split: a defender the rules DO call an NPC is mob-on-mob noise and stays out.
+    [TestMethod]
+    public void AMobBeatingAnotherMob_StillAnnouncesNothing()
+    {
+        var facts = BuildFacts(("A crazed flesh horror", "A bone walker", 900, 0, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("A crazed flesh horror", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
+        timeline.SetIdentity("A bone walker", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
+
+        var index = new MirrorDamageIndex(timeline);
+        Assert.AreEqual(0, FightProjection.Build(facts, timeline, index.OnFact).Count,
+            "two mobs on each other is not a raid fight; admitting unplaced victims must not widen this");
+        Assert.AreEqual(0, index.UnroutedFactCount);
+    }
+
     // ---- charm windows flip sides, never identities ----
 
     [TestMethod]

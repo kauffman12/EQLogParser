@@ -59,7 +59,9 @@ namespace EQLogParser.Mirror
     // How far BEFORE a death to look for the charm window that death closed. See DiedWhileCharmed.
     private const double CharmDeathSlackS = 1;
 
-    private enum Side : byte { Unknown, Player, Npc }
+    // Internal rather than private so a real-log census can ask the SAME question the walk asks: "which side is this
+    // name on at this second?" A test that re-implements it drifts, and a drifted census is worse than none.
+    internal enum Side : byte { Unknown, Player, Npc }
 
     /*
      * Optional reporter: which row a fact ended up owning. The projection is the single place that
@@ -355,13 +357,33 @@ namespace EQLogParser.Mirror
         {
           key = atkName; creditAttacker = false;
         }
-        else if (atkSide == Side.Npc && (defSide == Side.Npc || defSide == Side.Unknown))
+        else if (atkSide == Side.Npc && defSide == Side.Npc)
         {
           // Both sides NPC-side happens when a Friendly interval flips a player into the enemy
           // column: the charmed raider owns that row herself. Two mobs on each other (a mob pet,
           // or boss-vs-boss noise) is not a raid fight at all and stays out of the list.
           if (!IsFlipped(timeline, atkName, t)) continue;
           key = atkName; creditAttacker = false; charmed = true;
+        }
+        else if (atkSide == Side.Npc && defSide == Side.Unknown)
+        {
+          /*
+           * A mob hitting a name NO RULE PLACED used to be dropped with the mob-on-mob noise above. Measured on
+           * eqlog_Incogitable_xegony.txt that cost the tank board every point of damage several raiders took:
+           * `Worthless` 159 facts / 1,479,310, `Boner` 186 / 1,389,581, `Morris` 68 / 1,360,995 — and in the same
+           * minutes each of those names spends 200-300 of its own swings on the raid's enemies, which the branch
+           * below happily files. It also swallows `Ddread`, a raider the roster DOES know: 80 of her 85 incoming
+           * facts land before her registry verification replays (RegistrySeed starts an in-log verification at that
+           * instant rather than retroactively), so her column reads 12,275 against legacy's 181,670.
+           *
+           * Dropping is not a neutral choice here. The same name at the same second was a combatant while it swung
+           * and becomes noise while it is hit, and who got hit is the entire subject of the tank grid — where
+           * legacy lists all of these names today. So the fact is announced like any other, keyed on the mob that
+           * is doing the hitting (the raid's encounter), and IsRaidVictimAt — the engine's own exclusion, which until
+           * this branch existed could only ever be reached by facts that arrived on some other route — decides
+           * whether it counts as damage somebody received. Genuine mob-on-mob stays out: that defender reads Npc.
+           */
+          key = atkName; creditAttacker = false;
         }
         else if (defSide == Side.Npc && atkSide == Side.Unknown)
         {
@@ -633,7 +655,7 @@ namespace EQLogParser.Mirror
      * a player"). A name whose identity is already raid-side needs no interval to be ours, which is why this is
      * asked only of NPC-side names.
      */
-    private static Side SideAt(EntityTimeline timeline, string name, double t)
+    internal static Side SideAt(EntityTimeline timeline, string name, double t)
     {
       var kind = timeline.IdentityAt(name, t);
       if (kind is IdentityKind.Unknown) return Side.Unknown;
