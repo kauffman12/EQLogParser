@@ -780,4 +780,147 @@ public class MirrorRealLogBoardsTest
         return total;
     }
 
+    /*
+     * The per-consumer surfaces that moved to the mirror - the spell board (each fight's Dd/DoT/Proc dictionaries)
+     * and the taunt board (each fight's TauntBlocks) - measured at the same altitude as the boards above: select
+     * EVERY fight, compare per person, report rather than force. The engines legitimately differ about record
+     * attribution (legacy drops a record it cannot place and folds pets only once its registry learned them; the
+     * derived side reads the ownership word in the line), so the census fails only if it collapses to nothing on a
+     * side that should have data, and prints what moved for a human to read. Same gate as the rest of this class:
+     *   EQLP_MIRROR_BOARDS=<log> dotnet test --filter SpellTaunt_RealLog_Census --logger "console;verbosity=detailed"
+     */
+    [TestMethod]
+    public void SpellTaunt_RealLog_Census()
+    {
+        var path = Resolve(Environment.GetEnvironmentVariable("EQLP_MIRROR_BOARDS"));
+        if (string.IsNullOrEmpty(path)) Assert.Inconclusive("set EQLP_MIRROR_BOARDS=<path to log> to run");
+        if (!File.Exists(path)) Assert.Fail($"EQLP_MIRROR_BOARDS points at nothing: {path}");
+
+        // Only this log's records, or the census would include whatever other tests parsed.
+        RecordsStore.Instance.Clear(false);
+        PlayerRegistry.Instance.Clear();
+
+        var run = PipelineHarness.RunFileWithMirror(path);
+
+        var timeline = Classified(run);
+        var index = new MirrorDamageIndex(timeline);
+        var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
+        Sectionizer.StampGroupIds(rows);
+
+        // The select-all shape with the hidden charm pets added back - the same materialization the boards above use.
+        var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
+
+        var legacySpells = SpellAgg(run.Fights);
+        var derivedSpells = SpellAgg(input.Fights);
+        Console.WriteLine($"[spell] file={Path.GetFileName(path)} legacy pairs={legacySpells.Count:N0} derived pairs={derivedSpells.Count:N0}");
+        ReportDelta("spell", legacySpells, derivedSpells, "count/total/max");
+
+        var legacyTaunts = TauntAgg(run.Fights);
+        var derivedTaunts = TauntAgg(input.Fights);
+        Console.WriteLine($"[taunt] file={Path.GetFileName(path)} legacy pairs={legacyTaunts.Count:N0} derived pairs={derivedTaunts.Count:N0}");
+        ReportDelta("taunt", legacyTaunts, derivedTaunts, "taunts/failed/improved");
+
+        // Both sides may legitimately be empty (a melee-only capture), but they must agree about it: the hazard this
+        // census exists to catch is one side's spell data silently collapsing to nothing while the other still has it.
+        Assert.IsTrue((legacySpells.Count == 0) == (derivedSpells.Count == 0),
+            "the spell census is empty on exactly one side - one engine dropped every spell it should have counted");
+    }
+
+    /*
+     * Legacy fills these dictionaries live per fight (FightManager's damage branch); the derived materialization
+     * now fills the same three off the facts. Aggregated per (person, kind, spell) - the shape of a row on the
+     * spell board - so an owner's own spells and her pets' never mix in this census.
+     */
+    private static Dictionary<string, (long A, long B, long C)> SpellAgg(IEnumerable<Fight> fights)
+    {
+        var agg = new Dictionary<string, (long A, long B, long C)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var f in fights)
+        {
+            foreach (var kind in new[] { ("dd", f.DdDamage), ("dot", f.DoTDamage), ("proc", f.ProcDamage) })
+            {
+                foreach (var s in kind.Item2.Values)
+                {
+                    // The census keeps its numbers in long: a capture's whole evening of one spell fits with room
+                    // to spare, and the delta print below wants a single signable type.
+                    var count = (long)s.Count;
+                    var total = (long)s.Total;
+                    var max = (long)s.Max;
+                    var key = PersonOf(s.Caster) + "|" + kind.Item1 + "|" + s.Spell;
+                    if (agg.TryGetValue(key, out var v)) agg[key] = (v.A + count, v.B + total, Math.Max(v.C, max));
+                    else agg[key] = (count, total, max);
+                }
+            }
+        }
+
+        return agg;
+    }
+
+    /*
+     * The taunt board's own three words per (person, npc) - TauntStatsViewer's arithmetic, so the census counts
+     * what the viewer would count. A line with no taunter name credits nobody: PersonOf("") is not a person.
+     */
+    private static Dictionary<string, (long A, long B, long C)> TauntAgg(IEnumerable<Fight> fights)
+    {
+        var agg = new Dictionary<string, (long A, long B, long C)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var f in fights)
+        {
+            foreach (var block in f.TauntBlocks)
+            {
+                foreach (var action in block.Actions)
+                {
+                    if (action is not TauntRecord record) continue;
+                    if (string.IsNullOrEmpty(record.Player)) continue;
+
+                    var key = PersonOf(record.Player) + "|" + record.Npc;
+                    if (agg.TryGetValue(key, out var v))
+                    {
+                        agg[key] = (v.A + (record.IsImproved ? 0 : record.Success ? 1 : 0),
+                                    v.B + (record.IsImproved ? 0 : record.Success ? 0 : 1),
+                                    v.C + (record.IsImproved ? 1 : 0));
+                    }
+                    else
+                    {
+                        agg[key] = (record.IsImproved ? 0 : record.Success ? 1 : 0,
+                                    record.IsImproved ? 0 : record.Success ? 0 : 1,
+                                    record.IsImproved ? 1 : 0);
+                    }
+                }
+            }
+        }
+
+        return agg;
+    }
+
+    /*
+     * The shared reading: how many (person, key) pairs both sides carry, how many of those moved, and which names
+     * only one side has - the "folded or lost" question the boards above answer the same way. `columns` says what
+     * A/B/C mean on this census; the movers are ordered by the middle column, the one a reader would check first.
+     */
+    private static void ReportDelta(string what, Dictionary<string, (long A, long B, long C)> legacy,
+        Dictionary<string, (long A, long B, long C)> derived, string columns)
+    {
+        var moved = new List<(string Key, long L, long D)>();
+        var shared = 0L;
+
+        foreach (var kv in legacy)
+        {
+            if (!derived.TryGetValue(kv.Key, out var d)) continue;
+            shared++;
+            if (kv.Value.A != d.A || kv.Value.B != d.B || kv.Value.C != d.C) moved.Add((kv.Key, kv.Value.B, d.B));
+        }
+
+        var onlyLegacy = legacy.Where(kv => !derived.ContainsKey(kv.Key)).Select(kv => kv.Key).ToList();
+        var onlyDerived = derived.Where(kv => !legacy.ContainsKey(kv.Key)).Select(kv => kv.Key).ToList();
+
+        Console.WriteLine($"[{what}] columns={columns} shared={shared:N0} moved={moved.Count:N0} legacyOnly={onlyLegacy.Count:N0} derivedOnly={onlyDerived.Count:N0}");
+        foreach (var (key, l, d) in moved.OrderByDescending(m => Math.Abs(m.D - m.L)).Take(10))
+        {
+            Console.WriteLine($"[{what}]   {key}: legacy {l:N0} -> derived {d:N0}");
+        }
+
+        if (onlyLegacy.Count > 0) Console.WriteLine($"[{what}]   legacyOnly: {string.Join(", ", onlyLegacy.Take(10))}");
+        if (onlyDerived.Count > 0) Console.WriteLine($"[{what}]   derivedOnly: {string.Join(", ", onlyDerived.Take(10))}");
+    }
 }
