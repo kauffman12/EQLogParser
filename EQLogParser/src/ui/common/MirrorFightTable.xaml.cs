@@ -324,7 +324,7 @@ namespace EQLogParser
       var hasFight = GetSelectedFights().Count > 0;
 
       // Enabled by what the grid can actually do with: all/unselect by current selection, group by a real row
-      // under the cursor (a divider right-clicked has no span to overlap anything).
+      // under the cursor (a divider carries no section of its own).
       selectAllItem.IsEnabled = false;
       foreach (var row in _rows)
       {
@@ -429,29 +429,38 @@ namespace EQLogParser
 
     private void UnselectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(false);
 
-    // The group of a row is every other row living in the same seconds: span overlap, either direction. That is
-    // what a click on the damage overlay does to its selection, so "select group" from here and "click the fight"
-    // from there arrive at the same board.
+    // The group of a row is its SECTION: every fight between the same pair of inactivity rows - legacy's GroupId
+    // meaning, read off THIS display list. Walked rather than taken from fight.GroupId on purpose: that stamp
+    // comes from the walk over ALL fights (the "Fight N" number a stats run reads), while the dividers the user
+    // sees come from the walk over the VISIBLE ones, and a hidden pet row active across a quiet gap can bridge a
+    // divider in one but not the other. What the user sees is the definition, so the group stops at what the
+    // user sees. A sorted grid does not matter: _rows keeps section order regardless of how the view is arranged.
     private void SelectGroup(bool add)
     {
-      if (mirrorGrid.CurrentItem is not MirrorFightRow { IsDivider: false } target || target.Fight is not { } tf) return;
+      if (mirrorGrid.CurrentItem is not MirrorFightRow { IsDivider: false } target) return;
 
-      Predicate<MirrorFightRow> overlaps = row =>
-        row.Fight is { } f &&
-        double.IsFinite(f.BeginTime) && double.IsFinite(f.LastTime) &&
-        double.IsFinite(tf.BeginTime) && double.IsFinite(tf.LastTime) &&
-        f.BeginTime <= tf.LastTime && tf.BeginTime <= f.LastTime;
+      var idx = _rows.IndexOf(target);
+      var lo = idx;
+      while (lo > 0 && !_rows[lo - 1].IsDivider) lo--;
+      var hi = idx;
+      while (hi + 1 < _rows.Count && !_rows[hi + 1].IsDivider) hi++;
+
+      // Dividers are gaps, not fights: never selected, even though IsShown lets them through with breaks on.
+      var section = new HashSet<MirrorFightRow>();
+      for (var i = lo; i <= hi; i++)
+        if (!_rows[i].IsDivider) section.Add(_rows[i]);
+      Predicate<MirrorFightRow> inSection = row => section.Contains(row);
 
       if (add)
       {
-        SelectByShown(overlaps);
+        SelectByShown(inSection);
       }
       else
       {
         var remove = new HashSet<MirrorFightRow>();
         foreach (var item in mirrorGrid.SelectedItems)
         {
-          if (item is MirrorFightRow { IsDivider: false } row && overlaps(row)) remove.Add(row);
+          if (item is MirrorFightRow { IsDivider: false } row && inSection(row)) remove.Add(row);
         }
 
         foreach (var row in remove) mirrorGrid.SelectedItems.Remove(row);

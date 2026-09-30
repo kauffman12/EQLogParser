@@ -102,12 +102,12 @@
                     CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}"/>
           <MenuItem x:Name="selectAllItem" Header="Select All" Click="SelectAllClick"/>
           <MenuItem x:Name="unselectAllItem" Header="Unselect All" Click="UnselectAllClick"/>
-          <!-- Group = every row whose span overlaps the right-clicked row's span: what a click on the damage
-               overlay selects, without leaving the list. -->
+          <!-- Group = the right-clicked row's SECTION: every fight between its surrounding inactivity rows -
+               legacy's group semantics, read off this display list (see SelectGroup for why not fight.GroupId). -->
           <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
-                    ToolTip="Every row overlapping the time span of the right-clicked row"/>
+                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows"/>
           <MenuItem x:Name="unselectGroupItem" Header="Unselect Group" Click="UnselectGroupClick"
-                    ToolTip="Remove every row overlapping the time span of the right-clicked row"/>
+                    ToolTip="Remove every fight in the same section as the right-clicked row"/>
           <Separator/>
           <MenuItem x:Name="overridePlayerItem" Header="Set as Player" Click="OverridePlayerClick"
                     ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)"/>
