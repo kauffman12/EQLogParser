@@ -246,8 +246,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   line** — the cheap lane runs twice a second, and its bookkeeping would push the raid out of the file this app writes (`Note` above the passes). Accepted
   staleness is bounded and stated in Core: a verdict readable only from newer facts lands one full cadence later — never "facts went missing", which is
   what `TwoCheapPassesOverOneSetOfVerdictsMatchASingleFold` holds (three folds under one timeline == one fold, and the carry must survive consecutive cheap
-  passes or the cheap lane is slower than no cheap lane). With `LogReader`'s tail delay at 75 ms (that loop's watcher ignores `Changed`, so its poll *is*
-  the app's tail latency) a refresh lands in ~0.7-0.9 s instead of ~3.4 s, for ~7-12 % of the ingest gate. The unmeasured term is `MirrorFightRows.Build`,
+  passes or the cheap lane is slower than no cheap lane). With the pump at 100 ms and `LogReader`'s tail delay left at **200 ms** (that loop's watcher
+  ignores `Changed`, so its poll *is* the app's tail latency, and a line waits half of it; it was cut to 75 during this work and given back, because with
+  folding on a 0.5 s floor a later drain usually lands while the next pass is still not due) a refresh lands in ~0.8-1.2 s instead of ~3.4 s, for
+  ~7-12 % of the ingest gate. The unmeasured term is `MirrorFightRows.Build`,
   which every lane pays over every row the capture ever made: its bound lives in `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
   (Windows-only). Widen the cheap lane by row count before touching either floor. Numbers: docs/DesignNotes.md -> "How long a meter update takes".
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the

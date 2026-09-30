@@ -4609,12 +4609,18 @@ Point 4 is the one the session's bookkeeping can get wrong: if a cheap pass rest
 forever on the verdicts it happened to have at minute one and pets/charms would quietly stop folding. `ACheapPassNeverPushesTheExpensiveOneAway` pins
 the rule; `MirrorSession` keeps `_sinceAnyPass` and `_sinceFullPass` separately and restarts only the latter when a pass classified.
 
-**Fixed overheads**: `LogReader`'s tail delay 200 → **75 ms**, the session's pump 250 → **100 ms**. The first is not tunable by event — that loop's
-watcher ignores `Changed`, and EQ's own write buffering coalesces those notifications so an event wake-up would need this same poll behind it. No
-threshold moved (the cadence reads durations, which `TheRuleDoesNotDependOnHowOftenItIsAsked` holds), so these buy promptness only.
+**Fixed overheads**: the session's pump 250 → **100 ms**, and nothing else. That is not tunable by event in either direction — the cadence reads
+durations, which `TheRuleDoesNotDependOnHowOftenItIsAsked` holds — so it buys promptness only, and it is what keeps a 0.5 s floor from landing with a
+quarter-second of jitter on top.
+
+`LogReader`'s tail delay was cut to **75 ms** during this work and **put back to 200**. It cannot be replaced by an event either (that loop's watcher
+ignores `Changed`, and EQ's own write buffering coalesces those notifications, so a wake-up would need this same poll behind it), and it is real latency:
+a line waits half the delay on average. What changed is what that 125 ms buys. Before the cheap lane it was part of a ~3.4 s wait that had no other term
+willing to move; with folding on a 0.5 s floor, a line drained 125 ms later usually lands while the next pass is *still* not due, so most of it overlaps a
+wait we were going to pay anyway. Polling thirteen times a second for hundredths of a second is not a trade worth making against the file EQ has open.
 
 **What a refresh costs now, per second of live raid**: ~2 cheap passes at 0–5 ms projection + row-building, plus one full pass per ≥3 s at
-186–261 ms → roughly **7–12 % of the ingest gate** against **6–9 %** before, in exchange for numbers moving in **~0.7–0.9 s** instead of ~3.4 s.
+186–261 ms → roughly **7–12 % of the ingest gate** against **6–9 %** before, in exchange for numbers moving in **~0.8–1.2 s** instead of ~3.4 s (the worst case carries the 200 ms tail delay above; a live raid's steady traffic mostly hides it behind the floor's phase).
 The unknown term in that sum is `MirrorFightRows.Build`, which runs on every lane and formats four columns per row over *every row the capture ever
 produced* (4,644 on one capture); it lives in the app assembly, so its number is `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
 (Windows-only, 5,000 synthetic rows bound at 60 ms). If that ever climbs toward tens of milliseconds, widen the cheap lane by row count before

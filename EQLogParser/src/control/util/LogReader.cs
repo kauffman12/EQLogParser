@@ -232,16 +232,21 @@ namespace EQLogParser
           FlushBatch();
 
           /*
-           * This delay IS the tail latency of the whole app: the FileSystemWatcher above listens for Deleted and Renamed only,
-           * so nothing wakes this loop when EQ appends a line — it comes back on this timer. Measured downstream (docs/DesignNotes.md
-           * -> "How long a meter update takes"), 200 ms here plus a 250 ms mirror poll was ~6 % of a ~3.4 s meter refresh and the
-           * cheapest second to give back after the cadence itself; 75 ms keeps one wakeup every four frames' worth of wall time and
-           * costs nothing but a stream-length check, since the drain above reads everything available before sleeping.
+           * This delay IS the tail latency of the whole app: the FileSystemWatcher above listens for Deleted and Renamed only, so
+           * nothing wakes this loop when EQ appends a line — it comes back on this timer. A line's wait averages half of it, and that
+           * is the only cost of the number being big; the drain above reads everything available before sleeping, so nothing queues up
+           * behind a smaller one.
            *
-           * Deliberately not a Changed-event wake-up: EQ's own write buffering coalesces those notifications unpredictably, so an
-           * event would have to be backed by this same poll anyway.
+           * It was dropped to 75 ms while chasing the meter's ~3.4 s refresh, and given back afterwards: with the mirror now folding on
+           * `MirrorDeriveCadence.FastFloorSeconds` (0.5 s) the wait is almost entirely inside the cadence, where this much of it overlaps
+           * with a pass that was not due yet anyway, so polling thirteen times a second buys hundredths rather than tenths of a second
+           * (docs/DesignNotes.md -> "How long a meter update takes"). If the tail ever needs to be prompter again, the order is this knob
+           * first and `FastFloorSeconds` second — the floors, not the pump.
+           *
+           * Deliberately not a Changed-event wake-up: EQ's own write buffering coalesces those notifications unpredictably, so an event
+           * would have to be backed by this same poll anyway.
            */
-          await Task.Delay(75, _cts.Token);
+          await Task.Delay(200, _cts.Token);
         }
         catch (TaskCanceledException)
         {
