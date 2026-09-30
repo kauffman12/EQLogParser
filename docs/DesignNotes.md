@@ -4340,3 +4340,80 @@ where the last stopped; a death arriving in a later pass still splits the row on
 again matches one full pass; a gap landing exactly on the boundary matches; a charm arriving later closes the row it
 closed in one pass; the index travels with its rows; and `GrowingAParsedLogOnePassAtATimeEndsAtTheSameFightList` replays
 each fixture log tick by tick against the single-pass list.
+
+## A mob's victim is never noise: how the tank board lost raiders (2026-10)
+
+Asked whether legacy can be removed yet, the honest answer needed more than the fight-row count, so the boards bar was
+run over every local capture, 2022 to 2026. The first pass turned up a class of missing people on the tanking board, and
+one rule explains all of it.
+
+**The mechanism.** `FightProjection` routes a fact by comparing the row's anchor against the attacker and the defender, and
+the raid-side test is exclusion: `IdentityAt(name) is not Npc and not Pet`. So "no rule has placed this name" reads as one
+of ours. But a *branch before* that routing used the same word differently — a fact whose attacker is an NPC and whose
+defender nobody had placed fell into the mob-on-mob drop, filed with `creditAttacker = false` so it landed on the mob's row
+as its own output and was announced to nobody. Both halves of that branch were wrong for a raid member taking a mob's hits:
+
+```
+a crazed flesh horror hits Worthless for 900 (damage)
+```
+
+`Worthless` spends 322 swings on `A cunning scrykin` and `A flesh horror` (so she fights what beats her), the log gives her
+no possessive, no spell, no chat line, and `R18-healed-pet` only begins her identity when a heal names her. On Incogitable
+the bucket holds 1,003 facts / 14.06 M and its top names are `Batvar`, `Worthless`, `Rector of the Spire`, `Boner`,
+`Morris`. **Ddread** was the sharpest case because she IS in the roster: her registry verification replays from mid-log
+evidence, so 80 of her 85 incoming facts sit before her own identity begins and the derived board reported 12,275 of the
+181,670 legacy shows.
+
+**The fix is one branch, ordered before the drop.** An NPC hitting an unplaced defender is `FactTarget.RaidSide` on the
+mob's row; keying stays with the attacker so the fact cannot be credited to the victim as output. Only a defender that
+reads `Npc` is mob-on-mob noise now. `IsRaidVictimAt` gained nothing — it already admitted these facts, and could not be
+consulted from the branch that was discarding them.
+
+| capture | tanking people rows (legacy / derived) | damage taken by people: legacy → derived | Δ |
+|---|---|---|---|
+| Incogitable | 211 / **166 → 212** | 1,863,292,368 → 1,864,915,479 | −0.67 % → **+0.09 %** |
+| 9-18-22 | 74 / 74 (all shared) | 6,736,482,353 → 6,774,441,624 | +0.56 % |
+| 8-20-23 | 70 / 70 | 3,438,088,181 → 3,444,666,513 | +0.19 % |
+| 01-06-24 | 203 / 203 | 5,809,058,810 → 5,811,757,032 | +0.05 % |
+| 09-08-24 | 65 / 66 (+1 derived) | 1,839,352,269 → 1,835,492,983 | −0.21 % |
+| Kizant (2024) | 44 / 44 | 3,185,117,348 → 3,183,920,870 | −0.04 % |
+| 09-20-25 | 66 / 66 | 4,616,279,198 → 4,615,391,397 | −0.02 % |
+| 09-03-26 | 61 / 61 | 8,262,731,939 → 8,260,802,583 | −0.02 % |
+
+Only the Incogitable row has a measured "before": it came from running the same test on the same capture before the branch
+changed. The other seven were never run with this question asked, and the attempt to manufacture their before-numbers is
+itself worth recording — see the trap below.
+
+**Two census lines in the harness were lying, and one bar was comparing the wrong thing.**
+
+- `facts the walk drops (mob on unplaced …)` printed a bucket the code no longer drops. The census now enumerates the
+  refusals the way the walk does (`self damage`, `spell feedback`, `friendly fire`, `mob on mob`) and adds one line for what
+  the new branch ADMITS, labelled as such — that line is the useful number across captures, because it prices how much of
+  "damage our people received" rests on exclusion rather than on evidence. It is a multi-server-raid thing: Incogitable
+  admits **915 facts / 13.68 M** whose defender reads Unknown at the end plus **88 / 0.379 M** that turned out to be a listed
+  player, while the Kizant logs admit 231 (01-06-24), 24 (2022), 5 (09-08-24) and nothing on the other four — yet even those
+  handfuls are entire people's rows, which is why the population count moved by 46 on Incogitable and not by 46 million.
+- The damage bar read `derived.Keys.Count >= legacy.Keys.Count * 0.9` and failed on eqlog_Kizant_xegony-09-08-24.txt for
+  reasons that are not loss at all: legacy groups by `record.Attacker` whatever that name is, so npcs.txt puts NPCs on its
+  damage board (`Elmara Emberclaw`, `Dhakka Nogg`, both `Npc:R6-npcdb`, ~31 M dealt TO the raid), and a person is listed as
+  `X +Pets` whenever the builder knows her summons — `DamageStatsBuilder` folds an owner's own hits into that aggregate and
+  demotes her plain row below top level (`stats.IsTopLevel = false`), so the person row does not survive into the top-level
+  board. The derived side knows far more owners because `AttackerOwner` comes from the line's possessive word, so on
+  eqlog_Kizant_xegony.txt **all eight** of legacy's person rows arrive as `X +Pets`: 118 B of damage "missing from people"
+  that is sitting one row name away. The bar is now about people: `PersonOf` cuts the ` +Pets` suffix, and no raid-side
+  person legacy lists may be absent from the derived board under either name — 0 absent on all eight captures. (Nothing in
+  the product changes either way for a user: `StatsFormatter` prints `X +Pets` only when `PlayerParseShowPetLabel` is on.)
+
+**The measurement trap: a "before" number made by deleting a line.** To price the fix I first replaced the new branch's
+body with `continue`, which does not restore HEAD — the old code did *not* discard those facts, it filed them on the mob's
+row with `creditAttacker = false`. The bogus run reported derived tanking at 29.7 M / 51 rows against HEAD's 1.85 B / 166, a
+forty-fold difference that had nothing to do with anything real and would have become a triumphant paragraph in this file.
+A before/after pair has to be made by running the previous code (stash the file, or keep the log of the run you did before
+touching it), not by writing an approximation of it and trusting the shape.
+
+**What is left.** The tank board now agrees with legacy on population almost everywhere: the residue is one name on
+Incogitable (`Blizzak`) and one derived-only name on two captures, plus per-column deltas of a few hits on shared people
+(`Inconsistent` −3 hits / −125 k). Damage remains "renamed more than lost" for the reason already documented (pet folding),
+and the raid total sits inside +0.6 % everywhere. Legacy's removal is still gated on the surfaces that read `FightManager`
+rather than on parity: the overlay's show/reset path, the main grid's `ComputeStats`, and the line viewers (damage/heal/tank
+tables, `NpcStatsViewer`, `Timeline`), which are a separate workstream because the fact tables capture none of what they show.

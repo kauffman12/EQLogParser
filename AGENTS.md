@@ -88,9 +88,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   folds by `record.AttackerOwner`, which a derived record carries from the line's own possessive word while legacy needs
   its registry to have learned the pair; **tanking is the report of what people received** — legacy groups by
   `record.Defender` unfiltered, so its 7.11 B contains 4.82 B of NPC names and 428 M of pets; cut to people it is
-  1.863 B over 211 rows against derived **1.851 B over 166**, sharing 165 with 3 of 165 differing on Total (the two
-  sides disagree about the unplaced residue, not about the raid). Don't average these into one "parity %": the findings
-  need different actions.
+  1.863 B over 211 rows against derived **1.865 B over 212**, sharing 210 with one person differing on Total. Compare
+  **populations as people, never as row names**: legacy puts NPCs from npcs.txt on the *damage* board (`Elmara Emberclaw`,
+  `Dhakka Nogg`, both `Npc:R6-npcdb`, ~31 M dealt TO the raid) and lists a pet owner as `X +Pets` — which the derived side
+  does for far more owners, because it reads the line's own possessive word. Name counts therefore reported "30 people
+  lost" on eqlog_Kizant_xegony.txt where all 8 of legacy's person rows had simply arrived as `X +Pets`; `PersonOf` strips
+  that suffix and the bar is "nobody legacy lists is absent under EITHER name". Run the bar over **several captures** — one
+  log per finding is how a rule gets written from an accident (2022→2026, eight local logs: tanking people rows equal on
+  seven of eight and damage-taken-by-people within ±0.6 % on all eight; that sweep is what surfaced the mob-on-unplaced drop
+  in the next bullet). Don't average these into one "parity %": the findings need different actions.
 - **Classify before asking an identity question in a test**: `PipelineHarness.RunFileWithMirror` hands back a timeline
   with `RegistrySeed` on it and **no rule table** — R6 (npcs.txt), R14 (article shape), R15 (healed by our side) and the
   graph run only inside the app's derive (`MirrorSession`), or in a test that calls them. Measured on Incogitable:
@@ -120,6 +126,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   428 M of them (plus 4.82 B on NPC names); if pet damage taken is ever wanted it arrives as its own choice —
   owner-folded like `X +Pets`, or as pet rows — never as a widened predicate that silently moves every tank column. A charmed raider reads Npc while the window holds, so
   her incoming hits are not raid damage taken either; `IsRaidVictimAt` deliberately does not undo the flip.
+  (4) **`Unknown` means "no rule placed this name", never "not one of ours"** — and a branch that drops on `Unknown`
+  cannot be corrected by a predicate living in another branch. Mob → unplaced used to fall into the mob-on-mob drop, while
+  the very next expression (`IsRaidVictimAt`) calls the same name raid-side; the drop branch simply never asked. So raid
+  members taking a mob's hits left the tank board: on Incogitable `Worthless` 159 facts / 1.48 M (while spending 322 swings
+  of her own on `A cunning scrykin`), `Boner` 186 / 1.39 M, and **80 of Ddread's 85** incoming facts — she is in the roster,
+  but verdicts replay from mid-log evidence, so her identity begins at the first heal that names her and everything before it
+  was noise. Mob → unplaced is now `RaidSide` on the mob's row; only a defender that reads `Npc` is noise. The test asserts
+  **which side** of the row the fact lands on (`AMobBeatingAnUnplacedName_CountsAsDamageTaken_OnTheMobsRow`) because "a row
+  exists" and "the total is non-zero" both pass when it goes to nobody.
 - **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
   sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**
   process state, so a test asserting that two parsed heals share an instance has to call `HealingLineParser.ClearCaches()` in setup — otherwise it
