@@ -158,6 +158,14 @@ namespace EQLogParser
       combatMirrorIcon.Visibility = AppSettings.IsCombatMirrorEnabled ? Visibility.Visible : Visibility.Hidden;
 
       /*
+       * The checked item means the window is there: dock it at startup, not only on log open. Left to the
+       * open-log path alone, a restart lands "checked but invisible" - the feature reads as broken until
+       * somebody guesses that opening a log again would bring it back. It says "Mirror: no log" until then.
+       */
+      if (AppSettings.IsCombatMirrorEnabled)
+        DockingManager.SetState(mirrorFightWindow, DockState.Dock);
+
+      /*
        * Selecting rows in the derived list rebuilds the DAMAGE summary from the mirror's own facts. One
        * board on purpose (see MirrorFightTable.DerivedSelectionChanged): the experiment is to click the same
        * fight in both lists and read two engines' answers, and that only means something while exactly one
@@ -713,10 +721,23 @@ namespace EQLogParser
 
       if (!AppSettings.IsCombatMirrorEnabled)
       {
-        // The tap only sees lines from the moment it subscribes — stop cleanly rather than
+        // The tap only sees lines from the moment it subscribes - stop cleanly rather than
         // keep a half-log session; the next log open starts fresh.
         _mirrorSession?.Dispose();
         _mirrorSession = null;
+      }
+      else if (_mirrorSession is null && _eqLogReader is not null)
+      {
+        /*
+         * Re-enabling on a live parse: start the session NOW rather than waiting for the next open - uncheck/check
+         * is how this feature gets exercised, and docking an empty window that stays "no log" is what made the
+         * toggle read as broken. No backfill exists (facts before the tap were never captured), so the list fills
+         * forward from this line; the chat sink was fixed when the file opened, so drink evidence and chat identity
+         * join at the next open while facts and heals flow from now.
+         */
+        _mirrorSession = new MirrorSession();
+        _mirrorSession.Start();
+        Log.Info($"combat mirror: session attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
       }
 
       DockingManager.SetState(mirrorFightWindow, AppSettings.IsCombatMirrorEnabled ? DockState.Dock : DockState.Hidden);
@@ -1415,6 +1436,9 @@ namespace EQLogParser
               _mirrorSession = new MirrorSession();
               _mirrorSession.Start();
               chatSink = new CompositeChatSink(chatSink, _mirrorSession.ChatSink);
+              // One line per open: if the derived list ever silently fails to fill, this is the line that is
+              // missing from the log (session created) or that arrives without rows following it (derive stuck).
+              Log.Info($"combat mirror: session started ({Path.GetFileName(theFile)})");
             }
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);

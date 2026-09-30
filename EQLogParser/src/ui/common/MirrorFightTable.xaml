@@ -45,6 +45,13 @@
               ToolTip="Re-run classification and derivation over all captured facts"/>
       <CheckBox x:Name="mirrorShowBreaks" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
                 IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
+      <!-- Live name filter (case-insensitive), like the search box on the other tables. A filter rather than
+           legacy's find-next cycling: with thousands of rows the useful answer is "show me only this name",
+           and divider rows drop out on their own because a gap never matches a name. -->
+      <TextBox x:Name="mirrorSearchBox" Margin="14,3,0,3" Width="150" VerticalAlignment="Center"
+               GotFocus="SearchBoxGotFocus" LostFocus="SearchBoxLostFocus" KeyDown="SearchBoxKeyDown"
+               TextChanged="SearchBoxTextChanged"
+               ToolTip="Filter the list by fight name (case-insensitive)"/>
     </StackPanel>
     <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Mirror: no log" />
     <syncfusion:SfDataGrid x:Name="mirrorGrid"
@@ -83,7 +90,25 @@
         see MirrorFightTable.ApplyOverride for why that is a re-read of the facts rather than an edit of the row.
       -->
       <syncfusion:SfDataGrid.ContextMenu>
+        <!--
+          Selection items ported from the legacy list. Copy is the shared grid command (the GridCopyOption above
+          decides what it writes). Two legacy items are deliberately absent: Clear All wipes the legacy fight
+          store, and the derived list has no store - it is a projection of the facts, so there is nothing to wipe;
+          Refresh is the Re-derive button in the header, since a selection already rebuilds the board on its own.
+        -->
         <ContextMenu>
+          <MenuItem InputGestureText="Ctrl+C" Header="Copy"
+                    Command="{Binding Source={x:Static Member=local:ContextMenuCommands.Copy}}"
+                    CommandParameter="{Binding Path=PlacementTarget, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}}"/>
+          <MenuItem x:Name="selectAllItem" Header="Select All" Click="SelectAllClick"/>
+          <MenuItem x:Name="unselectAllItem" Header="Unselect All" Click="UnselectAllClick"/>
+          <!-- Group = every row whose span overlaps the right-clicked row's span: what a click on the damage
+               overlay selects, without leaving the list. -->
+          <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
+                    ToolTip="Every row overlapping the time span of the right-clicked row"/>
+          <MenuItem x:Name="unselectGroupItem" Header="Unselect Group" Click="UnselectGroupClick"
+                    ToolTip="Remove every row overlapping the time span of the right-clicked row"/>
+          <Separator/>
           <MenuItem x:Name="overridePlayerItem" Header="Set as Player" Click="OverridePlayerClick"
                     ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)"/>
           <MenuItem x:Name="overrideMercItem" Header="Set as Mercenary" Click="OverrideMercClick"

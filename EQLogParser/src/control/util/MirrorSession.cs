@@ -128,6 +128,11 @@ namespace EQLogParser
      */
     private EntityTimeline? _carriedTimeline;
     private volatile bool _autoDeriveDisabled;
+
+    // The first pass of a session logs itself once, whatever lane the cadence picked: "the list never filled"
+    // is otherwise invisible in a log that carries a million fact lines - either MainWindow's session-started
+    // line or this one is missing, and that says which half of the chain died.
+    private bool _firstDeriveLogged;
     private bool _disposed;
 
     public MirrorSession()
@@ -284,6 +289,13 @@ namespace EQLogParser
           // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
           Note($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
                $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
+
+          if (!_firstDeriveLogged)
+          {
+            _firstDeriveLogged = true;
+            Log.Info($"combat mirror: first derive - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows");
+          }
+
           Derived?.Invoke(snapshot);
 
           /*

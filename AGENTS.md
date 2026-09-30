@@ -252,6 +252,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   ~7-12 % of the ingest gate. The unmeasured term is `MirrorFightRows.Build`,
   which every lane pays over every row the capture ever made: its bound lives in `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
   (Windows-only). Widen the cheap lane by row count before touching either floor. Numbers: docs/DesignNotes.md -> "How long a meter update takes".
+  **The surface around it must never read as broken**: with `EnableCombatMirror` set, `MainWindow` docks the window at startup (a checked menu item
+  means the window is there - "Mirror: no log" until one opens; docking only in the open-log path left a restarted app "checked but invisible",
+  which shipped reading as "it stopped working after I restart"), and toggling ON over a live parse **starts a session immediately** (it used to
+  re-dock the window with no session, so uncheck/re-check did nothing until the next log open - the exact experiment the user reaches for). A
+  mid-log attach is forward-only by construction: no backfill exists (facts before the tap were never captured), and the chat sink was fixed when
+  the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
+  One line per session in eqlogparser.log - `combat mirror: session started (file)` at open, `combat mirror: first derive - N facts, M rows`
+  at the first pass - so a list that silently fails to fill is diagnosed by which of the two lines is missing.
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   mirror first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
   close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of

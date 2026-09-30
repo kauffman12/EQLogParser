@@ -59,9 +59,17 @@ namespace EQLogParser
     private MirrorSession _session;
     private bool _currentShowBreaks;
 
+    // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
+    private bool _searchPlaceholder;
+
     public MirrorFightTable()
     {
       InitializeComponent();
+
+      // Same placeholder idiom as the legacy table: the prompt is text in the box, cleared on focus.
+      _searchPlaceholder = true;
+      mirrorSearchBox.Text = Resource.NPC_SEARCH_TEXT;
+      mirrorSearchBox.FontStyle = FontStyles.Italic;
 
       mirrorGrid.ItemsSource = _rows;
       mirrorShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
@@ -314,6 +322,20 @@ namespace EQLogParser
     private void MirrorContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
       var hasFight = GetSelectedFights().Count > 0;
+
+      // Enabled by what the grid can actually do with: all/unselect by current selection, group by a real row
+      // under the cursor (a divider right-clicked has no span to overlap anything).
+      selectAllItem.IsEnabled = false;
+      foreach (var row in _rows)
+      {
+        if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = true; break; }
+      }
+
+      unselectAllItem.IsEnabled = mirrorGrid.SelectedItems.Count > 0;
+      var hasCurrent = mirrorGrid.CurrentItem is MirrorFightRow { IsDivider: false };
+      selectGroupItem.IsEnabled = hasCurrent;
+      unselectGroupItem.IsEnabled = hasCurrent && mirrorGrid.SelectedItems.Count > 0;
+
       overridePlayerItem.IsEnabled = hasFight;
       overrideMercItem.IsEnabled = hasFight;
       overridePetItem.IsEnabled = hasFight;
@@ -336,7 +358,124 @@ namespace EQLogParser
     }
 
     // The filter's own question, asked out loud so selection restore counts the same rows the grid shows.
-    private bool IsShown(MirrorFightRow row) => _currentShowBreaks || !row.IsDivider;
+    private bool IsShown(MirrorFightRow row) => (_currentShowBreaks || !row.IsDivider) && NameMatches(row);
+
+    private bool NameMatches(MirrorFightRow row)
+    {
+      if (_searchPlaceholder) return true;
+      // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
+      return mirrorSearchBox.Text.Length > 0 &&
+             row.Name.Contains(mirrorSearchBox.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SearchBoxGotFocus(object sender, RoutedEventArgs e)
+    {
+      if (!_searchPlaceholder) return;
+      _searchPlaceholder = false;
+      mirrorSearchBox.Text = string.Empty;
+      mirrorSearchBox.FontStyle = FontStyles.Normal;
+    }
+
+    private void RestoreSearchPlaceholder()
+    {
+      if (mirrorSearchBox.Text.Length == 0)
+      {
+        _searchPlaceholder = true;
+        mirrorSearchBox.Text = Resource.NPC_SEARCH_TEXT;
+        mirrorSearchBox.FontStyle = FontStyles.Italic;
+        ApplyFilter();
+      }
+    }
+
+    private void SearchBoxLostFocus(object sender, RoutedEventArgs e) => RestoreSearchPlaceholder();
+
+    private void SearchBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+      if (e.Key == System.Windows.Input.Key.Escape)
+      {
+        mirrorSearchBox.Text = string.Empty;
+        RestoreSearchPlaceholder();
+        e.Handled = true;
+      }
+    }
+
+    private void SearchBoxTextChanged(object sender, TextChangedEventArgs e)
+    {
+      // The placeholder swap moves the text without meaning anything; the focus handlers own that transition.
+      if (_searchPlaceholder) return;
+      ApplyFilter();
+    }
+
+    /*
+     * The right-click menu's selection items. Programmatic selects go through SelectRows over the SHOWN rows -
+     * the same run walk RestoreSelection uses, because SelectRows wants contiguous grid ranges and a hidden row
+     * (a filtered-out divider or name) takes no range. Each handler announces straight away rather than waiting
+     * out the settle timer: "Select All" is one deliberate act, not a drag to debounce; the timer's later tick
+     * re-announces the same ids and no-ops.
+     */
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+      SelectByShown(row => row.Fight is not null);
+      AnnounceSelection();
+    }
+
+    private void UnselectAllClick(object sender, RoutedEventArgs e)
+    {
+      mirrorGrid.SelectedItems.Clear();
+      AnnounceSelection();
+    }
+
+    private void SelectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(true);
+
+    private void UnselectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(false);
+
+    // The group of a row is every other row living in the same seconds: span overlap, either direction. That is
+    // what a click on the damage overlay does to its selection, so "select group" from here and "click the fight"
+    // from there arrive at the same board.
+    private void SelectGroup(bool add)
+    {
+      if (mirrorGrid.CurrentItem is not MirrorFightRow { IsDivider: false } target || target.Fight is not { } tf) return;
+
+      Predicate<MirrorFightRow> overlaps = row =>
+        row.Fight is { } f &&
+        double.IsFinite(f.BeginTime) && double.IsFinite(f.LastTime) &&
+        double.IsFinite(tf.BeginTime) && double.IsFinite(tf.LastTime) &&
+        f.BeginTime <= tf.LastTime && tf.BeginTime <= f.LastTime;
+
+      if (add)
+      {
+        SelectByShown(overlaps);
+      }
+      else
+      {
+        var remove = new HashSet<MirrorFightRow>();
+        foreach (var item in mirrorGrid.SelectedItems)
+        {
+          if (item is MirrorFightRow { IsDivider: false } row && overlaps(row)) remove.Add(row);
+        }
+
+        foreach (var row in remove) mirrorGrid.SelectedItems.Remove(row);
+      }
+
+      AnnounceSelection();
+    }
+
+    // The run walk RestoreSelection already needs: select every shown row matching the predicate, range by range.
+    private void SelectByShown(Predicate<MirrorFightRow> matches)
+    {
+      var first = FirstRecordRow();
+      var runStart = -1;
+      for (var i = 0; i <= _rows.Count; i++)
+      {
+        var hit = i < _rows.Count && IsShown(_rows[i]) && matches(_rows[i]);
+        if (hit && runStart < 0) runStart = i;
+        else if (!hit && runStart >= 0)
+        {
+          mirrorGrid.SelectRows(first + runStart, first + i - 1);
+          runStart = -1;
+        }
+      }
+    }
 
     /*
      * Put the highlight back on the rows whose fight ids survived the swap.
