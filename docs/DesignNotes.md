@@ -4532,3 +4532,52 @@ pins the new one, including the dead-row and stale-activity refusals, and `AClos
 EQLP_MIRROR_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
   --filter LiveFights_RealLog --logger "console;verbosity=detailed"     # prints [live] coverage, starts, restarts, reopen ceiling
 ```
+
+## How long a meter update takes, measured end to end (2026-09-29)
+
+Asked: can the meter update faster? Before changing anything the seconds were attributed, because "the meter is slow" has at least five
+candidate causes here and they cost completely different things to fix.
+
+**The chain, live raid, with measurements.** A line is written by EQ → `LogReader`'s tail loop drains it (**up to 200 ms**, `Task.Delay(200)`;
+its `FileSystemWatcher` listens for Deleted/Renamed only, so nothing wakes this loop early) → captured into the fact tables (microseconds, under
+`CombatMirror._gate`) → the session's pump asks every **250 ms** whether to derive → `MirrorDeriveCadence` answers with
+`clamp(4 × lastPassSeconds, 3 s, 15 s)` → the pass runs **under the same `_gate`**, so it stops capture while it runs → `Derived` fires → the overlay
+rebuilds its board and paints.
+
+So the typical felt delay is **~3.3–3.6 s**, and it is almost entirely the **3 s cadence floor**. Two more numbers decide what can be done about it:
+
+| what | Kizant (1.93 M damage facts) | Incogitable (1.89 M) |
+|---|---|---|
+| continued pass, projection only (+0.1 % of facts) | **0 ms** | **0 ms** |
+| same pass including classification | **186 ms** | **261 ms** |
+| full rebuild (classify + project) | 616 ms | 725 ms |
+| meter board over a 30 min window / 2 h window | — | **5 ms / 10–21 ms** |
+| meter board over every row in the file (1.7–1.8 M outcomes) | **1.6 s** | **3.6 s** |
+
+Three things fall out of that table.
+
+1. **Classification is the whole pass.** Projection is already incremental and costs nothing on a live increment; the rule book re-runs every pass
+   whether or not anything was learned (R9 charm windows 83 ms, R18 healed-pet intervals 67, R15 heal breadth 54, R7 graph 36, line evidence 15–25,
+   R5 ownership sweep 15). `4 × lastPassSeconds` therefore measures ~0.8 s and the floor does the actual governing.
+2. **A pass parks ingest**, because capture and derive share `CombatMirror._gate`. At a 1 s cadence a 260 ms pass holds that gate ~26 % of the time,
+   and the thread waiting on it is the parse thread. This — not CPU — is why the floor cannot simply be lowered.
+3. **Repainting is cheap for the windows players actually run** (single digits to ~20 ms), and expensive only for a window that accumulated thousands of
+   rows, i.e. a meter that has not expired all night. Any refresh rule that gets fast must stay cheap relative to *that*, or a dense farm night turns every
+   refresh into a second of work.
+
+**The options, in the order I would take them.**
+
+- **(a) A cheap lane for the meter.** Refresh rows (projection only, 0–5 ms) at ~500 ms and keep classification on today's cadence. Latency drops to
+  ~0.6–0.8 s, the gate stalls ~5 ms per refresh instead of ~250 ms, and the cost is staleness with a bounded size: identity verdicts (pet folding, charm)
+  catch up at the next full pass rather than on the same one, which is what already happens today whenever a pass is skipped. Needs the carry's state-stamp
+  gate to be asked per lane, so a stale-row rebuild still triggers exactly when a verdict moved.
+- **(b) Tiered classification.** Run the cheap rules every pass and the measured-expensive ones (R9/R15/R18/R7) on a slower tick or when their own evidence
+  count moves. Same one cadence, pass cost down to tens of ms, floor then becomes honest at ~1 s without the gate math hurting.
+- **(c) Trim the fixed overheads.** Tail delay 200 → 50–100 ms, pump 250 → 100 ms: about 0.3 s for nearly no risk, and it helps every derived surface, not just the meter.
+- **(d) Just lower `FloorSeconds`.** One constant, but it buys latency by parking ingest — I would not do this before (a) or (b) makes passes cheap.
+
+Probe kept as `EQLogParser.Test/src/parsing/mirror/MeterBoardCostRealLogTest.cs` (gated, skipped without the variable):
+```
+EQLP_MIRROR_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
+  --filter MeterBoardCost --logger "console;verbosity=detailed"
+```
