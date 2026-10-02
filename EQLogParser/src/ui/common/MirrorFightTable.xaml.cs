@@ -184,8 +184,13 @@ namespace EQLogParser
 
     private void OnDeriveFailed(string message)
     {
-      _pendingOverride = null;
-      Dispatcher.InvokeAsync(() => mirrorStatus.Text = $"Derive failed: {message}");
+      // Both halves on the dispatcher: this handler runs on the derive thread, and OverrideOutcome reads the
+      // pending names from the UI thread - a cross-thread clear would only cost a sentence, but it is not that.
+      Dispatcher.InvokeAsync(() =>
+      {
+        _pendingOverride = null;
+        mirrorStatus.Text = $"Derive failed: {message}";
+      });
     }
 
     /*
