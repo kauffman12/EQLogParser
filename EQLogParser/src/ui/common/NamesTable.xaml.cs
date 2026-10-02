@@ -52,7 +52,6 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private readonly ObservableCollection<NameRow> _rows = [];
-    private MirrorSession? _session;
     private int _refreshInFlight;
 
     public NamesTable()
@@ -75,7 +74,6 @@ namespace EQLogParser
         return;
       }
 
-      _session = session;
       if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1) return;
 
       _ = Task.Run(() =>
@@ -85,7 +83,16 @@ namespace EQLogParser
         catch (Exception ex) { Log.Error("Name census failed", ex); }
         finally { Interlocked.Exchange(ref _refreshInFlight, 0); }
 
-        Dispatcher.BeginInvoke(() => Apply(census));
+        Dispatcher.BeginInvoke(() =>
+        {
+          /*
+           * The answer may land after the capture moved on: this log closed and another opened (or just this one
+           * closed) is exactly when a stale list is most likely to be applied LAST. The session that built it must
+           * still be the active one - not merely "a" session.
+           */
+          if (!ReferenceEquals(session, MirrorSession.Active)) return;
+          Apply(census);
+        });
       });
     }
 
