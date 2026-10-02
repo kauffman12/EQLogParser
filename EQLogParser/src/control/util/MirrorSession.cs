@@ -268,8 +268,16 @@ namespace EQLogParser
             _carriedTimeline = classified;
             _lastFullPassSeconds = sw.Elapsed.TotalSeconds;
             _sinceFullPass.Restart();
-            IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
-                                               (long)_mirror.LastEventTime);
+
+            /*
+             * A pass that outlives its session does not get to write the ledger: closing this log and opening another runs
+             * IdentityPriorStore.Init(serverB) while this task is still in flight, and Record would then file THIS capture's
+             * conclusions under the NEXT server's name - where they sit for 90 days. Re-opening this file re-records them
+             * (the ledger is idempotent by design), so skipping costs nothing.
+             */
+            if (!_disposed)
+              IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
+                                                 (long)_mirror.LastEventTime);
           }
 
           /*

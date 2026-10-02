@@ -250,6 +250,13 @@ namespace EQLogParser
 
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnMirrorDerived;
       _derivedFrom = session;
+
+      /*
+       * A new capture is a new board: the stored start second describes a log that is gone (legacy got the same reset from
+       * ResetOverlayFights on every log open). Reset to null as well, so a later re-enable cannot inherit the previous
+       * capture's window start.
+       */
+      _mirrorWindowT = -1;
       if (session is not null) session.Derived += OnMirrorDerived;
     }
 
@@ -423,9 +430,11 @@ namespace EQLogParser
 
       try
       {
-        // Same clock the derived facts carry: their TimeS is seconds from DateTime.MinValue, which is what every
-        // legacy Fight bound uses too (the overlay's own expiry does DateTime.MinValue.AddSeconds(...)).
-        var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        // The capture's own newest event, never wall time (LiveFights' stated rule): a bulk load runs behind the wall,
+        // and an old log must not read as "quiet for hours" against a clock its facts will never catch. NaN until the
+        // first fact lands - there is no board to sum then anyway, so answer null without moving the window start.
+        var nowT = session.LastEventTime;
+        if (double.IsNaN(nowT)) return null;
         var timeout = MirrorMeter.TimeoutFor(_currentDamageMode);
 
         // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building).
