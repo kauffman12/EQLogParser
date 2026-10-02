@@ -4528,11 +4528,18 @@ name has at the fact's second — implemented as the fact naming the row AND sit
 (`BeginTime..LastTime`), intersected with any slice window. Same-name rows never overlap in time, so the clamp is
 exact.
 
-What that costs, by design: a taunt that hits no row's lifetime at all sits on a fight legacy would have **invented**
-(`?? Create`). The derived list does not invent rows — a life with no facts is not a life — so those are the board's
-known residue. Measured after the fix, same capture: taunts legacy **4,307** → derived **5,465** against ~6,083 raw
-taunt lines; derived is the side nearer the log's own count (its gap is the residue, legacy's is its expiry and
-fabrication bookkeeping). Spells: 515.078 B → 515.248 B (+0.03 %), 37 of 3,195 shared pairs moved at all. The census
+What that costs, by design: a taunt whose second falls in no row's lifetime is a known loss on the derived board —
+a life with no facts is not a life. Legacy's total is lower for a reason that is not expiry at all: `HandleNewTaunt`
+is `GetFight(npc) ?? Create(...)`, and while the DAMAGE path registers its new fight (`UpdateIfNewFightMap`), the taunt
+path does not — `Create` only allocates a local that is immediately dropped. Every taunt arriving with no ACTIVE row for
+the name (a tank's "has captured" routinely precedes the first hit line; anything >30 s past last activity likewise) is
+appended to an object nothing can ever read: no registration, no events, invisible by construction, which is how it was
+never noticed. Measured after the fix, same capture: taunts legacy **4,307** → derived **5,465** against ~6,083 raw
+taunt lines; derived counts each parsed taunt once against the life that was actually being taunted, and legacy's
+orphan path silently dropped ~1,800 of the capture's taunts (6,083 − 4,307) from every board — the old table simply
+never looked wrong. The mechanism is pinned through the real parser by `FightManagerTest.ATauntWithNoActiveRowIsLostFromEveryBoard`
+(and its damage-less 60 s sibling): if the orphan path ever gains a registration call, that test fails and these
+numbers get re-measured. Spells: 515.078 B → 515.248 B (+0.03 %), 37 of 3,195 shared pairs moved at all. The census
 prints grand totals precisely so a multiplication like this reads as a total out of line rather than a hundred small
 per-pair moves (`SpellTaunt_RealLog_Census`). Pinned by `TauntsLandOnTheirNpcRowWithTheOutcomeWords`, which now also
 carries the out-of-lifetime taunt that belongs to nobody.
