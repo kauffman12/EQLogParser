@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 
+using EQLogParser.Mirror;
+
 namespace EQLogParser
 {
   internal interface IFightManager
@@ -19,7 +21,10 @@ namespace EQLogParser
     internal event Action<Fight> EventsUpdateFight;
     internal event Action<Fight> EventsNewOverlayFight;
     internal const int MaxTimeout = 60;
-    internal const int FightTimeout = 30;
+
+    // Reads the projection's constant rather than spelling 30 a second time: while both engines run, the gap has
+    // exactly one source (FightProjection.EngagementGapS), and when this manager is deleted the constant survives.
+    internal const int FightTimeout = (int)FightProjection.EngagementGapS;
 
     // singleton with set for unit test
     internal static FightManager Instance { get; set; } = new();

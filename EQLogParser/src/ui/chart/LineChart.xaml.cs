@@ -10,6 +10,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
+using EQLogParser.Mirror;
+
 namespace EQLogParser
 {
   public partial class LineChart
@@ -783,7 +785,9 @@ namespace EQLogParser
         timeRanges[aggregate.Name] = value;
       }
 
-      if (diff > FightManager.FightTimeout)
+      // The segment-gap number by its neutral name: one silence threshold across the app, owned by the projection
+      // rather than read off a manager this chart otherwise knows nothing about.
+      if (diff > FightProjection.EngagementGapS)
       {
         value.Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
         Insert(aggregate, theValues, timeRanges);

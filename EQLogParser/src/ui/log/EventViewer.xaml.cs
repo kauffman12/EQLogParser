@@ -8,6 +8,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+
+using EQLogParser.Mirror;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -76,8 +78,14 @@ namespace EQLogParser
       {
         if (!(PlayerRegistry.Instance.IsVerifiedPet(record.Killed) && !PlayerRegistry.IsPossiblePlayerName(record.Killed)))
         {
-          var isActorNpc = FightManager.Instance.IsLifetimeNpc(record.Killer) || EQDataStore.Instance.IsKnownNpc(record.Killer);
-          var isTargetNpc = FightManager.Instance.IsLifetimeNpc(record.Killed) || EQDataStore.Instance.IsKnownNpc(record.Killed);
+          // "Is this one of the capture's mobs?" asked of the classified timeline - the same answer NamesTable
+          // shows - rather than "did this name carry a legacy fight row": a name no rule placed is Unknown, and
+          // that is the honest word for a text-choice question. npcs.txt still counts, as before.
+          var timeline = MirrorSession.Active?.Snapshot?.Timeline;
+          var isActorNpc = (timeline is not null && timeline.Identity(record.Killer) is IdentityKind.Npc)
+                           || EQDataStore.Instance.IsKnownNpc(record.Killer);
+          var isTargetNpc = (timeline is not null && timeline.Identity(record.Killed) is IdentityKind.Npc)
+                            || EQDataStore.Instance.IsKnownNpc(record.Killed);
           var isActorPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrSpell(record.Killer);
           var isTargetPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Killed);
 

@@ -43,8 +43,12 @@ namespace EQLogParser.Mirror
      * One number here rather than two: nothing measured has ever needed the slower one — a row that has not
      * hurt anybody for half a minute is over either way — and two thresholds would decide a row's boundaries
      * from which side the first hit went, which is not a fact about the encounter.
+     *
+     * This literal is THE source of the number: the legacy manager's own `FightTimeout` reads it back, so the
+     * two spellings cannot drift into two constants while both engines still run. When the manager goes, the
+     * constant that survives is this one, and app readers (LineChart's segment gaps) ask for it by name.
      */
-    public const double EngagementGapS = FightManager.FightTimeout;   // 30 s
+    public const double EngagementGapS = 30;
 
     /*
      * How far AFTER a row's last fact an event can still be ABOUT that row: a slain line lands a second after
