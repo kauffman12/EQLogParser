@@ -703,12 +703,14 @@ namespace EQLogParser
       else FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
     }
 
-    // Symmetric on purpose: MirrorSession.LiveDamageObserved is static and outlives a capture, so leaving it attached would
-    // keep this window (and its whole visual tree) alive across every log opened afterwards.
+    // Removes BOTH, unconditionally: `-=` on a handler that was never attached is a no-op, while the old
+    // Enabled-keyed branch read the dial AFTER the toggle had already flipped it - so a mirror-off flip removed the
+    // legacy handler and left the static mirror one attached, which is exactly the pin-on-process-lifetime leak the
+    // comment below the Subscribe pair warns about. Subscribe stays the conditional pair: exactly one engine reports.
     private void UnsubscribeOverlayFights()
     {
-      if (MirrorMeter.Enabled) MirrorSession.LiveDamageObserved -= OnMirrorLiveDamage;
-      else FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
+      MirrorSession.LiveDamageObserved -= OnMirrorLiveDamage;
+      FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
     }
 
     private void EventsNewOverlayFight(Fight e) => AutoOpenMeter();
