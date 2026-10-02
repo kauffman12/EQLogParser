@@ -268,7 +268,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **either** direction window sits inside the gap). Three rules that must not be "simplified": (1) **now = the capture's newest event, never
   wall time**, because a log file is never rotated — measured spans between first and last damage fact inside one file: **329 h**
   (`eqlog_Kizant_xegony.txt`), **616 days** (Incogitable) — so a wall-clock rule is a rule about when the raid logged out, and it cannot see the
-  dense end of a farm night (09-20-25: 3.0 h file, 143.9 min of it live); keyed to the capture, "live" means *at the end of what we have*. A file
+  dense end of a farm night (09-20-25: 3.0 h file, 143.9 min of it live); keyed to the capture, "live" means *at the end of what we have* — **except the meter's quiet dial**: how long a quiet board stays up is a promise in real seconds (mode 0 = the gap,
+  else N) and is keyed on `DateTime.Now`, because a lag in file growth (client buffering, parse stall) freezes the capture clock and would hold the board
+  past what the user chose — a capture-keyed pass was tried and reverted for exactly this. A file
   ending after a kill therefore answers **0 live rows**, which is correct — so `LiveFightsRealLogTest` reports that number and asserts each row is
   live at its *own* last activity instead. (2) **the gap is the meter's dial** (`TimeoutFor`: `OverlayDamageMode` 0 = on kill = `EngagementGapS`,
   else N seconds), so a window cannot be held open by one rule and blanked by another; pin it as *behaviour* (live at 29 s, dead at 31 s), since

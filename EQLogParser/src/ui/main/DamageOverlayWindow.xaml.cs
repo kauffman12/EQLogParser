@@ -430,11 +430,17 @@ namespace EQLogParser
 
       try
       {
-        // The capture's own newest event, never wall time (LiveFights' stated rule): a bulk load runs behind the wall,
-        // and an old log must not read as "quiet for hours" against a clock its facts will never catch. NaN until the
-        // first fact lands - there is no board to sum then anyway, so answer null without moving the window start.
-        var nowT = session.LastEventTime;
-        if (double.IsNaN(nowT)) return null;
+        /*
+         * Wall time, on purpose - this is the one meter rule that must see the real world. The dial (mode 0 = the engagement
+         * gap, else N seconds) is a promise in REAL seconds: how long a quiet board stays up. A lag between the fight and the
+         * file - the client buffering writes, a parse stall, a late flush - freezes the capture clock (no facts, no time), so
+         * a rule keyed to the capture's newest event would hold the board past whatever the user chose; wall now keeps counting
+         * through the lag. The split is deliberate and is not drift to "fix": whether there is a fight to show runs on capture
+         * time (LiveFights), how long a quiet board stays up runs on wall time. On an old capture this reads as quiet-forever
+         * and the board blanks - which is what the original did and what a live meter should do; boards and summaries are what
+         * old logs are for.
+         */
+        var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
         var timeout = MirrorMeter.TimeoutFor(_currentDamageMode);
 
         // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building).

@@ -4564,11 +4564,15 @@ a reopened window kept painting what it had not thrown away. A derived board hol
 that can carry is `windowT`, and that field was an instance member — reborn at "now" with every reopen, which quietly deleted the seconds already spent on the pull from the numbers
 while the raid kept going. It is static now, and the decision is a rule (`LiveFights.WindowStartFor`): the stored start survives unless it is absent (first tick after a clear) or the
 capture has been quiet past the meter's own dial, in which case the board zeroes and starts here. Nothing runs while no window exists, so an X does not age the start either — a reopen
-inside the range gets the whole pull, a reopen after it gets one fresh board, and in both cases it is `OverlayDamageMode` deciding rather than a special case in the window. The `now` that rule measures against is
-`MirrorSession.LastEventTime` - the capture's own newest event, not wall time: this is the same stated rule as `HasLiveFight`, and the code had drifted from it
-(the window arithmetic used the wall clock). On a live tail the two clocks agree within the tail delay, so nothing visible moves; on an OLD capture ending mid-fight the
-derived board now shows that fight's final seconds instead of expiring instantly - which is what both engines did before (legacy's row expiry and the old window code both
-compared against `DateTime.Now`, so a capture's tail was "quiet for hours" the moment it finished loading).
+inside the range gets the whole pull, a reopen after it gets one fresh board, and in both cases it is `OverlayDamageMode` deciding rather than a special case in the window. And the `now` that rule measures against is **wall time, on purpose** - the one
+meter rule that must see the real world: the dial (mode 0 = the engagement gap, else N seconds) is a promise in *real* seconds about how long a quiet board stays up, and a lag
+between the fight and the file - the client buffering writes, a parse stall, a late flush - freezes the capture clock (no facts arrive, so its "now" does not move), which would hold
+the board past whatever the user chose. `DateTime.Now` keeps counting through the lag; the capture clock cannot express it at all, because a static file contains no time. The
+split is therefore deliberate and is not drift to "fix": *is there a fight to show* runs on capture time (`LiveFights` - a wall key there is a rule about when the raid logged out,
+and the 329 h / 616 day file spans are the measurement), *how long does a quiet board stay up* runs on wall time. The consequence on an old capture ending mid-fight: the board
+blanks after the dial and stays blank - which is what the original did (both engines compared against `DateTime.Now`) and what a live meter should do; boards and summaries are
+what old logs are for. A first pass of this port had keyed the expiry to the capture's newest event for consistency with the open decision; it was reverted on measurement of the
+lag case, because consistency cost the user's dial its real-seconds meaning.
 
 Two things in the code and the notes disagreed with themselves while I wrote this, which is worth keeping as a lesson: my earlier "starts per life" census (269/269, 4,542/4,519) was
 a correct measurement of *pull starts* that I had labelled "announcements" and built a product rule on. The census stays — it is the shape of a night, and 23 restarts with a 121 s pause
