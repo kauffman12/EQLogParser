@@ -386,17 +386,25 @@ namespace EQLogParser
     {
       var hasFight = GetSelectedFights().Count > 0;
 
+      /*
+       * The position-based selects walk _rows in section order and select by grid POSITION (SelectByShown). A user sort
+       * reorders the records under those positions, so on a sorted grid they would highlight arbitrary fights - and
+       * announce them to the boards. Search does not have this problem: it walks the materialized view (SearchForNpc).
+       * Offer them only while the grid is unsorted; RestoreSelection already guards the same way.
+       */
+      var unsorted = mirrorGrid.SortColumnDescriptions.Count == 0;
+
       // Enabled by what the grid can actually do with: all/unselect by current selection, group by a real row
       // under the cursor (a divider carries no section of its own).
       selectAllItem.IsEnabled = false;
       foreach (var row in _rows)
       {
-        if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = true; break; }
+        if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = unsorted; break; }
       }
 
       unselectAllItem.IsEnabled = mirrorGrid.SelectedItems.Count > 0;
       var hasCurrent = mirrorGrid.CurrentItem is MirrorFightRow { IsDivider: false };
-      selectGroupItem.IsEnabled = hasCurrent;
+      selectGroupItem.IsEnabled = hasCurrent && unsorted;
       unselectGroupItem.IsEnabled = hasCurrent && mirrorGrid.SelectedItems.Count > 0;
 
       overridePlayerItem.IsEnabled = hasFight;
