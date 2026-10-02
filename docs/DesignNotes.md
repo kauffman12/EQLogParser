@@ -4516,6 +4516,27 @@ The word is scaffolding for the side-by-side burn-in only: when the legacy engin
 the fight window simply docks and toggles like the old one — no settings entry. Nothing on the OFF branch may do
 anything beyond "legacy runs exactly as before", or the deletion commit grows a behaviour migration inside it.
 
+### A taunt belongs to the life that was open when it landed (2026-10)
+
+The spell/taunt census over `eqlog_Incogitable_xegony.txt` found the one real bug the new seam could hide: derived
+taunt totals ran ~300× legacy (`Useless|An echo`: 16 → **4,608**), while the log itself held **4,364** of Useless's
+"has captured" lines in total. Cause: taunts are a name-keyed stream walked whole at materialization (the damage and
+tank passes cannot have this bug — they walk the row's own ordinals), and an unbounded selection routes with
+`fromT = -∞`, so **every** row named `An echo` received **every** taunt that ever named one, and a name with forty
+lives multiplies by forty. The routing rule is now what legacy's `GetFight(npc)` always meant: the ONE open row the
+name has at the fact's second — implemented as the fact naming the row AND sitting inside the row's own lifetime
+(`BeginTime..LastTime`), intersected with any slice window. Same-name rows never overlap in time, so the clamp is
+exact.
+
+What that costs, by design: a taunt that hits no row's lifetime at all sits on a fight legacy would have **invented**
+(`?? Create`). The derived list does not invent rows — a life with no facts is not a life — so those are the board's
+known residue. Measured after the fix, same capture: taunts legacy **4,307** → derived **5,465** against ~6,083 raw
+taunt lines; derived is the side nearer the log's own count (its gap is the residue, legacy's is its expiry and
+fabrication bookkeeping). Spells: 515.078 B → 515.248 B (+0.03 %), 37 of 3,195 shared pairs moved at all. The census
+prints grand totals precisely so a multiplication like this reads as a total out of line rather than a hundred small
+per-pair moves (`SpellTaunt_RealLog_Census`). Pinned by `TauntsLandOnTheirNpcRowWithTheOutcomeWords`, which now also
+carries the out-of-lifetime taunt that belongs to nobody.
+
 ### The X closes a meter; it does not reset one (2026-09-29)
 
 Reported from use: the reset button behaves, but "the X is just supposed to close the window and it would open back up next time damage comes in

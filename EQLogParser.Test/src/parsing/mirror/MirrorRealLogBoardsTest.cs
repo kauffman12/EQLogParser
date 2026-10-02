@@ -914,7 +914,13 @@ public class MirrorRealLogBoardsTest
         var onlyLegacy = legacy.Where(kv => !derived.ContainsKey(kv.Key)).Select(kv => kv.Key).ToList();
         var onlyDerived = derived.Where(kv => !legacy.ContainsKey(kv.Key)).Select(kv => kv.Key).ToList();
 
+        // Grand totals are the scale check: they should sit near the capture's own line count for this kind of
+        // fact, and a side reading multiples higher is the multiplication shape this census exists to catch.
+        var legacySum = legacy.Values.Sum(v => v.A + v.B + v.C);
+        var derivedSum = derived.Values.Sum(v => v.A + v.B + v.C);
+
         Console.WriteLine($"[{what}] columns={columns} shared={shared:N0} moved={moved.Count:N0} legacyOnly={onlyLegacy.Count:N0} derivedOnly={onlyDerived.Count:N0}");
+        Console.WriteLine($"[{what}] totals: legacy {legacySum:N0} -> derived {derivedSum:N0}");
         foreach (var (key, l, d) in moved.OrderByDescending(m => Math.Abs(m.D - m.L)).Take(10))
         {
             Console.WriteLine($"[{what}]   {key}: legacy {l:N0} -> derived {d:N0}");

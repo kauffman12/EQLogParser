@@ -886,7 +886,11 @@ public class MirrorSummaryFightsTest
     [TestMethod]
     public void TauntsLandOnTheirNpcRowWithTheOutcomeWords()
     {
-        var facts = BuildFacts(("Illuminai", "Echohead", 500, 0, LabelTypes.Melee));
+        // The row's life runs from its first fact to its last: the taunts must land INSIDE it, because a taunt is
+        // routed to the one open row its name has at its second (legacy's GetFight), and this row is only open on
+        // the seconds it actually fought.
+        var facts = BuildFacts(("Illuminai", "Echohead", 100, 2, LabelTypes.Melee),
+                               ("Illuminai", "Echohead", 100, 9, LabelTypes.Melee));
 
         // Two taunts on this row - a plain success at second 2 and an improved one at second 9 - plus one aimed
         // at a name that is not this row, which must stay out of it.
@@ -897,6 +901,11 @@ public class MirrorSummaryFightsTest
         facts.AddTaunt(new TauntFact(901, (long)(T0 + 9), npc, player, TauntFact.TauntImproved));
         facts.AddTaunt(new TauntFact(902, (long)(T0 + 3), other, player, TauntFact.TauntSuccess));
 
+        // And one that names the row on a second it is not alive: no row of that name is open at T0+400, so the
+        // fact belongs to nobody here. Without the lifetime clamp it would land on this row - and so would every
+        // other same-named row, which is how a 4,364-line evening multiplied into tens of thousands.
+        facts.AddTaunt(new TauntFact(903, (long)(T0 + 400), npc, player, TauntFact.TauntSuccess));
+
         var timeline = new EntityTimeline();
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
         timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
@@ -906,7 +915,9 @@ public class MirrorSummaryFightsTest
         var summary = index.SummaryFightFor(echo, table);
 
         var taunts = summary.TauntBlocks.SelectMany(b => b.Actions).Cast<TauntRecord>().ToList();
-        Assert.AreEqual(2, taunts.Count, "the taunt aimed at another name belongs to that row, not this one");
+        Assert.AreEqual(2, taunts.Count,
+            "only the two taunts that name the row while it is alive: the other name's taunt belongs to its own row, "
+            + "and the out-of-lifetime one belongs to no row at all");
         Assert.AreEqual("Illuminai", taunts[0].Player);
         Assert.AreEqual("Echohead", taunts[0].Npc);
         Assert.IsTrue(taunts[0].Success);

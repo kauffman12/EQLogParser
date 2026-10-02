@@ -385,18 +385,40 @@ namespace EQLogParser.Mirror
 
       /*
        * The taunt board reads TauntBlocks off these same fights (TauntStatsViewer): legacy attached every taunt to
-       * GetFight(npc) ?? Create(npc, t), so a fact belongs to this row when it names the row and its second sits
-       * inside the row's window. Same one-second block rule as the damage and tank passes - the builder merges
-       * same-BeginTime blocks across fights, and a split run would double-count an instant. The outcome words come
-       * back off the fact's bits exactly as the parser split them; nothing is re-inferred.
+       * GetFight(npc) ?? Create(npc, t), so a fact belongs to the ONE open row that name has at its second - never
+       * more than one, because one name carries one open row. That is the routing rule this pass implements: the
+       * fact names the row AND sits inside the row's OWN lifetime, intersected with the requested window.
+       *
+       * The lifetime clamp is load-bearing and easy to lose: the damage and tank passes cannot have this bug
+       * because they walk this row's own ordinals, but taunts are a name-keyed stream walked whole. With an
+       * unbounded selection every row named "An echo" would receive every taunt that ever named one - measured on
+       * Incogitable, Useless's 4,364 taunt lines read back as multiples of thousands per add name. Same-name rows
+       * never overlap in time (one life each), so the clamp is exact rather than approximate.
+       *
+       * What the clamp gives up, by design: a taunt that hits no row's lifetime at all sits on a fight legacy would
+       * have INVENTED for it (`?? Create`). The derived list has no such rows - a row is one life, and a life with
+       * no facts is not a life - so those taunts are the derived board's known residue rather than fabricated rows.
+       *
+       * Same one-second block rule as the damage and tank passes - the builder merges same-BeginTime blocks across
+       * fights, and a split run would double-count an instant. The outcome words come back off the fact's bits
+       * exactly as the parser split them; nothing is re-inferred.
        */
       ActionGroup tauntBlock = null;
       var lastTauntBlockTime = double.NaN;
+
+      // The row's own span, intersected with the window a slice asks for. NaN bounds mean "the row never fought",
+      // which cannot happen on a materialized row - but if it ever does, fall back to the plain window rather than
+      // let Math.Max hand out NaN and route nothing.
+      var tauntFrom = fromT;
+      var tauntTo = toT;
+      if (!double.IsNaN(fight.BeginTime) && fight.BeginTime > tauntFrom) tauntFrom = fight.BeginTime;
+      if (!double.IsNaN(fight.LastTime) && fight.LastTime < tauntTo) tauntTo = fight.LastTime;
+
       foreach (var taunt in facts.Taunts)
       {
         var time = (double)taunt.TimeS;
 
-        if (time < fromT || time > toT) continue;
+        if (time < tauntFrom || time > tauntTo) continue;
         // Names are interned case-insensitively, so this is the same comparison the identity tables make.
         if (!string.Equals(facts.NameOf(taunt.NpcIdx), fight.Name, StringComparison.OrdinalIgnoreCase)) continue;
 
