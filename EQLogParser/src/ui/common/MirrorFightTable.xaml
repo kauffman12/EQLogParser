@@ -30,8 +30,10 @@
       </Style>
       <Style x:Key="MirrorRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
+          <!-- The inactivity divider keeps legacy's own color: ColorRowStyleConverter paints every
+               Breaktime row with the warning brush (salmon/dark orange by theme), not the search one. -->
           <DataTrigger Binding="{Binding IsDivider}" Value="True">
-            <Setter Property="Background" Value="{DynamicResource EQSearchBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource EQWarnBackgroundBrush}"/>
           </DataTrigger>
           <!-- The search highlight, legacy's own brush and binding name (Fight.IsSearchResult on the old grid). -->
           <DataTrigger Binding="{Binding IsSearchResult}" Value="True">
