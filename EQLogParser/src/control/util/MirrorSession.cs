@@ -412,6 +412,14 @@ namespace EQLogParser
     public MirrorSnapshot Snapshot => _snapshot;
 
     /*
+     * The capture's own newest event (NaN until the first fact) — "now" for any rule over derived rows is THIS, never wall
+     * time: a log file never rotates, so a wall-clock key is a rule about when the raid logged out (LiveFights states it;
+     * HasLiveFight already reads it). The damage meter's board arithmetic used the wall clock and read a capture ending
+     * mid-fight as expired hours ago; this is the value that lets it ask the question LiveFights was written for.
+     */
+    public double LastEventTime => _mirror.LastEventTime;
+
+    /*
      * The fights this window answers for, as legacy-shaped rows: the door MainWindow.GetFights feeds to the
      * spell, taunt, death and export paths while the mirror is attached. Materialization is the same pass a board
      * click pays - records rebuilt from the facts - but nothing here is stored twice (the snapshot keeps the
