@@ -13,8 +13,10 @@ namespace EQLogParser
   [TestClass]
   public sealed class FightManagerTest
   {
-    private FightManager _fm;
-    private List<Fight> _registered;
+    // null!: constructed in Setup on purpose - the constructor wires HandleNewTaunt onto the static parser
+    // events, and doing that at field-initializer time would make the wiring depend on test-class construction order.
+    private FightManager _fm = null!;
+    private List<Fight> _registered = [];
 
     [TestInitialize]
     public void Setup()

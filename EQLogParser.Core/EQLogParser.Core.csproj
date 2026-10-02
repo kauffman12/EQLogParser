@@ -22,7 +22,8 @@
     <InternalsVisibleTo Include="EQLogParser.Test" />
     <InternalsVisibleTo Include="EQLogParser.Wpf.Test" />
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
-    <!-- RangeSpike: the sharded-parse measurement tool (EQLogParser.Tools). Spike-only. -->
+    <!-- RangeSpike: the sharded-parse measurement tool (EQLogParser.Tools). Spike-only, not shipped - but it reads
+         Core internals directly, so removing this breaks its standalone build. -->
     <InternalsVisibleTo Include="RangeSpike" />
   </ItemGroup>
   <PropertyGroup>
