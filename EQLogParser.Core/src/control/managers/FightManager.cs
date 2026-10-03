@@ -181,8 +181,10 @@ namespace EQLogParser
         StringCache.Clear();
       }
 
-      // The signal belongs to the app, not to whichever pipeline produced the fights (CombatEvents).
-      CombatEvents.FireActiveDataCleared(serverChanged);
+      // No event fires here anymore: "active data was cleared" belongs to the app's clear PATHS (LifecycleManager's
+      // new-capture fan-out, the fight list's Clear All), not to whichever store happens to be registered. Views went
+      // blank because a store reset; when this store is deleted the signal must survive, so it now rides with the
+      // paths that outlive it. Reasoning and consumers: docs/legacy-replacement-map.md step 1.
     }
 
     public void Shutdown() => Clear();

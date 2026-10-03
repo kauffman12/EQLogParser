@@ -35,6 +35,12 @@ namespace EQLogParser
       {
         instance.Clear(serverChanged);
       }
+
+      // The one raise for "the log closed / a new capture begins": the seven grids and charts blank on this. It lives
+      // on the PATH, not on FightManager — deleting the legacy store must not silently stop the clear (a board that
+      // keeps showing the previous night's raid is worse than an empty one), and firing after the fan-out means every
+      // store is already reset when the views look at the world. Clear All raises it itself.
+      CombatEvents.FireActiveDataCleared(serverChanged);
     }
 
     internal static void Shutdown()

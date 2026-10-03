@@ -22,7 +22,7 @@ each one needs, and the order deletions become safe.
 
 | file | legacy touch | replacement |
 |---|---|---|
-`HealingSummary`, `TankSummary`/`TankingSummary`, `DamageSummary`, `DamageChart`, `HealingChart`, `TankChart`, `ColumnChart` | **only** `FightManager.Instance.EventsClearedActiveData` — a "new log, blank your grid" signal; their data comes from the builders | one mirror event: `MirrorSession.CaptureCleared`. Six files, one line each. Cheapest win on the board and it removes the shared coupling that makes the other rows look bigger than they are |
+`HealingSummary`, `TankSummary`/`TankingSummary`, `DamageSummary`, `DamageChart`, `HealingChart`, `TankChart`, `ColumnChart` | the "new log, blank your grid" signal; their data comes from the builders | **DONE (in a better shape than planned)**: the views already subscribe to the engine-neutral `CombatEvents.ActiveDataCleared`, so what remained was the *raise*: it moved out of `FightManager.Clear` onto the clear PATHS — `LifecycleManager.Clear` fires after the fan-out, and `FightTable.ClearClick` raises `FireActiveDataCleared(true)` beside its store reset. Deleting FightManager can now never silently stop the clear. Pinned by `LifecycleManagerTest` (path raises with payload; a bare store reset raises nothing) |
 `EventViewer` | `FightManager.Instance.IsLifetimeNpc(name)` | ask the timeline (`EntityTimeline` kind + reason), same question `NamesTable` shows |
 |`DamageOverlayWindow` + `MainWindow` | `HasOverlayFights`, `ResetOverlayFights`, `EventsNewOverlayFight` — **ported behind one dial** (`EnableCombatMirror`, which replaced `OverlayDamageFromMirror` in the burn-in consolidation; both surfaces flip together, read live): the three questions now go through `MirrorMeter` (`LiveFights` answers "is a fight going on", `MirrorSession.LiveDamageObserved` replaces the new-fight event at derive rate rather than per line, and the board's start second is static so an X-then-back meter continues inside the dial instead of starting over) | what still keeps `FightManager` alive on this path is the legacy meter's own tally (`DamageOverlayStatsBuilder`), i.e. flipping the default and deleting that builder — not the show/reset/auto-open wiring any more |
 |line viewers (`NpcStatsViewer`, `Timeline`, damage/heal/tank tables, `HitLogViewer`) | whatever they read off `RecordsStore`/`FightManager` today | the fact tables hold rows for these (damage, healing, outcomes, identity) but none of the per-name lifetimes; needs readers, not a rule — **the main real work left** |
@@ -31,8 +31,9 @@ each one needs, and the order deletions become safe.
 
 ## Order of deletion (each step independently shippable, parity as the exit test)
 
-1. **`CaptureCleared` event** on the mirror; re-point the six boards/charts at it. Zero behaviour change, deletes the
-   widest coupling.
+1. **Clear signal off the store** — done. The views already rode the engine-neutral `CombatEvents.ActiveDataCleared`;
+   the raise moved from `FightManager.Clear` to the clear paths (`LifecycleManager.Clear`, fight-list Clear All), so the
+   legacy store's deletion cannot silently stop the grids blanking.
 2. **`IsLifetimeNpc` → timeline** in `EventViewer`.
 3. **Live/current fight in the mirror** — done for the meter: `LiveFights` answers it over rows on the capture's own clock,
    `MirrorSession.NewFightObserved` announces it once per pull, and the overlay's open/hide/reset path asks `MirrorMeter`

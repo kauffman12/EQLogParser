@@ -172,7 +172,10 @@ namespace EQLogParser
     private void EventsNewNonTankingFight(Fight fight) => ProcessNonTankingFight(fight);
     private void ClearClick(object sender, RoutedEventArgs e)
     {
+      // Clear() no longer raises ActiveDataCleared itself (the signal belongs to the clear path, not the store), so
+      // this button raises it with the payload Clear's default used to pass through — the grids blank along with the store.
       FightManager.Instance.Clear();
+      CombatEvents.FireActiveDataCleared(true);
 
       // The record cache and every parsed event drop together here, which is the most the collector has ever had to hand back in one go.
       GcTidyUp.Request("fight list cleared");
