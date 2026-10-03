@@ -6,7 +6,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
 - **Git**: Commit with detailed messages, but **never push to remote**. Pushing is the user's call.
-- **Docs are local discussion**: most files under `docs/` are untracked working documents (see `.gitignore`). Never `git add`/commit new files there — only the ones already tracked (`git ls-files docs/`) belong in the repo.
+- **Docs: exactly three are maintained in git** — `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md` (the `.gitignore` whitelist). Everything else under `docs/` is a local working document for discussions (`combat-mirror-design.md`, `legacy-replacement-map.md`, `TtsPacks.md`, `NagFctReference.md`, `counter-variable-issue.md`, …): never `git add` one, and never assume such a reference resolves in a fresh clone — durable decisions belong in `DesignNotes.md`, which now carries the orientation chapter ("The parsing direction") and the deletion queue the working map holds.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
 
