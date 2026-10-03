@@ -8,7 +8,8 @@ namespace EQLogParser;
  * What the incremental derive pass is worth, on a capture big enough for the number to mean something.
  *
  * Runs only when EQLP_MIRROR_INCREMENT names a log:
- *   EQLP_MIRROR_INCREMENT=local/eqlog_Incogitable_xegony.txt dotnet test --filter IncrementalPassIsCheaperThanARebuild --logger "console;verbosity=detailed"
+ *   EQLP_MIRROR_INCREMENT=local/logs/live/eqlog_Incogitable_xegony.txt dotnet test --filter IncrementalPassIsCheaperThanARebuild --logger "console;verbosity=detailed"
+ *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see MirrorRealLogBoardsTest's header)
  *
  * It separates the two halves of a derive pass, because they respond to different things:
  *

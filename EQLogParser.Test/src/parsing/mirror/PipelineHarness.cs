@@ -137,6 +137,14 @@ internal static class PipelineHarness
     {
         EnsureDataStore();
 
+        // EMU captures (local/logs/emu/) parse with the app's EnableEmuParsing switch on: DamageLineParser carries a
+        // second grammar for them - Heroes Forge `(Owner: X)` lines, old-EMU `scores a critical hit! (N)` pairing,
+        // absorbed-damage shapes. EQLP_EMU=1 marks this run's file as one, exactly like settings.txt does in the app
+        // (MainWindow reads it once before any parse). Restored with the other process state at the end of this
+        // method: live-format logs MISPARSE when the flag is left on.
+        var priorEmu = AppSettings.IsEmuParsingEnabled;
+        AppSettings.IsEmuParsingEnabled = Environment.GetEnvironmentVariable("EQLP_EMU") == "1";
+
         // The app derives the local player from the log filename (eqlog_(Player)_(Server).txt);
         // do the same so You-mapping and the R0-local rule behave as they will in production.
         // Fixture names never match, so synthetic runs keep PlayerName untouched.
@@ -278,6 +286,7 @@ internal static class PipelineHarness
         DamageLineParser.ResetProcessState();
         DamageLineParser.FightManager = priorParserFm;
         FightManager.Instance = priorInstance;
+        AppSettings.IsEmuParsingEnabled = priorEmu;
 
         processor.Dispose();
 

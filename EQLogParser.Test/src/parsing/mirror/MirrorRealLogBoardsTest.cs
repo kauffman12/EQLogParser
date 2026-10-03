@@ -18,7 +18,13 @@ namespace EQLogParser;
  * materialized derived one — and reports the per-column mismatch census.
  *
  * Runs only when EQLP_MIRROR_BOARDS names a log:
- *   EQLP_MIRROR_BOARDS=local/eqlog_Incogitable_xegony.txt dotnet test --filter Boards_RealLog --logger "console;verbosity=detailed"
+ *   EQLP_MIRROR_BOARDS=local/logs/live/eqlog_Incogitable_xegony.txt dotnet test --filter Boards_RealLog --logger "console;verbosity=detailed"
+ * EMU captures (local/logs/emu/) additionally need EQLP_EMU=1 - the harness switches on DamageLineParser's second
+ * grammar exactly like the app's EnableEmuParsing setting does; leaving it off silently loses the Heroes Forge and
+ * old-EMU crit shapes. First EMU sweep (Oct 2026, all PASS): Kugon exact (34,073 both boards, old-crit pairing
+ * included), Silresa exact on every board, Catenza -3.7 % raid total with population 23/23 and absentFromDerived=0,
+ * Bulron +0.02 % / 13,505≈13,503 rows, Ikky +0.07 % / 1.5 M facts, Roper +1.7 % / 4.36 M facts and 44,729≈44,728
+ * rows - the renames are the recorded pet-folding pattern and nobody is ever absent under either name.
  * It is slow (a full ingest of the capture plus four summary builds) and holds hundreds of MB, which is exactly what
  * a "select every fight in an eight-hour raid" click costs in the app, and why it is opt-in rather than CI.
  *
@@ -311,11 +317,27 @@ public class MirrorRealLogBoardsTest
         // side its own list changes nothing here — the window and the record source are the whole difference.
         var legacyHeals = By(BuildHeals(run.Fights, healWindow, null));
         var derivedHeals = By(BuildHeals(input.Fights, healWindow, derivedHealRecords));
-        Assert.IsTrue(legacyHeals.Count > 0, "the healing board read nothing from the record store");
-        CollectionAssert.AreEquivalent(legacyHeals.Keys.ToList(), derivedHeals.Keys.ToList());
 
-        var healDiffs = ReportBoard("healing", legacyHeals, derivedHeals, HealFields, 20);
-        Assert.AreEqual(0L, healDiffs, "a derived healing board disagrees with the store-built one — see [diff] lines");
+        /*
+         * "Never empty" is a law of DAMAGE, not of healing: a melee-only capture (local/logs/emu/
+         * eqlog_Kugon_thornblade.txt is nine lines of duel with no heal anywhere) legitimately shows nothing, and a
+         * capture whose every heal sits outside the fought spans too. What stays strict is AGREEMENT: an empty board
+         * on one door only is exactly the seam bug this assertion exists to catch.
+         */
+        long healDiffs = 0;   // reported on the [boards] done line; stays 0 for a capture with nothing to compare
+        if (legacyHeals.Count == 0 || derivedHeals.Count == 0)
+        {
+            Assert.AreEqual(legacyHeals.Count, derivedHeals.Count,
+                            "one door's healing board is empty while the other has rows - that is a seam difference, not a quiet evening");
+            Console.WriteLine("[boards] healing: both doors silent in this window - strict parity vacuous here");
+        }
+        else
+        {
+            CollectionAssert.AreEquivalent(legacyHeals.Keys.ToList(), derivedHeals.Keys.ToList());
+
+            healDiffs = ReportBoard("healing", legacyHeals, derivedHeals, HealFields, 20);
+            Assert.AreEqual(0L, healDiffs, "a derived healing board disagrees with the store-built one — see [diff] lines");
+        }
 
         // Damage and tanking: census, because the two engines answer ownership differently on purpose.
         var legacyDamage = By(BuildDamage(run.Fights, legacyRange));

@@ -21,7 +21,8 @@ namespace EQLogParser;
  *      with the X came straight back.
  *
  * Runs only when EQLP_MIRROR_LIVE names a log:
- *   EQLP_MIRROR_LIVE=local/eqlog_Kizant_xegony.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"
+ *   EQLP_MIRROR_LIVE=local/logs/live/eqlog_Kizant_xegony.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"
+ *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see MirrorRealLogBoardsTest's header)
  *
  * The pull counts are taken off each row's two direction populations — `MirrorDamageIndex.DamageOrdinalsFor` and
  * `.TankingOrdinalsFor`, which are exactly what `LiveFights.LastActivityAt` reads — counting a fresh start after every silence
