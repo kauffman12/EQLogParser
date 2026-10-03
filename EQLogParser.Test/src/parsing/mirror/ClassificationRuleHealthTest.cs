@@ -34,7 +34,7 @@ namespace EQLogParser
     [TestMethod]
     public void AFailingStageIsReportedAndThePassContinues()
     {
-      var outcome = new MirrorRuleOutcome();
+      var outcome = new ClassificationOutcome();
       var laterRan = false;
 
       ClassificationRules.RunStage("poison stage", outcome, () => throw new InvalidOperationException("one bad fact"));
@@ -50,7 +50,7 @@ namespace EQLogParser
     [TestMethod]
     public void ACleanRunPaysOffTheStreak_RetirementNeedsFiveInARow()
     {
-      var outcome = new MirrorRuleOutcome();
+      var outcome = new ClassificationOutcome();
       Action poison = () => throw new InvalidOperationException("poison");
 
       for (var i = 0; i < 4; i++)
@@ -70,7 +70,7 @@ namespace EQLogParser
     [TestMethod]
     public void ARetiredStageStopsRunningAndAnnouncesOnce()
     {
-      var outcome = new MirrorRuleOutcome();
+      var outcome = new ClassificationOutcome();
       Action poison = () => throw new InvalidOperationException("poison");
       var calls = 0;
 
@@ -91,12 +91,12 @@ namespace EQLogParser
     [TestMethod]
     public void ANewSessionGetsTheFullRuleBook()
     {
-      var outcome = new MirrorRuleOutcome();
+      var outcome = new ClassificationOutcome();
       Action poison = () => throw new InvalidOperationException("poison");
       for (var i = 0; i < 5; i++)
         ClassificationRules.RunStage("dying", outcome, poison);
 
-      ClassificationRules.ResetRuleHealth();   // what MirrorSession's constructor calls
+      ClassificationRules.ResetRuleHealth();   // what DeriveEngine's constructor calls
 
       var ran = false;
       ClassificationRules.RunStage("dying", outcome, () => ran = true);

@@ -16,7 +16,7 @@ namespace EQLogParser;
  *     thing is an assertion and belongs on the mirror's manual override (R10), not here.
  *
  * ConfigUtil.ConfigDir/ServerName/PlayerName are process globals and PlayerRegistry is a process-lifetime
- * singleton, so each test parks them in a temp folder (same pattern as MirrorOverrideTest) and leaves the
+ * singleton, so each test parks them in a temp folder (same pattern as IdentityOverrideStoreTest) and leaves the
  * registry empty on the way out - the assembly does not parallelize (AGENTS).
  */
 [TestClass]

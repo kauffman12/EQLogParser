@@ -36,7 +36,7 @@ namespace EQLogParser;
  * `PipelineHarness` hands back a timeline carrying the registry seeds and NOT the rule table. Run the census against
  * that state and "a mob is hitting 372 unplaced names" reads as a real signal, the idea looks urgent, and none of it is
  * true — the first version of this file reported exactly that, and the numbers on `IsRaidVictimAt` and in AGENTS.md
- * inherited it. Classify (RegistrySeed + ClassificationRules, the way MirrorSession derives) before asking an identity
+ * inherited it. Classify (RegistrySeed + ClassificationRules, the way DeriveEngine derives) before asking an identity
  * question.
  *
  * The assertion is a coverage guard rather than a rule: the unplaced-defender residue has to stay under 2 % of hit
@@ -125,11 +125,11 @@ public class HitByNpcCensusTest
         PlayerRegistry.Instance.Clear();
 
         var sw = Stopwatch.StartNew();
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
 
         /*
          * The app's classify step, replayed over the finished capture (RegistrySeed then ClassificationRules on a
-         * fresh timeline — MirrorSession does exactly this inside every derive). Skipping it is the trap this census
+         * fresh timeline — DeriveEngine does exactly this inside every derive). Skipping it is the trap this census
          * walked into first: the timeline the harness hands back carries only registry seeds, so almost every MOB is
          * Unknown, "a mob is hitting it" matches 372 names that are overwhelmingly mobs (`A scalewrought soldier`,
          * `Herald of the Outer Brood`), and the whole rule reads as nonsense. Every question below is asked against

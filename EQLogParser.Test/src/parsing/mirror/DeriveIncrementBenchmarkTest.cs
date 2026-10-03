@@ -9,7 +9,7 @@ namespace EQLogParser;
  *
  * Runs only when EQLP_MIRROR_INCREMENT names a log:
  *   EQLP_MIRROR_INCREMENT=local/logs/live/eqlog_Incogitable_xegony.txt dotnet test --filter IncrementalPassIsCheaperThanARebuild --logger "console;verbosity=detailed"
- *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see MirrorRealLogBoardsTest's header)
+ *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see RealLogBoardsTest's header)
  *
  * It separates the two halves of a derive pass, because they respond to different things:
  *
@@ -26,7 +26,7 @@ namespace EQLogParser;
  * safe direction, and a message that reads as "this row of numbers measured a full pass" rather than a wrong speedup.
  */
 [TestClass]
-public class MirrorIncrementBenchmarkTest
+public class DeriveIncrementBenchmarkTest
 {
     private const long RestampS = 3_600;
 
@@ -37,7 +37,7 @@ public class MirrorIncrementBenchmarkTest
         if (log is null) Assert.Inconclusive("set EQLP_MIRROR_INCREMENT=local/eqlog_….txt to run this");
 
         var load = Stopwatch.StartNew();
-        var run = PipelineHarness.RunFileWithMirror(log);
+        var run = PipelineHarness.RunFileDerived(log);
         var facts = run.Facts;
         var heals = run.HealFacts;
         var total = facts.FactCount;
@@ -111,7 +111,7 @@ public class MirrorIncrementBenchmarkTest
     /*
      * The classification carry measured on a real night (ClassificationState): first pass = the session's full walk,
      * quiet pass = every gated rule frozen with nothing new to read. The equality of the quiet pass with a from-zero
-     * replay is the LAW (MirrorIncrementalClassificationTest.CarriedPassMatchesAFullReplayOnRealLog runs it over
+     * replay is the LAW (IncrementalClassificationTest.CarriedPassMatchesAFullReplayOnRealLog runs it over
      * this same variable); what this prints is only its cost.
      */
     private static void ClassificationCarryReport(DamageFactTable facts, HealFactTable heals)

@@ -95,7 +95,7 @@ public class NamePoolTest
         var fixture = Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "namekey-fixture.txt");
         Assert.IsTrue(File.Exists(fixture), $"missing fixture: {fixture}");
 
-        var facts = PipelineHarness.RunFileWithMirror(fixture).Facts;
+        var facts = PipelineHarness.RunFileDerived(fixture).Facts;
 
         var walker = facts.InternedNames.Count(n => n.Equals("a namekey pet", StringComparison.OrdinalIgnoreCase));
         Assert.AreEqual(1, walker, "both spellings of the charmed pet are in the pool");

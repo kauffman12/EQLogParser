@@ -54,7 +54,7 @@ namespace EQLogParser.Mirror
    *   occupies were spent on DamageFact.OverTotal, a field damage never wrote (see DamageFact).
    *   A heal's mask is captured the same way (HealFact.ModMask) for when the healing board is fed from facts.
    *   AttackerOwner comes from the line's own ownership word (ClassificationRules.OwnerInName) or from an R9
-   *   charm window covering the fact (MirrorDamageIndex.OwnerOf), never from the registry: a pet the manager
+   *   charm window covering the fact (FightFactIndex.OwnerOf), never from the registry: a pet the manager
    *   never mapped still lands under its owner here, and so does a mob somebody charmed, which is a difference
    *   in what the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same
    *   field, so every charm of the same mob name across a night folds into one pet entry under its charmer.
@@ -71,7 +71,7 @@ namespace EQLogParser.Mirror
    * HitLabel does not (it names an attacker, never a type); no damage line produces it as a type, and a
    * stray one would read back null exactly as an unknown word always does.
    */
-  internal sealed class MirrorDamageIndex
+  internal sealed class FightFactIndex
   {
     /*
      * The classification this index belongs to, for one question only: was this attacker inside an R9 charm
@@ -80,7 +80,7 @@ namespace EQLogParser.Mirror
      */
     private readonly EntityTimeline _charmers;
 
-    public MirrorDamageIndex(EntityTimeline charmOwners = null) => _charmers = charmOwners;
+    public FightFactIndex(EntityTimeline charmOwners = null) => _charmers = charmOwners;
 
     private readonly object _gate = new();
 
@@ -203,7 +203,7 @@ namespace EQLogParser.Mirror
      *   the ownership word inside the line itself ("Sancus`s pet" -> "Sancus"), which is what makes
      *   DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet — the
      *   legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
-     *   this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test;
+     *   this one field is where the two boards part company: see FightSummarySourceTest's mini-fight parity test;
      *   otherwise the charmer named by an R9 window covering THIS fact, which is how a night of charming
      *   `an imbued whipgrass` arrives as one pet entry under whoever cast the charm instead of as an NPC that hit
      *   things. OwnerOf answers null outside a window (so nothing else changes) and null for a window no cast
@@ -463,7 +463,7 @@ namespace EQLogParser.Mirror
          * The owner a line-owned name carries inside itself ("Sancus`s pet" -> "Sancus"), which is what makes
          * DamageStatsBuilder fold a pet's damage under its raider when the registry never learned the pet. The
          * legacy manager asks the registry instead (and drops records whose attacker it cannot place at all), so
-         * this one field is where the two boards part company: see MirrorSummaryFightsTest's mini-fight parity test.
+         * this one field is where the two boards part company: see FightSummarySourceTest's mini-fight parity test.
          */
         AttackerOwner = OwnerOf(fact, attacker),
         Defender = facts.NameOf(fact.DefIdx),
@@ -494,23 +494,23 @@ namespace EQLogParser.Mirror
   // A derived selection turned into stats input: the materialized fights plus the AllRanges window the
   // summary expects (FightTable builds its own from the selected rows' BeginTime..LastTime, so the mirror
   // list has to hand over the same thing or DPS would be measured against a different clock).
-  internal sealed record MirrorSummaryInput(IReadOnlyList<Fight> Fights, TimeRange AllRanges)
+  internal sealed record SummaryInput(IReadOnlyList<Fight> Fights, TimeRange AllRanges)
   {
     public int WithoutDamage { get; init; }
 
     /*
-     * The healing board's input for the same click, deliberately NOT filled by MirrorSummaryFights.Build: heals
+     * The healing board's input for the same click, deliberately NOT filled by FightSummarySource.Build: heals
      * carry no fight id (a heal opens no encounter — that is why they are their own table), so the honest derived
      * heal input is "every heal in this selection's time window", which only a caller holding the heal table can
      * make. Null here means "this input says nothing about healing" and leaves the board on the record store;
-     * MirrorSession.BuildSummaryInput fills it, including with an empty list.
+     * DeriveEngine.BuildSummaryInput fills it, including with an empty list.
      */
     public List<(double, HealRecord)> Heals { get; init; }
   }
 
-  internal static class MirrorSummaryFights
+  internal static class FightSummarySource
   {
-    public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index, DamageFactTable facts)
+    public static SummaryInput Build(IReadOnlyList<DerivedFight> selected, FightFactIndex index, DamageFactTable facts)
       => Build(selected, index, facts, double.NegativeInfinity, double.PositiveInfinity);
 
     /*
@@ -518,7 +518,7 @@ namespace EQLogParser.Mirror
      * three-argument overload above is this one unbounded, so the click-a-row path keeps its cached materialization
      * untouched and cannot be affected by a meter that was reset mid-pull.
      */
-    public static MirrorSummaryInput Build(IReadOnlyList<DerivedFight> selected, MirrorDamageIndex index,
+    public static SummaryInput Build(IReadOnlyList<DerivedFight> selected, FightFactIndex index,
       DamageFactTable facts, double fromT, double toT)
     {
       var result = new List<Fight>(selected.Count);
@@ -560,7 +560,7 @@ namespace EQLogParser.Mirror
         result.Add(built);
       }
 
-      return new MirrorSummaryInput(result, allRanges) { WithoutDamage = withoutDamage };
+      return new SummaryInput(result, allRanges) { WithoutDamage = withoutDamage };
     }
   }
 }

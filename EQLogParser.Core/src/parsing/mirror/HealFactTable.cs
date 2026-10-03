@@ -41,7 +41,7 @@ namespace EQLogParser.Mirror
     public const byte FlagHealerPlayerSide = 2;
     public const byte FlagHealedPlayerSide = 4;
 
-    // Shared sequence with the damage stream (one counter in CombatMirror), so a heal and a hit that
+    // Shared sequence with the damage stream (one counter in CombatCapture), so a heal and a hit that
     // happen between two timestamps keep the order the consumer saw them in.
     public readonly int Seq;
     public readonly long TimeS;

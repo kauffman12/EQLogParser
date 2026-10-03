@@ -14,8 +14,8 @@ namespace EQLogParser
   // class that declares the event without implementing it fails SILENTLY — every realized row keeps its painted
   // value while only rows realized AFTER the change (scrolled into view) show it. That is exactly how the search
   // mark stopped moving between visible rows: cycling worked, ScrollInView was a correct no-op, and the green
-  // appeared only on the row scrolled to. MirrorFightRowTest pins the interface.
-  internal sealed class MirrorFightRow : INotifyPropertyChanged
+  // appeared only on the row scrolled to. DerivedFightRowTest pins the interface.
+  internal sealed class DerivedFightRow : INotifyPropertyChanged
   {
     // Row numbers are not data: the grid's row-header template shows the live position, exactly
     // like the current Fight Table - divider rows count, hidden dividers renumber. No `No` field.
@@ -66,9 +66,9 @@ namespace EQLogParser
     internal DerivedFight Fight { get; init; }
   }
 
-  internal sealed class MirrorSnapshot
+  internal sealed class DerivedSnapshot
   {
-    public List<MirrorFightRow> Rows = [];
+    public List<DerivedFightRow> Rows = [];
     public int FightCount;
     public long FactCount;
     public double ElapsedMs;
@@ -83,7 +83,7 @@ namespace EQLogParser
     // session because a re-derive replaces the projection wholesale — rows from the old list must never
     // be materialized against the new one's classification.
     internal DamageFactTable Facts;
-    internal MirrorDamageIndex DamageIndex;
+    internal FightFactIndex DamageIndex;
 
     /*
      * The heal stream as of this pass. Nothing is displayed from it yet — that is the heal projection's job —
@@ -100,12 +100,12 @@ namespace EQLogParser
     internal IReadOnlyList<DerivedFight> AllFights = [];
   }
 
-  internal static class MirrorFightRows
+  internal static class DerivedFightRows
   {
-    public static MirrorSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount,
-      DamageFactTable facts, MirrorDamageIndex damageIndex)
+    public static DerivedSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount,
+      DamageFactTable facts, FightFactIndex damageIndex)
     {
-      var snapshot = new MirrorSnapshot
+      var snapshot = new DerivedSnapshot
       {
         FactCount = factCount,
         DerivedAt = DateTime.Now,
@@ -120,7 +120,7 @@ namespace EQLogParser
       {
         if (isDivider)
         {
-          snapshot.Rows.Add(new MirrorFightRow
+          snapshot.Rows.Add(new DerivedFightRow
           {
             IsDivider = true,
             Name = "Inactivity > " + DateUtil.FormatGeneralTime(Math.Max(0, gapTo - gapFrom)),
@@ -135,7 +135,7 @@ namespace EQLogParser
                     + $"#Hits From Players: {fight.DamageHits}, Time Alive: {(long)fight.DurationSeconds}s";
         if (status.Length > 0)
           tooltip += $", {status}";
-        snapshot.Rows.Add(new MirrorFightRow
+        snapshot.Rows.Add(new DerivedFightRow
         {
           Name = fight.Name,
           Identity = identity.ToString(),

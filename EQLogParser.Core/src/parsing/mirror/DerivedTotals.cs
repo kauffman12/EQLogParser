@@ -1,10 +1,10 @@
 /*
- * MirrorStats — one calculation, asked about a set of rows.
+ * DerivedTotals — one calculation, asked about a set of rows.
  *
  * Monitoring a log is storage: lines become facts, facts become rows. Nothing here runs while that happens, and
  * nothing here keeps a second tally. A surface that wants numbers asks this class about the rows it is showing —
  * the fight list's selection, or the damage overlay's current session — and gets the same arithmetic every other
- * surface gets: MirrorSummaryFights turns those rows into records aimed at their own npcs, DamageStatsBuilder does
+ * surface gets: FightSummarySource turns those rows into records aimed at their own npcs, DamageStatsBuilder does
  * the counting (its DamageValidator filters, its pet folding, its activity segments), and the seconds behind any DPS
  * come from StatsUtil.UpdateRaidTimeRanges rather than a caller's stopwatch. So "the overlay says 4,182,300" and "I
  * selected those ten fights and pressed summary says 4,182,300" is not a discipline two components keep, it is one
@@ -29,7 +29,7 @@ namespace EQLogParser.Mirror;
 
 using System.Collections.Generic;
 
-internal static class MirrorStats
+internal static class DerivedTotals
 {
   /*
    * Stats for exactly these rows: damage, tanking and per-player activity built from the facts the rows point at,
@@ -62,7 +62,7 @@ internal static class MirrorStats
    * null when neither half produced anything and the window blanks itself. One half being null is normal too — the
    * legacy builder does the same, a raid that only healed has no tank board.
    */
-  internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, MirrorDamageIndex index,
+  internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
     DamageFactTable facts, HealFactTable heals, double fromT, double toT)
   {
     if (rows is not { Count: > 0 })
@@ -70,7 +70,7 @@ internal static class MirrorStats
       return null;
     }
 
-    var input = MirrorSummaryFights.Build(rows, index, facts, fromT, toT);
+    var input = FightSummarySource.Build(rows, index, facts, fromT, toT);
     if (input.Fights.Count == 0)
     {
       return null;
@@ -100,7 +100,7 @@ internal static class MirrorStats
     return new DamageOverlayStats { DamageStats = damage, TankStats = tanking };
   }
 
-  internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight> rows, MirrorDamageIndex index,
+  internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
     DamageFactTable facts, HealFactTable heals, double fromT = double.NegativeInfinity, double toT = double.PositiveInfinity)
   {
     if (rows is not { Count: > 0 })
@@ -108,13 +108,13 @@ internal static class MirrorStats
       return null;
     }
 
-    var input = MirrorSummaryFights.Build(rows, index, facts, fromT, toT);
+    var input = FightSummarySource.Build(rows, index, facts, fromT, toT);
     var options = new GenerateStatsOptions
     {
       AllRanges = input.AllRanges,
       // An empty heal list means "this scope healed nothing", not "say nothing about healing" — see the note on
       // GenerateStatsOptions.Heals. Passing null here would leave a refresh showing the previous scope's numbers.
-      Heals = MirrorSummaryHeals.Materialize(heals, input.AllRanges),
+      Heals = HealSummarySource.Materialize(heals, input.AllRanges),
     };
     options.Npcs.AddRange(input.Fights);
 

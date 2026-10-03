@@ -19,7 +19,7 @@ namespace EQLogParser.Mirror
    *     operator they are wrong about their own raid, on every subsequent pass, forever.
    *   - IT SURVIVES. Rules are re-derived from scratch on each pass and the timeline is rebuilt, so an override
    *     held only in that timeline evaporates at the next derive; it lives here, and this is replayed into every
-   *     new timeline (MirrorSession.RunDeriveAsync). Saved next to petmapping.txt, per server, because a name
+   *     new timeline (DeriveEngine.RunDeriveAsync). Saved next to petmapping.txt, per server, because a name
    *     that means "our pet" on One's Everfrost is not the same claim on another server.
    *   - IT IS ADDITIVE AND REVERSIBLE. It stores one verdict per name; "clear override" removes the line and the
    *     rules' own answer comes back untouched, with no re-parse needed (the facts are unchanged - this is a
@@ -29,9 +29,9 @@ namespace EQLogParser.Mirror
    * names it hands out while the evidence lines keep what EQ wrote, and an ordinal key here would make a saved
    * verdict silently miss the name it was saved for.
    */
-  internal sealed class MirrorOverrideStore
+  internal sealed class IdentityOverrideStore
   {
-    public static MirrorOverrideStore Instance { get; } = new();
+    public static IdentityOverrideStore Instance { get; } = new();
 
     private readonly object _gate = new();
     private readonly Dictionary<string, IdentityKind> _byName = new(StringComparer.OrdinalIgnoreCase);
@@ -49,7 +49,7 @@ namespace EQLogParser.Mirror
       // A server name is part of the path, so without one there is nothing to read: stay empty rather than
       // guessing at a folder. The in-memory behaviour below still works for a session.
       if (!string.IsNullOrEmpty(_serverName))
-        foreach (var (name, value) in ConfigUtil.ReadMirrorOverrides(_serverName))
+        foreach (var (name, value) in ConfigUtil.ReadIdentityOverrides(_serverName))
           if (!string.IsNullOrEmpty(name) && Enum.TryParse<IdentityKind>(value, out var kind)) loaded[name] = kind;
 
       lock (_gate)
@@ -130,7 +130,7 @@ namespace EQLogParser.Mirror
         lines = new List<KeyValuePair<string, string>>(_byName.Count);
         foreach (var (name, kind) in _byName) lines.Add(new KeyValuePair<string, string>(name, kind.ToString()));
       }
-      ConfigUtil.SaveMirrorOverrides(lines, _serverName);
+      ConfigUtil.SaveIdentityOverrides(lines, _serverName);
     }
   }
 }

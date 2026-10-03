@@ -9,7 +9,7 @@ namespace EQLogParser.Wpf.Test
   /// meter update takes") that lives on this side of the seam, where the display rows are made.
   ///
   /// The reason it needs its own number: the live cadence now runs a projection-only pass every half-second in between expensive
-  /// ones, and that pass does not stop at the projection — <see cref="MirrorFightRows.Build"/> walks every row the capture has
+  /// ones, and that pass does not stop at the projection — <see cref="DerivedFightRows.Build"/> walks every row the capture has
   /// accumulated and formats four columns each. Early in a pull that is nothing; at the end of a raid night (measured: 4,644 rows on
   /// one capture) it is work repeated twice a second, forever, because rows expire from the board long after they stop being listed
   /// here. If this ever grows into the tens of milliseconds the cheap lane needs widening (throttle it when the row count is high),
@@ -20,7 +20,7 @@ namespace EQLogParser.Wpf.Test
   /// classified night; the bound below leaves room for that.
   /// </summary>
   [TestClass]
-  public class MirrorSnapshotCostTest
+  public class DerivedSnapshotCostTest
   {
     private const int NightRows = 5_000;
 
@@ -31,7 +31,7 @@ namespace EQLogParser.Wpf.Test
     {
       var facts = new DamageFactTable(16);
       var timeline = new EntityTimeline();
-      var index = new MirrorDamageIndex();
+      var index = new FightFactIndex();
       var fights = new List<DerivedFight>(NightRows);
 
       // Spread across an evening with the gaps Sectionizer turns into "Inactivity" dividers, so the divider path is timed too.
@@ -45,10 +45,10 @@ namespace EQLogParser.Wpf.Test
         });
       }
 
-      var warm = MirrorFightRows.Build(fights, timeline, 0, facts, index);
+      var warm = DerivedFightRows.Build(fights, timeline, 0, facts, index);
 
       var sw = Stopwatch.StartNew();
-      var snapshot = MirrorFightRows.Build(fights, timeline, 0, facts, index);
+      var snapshot = DerivedFightRows.Build(fights, timeline, 0, facts, index);
       sw.Stop();
 
       TestContext?.WriteLine($"[snapshot] {NightRows:N0} fights -> {snapshot.Rows.Count:N0} display rows " +
@@ -58,7 +58,7 @@ namespace EQLogParser.Wpf.Test
 
       Assert.IsTrue(sw.Elapsed.TotalMilliseconds < 60,
           $"row-building takes {sw.Elapsed.TotalMilliseconds:N1} ms and the cheap lane runs it twice a second — " +
-          "see MirrorDeriveCadence.FastFloorSeconds before widening that cadence past this");
+          "see DeriveCadence.FastFloorSeconds before widening that cadence past this");
     }
   }
 }

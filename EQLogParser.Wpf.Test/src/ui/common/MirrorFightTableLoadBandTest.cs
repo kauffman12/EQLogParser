@@ -110,7 +110,7 @@ public sealed class MirrorFightTableLoadBandTest
       // The placeholder the panel shows before any data; rows landing must retire it, not leave it hanging.
       table.mirrorStatus.Text = "Capturing...";
 
-      table.OnDerived(new MirrorSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
+      table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.mirrorLoadOverlay.Visibility, "rows beat the bar");
       Assert.IsFalse(table.mirrorStatus.Text.Contains("Derived"), "a completed derive writes no stats line in the header");

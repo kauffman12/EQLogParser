@@ -25,7 +25,7 @@ namespace EQLogParser;
  * row is 1344/5/5 before checking two engines agree about it.
  */
 [TestClass]
-public class MirrorOutcomeParityTest
+public class OutcomeParityTest
 {
     // The counter set the attempt columns bind, across both boards.
     private static readonly string[] CounterFields =
@@ -102,15 +102,15 @@ public class MirrorOutcomeParityTest
         var path = Fixture(fixture);
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path} (copied by the test project's Content items)");
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var lastTimeS = run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0;
         var range = WholeLogRange(lastTimeS);
 
         // The same summary request the app makes when the derived table is switched on.
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
-        var summary = MirrorSummaryFights.Build(rows, index, run.Facts);
+        var summary = FightSummarySource.Build(rows, index, run.Facts);
 
         Dictionary<string, PlayerStats> By(CombinedStats? stats) =>
             (stats?.StatsList ?? []).ToDictionary(p => p.Name, p => p);
@@ -132,7 +132,7 @@ public class MirrorOutcomeParityTest
         var path = Fixture("attempt-fight.txt");
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path}");
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
 
         var byLabel = new Dictionary<string, int>();
         var subtypes = new List<string>();
@@ -229,14 +229,14 @@ public class MirrorOutcomeParityTest
     public void ZeroTotalSwingsCutTheSameFightList()
     {
         var path = Fixture("attempt-fight.txt");
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
 
         Assert.AreEqual(1, run.Fights.Count, "legacy sees one fight");
 
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
-        var summary = MirrorSummaryFights.Build(rows, index, run.Facts);
+        var summary = FightSummarySource.Build(rows, index, run.Facts);
 
         Assert.AreEqual(1, rows.Count, "derived sees one fight too");
 

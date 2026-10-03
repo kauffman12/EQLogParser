@@ -9,7 +9,7 @@ namespace EQLogParser;
  * here and pinned, because everything about it is a choice the legacy code never had to state:
  *
  *   - WHICH CLOCK. The capture's newest event, not the wall. A load running at 170k facts/s is minutes behind the clock;
- *     wall time would call the middle of that file live, and go quiet on the tail (MirrorSession supplies nowT; these tests
+ *     wall time would call the middle of that file live, and go quiet on the tail (DeriveEngine supplies nowT; these tests
  *     pass it explicitly so the choice is visible in the assertion).
  *   - WHICH TIMESTAMPS. A row's last activity in EITHER direction, since a row can be running with all its traffic pointed
  *     at the raid (a mob beating a player is tanking traffic on that row) while dealing nothing.

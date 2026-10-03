@@ -73,7 +73,7 @@ public class EntityNameKeyTest
     {
         Assert.IsTrue(File.Exists(FixturePath), $"missing fixture: {FixturePath}");
 
-        var run = PipelineHarness.RunFileWithMirror(FixturePath);
+        var run = PipelineHarness.RunFileDerived(FixturePath);
         var facts = run.Facts;
         var timeline = new EntityTimeline();
         _ = ClassificationRules.Apply(facts, timeline);

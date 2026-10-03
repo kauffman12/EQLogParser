@@ -106,7 +106,7 @@ namespace EQLogParser.Mirror
    * OverTotal used to sit here and was always 0 — "asked for more than landed" is a heal-line number,
    * and HealRecord owns it for the same reason (docs/DesignNotes.md → What a loaded raid costs in
    * memory). Deleting it made room for ModMask inside the same 32 bytes, which is what lets a derived
-   * damage summary honour the six modifier filters instead of reading high (see MirrorSummaryFights).
+   * damage summary honour the six modifier filters instead of reading high (see FightSummarySource).
    */
   internal readonly struct DamageFact
   {
@@ -251,7 +251,7 @@ namespace EQLogParser.Mirror
   // One taunt line. The current pipeline runs GetFight(npc) ?? Create(npc, t) on every taunt —
   // a taunt can therefore open a fight that no damage line ever touches.
   //
-  // The fact keeps the taunter and the outcome words, not just the npc: MirrorSummaryFights rebuilds
+  // The fact keeps the taunter and the outcome words, not just the npc: FightSummarySource rebuilds
   // fight.TauntBlocks from these for the taunt board, and Player / Success / IsImproved are exactly the
   // three fields TauntStatsViewer counts. The deriver still needs only the npc and the second.
   internal readonly struct TauntFact

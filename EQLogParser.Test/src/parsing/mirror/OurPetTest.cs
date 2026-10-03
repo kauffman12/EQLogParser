@@ -47,7 +47,7 @@ public class OurPetTest
   [TestMethod]
   public void AnNpcTheWholeRaidHealsLosesItsEnemyRowAndKeepsItsVerdict()
   {
-    var run = RunMirror(PetLines().ToArray());
+    var run = RunDerive(PetLines().ToArray());
     var timeline = new EntityTimeline();
     var outcome = ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
 
@@ -77,7 +77,7 @@ public class OurPetTest
   public void CrumbHealsAndABossThatHitsBackStayHostile()
   {
     // Eight casters, generous amounts: under the breadth gate, so still the enemy's.
-    var few = RunMirror(PetLines(casters: Casters[..8]).ToArray());
+    var few = RunDerive(PetLines(casters: Casters[..8]).ToArray());
     var fewTimeline = new EntityTimeline();
     ClassificationRules.Apply(few.Facts, fewTimeline, few.HealFacts);
     Assert.IsFalse(fewTimeline.IsOurPetAt(Pet, T(Timestamp(19, 5, 0))), "8 casters cleared the breadth gate");
@@ -92,7 +92,7 @@ public class OurPetTest
     var lines = PetLines().ToList();
     for (var i = 0; i < 10; i++)
       lines.Add($"[{Timestamp(19, 30, i * 6)}] {Pet} hits Healer01 for 4400 points of damage.");
-    var boss = RunMirror(lines.ToArray());
+    var boss = RunDerive(lines.ToArray());
     var bossTimeline = new EntityTimeline();
     ClassificationRules.Apply(boss.Facts, bossTimeline, boss.HealFacts);
     Assert.IsFalse(bossTimeline.IsOurPetAt(Pet, T(Timestamp(19, 5, 0))),
@@ -107,7 +107,7 @@ public class OurPetTest
     // hold a hostile mob on our side before the charm and after the wear-off.
     var lines = PetLines().ToList();
     lines.Add($"[{Timestamp(19, 2, 0)}] {Pet} has been charmed.");
-    var run = RunMirror(lines.ToArray());
+    var run = RunDerive(lines.ToArray());
 
     var timeline = new EntityTimeline();
     var outcome = ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
@@ -133,7 +133,7 @@ public class OurPetTest
     // A raid swing an hour after the top-ups stopped.
     lines.Add($"[{Timestamp(20, 40, 0)}] You hit {Pet} for 4321 points of damage.");
 
-    var run = RunMirror(lines.ToArray());
+    var run = RunDerive(lines.ToArray());
     var timeline = new EntityTimeline();
     ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
 
@@ -159,7 +159,7 @@ public class OurPetTest
 
     // A stray swing inside the pull, so a selection over the mob's row overlaps it and gets the damage back.
     lines.Add($"[{Timestamp(19, 0, 7)}] You hit {Pet} for 1234 points of damage.");
-    var run = RunMirror(lines.ToArray());
+    var run = RunDerive(lines.ToArray());
 
     var timeline = new EntityTimeline();
     ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
@@ -191,7 +191,7 @@ public class OurPetTest
     {
       // The harness clears the registry while parsing, so the operator's mapping goes in afterwards - which is
       // also the real order: the mapping was saved on an earlier session, this log is being reopened.
-      var run = RunMirror(PetLines(casters: Casters[..3]).ToArray());
+      var run = RunDerive(PetLines(casters: Casters[..3]).ToArray());
       PlayerRegistry.Instance.AddPetToPlayer(Pet, "Strangle");
 
       var timeline = new EntityTimeline();
@@ -204,12 +204,12 @@ public class OurPetTest
                     "a mapped pet with a target-frame NPC verdict is still on the enemy's side");
 
       // And it reaches the board: the pet's damage materializes as its owner's.
-      var index = new MirrorDamageIndex(timeline);
+      var index = new FightFactIndex(timeline);
       var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
       var mob = Row(rows, "A rune-etched warblade");
       Assert.IsNotNull(mob);
 
-      var records = MirrorSummaryFights.Build([mob], index, run.Facts).Fights
+      var records = FightSummarySource.Build([mob], index, run.Facts).Fights
           .SelectMany(f => f.DamageBlocks.SelectMany(b => b.Actions)).OfType<DamageRecord>().ToList();
       var petRecord = records.FirstOrDefault(r => r.Attacker == Pet);
       Assert.IsNotNull(petRecord, "the pet's damage never made it to the board");
@@ -232,7 +232,7 @@ public class OurPetTest
     PlayerRegistry.Instance.Clear();
     try
     {
-      var run = RunMirror(PetLines(casters: Casters[..3]).ToArray());
+      var run = RunDerive(PetLines(casters: Casters[..3]).ToArray());
       PlayerRegistry.Instance.AddPetToPlayer(Pet, Labels.Unassigned);
 
       var timeline = new EntityTimeline();
@@ -287,14 +287,14 @@ public class OurPetTest
     return $"Mon May {t.Day:00} {t.Hour:00}:{t.Minute:00}:{t.Second:00} 2026";
   }
 
-  private static PipelineHarness.MirrorRunResult RunMirror(params string[] lines)
+  private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
   {
     var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-ourpet-" + Guid.NewGuid().ToString("N")));
     var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
     try
     {
       File.WriteAllLines(log, lines);
-      return PipelineHarness.RunFileWithMirror(log);
+      return PipelineHarness.RunFileDerived(log);
     }
     finally
     {

@@ -6,7 +6,7 @@ namespace EQLogParser;
  * How long a row of the fight list covers — and, more to the point, in WHICH convention. The product counts seconds
  * inclusively: TimeSegment.Total is `EndTime - BeginTime + 1`, and that expression is the denominator every DPS figure
  * on the damage board is divided by. FightManager writes the same arithmetic into the legacy tooltip
- * (`var ttl = fight.LastTime - fight.BeginTime + 1;` → "Time Alive: 46s"), and MirrorSummaryFights reproduces that text
+ * (`var ttl = fight.LastTime - fight.BeginTime + 1;` → "Time Alive: 46s"), and FightSummarySource reproduces that text
  * so a derived row's summary matches the legacy one word for word. Subtracting two timestamps here instead would make
  * the grid disagree with both of them, and disagree worst exactly where it matters: a mob hit once inside a second
  * (`A corrupted egg`, 18:52:46, 36.5M damage in one second on eqlog_Kizant_xegony.txt) would show "00:00" while its own
@@ -41,8 +41,8 @@ public class DerivedFightTest
     }
 
     /*
-     * The same expression MirrorFightRows puts in the grid's duration cell, asserted where it can run on any platform
-     * (the row itself lives in the WPF assembly and is covered by MirrorFightRowsTest). Digits matter as much as the
+     * The same expression DerivedFightRows puts in the grid's duration cell, asserted where it can run on any platform
+     * (the row itself lives in the WPF assembly and is covered by DerivedFightRowsTest). Digits matter as much as the
      * number here: "00:46" is what the legacy tooltip of that row says in words other than words.
      */
     [TestMethod]

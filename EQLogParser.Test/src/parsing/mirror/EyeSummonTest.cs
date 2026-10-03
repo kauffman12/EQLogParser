@@ -82,7 +82,7 @@ public class EyeSummonTest
         Assert.IsNull(ClassificationRules.EyeSummonOwnerInName("Eye of Despair"));
         Assert.IsNull(ClassificationRules.EyeSummonOwnerInName("Eye of Mother"));
 
-        var run = RunMirror(
+        var run = RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (NPC): Eye of Veeshan",
             "[Mon May 04 18:50:02 2026] Bulgar hits Eye of Veeshan for 4400 points of damage.",
             "[Mon May 04 18:50:12 2026] Bulgar hits Eye of Veeshan for 4400 points of damage.");
@@ -95,7 +95,7 @@ public class EyeSummonTest
     [TestMethod]
     public void StrikingYourOwnEyeCallsYouAPlayer()
     {
-        var run = RunMirror(EyeFightLines().ToArray());
+        var run = RunDerive(EyeFightLines().ToArray());
         AssertIdentity(Cold(run), "Shennron", IdentityKind.Player, "R19-eyeowner");
 
         // The eye itself never became a name to classify at all, which is the difference between "ignored" and
@@ -110,7 +110,7 @@ public class EyeSummonTest
     [TestMethod]
     public void AForeignBladeOnAnEyeClaimsNothing()
     {
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Tolzol hit Eye of Shennron for 1 points of poison damage by Call for Blood XIII Rk. III.",
             "[Mon May 04 18:50:02 2026] Eye of Shennron was slain by Tolzol!"));
 
@@ -125,7 +125,7 @@ public class EyeSummonTest
     [TestMethod]
     public void TheClaimNeedsTheNameInsideTheEyeNotJustAnyEye()
     {
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Aldiris hit Eye of Brytt for 1 points of magic damage by Rending of Ulnaa Rk. III.",
             "[Mon May 04 18:50:02 2026] Brytt hit Eye of Aldiris for 1 points of magic damage by Rending of Ulnaa Rk. III."));
 
@@ -143,7 +143,7 @@ public class EyeSummonTest
     [TestMethod]
     public void AnEyeNeverEntersEitherFactStream()
     {
-        var run = RunMirror(EyeFightLines().ToArray());
+        var run = RunDerive(EyeFightLines().ToArray());
 
         Assert.IsFalse(HasEyeName(run.Facts.InternedNames), "an eye reached the damage name pool");
         Assert.AreEqual(0, run.Facts.DeathCount, "an eye's death was captured");
@@ -195,21 +195,21 @@ public class EyeSummonTest
     private static bool HasEyeName(IReadOnlyList<string> names) =>
         names.Any(n => n.StartsWith("Eye of", StringComparison.OrdinalIgnoreCase));
 
-    private static EntityTimeline Cold(PipelineHarness.MirrorRunResult run)
+    private static EntityTimeline Cold(PipelineHarness.DeriveRunResult run)
     {
         var timeline = new EntityTimeline();
         ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
         return timeline;
     }
 
-    private static PipelineHarness.MirrorRunResult RunMirror(params string[] lines)
+    private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-eye-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         try
         {
             File.WriteAllLines(log, lines);
-            return PipelineHarness.RunFileWithMirror(log);
+            return PipelineHarness.RunFileDerived(log);
         }
         finally
         {

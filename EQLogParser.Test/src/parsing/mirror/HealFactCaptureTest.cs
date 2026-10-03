@@ -22,7 +22,7 @@ namespace EQLogParser;
  */
 [TestClass]
 [DoNotParallelize]
-public class MirrorHealCaptureTest
+public class HealFactCaptureTest
 {
     private static string HealFixture => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "heal-fight.txt");
 
@@ -109,7 +109,7 @@ public class MirrorHealCaptureTest
     [TestMethod]
     public void EveryStoredHealIsAHealFactAndBack()
     {
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
         var stored = RecordsStore.Instance.GetAllHeals().ToList();
 
         Assert.IsTrue(stored.Count > 0, "the fixture must produce healing at all, or this test proves nothing");
@@ -149,7 +149,7 @@ public class MirrorHealCaptureTest
             Assert.AreEqual(rec.Type, LabelTypes.LabelOf(fact.TypeId));
             Assert.AreEqual(rec.SubType, run.HealFacts.SpellOf(fact.SubIdx));
             Assert.AreEqual(rec.ModifiersMask, fact.ModMask);
-            Assert.AreEqual(CombatMirror.ToTimeS(stored[i].Item1), fact.TimeS);
+            Assert.AreEqual(CombatCapture.ToTimeS(stored[i].Item1), fact.TimeS);
         }
     }
 
@@ -158,7 +158,7 @@ public class MirrorHealCaptureTest
     {
         // One counter across both streams: within a single second the log's own order is the only information
         // about what happened first, and a heal that arrives between two hits has to stay between them.
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
 
         var seqs = new List<(int Seq, bool IsHeal)>();
         var dmg = run.Facts.Facts;
@@ -210,7 +210,7 @@ public class MirrorHealCaptureTest
         // Shared interning is the design decision that keeps a join between the streams an index compare and
         // the name table paid for once. Two tables with their own spaces would pass every test above and still
         // make "the same raider" two different numbers.
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
 
         var heals = run.HealFacts.Heals;
         Assert.IsTrue(heals.Length > 0);
@@ -228,7 +228,7 @@ public class MirrorHealCaptureTest
     [TestMethod]
     public void TheOverhealNumberKeepsBothMeaningsApart()
     {
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
         var facts = run.HealFacts.Heals;
 
         var withAsk = First(run, "Vexmora", "Corunist");      // "for 3100 (9900)"
@@ -255,7 +255,7 @@ public class MirrorHealCaptureTest
     [TestMethod]
     public void HoTLinesAndModifierMasksComeAcrossAsTheSameWordsTheRecordUses()
     {
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
 
         var hot = First(run, "Corunist", "Vexmora");          // "... healed Vexmora over time for 1750 (2600)"
         Assert.AreEqual(LabelTypes.Hot, hot.TypeId);
@@ -273,13 +273,13 @@ public class MirrorHealCaptureTest
     [TestMethod]
     public void ADamageRecordRematerializesWithTheMaskThatMadeItsFiltersHonest()
     {
-        // The gap this closes was documented in MirrorSummaryFights for a whole increment: derived records had
+        // The gap this closes was documented in FightSummarySource for a whole increment: derived records had
         // ModifiersMask 0, so DamageValidator excluded nothing and every derived total read HIGH the moment one
         // of the six modifier settings was switched off. Off the record into the fact, out of the fact into the
         // rebuilt record — one hop each way, no interpretation.
-        var run = PipelineHarness.RunFileWithMirror(HealFixture);
+        var run = PipelineHarness.RunFileDerived(HealFixture);
 
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var timeline = new EntityTimeline();
         ClassificationRules.Apply(run.Facts, timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
@@ -376,7 +376,7 @@ public class MirrorHealCaptureTest
         return ok;
     }
 
-    private static HealFact First(PipelineHarness.MirrorRunResult run, string healer, string healed)
+    private static HealFact First(PipelineHarness.DeriveRunResult run, string healer, string healed)
     {
         var facts = run.HealFacts.Heals;
         for (var i = 0; i < facts.Length; i++)

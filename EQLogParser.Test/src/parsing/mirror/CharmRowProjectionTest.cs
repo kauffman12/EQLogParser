@@ -26,13 +26,13 @@ public class CharmRowProjectionTest
 {
     private const string Self = "Charmrow";
 
-    private static MirrorRuleOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
+    private static ClassificationOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-charmrow-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Charmrow_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 
-        facts = PipelineHarness.RunFileWithMirror(log).Facts;
+        facts = PipelineHarness.RunFileDerived(log).Facts;
         timeline = new EntityTimeline();
         return ClassificationRules.Apply(facts, timeline);
     }
@@ -43,8 +43,8 @@ public class CharmRowProjectionTest
         => rows.FirstOrDefault(r => r.Name == name);
 
     // Damage records the summary board would be handed for a set of rows.
-    private static List<DamageRecord> Records(IEnumerable<DerivedFight> rows, MirrorDamageIndex index, DamageFactTable facts)
-      => MirrorSummaryFights.Build(rows.ToList(), index, facts).Fights
+    private static List<DamageRecord> Records(IEnumerable<DerivedFight> rows, FightFactIndex index, DamageFactTable facts)
+      => FightSummarySource.Build(rows.ToList(), index, facts).Fights
           .SelectMany(f => f.DamageBlocks.SelectMany(b => b.Actions)).OfType<DamageRecord>().ToList();
 
     [TestMethod]
@@ -183,7 +183,7 @@ public class CharmRowProjectionTest
         Assert.AreEqual(1, outcome.Charms.Count);
         Assert.AreEqual(Self, outcome.Charms[0].Owner);
 
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
         var pet = Records(rows, index, facts).Where(a => a.Attacker == "An imbued whipgrass").ToList();
 
@@ -231,7 +231,7 @@ public class CharmRowProjectionTest
         Assert.AreEqual(1, outcome.Charms.Count);
         Assert.IsNull(outcome.Charms[0].Owner);
 
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
         var pet = Records(rows, index, facts).Where(a => a.Attacker == "An imbued whipgrass").ToList();
 
@@ -270,7 +270,7 @@ public class CharmRowProjectionTest
             "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
             "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
 
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
         var visible = CharmPetRows.Visible(rows);
 

@@ -24,21 +24,21 @@ namespace EQLogParser
   // one session may run at a time — MainWindow creates it before LogReader starts and disposes it
   // when the log closes, mirroring the harness lifecycle (RunCore) that proved this wiring.
   //
-  // Derivation is quiescent: CombatMirror.DeriveQuiescent parks ingest at its gate for the pass,
+  // Derivation is quiescent: CombatCapture.DeriveQuiescent parks ingest at its gate for the pass,
   // so a snapshot never races mid-append fact mutation and no tail line is lost. A load that stops moving gets its
-  // pass on the next tick, and a live tail that never stops moving gets one on MirrorDeriveCadence's clock — waiting
+  // pass on the next tick, and a live tail that never stops moving gets one on DeriveCadence's clock — waiting
   // for silence alone meant a raid-length freeze on every surface reading the snapshot. There is no Re-derive button: every trigger refreshes itself,
-  // overrides re-derive themselves, and a failed pass comes back on MirrorDeriveCadence.RetryDelayS's ladder - no flow
+  // overrides re-derive themselves, and a failed pass comes back on DeriveCadence.RetryDelayS's ladder - no flow
   // ever needed a human to force one (the button existed only because the old latch stopped asking forever; see
   // RederiveAsync's catch).
-  internal sealed class MirrorSession : IDisposable
+  internal sealed class DeriveEngine : IDisposable
   {
-    public static MirrorSession Active { get; private set; }
+    public static DeriveEngine Active { get; private set; }
 
     public static event Action ActiveChanged;
 
     // Raised on the derivation thread; subscribers marshal to the dispatcher themselves.
-    public event Action<MirrorSnapshot> Derived;
+    public event Action<DerivedSnapshot> Derived;
 
     /*
      * "Damage came in", for the one surface that opens itself: the meter. Legacy raised this on **every damage line** of a
@@ -74,11 +74,11 @@ namespace EQLogParser
      * board reads (RecordsStore gets the same records, off the same event).
      */
     private readonly HealFactTable _heals;
-    private readonly CombatMirror _mirror;
+    private readonly CombatCapture _capture;
 
-    // The snapshot currently on screen (see MirrorSnapshot.Facts): a selection is materialized against
+    // The snapshot currently on screen (see DerivedSnapshot.Facts): a selection is materialized against
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
-    private MirrorSnapshot _snapshot;
+    private DerivedSnapshot _snapshot;
 
     /*
      * The projection carried from pass to pass, together with the index its facts went into. Whether a pass may continue it
@@ -93,7 +93,7 @@ namespace EQLogParser
     private long _lastDerivedCount = -1;
 
     /*
-     * How often the cadence is asked. It is a POLLS rate, not the refresh rate — MirrorDeriveCadence takes seconds and
+     * How often the cadence is asked. It is a POLLS rate, not the refresh rate — DeriveCadence takes seconds and
      * facts-per-second precisely so this number can be changed without moving any threshold — and it is fine-grained so
      * a pass lands on its moment instead of on the next whole second: the end-of-load pass up to a full interval
      * earlier, and a live tail's floor read within a quarter of it. A dispatcher timer at Background priority, so this
@@ -108,7 +108,7 @@ namespace EQLogParser
     /*
      * The measurements the cadence needs, all monotonic intervals rather than DateTime moments (a clock adjustment must
      * not buy a free re-derive or hold one off): how long this count has held still, how wide the observation window behind the
-     * growth RATE was, and TWO clocks for the two lanes (MirrorDeriveCadence.DeriveKind) — `_sinceFullPass` against the cost of
+     * growth RATE was, and TWO clocks for the two lanes (DeriveCadence.DeriveKind) — `_sinceFullPass` against the cost of
      * the last pass that classified, `_sinceAnyPass` against the cheap floor. One stopwatch could not express "cheap now,
      * expensive in two more seconds", which is the whole shape of a live raid refresh; see _lastFullPassSeconds for why only the
      * expensive lane's clock may be restarted by an expensive pass.
@@ -126,7 +126,7 @@ namespace EQLogParser
      * the night. Nothing mutates a timeline outside ClassificationRules/RegistrySeed/overrides, all of which build a fresh one,
      * so this reference cannot be revised behind the pass that holds it.
      *
-     * The staleness this accepts is stated in MirrorDeriveCadence: a verdict readable only from facts that arrived after the last
+     * The staleness this accepts is stated in DeriveCadence: a verdict readable only from facts that arrived after the last
      * full pass (a pet folding onto its raiders, a charm flipping a name) lands one full cadence later.
      */
     private EntityTimeline? _carriedTimeline;
@@ -143,7 +143,7 @@ namespace EQLogParser
      */
     private readonly ClassificationState _classification = new();
 
-    // Consecutive derive passes that THREW. Drives MirrorDeriveCadence.RetryDelayS's backoff in QuietTick and is
+    // Consecutive derive passes that THREW. Drives DeriveCadence.RetryDelayS's backoff in QuietTick and is
     // zeroed by any completed pass; nothing disables anything - the surfaces keep trying at the ladder's pace for as
     // long as this session owns them.
     private volatile int _deriveFailures;
@@ -157,15 +157,15 @@ namespace EQLogParser
     private bool _firstDeriveLogged;
     private bool _disposed;
 
-    public MirrorSession()
+    public DeriveEngine()
     {
       // A fresh capture gets the full rule book even if this app run already saw a stage retire over other data:
       // retirement protects one session's pass loop, it is not a verdict about every file the process will open.
       ClassificationRules.ResetRuleHealth();
 
       _heals = new HealFactTable(_facts);
-      _mirror = new CombatMirror(_facts, _heals);
-      ChatSink = new MirrorChatSink(_mirror);
+      _capture = new CombatCapture(_facts, _heals);
+      ChatSink = new IdentityChatSink(_capture);
       _quietTimer = new DispatcherTimer(DispatcherPriority.Background)
       {
         Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
@@ -178,7 +178,7 @@ namespace EQLogParser
 
     public void Start()
     {
-      _mirror.Start();
+      _capture.Start();
       Active = this;
       ActiveChanged?.Invoke();
       _quietTimer.Start();
@@ -201,11 +201,11 @@ namespace EQLogParser
       try
       {
         var timeline = new EntityTimeline();
-        RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
+        RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
         ClassificationRules.Apply(_facts, timeline, _heals, _classification);
-        MirrorOverrideStore.Instance.Apply(timeline);
+        IdentityOverrideStore.Instance.Apply(timeline);
 
-        return ClassificationReport.Build(timeline, _facts, _heals, MirrorOverrideStore.Instance,
+        return ClassificationReport.Build(timeline, _facts, _heals, IdentityOverrideStore.Instance,
                                          PlayerRegistry.Instance, IdentityPriorStore.Instance);
       }
       catch (Exception ex)
@@ -246,7 +246,7 @@ namespace EQLogParser
           // instead of inside it: Record() writes a file, and nothing that writes belongs between the rules and the
           // snapshot the grid is waiting on.
           EntityTimeline? classified = null;
-          var snapshot = _mirror.DeriveQuiescent(() =>
+          var snapshot = _capture.DeriveQuiescent(() =>
           {
             /*
              * The expensive lane rebuilds the verdicts; the cheap lane takes the instance the last expensive pass left behind, so
@@ -263,7 +263,7 @@ namespace EQLogParser
              *
              * The pass continues where the previous one stopped whenever it may (FightProjectionCache: the watermarks still
              * name the same facts, and the classification stamp matches the one the carried rows were projected under). A
-             * charmed mob's damage is credited to its charmer on the stats board through the same timeline (MirrorDamageIndex).
+             * charmed mob's damage is credited to its charmer on the stats board through the same timeline (FightFactIndex).
              */
             var fights = _projection.Project(_facts, timeline);
             var damageIndex = _projection.Index;
@@ -272,7 +272,7 @@ namespace EQLogParser
             // dividers in this grid.
             Sectionizer.StampGroupIds(fights);
 
-            var snapshot = MirrorFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
+            var snapshot = DerivedFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
             snapshot.Heals = _heals;
             return snapshot;
           });
@@ -311,7 +311,7 @@ namespace EQLogParser
               try
               {
                 IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
-                                                   (long)_mirror.LastEventTime);
+                                                   (long)_capture.LastEventTime);
               }
               catch (Exception ex)
               {
@@ -327,7 +327,7 @@ namespace EQLogParser
            * log wants one. Gated on the setting for the same lazy reason legacy gated its per-line event.
            */
           var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
-                            && LiveFights.HasFreshDamage(snapshot.AllFights, _lastAnnouncedActivityT, _mirror.LastEventTime,
+                            && LiveFights.HasFreshDamage(snapshot.AllFights, _lastAnnouncedActivityT, _capture.LastEventTime,
                                                          LiveFights.GapS);
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
@@ -371,13 +371,13 @@ namespace EQLogParser
            * rule - and the meter must not go silent for the rest of the night over one hiccup, which is what the old
            * "stop the loop" latch did: it left a Re-derive button as the only recovery, and no legitimate flow needed
            * that button (its whole job had become this corner). Every attempt logs - a repeating stack in
-           * eqlogparser.log IS the diagnosis - QuietTick spaces the attempts on MirrorDeriveCadence.RetryDelayS (1 s
+           * eqlogparser.log IS the diagnosis - QuietTick spaces the attempts on DeriveCadence.RetryDelayS (1 s
            * doubling to a minute), and any success ends it. Note the finer grain above: a single classification STAGE
            * failing never reaches here at all (ClassificationRules.RunStage retires just that stage).
            */
           var failures = ++_deriveFailures;
           Log.Error($"Derive pass failed (attempt {failures}); " +
-                    $"next retry in {MirrorDeriveCadence.RetryDelayS(failures):0} s", ex);
+                    $"next retry in {DeriveCadence.RetryDelayS(failures):0} s", ex);
           DeriveFailed?.Invoke(ex.Message);
           _sinceFailedPass.Restart();
         }
@@ -400,7 +400,7 @@ namespace EQLogParser
       if (_disposed) return;
       _disposed = true;
       _quietTimer.Stop();
-      _mirror.Stop();
+      _capture.Stop();
 
       // The fact table is the biggest thing the mirror holds; a disposed session must not stay the reason
       // a closed log's records are still reachable.
@@ -422,21 +422,21 @@ namespace EQLogParser
      * Returns an empty input when no snapshot has landed: an empty selection is the caller's business,
      * a missing one means "the list you clicked is gone".
      */
-    internal MirrorSummaryInput BuildSummaryInput(IReadOnlyList<DerivedFight> selected)
+    internal SummaryInput BuildSummaryInput(IReadOnlyList<DerivedFight> selected)
     {
       var snapshot = _snapshot;
       if (snapshot is null || selected is not { Count: > 0 })
       {
         // An empty selection clears every board, so healing arrives as an empty list rather than null: null
         // would mean "say nothing about healing" and the board would keep last click's numbers.
-        return new MirrorSummaryInput([], new TimeRange()) { Heals = [] };
+        return new SummaryInput([], new TimeRange()) { Heals = [] };
       }
 
       // The grid hides a charmed mob's own rows (CharmPetRows: that is a pet, and pets have no fight row), so a
       // selection can never contain them. Put back the ones whose span overlaps what was clicked — otherwise the
       // hiding would take the charmer's +Pets damage, and the raid's own stray swings on their pet, out of every
       // board built from a selection.
-      var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
+      var input = FightSummarySource.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
         snapshot.DamageIndex, snapshot.Facts);
 
       /*
@@ -448,7 +448,7 @@ namespace EQLogParser
        * Cost is parity, not overhead: a legacy summary request allocates the same list out of RecordsStore on
        * every click (GetAllHeals().ToList()), and this replaces it rather than adding to it.
        */
-      return input with { Heals = MirrorSummaryHeals.Materialize(snapshot.Heals, input.AllRanges) };
+      return input with { Heals = HealSummarySource.Materialize(snapshot.Heals, input.AllRanges) };
     }
 
     /*
@@ -460,7 +460,7 @@ namespace EQLogParser
      * Null means there is no scope: no snapshot yet (the derive has not landed, so the rows a caller holds came from a
      * list that no longer exists), or the session has touched nothing. What to display for either is the surface's call.
      */
-    public MirrorSnapshot Snapshot => _snapshot;
+    public DerivedSnapshot Snapshot => _snapshot;
 
     /*
      * The fights this window answers for, as legacy-shaped rows: the door MainWindow.GetFights feeds to the
@@ -479,7 +479,7 @@ namespace EQLogParser
         selected = visible;
       }
 
-      return MirrorSummaryFights.Build(selected, _projection.Index, _facts).Fights.ToList();
+      return FightSummarySource.Build(selected, _projection.Index, _facts).Fights.ToList();
     }
 
     /*
@@ -499,7 +499,7 @@ namespace EQLogParser
           overlapping.Add(fight);
       }
 
-      return MirrorSummaryFights.Build(overlapping, _projection.Index, _facts).Fights.ToList();
+      return FightSummarySource.Build(overlapping, _projection.Index, _facts).Fights.ToList();
     }
 
     /*
@@ -522,7 +522,7 @@ namespace EQLogParser
     public bool HasLiveFight(double gapS)
     {
       var snapshot = _snapshot;
-      return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _mirror.LastEventTime, gapS);
+      return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _capture.LastEventTime, gapS);
     }
 
     internal DamageOverlayStats BuildOverlayStats(double fromT, double toT, out double lastFactT)
@@ -546,7 +546,7 @@ namespace EQLogParser
         }
       }
 
-      return MirrorStats.ForOverlay(rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, fromT, toT);
+      return DerivedTotals.ForOverlay(rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, fromT, toT);
     }
 
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
@@ -567,7 +567,7 @@ namespace EQLogParser
         return null;
       }
 
-      return MirrorStats.For(CharmPetRows.WithHiddenPets(rows, snapshot.AllFights), snapshot.DamageIndex,
+      return DerivedTotals.For(CharmPetRows.WithHiddenPets(rows, snapshot.AllFights), snapshot.DamageIndex,
         snapshot.Facts, snapshot.Heals, fromT, toT);
     }
 
@@ -585,7 +585,7 @@ namespace EQLogParser
       + _facts.IdentityEventCount + _facts.EvidenceCount;
 
     /*
-     * The trigger, decided by MirrorDeriveCadence (where the rule and its measurements live). This method only feeds it the counters
+     * The trigger, decided by DeriveCadence (where the rule and its measurements live). This method only feeds it the counters
      * and the two clocks, then dispatches whichever lane came back — a cheap fold or an expensive pass. Quiescence is still the fast path — a load that stops moving gets its pass on
      * the next tick — but it is no longer the ONLY path: waiting for two silent ticks meant that a live raid tail,
      * which never offers two silent ticks, held one snapshot for the whole encounter, and every surface reading it (the
@@ -602,7 +602,7 @@ namespace EQLogParser
        * every derived surface for the rest of the night over one hiccup. The gate sits ahead of the clock reads below
        * so a failing derive costs one attempt per rung rather than a pump-rate storm on the derive gate.
        */
-      if (_deriveFailures > 0 && _sinceFailedPass.Elapsed.TotalSeconds < MirrorDeriveCadence.RetryDelayS(_deriveFailures))
+      if (_deriveFailures > 0 && _sinceFailedPass.Elapsed.TotalSeconds < DeriveCadence.RetryDelayS(_deriveFailures))
         return;
 
       var count = CapturedTotal;
@@ -620,7 +620,7 @@ namespace EQLogParser
       // an empty log from a stalled pipeline without needing a debugger.
       if (count != _lastDerivedCount) Capturing?.Invoke(count);
 
-      var kind = MirrorDeriveCadence.Decide(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
+      var kind = DeriveCadence.Decide(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
                                             factsPerSecond, _sinceAnyPass.Elapsed.TotalSeconds,
                                             _sinceFullPass.Elapsed.TotalSeconds, _lastFullPassSeconds);
       if (kind != DeriveKind.None) RederiveAsync(kind);
@@ -636,7 +636,7 @@ namespace EQLogParser
     private EntityTimeline Classify()
     {
       var timeline = new EntityTimeline();
-      RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
+      RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
 
       // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
       // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
@@ -660,22 +660,22 @@ namespace EQLogParser
        * what the operator saved has to be replayed into each one or an override would vanish at the very
        * re-derive it asked for. Manual strength means nothing above can outvote it, order included.
        */
-      MirrorOverrideStore.Instance.Apply(timeline);
+      IdentityOverrideStore.Instance.Apply(timeline);
 
       return timeline;
     }
 
-    private sealed class MirrorChatSink : IChatSink
+    private sealed class IdentityChatSink : IChatSink
     {
-      private readonly CombatMirror _mirror;
+      private readonly CombatCapture _capture;
 
-      public MirrorChatSink(CombatMirror mirror) => _mirror = mirror;
+      public IdentityChatSink(CombatCapture mirror) => _capture = mirror;
 
       public void Init()
       {
       }
 
-      public void Add(ChatType chat) => _mirror.HandleChat(chat);
+      public void Add(ChatType chat) => _capture.HandleChat(chat);
     }
   }
 

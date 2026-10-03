@@ -361,7 +361,7 @@ namespace EQLogParser.Mirror
      * Pet or Npc at that second (a name can join, die, and be raised as a servant mid capture).
      *
      * Measured on eqlog_Incogitable_xegony.txt through the classification the app actually runs (registry seed + rule
-     * table, which is what MirrorSession builds inside every derive), the derived tank population is 91,036 facts /
+     * table, which is what DeriveEngine builds inside every derive), the derived tank population is 91,036 facts /
      * 1.6389 B on names called Player and 9,480 / 196.4 M on Merc, and proof — `Identity is Player or Merc` — would
      * keep every one of those. What exclusion adds is **86 facts worth 15.6 M** (0.85 % of the board): defenders no
      * rule ever placed. That is the whole price, and it buys the case proof cannot see: a raid member who never
@@ -373,7 +373,7 @@ namespace EQLogParser.Mirror
      * An earlier version of this note justified exclusion with a 90 % loss for proof. That was measured against the
      * timeline `PipelineHarness` hands back, which carries the registry seeds and NOT the rule table — on that state
      * R6 (npcs.txt), R14 (article shape) and R15 (healed by our side) have placed nothing, so nearly every mob reads
-     * Unknown and both numbers were fiction. Ask identity questions of a classified timeline; `MirrorRealLogBoardsTest.Classified`
+     * Unknown and both numbers were fiction. Ask identity questions of a classified timeline; `RealLogBoardsTest.Classified`
      * is the helper that does it.
      */
     public bool IsRaidVictimAt(string name, double t)
@@ -436,7 +436,7 @@ namespace EQLogParser.Mirror
 
     /*
      * "Did classification reach the same conclusions as last time?" The one user is the incremental fight projection
-     * (FightProjection.Continue — see MirrorSession): rows carried across passes stay valid only while the classification
+     * (FightProjection.Continue — see DeriveEngine): rows carried across passes stay valid only while the classification
      * they were projected over is unchanged, and every question the projection asks (IdentityAt, IsCharmedAt, IsOurPetAt,
      * CharmStartAfter, HasIndependentIdentity, OwnerOf) reads these two dictionaries and nothing else.
      *

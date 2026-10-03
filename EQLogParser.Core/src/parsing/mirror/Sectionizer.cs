@@ -3,7 +3,7 @@ namespace EQLogParser.Mirror
   // One "Fight N" section: a run of consecutive fights whose starts stay within GroupTimeout of
   // the previous fight's end, plus the inactivity gaps that opened each following section.
   // Pure and deterministic — the display rows (WPF phase) are a projection of this.
-  internal sealed class MirrorSection
+  internal sealed class FightSection
   {
     public int Index;                    // 1-based "Fight N"
     public List<DerivedFight> Fights { get; } = [];
@@ -19,9 +19,9 @@ namespace EQLogParser.Mirror
     public const int DefaultGroupTimeout = FightTableGroupTimeout;
     private const int FightTableGroupTimeout = 120;   // mirrors FightTable.GroupTimeout
 
-    public static List<MirrorSection> Sectionize(IReadOnlyList<DerivedFight> fights, int groupTimeout = DefaultGroupTimeout, bool nonTanking = false)
+    public static List<FightSection> Sectionize(IReadOnlyList<DerivedFight> fights, int groupTimeout = DefaultGroupTimeout, bool nonTanking = false)
     {
-      var sections = new List<MirrorSection>();
+      var sections = new List<FightSection>();
       if (fights.Count == 0) return sections;
 
       var section = NewSection(1, sections);
@@ -76,9 +76,9 @@ namespace EQLogParser.Mirror
       return sections.Count;
     }
 
-    private static MirrorSection NewSection(int index, List<MirrorSection> sections)
+    private static FightSection NewSection(int index, List<FightSection> sections)
     {
-      var section = new MirrorSection { Index = index };
+      var section = new FightSection { Index = index };
       sections.Add(section);
       return section;
     }

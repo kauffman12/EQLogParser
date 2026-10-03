@@ -4,7 +4,7 @@ namespace EQLogParser
    * FightManager taunt bookkeeping. The one behavior these pin is the legacy loss path: a taunt that arrives while its
    * name has no ACTIVE row is appended to a Fight that HandleNewTaunt allocates with ?? Create but never registers
    * (only the damage path calls UpdateIfNewFightMap), so it is unreachable by every board, list and census that reads
-   * registered fights. The derived side cannot have this loss — CombatMirror stores every taunt in the capture at ingest
+   * registered fights. The derived side cannot have this loss — CombatCapture stores every taunt in the capture at ingest
    * and routes it at materialization — which is why the census (docs/DesignNotes.md, "Spells and taunts") measures the
    * old board undercounting. This test exists so that loss is a known, named mechanism rather than a rumor: if the
    * orphan path ever gets registered, ATauntWithNoActiveRowIsLostFromEveryBoard must fail and the numbers re-measured.

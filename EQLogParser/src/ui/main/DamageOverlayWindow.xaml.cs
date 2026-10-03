@@ -39,7 +39,7 @@ namespace EQLogParser
      * derived one has been watched on live pulls, and when the legacy path goes the dial itself goes with it.
      *
      * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
-     * (MirrorStats), instead of the overlay's own running totals. The meter's policy stays here, because it always was
+     * (DerivedTotals), instead of the overlay's own running totals. The meter's policy stays here, because it always was
      * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. the engagement gap,
      * otherwise N seconds), and the window starting at the reset. That is why the mirror holds no "current fight": the
      * seconds a board covers is this component's business.
@@ -223,7 +223,7 @@ namespace EQLogParser
          */
         if (MirrorMeter.Enabled)
         {
-          MirrorSession.Active?.RederiveAsync();
+          DeriveEngine.Active?.RederiveAsync();
 
           /*
            * Paint when the pump publishes, not on the next poll. The 1 s tick above is a repaint interval that happens to
@@ -234,21 +234,21 @@ namespace EQLogParser
            * A session belongs to one log-open, so it is listened to through ActiveChanged rather than grabbed once: the
            * overlay can be opened before a session exists, and survives one being swapped under it.
            */
-          MirrorSession.ActiveChanged += FollowActiveSession;
+          DeriveEngine.ActiveChanged += FollowActiveSession;
           FollowActiveSession();
         }
       }
     }
 
-    private MirrorSession _derivedFrom;
+    private DeriveEngine _derivedFrom;
 
     // Re/listens to whichever session is current. Detached in WindowClosing: ActiveChanged is static and outlives the window.
     private void FollowActiveSession()
     {
-      var session = MirrorSession.Active;
+      var session = DeriveEngine.Active;
       if (ReferenceEquals(session, _derivedFrom)) return;
 
-      if (_derivedFrom is not null) _derivedFrom.Derived -= OnMirrorDerived;
+      if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       _derivedFrom = session;
 
       /*
@@ -257,7 +257,7 @@ namespace EQLogParser
        * capture's window start.
        */
       _mirrorWindowT = -1;
-      if (session is not null) session.Derived += OnMirrorDerived;
+      if (session is not null) session.Derived += OnDerived;
     }
 
     /*
@@ -265,7 +265,7 @@ namespace EQLogParser
      * thread — so the repaint is queued there rather than run inline. No priority is specified: default (Normal) lands it
      * behind whatever input is already queued but ahead of the Background poll, which is what a user-visible refresh wants.
      */
-    private void OnMirrorDerived(MirrorSnapshot snapshot)
+    private void OnDerived(DerivedSnapshot snapshot)
     {
       var dispatcher = Dispatcher;
       if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) return;
@@ -410,7 +410,7 @@ namespace EQLogParser
      */
     private DamageOverlayStats BuildMirrorUpdate()
     {
-      var session = MirrorSession.Active;
+      var session = DeriveEngine.Active;
       if (session is null)
       {
         // Loud, not legacy. The dial means "the derived numbers, or nothing": an empty board plus one line saying why.
@@ -625,7 +625,7 @@ namespace EQLogParser
          * terms: legacy kept a set of overlay fights, the mirror asks whether any row is still going inside the window that
          * zeroes this board (LiveFights). One consequence of the second phrasing is worth knowing: on a derived meter a
          * window hidden between pulls closes instead of waiting out the log, and comes back on the next pull through
-         * MirrorSession.NewFightObserved rather than lingering invisibly until the app restarts.
+         * DeriveEngine.NewFightObserved rather than lingering invisibly until the app restarts.
          */
         var stillSomethingToShow = MirrorMeter.Enabled ? MirrorMeter.HasLiveFight(_currentDamageMode)
                                                 : FightManager.Instance.HasOverlayFights();
@@ -1105,8 +1105,8 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, CancelEventArgs e)
     {
-      if (_derivedFrom is not null) _derivedFrom.Derived -= OnMirrorDerived;
-      MirrorSession.ActiveChanged -= FollowActiveSession;
+      if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
+      DeriveEngine.ActiveChanged -= FollowActiveSession;
       _derivedFrom = null;
 
       _updateTimer?.Stop();

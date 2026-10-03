@@ -23,7 +23,7 @@ namespace EQLogParser;
 [TestClass]
 public class IdentityPriorStoreTest
 {
-  private static PipelineHarness.MirrorRunResult? _capture;
+  private static PipelineHarness.DeriveRunResult? _capture;
 
   private string _savedConfigDir = "";
   private string _savedServerName = "";
@@ -60,11 +60,11 @@ public class IdentityPriorStoreTest
     try { if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true); } catch (IOException) { }
   }
 
-  private static PipelineHarness.MirrorRunResult Capture()
+  private static PipelineHarness.DeriveRunResult Capture()
   {
     var log = Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "mini-fight.txt");
     Assert.IsTrue(File.Exists(log), $"missing fixture: {log}");
-    return _capture ??= PipelineHarness.RunFileWithMirror(log);
+    return _capture ??= PipelineHarness.RunFileDerived(log);
   }
 
   // A rules pass over the fixture, which is what Record() is handed in the app after a derive.

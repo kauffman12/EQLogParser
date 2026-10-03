@@ -24,13 +24,13 @@ public class CharmWindowPolicyTest
     private static double T(string stamp) => DateUtil.StandardDateToDotNetSeconds(stamp + " x");
 
     // Runs the real parser over synthetic lines and applies the rules cold, exactly like a capture.
-    private static MirrorRuleOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
+    private static ClassificationOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-charm-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Charmone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 
-        facts = PipelineHarness.RunFileWithMirror(log).Facts;
+        facts = PipelineHarness.RunFileDerived(log).Facts;
         timeline = new EntityTimeline();
         return ClassificationRules.Apply(facts, timeline);
     }

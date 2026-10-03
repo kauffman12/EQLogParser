@@ -9,7 +9,7 @@ namespace EQLogParser;
 // must be legible. The large real-log runs (344 MB / 3.6M lines) happen locally via the
 // EQLP_MIRROR_LOG env var; no log files are committed.
 [TestClass]
-public class MirrorComparisonTest
+public class FightParityDiffTest
 {
     private static string MiniFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "mini-fight.txt");
     private static string GapFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "gap-fight.txt");
@@ -20,11 +20,11 @@ public class MirrorComparisonTest
     {
         Assert.IsTrue(File.Exists(MiniFightPath), $"missing fixture: {MiniFightPath}");
 
-        var run = PipelineHarness.RunFileWithMirror(MiniFightPath);
+        var run = PipelineHarness.RunFileDerived(MiniFightPath);
         Assert.IsTrue(run.Facts.FactCount > 0, "no damage facts captured — mirror tap not wired?");
         Assert.AreEqual(1, run.Facts.DeathCount, "expected exactly one slain fact on this fixture");
 
-        var report = MirrorComparison.Compare(run.Fights, run.DerivedFights, logName: "mini-fight.txt", factCount: run.Facts.FactCount);
+        var report = FightParityDiff.Compare(run.Fights, run.DerivedFights, logName: "mini-fight.txt", factCount: run.Facts.FactCount);
         report.WriteAll(ReportDir, "mini-fight");
         Console.WriteLine(report.ToText());
 
@@ -37,8 +37,8 @@ public class MirrorComparisonTest
     {
         Assert.IsTrue(File.Exists(GapFightPath), $"missing fixture: {GapFightPath}");
 
-        var run = PipelineHarness.RunFileWithMirror(GapFightPath);
-        var report = MirrorComparison.Compare(run.Fights, run.DerivedFights, logName: "gap-fight.txt", factCount: run.Facts.FactCount);
+        var run = PipelineHarness.RunFileDerived(GapFightPath);
+        var report = FightParityDiff.Compare(run.Fights, run.DerivedFights, logName: "gap-fight.txt", factCount: run.Facts.FactCount);
         report.WriteAll(ReportDir, "gap-fight");
 
         // two instances of the same boss across a 5-minute gap: the current pipeline closes the
@@ -68,19 +68,19 @@ public class MirrorComparisonTest
         var baselineMs = sw.ElapsedMilliseconds;
 
         sw.Restart();
-        var run = PipelineHarness.RunFileWithMirror(path);
-        var withMirrorMs = sw.ElapsedMilliseconds;
+        var run = PipelineHarness.RunFileDerived(path);
+        var derivedMs = sw.ElapsedMilliseconds;
 
         var facts = run.Facts;
         sw.Restart();
         _ = FightDeriver.Derive(facts);
         var deriveMs = sw.ElapsedMilliseconds;
 
-        Console.WriteLine($"[perf] {Path.GetFileName(path)}: baseline={baselineMs}ms withMirror={withMirrorMs}ms derive={deriveMs}ms facts={facts.FactCount}");
+        Console.WriteLine($"[perf] {Path.GetFileName(path)}: baseline={baselineMs}ms derived={derivedMs}ms derive={deriveMs}ms facts={facts.FactCount}");
 
         Assert.IsTrue(deriveMs < 300, $"full derive took {deriveMs} ms — §6 target is < 300 ms even at fixture scale");
-        Assert.IsTrue(withMirrorMs < baselineMs + Math.Max(50, baselineMs / 2),
-            $"mirror overhead too large: baseline={baselineMs}ms withMirror={withMirrorMs}ms");
+        Assert.IsTrue(derivedMs < baselineMs + Math.Max(50, baselineMs / 2),
+            $"mirror overhead too large: baseline={baselineMs}ms derived={derivedMs}ms");
     }
 
     [TestMethod]
@@ -94,10 +94,10 @@ public class MirrorComparisonTest
         }
 
         var sw = Stopwatch.StartNew();
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var wallMs = sw.ElapsedMilliseconds;
 
-        var report = MirrorComparison.Compare(run.Fights, run.DerivedFights, logName: Path.GetFileName(path), factCount: run.Facts.FactCount);
+        var report = FightParityDiff.Compare(run.Fights, run.DerivedFights, logName: Path.GetFileName(path), factCount: run.Facts.FactCount);
         var baseName = $"real-{Path.GetFileNameWithoutExtension(path)}";
         report.WriteAll(ReportDir, baseName);
 

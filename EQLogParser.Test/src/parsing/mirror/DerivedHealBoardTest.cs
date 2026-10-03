@@ -8,8 +8,8 @@ namespace EQLogParser;
  * HealingStatsBuilder is the one board that never reads a Fight: it pulls `RecordsStore.GetAllHeals()` (a
  * (time, record) pair per heal), windows that list against GenerateStatsOptions.AllRanges and groups by healer.
  * So a derived healing grid cannot be produced by materializing rows — it needs the records themselves, which is
- * what MirrorSummaryHeals builds from HealFactTable and GenerateStatsOptions.Heals carries. Capture fidelity is
- * already pinned elsewhere (MirrorHealCaptureTest: every stored heal is a fact and back); what this file holds is
+ * what HealSummarySource builds from HealFactTable and GenerateStatsOptions.Heals carries. Capture fidelity is
+ * already pinned elsewhere (HealFactCaptureTest: every stored heal is a fact and back); what this file holds is
  * the part downstream of that — the records a board actually sums, and the seam's rules.
  *
  * Measured on `heal-board.txt` (7 heals over two raiders: a plain heal, one that asked for more than it landed, a
@@ -21,10 +21,10 @@ namespace EQLogParser;
  */
 [TestClass]
 [DoNotParallelize]
-public class MirrorHealBoardTest
+public class DerivedHealBoardTest
 {
     /*
-     * Same three process globals as MirrorHealCaptureTest, for the same reason: RecordsStore keeps every record any
+     * Same three process globals as HealFactCaptureTest, for the same reason: RecordsStore keeps every record any
      * test has ever parsed, so a second parse of this fixture inside the same run would double the board (3,401
      * becoming 6,802 is exactly what that looks like), and the heal RepeatStore decides instance sharing from
      * sighting history. The builder itself starts each build clean — it is the input that has to be.
@@ -73,9 +73,9 @@ public class MirrorHealBoardTest
         var path = Path_(Fixture);
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path} (copied by the test project's Content items)");
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var stored = RecordsStore.Instance.GetAllHeals().ToList();
-        var derived = MirrorSummaryHeals.Materialize(run.HealFacts, null);
+        var derived = HealSummarySource.Materialize(run.HealFacts, null);
 
         Assert.AreEqual(7, stored.Count, "the fixture writes seven heals");
         Assert.AreEqual(stored.Count, derived.Count, "one materialized record per stored heal");
@@ -116,11 +116,11 @@ public class MirrorHealBoardTest
     public void TheDerivedHealingBoardReadsLikeTheStoreBuiltOne()
     {
         var path = Path_(Fixture);
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
 
         var legacy = BuildHeals(run.Fights, range, null);
-        var derived = BuildHeals(run.Fights, range, MirrorSummaryHeals.Materialize(run.HealFacts, range));
+        var derived = BuildHeals(run.Fights, range, HealSummarySource.Materialize(run.HealFacts, range));
 
         Assert.IsNotNull(legacy);
         Assert.IsNotNull(derived);
@@ -172,7 +172,7 @@ public class MirrorHealBoardTest
     public void AnEmptyHealListIsTheBoardBeingToldThereWasNoHealing()
     {
         var path = Path_(Fixture);
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
 
         Assert.AreEqual(3401L, BuildHeals(run.Fights, range, null)?.RaidStats.Total,
@@ -185,7 +185,7 @@ public class MirrorHealBoardTest
 
         // And the same through the session-level shape: a selection of nothing carries an empty heal list rather
         // than null, so all three boards clear together.
-        var nothing = MirrorSummaryFights.Build([], new MirrorDamageIndex(), run.Facts);
-        Assert.IsNull(nothing.Heals, "MirrorSummaryFights says nothing about healing; the session owns that");
+        var nothing = FightSummarySource.Build([], new FightFactIndex(), run.Facts);
+        Assert.IsNull(nothing.Heals, "FightSummarySource says nothing about healing; the session owns that");
     }
 }

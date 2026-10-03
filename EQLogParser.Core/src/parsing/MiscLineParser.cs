@@ -42,7 +42,7 @@ namespace EQLogParser
     private const string Charmed2Suffix = " is charmed.";
     private const string CharmEndMarker = " spell has worn off of ";
 
-    private static void ScanMirrorEvidence(string action, double beginTime)
+    private static void ScanIdentityEvidence(string action, double beginTime)
     {
       if (string.IsNullOrEmpty(action)) return;
 
@@ -115,7 +115,7 @@ namespace EQLogParser
     {
       var handled = false;
 
-      ScanMirrorEvidence(lineData.Action, lineData.BeginTime);
+      ScanIdentityEvidence(lineData.Action, lineData.BeginTime);
 
       try
       {

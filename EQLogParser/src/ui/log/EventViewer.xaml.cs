@@ -81,7 +81,7 @@ namespace EQLogParser
           // "Is this one of the capture's mobs?" asked of the classified timeline - the same answer NamesTable
           // shows - rather than "did this name carry a legacy fight row": a name no rule placed is Unknown, and
           // that is the honest word for a text-choice question. npcs.txt still counts, as before.
-          var timeline = MirrorSession.Active?.Snapshot?.Timeline;
+          var timeline = DeriveEngine.Active?.Snapshot?.Timeline;
           var isActorNpc = (timeline is not null && timeline.Identity(record.Killer) is IdentityKind.Npc)
                            || EQDataStore.Instance.IsKnownNpc(record.Killer);
           var isTargetNpc = (timeline is not null && timeline.Identity(record.Killed) is IdentityKind.Npc)

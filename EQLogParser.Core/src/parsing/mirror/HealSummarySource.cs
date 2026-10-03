@@ -31,7 +31,7 @@ namespace EQLogParser.Mirror
    * carry no fight id (they open no encounter), and the healing board does not slice by fight — it slices by time,
    * which is why `range` here is the selection's own AllRanges window: one click, one clock on every board.
    */
-  internal static class MirrorSummaryHeals
+  internal static class HealSummarySource
   {
     /// <summary>
     /// Every heal whose timestamp falls inside <paramref name="range"/>. A null range means the whole capture; a

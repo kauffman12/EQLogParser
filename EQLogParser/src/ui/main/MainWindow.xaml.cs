@@ -61,7 +61,7 @@ namespace EQLogParser
     private PetMapping _currentEditMapping;
     private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
-    private MirrorSession _mirrorSession;
+    private DeriveEngine _engine;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
@@ -171,7 +171,7 @@ namespace EQLogParser
        * fight in both lists and read two engines' answers, and that only means something while exactly one
        * of the two lists owns the numbers at a time.
        */
-      if (mirrorFightWindow?.Content is MirrorFightTable mirrorTable) mirrorTable.DerivedSelectionChanged += MirrorDerivedSelectionChanged;
+      if (mirrorFightWindow?.Content is MirrorFightTable fightTable) fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -335,7 +335,7 @@ namespace EQLogParser
     /*
      * The app's fight-range provider: the spell/taunt/death/export paths read fights from here. While the mirror
      * is attached to a log it answers (legacy-shaped rows materialized off its facts - see
-     * MirrorSession.MaterializeFights); the legacy table keeps answering until the deletion pass removes both it
+     * DeriveEngine.MaterializeFights); the legacy table keeps answering until the deletion pass removes both it
      * and this second branch. Both windows cannot own one export, so the ordering is the rule, not an accident:
      * mirror first, legacy while the mirror is off.
      */
@@ -699,7 +699,7 @@ namespace EQLogParser
      */
     private void SubscribeOverlayFights()
     {
-      if (MirrorMeter.Enabled) MirrorSession.LiveDamageObserved += OnMirrorLiveDamage;
+      if (MirrorMeter.Enabled) DeriveEngine.LiveDamageObserved += OnLiveDamage;
       else FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
     }
 
@@ -709,14 +709,14 @@ namespace EQLogParser
     // comment below the Subscribe pair warns about. Subscribe stays the conditional pair: exactly one engine reports.
     private void UnsubscribeOverlayFights()
     {
-      MirrorSession.LiveDamageObserved -= OnMirrorLiveDamage;
+      DeriveEngine.LiveDamageObserved -= OnLiveDamage;
       FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
     }
 
     private void EventsNewOverlayFight(Fight e) => AutoOpenMeter();
 
     // Damage arrived, and which row carries it is not the meter's business: it opens and reads whatever the snapshot says.
-    private void OnMirrorLiveDamage() => AutoOpenMeter();
+    private void OnLiveDamage() => AutoOpenMeter();
 
     private void AutoOpenMeter()
     {
@@ -763,10 +763,10 @@ namespace EQLogParser
         // until the next log open or power cycle).
         UnsubscribeOverlayFights();
         SubscribeOverlayFights();
-        _mirrorSession?.Dispose();
-        _mirrorSession = null;
+        _engine?.Dispose();
+        _engine = null;
       }
-      else if (_mirrorSession is null && _eqLogReader is not null)
+      else if (_engine is null && _eqLogReader is not null)
       {
         /*
          * Re-enabling on a live parse: start the session NOW rather than waiting for the next open - uncheck/check
@@ -775,8 +775,8 @@ namespace EQLogParser
          * forward from this line; the chat sink was fixed when the file opened, so drink evidence and chat identity
          * join at the next open while facts and heals flow from now.
          */
-        _mirrorSession = new MirrorSession();
-        _mirrorSession.Start();
+        _engine = new DeriveEngine();
+        _engine.Start();
         Log.Info($"capture: attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
 
         // The auto-open announcement lives on a static event; this process may have subscribed for the OTHER engine
@@ -892,15 +892,15 @@ namespace EQLogParser
      *
      * The healing board arrives by a different door, because it reads records rather than fights: the session
      * materializes the heal facts inside this selection's window and hands them in as options.Heals (see
-     * MirrorSummaryHeals). Same click, same AllRanges window, so all three boards answer to one clock — and when
+     * HealSummarySource). Same click, same AllRanges window, so all three boards answer to one clock — and when
      * no fight is selected each of them is told to clear, healing included.
      *
      * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
      * is what the legacy list does with an empty selection too.
      */
-    private void MirrorDerivedSelectionChanged(IReadOnlyList<DerivedFight> selected)
+    private void DerivedSelectionChanged(IReadOnlyList<DerivedFight> selected)
     {
-      var session = _mirrorSession;
+      var session = _engine;
       if (session is null) return;
 
       /*
@@ -1304,7 +1304,7 @@ namespace EQLogParser
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. The
           // band owns itself from here: EOF flips it to "building", the first snapshot takes it down.
-          if (mirrorFightWindow?.Content is MirrorFightTable mirrorPump) mirrorPump.ReportCaptureProgress(filePercent);
+          if (mirrorFightWindow?.Content is MirrorFightTable pumpTable) pumpTable.ReportCaptureProgress(filePercent);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
@@ -1462,7 +1462,7 @@ namespace EQLogParser
 
               // R10: the operator's own verdicts on names are per server too (mirror-overrides.txt), and they
               // have to be loaded before the mirror's first derive or the rules answer alone.
-              MirrorOverrideStore.Instance.Init(server);
+              IdentityOverrideStore.Instance.Init(server);
 
               // Same per-server reasoning for the sighting ledger (identity-priors.txt): what older logs on THIS
               // server concluded, kept for names a later capture has no evidence about.
@@ -1480,14 +1480,14 @@ namespace EQLogParser
 
             // Mirror session subscribes to the parser statics before any line flows, and shares
             // the single chat sink slot via fan-out (archive first, mirror second — D8 seam).
-            _mirrorSession?.Dispose();
-            _mirrorSession = null;
+            _engine?.Dispose();
+            _engine = null;
             IChatSink chatSink = new ChatDbSink();
             if (AppSettings.IsCombatMirrorEnabled)
             {
-              _mirrorSession = new MirrorSession();
-              _mirrorSession.Start();
-              chatSink = new CompositeChatSink(chatSink, _mirrorSession.ChatSink);
+              _engine = new DeriveEngine();
+              _engine.Start();
+              chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
               // One line per open: if the derived list ever silently fails to fill, this is the line that is
               // missing from the log (session created) or that arrives without rows following it (derive stuck).
               Log.Info($"capture: started ({Path.GetFileName(theFile)})");
@@ -1527,8 +1527,8 @@ namespace EQLogParser
         statusText.Text = string.Empty;
         _eqLogReader?.Dispose();
         _eqLogReader = null;
-        _mirrorSession?.Dispose();
-        _mirrorSession = null;
+        _engine?.Dispose();
+        _engine = null;
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;

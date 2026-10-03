@@ -22,7 +22,7 @@ namespace EQLogParser;
 [TestClass]
 public class ClassificationReportTest
 {
-  private static PipelineHarness.MirrorRunResult? _capture;
+  private static PipelineHarness.DeriveRunResult? _capture;
 
   private string _savedConfigDir = "";
   private string _savedServerName = "";
@@ -47,7 +47,7 @@ public class ClassificationReportTest
     // Cold identity on both sides: the capture itself is parsed once and reused (it is slow), so each test starts by
     // emptying what that parse taught the process-wide registry, then loads an override file of its own.
     PlayerRegistry.Instance.Clear();
-    MirrorOverrideStore.Instance.Init("Census Test");
+    IdentityOverrideStore.Instance.Init("Census Test");
   }
 
   [TestCleanup]
@@ -56,7 +56,7 @@ public class ClassificationReportTest
     PlayerRegistry.Instance.Clear();
     // Both stores are process singletons: load an empty override file so a verdict written here cannot answer for
     // another test class that runs afterwards.
-    MirrorOverrideStore.Instance.Init("census-cleanup-" + Guid.NewGuid().ToString("N"));
+    IdentityOverrideStore.Instance.Init("census-cleanup-" + Guid.NewGuid().ToString("N"));
     IdentityPriorStore.Instance.Init("census-cleanup-" + Guid.NewGuid().ToString("N"));
     ConfigUtil.ConfigDir = _savedConfigDir;
     ConfigUtil.ServerName = _savedServerName;
@@ -68,15 +68,15 @@ public class ClassificationReportTest
   // enough to exercise every column without a second parse per test.
   private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "mini-fight.txt");
 
-  private static PipelineHarness.MirrorRunResult Capture()
+  private static PipelineHarness.DeriveRunResult Capture()
   {
     Assert.IsTrue(File.Exists(FixturePath), $"missing fixture: {FixturePath}");
-    return _capture ??= PipelineHarness.RunFileWithMirror(FixturePath);
+    return _capture ??= PipelineHarness.RunFileDerived(FixturePath);
   }
 
   /*
    * The census as the app would build it after a derive: run the rule pass over the captured facts, replay the
-   * operator's file into the result (MirrorSession.RunDeriveAsync does the same two steps), then take the census.
+   * operator's file into the result (DeriveEngine.RunDeriveAsync does the same two steps), then take the census.
    * run.Timeline alone is only SEEDED — the harness hands back what RegistrySeed left, so asking it directly reads
    * mostly Unknown and would let these tests pass on an unclassified board.
    */
@@ -95,7 +95,7 @@ public class ClassificationReportTest
   }
 
   /*
-   * The same three steps, in the same order, that MirrorSession.RunDeriveAsync runs on every derive: seed from what
+   * The same three steps, in the same order, that DeriveEngine.RunDeriveAsync runs on every derive: seed from what
    * the registry already knows, replay the rules over the facts from scratch, then put the operator's file on top.
    * Order matters twice over - the seed is what turns a saved players.txt name into a Player before any rule has to
    * guess, and R10 has to be last because this timeline was built from nothing and the verdict must survive it.
@@ -107,9 +107,9 @@ public class ClassificationReportTest
     var timeline = new EntityTimeline();
     RegistrySeed.Apply(timeline, facts, LogStartS(), LogEndS());
     ClassificationRules.Apply(facts, timeline, capture.HealFacts);
-    MirrorOverrideStore.Instance.Apply(timeline);
+    IdentityOverrideStore.Instance.Apply(timeline);
     return ClassificationReport.Build(timeline, facts, capture.HealFacts,
-                                      MirrorOverrideStore.Instance, PlayerRegistry.Instance, priors);
+                                      IdentityOverrideStore.Instance, PlayerRegistry.Instance, priors);
   }
 
   // Facts are appended in arrival order, so the ends of the table are the ends of the capture (the mirror keeps the
@@ -202,13 +202,13 @@ public class ClassificationReportTest
     PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
     Assert.IsFalse(Census().Find(name)!.IsDisagreement, "a verified pet read as a disagreement before any override");
 
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
     var overridden = Census().Find(name)!;
     Assert.IsTrue(overridden.IsOperatorVerdict, "the census did not say the verdict was the operator's");
     Assert.AreEqual(IdentityKind.Npc, overridden.Kind, "an override that outranks nothing is not an override");
     Assert.IsTrue(overridden.IsDisagreement, "a demoted name on the roster is exactly what this column is for");
 
-    ClassificationCommands.ClearVerdict(MirrorOverrideStore.Instance, name);
+    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, name);
     var reverted = Census().Find(name)!;
     Assert.IsFalse(reverted.IsOperatorVerdict, "reverting left the operator's mark on the row");
     Assert.AreEqual(IdentityKind.Pet, reverted.Kind, "the rules' own answer did not come back after a revert");
@@ -218,18 +218,18 @@ public class ClassificationReportTest
   public void AVerdictSurvivesTheFileItWasWrittenTo()
   {
     var name = Census().Rows.First(r => r.Kind == IdentityKind.Npc).Name;
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Merc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Merc);
 
     // Re-read from disk the way a fresh window on a reopened log would.
-    MirrorOverrideStore.Instance.Init("Census Test");
-    Assert.IsTrue(MirrorOverrideStore.Instance.TryGet(name, out var kind), "the verdict never reached the file");
+    IdentityOverrideStore.Instance.Init("Census Test");
+    Assert.IsTrue(IdentityOverrideStore.Instance.TryGet(name, out var kind), "the verdict never reached the file");
     Assert.AreEqual(IdentityKind.Merc, kind);
     Assert.AreEqual(1, Census().Rows.Count(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)));
   }
 
   /*
    * Cold is the TEST condition, not the app's: opening a file makes MainWindow read the server and character out of
-   * the name, set ConfigUtil.ServerName/PlayerName, then PlayerRegistry.Init() + MirrorOverrideStore.Init(server)
+   * the name, set ConfigUtil.ServerName/PlayerName, then PlayerRegistry.Init() + IdentityOverrideStore.Init(server)
    * (MainWindow.xaml.cs:1335-1345) - so every real session is warmed from that server's players.txt and pet pairs
    * before the first derive. This test walks that same path on purpose: save a roster entry, load it back from the
    * file, and require the census to show the name as a Player seeded by the registry rather than guessed.
@@ -405,7 +405,7 @@ public class ClassificationReportTest
     remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, ["Zzquietname"], PlayerRegistry.Instance, 1_700_000_000);
 
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Zzquietname", IdentityKind.Merc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Zzquietname", IdentityKind.Merc);
 
     var row = Census(ledger).Find("Zzquietname")!;
     Assert.AreEqual(IdentityKind.Merc, row.Kind);
@@ -417,7 +417,7 @@ public class ClassificationReportTest
   public void ARejectedNameStaysOnTheListEvenWithNoEvidence()
   {
     const string name = "Zznotaname";
-    ClassificationCommands.Reject(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name);
+    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
 
     var row = Census().Find(name);
     Assert.IsNotNull(row, "a rejection with no facts vanished from the audit list");
@@ -430,10 +430,10 @@ public class ClassificationReportTest
   public void SettingAVerdictLiftsARejectionWithoutClaimingARaider()
   {
     const string name = "Zznotaname";
-    ClassificationCommands.Reject(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name);
+    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
     Assert.IsTrue(PlayerRegistry.Instance.IsRejectedPlayer(name));
 
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
 
     Assert.IsFalse(PlayerRegistry.Instance.IsRejectedPlayer(name), "an explicit verdict did not supersede the shadow");
     Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer(name), "\"this is an NPC\" must not add a roster player");

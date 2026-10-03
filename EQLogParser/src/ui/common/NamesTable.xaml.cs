@@ -66,7 +66,7 @@ namespace EQLogParser
     /// <summary>Rebuild the list from the captured facts. Safe to call from anywhere; harmless while one is running.</summary>
     public void Refresh()
     {
-      var session = MirrorSession.Active;
+      var session = DeriveEngine.Active;
       if (session is null)
       {
         // A log that has not opened yet is not an error: the window simply has nothing to classify.
@@ -90,7 +90,7 @@ namespace EQLogParser
            * closed) is exactly when a stale list is most likely to be applied LAST. The session that built it must
            * still be the active one - not merely "a" session.
            */
-          if (!ReferenceEquals(session, MirrorSession.Active)) return;
+          if (!ReferenceEquals(session, DeriveEngine.Active)) return;
           Apply(census);
         });
       });
@@ -153,7 +153,7 @@ namespace EQLogParser
       var names = SelectedNames().ToList();
       if (names.Count == 0) return;
       foreach (var name in names)
-        ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name, kind);
+        ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, kind);
       Refresh();
     }
 
@@ -166,7 +166,7 @@ namespace EQLogParser
       var names = SelectedNames().ToList();
       if (names.Count == 0) return;
       foreach (var name in names)
-        ClassificationCommands.Reject(MirrorOverrideStore.Instance, PlayerRegistry.Instance, name);
+        ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
       Refresh();
     }
 

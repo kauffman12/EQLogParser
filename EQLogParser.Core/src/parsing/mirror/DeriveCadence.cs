@@ -27,7 +27,7 @@ namespace EQLogParser.Mirror
    * capture against tens per second while tailing live) is left to the quiescence trigger, so re-deriving does not park
    * ingest at the gate several times during the one moment when throughput matters.
    */
-  public static class MirrorDeriveCadence
+  public static class DeriveCadence
   {
     // Never pass more often than this, however cheap the capture: each pass parks ingest at the gate while it runs.
     public const double FloorSeconds = 3d;
@@ -41,7 +41,7 @@ namespace EQLogParser.Mirror
 
     /*
      * How still the captured count has to sit before a load counts as finished. Measured in SECONDS rather than in timer
-     * ticks because the timer's granularity is a plumbing detail (see MirrorSession.TimerIntervalMs): counted in ticks,
+     * ticks because the timer's granularity is a plumbing detail (see DeriveEngine.TimerIntervalMs): counted in ticks,
      * a finer timer would decide "finished" after a shorter silence, so the same log would get its end-of-load pass at
      * different moments depending on how often somebody happens to check.
      */
@@ -72,7 +72,7 @@ namespace EQLogParser.Mirror
      * How often the CHEAP lane may run: rows recomputed from the facts already captured, with the verdicts the last full pass
      * produced. Measured cost of that on a live increment is **0-5 ms** of projection (docs/DesignNotes.md -> "How long a meter
      * update takes"), against 186-261 ms for a pass that re-runs the classification rule book — and since a pass parks ingest at
-     * `CombatMirror._gate` while it runs, the price of a cadence is not CPU but how much of the cycle the parse thread spends
+     * `CombatCapture._gate` while it runs, the price of a cadence is not CPU but how much of the cycle the parse thread spends
      * waiting. Half a second costs about 1 % of that gate; lowering the FULL floor to half a second would cost a quarter of it.
      *
      * What the cheap lane buys and what it costs: numbers move in ~0.6-0.8 s instead of ~3.4 s, and an identity verdict learned

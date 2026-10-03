@@ -38,7 +38,7 @@ namespace EQLogParser.Mirror
   // The Phase 1 validation artifact (D7): machine-readable JSON + legible text, generated from
   // the current pipeline's fight list and the derived one. A WPF side-by-side window over this
   // data comes in Phase 3.
-  internal sealed class MirrorReport
+  internal sealed class FightParityReport
   {
     public string LogName { get; init; }
     public int CurrentFightCount { get; init; }
@@ -167,13 +167,13 @@ namespace EQLogParser.Mirror
     }
   }
 
-  internal static class MirrorComparison
+  internal static class FightParityDiff
   {
     // timeToleranceS: boundaries may differ by this much (default 1 s = one log frame);
     // counts and totals are exact.
-    public static MirrorReport Compare(IReadOnlyList<Fight> current, IReadOnlyList<DerivedFight> derived, double timeToleranceS = 1.0, string logName = null, long factCount = -1)
+    public static FightParityReport Compare(IReadOnlyList<Fight> current, IReadOnlyList<DerivedFight> derived, double timeToleranceS = 1.0, string logName = null, long factCount = -1)
     {
-      var report = new MirrorReport
+      var report = new FightParityReport
       {
         LogName = logName,
         CurrentFightCount = current.Count,

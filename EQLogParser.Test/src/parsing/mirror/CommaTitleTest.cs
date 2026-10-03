@@ -53,7 +53,7 @@ public class CommaTitleTest
         const string name = "Vhorvus, the Ashen Crown";
         Assert.IsFalse(EQDataStore.Instance.IsKnownNpc(name), $"{name} is in npcs.txt; pick a name the registry does not know");
 
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] " + name + " hits Healerone for 900 points of damage.",
             "[Mon May 04 18:50:06 2026] " + name + " hits Healerone for 900 points of damage."));
@@ -75,7 +75,7 @@ public class CommaTitleTest
         const string name = "Glarubaran, the Great Storm";
         Assert.IsTrue(EQDataStore.Instance.IsKnownNpc(name), $"{name} left npcs.txt; pick a comma entry the registry still has");
 
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] " + name + " hits Healerone for 900 points of damage.",
             "[Mon May 04 18:50:07 2026] " + name + " hits Healerone for 900 points of damage."));
@@ -93,7 +93,7 @@ public class CommaTitleTest
     {
         const string name = "Akini, Xanathan`s Warder";
 
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] " + name + " hits Healerone for 900 points of damage."));
 
@@ -112,7 +112,7 @@ public class CommaTitleTest
     {
         const string name = "Vhorvus, the Ashen Crown";
 
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): " + name,
             "[Mon May 04 18:50:02 2026] " + name + " hits a frostbound sentinel for 900 points of damage."));
 
@@ -130,7 +130,7 @@ public class CommaTitleTest
         const string name = "First Create, Then Destroy";
         Assert.IsNotNull(EQDataStore.Instance.GetDamagingSpellByName(name), $"{name} is no longer a damaging spell; pick another");
 
-        var timeline = Cold(RunMirror(
+        var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] " + name + " hits Healerone for 900 points of damage."));
 
@@ -160,12 +160,12 @@ public class CommaTitleTest
     {
         const string name = "Feroun, come back";
 
-        var timeline = Cold(RunMirror(HealLines(name, 12).ToArray()));
+        var timeline = Cold(RunDerive(HealLines(name, 12).ToArray()));
 
         AssertIdentity(timeline, name, IdentityKind.Player, "R15-healed");
     }
 
-    // ---- helpers (same shape as MirrorRuleExtensionsTest) ----
+    // ---- helpers (same shape as IdentityRuleExtensionsTest) ----
 
     // Two verified players healing `target` `count` times over six minutes.
     private static IEnumerable<string> HealLines(string target, int count)
@@ -179,7 +179,7 @@ public class CommaTitleTest
         }
     }
 
-    private static EntityTimeline Cold(PipelineHarness.MirrorRunResult run)
+    private static EntityTimeline Cold(PipelineHarness.DeriveRunResult run)
     {
         var timeline = new EntityTimeline();
         ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
@@ -193,14 +193,14 @@ public class CommaTitleTest
         Assert.AreEqual(expectedSource, source, $"{name}: wrong rule got there first");
     }
 
-    private static PipelineHarness.MirrorRunResult RunMirror(params string[] lines)
+    private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-comma-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         try
         {
             File.WriteAllLines(log, lines);
-            return PipelineHarness.RunFileWithMirror(log);
+            return PipelineHarness.RunFileDerived(log);
         }
         finally
         {

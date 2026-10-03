@@ -13,19 +13,19 @@ namespace EQLogParser.Wpf.Test
   /// below are those measured rows; see DerivedFightTest for why the +1 belongs to DerivedFight rather than here.
   /// </summary>
   [TestClass]
-  public class MirrorFightRowsTest
+  public class DerivedFightRowsTest
   {
     private const double T0 = 1_000;
 
-    private static MirrorFightRow Row(double beginS, double lastS, DerivedFightEnd end = DerivedFightEnd.Open)
+    private static DerivedFightRow Row(double beginS, double lastS, DerivedFightEnd end = DerivedFightEnd.Open)
     {
       var fight = new DerivedFight
       {
         Name = "Grul", Id = 1, BeginTime = T0 + beginS, LastTime = T0 + lastS, EndReason = end,
         Dead = end is DerivedFightEnd.Slain or DerivedFightEnd.Charmed,
       };
-      var snapshot = MirrorFightRows.Build([fight], new EntityTimeline(), 0,
-        new DamageFactTable(8), new MirrorDamageIndex());
+      var snapshot = DerivedFightRows.Build([fight], new EntityTimeline(), 0,
+        new DamageFactTable(8), new FightFactIndex());
 
       Assert.AreEqual(1, snapshot.Rows.Count, "one fight, one row, no divider");
       return snapshot.Rows[0];

@@ -102,7 +102,7 @@ public class EntityTimelineDigestTest
         /*
          * R16 (reparse) drops a name's evidence and re-runs the rules; R18 (manual side) is classification INPUT rather
          * than a side-channel. Both therefore land here as different assignments and intervals — which is the shape
-         * MirrorSession produces after RepairAsync: the same facts, a different reading of them.
+         * DeriveEngine produces after RepairAsync: the same facts, a different reading of them.
          */
         var asDerived = new EntityTimeline();
         asDerived.SetIdentity("Grul", IdentityKind.Npc, RuleStrength.Medium, "R14-article");

@@ -19,7 +19,7 @@ namespace EQLogParser;
  */
 [TestClass]
 [DoNotParallelize]
-public class MirrorRuleExtensionsTest
+public class IdentityRuleExtensionsTest
 {
     private string? _playerName;
 
@@ -71,7 +71,7 @@ public class MirrorRuleExtensionsTest
     [TestMethod]
     public void ACommaInFrontOfTheWordClaimsThePetNotAFakeRaidMember()
     {
-        var run = RunMirror(
+        var run = RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] Akini, Xanathan`s Warder hits a frostbound sentinel for 900 points of damage.",
             "[Mon May 04 18:50:42 2026] Akini, Xanathan`s Warder hits a frostbound sentinel for 900 points of damage.");
@@ -90,7 +90,7 @@ public class MirrorRuleExtensionsTest
     [TestMethod]
     public void ASummonThatOnlyEverGetsHealedStillBelongsToItsOwner()
     {
-        var run = RunMirror(
+        var run = RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] Healerone healed Tuona`s ward for 4200 hit points by Blessed Radiance Rk. II.",
             "[Mon May 04 18:51:02 2026] Healerone healed Tuona`s ward for 4200 hit points by Blessed Radiance Rk. II.");
@@ -111,7 +111,7 @@ public class MirrorRuleExtensionsTest
     [TestMethod]
     public void AnArticleIsTheGamesOwnNpcMarker()
     {
-        var run = RunMirror(
+        var run = RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:01 2026] Targeted (Player): The Probechosen",
             "[Mon May 04 18:50:02 2026] A nonsense probe beast hits Healerone for 900 points of damage.",
@@ -141,7 +141,7 @@ public class MirrorRuleExtensionsTest
     {
         PipelineHarness.EnsureDataStore();
 
-        var run = RunMirror(
+        var run = RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
             "[Mon May 04 18:50:02 2026] A bixie commander hits Healerone for 900 points of damage.");
 
@@ -179,7 +179,7 @@ public class MirrorRuleExtensionsTest
         lines.Add($"[{Timestamp(19, 0, 30)}] Mudflap hits Nobodyatall for 900 points of damage.");
         lines.Add($"[{Timestamp(19, 0, 40)}] Mudflap hits Nobodyelseatall for 900 points of damage.");
 
-        var timeline = Cold(RunMirror(lines.ToArray()));
+        var timeline = Cold(RunDerive(lines.ToArray()));
         AssertIdentity(timeline, "Grumblechin", IdentityKind.Player, "R7-graph");
         Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityWithSource("Mudflap", out var mudSrc),
             $"a mostly-unclassified pile was read as a side (source {mudSrc ?? "none"})");
@@ -190,7 +190,7 @@ public class MirrorRuleExtensionsTest
     [TestMethod]
     public void ANameTheRaidKeepsHealingIsOnOurSide()
     {
-        var run = RunMirror(HealLines("Mercless", 12).ToArray());
+        var run = RunDerive(HealLines("Mercless", 12).ToArray());
         var timeline = Cold(run);
 
         AssertIdentity(timeline, "Mercless", IdentityKind.Player, "R15-healed");
@@ -206,11 +206,11 @@ public class MirrorRuleExtensionsTest
     public void AHealEdgeNeedsVolumeTwoCastersAndNoSwingsBack()
     {
         // Too few heal lines.
-        var timeline = Cold(RunMirror(HealLines("Fewlines", 6).ToArray()));
+        var timeline = Cold(RunDerive(HealLines("Fewlines", 6).ToArray()));
         Assert.AreEqual(IdentityKind.Unknown, timeline.Identity("Fewlines"), "6 heal lines were enough");
 
         // One caster healing twelve times is one player's habit, not the raid's picture of a mate.
-        timeline = Cold(RunMirror(OneCasterLines("Solohealee", 12).ToArray()));
+        timeline = Cold(RunDerive(OneCasterLines("Solohealee", 12).ToArray()));
         Assert.AreEqual(IdentityKind.Unknown, timeline.Identity("Solohealee"), "a single caster was enough");
 
         /*
@@ -222,17 +222,17 @@ public class MirrorRuleExtensionsTest
         {
             lines.Add($"[{Timestamp(19, 30, i * 6)}] Gloomfang hits Healerone for 4400 points of damage.");
         }
-        timeline = Cold(RunMirror(lines.ToArray()));
+        timeline = Cold(RunDerive(lines.ToArray()));
         Assert.AreNotEqual(IdentityKind.Player, timeline.Identity("Gloomfang"), "the boss that got rained on joined our side");
 
         // A healer who is only a MEDIUM name (an owner named solely by its pet's line) cannot launder anyone.
-        timeline = Cold(RunMirror(MediumCasterLines("Laundered").ToArray()));
+        timeline = Cold(RunDerive(MediumCasterLines("Laundered").ToArray()));
         Assert.AreEqual(IdentityKind.Unknown, timeline.Identity("Laundered"), "a Medium healer put a name on our side");
     }
 
     // ---- helpers ----
 
-    private static EntityTimeline Cold(PipelineHarness.MirrorRunResult run)
+    private static EntityTimeline Cold(PipelineHarness.DeriveRunResult run)
     {
         var timeline = new EntityTimeline();
         ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
@@ -284,14 +284,14 @@ public class MirrorRuleExtensionsTest
         return $"Mon May {t.Day:00} {t.Hour:00}:{t.Minute:00}:{t.Second:00} 2026";
     }
 
-    private static PipelineHarness.MirrorRunResult RunMirror(params string[] lines)
+    private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-ext-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         try
         {
             File.WriteAllLines(log, lines);
-            return PipelineHarness.RunFileWithMirror(log);
+            return PipelineHarness.RunFileDerived(log);
         }
         finally
         {

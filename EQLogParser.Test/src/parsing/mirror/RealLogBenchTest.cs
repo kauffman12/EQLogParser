@@ -13,7 +13,7 @@ namespace EQLogParser;
 // opaque wait; the printout says which phase owns the wait.
 [TestClass]
 [DoNotParallelize]
-public class MirrorRealLogBenchTest
+public class RealLogBenchTest
 {
     [TestMethod]
     public void Bench_RealLog_MirrorPhases()
@@ -63,14 +63,14 @@ public class MirrorRealLogBenchTest
         FightManager.Instance = fm;
         DamageLineParser.FightManager = fm;
 
-        // Legacy count inside the same run: "derived == current" here is what MirrorComparisonTest
+        // Legacy count inside the same run: "derived == current" here is what FightParityDiffTest
         // asserts end-to-end; seeing both numbers side by side says whether a difference is parser
         // variance across processes or a deriver gap (learned the hard way on the 09-17 capture).
         var legacyFights = 0;
         fm.EventsNewFight += _ => Interlocked.Increment(ref legacyFights);
 
         var facts = new DamageFactTable(100_000);
-        var mirror = new CombatMirror(facts);
+        var mirror = new CombatCapture(facts);
         if (!tapOff) mirror.Start();
 
         var totalSw = Stopwatch.StartNew();
@@ -82,7 +82,7 @@ public class MirrorRealLogBenchTest
             var ingestSw = Stopwatch.StartNew();
             using (var items = new System.Collections.Concurrent.BlockingCollection<LogReaderItem>(
                        new System.Collections.Concurrent.ConcurrentQueue<LogReaderItem>(), 100_000))
-            using (var processor = new LogProcessor(path, tapOff ? new NoOpChat() : (IChatSink)new MirrorChatSink(mirror), new NoOpHook()))
+            using (var processor = new LogProcessor(path, tapOff ? new NoOpChat() : (IChatSink)new IdentityChatSink(mirror), new NoOpHook()))
             {
                 processor.LinkTo(items);
 
@@ -395,12 +395,12 @@ public class MirrorRealLogBenchTest
         return $"{words[0]} {words[1]}";
     }
 
-    private sealed class MirrorChatSink : IChatSink
+    private sealed class IdentityChatSink : IChatSink
     {
-        private readonly CombatMirror _mirror;
-        public MirrorChatSink(CombatMirror mirror) => _mirror = mirror;
+        private readonly CombatCapture _capture;
+        public IdentityChatSink(CombatCapture mirror) => _capture = mirror;
         public void Init() { }
-        public void Add(ChatType chat) => _mirror.HandleChat(chat);
+        public void Add(ChatType chat) => _capture.HandleChat(chat);
     }
 
     // Used by the tap-off baseline: the parser must not see the mirror on either channel.

@@ -22,9 +22,9 @@ namespace EQLogParser;
  *
  * Runs only when EQLP_MIRROR_LIVE names a log:
  *   EQLP_MIRROR_LIVE=local/logs/live/eqlog_Kizant_xegony.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"
- *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see MirrorRealLogBoardsTest's header)
+ *   (EMU captures under local/logs/emu/ also need EQLP_EMU=1 - see RealLogBoardsTest's header)
  *
- * The pull counts are taken off each row's two direction populations — `MirrorDamageIndex.DamageOrdinalsFor` and
+ * The pull counts are taken off each row's two direction populations — `FightFactIndex.DamageOrdinalsFor` and
  * `.TankingOrdinalsFor`, which are exactly what `LiveFights.LastActivityAt` reads — counting a fresh start after every silence
  * longer than the gap. Unrouted facts (mob on mob, mob on somebody's pet) sit inside the row's span but in neither window, so
  * they do not keep a fight live and do not appear here either; counting them would understate the quiet stretches, which are
@@ -43,14 +43,14 @@ public class LiveFightsRealLogTest
         if (path is null) Assert.Inconclusive("set EQLP_MIRROR_LIVE=<log> to census the live-fight rule over a capture");
 
         var step = Stopwatch.StartNew();
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var timeline = new EntityTimeline();
         var facts = run.Facts;
         var first = facts.Facts.Length > 0 ? facts.Facts[0].TimeS : 0;
         var last = facts.Facts.Length > 0 ? facts.Facts[^1].TimeS : 0;
         RegistrySeed.Apply(timeline, facts, first, last);
         ClassificationRules.Apply(facts, timeline, run.HealFacts);
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
         step.Stop();
         Console.WriteLine($"[live] {rows.Count} rows, raw fact clock {first:N0} .. {last:N0} = {(last - first):N0} s "
@@ -183,7 +183,7 @@ public class LiveFightsRealLogTest
 
         /*
          * What the reopen rule consumes. It fires per derive while damage stays inside the gap, so its rate is the CADENCE's,
-         * not the log's (MirrorDeriveCadence: 3..15 s). Printed against this capture's fact count so nobody has to wonder
+         * not the log's (DeriveCadence: 3..15 s). Printed against this capture's fact count so nobody has to wonder
          * whether "announce on fresh damage" means an open-per-line like legacy's per-line event — it does not, and its reader
          * no-ops while a window exists anyway.
          */

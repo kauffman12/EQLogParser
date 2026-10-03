@@ -15,7 +15,7 @@ namespace EQLogParser
   /*
    * The derived-fight-list twin of FightTable: same grid, the same three columns in the legacy order (Initial Hit
    * Time | HP | Name, with duration and hits on the row tooltip like legacy's), the same search/HP/Inactivity header -
-   * different data source (CombatMirror → ClassificationRules → FightDeriver → Sectionizer). Selection feeds the
+   * different data source (CombatCapture → ClassificationRules → FightDeriver → Sectionizer). Selection feeds the
    * damage summary from derived facts (see DerivedSelectionChanged), and the right-click menu is where R10 lives:
    * say what a name actually is (Set as Player / Mercenary / Pet / NPC), which saves per server and re-derives.
    * Cross-grid selection sync with the legacy list is still ahead of it.
@@ -37,7 +37,7 @@ namespace EQLogParser
     // enough that dragging a range across a thousand rows fires once, short enough to feel immediate.
     private const int SelectionSettleMs = 350;
 
-    private ObservableCollection<MirrorFightRow> _rows = [];
+    private ObservableCollection<DerivedFightRow> _rows = [];
     private readonly DispatcherTimer _selectionTimer;
 
     // What was last announced, as fight ids. Two jobs: a stale snapshot's rows cannot be re-announced as
@@ -71,7 +71,7 @@ namespace EQLogParser
      */
     private readonly record struct FightKey(string Name, double BeginTime);
 
-    private MirrorSession _session;
+    private DeriveEngine _session;
     private bool _currentShowBreaks;
     private bool _currentShowHp;
 
@@ -118,8 +118,8 @@ namespace EQLogParser
         AnnounceSelection();
       };
 
-      MirrorSession.ActiveChanged += OnActiveChanged;
-      Attach(MirrorSession.Active);
+      DeriveEngine.ActiveChanged += OnActiveChanged;
+      Attach(DeriveEngine.Active);
     }
 
     private void OnActiveChanged()
@@ -127,8 +127,8 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         Detach();
-        Attach(MirrorSession.Active);
-        if (MirrorSession.Active is null)
+        Attach(DeriveEngine.Active);
+        if (DeriveEngine.Active is null)
         {
           _selectionTimer.Stop();
           _announcedIds = [];
@@ -151,7 +151,7 @@ namespace EQLogParser
     // signalling every row insert, and ItemsSourceChanged reapplies the divider filter.
     // Internal for the band's WPF test (a live session is not needed to hand this panel a snapshot); every
     // production call arrives through the session's Derived event.
-    internal void OnDerived(MirrorSnapshot snapshot)
+    internal void OnDerived(DerivedSnapshot snapshot)
     {
       Dispatcher.InvokeAsync(() =>
       {
@@ -187,7 +187,7 @@ namespace EQLogParser
         _selectionTimer.Stop();
         _announcedIds = [];
 
-        _rows = new ObservableCollection<MirrorFightRow>(snapshot.Rows);
+        _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
         mirrorGrid.ItemsSource = _rows;
 
         if (restorable)
@@ -217,7 +217,7 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         _pendingOverride = null;
-        // The session retries a failed pass itself (backoff ladder, MirrorSession); the line says so rather
+        // The session retries a failed pass itself (backoff ladder, DeriveEngine); the line says so rather
         // than leaving the reader looking for a button that no longer exists.
         mirrorStatus.Text = $"Derive failed (retrying automatically): {message}";
       });
@@ -305,7 +305,7 @@ namespace EQLogParser
     private void UpdateLoadDetail()
       => mirrorLoadDetail.Text = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : "waiting for first facts";
 
-    private void Attach(MirrorSession session)
+    private void Attach(DeriveEngine session)
     {
       _session = session;
       if (session is not null)
@@ -344,7 +344,7 @@ namespace EQLogParser
       foreach (var item in items)
       {
         // Divider rows are gaps, not fights — they carry no DerivedFight and select nothing.
-        if (item is MirrorFightRow { IsDivider: false } row && row.Fight is { } fight) selected.Add(fight);
+        if (item is DerivedFightRow { IsDivider: false } row && row.Fight is { } fight) selected.Add(fight);
       }
 
       return selected;
@@ -362,7 +362,7 @@ namespace EQLogParser
     internal List<Fight> GetFights(bool selected)
         => _session?.MaterializeFights(selected ? GetSelectedFights() : null) ?? [];
 
-    // The scoped variant the death viewer wants per death click - see MirrorSession.MaterializeFightsOverlapping
+    // The scoped variant the death viewer wants per death click - see DeriveEngine.MaterializeFightsOverlapping
     // for why materializing everything would be a full board's cost paid per keystroke.
     internal List<Fight> GetFightsOverlapping(double fromT, double toT)
         => _session?.MaterializeFightsOverlapping(fromT, toT) ?? [];
@@ -431,7 +431,7 @@ namespace EQLogParser
     }
 
   /*
-     * R10 - the operator's verdict on a name, entered here and kept by MirrorOverrideStore.
+     * R10 - the operator's verdict on a name, entered here and kept by IdentityOverrideStore.
      *
      * Actions go to every selected row at once (ctrl-click twenty rows, "all pets"), write ONE file, then ask
      * for a re-derive instead of editing the grid. That is the whole design: an override is a new reading of the
@@ -461,7 +461,7 @@ namespace EQLogParser
 
       // Remembered so the derive that follows can say what became of these names (see OverrideOutcome).
       _pendingOverride = names;
-      MirrorOverrideStore.Instance.Apply(names, kind);
+      IdentityOverrideStore.Instance.Apply(names, kind);
 
       mirrorStatus.Text = kind is { } k
         ? $"Override: {names.Count} name{(names.Count == 1 ? "" : "s")} set to {k} - re-deriving"
@@ -493,7 +493,7 @@ namespace EQLogParser
       }
 
       unselectAllItem.IsEnabled = mirrorGrid.SelectedItems.Count > 0;
-      var hasCurrent = mirrorGrid.CurrentItem is MirrorFightRow { IsDivider: false };
+      var hasCurrent = mirrorGrid.CurrentItem is DerivedFightRow { IsDivider: false };
       selectGroupItem.IsEnabled = hasCurrent && unsorted;
       unselectGroupItem.IsEnabled = hasCurrent && mirrorGrid.SelectedItems.Count > 0;
 
@@ -505,7 +505,7 @@ namespace EQLogParser
       // How many verdicts are on file for this server, so "Clear" says whether it has anything to do - the
       // question gets asked most often about a name that no longer has a row to click (set as Pet hides it by
       // design), where the menu is the only place left that can answer.
-      var saved = MirrorOverrideStore.Instance.Count;
+      var saved = IdentityOverrideStore.Instance.Count;
       overrideClearItem.IsEnabled = saved > 0 || hasFight;
       overrideClearItem.Header = saved > 0 ? $"Clear Override ({saved} saved)" : "Clear Override";
     }
@@ -520,16 +520,16 @@ namespace EQLogParser
     private void ApplyFilter()
     {
       if (mirrorGrid?.View == null) return;
-      mirrorGrid.View.Filter = item => IsShown((MirrorFightRow)item);
+      mirrorGrid.View.Filter = item => IsShown((DerivedFightRow)item);
       mirrorGrid.View.RefreshFilter();
     }
 
-    private bool IsShown(MirrorFightRow row) => _currentShowBreaks || !row.IsDivider;
+    private bool IsShown(DerivedFightRow row) => _currentShowBreaks || !row.IsDivider;
 
     // The search's own state, walking the VISIBLE view (not _rows) both directions from the last hit - the same
     // fields and arithmetic FightTable.SearchForNpc uses; ported, not re-invented.
     private readonly DispatcherTimer _searchTextTimer;
-    private MirrorFightRow _searchEntry;
+    private DerivedFightRow _searchEntry;
     private int _searchIndex;
     private int _searchDirection = 1;
 
@@ -655,7 +655,7 @@ namespace EQLogParser
         {
           // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
           // A divider row's name is the gap label, never a fight, so it simply never matches.
-          if (records.GetItemAt(i) is MirrorFightRow { Name: not null } row &&
+          if (records.GetItemAt(i) is DerivedFightRow { Name: not null } row &&
               row.Name.IndexOf(mirrorSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
           {
             row.IsSearchResult = true;
@@ -704,7 +704,7 @@ namespace EQLogParser
     // user sees. A sorted grid does not matter: _rows keeps section order regardless of how the view is arranged.
     private void SelectGroup(bool add)
     {
-      if (mirrorGrid.CurrentItem is not MirrorFightRow { IsDivider: false } target) return;
+      if (mirrorGrid.CurrentItem is not DerivedFightRow { IsDivider: false } target) return;
 
       var idx = _rows.IndexOf(target);
       var lo = idx;
@@ -713,10 +713,10 @@ namespace EQLogParser
       while (hi + 1 < _rows.Count && !_rows[hi + 1].IsDivider) hi++;
 
       // Dividers are gaps, not fights: never selected, even though IsShown lets them through with breaks on.
-      var section = new HashSet<MirrorFightRow>();
+      var section = new HashSet<DerivedFightRow>();
       for (var i = lo; i <= hi; i++)
         if (!_rows[i].IsDivider) section.Add(_rows[i]);
-      Predicate<MirrorFightRow> inSection = row => section.Contains(row);
+      Predicate<DerivedFightRow> inSection = row => section.Contains(row);
 
       if (add)
       {
@@ -724,10 +724,10 @@ namespace EQLogParser
       }
       else
       {
-        var remove = new HashSet<MirrorFightRow>();
+        var remove = new HashSet<DerivedFightRow>();
         foreach (var item in mirrorGrid.SelectedItems)
         {
-          if (item is MirrorFightRow { IsDivider: false } row && inSection(row)) remove.Add(row);
+          if (item is DerivedFightRow { IsDivider: false } row && inSection(row)) remove.Add(row);
         }
 
         foreach (var row in remove) mirrorGrid.SelectedItems.Remove(row);
@@ -737,7 +737,7 @@ namespace EQLogParser
     }
 
     // The run walk RestoreSelection already needs: select every shown row matching the predicate, range by range.
-    private void SelectByShown(Predicate<MirrorFightRow> matches)
+    private void SelectByShown(Predicate<DerivedFightRow> matches)
     {
       var first = FirstRecordRow();
       var runStart = -1;

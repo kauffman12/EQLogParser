@@ -59,7 +59,7 @@ namespace EQLogParser
     public DamageRecord Record { get; set; }
     public double BeginTime { get; set; }
 
-    // The raw action line as parsed (D1: consumers like CombatMirror read line-intrinsic evidence
+    // The raw action line as parsed (D1: consumers like CombatCapture read line-intrinsic evidence
     // — e.g. "X`s pet" ownership — without a registry or a second parse).
     public string Action { get; set; }
 

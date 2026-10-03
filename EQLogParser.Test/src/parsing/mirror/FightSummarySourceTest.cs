@@ -3,8 +3,8 @@ using EQLogParser.Mirror;
 namespace EQLogParser;
 
 /*
- * The seam that lets the existing damage summary render a derived selection: MirrorDamageIndex learns
- * from FightProjection which facts belong to which row and in which direction, and MirrorSummaryFights
+ * The seam that lets the existing damage summary render a derived selection: FightFactIndex learns
+ * from FightProjection which facts belong to which row and in which direction, and FightSummarySource
  * rebuilds them as DamageRecord objects inside Fight.DamageBlocks.
  *
  * What these tests hold:
@@ -20,7 +20,7 @@ namespace EQLogParser;
  *     derived row shows. That is the whole point: one board, two engines, comparable numbers.
  */
 [TestClass]
-public class MirrorSummaryFightsTest
+public class FightSummarySourceTest
 {
     private const double T0 = 1_000;
     private static string MiniFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "mini-fight.txt");
@@ -40,13 +40,13 @@ public class MirrorSummaryFightsTest
         return facts;
     }
 
-    // The pass MirrorSession runs: rules over the facts, then the projection with its index sink.
-    private static (List<DerivedFight> Fights, MirrorDamageIndex Index, DamageFactTable Facts) Derive(DamageFactTable facts, EntityTimeline? timeline = null)
+    // The pass DeriveEngine runs: rules over the facts, then the projection with its index sink.
+    private static (List<DerivedFight> Fights, FightFactIndex Index, DamageFactTable Facts) Derive(DamageFactTable facts, EntityTimeline? timeline = null)
     {
         var line = timeline ?? new EntityTimeline();
         ClassificationRules.Apply(facts, line);
 
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var fights = FightProjection.Build(facts, line, index.OnFact);
         Sectionizer.StampGroupIds(fights);
         return (fights, index, facts);
@@ -254,7 +254,7 @@ public class MirrorSummaryFightsTest
             Assert.AreEqual(fact.Total, record.Total);
             Assert.AreEqual(LabelTypes.LabelOf(fact.TypeId), record.Type, "the label word is the same interned literal the parsers write");
             // A fact whose line carried no modifier text gets the type word as its subtype: the summary's melee
-            // counters key a ConcurrentDictionary on it and throw on a null key (MirrorSummaryFights.SubTypeOf).
+            // counters key a ConcurrentDictionary on it and throw on a null key (FightSummarySource.SubTypeOf).
             Assert.AreEqual(table.SubtypeOf(fact.SubIdx) ?? LabelTypes.LabelOf(fact.TypeId), record.SubType);
             Assert.AreEqual(fact.AttackerIsSpell, record.AttackerIsSpell);
         }
@@ -311,7 +311,7 @@ public class MirrorSummaryFightsTest
         var summary = index.SummaryFightFor(Row(rows, "Echohead"), table);
 
         // Melee carries no modifier text on its line, so the sub-segment key falls back to the type word
-        // (MirrorDamageIndex) rather than handing the dictionary a null key.
+        // (FightFactIndex) rather than handing the dictionary a null key.
         CollectionAssert.Contains(summary.DamageSubSegments["Illuminai"].Keys.ToList(), Labels.Melee);
 
         CollectionAssert.AreEqual(new[] { "Baruk", "Illuminai" }, summary.DamageSegments.Keys.OrderBy(k => k).ToList(),
@@ -354,7 +354,7 @@ public class MirrorSummaryFightsTest
         Assert.IsFalse(index.HasDamage(rows[0]), "nothing was aimed AT this row");
         Assert.IsTrue(index.HasTanking(rows[0]), "and yet this row is where the damage taken lives");
 
-        var input = MirrorSummaryFights.Build(rows, index, table);
+        var input = FightSummarySource.Build(rows, index, table);
 
         Assert.AreEqual(1, input.Fights.Count, "a hit-only row still reaches the boards");
         Assert.AreEqual(0, input.WithoutDamage);
@@ -395,7 +395,7 @@ public class MirrorSummaryFightsTest
             index.DamageOrdinalsFor(echo).Union(index.TankingOrdinalsFor(echo)).OrderBy(x => x).ToList(),
             "no ordinal sits on both sides of its row");
 
-        var input = MirrorSummaryFights.Build(rows, index, table);
+        var input = FightSummarySource.Build(rows, index, table);
         var built = input.Fights.Single();
 
         Assert.AreEqual(4, Records(built).Count + TankRecords(built).Count,
@@ -427,14 +427,14 @@ public class MirrorSummaryFightsTest
         var path = Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "tank-fight.txt");
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path}");
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
 
         ClassificationRules.Apply(run.Facts, run.Timeline);
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
 
-        var input = MirrorSummaryFights.Build(rows, index, run.Facts);
+        var input = FightSummarySource.Build(rows, index, run.Facts);
         Assert.IsTrue(input.Fights.Any(static f => f.TankingBlocks.Count > 0),
             "the fixture produced no damage taken at all — this test would prove nothing");
         Assert.IsTrue(rows.All(static r => r.Name != "Rune"),
@@ -488,7 +488,7 @@ public class MirrorSummaryFightsTest
         timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
 
         var (rows, index, table) = Derive(facts, timeline);
-        var built = MirrorSummaryFights.Build(rows, index, table).Fights.Single();
+        var built = FightSummarySource.Build(rows, index, table).Fights.Single();
 
         Assert.AreEqual(2, built.TankSegments.Count, "one entry per raider who was hit");
         Assert.IsTrue(built.TankSegments.ContainsKey("Illuminai"));
@@ -517,7 +517,7 @@ public class MirrorSummaryFightsTest
         timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
 
         var (rows, index, table) = Derive(facts, timeline);
-        var built = MirrorSummaryFights.Build(rows, index, table).Fights.Single();
+        var built = FightSummarySource.Build(rows, index, table).Fights.Single();
 
         Assert.AreEqual(2L, built.TankHits, "a zero-total outcome is still a swing that found somebody");
         Assert.AreEqual(120L, built.TankTotal);
@@ -540,7 +540,7 @@ public class MirrorSummaryFightsTest
         var (rows, index, table) = Derive(facts, timeline);
         Assert.AreEqual(2, rows.Count);
 
-        var input = MirrorSummaryFights.Build(rows, index, table);
+        var input = FightSummarySource.Build(rows, index, table);
 
         Assert.AreEqual(2, input.Fights.Count);
         Assert.AreEqual(0, input.WithoutDamage);
@@ -563,7 +563,7 @@ public class MirrorSummaryFightsTest
         timeline.SetIdentity("Grimling", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
 
         var (rows, index, table) = Derive(facts, timeline);
-        var input = MirrorSummaryFights.Build([Row(rows, "Echohead")], index, table);
+        var input = FightSummarySource.Build([Row(rows, "Echohead")], index, table);
 
         Assert.AreEqual(1, input.Fights.Count);
         Assert.AreEqual(1, input.AllRanges.TimeSegments.Count);
@@ -588,12 +588,12 @@ public class MirrorSummaryFightsTest
         timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
 
         var (rows, index, table) = Derive(facts, timeline);
-        var input = MirrorSummaryFights.Build(rows, index, table);
+        var input = FightSummarySource.Build(rows, index, table);
 
         /*
          * No damage-filter dial is pinned here and none needs it: a materialized record carries ModifiersMask 0,
          * and each of the six filters drops a record only when its modifier bit is set. Nothing can be excluded
-         * from a derived selection — which is also the honest limit of this comparison (MirrorSummaryFights).
+         * from a derived selection — which is also the honest limit of this comparison (FightSummarySource).
          */
         StatsGenerationEvent? done = null;
         DamageStatsBuilder.Instance.EventsGenerationStatus += OnStatus;
@@ -632,12 +632,12 @@ public class MirrorSummaryFightsTest
     {
         Assert.IsTrue(File.Exists(MiniFightPath), $"missing fixture: {MiniFightPath}");
 
-        var run = PipelineHarness.RunFileWithMirror(MiniFightPath);
+        var run = PipelineHarness.RunFileDerived(MiniFightPath);
 
-        // The same pass order MirrorSession runs, so this walks the production path and not a shortcut.
+        // The same pass order DeriveEngine runs, so this walks the production path and not a shortcut.
         ClassificationRules.Apply(run.Facts, run.Timeline);
 
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var fights = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
         Sectionizer.StampGroupIds(fights);
 
@@ -703,7 +703,7 @@ public class MirrorSummaryFightsTest
      * gap is a rule difference rather than arithmetic — which is precisely the thing worth being able to see.
      *
      * All six filters are switched on because a materialized record carries no modifier bits: with any of them off
-     * the two sides differ for a second, unrelated and documented reason (MirrorSummaryFights), and this test would
+     * the two sides differ for a second, unrelated and documented reason (FightSummarySource), and this test would
      * be measuring that gap instead of this one.
      */
     [TestMethod]
@@ -712,14 +712,14 @@ public class MirrorSummaryFightsTest
         Assert.IsTrue(File.Exists(MiniFightPath), $"missing fixture: {MiniFightPath}");
         PipelineHarness.EnsureDataStore();
 
-        var run = PipelineHarness.RunFileWithMirror(MiniFightPath);
+        var run = PipelineHarness.RunFileDerived(MiniFightPath);
 
         ClassificationRules.Apply(run.Facts, run.Timeline);
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var derived = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
         Sectionizer.StampGroupIds(derived);
 
-        // Pair by name — that the names and boundaries agree at all is MirrorComparisonTest's claim; here it
+        // Pair by name — that the names and boundaries agree at all is FightParityDiffTest's claim; here it
         // only lets each side hand the builder its own Fight objects.
         var rows = derived.Where(row => index.HasDamage(row) && run.Fights.Any(f => f.Name == row.Name)).ToList();
         Assert.IsTrue(rows.Count > 0, "no fight of this fixture appears on both sides");
@@ -727,7 +727,7 @@ public class MirrorSummaryFightsTest
         var names = rows.Select(r => r.Name).ToHashSet();
         var legacy = run.Fights.Where(f => names.Contains(f.Name)).ToList();
 
-        var fromMirror = MirrorSummaryFights.Build(rows, index, run.Facts);
+        var fromDerived = FightSummarySource.Build(rows, index, run.Facts);
         var fromManager = new TimeRange();
         foreach (var fight in legacy) fromManager.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
 
@@ -735,13 +735,13 @@ public class MirrorSummaryFightsTest
           DamageShield: AppSettings.IsDamageShieldDamageEnabled, FinishingBlow: AppSettings.IsFinishingBlowDamageEnabled,
           Headshot: AppSettings.IsHeadshotDamageEnabled, SlayUndead: AppSettings.IsSlayUndeadDamageEnabled);
 
-        CombinedStats mirrorStats, managerStats;
+        CombinedStats totals, managerStats;
         try
         {
             AppSettings.IsAssassinateDamageEnabled = AppSettings.IsBaneDamageEnabled = AppSettings.IsDamageShieldDamageEnabled
               = AppSettings.IsFinishingBlowDamageEnabled = AppSettings.IsHeadshotDamageEnabled = AppSettings.IsSlayUndeadDamageEnabled = true;
 
-            mirrorStats = Board(fromMirror.Fights, fromMirror.AllRanges);
+            totals = Board(fromDerived.Fights, fromDerived.AllRanges);
             managerStats = Board(legacy, fromManager);
         }
         finally
@@ -758,13 +758,13 @@ public class MirrorSummaryFightsTest
         // what the old engine managed to place may move.
         foreach (var entry in managerStats.StatsList)
         {
-            var other = mirrorStats.StatsList.FirstOrDefault(s => s.Name == entry.Name);
+            var other = totals.StatsList.FirstOrDefault(s => s.Name == entry.Name);
             Assert.IsNotNull(other, $"{entry.Name}: on the legacy board only");
             Assert.AreEqual(entry.Total, other.Total, $"{entry.Name}: per-raider total differs between the two lists");
         }
 
         // (2) The derived board may add only line-owned pets, folded under their owners.
-        var extra = mirrorStats.StatsList.Where(s => !managerStats.StatsList.Any(m => m.Name == s.Name)).ToList();
+        var extra = totals.StatsList.Where(s => !managerStats.StatsList.Any(m => m.Name == s.Name)).ToList();
         Assert.IsTrue(extra.Count > 0, "this fixture is supposed to show the difference the mirror exists for");
         foreach (var entry in extra)
         {
@@ -777,7 +777,7 @@ public class MirrorSummaryFightsTest
             .Where(o => run.Facts.Facts[o].OwnerInLine && LabelTypes.IsHit(run.Facts.Facts[o].TypeId))
             .Sum(o => (long)run.Facts.Facts[o].Total));
 
-        Assert.AreEqual(petDamage, mirrorStats.RaidStats.Total - managerStats.RaidStats.Total,
+        Assert.AreEqual(petDamage, totals.RaidStats.Total - managerStats.RaidStats.Total,
             "the two boards differ by something other than the pets legacy's registry never mapped");
         Assert.AreEqual(extra.Sum(s => (long)s.Total), petDamage, "the pet rows and the fact table disagree");
     }
@@ -930,7 +930,7 @@ public class MirrorSummaryFightsTest
         Assert.AreEqual(T0 + 9, summary.TauntBlocks[1].BeginTime);
 
         // And a windowed materialization keeps only what is inside the window: the second-9 taunt is out.
-        var bounded = MirrorSummaryFights.Build([echo], index, table, T0, T0 + 5).Fights.Single();
+        var bounded = FightSummarySource.Build([echo], index, table, T0, T0 + 5).Fights.Single();
         Assert.AreEqual(1, bounded.TauntBlocks.SelectMany(b => b.Actions).Count(), "the windowed row keeps one taunt");
     }
 }

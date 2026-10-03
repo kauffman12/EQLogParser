@@ -49,7 +49,7 @@
     </Grid.RowDefinitions>
     <!-- Header order like the legacy table: search first, then the display checkboxes. There is no Re-derive
          button - legacy has none, and nothing needed one: every trigger refreshes on its own, overrides
-         re-derive themselves, and a failed pass retries on a backoff (MirrorSession). The old strip hung both the
+         re-derive themselves, and a failed pass retries on a backoff (DeriveEngine). The old strip hung both the
          checkboxes and that button left of the search box, which is what users read as "different UI". -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <!-- Find-next, not a filter: typing highlights and scrolls to the matching row so the user can fight
@@ -80,7 +80,7 @@
                            SelectionChanged="MirrorSelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"
-                           SourceType="{x:Type local:MirrorFightRow}">
+                           SourceType="{x:Type local:DerivedFightRow}">
       <!--
         The same three columns the legacy table shows, in the legacy order (its Fight model keeps "SortId,
         DamageTotal, Name in this order for display"). Duration and hits are not columns there and are not

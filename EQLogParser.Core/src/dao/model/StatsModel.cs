@@ -45,7 +45,7 @@ namespace EQLogParser
      * Where the HEALING board reads its records from. Null means "the record store", which is what every caller
      * does today, and that is why this lives on the options rather than behind a builder overload — the healing
      * builder never looks at a Fight (it pulls GetAllHeals and windows it by time), so the combat mirror cannot
-     * hand it derived rows the way the damage and tanking boards get them. See MirrorSummaryHeals for what fills it.
+     * hand it derived rows the way the damage and tanking boards get them. See HealSummarySource for what fills it.
      *
      * A NON-NULL EMPTY list means empty, not "fall back": a selection with no healing has to clear the board
      * instead of quietly going on showing last click's numbers from a store this path is meant to bypass.

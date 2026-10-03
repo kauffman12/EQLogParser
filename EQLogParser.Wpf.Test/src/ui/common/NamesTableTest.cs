@@ -34,7 +34,7 @@ public class NamesTableTest
     ConfigUtil.PlayerName = "Namestestee";
 
     PlayerRegistry.Instance.Clear();
-    MirrorOverrideStore.Instance.Init("names-window-test");
+    IdentityOverrideStore.Instance.Init("names-window-test");
     IdentityPriorStore.Instance.Init("names-window-test");
   }
 
@@ -42,7 +42,7 @@ public class NamesTableTest
   public void Cleanup()
   {
     PlayerRegistry.Instance.Clear();
-    MirrorOverrideStore.Instance.Init("names-cleanup-" + Guid.NewGuid().ToString("N"));
+    IdentityOverrideStore.Instance.Init("names-cleanup-" + Guid.NewGuid().ToString("N"));
     IdentityPriorStore.Instance.Init("names-cleanup-" + Guid.NewGuid().ToString("N"));
     ConfigUtil.ConfigDir = _savedConfigDir;
     ConfigUtil.ServerName = _savedServerName;
@@ -53,12 +53,12 @@ public class NamesTableTest
   // Nothing open: no timeline, no fact tables. The census still lists what files claim, which is the state the window
   // is in when it is opened before a log.
   private static ClassificationReport CensusWithoutACapture(IdentityPriorStore? priors = null)
-    => ClassificationReport.Build(null, null, null, MirrorOverrideStore.Instance, PlayerRegistry.Instance, priors);
+    => ClassificationReport.Build(null, null, null, IdentityOverrideStore.Instance, PlayerRegistry.Instance, priors);
 
   [TestMethod]
   public void AVerdictTheOperatorGaveSaysSo()
   {
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Nicky", IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Nicky", IdentityKind.Npc);
 
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Nicky")!);
 
@@ -70,7 +70,7 @@ public class NamesTableTest
   [TestMethod]
   public void ARejectionIsNotReportedAsAVerdict()
   {
-    ClassificationCommands.Reject(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Ghosty");
+    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Ghosty");
 
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
 
@@ -100,7 +100,7 @@ public class NamesTableTest
   {
     // Verified raider, overridden to NPC: exactly the state in which a player's damage leaves the board.
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
-    ClassificationCommands.SetVerdict(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Berta", IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Berta", IdentityKind.Npc);
 
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
@@ -117,8 +117,8 @@ public class NamesTableTest
     Assert.AreEqual(0, census.UnresolvedInCapture);
 
     // Every command has to survive being asked with nothing selected and nothing open.
-    ClassificationCommands.Reject(MirrorOverrideStore.Instance, PlayerRegistry.Instance, "Nobody");
+    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Nobody");
     ClassificationCommands.ClearPrior(IdentityPriorStore.Instance, "Nobody");
-    ClassificationCommands.ClearVerdict(MirrorOverrideStore.Instance, "Nobody");
+    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Nobody");
   }
 }

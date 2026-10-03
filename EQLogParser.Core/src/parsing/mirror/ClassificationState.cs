@@ -29,7 +29,7 @@ namespace EQLogParser.Mirror
    * line evidence 15-25, R5 ownership 15), paid again at the full-pass cadence for the whole night.
    *
    * WHAT THE DESIGN PRESERVES, first, because it is the reason the design is shaped this way: a classifying
-   * pass runs over a FRESH timeline (MirrorSession.Classify), and a rule's walk therefore sees exactly the
+   * pass runs over a FRESH timeline (DeriveEngine.Classify), and a rule's walk therefore sees exactly the
    * verdicts the stages before it produced THIS pass — never its own earlier passes' claims, never later
    * stages' (that blindness is deliberate in places: R9's break signal reads "a defender called ours", and old
    * passes' R7/R18 claims were never supposed to answer that). A carried TIMELINE would leak those claims
@@ -57,7 +57,7 @@ namespace EQLogParser.Mirror
    *
    * Inputs that advance no stream and precede no digest — npcs.txt/spells.txt reloads, chat-channel settings —
    * are session-static by construction (loaded at open), same as before this class existed; a data reload
-   * happens by re-opening the log, which makes a new MirrorSession and so a new instance of this class.
+   * happens by re-opening the log, which makes a new DeriveEngine and so a new instance of this class.
    */
   internal sealed class ClassificationState
   {

@@ -8,7 +8,7 @@ namespace EQLogParser;
 // that keep each rule honest (say-channel speaker stays Unknown, buff wear-off on a player name
 // does not open a charm window, etc).
 [TestClass]
-public class MirrorRulesTest
+public class IdentityRulesTest
 {
     private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "rules-fixture.txt");
 
@@ -17,7 +17,7 @@ public class MirrorRulesTest
     {
         Assert.IsTrue(File.Exists(FixturePath), $"missing fixture: {FixturePath}");
 
-        var run = PipelineHarness.RunFileWithMirror(FixturePath);
+        var run = PipelineHarness.RunFileDerived(FixturePath);
         var facts = run.Facts;
         Assert.IsTrue(facts.EvidenceCount >= 12, $"expected identity evidence, got {facts.EvidenceCount} — tap not wired?");
 
@@ -249,7 +249,7 @@ public class MirrorRulesTest
                 "[Sun Apr 26 18:51:15 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
             });
 
-            var facts = PipelineHarness.RunFileWithMirror(log).Facts;
+            var facts = PipelineHarness.RunFileDerived(log).Facts;
             Assert.AreEqual(4, facts.Facts.Length, "feedback lines produced no damage facts?");
 
             var timeline = new EntityTimeline();

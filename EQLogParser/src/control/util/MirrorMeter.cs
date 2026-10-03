@@ -30,7 +30,7 @@ namespace EQLogParser
 
     // "Is a pull going on?" from the capture instead of FightManager's overlay-fight set. No session, no fight: a mirror that
     // is not capturing has nothing to show, which is the same answer as an empty board and does not fall back to anything.
-    internal static bool HasLiveFight(int damageMode) => MirrorSession.Active?.HasLiveFight(TimeoutFor(damageMode)) == true;
+    internal static bool HasLiveFight(int damageMode) => DeriveEngine.Active?.HasLiveFight(TimeoutFor(damageMode)) == true;
 
     /* The same question for a caller holding no meter window, so no dial is in hand to read: the saved setting is where a
      * window about to open would get it from, which makes this the honest version of the question rather than a default. */

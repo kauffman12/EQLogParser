@@ -25,7 +25,7 @@ public class RegistryRebuildTest
             return;
         }
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var facts = run.Facts;
 
         var timeline = new EntityTimeline();

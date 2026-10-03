@@ -33,7 +33,7 @@ public class RaisedCorpseTest
         var log = Path.Combine(dir.FullName, "eqlog_Corpseone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 
-        var facts = PipelineHarness.RunFileWithMirror(log).Facts;
+        var facts = PipelineHarness.RunFileDerived(log).Facts;
         timeline = new EntityTimeline();
         ClassificationRules.Apply(facts, timeline);
         return facts;
@@ -74,9 +74,9 @@ public class RaisedCorpseTest
         var facts = Run(out var timeline,
             "[Sun Apr 26 18:48:05 2026] Kazcro`s pet hits an aetherial hydra for 700 points of damage.");
 
-        var index = new MirrorDamageIndex();
+        var index = new FightFactIndex();
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
-        var actions = MirrorSummaryFights.Build(rows, index, facts).Fights
+        var actions = FightSummarySource.Build(rows, index, facts).Fights
             .SelectMany(f => f.DamageBlocks.SelectMany(b => b.Actions)).OfType<DamageRecord>().ToList();
 
         Assert.AreEqual(1, actions.Count);

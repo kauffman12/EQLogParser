@@ -24,7 +24,7 @@ namespace EQLogParser;
  * implementation would hide those old heals forever.
  */
 [TestClass]
-public class MirrorIncrementalClassificationTest
+public class IncrementalClassificationTest
 {
     private const double T0 = 1_000_000;
 
@@ -65,8 +65,8 @@ public class MirrorIncrementalClassificationTest
     private static void JoinRaid(DamageFactTable facts, ref int seq, string name)
       => facts.AddEvidence(new EvidenceFact(seq++, (long)(T0 + 1), facts.InternName(name), EvidenceFact.EvJoinedRaid));
 
-    // One classifying pass exactly the way MirrorSession.Classify runs one: seed, then rules with the carry.
-    private static (EntityTimeline Timeline, MirrorRuleOutcome Outcome) Pass(
+    // One classifying pass exactly the way DeriveEngine.Classify runs one: seed, then rules with the carry.
+    private static (EntityTimeline Timeline, ClassificationOutcome Outcome) Pass(
       DamageFactTable facts, HealFactTable heals, ClassificationState state)
     {
       var timeline = new EntityTimeline();
@@ -77,7 +77,7 @@ public class MirrorIncrementalClassificationTest
     }
 
     // A from-zero replay: fresh store, no carried state. This is the reference answer.
-    private static (EntityTimeline Timeline, MirrorRuleOutcome Outcome) Replay(DamageFactTable facts, HealFactTable heals)
+    private static (EntityTimeline Timeline, ClassificationOutcome Outcome) Replay(DamageFactTable facts, HealFactTable heals)
     {
       var timeline = new EntityTimeline();
       RegistrySeed.Apply(timeline, facts, double.NaN, double.NaN);
@@ -231,7 +231,7 @@ public class MirrorIncrementalClassificationTest
         return;
       }
 
-      var run = PipelineHarness.RunFileWithMirror(path);
+      var run = PipelineHarness.RunFileDerived(path);
       var state = new ClassificationState();
 
       var first = Pass(run.Facts, run.HealFacts, state);

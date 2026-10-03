@@ -13,7 +13,7 @@ namespace EQLogParser.Mirror
   }
 
   // What a rules pass additionally reports (never part of the identity state itself).
-  internal sealed class MirrorRuleOutcome
+  internal sealed class ClassificationOutcome
   {
     // Names that got both Targeted (Player) and Targeted (NPC) verdicts in one run — the target
     // frame never contradicts itself in measured logs, so any hit here is genuine conflict
@@ -88,7 +88,7 @@ namespace EQLogParser.Mirror
      * the log's own possessive lines prove 18/96 of the owners the operator's registry knows (petmapping.txt),
      * because most pets are given custom names (``Dangle``, ``Bigboned``, ``Useless``) that print bare.
      *
-     * This list is also what CombatMirror flags on facts, and what FightDeriver's PetOwner and a
+     * This list is also what CombatCapture flags on facts, and what FightDeriver's PetOwner and a
      * materialized record's AttackerOwner cut with - one copy, in OwnerInName, on purpose.
      */
     private static readonly string[] OwnerSuffixes = ["`s pet", "`s warder", "`s ward", "`s familiar", "`s mount"];
@@ -166,16 +166,16 @@ namespace EQLogParser.Mirror
      * it stopped while that rule's BOUNDARY DIGEST still matches the store at the same point of this pass: equal
      * means nothing upstream moved, so resuming reproduces a full replay term for term; any change rebuilds that
      * rule from zero, exactly as this method always did. Two properties this keeps whole: `timeline` is a fresh
-     * store every pass (MirrorSession.Classify), so a rule's walk sees what the stages before it produced THIS
+     * store every pass (DeriveEngine.Classify), so a rule's walk sees what the stages before it produced THIS
      * pass — never its own earlier passes' claims, never later stages' — and carried aggregates are replayed onto
      * that store in stage order. Overrides apply last and enter no rule's input, which is why removal self-heals
      * on the next pass exactly as before (docs R10) and no invalidation hook exists for them.
      */
-    public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable? heals = null,
+    public static ClassificationOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable? heals = null,
                                          ClassificationState? state = null)
     {
       state ??= new ClassificationState();   // throwaway state == the original from-zero replay
-      var outcome = new MirrorRuleOutcome();
+      var outcome = new ClassificationOutcome();
 
       /*
        * Every stage runs under its own guard (RunStage): one rule's exception costs that rule's verdicts and NOTHING
@@ -259,7 +259,7 @@ namespace EQLogParser.Mirror
     }
 
     // Internal for its own tests (ClassificationRuleHealthTest); Apply is the only production caller.
-    internal static void RunStage(string name, MirrorRuleOutcome outcome, Action work)
+    internal static void RunStage(string name, ClassificationOutcome outcome, Action work)
     {
       if (RetiredStageNames.Contains(name)) return;
       try
@@ -296,7 +296,7 @@ namespace EQLogParser.Mirror
       }
     }
 
-    // R10: the override UI ("set as player / merc / pet / npc") calls through here, and MirrorOverrideStore
+    // R10: the override UI ("set as player / merc / pet / npc") calls through here, and IdentityOverrideStore
     // replays what the operator saved on every rebuild. Manual strength outranks every rule, retroactively:
     // this is the one input that is allowed to reason "the rules are wrong about this name".
     public static void ApplyManualOverride(EntityTimeline timeline, string name, IdentityKind kind)
@@ -383,7 +383,7 @@ namespace EQLogParser.Mirror
      * pass: its SetIdentity writes dedupe against the carried timeline, so re-running the ladder costs a hash
      * walk and moves neither store nor digest, while an evidence row arriving late still re-decides its name.
      */
-    private static void ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome,
+    private static void ApplyEvidence(IFactTable facts, EntityTimeline timeline, ClassificationOutcome outcome,
                                       ClassificationState state)
     {
 

@@ -11,7 +11,7 @@ namespace EQLogParser.Mirror
   //
   // Thread model: parser events are raised by the LogProcessor consumer task on a single thread,
   // so appends need no locking (same contract as DamageFactTable).
-  internal sealed class CombatMirror
+  internal sealed class CombatCapture
   {
     private const string OwnerToken = "Owner:";
 
@@ -35,7 +35,7 @@ namespace EQLogParser.Mirror
     private long _lastSeenTs = -1;
     private long _firstSeenTs = -1;
 
-    public CombatMirror(IFactTable facts, IHealFactTable heals = null)
+    public CombatCapture(IFactTable facts, IHealFactTable heals = null)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
@@ -59,7 +59,7 @@ namespace EQLogParser.Mirror
 
       // Fires for every heal the parser stored, immediately after RecordsStore.Add — so "heal facts" and
       // "what the healing board reads" are the same population, which is what makes the fidelity ledger
-      // (MirrorHealCaptureTest) an equality test rather than an approximation.
+      // (HealFactCaptureTest) an equality test rather than an approximation.
       if (_heals is not null) HealingLineParser.EventsHealProcessed += HandleHeal;
 
       PreLineParser.EventsEvidence += OnPreLineEvidence;
@@ -173,7 +173,7 @@ namespace EQLogParser.Mirror
 
           // The six modifier filters' input. Its old four bytes came from deleting the always-zero OverTotal,
           // so DamageFact is still 32 B — and the derived damage summary stopped reading high whenever one of
-          // those filters was switched off, which is what MirrorSummaryFights used to have to warn about.
+          // those filters was switched off, which is what FightSummarySource used to have to warn about.
           modMask: r.ModifiersMask,
           subIdx: subIdx));
       }

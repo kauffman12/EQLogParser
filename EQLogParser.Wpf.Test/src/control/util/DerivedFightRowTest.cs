@@ -11,15 +11,15 @@ namespace EQLogParser.Wpf.Test;
  * with; only containers realized AFTER the change (scrolled into view, re-virtualized) ever show it. That is
  * exactly the bug this pins: the search mark appeared to freeze — Enter cycled correctly through the greedlings,
  * ScrollInView no-oped on visible ones as it should, and green appeared only on a row scrolled to from off-screen
- * (reported 2026-10-02; MirrorFightRow declared the event but did not implement the interface).
+ * (reported 2026-10-02; DerivedFightRow declared the event but did not implement the interface).
  */
 [TestClass]
-public class MirrorFightRowTest
+public class DerivedFightRowTest
 {
   [TestMethod]
   public void TheBoundRowImplementsTheInterfaceWpfListensFor()
   {
-    var row = new MirrorFightRow();
+    var row = new DerivedFightRow();
     Assert.IsInstanceOfType(row, typeof(INotifyPropertyChanged),
       "a row with a mutable bound property (IsSearchResult) must implement INotifyPropertyChanged, not just declare the event");
   }
@@ -27,7 +27,7 @@ public class MirrorFightRowTest
   [TestMethod]
   public void TheSearchMarkRaisesOneEventPerRealChange()
   {
-    var row = new MirrorFightRow();
+    var row = new DerivedFightRow();
     var fired = 0;
     string? changed = null;
     ((INotifyPropertyChanged)row).PropertyChanged += (_, e) => { fired++; changed = e.PropertyName; };

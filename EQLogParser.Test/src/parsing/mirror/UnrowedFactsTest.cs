@@ -5,7 +5,7 @@ namespace EQLogParser;
 /*
  * The gap between "every fact inside the window" and "the union of the rows".
  *
- * The damage meter is going to be a reader over derived rows: its session picks rows, MirrorStats totals them, and the
+ * The damage meter is going to be a reader over derived rows: its session picks rows, DerivedTotals totals them, and the
  * fight list's select-all picks the same rows and gets the same digits. That equivalence has one precondition worth
  * knowing as a number instead of a hope — some captured facts may belong to NO row, in which case they exist in the
  * capture and in a time-window sum but in no selection, and "the meter and the list agree" would be true only because
@@ -31,7 +31,7 @@ namespace EQLogParser;
  * was beating its own charmed pet and deserves to be on the board at all.
  */
 [TestClass]
-public class MirrorUnrowedFactsTest
+public class UnrowedFactsTest
 {
     private const double T0 = 1_000;
 
@@ -50,7 +50,7 @@ public class MirrorUnrowedFactsTest
     }
 
     // The projection pass with a spy ahead of the index sink: which ordinals did ANY row claim?
-    private static (List<DerivedFight> Rows, MirrorDamageIndex Index, HashSet<int> Claimed) Derive(
+    private static (List<DerivedFight> Rows, FightFactIndex Index, HashSet<int> Claimed) Derive(
       DamageFactTable facts, EntityTimeline timeline, bool applyRules = true, bool indexKnowsOwners = false)
     {
         if (applyRules)
@@ -58,9 +58,9 @@ public class MirrorUnrowedFactsTest
             ClassificationRules.Apply(facts, timeline);
         }
 
-        // MirrorSession hands the index the timeline so a materialized record can carry AttackerOwner; the tests that
+        // DeriveEngine hands the index the timeline so a materialized record can carry AttackerOwner; the tests that
         // only count routing leave it null.
-        var index = indexKnowsOwners ? new MirrorDamageIndex(timeline) : new MirrorDamageIndex();
+        var index = indexKnowsOwners ? new FightFactIndex(timeline) : new FightFactIndex();
         var claimed = new HashSet<int>();
         var rows = FightProjection.Build(facts, timeline, (fact, ordinal, owner, target) =>
         {
@@ -154,7 +154,7 @@ public class MirrorUnrowedFactsTest
             var path = Resolve(raw);
             if (!File.Exists(path)) Assert.Fail($"EQLP_MIRROR_UNROWED points at nothing: {raw}");
 
-            var run = PipelineHarness.RunFileWithMirror(path);
+            var run = PipelineHarness.RunFileDerived(path);
             var facts = run.Facts;
 
             // The harness already ran the rules for its own pass; reuse its timeline rather than claiming twice.
@@ -277,7 +277,7 @@ public class MirrorUnrowedFactsTest
         var row = rows.First(r => r.Name == "Grimling");
 
         Assert.AreEqual(facts.FactCount, claimed.Count, "the pet's hits reach the boss row like anyone else's");
-        var stats = MirrorStats.For([row], index, facts, NoHeals(facts))?.CombinedStats;
+        var stats = DerivedTotals.For([row], index, facts, NoHeals(facts))?.CombinedStats;
         Assert.IsNotNull(stats);
         // Both the raider and the pet's damage are on the board — 500 + 4,000 + 3,500 — which is the whole complaint:
         // before this was asked of the combatant rather than the string, 7,500 of these 8,000 existed nowhere.

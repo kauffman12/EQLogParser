@@ -8,7 +8,7 @@ namespace EQLogParser.Mirror
   // answers "which NPC-side entity is this exchange with, given everything we now know?".
   // Rows therefore migrate when evidence arrives - an exchange that started as a defender-keyed
   // guess under legacy's tiebreak moves to its true NPC row the moment R4/R9/overrides classify
-  // one side - without a single fact changing. Rebuild is cheap and idempotent; MirrorSession
+  // one side - without a single fact changing. Rebuild is cheap and idempotent; DeriveEngine
   // reruns it after every classification pass, which is the whole dynamic-update mechanism.
   //
   // Side rules (per fact, at the fact's own timestamp):
@@ -70,7 +70,7 @@ namespace EQLogParser.Mirror
     /*
      * Optional reporter: which row a fact ended up owning. The projection is the single place that
      * decides sides, so anything that needs "the facts of this fight" (the damage summary fed from the
-     * derived list, MirrorSummaryFights) has to be told here rather than re-deciding somewhere else —
+     * derived list, FightSummarySource) has to be told here rather than re-deciding somewhere else —
      * a second copy of these rules would drift the moment a rule changes, and the drift would show up
      * as a summary that disagrees with the row it was opened from.
      *
@@ -80,7 +80,7 @@ namespace EQLogParser.Mirror
      * away from itself lands on a pet or another mob. Measured on Incogitable against the classification the app runs:
      * legacy's unfiltered "damage taken" is 7,114,675,399, of which 4,823,236,582 sits on names classified as NPC and
      * 428,146,449 on pets; what the three targets leave is 1,850,853,404 — 91,036 facts with a Player behind them and
-     * 9,480 a Merc (`MirrorRealLogBoardsTest` prints that census, `HitByNpcCensusTest` the residue around it).
+     * 9,480 a Merc (`RealLogBoardsTest` prints that census, `HitByNpcCensusTest` the residue around it).
      *
      * AtOwner is the same test that splits DamageToOwner from DamageByOwner — the split legacy draws too, with
      * FightManager putting everything aimed at the npc in DamageBlocks and the mob's own output in TankingBlocks.
@@ -207,7 +207,7 @@ namespace EQLogParser.Mirror
 
     /*
      * The derive pass's memory: it holds one ProjectionState and the damage index built with it, and decides whether the
-     * next projection may continue that state or has to start over. MirrorSession holds one of these per log-open; tests
+     * next projection may continue that state or has to start over. DeriveEngine holds one of these per log-open; tests
      * drive it directly, which is why the decision lives here rather than inline in the session's derive lambda.
      *
      * The gate has two halves and both have to hold (see ProjectionState):
@@ -227,12 +227,12 @@ namespace EQLogParser.Mirror
     internal sealed class FightProjectionCache
     {
       private readonly ProjectionState _state = new();
-      private MirrorDamageIndex _index;
+      private FightFactIndex _index;
 
       // Diagnostics for the derive report: what the last pass did, and why.
       public bool LastPassContinued { get; private set; }
 
-      public MirrorDamageIndex Index => _index;
+      public FightFactIndex Index => _index;
       public long Stamp => _state.Stamp;
 
       public IReadOnlyList<DerivedFight> Project(DamageFactTable facts, EntityTimeline timeline)
@@ -246,7 +246,7 @@ namespace EQLogParser.Mirror
           // Both halves of the rebuild: a fresh index (its ordinal lists would otherwise describe the old walk) and a
           // state with nothing in it, because rows are the accumulated work of the verdicts they were folded under.
           _state.Reset();
-          _index = new MirrorDamageIndex(timeline);
+          _index = new FightFactIndex(timeline);
         }
 
         var rows = FightProjection.Continue(_state, facts, timeline, _index.OnFact);
@@ -291,7 +291,7 @@ namespace EQLogParser.Mirror
          * mark a row as slain would hand out a second kill for one corpse, and would do so on whichever row
          * of that name happened to be open — possibly a different instance three pulls away. It is skipped
          * here exactly as a party member's death is not a raid kill. Nothing is lost: the charm window itself
-         * records this death as the reason it closed (CharmEndReason.Death on MirrorRuleOutcome.Charms).
+         * records this death as the reason it closed (CharmEndReason.Death on ClassificationOutcome.Charms).
          */
         if (DiedWhileCharmed(timeline, killed, death.TimeS)) continue;
 

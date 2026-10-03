@@ -26,14 +26,14 @@ public class MeterBoardCostRealLogTest
         var path = Resolve(Environment.GetEnvironmentVariable("EQLP_MIRROR_COST"));
         if (path is null) Assert.Inconclusive("set EQLP_MIRROR_COST=<log>");
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var timeline = new EntityTimeline();
         var facts = run.Facts;
         var first = facts.Facts.Length > 0 ? facts.Facts[0].TimeS : 0;
         var last = facts.Facts.Length > 0 ? facts.Facts[^1].TimeS : 0;
         RegistrySeed.Apply(timeline, facts, first, last);
         ClassificationRules.Apply(facts, timeline, run.HealFacts);
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
         Console.WriteLine($"[cost] {rows.Count} rows, {facts.Facts.Length:N0} facts");
 
@@ -46,11 +46,11 @@ public class MeterBoardCostRealLogTest
             for (var i = 0; i < 3; i++)
             {
                 var materialize = Stopwatch.StartNew();
-                var input = MirrorSummaryFights.Build(windowed, index, facts, fromT, last);
+                var input = FightSummarySource.Build(windowed, index, facts, fromT, last);
                 materialize.Stop();
 
                 var board = Stopwatch.StartNew();
-                var built = MirrorStats.ForOverlay(windowed, index, facts, run.HealFacts, fromT, last);
+                var built = DerivedTotals.ForOverlay(windowed, index, facts, run.HealFacts, fromT, last);
                 board.Stop();
 
                 Console.WriteLine($"[cost] {label,8}: {windowed.Count,5} rows / {hits,9:N0} outcomes -> materialize {materialize.ElapsedMilliseconds,6} ms, "

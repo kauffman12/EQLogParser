@@ -22,17 +22,17 @@ internal static class PipelineHarness
 
     internal sealed record RunResult(IReadOnlyList<Fight> Fights);
 
-    // Phase 1: the same run with the CombatMirror tap active and the derivation executed.
+    // Phase 1: the same run with the CombatCapture tap active and the derivation executed.
     // Fights are creation-ordered (EventsNewFight only) — the natural pairing for the derived list.
-    internal sealed record MirrorRunResult(
+    internal sealed record DeriveRunResult(
         IReadOnlyList<Fight> Fights,
         IReadOnlyList<Fight> NonTankingFights,
         IReadOnlyList<DerivedFight> DerivedFights,
         DamageFactTable Facts,
         EntityTimeline Timeline,
 
-        // Captured on every mirror run, exactly as the app's MirrorSession captures it, so a test that says
-        // "the mirror saw the same heals the healing board reads" is testing the wiring users get.
+        // Captured on every capture run, exactly as the app's DeriveEngine captures it, so a test that says
+        // "the capture saw the same heals the healing board reads" is testing the wiring users get.
         HealFactTable HealFacts);
 
     // Side channels are inert in headless runs: no chat archive, no trigger evaluation.
@@ -53,17 +53,17 @@ internal static class PipelineHarness
 
     // Mirror runs additionally feed fully-classified chat to the tap (R3 evidence). This is the
     // same seam the WPF app uses for ChatDB — no Core-side plumbing added for it.
-    private sealed class MirrorChatSinks : IChatSink, ITriggerHook
+    private sealed class CaptureSinks : IChatSink, ITriggerHook
     {
-        private readonly CombatMirror _mirror;
+        private readonly CombatCapture _capture;
 
-        public MirrorChatSinks(CombatMirror mirror) => _mirror = mirror;
+        public CaptureSinks(CombatCapture capture) => _capture = capture;
 
         public void Init()
         {
         }
 
-        public void Add(ChatType chat) => _mirror.HandleChat(chat);
+        public void Add(ChatType chat) => _capture.HandleChat(chat);
 
         public void CheckQuickShare(ChatType chat, string action, double beginTime)
         {
@@ -72,22 +72,22 @@ internal static class PipelineHarness
 
     public static RunResult RunFile(string path)
     {
-        var (fights, _, _, _, _, _) = RunCore(path, withMirror: false);
+        var (fights, _, _, _, _, _) = RunCore(path, withDerivation: false);
         return new RunResult(fights);
     }
 
-    public static MirrorRunResult RunFileWithMirror(string path)
+    public static DeriveRunResult RunFileDerived(string path)
     {
-        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withMirror: true);
-        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline, heals);
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true);
+        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
     }
 
     // onEvent observes every processed damage record from the test thread (same instant the
     // pipeline sees it) — debugging hook for live-state inspection of the current pipeline.
-    public static MirrorRunResult RunFileWithMirror(string path, Action<DamageProcessedEvent> onEvent)
+    public static DeriveRunResult RunFileDerived(string path, Action<DamageProcessedEvent> onEvent)
     {
-        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withMirror: true, onEvent);
-        return new MirrorRunResult(fights, nonTanking, derived, facts, timeline, heals);
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true, onEvent);
+        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
     }
 
     // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
@@ -133,7 +133,7 @@ internal static class PipelineHarness
     };
 #pragma warning restore CS8603 // Possible null reference return.
 
-    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, bool withMirror, Action<DamageProcessedEvent>? onEvent = null)
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, bool withDerivation, Action<DamageProcessedEvent>? onEvent = null)
     {
         EnsureDataStore();
 
@@ -205,18 +205,18 @@ internal static class PipelineHarness
         DamageFactTable? facts = null;
         HealFactTable? heals = null;
         EntityTimeline? timeline = null;
-        CombatMirror? mirror = null;
-        if (withMirror)
+        CombatCapture? capture = null;
+        if (withDerivation)
         {
             facts = new DamageFactTable(100_000);
             heals = new HealFactTable(facts);
             timeline = new EntityTimeline();
-            mirror = new CombatMirror(facts, heals);
-            mirror.Start();
+            capture = new CombatCapture(facts, heals);
+            capture.Start();
         }
 
         using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
-        using var processor = new LogProcessor(path, mirror is not null ? new MirrorChatSinks(mirror) : new NoOpSinks(), new NoOpSinks());
+        using var processor = new LogProcessor(path, capture is not null ? new CaptureSinks(capture) : new NoOpSinks(), new NoOpSinks());
         processor.LinkTo(items);
 
         const int batchSize = 5000;
@@ -269,14 +269,14 @@ internal static class PipelineHarness
             DamageLineParser.CheckSlainQueue(lastTs + 1);
         }
 
-        mirror?.Stop();
+        capture?.Stop();
 
         List<DerivedFight> derived = [];
-        if (withMirror && facts is not null && timeline is not null)
+        if (withDerivation && facts is not null && timeline is not null)
         {
             // Identity evidence for the Phase 2 rules (and report context): the registry's own
             // knowledge with evidence times. The replay itself reads the per-fact registry
-            // verdicts captured by the mirror — that is what IsPetOrPlayerOrMerc answered at
+            // verdicts captured by the capture — that is what IsPetOrPlayerOrMerc answered at
             // each line.
             SeedIdentity(timeline, facts, firstTs, lastTs);
             derived = FightDeriver.Derive(facts);
@@ -299,7 +299,7 @@ internal static class PipelineHarness
         }
 
         /*
-         * Empty tables rather than nulls for a run without the mirror: callers never branch on the mode. The
+         * Empty tables rather than nulls for a run without the capture: callers never branch on the mode. The
          * one table both streams share is decided here so a fallback heal table can never intern names into a
          * different damage table than the one handed back — two index spaces wearing the same numbers is
          * exactly the bug the shared-name design exists to prevent.

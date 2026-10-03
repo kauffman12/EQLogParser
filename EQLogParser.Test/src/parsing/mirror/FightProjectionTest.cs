@@ -44,7 +44,7 @@ public class FightProjectionTest
         Assert.AreEqual("Illuminai", before[0].Name, "unknown-vs-unknown must keep the legacy defender key");
         Assert.AreEqual(50, before[0].DamageToOwner);
 
-        // R4-spell arrives (same pass structure MirrorSession runs): rebuild over the SAME facts.
+        // R4-spell arrives (same pass structure DeriveEngine runs): rebuild over the SAME facts.
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Medium, "R4-spell");
         var after = FightProjection.Build(facts, timeline);
 
@@ -105,7 +105,7 @@ public class FightProjectionTest
         var timeline = new EntityTimeline();
         timeline.SetIdentity("A crazed flesh horror", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
 
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
 
         Assert.AreEqual(1, rows.Count, "the raid's encounter with that mob is the row this belongs to");
@@ -130,7 +130,7 @@ public class FightProjectionTest
         timeline.SetIdentity("A crazed flesh horror", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
         timeline.SetIdentity("A bone walker", IdentityKind.Npc, RuleStrength.Medium, "R14-article");
 
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         Assert.AreEqual(0, FightProjection.Build(facts, timeline, index.OnFact).Count,
             "two mobs on each other is not a raid fight; admitting unplaced victims must not widen this");
         Assert.AreEqual(0, index.UnroutedFactCount);

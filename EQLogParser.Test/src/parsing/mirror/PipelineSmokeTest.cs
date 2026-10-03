@@ -7,7 +7,7 @@ namespace EQLogParser;
 // here we assert structure and parity only.
 // (assembly-level DoNotParallelize lives in src/control/fct/AssemblySettings.cs)
 [TestClass]
-public class MirrorPipelineSmokeTest
+public class PipelineSmokeTest
 {
     private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "mirror", "mini-fight.txt");
 

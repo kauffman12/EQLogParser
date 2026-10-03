@@ -179,7 +179,7 @@ namespace EQLogParser.Mirror
      * builds sides out of what the timeline knows and yesterday's guess must not become today's evidence.
      */
     public static ClassificationReport Build(EntityTimeline? timeline, DamageFactTable? damageFacts,
-                                             HealFactTable? healFacts, MirrorOverrideStore? overrides,
+                                             HealFactTable? healFacts, IdentityOverrideStore? overrides,
                                              PlayerRegistry? registry, IdentityPriorStore? priors = null)
     {
       var names = damageFacts?.InternedNames;
@@ -301,7 +301,7 @@ namespace EQLogParser.Mirror
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
-                              MirrorOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
+                              IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               double damage, double healing, long events, bool hasFacts)
     {
       var kind = IdentityKind.Unknown;
@@ -395,14 +395,14 @@ namespace EQLogParser.Mirror
    * players.txt while "Set as Pet" writes mirror-overrides.txt).
    *
    * Every command leaves the capture untouched — these are readings, not edits of history — so the caller re-runs
-   * the derive afterwards (MirrorSession.RunDeriveAsync) and the whole board updates without a re-parse. Nothing here
+   * the derive afterwards (DeriveEngine.RunDeriveAsync) and the whole board updates without a re-parse. Nothing here
    * touches a dispatcher: keep it callable from a test and from a background command.
    */
   internal static class ClassificationCommands
   {
     /// <summary>"That is a player / pet / merc / NPC." Writes the verdict that outranks every rule, and drops a
     /// rejection: an explicit claim supersedes "make no claim about this name".</summary>
-    public static void SetVerdict(MirrorOverrideStore overrides, PlayerRegistry registry, string name, IdentityKind kind)
+    public static void SetVerdict(IdentityOverrideStore overrides, PlayerRegistry registry, string name, IdentityKind kind)
     {
       overrides.Set(name, kind);
       registry.ClearRejectedPlayer(name);
@@ -410,7 +410,7 @@ namespace EQLogParser.Mirror
 
     /// <summary>"I was wrong, let the rules answer again." The rules' own conclusion comes back on the next derive;
     /// a roster entry learned from loot lines is NOT deleted by this — that is what Reject is for.</summary>
-    public static void ClearVerdict(MirrorOverrideStore overrides, string name) => overrides.Remove(name);
+    public static void ClearVerdict(IdentityOverrideStore overrides, string name) => overrides.Remove(name);
 
     /// <summary>"Forget what this server's older logs concluded about this name." Removes the ledger row only —
     /// verdicts, roster membership and pet mappings are separate files and stay as they are. With no entry left the
@@ -419,7 +419,7 @@ namespace EQLogParser.Mirror
 
     /// <summary>"Not a player, and stop guessing." No identity claim at all (see Row.IsRejected), so the rules can
     /// still conclude something from evidence in this log; pet mappings are left alone.</summary>
-    public static void Reject(MirrorOverrideStore overrides, PlayerRegistry registry, string name)
+    public static void Reject(IdentityOverrideStore overrides, PlayerRegistry registry, string name)
     {
       overrides.Remove(name);
       // The roster's own removal verb IS the tombstone: it writes `!Name`, refuses the learning paths from here on,

@@ -30,8 +30,8 @@ namespace EQLogParser;
  *
  * What it asserts, and why at that strength:
  *   - **Healing must match exactly.** Both boards run the same builder over what should be the same population —
- *     capture fidelity is pinned in MirrorHealCaptureTest, and nothing about a heal is interpreted differently by
- *     the two paths — so any difference here is a bug in the materialization seam (MirrorSummaryHeals), not a
+ *     capture fidelity is pinned in HealFactCaptureTest, and nothing about a heal is interpreted differently by
+ *     the two paths — so any difference here is a bug in the materialization seam (HealSummarySource), not a
  *     disagreement about classification.
  *   - **Damage/tanking agreement is measured, not demanded.** Legacy drops a record whose attacker it cannot place
  *     and folds a pet under an owner only if its registry learned the pair; the derived board reads the ownership
@@ -73,7 +73,7 @@ namespace EQLogParser;
  */
 [TestClass]
 [DoNotParallelize]
-public class MirrorRealLogBoardsTest
+public class RealLogBoardsTest
 {
     // The columns a damage or tanking grid binds, minus the derived ratios (each of which is computed FROM these).
     private static readonly PropertyInfo[] DamageFields =
@@ -107,14 +107,14 @@ public class MirrorRealLogBoardsTest
     ];
 
     /*
-     * The classification the product runs before it derives anything: MirrorSession builds a fresh timeline, seeds it
+     * The classification the product runs before it derives anything: DeriveEngine builds a fresh timeline, seeds it
      * from the registry and replays the rule table inside every derive. PipelineHarness hands back a timeline with the
      * registry seeds ONLY, which is fine for questions about facts and wrong for questions about identity — measured
      * on Incogitable, "how many damage facts have a defender nothing has placed" reads 1,525,786 on a seeded-only
      * timeline against 4,323 once the rules have run, because that is how many mobs R6/R14/R15 place out of the way.
      * Anything that touches IsRaidVictimAt, pet folding or charm ownership has to be measured on this, not on the seed.
      */
-    private static EntityTimeline Classified(PipelineHarness.MirrorRunResult run)
+    private static EntityTimeline Classified(PipelineHarness.DeriveRunResult run)
     {
         var timeline = new EntityTimeline();
         var first = run.Facts.Facts.Length > 0 ? run.Facts.Facts[0].TimeS : 0;
@@ -271,7 +271,7 @@ public class MirrorRealLogBoardsTest
         PlayerRegistry.Instance.Clear();
 
         var sw = Stopwatch.StartNew();
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         Console.WriteLine($"[boards] file={Path.GetFileName(path)} ingest={sw.ElapsedMilliseconds:N0} ms "
                           + $"legacyFights={run.Fights.Count} derivedRows={run.DerivedFights.Count} "
                           + $"damageFacts={run.Facts.Facts.Length:N0} healFacts={run.HealFacts.HealCount:N0}");
@@ -283,7 +283,7 @@ public class MirrorRealLogBoardsTest
          */
         var step = Stopwatch.StartNew();
         var timeline = Classified(run);
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
         Console.WriteLine($"[boards] classify+project={step.ElapsedMilliseconds:N0} ms for {rows.Count} fight rows");
@@ -291,7 +291,7 @@ public class MirrorRealLogBoardsTest
 
         // The same thing the app does with a select-all click, hidden charm pets included.
         var selected = CharmPetRows.WithHiddenPets(rows, rows);
-        var input = MirrorSummaryFights.Build(selected, index, run.Facts);
+        var input = FightSummarySource.Build(selected, index, run.Facts);
         Console.WriteLine($"[boards] projected={rows.Count} rows (pet rows hidden by the grid are added back: {selected.Count}), "
                           + $"materialized={input.Fights.Count}, skippedForNoFacts={input.WithoutDamage}, "
                           + $"materialize={step.ElapsedMilliseconds:N0} ms");
@@ -309,7 +309,7 @@ public class MirrorRealLogBoardsTest
          * test (the record seam). Scope is reported separately below.
          */
         var healWindow = legacyRange;
-        var derivedHealRecords = MirrorSummaryHeals.Materialize(run.HealFacts, healWindow);
+        var derivedHealRecords = HealSummarySource.Materialize(run.HealFacts, healWindow);
         Console.WriteLine($"[boards] heal window = the legacy fight spans; materialized={derivedHealRecords.Count:N0} "
                           + $"of {run.HealFacts.HealCount:N0} captured heals (the rest fall outside those spans)");
 
@@ -525,7 +525,7 @@ public class MirrorRealLogBoardsTest
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var facts = run.Facts;
         var timeline = Classified(run);
 
@@ -609,7 +609,7 @@ public class MirrorRealLogBoardsTest
 
         // Watch every fact the projection files, through the projection's own sink, alongside the index that feeds
         // the board — same call, so what is counted here is what the grid gets.
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var seen = new Dictionary<string, (long Count, long Sum)>();
         var byTarget = new Dictionary<string, (FightProjection.FactTarget Target, long Count, long Sum)>();
         var rowKeys = new Dictionary<string, Dictionary<string, long>>();
@@ -632,7 +632,7 @@ public class MirrorRealLogBoardsTest
 
         var rows = FightProjection.Build(facts, timeline, Sink);
         Sectionizer.StampGroupIds(rows);
-        var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, facts);
+        var input = FightSummarySource.Build(CharmPetRows.WithHiddenPets(rows, rows), index, facts);
 
         var legacyTanking = By(BuildTanking(run.Fights, WindowOf(run.Fights)));
         var derivedTanking = By(BuildTanking(input.Fights, input.AllRanges));
@@ -746,12 +746,12 @@ public class MirrorRealLogBoardsTest
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
         var timeline = Classified(run);
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
-        var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
+        var input = FightSummarySource.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
 
         foreach (var name in wanted)
         {
@@ -822,15 +822,15 @@ public class MirrorRealLogBoardsTest
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
-        var run = PipelineHarness.RunFileWithMirror(path);
+        var run = PipelineHarness.RunFileDerived(path);
 
         var timeline = Classified(run);
-        var index = new MirrorDamageIndex(timeline);
+        var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         Sectionizer.StampGroupIds(rows);
 
         // The select-all shape with the hidden charm pets added back - the same materialization the boards above use.
-        var input = MirrorSummaryFights.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
+        var input = FightSummarySource.Build(CharmPetRows.WithHiddenPets(rows, rows), index, run.Facts);
 
         var legacySpells = SpellAgg(run.Fights);
         var derivedSpells = SpellAgg(input.Fights);

@@ -78,7 +78,7 @@ public class FightProjectionIncrementTest
             $"{because}\n  reference = {string.Join("\n  reference = ", expected)}\n  continued = {string.Join("\n  continued = ", actual)}");
     }
 
-    // The classification MirrorSession builds per pass (roster seed, then the rules over damage and heals).
+    // The classification DeriveEngine builds per pass (roster seed, then the rules over damage and heals).
     private static EntityTimeline Classify(DamageFactTable facts)
       => Classify(facts, null);
 
@@ -112,7 +112,7 @@ public class FightProjectionIncrementTest
     }
 
     /*
-     * The cheap lane of the live cadence (MirrorDeriveCadence.DeriveKind.ProjectionOnly): between expensive passes the session
+     * The cheap lane of the live cadence (DeriveCadence.DeriveKind.ProjectionOnly): between expensive passes the session
      * re-projects the new facts over the timeline INSTANCE the last full pass produced, because rebuilding verdicts is what costs
      * 186-261 ms and folding is what costs 0-5. Two things have to be true for that to be a display rather than a fiction, and both
      * are asserted here: the carry stays open across consecutive cheap folds (otherwise the "cheap" lane re-walks the night every
@@ -363,7 +363,7 @@ public class FightProjectionIncrementTest
 
     /*
      * The property above over real parsed content: feed one log through the cache in growing pieces — re-parsing and
-     * re-classifying each time, exactly as MirrorSession does on every tick — and require the final row list to be the one
+     * re-classifying each time, exactly as DeriveEngine does on every tick — and require the final row list to be the one
      * a single pass over the finished log produces. This is the test that exercises the gate with real evidence arriving in
      * real order: joins, pets, charms, mid-log verdicts, names migrating between rows.
      */
@@ -439,14 +439,14 @@ public class FightProjectionIncrementTest
 
     private sealed record Parsed(DamageFactTable Facts, EntityTimeline Timeline);
 
-    // The same two steps MirrorSession runs per pass: roster seed, then the rules over facts and heals.
+    // The same two steps DeriveEngine runs per pass: roster seed, then the rules over facts and heals.
     private static Parsed ParseAndClassify(string[] lines, string fixtureName)
     {
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-inc-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, fixtureName);   // the fixture's own name keeps any player-name seeding intact
         File.WriteAllLines(log, lines);
 
-        var run = PipelineHarness.RunFileWithMirror(log);
+        var run = PipelineHarness.RunFileDerived(log);
         var facts = run.Facts;
         var timeline = new EntityTimeline();
         var firstT = facts.Facts.Length > 0 ? facts.Facts[0].TimeS : 0;
