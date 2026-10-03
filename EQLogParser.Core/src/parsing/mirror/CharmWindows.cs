@@ -83,6 +83,27 @@ namespace EQLogParser.Mirror
    * exists in trivia. If a capture ever does write one, the rule arrives with the sample line and a closed spell
    * vocabulary (this file's CharmSpells precedent), never with a heuristic.
    */
+  /*
+   * CharmWindowPolicy's carried memory between passes (ClassificationState holds one of these): the charm event
+   * tables the policy builds, the stream cursors that let it feed only what it has not seen, and the previous
+   * pass's window list its fact counters extend from. Nothing here is read outside the policy; a non-frozen pass
+   * clears all of it and rebuilds, so its worst case is the old full walk, never a wrong answer.
+   */
+  internal sealed class CharmCarry
+  {
+    internal readonly Dictionary<string, List<double>> Starts = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly Dictionary<string, List<(double T, string Owner)>> WearOffs = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly List<(double T, string Caster)> CharmCasts = [];
+    internal readonly Dictionary<string, List<double>> Deaths = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly Dictionary<string, List<double>> Broke = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly List<CharmWindow> PreviousWindows = [];
+
+    internal double LastTime;
+    internal int EvidenceCursor;
+    internal int DeathCursor;
+    internal int FactCursor;
+  }
+
   internal static class CharmWindowPolicy
   {
     /*
@@ -109,13 +130,41 @@ namespace EQLogParser.Mirror
     internal const double OwnerCastLookbackS = 8;
 
     public static List<CharmWindow> Apply(IFactTable facts, EntityTimeline timeline)
-    {
-      var starts = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
-      var wearOffs = new Dictionary<string, List<(double T, string Owner)>>(StringComparer.OrdinalIgnoreCase);
-      var charmCasts = new List<(double T, string Caster)>();
+      => Apply(facts, timeline, new CharmCarry(), frozen: false);
 
-      foreach (var e in facts.Evidence)
+    /*
+     * Incremental contract (see ClassificationState): `frozen` promises nothing has moved since this policy last
+     * walked that changes how ALREADY-WALKED events read — no verdict moved, so every past break-signal answer
+     * ("did this charmed name hit one of ours") and every IsOurSide check still stands. The event tables then
+     * take only [cursor..tail], window counters extend from the new fact slice, and windows are rebuilt from the
+     * carried tables — which cost what the charms cost (tens), not what the capture costs (millions).
+     *
+     * Not frozen means rebuild from nothing, exactly as every pass did before this existed, and the caller
+     * re-clocks the rule. Either way the AFFILIATION writes below run over the full rebuilt window list per
+     * pass: unchanged segments hit EntityTimeline's dedupe and move neither the store nor its digest.
+     */
+    public static List<CharmWindow> Apply(IFactTable facts, EntityTimeline timeline, CharmCarry carry, bool frozen)
+    {
+      var starts = carry.Starts;
+      var wearOffs = carry.WearOffs;
+      var charmCasts = carry.CharmCasts;
+
+      if (!frozen)
       {
+        starts.Clear();
+        wearOffs.Clear();
+        charmCasts.Clear();
+        carry.Deaths.Clear();
+        carry.Broke.Clear();
+        carry.PreviousWindows.Clear();
+        carry.LastTime = 0d;
+        carry.EvidenceCursor = carry.DeathCursor = carry.FactCursor = 0;
+      }
+
+      var evidence = facts.Evidence;
+      for (var i = carry.EvidenceCursor; i < evidence.Length; i++)
+      {
+        var e = evidence[i];
         if (e.Kind == EvidenceFact.EvCast)
         {
           // R4 reads these same facts for the caster's identity; here they answer "who charmed it".
@@ -137,33 +186,40 @@ namespace EQLogParser.Mirror
 
       var windows = new List<CharmWindow>();
       if (starts.Count == 0) return windows;
+      carry.EvidenceCursor = evidence.Length;
 
-      var deaths = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
-      foreach (var d in facts.Deaths) AddTime(deaths, facts.NameOf(d.KilledIdx), d.TimeS);
+      var deaths = carry.Deaths;
+      var deathList = facts.Deaths;
+      for (var i = carry.DeathCursor; i < deathList.Length; i++) AddTime(deaths, facts.NameOf(deathList[i].KilledIdx), deathList[i].TimeS);
+      carry.DeathCursor = deathList.Length;
 
       // The break signal: a charmed name hitting somebody the timeline already puts on our side. This
       // runs after every other identity rule for that reason — a defender called ours by R1/R2/R3/R6/R7
       // is what ends a charm, so the identities have to be settled first.
-      var broke = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
-      var lastTime = 0d;
-      foreach (var f in facts.Facts)
+      var broke = carry.Broke;
+      var factList = facts.Facts;
+      var countFrom = carry.FactCursor;   // window counters extend over the same slice this walk covers
+      for (var i = countFrom; i < factList.Length; i++)
       {
-        if (f.TimeS > lastTime) lastTime = f.TimeS;   // the log's own end: a charm past it never closes
+        var f = factList[i];
+        if (f.TimeS > carry.LastTime) carry.LastTime = f.TimeS;   // the log's own end: a charm past it never closes
         var atk = facts.NameOf(f.AtkIdx);
         if (!starts.ContainsKey(atk)) continue;
         var t = f.TimeS;
         if (IsOurSide(timeline, facts.NameOf(f.DefIdx), t)) AddTime(broke, atk, t);
       }
 
+      carry.FactCursor = factList.Length;
+
       foreach (var (name, startTimes) in starts)
       {
         startTimes.Sort();
         var closes = BuildCloses(name, wearOffs, deaths, broke);
-        windows.AddRange(BuildWindows(name, startTimes, closes, charmCasts, lastTime));
+        windows.AddRange(BuildWindows(name, startTimes, closes, charmCasts, carry.LastTime));
       }
 
       windows.Sort(static (a, b) => a.T0.CompareTo(b.T0));
-      CountFacts(facts, windows);
+      CountFacts(facts, windows, carry, countFrom);
 
       foreach (var w in windows)
       {
@@ -352,8 +408,38 @@ namespace EQLogParser.Mirror
              && source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
     }
 
-    private static void CountFacts(IFactTable facts, List<CharmWindow> windows)
+    /*
+     * Window fact counts extend rather than restart: a window's identity across passes is (name, T0) — its span
+     * may CLOSE at a newer event but never moves backward under already-counted facts, because closes arrive
+     * with their own timestamps and every fact walked before that event is older than it. So the counters from
+     * the previous pass's list seed this one, and only [countFrom..tail] gets walked. A full rebuild passes
+     * countFrom 0 with empty carry and reproduces the original walk exactly.
+     */
+    private static void CountFacts(IFactTable facts, List<CharmWindow> windows, CharmCarry carry, int countFrom)
     {
+      if (carry.PreviousWindows.Count > 0)
+      {
+        var done = new Dictionary<string, List<CharmWindow>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var w in carry.PreviousWindows)
+        {
+          if (!done.TryGetValue(w.Name ?? string.Empty, out var list)) done[w.Name ?? string.Empty] = list = [];
+          list.Add(w);
+        }
+
+        foreach (var w in windows)
+        {
+          if (!done.TryGetValue(w.Name ?? string.Empty, out var list)) continue;
+          foreach (var p in list)
+          {
+            if (p.T0 != w.T0) continue;
+            w.FactCount = p.FactCount;
+            w.SameNameFactCount = p.SameNameFactCount;
+            w.CreditedTotal = p.CreditedTotal;
+            break;
+          }
+        }
+      }
+
       if (windows.Count == 0) return;
 
       var byName = new Dictionary<string, List<CharmWindow>>(StringComparer.OrdinalIgnoreCase);
@@ -363,12 +449,14 @@ namespace EQLogParser.Mirror
         list.Add(w);
       }
 
-      foreach (var f in facts.Facts)
+      var list2 = facts.Facts;
+      for (var i = countFrom; i < list2.Length; i++)
       {
+        var f = list2[i];
         var atk = facts.NameOf(f.AtkIdx);
-        if (!byName.TryGetValue(atk, out var list)) continue;
+        if (!byName.TryGetValue(atk, out var wlist)) continue;
 
-        foreach (var w in list)
+        foreach (var w in wlist)
         {
           if (f.TimeS < w.T0 || f.TimeS >= w.T1) continue;
           w.FactCount++;
@@ -377,6 +465,9 @@ namespace EQLogParser.Mirror
           break;
         }
       }
+
+      carry.PreviousWindows.Clear();
+      carry.PreviousWindows.AddRange(windows);
     }
 
     private static void AddTime(Dictionary<string, List<double>> map, string name, double t)

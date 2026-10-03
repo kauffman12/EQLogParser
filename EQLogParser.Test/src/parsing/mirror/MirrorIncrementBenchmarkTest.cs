@@ -65,10 +65,9 @@ public class MirrorIncrementBenchmarkTest
             cache.Project(facts, BuildTimeline(facts, heals));           // the pass that fills the carried state
 
             /*
-             * A tick with nothing new. Classification is still replayed in full here (the rules are aggregate — R7 counts
-             * attack edges over the whole capture, R15 counts heal casters — so it has no incremental form yet); what this
-             * line separates is the two halves: `classify` is that replay, and the number after `+` is the projection, which
-             * is what continuation made cheap.
+             * A tick with nothing new. The `classify` figure here still uses a fresh ClassificationState per pass (this is
+             * the projection benchmark; the classification carry is measured separately at the end) — the number after
+             * `+` is the projection, which continuation made cheap first.
              */
             var idleTimeline = BuildTimeline(facts, heals, out var idleSeedMs, out var idleRulesMs);
             var idleWatch = Stopwatch.StartNew();
@@ -105,6 +104,40 @@ public class MirrorIncrementBenchmarkTest
             var reference = FightProjection.Build(facts, BuildTimeline(facts, heals));
             Assert.AreEqual(reference.Count, tailRows.Count, $"{share:P1}: rows differ from a rebuild");
         }
+
+        ClassificationCarryReport(facts, heals);
+    }
+
+    /*
+     * The classification carry measured on a real night (ClassificationState): first pass = the session's full walk,
+     * quiet pass = every gated rule frozen with nothing new to read. The equality of the quiet pass with a from-zero
+     * replay is the LAW (MirrorIncrementalClassificationTest.CarriedPassMatchesAFullReplayOnRealLog runs it over
+     * this same variable); what this prints is only its cost.
+     */
+    private static void ClassificationCarryReport(DamageFactTable facts, HealFactTable heals)
+    {
+        var state = new ClassificationState();
+        var w0 = Stopwatch.StartNew();
+        var firstT = ClassifyCarried(facts, heals, state);
+        var firstMs = w0.ElapsedMilliseconds;
+        var w1 = Stopwatch.StartNew();
+        var quietT = ClassifyCarried(facts, heals, state);
+        var quietMs = w1.ElapsedMilliseconds;
+
+        var freshT = BuildTimeline(facts, heals);
+        Assert.AreEqual(freshT.StateStamp(), quietT.StateStamp(),
+                        "the carried quiet pass built a different store than the from-zero replay");
+
+        Console.WriteLine($"[increment] classification carry: first pass {firstMs} ms, quiet carried pass {quietMs} ms " +
+                          $"(from-zero replay was reported as `classify` above)");
+    }
+
+    private static EntityTimeline ClassifyCarried(DamageFactTable facts, HealFactTable heals, ClassificationState state)
+    {
+        var timeline = new EntityTimeline();
+        RegistrySeed.Apply(timeline, facts, 0, double.MaxValue);
+        ClassificationRules.Apply(facts, timeline, heals, state);
+        return timeline;
     }
 
     /*

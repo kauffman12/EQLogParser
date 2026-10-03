@@ -1,3 +1,4 @@
+#nullable enable annotations
 namespace EQLogParser.Mirror
 {
   // Strength scale for the rule catalog (docs/batch-parsing-plan.md): higher wins on conflict and
@@ -158,8 +159,22 @@ namespace EQLogParser.Mirror
     private const double OurPetTailS = 300;                   // keeps our own trailing facts folded after the top-ups stop
 
     // heals is optional: the damage stream alone classifies exactly as it did before this table existed.
-    public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable heals = null)
+    /*
+     * `state` carries every expensive stage's aggregates and stream cursors across passes; see ClassificationState
+     * for the full contract. Passing null runs the rule book exactly as it always did — which is what a test, the
+     * name census, and a session's first pass do. Handing in a carried state makes each costly walk resume where
+     * it stopped while that rule's BOUNDARY DIGEST still matches the store at the same point of this pass: equal
+     * means nothing upstream moved, so resuming reproduces a full replay term for term; any change rebuilds that
+     * rule from zero, exactly as this method always did. Two properties this keeps whole: `timeline` is a fresh
+     * store every pass (MirrorSession.Classify), so a rule's walk sees what the stages before it produced THIS
+     * pass — never its own earlier passes' claims, never later stages' — and carried aggregates are replayed onto
+     * that store in stage order. Overrides apply last and enter no rule's input, which is why removal self-heals
+     * on the next pass exactly as before (docs R10) and no invalidation hook exists for them.
+     */
+    public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable? heals = null,
+                                         ClassificationState? state = null)
     {
+      state ??= new ClassificationState();   // throwaway state == the original from-zero replay
       var outcome = new MirrorRuleOutcome();
 
       /*
@@ -172,8 +187,8 @@ namespace EQLogParser.Mirror
        * carry gate notices and re-folds rather than mixing rule books across passes.
        */
       RunStage("R0 local player", outcome, () => ApplyLocalPlayer(timeline));
-      RunStage("line evidence", outcome, () => ApplyEvidence(facts, timeline, outcome));
-      RunStage("R5 ownership", outcome, () => ApplyOwnershipFlags(facts, timeline));
+      RunStage("line evidence", outcome, () => ApplyEvidence(facts, timeline, outcome, state));
+      RunStage("R5 ownership", outcome, () => ApplyOwnershipFlags(facts, timeline, state));
       RunStage("R6 npcs.txt", outcome, () => ApplyNpcDatabase(facts, timeline));
 
       // Name shape before the graph, because the graph reads it: an article-shaped defender is no longer an
@@ -181,7 +196,7 @@ namespace EQLogParser.Mirror
       RunStage("R14 name shape", outcome, () => ApplyNameShape(facts, timeline));
 
       // Before R7 for the same reason - our-side defenders are what R7-side needs to call an attacker hostile.
-      if (heals is not null) RunStage("R15 healed by raid side", outcome, () => ApplyHealedByRaidSide(facts, heals, timeline));
+      if (heals is not null) RunStage("R15 healed by raid side", outcome, () => ApplyHealedByRaidSide(facts, heals, timeline, state));
 
       // The other marker the client writes inside a name. After R15 on purpose: R15 only considers names still
       // Unknown, so a summon whose name happens to carry a comma would lose the heal evidence to punctuation.
@@ -190,17 +205,27 @@ namespace EQLogParser.Mirror
       // Charm after everything that decides sides, before the graph: a window ends when the charmed name
       // swings at somebody these rules put on our side, so it has to see settled identities.
       var charms = new List<CharmWindow>();
-      RunStage("R9 charm windows", outcome, () => charms.AddRange(CharmWindowPolicy.Apply(facts, timeline)));
+      RunStage("R9 charm windows", outcome,
+               () =>
+               {
+                 state.Charms ??= new CharmCarry();
+                 var boundary = timeline.StateStamp();
+                 var frozen = state.DigestR9 == boundary;
+                 state.DigestR9 = boundary;
+                 charms.AddRange(CharmWindowPolicy.Apply(facts, timeline, state.Charms, frozen));
+               });
       outcome.Charms.AddRange(charms);
 
-      RunStage("R7 graph", outcome, () => ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))]));
+      RunStage("R7 graph", outcome,
+               () => ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))], state));
 
       // Last, because it reads everything above: which NPC-verdict names are actually ours. It has to run
       // after the charm pass to know which names a window already explains, and after the graph because a
       // name R7 could classify as an attacker is not one the raid owns.
       if (heals is not null)
         RunStage("R18 healed-pet intervals", outcome,
-                 () => outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline, [.. charms.Select(w => w.Name)])));
+                 () => outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline,
+                                                                        [.. charms.Select(w => w.Name)], state)));
 
       return outcome;
     }
@@ -339,17 +364,32 @@ namespace EQLogParser.Mirror
     // charm broke, so they come later in Apply through CharmWindowPolicy. What this pass does is stamp the
     // fact that a name was charmed at all (identity stays Npc — a charmed mob is an NPC on our side for a
     // while, never a player).
-    private static void ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome)
+    /*
+     * The evidence sweep is pure input: every assertion here is a function of the evidence row itself (identity
+     * asserts do not read verdicts), so it needs no clock — it just resumes at state.EvidenceCursor and lets the
+     * carried target-frame sets hold the history. The ladder below then runs over the FULL carried sets each
+     * pass: its SetIdentity writes dedupe against the carried timeline, so re-running the ladder costs a hash
+     * walk and moves neither store nor digest, while an evidence row arriving late still re-decides its name.
+     */
+    private static void ApplyEvidence(IFactTable facts, EntityTimeline timeline, MirrorRuleOutcome outcome,
+                                      ClassificationState state)
     {
+
+      // Replay of everything this stage ever asserted, onto this pass's fresh store, before anything new is
+      // walked. The full ladder below re-derives its own asserts from the carried sets, so only the direct
+      // writes need a list; identical replays hit the timeline's dedupe and move no digest.
+      foreach (var claim in state.EvidenceClaims) claim.Apply(timeline);
 
       // Target-frame verdicts and player-side behavior are collected per name and applied AFTER
       // the sweep as a deterministic ladder (order of evidence arrival must not matter).
-      var targetNpc = new HashSet<string>(StringComparer.Ordinal);
-      var targetPlayer = new HashSet<string>(StringComparer.Ordinal);
-      var playerBehavior = new HashSet<string>(StringComparer.Ordinal);
+      var targetNpc = state.TargetNpc;
+      var targetPlayer = state.TargetPlayer;
+      var playerBehavior = state.PlayerBehavior;
 
-      foreach (var e in facts.Evidence)
+      var evidence = facts.Evidence;
+      for (var ei = state.EvidenceCursor; ei < evidence.Length; ei++)
       {
+        var e = evidence[ei];
         var name = facts.NameOf(e.NameIdx);
         switch (e.Kind)
         {
@@ -367,17 +407,17 @@ namespace EQLogParser.Mirror
           case EvidenceFact.EvLeftGroup:
           case EvidenceFact.EvRaidLeader:
             playerBehavior.Add(name);
-            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R3-presence", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R3-presence", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvMercJoinedGroup:
             // legacy isPossiblePlayerName said no - an oddly-named hireling, authoritative enough.
-            timeline.SetIdentity(name, IdentityKind.Merc, RuleStrength.Strong, "R3-merc", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Merc, RuleStrength.Strong, "R3-merc", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvWhoRoster:
             playerBehavior.Add(name);
-            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Certain, "R2-who", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R2-who", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvChat:
@@ -385,7 +425,7 @@ namespace EQLogParser.Mirror
             if (PlayerChannels.Contains(facts.AuxOf(e.AuxIdx) ?? string.Empty) && name != ChatType.You)
             {
               playerBehavior.Add(name);
-              timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R3-chat", double.NegativeInfinity);
+              Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R3-chat", double.NegativeInfinity);
             }
             break;
 
@@ -394,7 +434,7 @@ namespace EQLogParser.Mirror
             // player character carries a flask or a loaf. Strong rather than Certain, so a Targeted (NPC) verdict
             // on the same name still wins (docs/combat-mirror-design.md R17).
             playerBehavior.Add(name);
-            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvEyeOwnedStrike:
@@ -405,12 +445,12 @@ namespace EQLogParser.Mirror
              * the parser only reports a striker whose name is INSIDE the eye).
              */
             playerBehavior.Add(name);
-            timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCalledToOwner:
-            timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Certain, "R5-called", double.NegativeInfinity);
-            timeline.AddAffiliation(AffiliationKind.Friendly, name, e.TimeS, double.PositiveInfinity, RuleStrength.Certain, "R5-called");
+            Claim(timeline, state,name, IdentityKind.Pet, RuleStrength.Certain, "R5-called", double.NegativeInfinity);
+            Claim(timeline, state,AffiliationKind.Friendly, name, e.TimeS, double.PositiveInfinity, RuleStrength.Certain, "R5-called");
             break;
 
           case EvidenceFact.EvCharmStart:
@@ -419,7 +459,7 @@ namespace EQLogParser.Mirror
             // charm confirm line writes "a skeleton" and every line where that mob is the SUBJECT writes
             // "A skeleton": EntityTimeline keys identity case-insensitively, so SideAt finds this assignment
             // whichever spelling it was asked with (docs/combat-mirror-design.md).
-            timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCharmEnd:
@@ -431,18 +471,20 @@ namespace EQLogParser.Mirror
             var castSpell = facts.AuxOf(e.AuxIdx);
             if (IsClassSafeCast(castSpell))
             {
-              timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
+              Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
             }
             else if (IsPetCastSpell(castSpell))
             {
               // Strong, not Certain: the spell proves the caster is somebody's pet, but says nothing
               // about WHOSE - a verified owner claim (R5, Certain) still outranks this, and a name
               // that is also a verified player keeps Player.
-              timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
+              Claim(timeline, state,name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
             }
             break;
         }
       }
+
+      state.EvidenceCursor = evidence.Length;
 
       // Target-frame ladder (Certain beats everything behavioral, regardless of arrival order):
       //  Player frame wins over NPC frame but is reported; NPC frame + player-shaped behavior
@@ -468,26 +510,67 @@ namespace EQLogParser.Mirror
       }
     }
 
-    private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline)
+    /*
+     * The claim is a function of the name text alone, so both input streams resume at their cursors: a summon is
+     * claimed when its NAME first enters the pool (names are append-only ids), and an `Owner:` flagged fact is
+     * claimed when the flag first streams past. The carried `claimed` set costs one hash insert per claim ever and
+     * keeps a re-run of both sweeps free (no clock needed: no verdict is read anywhere below).
+     */
+    /*
+     * The evidence stage's write seam: the assertion lands on the timeline AND in the replay list (deduped -
+     * ten thousand join-lines name one raider, and the replay should hold it once). The target-frame ladder
+     * below writes through `timeline` directly instead: its asserts are re-derived from the carried sets every
+     * pass, so they need no list.
+     */
+    private static void Claim(EntityTimeline timeline, ClassificationState state, string name, IdentityKind kind,
+                              int strength, string source, double effectiveFrom = double.NegativeInfinity)
     {
+      timeline.SetIdentity(name, kind, strength, source, effectiveFrom);
+      var claim = new TimelineClaim(false, name, (int)kind, strength, source, effectiveFrom, 0d, null);
+      if (state.EvidenceClaimed.Add(claim)) state.EvidenceClaims.Add(claim);
+    }
+
+    private static void Claim(EntityTimeline timeline, ClassificationState state, AffiliationKind kind, string name,
+                              double t0, double t1, int strength, string source, string owner = null)
+    {
+      timeline.AddAffiliation(kind, name, t0, t1, strength, source, owner);
+      var claim = new TimelineClaim(true, name, (int)kind, strength, source, t0, t1, owner);
+      if (state.EvidenceClaimed.Add(claim)) state.EvidenceClaims.Add(claim);
+    }
+
+    private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline, ClassificationState state)
+    {
+      // Replay of every claim ever made, onto this pass's fresh store, before the sweeps resume; a scratch
+      // `claimed` set per name keeps chain handling identical to the original visit.
+      foreach (var claimedName in state.OwnerClaimNames)
+        ClaimOwnedSummon(timeline, claimedName, new HashSet<string>(StringComparer.Ordinal));
+
       // The verdict depends only on the NAME, so it is taken from the name pool: one pass per distinct name.
       // Sweeping names rather than facts is what lets a summon that never swung a weapon be owned too -
       // "Tuona`s ward" appears in these captures only as something a raid member heals, and a ward nobody
       // owns is a stray row in the display list forever.
-      var claimed = new HashSet<string>(StringComparer.Ordinal);
-      foreach (var name in facts.InternedNames)
+      var claimed = state.OwnerClaimed;
+      var names = facts.InternedNames;
+      for (var i = state.R5PoolCursor; i < names.Count; i++)
       {
+        var name = names[i];
         if (OwnerInName(name) is null) continue;
+        if (!claimed.Contains(name)) state.OwnerClaimNames.Add(name);   // registered for replay onto future fresh stores
         ClaimOwnedSummon(timeline, name, claimed);
       }
+      state.R5PoolCursor = names.Count;
 
       // Explicit "Owner: X" annotations: the line says ownership without saying it in the name, and only the
       // flag knows. (Heal lines have no raw text on the fact, so they carry the name-shape case above.)
-      foreach (var f in facts.Facts)
+      var factsList = facts.Facts;
+      for (var i = state.R5FactCursor; i < factsList.Length; i++)
       {
-        if ((f.Flags & DamageFact.FlagOwnerInLine) == 0) continue;
-        ClaimOwnedSummon(timeline, facts.NameOf(f.AtkIdx), claimed);
+        if ((factsList[i].Flags & DamageFact.FlagOwnerInLine) == 0) continue;
+        var flagged = facts.NameOf(factsList[i].AtkIdx);
+        if (!claimed.Contains(flagged)) state.OwnerClaimNames.Add(flagged);
+        ClaimOwnedSummon(timeline, flagged, claimed);
       }
+      state.R5FactCursor = factsList.Length;
     }
 
     private static void ClaimOwnedSummon(EntityTimeline timeline, string name, HashSet<string> claimed)
@@ -631,11 +714,39 @@ namespace EQLogParser.Mirror
      * roster, joins, guild/group/raid speech, ownership, target frame). A Medium name healing a Medium name
      * would be an inference reasoning from itself, and that is how a charmed raid turns into an army.
      */
-    private static void ApplyHealedByRaidSide(IFactTable facts, IHealFactTable heals, EntityTimeline timeline)
+    /*
+     * Incremental form: the heal walk and the swing-back veto resume at their cursors while the rule's CLOCK
+     * still matches the timeline. The clock is load-bearing here in two directions the cursors cannot see: a
+     * healer that reaches Strong retroactively qualifies every heal it ever cast (identity intervals span the
+     * whole log, so "healer was not ours" is a verdict-dependent answer), and the veto colours each edge by its
+     * DEFENDER's side. Any moved verdict rebuilds both aggregates from zero, which reproduces the original walk
+     * term for term.
+     *
+     * The veto is counted over ALL attackers, not just current candidates: a name can become a candidate long
+     * after its attacks streamed past the cursor, and today's full pass would count those older swings. The eval
+     * below re-checks the admission filter (a name classified since it was admitted must not keep being claimed,
+     * exactly as the from-zero walk excludes it) and runs over the carried candidates every pass - SetIdentity
+     * dedupe makes that free on the timeline.
+     */
+    private static void ApplyHealedByRaidSide(IFactTable facts, IHealFactTable heals, EntityTimeline timeline,
+                                              ClassificationState state)
     {
-      var candidates = new Dictionary<string, HealEdgeAgg>(StringComparer.Ordinal);
-      foreach (var h in heals.Heals)
+      var boundary = timeline.StateStamp();
+      var frozen = state.DigestR15 == boundary;
+      state.DigestR15 = boundary;
+      if (!frozen)
       {
+        state.R15Candidates.Clear();
+        state.R15Vetos.Clear();
+        state.R15HealCursor = 0;
+        state.R15VetoCursor = 0;
+      }
+
+      var candidates = state.R15Candidates;
+      var healList = heals.Heals;
+      for (var i = state.R15HealCursor; i < healList.Length; i++)
+      {
+        var h = healList[i];
         var healer = heals.NameOf(h.HealerIdx);
         var healed = heals.NameOf(h.HealedIdx);
         if (healer == healed) continue;                       // self-heal proves nothing about anybody else
@@ -652,23 +763,32 @@ namespace EQLogParser.Mirror
         agg.Lines++;
         agg.AddHealer(healer);
       }
-
-      if (candidates.Count == 0) return;
+      state.R15HealCursor = healList.Length;
 
       // Veto: a name that hits our side is not ours, however gently it was healed. A boss rained on by raid
       // AoE heals is the exact trap, and it answers for itself by swinging back.
-      foreach (var f in facts.Facts)
+      var vetos = state.R15Vetos;
+      var factsList = facts.Facts;
+      for (var i = state.R15VetoCursor; i < factsList.Length; i++)
       {
+        var f = factsList[i];
         var atk = facts.NameOf(f.AtkIdx);
-        if (!candidates.TryGetValue(atk, out var agg)) continue;
-        agg.Edges++;
-        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) agg.RaidSideEdges++;
+        if (!vetos.TryGetValue(atk, out var veto)) veto = default;
+        veto.Edges++;
+        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
+        vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
       }
+      state.R15VetoCursor = factsList.Length;
 
+      // Every carried candidate is re-evaluated each pass - today's from-zero walk asserts over its whole
+      // candidate dict too, and SetIdentity dedupe makes the re-assertion free. No admission re-check is
+      // needed here: a frozen gate proves this store still says "Unknown" for every admitted name, and an
+      // unfrozen pass rebuilt the candidates from scratch.
       foreach (var (name, agg) in candidates)
       {
         if (agg.Lines < HealEdgeMinLines || agg.Healers.Count < HealEdgeMinHealers) continue;
-        if (agg.Edges > 0 && (double)agg.RaidSideEdges / agg.Edges > HealEdgeMaxRaidAttackShare) continue;
+        if (vetos.TryGetValue(name, out var veto) && veto.Edges > 0 &&
+            (double)veto.RaidSideEdges / veto.Edges > HealEdgeMaxRaidAttackShare) continue;
 
         timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Medium, "R15-healed", double.NegativeInfinity);
       }
@@ -679,7 +799,7 @@ namespace EQLogParser.Mirror
     private static bool IsRaidSideKind(IdentityKind kind)
       => kind is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Pet;
 
-    private sealed class HealEdgeAgg
+    internal sealed class HealEdgeAgg
     {
       public int Lines;
       public int Edges;
@@ -727,13 +847,36 @@ namespace EQLogParser.Mirror
      * history the rules cannot see, and RegistrySeed supplies it in warm runs from petmapping.txt - an ownerless interval
      * leaves AttackerOwner null rather than inventing a raider.
      */
+    /*
+     * Incremental form, same shape as R15: the stage gates on its OWN boundary digest (the NPC verdicts, healer
+     * strengths and charm names it reads are all upstream of it, and anything upstream that moved re-coloured
+     * this pass's store), then the heal walk and the swing-back veto resume at their cursors. Evaluation runs
+     * over the FULL carried candidates every pass - as the from-zero walk did over its whole dict - so a minted
+     * interval re-extends as top-ups stream in, and an unchanged re-add hits AddAffiliation's dedupe and moves
+     * no digest.
+     */
     private static List<string> ApplyHealedPetIntervals(IFactTable facts, IHealFactTable heals, EntityTimeline timeline,
-                                                        IReadOnlyCollection<string> charmExplained)
+                                                        IReadOnlyCollection<string> charmExplained,
+                                                        ClassificationState state)
     {
       var minted = new List<string>();
-      var candidates = new Dictionary<string, HealEdgeAgg>(StringComparer.Ordinal);
-      foreach (var h in heals.Heals)
+
+      var boundary = timeline.StateStamp();
+      var frozen = state.DigestR18 == boundary;
+      state.DigestR18 = boundary;
+      if (!frozen)
       {
+        state.R18Candidates.Clear();
+        state.R18Vetos.Clear();
+        state.R18HealCursor = 0;
+        state.R18VetoCursor = 0;
+      }
+
+      var candidates = state.R18Candidates;
+      var healList = heals.Heals;
+      for (var i = state.R18HealCursor; i < healList.Length; i++)
+      {
+        var h = healList[i];
         var healer = heals.NameOf(h.HealerIdx);
         var healed = heals.NameOf(h.HealedIdx);
         if (healer == healed) continue;                          // self-heal proves nothing about anybody else
@@ -751,23 +894,29 @@ namespace EQLogParser.Mirror
         agg.AddHealer(healer);
         if (h.TimeS > agg.LastS) agg.LastS = h.TimeS;
       }
+      state.R18HealCursor = healList.Length;
 
-      if (candidates.Count == 0) return minted;
-
-      // The swing-back veto, aggregated over the same damage stream R15 reads.
-      foreach (var f in facts.Facts)
+      // The swing-back veto, counted over ALL attackers (a name can become a candidate long after its attacks
+      // streamed past the cursor, and a from-zero walk counts those older swings), gated below by share.
+      var vetos = state.R18Vetos;
+      var factsList = facts.Facts;
+      for (var i = state.R18VetoCursor; i < factsList.Length; i++)
       {
+        var f = factsList[i];
         var atk = facts.NameOf(f.AtkIdx);
-        if (!candidates.TryGetValue(atk, out var agg)) continue;
-        agg.Edges++;
-        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) agg.RaidSideEdges++;
+        if (!vetos.TryGetValue(atk, out var veto)) veto = default;
+        veto.Edges++;
+        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
+        vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
       }
+      state.R18VetoCursor = factsList.Length;
 
       foreach (var (name, agg) in candidates)
       {
         if (charmExplained.Contains(name)) continue;
         if (agg.Lines < OurPetMinHealLines || agg.Healers.Count < OurPetMinCasters) continue;
-        if (agg.Edges > 0 && (double)agg.RaidSideEdges / agg.Edges > OurPetMaxRaidAttackShare) continue;
+        if (vetos.TryGetValue(name, out var veto) && veto.Edges > 0 &&
+            (double)veto.RaidSideEdges / veto.Edges > OurPetMaxRaidAttackShare) continue;
 
         timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, agg.LastS + OurPetTailS,
                                RuleStrength.Strong, "R18-healedpet");
@@ -798,8 +947,27 @@ namespace EQLogParser.Mirror
     // out of players. Unclassified defenders are allowed up to MaxUnknownEdgeShare of the attacker's
     // edges: a handful of unnamed trash in a night of named ones used to be enough to leave a real
     // mercenary unclassified for the whole capture.
-    private static void ApplyGraphInference(IFactTable facts, EntityTimeline timeline, List<(string Name, double T0, double T1)> friendlyWindows)
+    /*
+     * Incremental form: gated on this stage's boundary digest. The store at this point holds seed + prior
+     * stages ONLY - a fresh timeline per pass means R7's walk never colours edges with its OWN earlier
+     * verdicts (that would let the vote bootstrap itself), exactly as before; what it now skips is re-walking
+     * edges whose endpoints' verdicts provably have not moved, since any upstream change IS the digest.
+     * Evaluation runs over every carried attacker each pass, which is what the from-zero dict rebuild did.
+     */
+    private static void ApplyGraphInference(IFactTable facts, EntityTimeline timeline,
+                                            List<(string Name, double T0, double T1)> friendlyWindows,
+                                            ClassificationState state)
     {
+      var boundary = timeline.StateStamp();
+      var frozen = state.DigestR7 == boundary;
+      state.DigestR7 = boundary;
+      if (!frozen)
+      {
+        // Same law as R15/R18: a rebuilt aggregate must be rebuilt over EVERY edge, cursor included.
+        state.GraphAggs.Clear();
+        state.R7FactCursor = 0;
+      }
+
       var kinds = new Dictionary<string, IdentityKind>(StringComparer.Ordinal);
       foreach (var name in facts.InternedNames)
       {
@@ -813,9 +981,11 @@ namespace EQLogParser.Mirror
         list.Add((t0, t1));
       }
 
-      var aggByAttacker = new Dictionary<string, SideAgg>(StringComparer.Ordinal);
-      foreach (var f in facts.Facts)
+      var aggByAttacker = state.GraphAggs;
+      var factList = facts.Facts;
+      for (var fi = state.R7FactCursor; fi < factList.Length; fi++)
       {
+        var f = factList[fi];
         var atk = facts.NameOf(f.AtkIdx);
         if (kinds[atk] != IdentityKind.Unknown) continue;
 
@@ -849,6 +1019,7 @@ namespace EQLogParser.Mirror
           default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
         }
       }
+      state.R7FactCursor = factList.Length;
 
       foreach (var (atk, agg) in aggByAttacker)
       {
@@ -866,7 +1037,7 @@ namespace EQLogParser.Mirror
       }
     }
 
-    private sealed class SideAgg
+    internal sealed class SideAgg
     {
       // Unclassified defenders, counted rather than flagged: see MaxUnknownEdgeShare.
       public int UnknownEdges;

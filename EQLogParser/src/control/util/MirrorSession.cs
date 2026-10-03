@@ -130,6 +130,19 @@ namespace EQLogParser
      * full pass (a pet folding onto its raiders, a charm flipping a name) lands one full cadence later.
      */
     private EntityTimeline? _carriedTimeline;
+
+    /*
+     * Rule aggregates and stream cursors carried across classifying passes so the costly walks resume where they
+     * stopped (ClassificationState is the full contract). The design keeps two properties whole: every pass still
+     * builds its timeline FRESH, so a rule's walk sees what the stages before it produced this pass - never its
+     * own earlier passes' claims; and each gated rule rebuilds from zero whenever its boundary digest moved,
+     * which is "something upstream changed", so a carried aggregate can lag knowledge, never contradict it.
+     * Overrides enter no rule's input and need no invalidation: they apply last, exactly as before. One instance
+     * per capture - a new session makes a new one, and the first pass of a log is a full walk whatever was
+     * classified before it.
+     */
+    private readonly ClassificationState _classification = new();
+
     // Consecutive derive passes that THREW. Drives MirrorDeriveCadence.RetryDelayS's backoff in QuietTick and is
     // zeroed by any completed pass; nothing disables anything - the surfaces keep trying at the ladder's pace for as
     // long as this session owns them.
@@ -189,7 +202,7 @@ namespace EQLogParser
       {
         var timeline = new EntityTimeline();
         RegistrySeed.Apply(timeline, _facts, _mirror.FirstEventTime, _mirror.LastEventTime);
-        ClassificationRules.Apply(_facts, timeline, _heals);
+        ClassificationRules.Apply(_facts, timeline, _heals, _classification);
         MirrorOverrideStore.Instance.Apply(timeline);
 
         return ClassificationReport.Build(timeline, _facts, _heals, MirrorOverrideStore.Instance,
@@ -628,7 +641,8 @@ namespace EQLogParser
       // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
       // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
       // same stream for an NPC-verdict name the whole raid keeps topping up.
-      var ruleOutcome = ClassificationRules.Apply(_facts, timeline, _heals);
+      // The carried classification serves this fallback too: same capture, same aggregates (see _classification).
+      var ruleOutcome = ClassificationRules.Apply(_facts, timeline, _heals, _classification);
 
       /*
        * A stage that threw or retired is a bug in ONE check, and the pass continues on every verdict the other stages

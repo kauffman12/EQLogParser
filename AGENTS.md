@@ -314,10 +314,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   XOR'd because one tuple can legitimately be recorded in both stores where an XOR pair cancels to nothing. **This leans on classification being
   append-deterministic**: replaying over a longer fact prefix reproduces every earlier insertion, so a rule that *revises* a conclusion in place, or
   any removal/revision API on `EntityTimeline`, must move the digest itself — nothing else would notice and the failure is a stale row with plausible
-  numbers. `MirrorIncrementBenchmarkTest` (gated `EQLP_MIRROR_INCREMENT=<log>`) prints the projection/classification split; classification is what is
-  left, and it is not one thing — on Incogitable: **R9 charm windows 83 ms, R18 healed-pet intervals 67, R15 heal breadth 54, R7 graph 36, line evidence
-  15-25, R5 ownership sweep 15**, and the rest ~0. Making those incremental means a per-rule watermark plus a gate for roster/override/npcs.txt edits, which
-  move verdicts without adding facts — and note that when a rule does find something new the projection rebuilds anyway, so only a 3 s→1 s floor is at stake. Numbers and reasoning: docs/DesignNotes.md → "A mirror pass that starts where the last one stopped".
+  numbers. `MirrorIncrementBenchmarkTest` (gated `EQLP_MIRROR_INCREMENT=<log>`) prints the projection/classification split.
+  Classification IS incremental now too (`ClassificationState`, passed by `MirrorSession` to `ClassificationRules.Apply`), and its design law is that the
+  **timeline stays fresh per pass** — each rule carries only its OWN aggregates (cursors + edge/candidate tables + registered claim lists) and replays them
+  onto the fresh store in stage order, so no stage ever sees another stage's claims that the from-zero replay would have hidden. Each gated rule (R5, R9,
+  R15, R7, R18; evidence claims need no gate — they are pure functions of facts) compares this pass's **boundary `StateStamp()`** taken at its own stage
+  entry against the stamp its aggregates were built under: moved verdicts ⇒ discard aggregates AND cursors and walk from zero. Three laws each learned by a
+  real failure: (1) partial rules must **register every claim they make** for replay — R5 swept with a persistent `claimed` set but recorded nothing, so
+  carried passes lost all `R5-owner` verdicts and `Odin` quietly reappeared as `Player/R15-healed` (a laundered source changes who owns the damage); (2) an
+  unfreeze must reset the **cursor** with the aggregate — R7 cleared `GraphAggs` but resumed at the old fact cursor and rebuilt a graph from only the newest
+  edges; (3) R15/R18's healer gate reads **Strong**, which `RegistrySeed` (strength 8) deliberately does not satisfy, so tests must give healers an evidence
+  line (`EvJoinedRaid`) rather than a registry entry. A carried quiet pass over Incogitable measures **2 ms** against ~380 ms from zero; equality with a
+  from-zero replay is the law — `MirrorIncrementalClassificationTest` pins it in fixtures (incl. a late roster join re-counting every older heal) and
+  `CarriedPassMatchesAFullReplayOnRealLog` runs it over the gated capture. Numbers and reasoning: docs/DesignNotes.md → "A mirror pass that starts where the last one stopped".
 - **A fight's duration counts seconds inclusively**: `DerivedFight.DurationSeconds` is `Math.Max(1, LastTime - BeginTime + 1)` because
   that +1 is what the product already calls a duration — `TimeSegment.Total` (`end - begin + 1`) is the DPS denominator of every board number, and
   `FightManager`'s tooltip (`Time Alive: Ns`) uses it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its

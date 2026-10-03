@@ -4341,6 +4341,30 @@ again matches one full pass; a gap landing exactly on the boundary matches; a ch
 closed in one pass; the index travels with its rows; and `GrowingAParsedLogOnePassAtATimeEndsAtTheSameFightList` replays
 each fixture log tick by tick against the single-pass list.
 
+### The classification half joins the carry (2026-11)
+
+The projection's 0–5 ms continued passes were being paced by a 378 ms from-zero classification replay every full tick —
+R9 charm windows, R15 heal breadth, R7's graph and friends re-walking 1.9 M facts to re-reach verdicts they had already
+reached. The carry (`ClassificationState`) deliberately does **not** carry the timeline: every pass still builds a fresh
+`EntityTimeline`, and each gated rule (R5, R9, R15, R7, R18) carries only its own aggregates — stream cursors, edge and
+candidate tables, charm event tables, and a registered list of the claims it ever asserted — replaying them onto the fresh
+store in stage order. That preserves the rulebook's visibility law exactly: no stage ever sees a verdict the from-zero
+replay would have hidden from it (a carried timeline would have leaked R7/R18 claims into earlier stages, e.g. R9's
+break signal). The gate per rule is its own **boundary `StateStamp()`** captured at stage entry: unchanged means no
+upstream verdict moved, so the rule's inputs cannot have changed either and the cursors resume; moved means discard the
+aggregates *and the cursors* and walk from zero. R7's first cut reset the aggregate but not the cursor and rebuilt the
+graph from only the newest edges; R5 swept with a persistent `claimed` set but registered nothing for replay, so carried
+passes silently lost every `R5-owner` verdict — and `Odin` came back as `Player/R15-healed`, which is what a laundered
+verdict source looks like: same kind, different reason, different owner. Both shipped caught only by diffing every
+interned name's verdict+source between carried and from-zero passes over the real capture — that diff is now the gated
+law (`CarriedPassMatchesAFullReplayOnRealLog`), with fixtures for the late roster join (a healer verified mid-log must
+re-count every heal it ever cast: the cursor may never outrun a verdict) and the process-health reset.
+
+Measured on Incogitable (1,891,875 damage facts, 420,115 heals): from-zero classification **378 ms**, carried quiet pass
+**2 ms**, first (session-warming) pass ~398 ms; a live-tail full tick is now ~2 ms of rules + whatever the projection
+gate allows. `RegistrySeed` deliberately seeds at strength 8 — below R15/R18's Strong healer gate — so a registry name
+alone never launders other verdicts, and tests must reach for an evidence line (`EvJoinedRaid`), not `AddVerifiedPlayer`.
+
 ## A mob's victim is never noise: how the tank board lost raiders (2026-10)
 
 Asked whether legacy can be removed yet, the honest answer needed more than the fight-row count, so the boards bar was
