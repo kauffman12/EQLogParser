@@ -74,6 +74,7 @@ namespace EQLogParser
     private DeriveEngine _session;
     private bool _currentShowBreaks;
     private bool _currentShowHp;
+    private bool _currentShowTanking;
 
     // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
     private bool _searchPlaceholder;
@@ -94,6 +95,10 @@ namespace EQLogParser
       // compared, so one checkbox's meaning should not fork between them.
       mirrorShowHp.IsChecked = _currentShowHp = ConfigUtil.IfSet("NpcShowHitPoints");
       mirrorDamageColumn.IsHidden = !_currentShowHp;
+
+      // Same inheritance for the tanking dial, same saved word ("NpcShowTanking", default on): an operator who
+      // hides mob-only rows in the legacy table keeps that filter on arrival.
+      mirrorShowTanking.IsChecked = _currentShowTanking = ConfigUtil.IfSet("NpcShowTanking", true);
 
       // The time column takes the theme's date-time width like every other table that stamps a line, rather
       // than a hand-picked number that stops fitting when the font scale changes.
@@ -430,6 +435,21 @@ namespace EQLogParser
       }
     }
 
+    // "Include Fights with only Tanking data", the legacy table's third dial, ported. Same pane-readiness
+    // sentinel as ShowBreakChanged/ShowHpChanged (docs/DesignNotes.md -> "Handlers that XAML fires early"):
+    // the synthetic IsChecked="True" toggle lands mid-InitializeComponent and must not write the setting
+    // before the constructor reads it.
+    private void ShowTankingChanged(object sender, RoutedEventArgs e)
+    {
+      if (mirrorGrid?.View is null) return;
+      if (mirrorShowTanking.IsChecked.HasValue && mirrorShowTanking.IsChecked != _currentShowTanking)
+      {
+        _currentShowTanking = mirrorShowTanking.IsChecked == true;
+        ConfigUtil.SetSetting("NpcShowTanking", _currentShowTanking);
+        ApplyFilter();
+      }
+    }
+
   /*
      * R10 - the operator's verdict on a name, entered here and kept by IdentityOverrideStore.
      *
@@ -511,7 +531,8 @@ namespace EQLogParser
     }
 
     /*
-     * The inactivity checkbox is this grid's only filter: search deliberately does NOT hide rows. The point of a
+     * Two row dials, no more - Inactivity (dividers) and Tanking (rows whose whole story is something hitting
+     * us). Search deliberately does NOT hide rows. The point of a
      * name here is to fight that raid event - the row needs to be HIGHLIGHTED and IN VIEW so the user can right-
      * click it and select the whole group, not removed from the list they were reading. That is the legacy table's
      * behavior, ported whole: one current result at a time, found on a debounce while typing, cycled with Enter /
@@ -524,7 +545,15 @@ namespace EQLogParser
       mirrorGrid.View.RefreshFilter();
     }
 
-    private bool IsShown(DerivedFightRow row) => _currentShowBreaks || !row.IsDivider;
+    private bool IsShown(DerivedFightRow row) => row.IsDivider
+      ? _currentShowBreaks
+      : _currentShowTanking || ShownWhenTankingHidden(row.Fight);
+
+    // Legacy swapped whole lists for this dial (_fights vs _nonTankingFights); one predicate over the derived
+    // rows says the same thing. DamageToOwner is the raid's output ON this row, so zero means the line exists
+    // only because the anchor was hitting us. A person-row reads above zero whenever her person was struck,
+    // so nobody vanishes under the dial. Split out because it is the whole decision - and testable.
+    internal static bool ShownWhenTankingHidden(DerivedFight? fight) => fight is null || fight.DamageToOwner > 0;
 
     // The search's own state, walking the VISIBLE view (not _rows) both directions from the last hit - the same
     // fields and arithmetic FightTable.SearchForNpc uses; ported, not re-invented.
