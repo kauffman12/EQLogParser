@@ -9,7 +9,13 @@ namespace EQLogParser
   // One row of the derived fight list: a fight, or an inactivity divider (D5 — legacy's
   // IsInactivity pseudo-row shape: "Inactivity > mm:ss"). Strings are formatted once at build
   // time; the grid binds plain properties.
-  internal sealed class MirrorFightRow
+  // INotifyPropertyChanged is LOAD-BEARING as an interface, not just as an event: WPF's binding engine checks
+  // whether the item IMPLEMENTS the interface and never looks for a bare `PropertyChanged` event by name. A row
+  // class that declares the event without implementing it fails SILENTLY — every realized row keeps its painted
+  // value while only rows realized AFTER the change (scrolled into view) show it. That is exactly how the search
+  // mark stopped moving between visible rows: cycling worked, ScrollInView was a correct no-op, and the green
+  // appeared only on the row scrolled to. MirrorFightRowTest pins the interface.
+  internal sealed class MirrorFightRow : INotifyPropertyChanged
   {
     // Row numbers are not data: the grid's row-header template shows the live position, exactly
     // like the current Fight Table - divider rows count, hidden dividers renumber. No `No` field.
@@ -28,7 +34,7 @@ namespace EQLogParser
 
     // The row search highlighted. The one live property on an otherwise value-object row - it changes after
     // construction, which is why the grid's DataTrigger reaches it through PropertyChanged (legacy's own
-    // Fight.IsSearchResult works the same way).
+    // Fight.IsSearchResult works the same way — and legacy's Fight really does implement the interface).
     private bool _isSearchResult;
 
     public bool IsSearchResult
