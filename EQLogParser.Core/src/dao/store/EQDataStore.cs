@@ -105,6 +105,11 @@ namespace EQLogParser
       // article-shaped. Word order alone keeps the Focused row out of the plain family's prefix.
       ("Celestial Regeneration", SpellClass.Clr),
       ("Focused Celestial Regeneration", SpellClass.Clr),
+      // The druid's healing AA (user-added 2026-10): 46 DB ranks (a complete I..XLVI run; a rank
+      // beyond it stays silent by the gate), all single-bit Dru (32); every one of the 83 cast
+      // lines names a proper noun (Tilwedarx, Tuona), zero possessive or article-shaped. The ~7.9k
+      // heal lines naming the spell claim nothing, per the target rule.
+      ("Spirit of the Wood", SpellClass.Dru),
       // MULTI-BIT entries are identity-safe but class-AMBIGUOUS (Warrior OR Berserker): the rank
       // proves its caster is a player - these are AA-derived warcries, which mobs are not given -
       // while GetSpellClass deliberately stays null so no registry write coin-flips a class.

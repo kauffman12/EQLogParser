@@ -70,6 +70,9 @@ public class MirrorRulesTest
         AssertIdentity(timeline, "Brakka", IdentityKind.Player, "R4-spell");
         AssertIdentity(timeline, "Relaraa", IdentityKind.Player, "R4-spell");
 
+        // R4 tier 1, druid family (rank XXVII of the complete I-XLVI run).
+        AssertIdentity(timeline, "Faenwyn", IdentityKind.Player, "R4-spell");
+
         // R6: multi-word NPC-database name asserts Npc at Medium. The damage parser stores the
         // attacker exactly as the log spells it ("A bixie commander"), so resolve by case match.
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
@@ -151,7 +154,7 @@ public class MirrorRulesTest
         foreach (var spell in new[] { "Boastful Bellow XLVII", "Boastful Conclusion LIII", "Frenzy of Spirit XIII",
                                       "Paragon of Spirit XLI", "Focused Paragon of Spirit XXXIV", "Hobble of Spirits VI",
                                       "Hobble of Spirits Snare VI", "Tireless Sprint VIII", "Celestial Regeneration XLII",
-                                      "Focused Celestial Regeneration XXVII" })
+                                      "Focused Celestial Regeneration XXVII", "Spirit of the Wood XLVI" })
         {
             Assert.IsNotNull(EQDataStore.Instance.GetSpellClass(spell), $"{spell} must resolve through the family seed");
         }
@@ -191,13 +194,13 @@ public class MirrorRulesTest
     }
 
     [TestMethod]
-    public void VersionedFamilyListsAreElevenAndOneNoMore()
+    public void VersionedFamilyListsAreTwelveAndOneNoMore()
     {
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
-        Assert.AreEqual(11, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(12, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 
         // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
@@ -206,7 +209,7 @@ public class MirrorRulesTest
             "Boastful Bellow", "Boastful Conclusion", "Frenzy of Spirit", "Paragon of Spirit",
             "Focused Paragon of Spirit", "Hobble of Spirits", "Tireless Sprint",
             "Celestial Regeneration", "Focused Celestial Regeneration",
-            "Battle Leap Warcry", "Battle Leap",
+            "Spirit of the Wood", "Battle Leap Warcry", "Battle Leap",
         }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
     }
 
