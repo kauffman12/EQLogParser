@@ -1,4 +1,4 @@
-using EQLogParser.Mirror;
+using EQLogParser;
 using System;
 using log4net;
 using System.Reflection;

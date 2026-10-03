@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 namespace EQLogParser
 {

@@ -19,7 +19,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 using Application = System.Windows.Application;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;

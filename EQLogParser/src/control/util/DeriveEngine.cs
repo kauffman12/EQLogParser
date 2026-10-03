@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 /*
  * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional

@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 using System.Windows.Threading;
 
 namespace EQLogParser

@@ -218,9 +218,9 @@ public class PlayerRegistryPersistenceTest
     Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Xanathan"),
       "a mapping that quotes a rejected name re-claimed it as a player");
 
-    var timeline = new Mirror.EntityTimeline();
-    Mirror.RegistrySeed.Apply(timeline, new Mirror.DamageFactTable(), double.NaN, double.NaN);
-    Assert.AreEqual(Mirror.IdentityKind.Unknown, timeline.Identity("Xanathan"),
+    var timeline = new EntityTimeline();
+    RegistrySeed.Apply(timeline, new DamageFactTable(), double.NaN, double.NaN);
+    Assert.AreEqual(IdentityKind.Unknown, timeline.Identity("Xanathan"),
       "RegistrySeed claimed a rejected name from the pet mapping");
   }
 

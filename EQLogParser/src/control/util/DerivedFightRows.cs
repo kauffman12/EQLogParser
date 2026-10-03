@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 namespace EQLogParser
 {

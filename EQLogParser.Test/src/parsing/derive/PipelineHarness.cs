@@ -1,0 +1,338 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+using EQLogParser;
+
+namespace EQLogParser;
+
+// Headless runner for the current (per-line) pipeline: feeds a log file through LogProcessor
+// exactly as LogReader does, with no WPF in sight. Mirrors LogReader.HandleLine item shaping —
+// only lines past the 28-char header with a parseable date are enqueued, Ts is the dotnet-epoch
+// second for the line, IsMonitor is false. Collects fights via FightManager events.
+internal static class PipelineHarness
+{
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private static EQDataStore? _dataStore;
+
+    internal sealed record RunResult(IReadOnlyList<Fight> Fights);
+
+    // Phase 1: the same run with the CombatCapture tap active and the derivation executed.
+    // Fights are creation-ordered (EventsNewFight only) — the natural pairing for the derived list.
+    internal sealed record DeriveRunResult(
+        IReadOnlyList<Fight> Fights,
+        IReadOnlyList<Fight> NonTankingFights,
+        IReadOnlyList<DerivedFight> DerivedFights,
+        DamageFactTable Facts,
+        EntityTimeline Timeline,
+
+        // Captured on every capture run, exactly as the app's DeriveEngine captures it, so a test that says
+        // "the capture saw the same heals the healing board reads" is testing the wiring users get.
+        HealFactTable HealFacts);
+
+    // Side channels are inert in headless runs: no chat archive, no trigger evaluation.
+    private sealed class NoOpSinks : IChatSink, ITriggerHook
+    {
+        public void Init()
+        {
+        }
+
+        public void Add(ChatType chat)
+        {
+        }
+
+        public void CheckQuickShare(ChatType chat, string action, double beginTime)
+        {
+        }
+    }
+
+    // Mirror runs additionally feed fully-classified chat to the tap (R3 evidence). This is the
+    // same seam the WPF app uses for ChatDB — no Core-side plumbing added for it.
+    private sealed class CaptureSinks : IChatSink, ITriggerHook
+    {
+        private readonly CombatCapture _capture;
+
+        public CaptureSinks(CombatCapture capture) => _capture = capture;
+
+        public void Init()
+        {
+        }
+
+        public void Add(ChatType chat) => _capture.HandleChat(chat);
+
+        public void CheckQuickShare(ChatType chat, string action, double beginTime)
+        {
+        }
+    }
+
+    public static RunResult RunFile(string path)
+    {
+        var (fights, _, _, _, _, _) = RunCore(path, withDerivation: false);
+        return new RunResult(fights);
+    }
+
+    public static DeriveRunResult RunFileDerived(string path)
+    {
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true);
+        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
+    }
+
+    // onEvent observes every processed damage record from the test thread (same instant the
+    // pipeline sees it) — debugging hook for live-state inspection of the current pipeline.
+    public static DeriveRunResult RunFileDerived(string path, Action<DamageProcessedEvent> onEvent)
+    {
+        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true, onEvent);
+        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
+    }
+
+    // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
+    // Public because tests that only touch EQDataStore (no log run) still need the host injection.
+    internal static void EnsureDataStore()
+    {
+        Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        if (_dataStore == null)
+        {
+            // Host injection mirroring App.xaml.cs (the app supplies resx labels; the default
+            // lookup returns null, which would leave EQDataStore's class maps empty headless).
+            CombatRecordLookup.ClassLabelByEnumName = ClassLabel;
+            _dataStore = new EQDataStore();
+            EQDataStore.Instance = _dataStore;
+        }
+    }
+
+    // Canonical EQ2 class labels keyed by uppercased SpellClass enum names — the same resource
+    // keys App.xaml.cs resolves through the resx ("WAR", "SHD", ...; "*_COLOR" returns null here).
+    // The host contract is nullable-oblivious (CombatRecordLookup.ClassLabelByEnumName defaults to `=> null` and
+    // EQDataStore tests the answer for emptiness), so returning null for a "*_COLOR" name is the documented answer,
+    // not a possible-null slip: same pragma pair DamageLineParserTest uses for the host-injected lookups.
+#pragma warning disable CS8603 // Possible null reference return.
+    private static string ClassLabel(string resourceName) => resourceName switch
+    {
+        "WAR" => "Warrior",
+        "CLR" => "Cleric",
+        "PAL" => "Paladin",
+        "RNG" => "Ranger",
+        "SHD" => "Shadow Knight",
+        "DRU" => "Druid",
+        "MNK" => "Monk",
+        "BRD" => "Bard",
+        "ROG" => "Rogue",
+        "SHM" => "Shaman",
+        "NEC" => "Necromancer",
+        "WIZ" => "Wizard",
+        "MAG" => "Magician",
+        "ENC" => "Enchanter",
+        "BST" => "Beastlord",
+        "BER" => "Berserker",
+        _ => null
+    };
+#pragma warning restore CS8603 // Possible null reference return.
+
+    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, bool withDerivation, Action<DamageProcessedEvent>? onEvent = null)
+    {
+        EnsureDataStore();
+
+        // EMU captures (local/logs/emu/) parse with the app's EnableEmuParsing switch on: DamageLineParser carries a
+        // second grammar for them - Heroes Forge `(Owner: X)` lines, old-EMU `scores a critical hit! (N)` pairing,
+        // absorbed-damage shapes. EQLP_EMU=1 marks this run's file as one, exactly like settings.txt does in the app
+        // (MainWindow reads it once before any parse). Restored with the other process state at the end of this
+        // method: live-format logs MISPARSE when the flag is left on.
+        var priorEmu = AppSettings.IsEmuParsingEnabled;
+        AppSettings.IsEmuParsingEnabled = Environment.GetEnvironmentVariable("EQLP_EMU") == "1";
+
+        // The app derives the local player from the log filename (eqlog_(Player)_(Server).txt);
+        // do the same so You-mapping and the R0-local rule behave as they will in production.
+        // Fixture names never match, so synthetic runs keep PlayerName untouched.
+        var selfMatch = System.Text.RegularExpressions.Regex.Match(
+            Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (selfMatch.Success) ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
+
+        // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
+        DamageLineParser.ResetProcessState();
+
+        // The registry is a process-lifetime singleton the parsers read for every name lookup;
+        // without this, verifications from earlier tests' logs leak into this run's routing
+        // (measured: the same real log compared as 4473 vs 4274 current fights across two runs).
+        // Same pattern LineParsersTest uses. In tests ConfigUtil.ServerName is empty, so Clear()
+        // does not Save() anything.
+        PlayerRegistry.Instance.Clear();
+
+        // Pin the managers for the duration of this run and restore whatever preceded it: parser
+        // statics (DamageLineParser.FightManager) and the default singleton are process-global and
+        // other test classes set/leak them.
+        Action<DamageProcessedEvent>? observer = null;
+        if (onEvent is not null)
+        {
+            observer = e => onEvent(e);
+            DamageLineParser.EventsDamageProcessed += observer;
+        }
+
+        var priorInstance = FightManager.Instance;
+        var priorParserFm = DamageLineParser.FightManager;
+        var fm = new FightManager();
+        FightManager.Instance = fm;
+        DamageLineParser.FightManager = fm;
+
+        var fights = new List<Fight>();
+        var nonTanking = new List<Fight>();
+        void Collect(Fight f)
+        {
+            lock (fights)
+            {
+                fights.Add(f);
+            }
+        }
+
+        void CollectNonTanking(Fight f)
+        {
+            lock (nonTanking)
+            {
+                nonTanking.Add(f);
+            }
+        }
+
+        // EventsNewFight fires once per creation (TryAdd) — creation order, the pairing key for
+        // the derived list. The old RunResult also included the non-tanking events (duplicates),
+        // which the comparison must not do.
+        fm.EventsNewFight += Collect;
+        fm.EventsNewNonTankingFight += CollectNonTanking;
+
+        DamageFactTable? facts = null;
+        HealFactTable? heals = null;
+        EntityTimeline? timeline = null;
+        CombatCapture? capture = null;
+        if (withDerivation)
+        {
+            facts = new DamageFactTable(100_000);
+            heals = new HealFactTable(facts);
+            timeline = new EntityTimeline();
+            capture = new CombatCapture(facts, heals);
+            capture.Start();
+        }
+
+        using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
+        using var processor = new LogProcessor(path, capture is not null ? new CaptureSinks(capture) : new NoOpSinks(), new NoOpSinks());
+        processor.LinkTo(items);
+
+        const int batchSize = 5000;
+        var batch = new List<LogReaderItem>(batchSize);
+        double firstTs = double.NaN;
+        double lastTs = double.NaN;
+        foreach (var line in File.ReadLines(path))
+        {
+            if (line.Length <= 28) continue;
+            var dt = DateUtil.ParseStandardDate(line);
+            if (dt == DateTime.MinValue) continue;
+            var ts = DateUtil.ToDotNetSeconds(dt);
+            if (double.IsNaN(firstTs)) firstTs = ts;
+            lastTs = ts;
+            batch.Add(new LogReaderItem(line, ts, false));
+            if (batch.Count >= batchSize)
+            {
+                foreach (var item in batch) items.Add(item);
+                batch.Clear();
+            }
+        }
+
+        foreach (var item in batch) items.Add(item);
+        items.CompleteAdding();
+
+        // Wait for a full drain before Dispose (which would otherwise race the consumer and drop
+        // the tail). Also surfaces consumer exceptions that LogProcessor only logs in-app.
+        // Cap scales with file size: fixtures get 60 s, a 588 MB log gets ~20 — a hard failure
+        // here means the pipeline stalled, not that we ran out of patience.
+        var drainCap = TimeSpan.FromSeconds(Math.Max(60, new FileInfo(path).Length / (1024.0 * 1024) * 2));
+        var completion = processor.Completion;
+        if (completion is not null)
+        {
+            try
+            {
+                if (!completion.Wait(drainCap))
+                    throw new TimeoutException($"pipeline did not drain within {drainCap.TotalSeconds:F0}s ({path})");
+            }
+            catch (AggregateException ae) when (ae.InnerException is not TimeoutException)
+            {
+                throw ae.InnerException ?? ae;
+            }
+        }
+
+        // A slain line only flushes when a later-timestamped record calls CheckSlainQueue — in the
+        // app that's just the next line of an ongoing log. End-of-file logs never get it, so we
+        // simulate exactly one second of follow-up here.
+        if (!double.IsNaN(lastTs))
+        {
+            DamageLineParser.CheckSlainQueue(lastTs + 1);
+        }
+
+        capture?.Stop();
+
+        List<DerivedFight> derived = [];
+        if (withDerivation && facts is not null && timeline is not null)
+        {
+            // Identity evidence for the Phase 2 rules (and report context): the registry's own
+            // knowledge with evidence times. The replay itself reads the per-fact registry
+            // verdicts captured by the capture — that is what IsPetOrPlayerOrMerc answered at
+            // each line.
+            SeedIdentity(timeline, facts, firstTs, lastTs);
+            derived = LegacyFightReplay.Derive(facts);
+        }
+
+        if (observer is not null) DamageLineParser.EventsDamageProcessed -= observer;
+        DamageLineParser.ResetProcessState();
+        DamageLineParser.FightManager = priorParserFm;
+        FightManager.Instance = priorInstance;
+        AppSettings.IsEmuParsingEnabled = priorEmu;
+
+        processor.Dispose();
+
+        List<Fight> snapshot;
+        List<Fight> nonTankingSnapshot;
+        lock (fights)
+        {
+            snapshot = [.. fights];
+            nonTankingSnapshot = [.. nonTanking];
+        }
+
+        /*
+         * Empty tables rather than nulls for a run without the capture: callers never branch on the mode. The
+         * one table both streams share is decided here so a fallback heal table can never intern names into a
+         * different damage table than the one handed back — two index spaces wearing the same numbers is
+         * exactly the bug the shared-name design exists to prevent.
+         */
+        facts ??= new DamageFactTable(1);
+        heals ??= new HealFactTable(facts);
+
+        return (snapshot, nonTankingSnapshot, derived, facts, heals, timeline ?? new EntityTimeline());
+    }
+
+    // Registry end-state + evidence times as manual identity assignments. Strengths stay below the
+    // Phase 2 rule tiers so rule output overrides this seed when both are present (R10 > R2 > …).
+    // Cold/warm registry semantics live in Core so the app session and headless runs cannot drift.
+    private static void SeedIdentity(EntityTimeline timeline, IFactTable facts, double logStartS, double logEndS)
+        => RegistrySeed.Apply(timeline, facts, logStartS, logEndS);
+
+    // Phase 0 milestone: dump current-pipeline fight state as JSON for eyeballing and, in Phase 1,
+    // as the "current" side of the comparison report.
+    public static string ToJson(RunResult result)
+    {
+        var snapshot = result.Fights.Select(f => new
+        {
+            f.Name,
+            f.Dead,
+            f.DamageTotal,
+            f.DamageHits,
+            f.TankTotal,
+            f.TankHits,
+            f.BeginDamageTime,
+            f.LastDamageTime,
+            Players = f.PlayerDamageTotals.ToDictionary(kv => kv.Key, kv => new { kv.Value.Damage, kv.Value.PetOwner })
+        });
+
+        return JsonSerializer.Serialize(snapshot, JsonOpts);
+    }
+}

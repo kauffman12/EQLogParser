@@ -1,4 +1,4 @@
-using EQLogParser.Mirror;
+using EQLogParser;
 
 namespace EQLogParser
 {

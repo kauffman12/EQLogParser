@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 namespace EQLogParser.Wpf.Test
 {

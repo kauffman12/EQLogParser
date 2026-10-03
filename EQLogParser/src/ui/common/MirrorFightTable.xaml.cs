@@ -8,14 +8,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 namespace EQLogParser
 {
   /*
    * The derived-fight-list twin of FightTable: same grid, the same three columns in the legacy order (Initial Hit
    * Time | HP | Name, with duration and hits on the row tooltip like legacy's), the same search/HP/Inactivity header -
-   * different data source (CombatCapture → ClassificationRules → FightDeriver → Sectionizer). Selection feeds the
+   * different data source (CombatCapture → ClassificationRules → LegacyFightReplay → Sectionizer). Selection feeds the
    * damage summary from derived facts (see DerivedSelectionChanged), and the right-click menu is where R10 lives:
    * say what a name actually is (Set as Player / Mercenary / Pet / NPC), which saves per server and re-derives.
    * Cross-grid selection sync with the legacy list is still ahead of it.

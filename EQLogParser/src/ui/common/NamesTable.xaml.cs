@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-using EQLogParser.Mirror;
+using EQLogParser;
 
 /*
  * Annotations only, no null-flow analysis: this project builds with Nullable=disable, and the census API genuinely

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using EQLogParser;
-using EQLogParser.Mirror;
+using EQLogParser;
 
 /*
  * RangeSpike — a measurement spike, NOT a feature. It is deliberately outside EQLogParser.sln so it can
@@ -119,7 +119,7 @@ internal static class Program
 
         var facts = new DamageFactTable(1 << 16);
         var heals = new HealFactTable(facts, 1 << 14);
-        var mirror = new CombatMirror(facts, heals);
+        var mirror = new CombatCapture(facts, heals);
         mirror.Start();
 
         var from = o.From;
@@ -810,7 +810,7 @@ internal static class Program
 
     private static string? Abs(string? path) => string.IsNullOrEmpty(path) ? path : System.IO.Path.GetFullPath(path);
 
-    private sealed class ChatSink(CombatMirror mirror) : IChatSink, ITriggerHook
+    private sealed class ChatSink(CombatCapture mirror) : IChatSink, ITriggerHook
     {
         public void Init() { }
         public void Add(ChatType chat) => mirror.HandleChat(chat);
