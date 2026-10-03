@@ -99,7 +99,19 @@ namespace EQLogParser
       ("Hobble of Spirits", SpellClass.Bst),
       // The berserker's sprint spell: 8 ranks in spells.txt, single-bit Ber mask on every one; the
       // log carries it as `Tolzol begins casting Tireless Sprint VIII.` (named raid casters only).
-      ("Tireless Sprint", SpellClass.Ber)
+      ("Tireless Sprint", SpellClass.Ber),
+      // The cleric's healing discipline (user-added 2026-10): 45 + 29 DB ranks, all single-bit Clr;
+      // 601 `begins casting` lines by proper-noun healers (Trelania, Farzi, Lariiah), zero
+      // article-shaped. Word order alone keeps the Focused row out of the plain family's prefix.
+      ("Celestial Regeneration", SpellClass.Clr),
+      ("Focused Celestial Regeneration", SpellClass.Clr),
+      // MULTI-BIT entries are identity-safe but class-AMBIGUOUS (Warrior OR Berserker): the rank
+      // proves its caster is a player - these are AA-derived warcries, which mobs are not given -
+      // while GetSpellClass deliberately stays null so no registry write coin-flips a class.
+      ("Battle Leap Warcry", SpellClass.War | SpellClass.Ber),
+      // The sibling jump spell, same War|Ber mask on all 13 ranks; 470 `begins casting` lines over
+      // the corpus, casters Fllint/Tolzol/Rune/Shennron - proper-noun raid names, zero article-shaped.
+      ("Battle Leap", SpellClass.War | SpellClass.Ber)
     ];
 
     // Pet-cast spell families: this exact spell is an ability of a beastlord's pet and never of the
@@ -127,6 +139,11 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
+
+    // Versioned-family ranks whose family carries a multi-bit class mask (`Battle Leap Warcry II`):
+    // the data knows the rank, so R4's gate opens and the caster is claimed Player - but no class
+    // label exists (Warrior OR Berserker), so GetSpellClass stays null and nothing writes one.
+    private readonly ConcurrentDictionary<string, byte> _classAmbiguousFamilyRanks = new();
 
     private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
@@ -333,11 +350,18 @@ namespace EQLogParser
       // the class label describes the spellbook owner and also feeds the registry's active-class map.
       foreach (var spell in _allSpellData)
       {
-        if ((TryGetVersionedFamily(spell.Name, ClassSafeSpellFamilies, out var familyClass)
-             || TryGetVersionedFamily(spell.Name, PetCastSpellFamilies, out familyClass))
-          && _classNames.TryGetValue(familyClass, out var familyClassName))
+        if (TryGetVersionedFamily(spell.Name, ClassSafeSpellFamilies, out var familyClass)
+          || TryGetVersionedFamily(spell.Name, PetCastSpellFamilies, out familyClass))
         {
-          _spellsToClass[spell.Name] = familyClassName;
+          if (_classNames.TryGetValue(familyClass, out var familyClassName))
+          {
+            _spellsToClass[spell.Name] = familyClassName;
+          }
+          else if ((familyClass & (familyClass - 1)) != 0)
+          {
+            // Multi-bit family: rank known for the identity gate, deliberately no class label.
+            _classAmbiguousFamilyRanks[spell.Name] = 1;
+          }
         }
       }
 
@@ -474,6 +498,12 @@ namespace EQLogParser
     // cast-based writes; an unset host label lookup answers empty, which PlayerRegistry refuses.
     internal string GetClassLabel(SpellClass spellClass) =>
       _classNames.TryGetValue(spellClass, out var name) ? name : string.Empty;
+
+    // True for a versioned-family rank the data files know whose class cannot be narrowed below a
+    // set (War|Ber). R4 accepts these through its "the data knows this rank" gate; the registry's
+    // class map never sees them.
+    internal bool IsClassAmbiguousFamilyRank(string name) =>
+      !string.IsNullOrEmpty(name) && _classAmbiguousFamilyRanks.ContainsKey(name);
 
     // Catalog R4 tier 1: spell identity alone proves the caster is a player of one class, no
     // corroboration needed. The curated epics/Minstrels and every single-bit Spire row are seeded

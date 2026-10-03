@@ -482,13 +482,19 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
-  `EQDataStore.ClassSafeSpellFamilies` (closed at **7**: Boastful Bellow/Boastful Conclusion → Bard,
-  Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker)
-  claims the caster of
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **11**: Boastful Bellow/Boastful Conclusion → Bard,
+  Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker,
+  Celestial Regeneration/Focused Celestial Regeneration → Cleric, Battle Leap Warcry/Battle Leap →
+  Warrior **or** Berserker) claims the caster of
   `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
   match and must be the whole tail**: versionless never prints (measured: 0 lines) and matches nothing,
-  and a rank absent from `spells.txt` passes the text gate but fails the `GetSpellClass` gate — new
-  expansion content is **silent, never guessed**. Census 2022→2026 + THJ: 17,304 Bellow + 14,689
+  and a rank absent from `spells.txt` passes the text gate but fails the data gate — new
+  expansion content is **silent, never guessed**. A family entry may be **multi-bit** (War|Ber): those
+  ranks claim Player Certain while `GetSpellClass` **stays null and no class is ever written** —
+  seeding puts them in `_classAmbiguousFamilyRanks` only, and `ClassificationRules.IsClassSafeCast`
+  (internal for tests) accepts label-or-ambiguous as "the data knows this rank". Assert both directions
+  (`IsClassSafeCast` true + `GetSpellClass` null): the null half is what fails silently if seeding ever
+  regresses into the label path, and a coin-flipped class column is worse than silence. Census 2022→2026 + THJ: 17,304 Bellow + 14,689
   Conclusion lines, ~25k Frenzy/Paragon, **zero article-shaped and zero possessive-pet casters**;
   engine yield 3 real names with no other evidence (Chori/Dram/Metalplayer, Unknown→Player).
   **`Hobble of Spirits Snare <rank>` is a different spell than `Hobble of Spirits <rank>`** — the pet's
@@ -502,8 +508,11 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   attackers, but every attacker already held a stronger claim (zero yield = bug surface), so modifier
   masks stay stats-only. Class flows with no new system: the seeded `_spellsToClass` feeds
   `CastLineParser`'s existing registry `SetActivePlayerClass` path. Pinned by `MirrorRulesTest`
-  (`VersionedFamilyListsAreSevenAndOneNoMore`, `...Split_Hobble...`); numbers: docs/combat-mirror-design.md
-  → "Casting words are identity".
+  (`VersionedFamilyListsAreElevenAndOneNoMore`; `DerivedFightsMatchLiveParseFactForFact` is where the
+  Hobble split lives in a test). Battle Leap Warcry itself prints
+  **zero lines** in every local capture — it ships on user assertion plus the spell DB's War|Ber column,
+  with plain Battle Leap's 470 zero-article casts as nearest corroboration; numbers:
+  docs/combat-mirror-design.md → "Casting words are identity", "Identity certain, class one of two".
 - **The frenzy verb claims a class, never a person — and classes are time-bounded.** `X frenzies on Y for N`
   is the berserker frenzy AA (85,685 lines, zero article-shaped actors; a monster's frenzy reads
   `is struck by a frenzied assault` and names no attacker), so `DamageLineParser`'s melee branch — gated on

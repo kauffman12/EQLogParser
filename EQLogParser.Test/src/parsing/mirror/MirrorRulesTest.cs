@@ -65,6 +65,11 @@ public class MirrorRulesTest
         // R4 tier 1, berserker family: a name nothing else claims, proven by one sprint cast.
         AssertIdentity(timeline, "Krietz", IdentityKind.Player, "R4-spell");
 
+        // R4 tier 1, class-AMBIGUOUS rank (War|Ber): the caster is a player for certain, the class
+        // is one of two and nothing writes one. And the cleric's healing discipline.
+        AssertIdentity(timeline, "Brakka", IdentityKind.Player, "R4-spell");
+        AssertIdentity(timeline, "Relaraa", IdentityKind.Player, "R4-spell");
+
         // R6: multi-word NPC-database name asserts Npc at Medium. The damage parser stores the
         // attacker exactly as the log spells it ("A bixie commander"), so resolve by case match.
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
@@ -145,10 +150,28 @@ public class MirrorRulesTest
         // data/spells.txt) so the second gate on both cast rules passes for real captures.
         foreach (var spell in new[] { "Boastful Bellow XLVII", "Boastful Conclusion LIII", "Frenzy of Spirit XIII",
                                       "Paragon of Spirit XLI", "Focused Paragon of Spirit XXXIV", "Hobble of Spirits VI",
-                                      "Hobble of Spirits Snare VI", "Tireless Sprint VIII" })
+                                      "Hobble of Spirits Snare VI", "Tireless Sprint VIII", "Celestial Regeneration XLII",
+                                      "Focused Celestial Regeneration XXVII" })
         {
             Assert.IsNotNull(EQDataStore.Instance.GetSpellClass(spell), $"{spell} must resolve through the family seed");
         }
+
+        // Class-AMBIGUOUS ranks (multi-bit War|Ber families): the identity gate opens, the class
+        // map deliberately stays shut - the caster is a player, the class is one of two, and a
+        // coin flip in the registry's class column is worse than silence. Assert BOTH directions;
+        // "the cast claims nothing" and "the class resolves" would each also pass a broken seed.
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Battle Leap Warcry II"));
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Battle Leap VII"));
+        Assert.IsTrue(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Battle Leap Warcry II"));
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Battle Leap Warcry II"));
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Battle Leap VII"));
+
+        // The rank gate holds the ambiguous families exactly like the single-class ones. Warcry has
+        // ranks I-III in the data and plain Battle Leap I-XIII - "Warcry IX" is the trap where one
+        // sibling's rank exists and the other's does not.
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Battle Leap Warcry IX"));
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Battle Leap XIV"));
+        Assert.IsFalse(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Battle Leap Warcry IX"));
 
         // Roman-rank anchor: the bare family never matches (no capture prints it versionless).
         Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Boastful Bellow"));
@@ -168,13 +191,13 @@ public class MirrorRulesTest
     }
 
     [TestMethod]
-    public void VersionedFamilyListsAreSevenAndOneNoMore()
+    public void VersionedFamilyListsAreElevenAndOneNoMore()
     {
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
-        Assert.AreEqual(7, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(11, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 
         // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
@@ -182,6 +205,8 @@ public class MirrorRulesTest
         {
             "Boastful Bellow", "Boastful Conclusion", "Frenzy of Spirit", "Paragon of Spirit",
             "Focused Paragon of Spirit", "Hobble of Spirits", "Tireless Sprint",
+            "Celestial Regeneration", "Focused Celestial Regeneration",
+            "Battle Leap Warcry", "Battle Leap",
         }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
     }
 

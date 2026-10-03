@@ -51,8 +51,9 @@ namespace EQLogParser.Mirror
   //  - Legacy registry verification events are NOT applied here. Cold-mode rebuild measures what the
   //    rules alone can recover; the fidelity path (harness SeedIdentity) still exercises them.
   //  - R4 tier 2 (other single-class spells) waits for its corroboration rule; only tier-1 names
-  //    (EQDataStore.IsClassSafeSpellName: spires, curated epics, and the versioned bard/beastlord
-  //    families censused to zero mob-shaped casters) assert identity here.
+  //    (EQDataStore.IsClassSafeSpellName: spires, curated epics, and the versioned rank families
+  //    censused to zero mob-shaped casters — bard, beastlord, berserker, cleric, and the War|Ber
+  //    battle leaps whose multi-bit mask claims identity but never a class) assert identity here.
   //  - R20-petspell (EQDataStore.PetCastSpellFamilies) claims the CASTER as Pet with no owner: the
   //    snare line names nobody but the pet. Owner evidence keeps coming from the possessive words
   //    and "My leader is" chat, not from this rule.
@@ -920,8 +921,14 @@ namespace EQLogParser.Mirror
       list.Add(timeS);
     }
 
-    private static bool IsClassSafeCast(string spell)
-      => EQDataStore.IsClassSafeSpellName(spell) && EQDataStore.Instance.GetSpellClass(spell) is not null;
+    // R4 gate: the family pattern must match AND the data files must know this exact rank. The
+    // data "knows" it two ways: a single-class rank resolves to a class label (which also rides
+    // CastLineParser's registry write), while a multi-bit rank (`Battle Leap Warcry II` = War|Ber)
+    // answers no class at all - the identity claim fires, nobody coin-flips a class. An unseen
+    // future version claims nothing either way.
+    internal static bool IsClassSafeCast(string spell)
+      => EQDataStore.IsClassSafeSpellName(spell)
+        && (EQDataStore.Instance.GetSpellClass(spell) is not null || EQDataStore.Instance.IsClassAmbiguousFamilyRank(spell));
 
     // R20 gate, symmetric to R4's: the family pattern must match AND the data files must know this
     // exact rank - an unseen future version claims nothing.
