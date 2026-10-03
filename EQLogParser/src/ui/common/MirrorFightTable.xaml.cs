@@ -320,11 +320,15 @@ namespace EQLogParser
 
     private void ShowBreakChanged(object sender, RoutedEventArgs e)
     {
-      // Load-time contract, the same one the legacy table's `dataGrid?.View != null` absorbs: XAML sets
-      // IsChecked="True" WHILE InitializeComponent parses, firing this handler before ANY of this control's named
-      // fields are wired - mirrorShowBreaks itself is still null then. Acting on that synthetic toggle would also
-      // overwrite the stored setting before the constructor reads it, so skipping pre-load firings is required.
-      if (mirrorShowBreaks is null) return;
+      // Load-time contract: XAML sets IsChecked="True" WHILE InitializeComponent parses, and this handler must
+      // absorb that synthetic toggle - acting on it would overwrite the stored setting before the constructor
+      // reads it. The sentinel is the pane's readiness (the grid's View, materialized only when the constructor
+      // assigns ItemsSource), NOT the sender's nullness: a real startup firing was measured where this
+      // checkbox's field WAS already wired and a later element in the markup (a column) was not - so testing
+      // mirrorShowBreaks here would let that firing through to apply work on half-built state. Legacy tests
+      // dataGrid?.View != null everywhere for exactly this reason; a pane's own readiness is the only thing a
+      // mid-parse firing can be shown not to have.
+      if (mirrorGrid?.View is null) return;
       if (mirrorShowBreaks.IsChecked.HasValue && mirrorShowBreaks.IsChecked != _currentShowBreaks)
       {
         _currentShowBreaks = mirrorShowBreaks.IsChecked == true;
@@ -337,9 +341,11 @@ namespace EQLogParser
     // column by name: legacy reaches for dataGrid.Columns[1], which breaks the moment anyone reorders the XAML.
     private void ShowHpChanged(object sender, RoutedEventArgs e)
     {
-      // Load-time contract as in ShowBreakChanged: this fired mid-InitializeComponent with mirrorShowHp itself
-      // null - the startup crash MainWindow's XAML construct hit 100% of launches. Guard first, then compare.
-      if (mirrorShowHp is null) return;
+      // Load-time contract as in ShowBreakChanged - same pane-readiness sentinel, same reason: the measured
+      // startup crashes came in BOTH shapes (once with this checkbox's own field still null, once wired while
+      // mirrorDamageColumn below was not), so only `View` separates a synthetic toggle from the constructor's
+      // real sync of the saved setting.
+      if (mirrorGrid?.View is null) return;
       if (mirrorShowHp.IsChecked.HasValue && mirrorShowHp.IsChecked != _currentShowHp)
       {
         _currentShowHp = mirrorShowHp.IsChecked == true;

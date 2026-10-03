@@ -57,6 +57,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (`FctSkiaCanvas`, a window, a control) goes through `Sta.Run(...)` (`EQLogParser.Wpf.Test/src/Sta.cs`), which claims a thread as STA, runs
   the body there and rethrows at the call site so a failure still reads as a failed assertion. `Dispatcher.CurrentDispatcher` does not help;
   it hands out a dispatcher on any thread and fails in the same constructor. The lane guide test found this by failing three for three.
+- **XAML-fired handlers guard the PANE, not the sender**: a handler attached to a property XAML itself sets (`IsChecked="True"`) runs
+  DURING `InitializeComponent`, and not all named fields are wired at once — measured startup crashes came in both shapes: once with the
+  checkbox field itself null, once with the checkbox wired while a column declared later in the markup was not (NRE one line past a
+  sender-null guard). So every such handler opens with the pane-readiness sentinel — `dataGrid?.View != null` (legacy) / `mirrorGrid?.View is null`
+  return (mirror list) — never `senderField is null`. View materializes when the constructor assigns ItemsSource, so it swallows every
+  synthetic firing and passes every real one, including the constructor's own dial sync; a test where a post-load toggle must still reach
+  its column belongs with any handler like this (`MirrorFightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
 - **Namespaces**: the WPF app compiles every source into the flat `namespace EQLogParser` whatever folder it lives in, while
   `EQLogParser.Core` matches folders (`EQLogParser.perf`). Tests reach app internals through `using EQLogParser;` (`InternalsVisibleTo` is
   already granted to both test assemblies); declaring `EQLogParser.ui.perf` in a new app file breaks that.
