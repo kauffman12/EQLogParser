@@ -336,7 +336,7 @@
               <fa:ImageAwesome x:Name="emuParsingIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="combatMirror" Header="Combat Mirror (Experimental)" Click="ToggleCombatMirrorClick" ToolTip="Derived fight list computed from captured combat facts; the tap attaches when a log opens">
+          <MenuItem x:Name="combatMirror" Header="Derived Fight List (Experimental)" Click="ToggleCombatMirrorClick" ToolTip="Fight list and damage boards derived from captured combat lines; the capture attaches when a log opens">
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="combatMirrorIcon" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
             </MenuItem.Icon>

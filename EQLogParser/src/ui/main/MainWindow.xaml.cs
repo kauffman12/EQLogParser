@@ -160,7 +160,7 @@ namespace EQLogParser
       /*
        * The checked item means the window is there: dock it at startup, not only on log open. Left to the
        * open-log path alone, a restart lands "checked but invisible" - the feature reads as broken until
-       * somebody guesses that opening a log again would bring it back. It says "Mirror: no log" until then.
+       * somebody guesses that opening a log again would bring it back. It reads "No log open" until then.
        */
       if (AppSettings.IsCombatMirrorEnabled)
         DockingManager.SetState(mirrorFightWindow, DockState.Dock);
@@ -777,7 +777,7 @@ namespace EQLogParser
          */
         _mirrorSession = new MirrorSession();
         _mirrorSession.Start();
-        Log.Info($"combat mirror: session attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
+        Log.Info($"capture: attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
 
         // The auto-open announcement lives on a static event; this process may have subscribed for the OTHER engine
         // (or not at all, if no log had finished loading before the tap). Re-home it for whichever is on now - the
@@ -1490,7 +1490,7 @@ namespace EQLogParser
               chatSink = new CompositeChatSink(chatSink, _mirrorSession.ChatSink);
               // One line per open: if the derived list ever silently fails to fill, this is the line that is
               // missing from the log (session created) or that arrives without rows following it (derive stuck).
-              Log.Info($"combat mirror: session started ({Path.GetFileName(theFile)})");
+              Log.Info($"capture: started ({Path.GetFileName(theFile)})");
             }
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);

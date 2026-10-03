@@ -61,7 +61,7 @@
       <CheckBox x:Name="mirrorShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
                 IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
     </StackPanel>
-    <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Mirror: no log" />
+    <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="No log open" />
     <syncfusion:SfDataGrid x:Name="mirrorGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"

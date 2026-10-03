@@ -234,7 +234,7 @@ namespace EQLogParser
         if (kind == DeriveKind.Full) Log.Info(message); else Log.Debug(message);
       }
 
-      Note($"Combat mirror derive starting over {CapturedTotal:N0} captured facts");
+      Note($"Derive starting over {CapturedTotal:N0} captured facts");
 
       _ = Task.Run(() =>
       {
@@ -315,7 +315,7 @@ namespace EQLogParser
               }
               catch (Exception ex)
               {
-                Log.Error("Combat mirror could not record identity priors; the derived boards are unaffected", ex);
+                Log.Error("Could not record identity priors during derive; the derived boards are unaffected", ex);
               }
             }
           }
@@ -339,13 +339,13 @@ namespace EQLogParser
           _deriveFailures = 0;
           // "continued" is the interesting half of the cost story: a continuing pass walked only what arrived since the
           // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
-          Note($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
+          Note($"Derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
                $"({(_projection.LastPassContinued ? "continued" : "rebuilt")})");
 
           if (!_firstDeriveLogged)
           {
             _firstDeriveLogged = true;
-            Log.Info($"combat mirror: first derive - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows");
+            Log.Info($"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows");
           }
 
           Derived?.Invoke(snapshot);
@@ -361,7 +361,7 @@ namespace EQLogParser
             // meter that was open (and ignored this) must not make the NEXT pass look like news all over again.
             _lastAnnouncedActivityT = LiveFights.LatestActivityAt(snapshot.AllFights);
             try { LiveDamageObserved?.Invoke(); }
-            catch (Exception ex) { Log.Error("Mirror live-damage subscriber failed", ex); }
+            catch (Exception ex) { Log.Error("Live-damage subscriber failed", ex); }
           }
         }
         catch (Exception ex) when (!_disposed)
@@ -376,7 +376,7 @@ namespace EQLogParser
            * failing never reaches here at all (ClassificationRules.RunStage retires just that stage).
            */
           var failures = ++_deriveFailures;
-          Log.Error($"Combat mirror derivation failed (attempt {failures}); " +
+          Log.Error($"Derive pass failed (attempt {failures}); " +
                     $"next retry in {MirrorDeriveCadence.RetryDelayS(failures):0} s", ex);
           DeriveFailed?.Invoke(ex.Message);
           _sinceFailedPass.Restart();

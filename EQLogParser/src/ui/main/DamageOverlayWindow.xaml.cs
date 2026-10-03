@@ -419,8 +419,8 @@ namespace EQLogParser
         if (!_mirrorMeterWarned)
         {
           _mirrorMeterWarned = true;
-          Log.Warn("Damage meter: EnableCombatMirror is set but no capture is being mirrored, so the board stays "
-                   + "empty until a log is opened (clear the setting to use the legacy tally).");
+          Log.Warn("Damage meter: the derived fight list is enabled but no capture is running, so the board stays "
+                   + "empty until a log is opened (turn Derived Fight List off to use the legacy tally).");
         }
 
         return null;

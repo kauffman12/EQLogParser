@@ -133,7 +133,7 @@ namespace EQLogParser
           _selectionTimer.Stop();
           _announcedIds = [];
           _rows.Clear();
-          mirrorStatus.Text = "Mirror: no log";
+          mirrorStatus.Text = "No log open";
           SetLoadBand(null);
         }
         else
@@ -141,7 +141,7 @@ namespace EQLogParser
           // A new session is a new load: the band may show again, and its counters start from nothing.
           _loadBandSettled = false;
           _capturedFacts = 0;
-          mirrorStatus.Text = "Mirror: capturing...";
+          mirrorStatus.Text = "Capturing...";
         }
       });
     }
@@ -203,7 +203,8 @@ namespace EQLogParser
         var outcome = OverrideOutcome().TrimStart(' ', '-');
         if (outcome.Length > 0)
           mirrorStatus.Text = outcome;
-        else if (mirrorStatus.Text.StartsWith("Mirror:", StringComparison.Ordinal)
+        else if (mirrorStatus.Text == "No log open"
+              || mirrorStatus.Text.StartsWith("Capturing", StringComparison.Ordinal)
               || mirrorStatus.Text.StartsWith("Derive failed", StringComparison.Ordinal))
           mirrorStatus.Text = string.Empty;
       });

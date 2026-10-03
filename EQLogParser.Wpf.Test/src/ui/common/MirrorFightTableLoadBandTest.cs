@@ -18,7 +18,7 @@ namespace EQLogParser.Wpf.Test;
  *
  * The header status line gets the companion law: a completed derive says NOTHING there - the "Derived HH:mm:ss -
  * N fights, M facts, X ms" line never fit the dock beside three columns. Only an override verdict claims the
- * space, and placeholders ("Mirror: capturing...", stale failure lines) clear when rows land.
+ * space, and placeholders ("Capturing...", "No log open", stale failure lines) clear when rows land.
  *
  * Same construction contract as MirrorFightTableStartupTest - STA thread because WPF will not build a
  * FrameworkElement on MTA, stubbed app-level StaticResources because the test host never loads App.xaml.
@@ -108,7 +108,7 @@ public sealed class MirrorFightTableLoadBandTest
       Assert.AreEqual(Visibility.Visible, table.mirrorLoadOverlay.Visibility);
 
       // The placeholder the panel shows before any data; rows landing must retire it, not leave it hanging.
-      table.mirrorStatus.Text = "Mirror: capturing...";
+      table.mirrorStatus.Text = "Capturing...";
 
       table.OnDerived(new MirrorSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
       Flush();
