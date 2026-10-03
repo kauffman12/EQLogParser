@@ -15,11 +15,21 @@ namespace EQLogParser
   [TestClass]
   public class ClassificationRuleHealthTest
   {
+    // This class is the sanctioned exception to the assembly-wide FailFastStages: it pins the SWALLOW-on-purpose
+    // semantics (count, report, retire-after-five), which need RunStage to survive a poisoned stage.
     [TestInitialize]
-    public void Setup() => ClassificationRules.ResetRuleHealth();
+    public void Setup()
+    {
+      ClassificationRules.FailFastStages = false;
+      ClassificationRules.ResetRuleHealth();
+    }
 
     [TestCleanup]
-    public void Cleanup() => ClassificationRules.ResetRuleHealth();
+    public void Cleanup()
+    {
+      ClassificationRules.FailFastStages = true;
+      ClassificationRules.ResetRuleHealth();
+    }
 
     [TestMethod]
     public void AFailingStageIsReportedAndThePassContinues()

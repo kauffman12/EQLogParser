@@ -243,6 +243,15 @@ namespace EQLogParser.Mirror
     private static readonly Dictionary<string, int> StageFailures = [];
     private static readonly HashSet<string> RetiredStageNames = [];
 
+    /// <summary>
+    /// Test-only: a stage that throws RETHROWS instead of being swallowed, so a rule dying mid-pass fails the test
+    /// loudly with its real stack rather than reading as "the rules found nothing" — the failure class this codebase
+    /// keeps meeting (charm flips that flipped nothing, R5 claims that never replayed). Off in production on purpose:
+    /// one bad fact must not cost a raid night every line. The health tests drive the swallow-on-purpose semantics and
+    /// turn this off while they do; the test assemblies turn it on at assembly init.
+    /// </summary>
+    internal static bool FailFastStages;
+
     internal static void ResetRuleHealth()
     {
       StageFailures.Clear();
@@ -260,6 +269,9 @@ namespace EQLogParser.Mirror
       }
       catch (Exception ex)
       {
+        if (FailFastStages)
+          throw;   // tests: a silent stage death is a failed run, not an empty column
+
         var streak = (StageFailures.TryGetValue(name, out var seen) ? seen : 0) + 1;
         StageFailures[name] = streak;
         outcome.FailedRules.Add($"{name} (#{streak}): {ex}");
