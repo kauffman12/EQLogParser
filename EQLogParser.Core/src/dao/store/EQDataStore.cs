@@ -80,6 +80,35 @@ namespace EQLogParser
       ("Shiv of Hate", SpellClass.Shd)
     ];
 
+    // Versioned single-class families (Catalog R4 tier 1): every rank of a family shares one class by
+    // game design, and the log always carries the roman rank (`Boastful Bellow XLVII`). The raw masks
+    // on these rows are not usable as identity evidence, so the name pattern decides - same reasoning
+    // as the Spire block below. Census (eight captures, 2022-2026): 17,304 Boastful Bellow and 14,689
+    // Boastful Conclusion lines with ZERO mob-shaped or possessive-pet casters; Frenzy/Paragon of Spirit
+    // (incl. the Focused variants) likewise. Their TARGETS are raid members (Paragon healed the same
+    // raiders who land melee procs), which is exactly why no target-side claim rides on these lines.
+    internal static readonly (string Family, SpellClass Class)[] ClassSafeSpellFamilies =
+    [
+      ("Boastful Bellow", SpellClass.Brd),
+      ("Boastful Conclusion", SpellClass.Brd),
+      ("Frenzy of Spirit", SpellClass.Bst),
+      ("Paragon of Spirit", SpellClass.Bst),
+      ("Focused Paragon of Spirit", SpellClass.Bst),
+      // The beastlord's OWN snare. NOT the pet's - see PetCastSpellFamilies; the roman-rank anchor is
+      // what keeps this prefix from swallowing `Hobble of Spirits Snare VI`.
+      ("Hobble of Spirits", SpellClass.Bst)
+    ];
+
+    // Pet-cast spell families: this exact spell is an ability of a beastlord's pet and never of the
+    // player wearing the spellbook. The corpus separates the two Hobbles cleanly (12 files):
+    // `Beorun begins casting Hobble of Spirits VI.` - 10 lines, casters are the very beastlords who
+    // cast Paragon; `Stormclaw begins casting Hobble of Spirits Snare VI.` - ~24k lines, and Stormclaw's
+    // own pet line says "My leader is Beorun". Caster claims Pet (R20-petspell), never an owner.
+    internal static readonly (string Family, SpellClass Class)[] PetCastSpellFamilies =
+    [
+      ("Hobble of Spirits Snare", SpellClass.Bst)
+    ];
+
     // singleton with set for unit test
     internal static EQDataStore Instance { get; set; } = new();
 
@@ -294,6 +323,21 @@ namespace EQLogParser
         }
       }
 
+      // Versioned families: seed every rank the data knows (all log-printed versions are present in
+      // spells.txt - verified per version) so GetSpellClass answers for them. That is the second gate
+      // on both cast rules: a future rank absent from the data files fails the gate and claims
+      // NOTHING, so new content degrades to silence rather than to a guess. Pet families seed too -
+      // the class label describes the spellbook owner and also feeds the registry's active-class map.
+      foreach (var spell in _allSpellData)
+      {
+        if ((TryGetVersionedFamily(spell.Name, ClassSafeSpellFamilies, out var familyClass)
+             || TryGetVersionedFamily(spell.Name, PetCastSpellFamilies, out familyClass))
+          && _classNames.TryGetValue(familyClass, out var familyClassName))
+        {
+          _spellsToClass[spell.Name] = familyClassName;
+        }
+      }
+
       // load NPCs
       foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\npcs.txt")))
       {
@@ -428,7 +472,37 @@ namespace EQLogParser
     internal static bool IsClassSafeSpellName(string name)
       => !string.IsNullOrEmpty(name)
         && (name.StartsWith("Spire of", StringComparison.OrdinalIgnoreCase)
-            || Array.Exists(CuratedClassSpells, s => string.Equals(s.Spell, name, StringComparison.OrdinalIgnoreCase)));
+            || Array.Exists(CuratedClassSpells, s => string.Equals(s.Spell, name, StringComparison.OrdinalIgnoreCase))
+            || MatchesVersionedFamily(name, ClassSafeSpellFamilies));
+
+    // R20: exact pet-cast spell family with a roman rank (`Hobble of Spirits Snare VI`). The bare
+    // family and any non-rank tail (`Snare VI` under the player prefix) match nothing.
+    internal static bool IsPetCastSpellName(string name)
+      => !string.IsNullOrEmpty(name) && MatchesVersionedFamily(name, PetCastSpellFamilies);
+
+    // Family + " " + roman rank. The rank must be the whole tail: that anchor is load-bearing, it is
+    // what keeps the player family `Hobble of Spirits` from matching the pet's `... Snare VI`, and
+    // keeps `Boastful Bellow` (never printed versionless in any capture) from matching on its own.
+    private static bool MatchesVersionedFamily(string name, (string Family, SpellClass Class)[] table)
+      => TryGetVersionedFamily(name, table, out _);
+
+    private static bool TryGetVersionedFamily(string name, (string Family, SpellClass Class)[] table, out SpellClass spellClass)
+    {
+      foreach (var (family, cls) in table)
+      {
+        if (name.Length > family.Length + 1
+          && name[family.Length] == ' '
+          && name.StartsWith(family, StringComparison.OrdinalIgnoreCase)
+          && RomanRegex().IsMatch(name[(family.Length + 1)..]))
+        {
+          spellClass = cls;
+          return true;
+        }
+      }
+
+      spellClass = default;
+      return false;
+    }
 
     public SpellData GetSpellByAbbrv(string abbrv)
     {

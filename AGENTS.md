@@ -481,6 +481,28 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   equal-strength chat/presence claim, so nothing moved Unknown→Player on this corpus — it is a last resort plus a
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
+- **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **6**: Boastful Bellow/Boastful Conclusion → Bard,
+  Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord) claims the caster of
+  `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
+  match and must be the whole tail**: versionless never prints (measured: 0 lines) and matches nothing,
+  and a rank absent from `spells.txt` passes the text gate but fails the `GetSpellClass` gate — new
+  expansion content is **silent, never guessed**. Census 2022→2026 + THJ: 17,304 Bellow + 14,689
+  Conclusion lines, ~25k Frenzy/Paragon, **zero article-shaped and zero possessive-pet casters**;
+  engine yield 3 real names with no other evidence (Chori/Dram/Metalplayer, Unknown→Player).
+  **`Hobble of Spirits Snare <rank>` is a different spell than `Hobble of Spirits <rank>`** — the pet's
+  (~24k lines: Stormclaw/Cutie/Bark) vs the beastlord's own (10 lines, cast by Paragon casters): the pet
+  form claims caster **Pet Strong "R20-petspell", no owner invented**; the rank anchor is exactly what
+  stops the player prefix swallowing `Snare VI`, and a verified Player claim outranks the Pet one.
+  Stormclaw's own `says, 'My leader is Beorun.'` is already read by legacy `ChatLineParser` — ownership
+  keeps coming from those lines and the possessive words, never from this rule. **Targets claim nothing:**
+  Paragon healed raid members (Tolzol/Covennx land melee procs), so no target-side or owner↔pet inference
+  rides on heal-by shapes. **`Finishing Blow` was refused as a rule** — 8,204 lines, zero mob/pet
+  attackers, but every attacker already held a stronger claim (zero yield = bug surface), so modifier
+  masks stay stats-only. Class flows with no new system: the seeded `_spellsToClass` feeds
+  `CastLineParser`'s existing registry `SetActivePlayerClass` path. Pinned by `MirrorRulesTest`
+  (`VersionedFamilyListsAreSixAndOneNoMore`, `...Split_Hobble...`); numbers: docs/combat-mirror-design.md
+  → "Casting words are identity".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

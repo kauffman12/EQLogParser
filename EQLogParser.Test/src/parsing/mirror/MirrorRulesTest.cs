@@ -52,6 +52,16 @@ public class MirrorRulesTest
         AssertIdentity(timeline, "Spireina", IdentityKind.Player, "R4-spell");
         AssertIdentity(timeline, "Epica", IdentityKind.Player, "R4-spell");
 
+        // R4 tier 1, versioned families: the roman-rank suffix must not break the match, and the
+        // two Hobbles must split - `Hobble of Spirits VI` is the beastlord's own snare (Chantoya
+        // and Ferociousley are players), `Hobble of Spirits Snare VI` is the pet's.
+        AssertIdentity(timeline, "Chantoya", IdentityKind.Player, "R4-spell");
+        AssertIdentity(timeline, "Ferociousley", IdentityKind.Player, "R4-spell");
+
+        // R20: the exact pet-cast rank claims the caster as Pet with no owner. Snapclaw gets no
+        // Player claim and no owner is invented from the spellbook owner above it.
+        AssertIdentity(timeline, "Snapclaw", IdentityKind.Pet, "R20-petspell");
+
         // R6: multi-word NPC-database name asserts Npc at Medium. The damage parser stores the
         // attacker exactly as the log spells it ("A bixie commander"), so resolve by case match.
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
@@ -121,6 +131,48 @@ public class MirrorRulesTest
         // A generic multi-mask (0) proc spell must NOT become class evidence.
         Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Savage Bloodlust Effect"));
         Assert.IsNull(EQDataStore.Instance.GetSpellClass("Savage Bloodlust Effect"));
+    }
+
+    [TestMethod]
+    public void VersionedFamilies_RankMatch_Split_Hobble_And_UnknownRankIsSilent()
+    {
+        PipelineHarness.EnsureDataStore();
+
+        // Every rank printed by the corpus resolves to a class (all were verified present in
+        // data/spells.txt) so the second gate on both cast rules passes for real captures.
+        foreach (var spell in new[] { "Boastful Bellow XLVII", "Boastful Conclusion LIII", "Frenzy of Spirit XIII",
+                                      "Paragon of Spirit XLI", "Focused Paragon of Spirit XXXIV", "Hobble of Spirits VI",
+                                      "Hobble of Spirits Snare VI" })
+        {
+            Assert.IsNotNull(EQDataStore.Instance.GetSpellClass(spell), $"{spell} must resolve through the family seed");
+        }
+
+        // Roman-rank anchor: the bare family never matches (no capture prints it versionless).
+        Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Boastful Bellow"));
+
+        // The two Hobbles split: the player's rank is class-safe, the pet's exact name claims Pet
+        // only - and the pet form must NOT match the player family (tail "Snare VI" is not a rank).
+        Assert.IsTrue(EQDataStore.IsClassSafeSpellName("Hobble of Spirits VI"));
+        Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Hobble of Spirits Snare VI"));
+        Assert.IsTrue(EQDataStore.IsPetCastSpellName("Hobble of Spirits Snare VI"));
+        Assert.IsFalse(EQDataStore.IsPetCastSpellName("Hobble of Spirits VI"));
+
+        // Gate: a rank the data files do not know claims nothing on either lane (new expansion
+        // content degrades to silence, never to a guess).
+        Assert.IsTrue(EQDataStore.IsClassSafeSpellName("Boastful Bellow LXI")); // text matches...
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Boastful Bellow LXI")); // ...but the data does not know it
+        Assert.IsFalse(ClassificationRules.IsPetCastSpell("Hobble of Spirits Snare XLII"));
+    }
+
+    [TestMethod]
+    public void VersionedFamilyListsAreSixAndOneNoMore()
+    {
+        // Closed vocabulary, house law: a new family arrives with a census over several eras AND
+        // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
+        // Finishing Blow was refused entry on measurement: every attacker already held a stronger
+        // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
+        Assert.AreEqual(6, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
     }
 
     [TestMethod]

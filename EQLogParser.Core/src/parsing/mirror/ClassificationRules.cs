@@ -51,7 +51,14 @@ namespace EQLogParser.Mirror
   //  - Legacy registry verification events are NOT applied here. Cold-mode rebuild measures what the
   //    rules alone can recover; the fidelity path (harness SeedIdentity) still exercises them.
   //  - R4 tier 2 (other single-class spells) waits for its corroboration rule; only tier-1 names
-  //    (EQDataStore.IsClassSafeSpellName) assert identity here.
+  //    (EQDataStore.IsClassSafeSpellName: spires, curated epics, and the versioned bard/beastlord
+  //    families censused to zero mob-shaped casters) assert identity here.
+  //  - R20-petspell (EQDataStore.PetCastSpellFamilies) claims the CASTER as Pet with no owner: the
+  //    snare line names nobody but the pet. Owner evidence keeps coming from the possessive words
+  //    and "My leader is" chat, not from this rule.
+  //  - Combat MODIFIERS assert nothing: `Finishing Blow` looks player-exclusive (8,200+ lines, zero
+  //    mob or pet shaped attackers) but every attacker already carries a stronger claim, so the mask
+  //    stays stats-only rather than becoming a zero-yield identity rule.
   internal static class ClassificationRules
   {
     // Channels whose speech proves the sender is on your side (R3). Say/tell excluded: hostile
@@ -420,9 +427,17 @@ namespace EQLogParser.Mirror
 
           case EvidenceFact.EvCast:
             // R4 tier 1 only until tier 2 gets its corroboration rule.
-            if (IsClassSafeCast(facts.AuxOf(e.AuxIdx)))
+            var castSpell = facts.AuxOf(e.AuxIdx);
+            if (IsClassSafeCast(castSpell))
             {
               timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
+            }
+            else if (IsPetCastSpell(castSpell))
+            {
+              // Strong, not Certain: the spell proves the caster is somebody's pet, but says nothing
+              // about WHOSE - a verified owner claim (R5, Certain) still outranks this, and a name
+              // that is also a verified player keeps Player.
+              timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
             }
             break;
         }
@@ -907,6 +922,11 @@ namespace EQLogParser.Mirror
 
     private static bool IsClassSafeCast(string spell)
       => EQDataStore.IsClassSafeSpellName(spell) && EQDataStore.Instance.GetSpellClass(spell) is not null;
+
+    // R20 gate, symmetric to R4's: the family pattern must match AND the data files must know this
+    // exact rank - an unseen future version claims nothing.
+    internal static bool IsPetCastSpell(string spell)
+      => EQDataStore.IsPetCastSpellName(spell) && EQDataStore.Instance.GetSpellClass(spell) is not null;
 
     // Damaging spell the spell DB says only hits its caster (SpellTarget.Self): spell feedback.
     // Cheap dict lookup, reached only for facts whose attacker has no identity yet.
