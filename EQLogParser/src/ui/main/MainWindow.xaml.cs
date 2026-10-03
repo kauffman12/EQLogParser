@@ -1304,7 +1304,7 @@ namespace EQLogParser
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. The
           // band owns itself from here: EOF flips it to "building", the first snapshot takes it down.
-          if (mirrorFightWindow?.Content is MirrorFightTable mirrorPump) mirrorPump.ReportCaptureProgress(filePercent, seconds);
+          if (mirrorFightWindow?.Content is MirrorFightTable mirrorPump) mirrorPump.ReportCaptureProgress(filePercent);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;

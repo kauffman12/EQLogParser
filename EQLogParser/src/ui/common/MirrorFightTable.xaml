@@ -184,16 +184,17 @@
       a 20-second night loads at parse speed rather than queue-lottery with a projection - so during a load this
       window would otherwise show a silent empty grid. The band says what is actually happening on real signals:
       MainWindow's reader pump (byte progress through the file, the same number its own status bar shows) plus
-      the session's captured-fact count, then an indeterminate "building" phase from EOF to the first snapshot,
-      which hides it. It never lies: a snapshot landing mid-load takes it down and it stays down for the session.
+      the session's captured-fact count. The reading phase is deliberately NOT announced here - the status line at
+      the top of the application already counts that same pump's percent and seconds, and a second copy inside the
+      dock duplicates it without adding anything. It never lies: a snapshot landing takes it down and it stays down
+      for the session.
     -->
     <Border x:Name="mirrorLoadOverlay" Grid.Row="1" Visibility="Collapsed"
             Background="{DynamicResource ContentBackground}">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <TextBlock x:Name="mirrorLoadText" HorizontalAlignment="Center" TextAlignment="Center"
-                   FontSize="{DynamicResource EQContentSize}"
-                   Foreground="{DynamicResource EQWarnForegroundBrush}"/>
-        <ProgressBar x:Name="mirrorLoadBar" Width="280" Height="10" Margin="0,10,0,6"/>
+                   FontSize="{DynamicResource EQContentSize}"/>
+        <ProgressBar x:Name="mirrorLoadBar" Width="280" Height="10" Margin="0,10,0,6" IsIndeterminate="True"/>
         <TextBlock x:Name="mirrorLoadDetail" HorizontalAlignment="Center" TextAlignment="Center"
                    FontSize="{DynamicResource EQContentSize}" Opacity="0.75"/>
       </StackPanel>

@@ -7,12 +7,18 @@ using EQLogParser;
 namespace EQLogParser.Wpf.Test;
 
 /*
- * The loading band over the derived fight list (mirrorLoadOverlay).
+ * The loading band over the derived fight list (mirrorLoadOverlay), and the one thing it is allowed to say.
  *
- * Bulk ingest parks both derive lanes by design, so during the load of a big capture this window shows NO rows -
- * and showed nothing else either, just a counter on a status line. The band replaced that: MainWindow's reader
- * pump feeds it byte progress, EOF flips it to an indeterminate "building", and the first snapshot takes it down
- * for the session (a quiet stretch mid-file can complete a derive under 100 %, and real rows beat a bar).
+ * Bulk ingest parks both derive lanes by design, so during the load of a big capture this window shows NO rows.
+ * The reading phase is announced by the application-wide status line at the top of the window - percent and
+ * seconds off the same 500 ms pump - and a second copy inside the dock duplicates it, so the pump's sub-100 ticks
+ * must leave this panel silent. What only this panel can say is the gap the top bar cannot: EOF has happened and
+ * the first snapshot has not, "Building derived fight list..." over an indeterminate bar. The first snapshot takes
+ * it down for the session and it stays down (real rows beat a bar).
+ *
+ * The header status line gets the companion law: a completed derive says NOTHING there - the "Derived HH:mm:ss -
+ * N fights, M facts, X ms" line never fit the dock beside three columns. Only an override verdict claims the
+ * space, and placeholders ("Mirror: capturing...", stale failure lines) clear when rows land.
  *
  * Same construction contract as MirrorFightTableStartupTest - STA thread because WPF will not build a
  * FrameworkElement on MTA, stubbed app-level StaticResources because the test host never loads App.xaml.
@@ -59,24 +65,34 @@ public sealed class MirrorFightTableLoadBandTest
   private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.SystemIdle);
 
   [TestMethod]
-  public void TheBandTracksTheReaderUntilTheFirstSnapshot()
+  public void AReadingTickSaysNothingHere()
   {
     Sta.Run(() =>
     {
       var table = new MirrorFightTable();
       Assert.AreEqual(Visibility.Collapsed, table.mirrorLoadOverlay.Visibility, "a fresh panel shows no band");
 
-      table.ReportCaptureProgress(35, 4);
+      // Mid-file pump ticks: the application status line is the one that counts percent. This window stays out
+      // of the conversation - a duplicate progress report in the dock is what the user asked to have removed.
+      table.ReportCaptureProgress(35);
       Flush();
-      Assert.AreEqual(Visibility.Visible, table.mirrorLoadOverlay.Visibility, "the reader pump raises the band");
-      Assert.IsFalse(table.mirrorLoadBar.IsIndeterminate, "byte progress is a determinate bar");
-      Assert.AreEqual(35, table.mirrorLoadBar.Value, 0.5, "the bar tracks the percent it was handed");
-      StringAssert.Contains(table.mirrorLoadText.Text, "35");
+      Assert.AreEqual(Visibility.Collapsed, table.mirrorLoadOverlay.Visibility, "reading is announced at the top, not here");
+      Assert.AreEqual("", table.mirrorLoadText.Text, "no headline is written for a phase this panel does not report");
+    });
+  }
 
-      // EOF: reading is done but the list is not - indeterminate until a snapshot lands.
-      table.ReportCaptureProgress(100, 9);
+  [TestMethod]
+  public void AEofTickRaisesTheBuildingBand()
+  {
+    Sta.Run(() =>
+    {
+      var table = new MirrorFightTable();
+
+      // EOF: reading is done but the list is not - only this panel can say so, over an indeterminate bar.
+      table.ReportCaptureProgress(100);
       Flush();
-      Assert.AreEqual(Visibility.Visible, table.mirrorLoadOverlay.Visibility, "EOF keeps the band up");
+      Assert.AreEqual(Visibility.Visible, table.mirrorLoadOverlay.Visibility, "EOF raises the building band");
+      StringAssert.Contains(table.mirrorLoadText.Text, "Building");
       Assert.IsTrue(table.mirrorLoadBar.IsIndeterminate, "the wait for the first derive has no known length");
     });
   }
@@ -87,16 +103,21 @@ public sealed class MirrorFightTableLoadBandTest
     Sta.Run(() =>
     {
       var table = new MirrorFightTable();
-      table.ReportCaptureProgress(60, 3);
+      table.ReportCaptureProgress(100);
       Flush();
       Assert.AreEqual(Visibility.Visible, table.mirrorLoadOverlay.Visibility);
+
+      // The placeholder the panel shows before any data; rows landing must retire it, not leave it hanging.
+      table.mirrorStatus.Text = "Mirror: capturing...";
 
       table.OnDerived(new MirrorSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.mirrorLoadOverlay.Visibility, "rows beat the bar");
+      Assert.IsFalse(table.mirrorStatus.Text.Contains("Derived"), "a completed derive writes no stats line in the header");
+      Assert.AreEqual(string.Empty, table.mirrorStatus.Text, "the capturing placeholder retires with the first rows");
 
-      // A late pump tick - a derive legitimately completed mid-file - must not resurrect the band for this session.
-      table.ReportCaptureProgress(80, 12);
+      // A late pump tick - a tail running past 100 - must not resurrect the band for this session.
+      table.ReportCaptureProgress(100);
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.mirrorLoadOverlay.Visibility, "a settled session stays settled");
     });

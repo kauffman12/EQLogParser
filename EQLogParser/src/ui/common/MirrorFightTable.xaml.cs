@@ -54,10 +54,10 @@ namespace EQLogParser
 
     /*
      * Loading-band state (see mirrorLoadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
-     * landed" flag: the band goes down for good at the first Derived, even if the reader pump is still under 100 %
-     * (a quiet stretch mid-file can legitimately complete a derive early), and it comes back only with the next
-     * session. `_capturedFacts` rides in from the session's capture event so the band can show facts AND bytes -
-     * the file percentage is the reader's honest denominator, the count is the mirror's own work.
+     * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
+     * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
+     * `_capturedFacts` rides in from the session's capture event to put a number on what the build is chewing
+     * through; reading itself is announced by the application-wide status line, not here (see ReportCaptureProgress).
      */
     private bool _loadBandSettled;
     private long _capturedFacts;
@@ -196,10 +196,16 @@ namespace EQLogParser
           AnnounceSelection();
         }
 
-        // The verdict sentence goes on the end of the derive line, not in front of it: "which of my names moved"
-        // is the question, and the counts under it are the context for the answer.
-        mirrorStatus.Text = $"Derived {snapshot.DerivedAt:HH:mm:ss} - {snapshot.FightCount} fights, " +
-                            $"{snapshot.FactCount:N0} facts, {snapshot.ElapsedMs:F0} ms" + OverrideOutcome();
+        // The header says nothing more about this pass. "Derived HH:mm:ss - N fights, M facts, X ms" never fit
+        // the dock beside three columns, and the rows themselves are the message; what still earns the space is the
+        // override verdict (the user asked a question seconds before) and clearing a placeholder or stale failure
+        // line that has served its turn. Selection messages come from AnnounceSelection and must survive.
+        var outcome = OverrideOutcome().TrimStart(' ', '-');
+        if (outcome.Length > 0)
+          mirrorStatus.Text = outcome;
+        else if (mirrorStatus.Text.StartsWith("Mirror:", StringComparison.Ordinal)
+              || mirrorStatus.Text.StartsWith("Derive failed", StringComparison.Ordinal))
+          mirrorStatus.Text = string.Empty;
       });
     }
 
@@ -255,16 +261,17 @@ namespace EQLogParser
     }
 
     /*
-     * The reader pump MainWindow drives every ~500 ms while a file is open (byte progress through the log, the
-     * same reading its own status bar gives). Called on the dispatcher; `percent` counts against the size the
-     * file had when reading began, so a growing live tail runs past 100 - the band treats >= 100 as "reading is
-     * done", which is the truth from the reader's side, and waits for the first snapshot on its own.
+     * The reader pump MainWindow drives every ~500 ms while a file is open (byte progress through the log). Called
+     * on the dispatcher; `percent` counts against the size the file had when reading began, so a growing live tail
+     * runs past 100 - >= 100 means "reading is done", which is the truth from the reader's side, and the panel then
+     * waits for the first snapshot on its own. The percent itself is NOT shown here - the application-wide status
+     * line counts it already, and a second copy in the dock duplicates it without adding anything.
      */
-    internal void ReportCaptureProgress(double percent, double seconds)
+    internal void ReportCaptureProgress(double percent)
     {
       if (Dispatcher.CheckAccess() == false)
       {
-        Dispatcher.InvokeAsync(() => ReportCaptureProgress(percent, seconds));
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(percent));
         return;
       }
 
@@ -272,25 +279,24 @@ namespace EQLogParser
       // (mirror off), and a hidden band costs nothing. The only veto is "rows already landed this session".
       if (_loadBandSettled) return;
 
-      if (percent < 100.0)
-        SetLoadBand($"Reading log\u2026 {percent:0}%", indeterminate: false, percent);
-      else
-        SetLoadBand("Building derived fight list\u2026", indeterminate: true, 100.0);
+      // The reading phase says nothing HERE: the status line at the top of the application counts the same pump's
+      // percent (and seconds) already, and a second copy in the dock duplicates it. The one gap only this panel can
+      // speak of is EOF-to-first-snapshot - file done, rows still being built - so that is all the band shows.
+      if (percent >= 100.0)
+        SetLoadBand("Building derived fight list\u2026");
     }
 
-    // null takes the band down; UI thread.
-    private void SetLoadBand(string headline, bool indeterminate = false, double percent = 0)
+    // null takes the band down; UI thread. The bar is the XAML's own indeterminate one - the only phase this band
+    // speaks of has no known length, and the phase that DOES (reading) reports through the application status line.
+    private void SetLoadBand(string headline)
     {
       if (headline is null)
       {
         mirrorLoadOverlay.Visibility = Visibility.Collapsed;
-        mirrorLoadBar.IsIndeterminate = false;
         return;
       }
 
       mirrorLoadText.Text = headline;
-      mirrorLoadBar.IsIndeterminate = indeterminate;
-      if (!indeterminate) mirrorLoadBar.Value = percent;
       UpdateLoadDetail();
       mirrorLoadOverlay.Visibility = Visibility.Visible;
     }
