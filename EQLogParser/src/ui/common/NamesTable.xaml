@@ -13,6 +13,25 @@
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
+    <Grid.Resources>
+      <!-- The same row-number template every other row-headered table in the app declares (implicit style, plain
+           index text at EQContentSize): numbering tracks the live row position. Without it this grid was the only
+           one showing Syncfusion's default row header. -->
+      <Style TargetType="syncfusion:GridRowHeaderCell">
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                  <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
+                </Grid>
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </Grid.Resources>
+
     <!-- One line of context, because "Unknown" means three different things and the window has to say which. -->
     <DockPanel Grid.Row="0" Margin="4,3,4,3">
       <Button x:Name="namesRefreshButton" DockPanel.Dock="Right" Content="Re-scan" Padding="8,2"
@@ -27,6 +46,7 @@
                            CurrentCellBorderThickness="0"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            RowHeight="{DynamicResource EQTableRowHeight}"
+                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
