@@ -47,8 +47,10 @@
       <RowDefinition Height="{DynamicResource EQFightGridTitleHeight}"></RowDefinition>
       <RowDefinition Height="300*" />
     </Grid.RowDefinitions>
-    <!-- Header order like the legacy table: search first, then the display checkboxes. Re-derive is this
-         window's own command and sits after them; it re-runs classification over every captured fact. -->
+    <!-- Header order like the legacy table: search first, then the display checkboxes. There is no Re-derive
+         button - legacy has none, and nothing needed one: every trigger refreshes on its own, overrides
+         re-derive themselves, and a failed pass retries on a backoff (MirrorSession). The old strip hung both the
+         checkboxes and that button left of the search box, which is what users read as "different UI". -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <!-- Find-next, not a filter: typing highlights and scrolls to the matching row so the user can fight
            that event and select its group - hiding rows here would hide the very fights around it. -->
@@ -58,8 +60,6 @@
                 IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>
       <CheckBox x:Name="mirrorShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
                 IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
-      <Button x:Name="mirrorRederiveButton" Margin="14,2,0,2" Content="Re-derive" Padding="8,1" Click="RederiveClick"
-              ToolTip="Re-run classification and derivation over all captured facts"/>
     </StackPanel>
     <TextBlock x:Name="mirrorStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="Mirror: no log" />
     <syncfusion:SfDataGrid x:Name="mirrorGrid"
@@ -107,8 +107,8 @@
         <!--
           Icons and gestures ported from the legacy list's menu. Two legacy items are deliberately absent:
           Clear All wipes the legacy fight store, and the derived list has no store - it is a projection of
-          the facts, so there is nothing to wipe; Refresh is the Re-derive button in the header, since a
-          selection already rebuilds the board on its own.
+          the facts, so there is nothing to wipe; legacy's Refresh has no button either - re-deriving is
+          automatic (cadence, overrides, meter openings) and a selection already rebuilds the board on its own.
         -->
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy"

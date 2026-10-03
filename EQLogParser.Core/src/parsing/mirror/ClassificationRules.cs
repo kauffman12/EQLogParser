@@ -27,6 +27,15 @@ namespace EQLogParser.Mirror
     // Names R18 put an ownership interval on: the target frame called them an NPC, and the raid's healing
     // says otherwise. Each one is damage that used to sit in the enemy column of the fight list.
     public List<string> OurPets { get; } = [];
+
+    // Stages that THREW this run, with their streak count and full exception text (Core owns no logger — the
+    // caller writes these to the player's log). See RunStage: a failed stage costs its own verdicts and nothing
+    // else, so a non-empty list here means degraded-but-live, which is exactly what must never be silent.
+    public List<string> FailedRules { get; } = [];
+
+    // Stages this run RETIRED after repeated consecutive failures — one announcement each, logged once,
+    // skipped for the rest of the session (ResetRuleHealth hands the rule book back to the next capture).
+    public List<string> RetiredRules { get; } = [];
   }
 
   // Phase 2 rules (identity slice): turn the captured evidence facts into retroactive identity
@@ -144,36 +153,89 @@ namespace EQLogParser.Mirror
     public static MirrorRuleOutcome Apply(IFactTable facts, EntityTimeline timeline, IHealFactTable heals = null)
     {
       var outcome = new MirrorRuleOutcome();
-      ApplyLocalPlayer(timeline);
-      ApplyEvidence(facts, timeline, outcome);
-      ApplyOwnershipFlags(facts, timeline);
-      ApplyNpcDatabase(facts, timeline);
+
+      /*
+       * Every stage runs under its own guard (RunStage): one rule's exception costs that rule's verdicts and NOTHING
+       * else — the pass keeps every conclusion the other stages already reached, the failure is reported on the
+       * outcome for the caller to log, and a stage that fails repeatedly RETIRES itself rather than freezing the
+       * whole identity pipeline. Rules only ADD evidence, and every consumer already handles a name nothing has
+       * placed (that is the state at the start of every log), so the degradation direction is "less known", never
+       * "wrong side". A stage that retires mid-session moves the timeline's StateStamp for later rebuilds, so the
+       * carry gate notices and re-folds rather than mixing rule books across passes.
+       */
+      RunStage("R0 local player", outcome, () => ApplyLocalPlayer(timeline));
+      RunStage("line evidence", outcome, () => ApplyEvidence(facts, timeline, outcome));
+      RunStage("R5 ownership", outcome, () => ApplyOwnershipFlags(facts, timeline));
+      RunStage("R6 npcs.txt", outcome, () => ApplyNpcDatabase(facts, timeline));
 
       // Name shape before the graph, because the graph reads it: an article-shaped defender is no longer an
       // unknown edge, so attackers that were starved by "a skeleton" being unclassified get their evidence.
-      ApplyNameShape(facts, timeline);
+      RunStage("R14 name shape", outcome, () => ApplyNameShape(facts, timeline));
 
       // Before R7 for the same reason - our-side defenders are what R7-side needs to call an attacker hostile.
-      if (heals is not null) ApplyHealedByRaidSide(facts, heals, timeline);
+      if (heals is not null) RunStage("R15 healed by raid side", outcome, () => ApplyHealedByRaidSide(facts, heals, timeline));
 
       // The other marker the client writes inside a name. After R15 on purpose: R15 only considers names still
       // Unknown, so a summon whose name happens to carry a comma would lose the heal evidence to punctuation.
-      ApplyCommaTitle(facts, timeline);
+      RunStage("comma title", outcome, () => ApplyCommaTitle(facts, timeline));
 
       // Charm after everything that decides sides, before the graph: a window ends when the charmed name
       // swings at somebody these rules put on our side, so it has to see settled identities.
-      var charms = CharmWindowPolicy.Apply(facts, timeline);
+      var charms = new List<CharmWindow>();
+      RunStage("R9 charm windows", outcome, () => charms.AddRange(CharmWindowPolicy.Apply(facts, timeline)));
       outcome.Charms.AddRange(charms);
 
-      ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))]);
+      RunStage("R7 graph", outcome, () => ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))]));
 
       // Last, because it reads everything above: which NPC-verdict names are actually ours. It has to run
       // after the charm pass to know which names a window already explains, and after the graph because a
       // name R7 could classify as an attacker is not one the raid owns.
       if (heals is not null)
-        outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline, [.. charms.Select(w => w.Name)]));
+        RunStage("R18 healed-pet intervals", outcome,
+                 () => outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline, [.. charms.Select(w => w.Name)])));
 
       return outcome;
+    }
+
+    /*
+     * Per-stage health. A stage that THREW is a bug in one check, not in the capture: it gets counted, reported,
+     * and after RuleFailureRetries failures IN A ROW retires — itself only. One clean run pays off a stage's
+     * streak (transient conditions are what most of these exceptions actually are); a deterministic poison fact
+     * gets logged five times and then skipped instead of making every full pass of the night fail.
+     *
+     * Process state, consulted by name; passes are serialized by the session's derive gate. ResetRuleHealth is
+     * called when a new session starts (a different capture must get the full rule book) and by tests.
+     */
+    private const int RuleFailureRetries = 5;
+    private static readonly Dictionary<string, int> StageFailures = [];
+    private static readonly HashSet<string> RetiredStageNames = [];
+
+    internal static void ResetRuleHealth()
+    {
+      StageFailures.Clear();
+      RetiredStageNames.Clear();
+    }
+
+    // Internal for its own tests (ClassificationRuleHealthTest); Apply is the only production caller.
+    internal static void RunStage(string name, MirrorRuleOutcome outcome, Action work)
+    {
+      if (RetiredStageNames.Contains(name)) return;
+      try
+      {
+        work();
+        StageFailures.Remove(name);
+      }
+      catch (Exception ex)
+      {
+        var streak = (StageFailures.TryGetValue(name, out var seen) ? seen : 0) + 1;
+        StageFailures[name] = streak;
+        outcome.FailedRules.Add($"{name} (#{streak}): {ex}");
+        if (streak >= RuleFailureRetries)
+        {
+          RetiredStageNames.Add(name);
+          outcome.RetiredRules.Add(name);
+        }
+      }
     }
 
     // R0: the log's own author. Every "You" in the file is the local player by construction,

@@ -27,8 +27,10 @@ namespace EQLogParser
   // Derivation is quiescent: CombatMirror.DeriveQuiescent parks ingest at its gate for the pass,
   // so a snapshot never races mid-append fact mutation and no tail line is lost. A load that stops moving gets its
   // pass on the next tick, and a live tail that never stops moving gets one on MirrorDeriveCadence's clock — waiting
-  // for silence alone meant a raid-length freeze on every surface reading the snapshot. The Re-derive button stays for
-  // the moment somebody wants an answer right now.
+  // for silence alone meant a raid-length freeze on every surface reading the snapshot. There is no Re-derive button: every trigger refreshes itself,
+  // overrides re-derive themselves, and a failed pass comes back on MirrorDeriveCadence.RetryDelayS's ladder - no flow
+  // ever needed a human to force one (the button existed only because the old latch stopped asking forever; see
+  // RederiveAsync's catch).
   internal sealed class MirrorSession : IDisposable
   {
     public static MirrorSession Active { get; private set; }
@@ -128,7 +130,13 @@ namespace EQLogParser
      * full pass (a pet folding onto its raiders, a charm flipping a name) lands one full cadence later.
      */
     private EntityTimeline? _carriedTimeline;
-    private volatile bool _autoDeriveDisabled;
+    // Consecutive derive passes that THREW. Drives MirrorDeriveCadence.RetryDelayS's backoff in QuietTick and is
+    // zeroed by any completed pass; nothing disables anything - the surfaces keep trying at the ladder's pace for as
+    // long as this session owns them.
+    private volatile int _deriveFailures;
+
+    // Time since the last THREW pass; only consulted while _deriveFailures > 0.
+    private readonly Stopwatch _sinceFailedPass = Stopwatch.StartNew();
 
     // The first pass of a session logs itself once, whatever lane the cadence picked: "the list never filled"
     // is otherwise invisible in a log that carries a million fact lines - either MainWindow's session-started
@@ -138,6 +146,10 @@ namespace EQLogParser
 
     public MirrorSession()
     {
+      // A fresh capture gets the full rule book even if this app run already saw a stage retire over other data:
+      // retirement protects one session's pass loop, it is not a verdict about every file the process will open.
+      ClassificationRules.ResetRuleHealth();
+
       _heals = new HealFactTable(_facts);
       _mirror = new CombatMirror(_facts, _heals);
       ChatSink = new MirrorChatSink(_mirror);
@@ -191,7 +203,8 @@ namespace EQLogParser
       }
     }
 
-    // A pass that classifies: what the UI asks for (a meter opening, a Re-derive click, a log opening).
+    // A pass that classifies: what the UI asks for directly - opening the derived meter over a fresh board, and an
+    // identity override (which has to re-run classification before the ruled name can move anywhere).
     public void RederiveAsync() => RederiveAsync(DeriveKind.Full);
 
     public void RederiveAsync(DeriveKind kind)
@@ -276,8 +289,22 @@ namespace EQLogParser
              * (the ledger is idempotent by design), so skipping costs nothing.
              */
             if (!_disposed)
-              IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
-                                                 (long)_mirror.LastEventTime);
+            {
+              /*
+               * The ledger is memory for the NEXT log. A locked or half-written file here must not cost this session
+               * the snapshot that was already computed - a failed write is a logged write failure, never "derive
+               * failed", and it does not touch the boards on screen.
+               */
+              try
+              {
+                IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
+                                                   (long)_mirror.LastEventTime);
+              }
+              catch (Exception ex)
+              {
+                Log.Error("Combat mirror could not record identity priors; the derived boards are unaffected", ex);
+              }
+            }
           }
 
           /*
@@ -294,6 +321,9 @@ namespace EQLogParser
           // that made them, never against the previous snapshot's facts.
           _snapshot = snapshot;
           _lastDerivedCount = CapturedTotal;
+
+          // Any completed pass - either lane, even one that logged degraded stages - pays off the failure ladder.
+          _deriveFailures = 0;
           // "continued" is the interesting half of the cost story: a continuing pass walked only what arrived since the
           // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
           Note($"Combat mirror derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
@@ -323,12 +353,20 @@ namespace EQLogParser
         }
         catch (Exception ex) when (!_disposed)
         {
-          // A stale list must never fail silently: it is the one surface where a broken
-          // derivation would otherwise be indistinguishable from an idle mirror. Auto-retry at
-          // timer rate would spam the log — stop the loop, leave Re-derive available.
-          _autoDeriveDisabled = true;
-          Log.Error("Combat mirror derivation failed; auto-derive disabled", ex);
+          /*
+           * Backoff, not a kill switch. A pass is allowed to fail - a file locked mid-write, a race in somebody's new
+           * rule - and the meter must not go silent for the rest of the night over one hiccup, which is what the old
+           * "stop the loop" latch did: it left a Re-derive button as the only recovery, and no legitimate flow needed
+           * that button (its whole job had become this corner). Every attempt logs - a repeating stack in
+           * eqlogparser.log IS the diagnosis - QuietTick spaces the attempts on MirrorDeriveCadence.RetryDelayS (1 s
+           * doubling to a minute), and any success ends it. Note the finer grain above: a single classification STAGE
+           * failing never reaches here at all (ClassificationRules.RunStage retires just that stage).
+           */
+          var failures = ++_deriveFailures;
+          Log.Error($"Combat mirror derivation failed (attempt {failures}); " +
+                    $"next retry in {MirrorDeriveCadence.RetryDelayS(failures):0} s", ex);
           DeriveFailed?.Invoke(ex.Message);
+          _sinceFailedPass.Restart();
         }
         catch (Exception)
         {
@@ -538,13 +576,21 @@ namespace EQLogParser
      * and the two clocks, then dispatches whichever lane came back — a cheap fold or an expensive pass. Quiescence is still the fast path — a load that stops moving gets its pass on
      * the next tick — but it is no longer the ONLY path: waiting for two silent ticks meant that a live raid tail,
      * which never offers two silent ticks, held one snapshot for the whole encounter, and every surface reading it (the
-     * fight list, a click's summary, the damage meter) showed the same frozen numbers until somebody pressed Re-derive.
+     * fight list, a click's summary, the damage meter) showed the same frozen numbers until the file stopped growing.
      *
      * Derivation itself parks ingest at the gate, so a completed pass always leaves count == lastDerivedCount.
      */
     private void QuietTick(object sender, EventArgs e)
     {
-      if (_disposed || _autoDeriveDisabled) return;
+      if (_disposed) return;
+
+      /*
+       * A pass that threw comes back on the ladder - 1 s, doubling to a minute - instead of never: the old latch froze
+       * every derived surface for the rest of the night over one hiccup. The gate sits ahead of the clock reads below
+       * so a failing derive costs one attempt per rung rather than a pump-rate storm on the derive gate.
+       */
+      if (_deriveFailures > 0 && _sinceFailedPass.Elapsed.TotalSeconds < MirrorDeriveCadence.RetryDelayS(_deriveFailures))
+        return;
 
       var count = CapturedTotal;
 
@@ -582,7 +628,18 @@ namespace EQLogParser
       // The heal stream goes in too: R15 (our side keeps healing this name) is the only rule that can
       // see a mercenary or custom-named pet that never speaks, never joins and owns nothing; R18 reads the
       // same stream for an NPC-verdict name the whole raid keeps topping up.
-      ClassificationRules.Apply(_facts, timeline, _heals);
+      var ruleOutcome = ClassificationRules.Apply(_facts, timeline, _heals);
+
+      /*
+       * A stage that threw or retired is a bug in ONE check, and the pass continues on every verdict the other stages
+       * reached (ClassificationRules.RunStage) - which is exactly why it must not be silent: degraded-but-live reads
+       * as healthy otherwise. Full exception text reaches the player's log once per attempt (five times, then one
+       * final retirement line).
+       */
+      foreach (var failure in ruleOutcome.FailedRules)
+        Log.Error($"Classification stage failed; its verdicts are missing from this pass: {failure}");
+      foreach (var retired in ruleOutcome.RetiredRules)
+        Log.Error($"Classification stage retired after repeated failures: {retired}");
 
       /*
        * R10 last, and it has to be last: this timeline is built from nothing on every pass (see above), so

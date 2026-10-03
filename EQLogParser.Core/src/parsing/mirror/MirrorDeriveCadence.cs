@@ -9,7 +9,7 @@ namespace EQLogParser.Mirror
    *   "Somebody is watching."    A live tail never goes quiet for two whole ticks during a raid; a line arrives every
    *                             fraction of a second all fight long. Waiting for silence there means the fight list, the
    *                             summaries and the damage meter hold one snapshot for the whole encounter and only move
-   *                             when a human presses Re-derive. Measured on `eqlog_Kizant_xegony.txt` (2,931,939 facts):
+   *                             when somebody forced a pass by hand. Measured on `eqlog_Kizant_xegony.txt` (2,931,939 facts):
    *                             one pass costs about 650 ms, so refreshing while data is dirty is affordable — and
    *                             therefore necessary, not a luxury.
    *
@@ -117,6 +117,20 @@ namespace EQLogParser.Mirror
       if (sinceFullPassS >= LiveIntervalSeconds(lastFullPassSeconds)) return DeriveKind.Full;
       return sinceAnyPassS >= FastFloorSeconds ? DeriveKind.ProjectionOnly : DeriveKind.None;
     }
+
+    /*
+     * The failure ladder, in seconds: after a pass THREW, the next attempt comes RetryDelayS(consecutiveFailures) later —
+     * 1 s, doubling, capped at a minute, and 0 for "no failures outstanding" (any completed pass, either lane, clears the
+     * streak).
+     *
+     * This replaced killing auto-derive forever on the first exception. That design predates the two-lane cadence: when a
+     * derive only ran at load-end, "stop the loop" cost one or two future passes; under a 0.5-3 s refresh it froze every
+     * derived surface for the rest of the night over a single hiccup — a file locked mid-write, an AV scan, a race in
+     * someone's new rule — and recovery needed a human with a button. A transient fault now disappears inside a second;
+     * deterministic poison degrades to a slow, LOGGED drip that a reopened log ends.
+     */
+    public static double RetryDelayS(int consecutiveFailures)
+      => consecutiveFailures <= 0 ? 0 : Math.Min(60d, Math.Pow(2, consecutiveFailures - 1));
   }
 
   /*

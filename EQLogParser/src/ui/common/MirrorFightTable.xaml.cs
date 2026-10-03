@@ -189,7 +189,9 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         _pendingOverride = null;
-        mirrorStatus.Text = $"Derive failed: {message}";
+        // The session retries a failed pass itself (backoff ladder, MirrorSession); the line says so rather
+        // than leaving the reader looking for a button that no longer exists.
+        mirrorStatus.Text = $"Derive failed (retrying automatically): {message}";
       });
     }
 
@@ -235,7 +237,6 @@ namespace EQLogParser
         session.DeriveFailed += OnDeriveFailed;
         session.Capturing += OnCapturing;
       }
-      mirrorRederiveButton.IsEnabled = session is not null;
     }
 
     private void Detach()
@@ -315,8 +316,6 @@ namespace EQLogParser
 
       return true;
     }
-
-    private void RederiveClick(object sender, RoutedEventArgs e) => _session?.RederiveAsync();
 
     private void ShowBreakChanged(object sender, RoutedEventArgs e)
     {

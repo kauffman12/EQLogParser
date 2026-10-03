@@ -239,4 +239,30 @@ public class MirrorDeriveCadenceTest
             MirrorDeriveCadence.Decide(captured + healed, Derived, 0.1, 30_000, 0.2, double.PositiveInfinity, 0),
             "a healing-only stretch is still moving and must read as busy, not quiet — 30k events/second is bulk, and bulk parks until the count stops");
     }
+
+    /*
+     * The failure ladder replaced "auto-derive off forever" after one exception. A transient fault (locked file, an AV
+     * scan) must retry inside a second; deterministic poison must degrade to a slow LOGGED drip, never to silence. The
+     * shape is pinned as numbers because the bug shape is "the wait grew untoward and the meter stopped moving".
+     */
+    [TestMethod]
+    public void ARetryLadderStartsAtOneSecondAndCapsAtAMinute()
+    {
+      Assert.AreEqual(0, MirrorDeriveCadence.RetryDelayS(0), "no failures outstanding - full cadence speed");
+      Assert.AreEqual(1, MirrorDeriveCadence.RetryDelayS(1), "the first retry is quick: most faults are transient");
+      Assert.AreEqual(2, MirrorDeriveCadence.RetryDelayS(2));
+      Assert.AreEqual(4, MirrorDeriveCadence.RetryDelayS(3));
+      Assert.AreEqual(32, MirrorDeriveCadence.RetryDelayS(6));
+      Assert.AreEqual(60, MirrorDeriveCadence.RetryDelayS(7), "capped: a poison capture drips once a minute, visibly");
+      Assert.AreEqual(60, MirrorDeriveCadence.RetryDelayS(500));
+
+      var previous = 0d;
+      for (var failures = 1; failures <= 40; failures++)
+      {
+        var delay = MirrorDeriveCadence.RetryDelayS(failures);
+        Assert.IsTrue(delay >= previous, $"the ladder never shrinks while failures pile up (rung {failures})");
+        Assert.IsTrue(delay > 0 && delay <= 60, "always trying, never slower than a minute");
+        previous = delay;
+      }
+    }
 }
