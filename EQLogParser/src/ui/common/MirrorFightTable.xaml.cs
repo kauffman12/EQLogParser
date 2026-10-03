@@ -320,6 +320,11 @@ namespace EQLogParser
 
     private void ShowBreakChanged(object sender, RoutedEventArgs e)
     {
+      // Load-time contract, the same one the legacy table's `dataGrid?.View != null` absorbs: XAML sets
+      // IsChecked="True" WHILE InitializeComponent parses, firing this handler before ANY of this control's named
+      // fields are wired - mirrorShowBreaks itself is still null then. Acting on that synthetic toggle would also
+      // overwrite the stored setting before the constructor reads it, so skipping pre-load firings is required.
+      if (mirrorShowBreaks is null) return;
       if (mirrorShowBreaks.IsChecked.HasValue && mirrorShowBreaks.IsChecked != _currentShowBreaks)
       {
         _currentShowBreaks = mirrorShowBreaks.IsChecked == true;
@@ -332,6 +337,9 @@ namespace EQLogParser
     // column by name: legacy reaches for dataGrid.Columns[1], which breaks the moment anyone reorders the XAML.
     private void ShowHpChanged(object sender, RoutedEventArgs e)
     {
+      // Load-time contract as in ShowBreakChanged: this fired mid-InitializeComponent with mirrorShowHp itself
+      // null - the startup crash MainWindow's XAML construct hit 100% of launches. Guard first, then compare.
+      if (mirrorShowHp is null) return;
       if (mirrorShowHp.IsChecked.HasValue && mirrorShowHp.IsChecked != _currentShowHp)
       {
         _currentShowHp = mirrorShowHp.IsChecked == true;
