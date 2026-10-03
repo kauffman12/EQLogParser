@@ -72,7 +72,7 @@ namespace EQLogParser
     /*
      * Drops a rejection WITHOUT claiming anything. AddVerifiedPlayerByOperator also lifts a rejection, but it adds the
      * name to the player roster on the way through - wrong for the operator who just said "that is an NPC" or "that is
-     * somebody's pet" on the mirror. A verdict supersedes "make no claim"; it does not imply "is a raider".
+     * somebody's pet" on the engine. A verdict supersedes "make no claim"; it does not imply "is a raider".
      */
     internal void ClearRejectedPlayer(string name)
     {
@@ -91,7 +91,7 @@ namespace EQLogParser
       return true;
     }
 
-    // name -> log time the player-side evidence appeared (used by the combat mirror's Phase 1
+    // name -> log time the player-side evidence appeared (used by the the derivation's Phase 1
     // seed so ingest-time identity replay matches what IsPetOrPlayerOrMerc saw at each line)
     internal IReadOnlyDictionary<string, double> GetVerifiedPlayerTimes() => _verifiedPlayers;
     internal List<string> GetVerifiedPets() => [.. _verifiedPets.Keys];
@@ -400,7 +400,7 @@ namespace EQLogParser
          * _verifiedPlayers at time 0, the mappings of perfectly good raiders whose only evidence was the file.
          *
          * "No claim" is all this says. When the operator means "that is the enemy", that is an assertion and it
-         * belongs on the mirror's manual override (R10, IdentityKind.Npc), where it feeds opposition instead of
+         * belongs on the engine's manual override (R10, IdentityKind.Npc), where it feeds opposition instead of
          * merely silencing a guess.
          */
         _rejectedPlayers[name] = 1;

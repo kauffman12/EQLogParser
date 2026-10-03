@@ -286,7 +286,7 @@ public class IdentityRuleExtensionsTest
 
     private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-ext-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-ext-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         try
         {

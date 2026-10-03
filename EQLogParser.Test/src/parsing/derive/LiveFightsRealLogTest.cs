@@ -8,7 +8,7 @@ namespace EQLogParser;
  * What "a fight is going on" costs and how often it changes, measured over a real capture instead of argued from the rule.
  *
  * `LiveFights` states three choices (which clock, which timestamps, which rows) that the legacy meter never had to make —
- * FightManager owned a set that a log line added to. Once the mirror owns the answer, two questions become product
+ * FightManager owned a set that a log line added to. Once the engine owns the answer, two questions become product
  * questions, and both are answerable from a capture:
  *
  *   1. **How much of a raid night has no fight in it?** That is how long a closed meter stays closed: the announcement that

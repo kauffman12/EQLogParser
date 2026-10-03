@@ -1239,7 +1239,7 @@ namespace EQLogParser
       }
 
       /*
-       * A summoned eye is not a combatant, so no record reaches FightManager, the store, the FCT feed or the mirror.
+       * A summoned eye is not a combatant, so no record reaches FightManager, the store, the FCT feed or the engine.
        * The shape and the three eyes that DO count (a boss's eye, a scrystone) live in one place now -
        * ClassificationRules.EyeSummonOwnerInName - because R19 has to spell an owner exactly the way this gate
        * refuses the fight, and two copies of a name cut are how a rule claims a raider the meter refuses.

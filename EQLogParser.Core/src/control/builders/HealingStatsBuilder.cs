@@ -103,7 +103,7 @@ namespace EQLogParser
           if (_raidTotals.Ranges.TimeSegments.Count > 0)
           {
             /*
-             * The board's one source, and the seam the combat mirror feeds: options.Heals is null for every caller
+             * The board's one source, and the seam the the derivation feeds: options.Heals is null for every caller
              * that wants the captured record store, and a materialized (possibly empty) list when a derived fight
              * selection is being summarized. Nothing else about this method differs between the two — same window,
              * same HealingValidator filters, same grouping — which is what makes the two boards comparable.

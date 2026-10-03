@@ -1,7 +1,7 @@
 namespace EQLogParser;
 
 // Phase 0 smoke tests: the current per-line pipeline runs headlessly (no WPF) on Linux and
-// produces the expected fight for a small fixture. The fixture (mini-data/mirror/mini-fight.txt)
+// produces the expected fight for a small fixture. The fixture (mini-data/derive/mini-fight.txt)
 // is hand-synthesized in EQ log format with agreed test names — real log files are never
 // committed. Exact-value pinning against the derived pipeline is Phase 1's comparison report;
 // here we assert structure and parity only.
@@ -80,7 +80,7 @@ public class PipelineSmokeTest
     {
         var result = PipelineHarness.RunFile(FixturePath);
         var json = PipelineHarness.ToJson(result);
-        var outPath = Path.Combine(AppContext.BaseDirectory, "mirror-snapshot-mini-fight.json");
+        var outPath = Path.Combine(AppContext.BaseDirectory, "derive-snapshot-mini-fight.json");
         File.WriteAllText(outPath, json);
 
         Console.WriteLine(json);

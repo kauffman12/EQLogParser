@@ -64,7 +64,7 @@ public class ClassificationReportTest
     try { Directory.Delete(_tempDir, true); } catch (IOException) { }
   }
 
-  // The reference capture other mirror tests use: several raiders, mobs on both sides and one heal line, which is
+  // The reference capture other derive tests use: several raiders, mobs on both sides and one heal line, which is
   // enough to exercise every column without a second parse per test.
   private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "mini-fight.txt");
 
@@ -112,8 +112,8 @@ public class ClassificationReportTest
                                       IdentityOverrideStore.Instance, PlayerRegistry.Instance, priors);
   }
 
-  // Facts are appended in arrival order, so the ends of the table are the ends of the capture (the mirror keeps the
-  // same pair; a test has no mirror object to ask).
+  // Facts are appended in arrival order, so the ends of the table are the ends of the capture (the engine keeps the
+  // same pair; a test has no capture object to ask).
   private static double LogStartS() => Capture().Facts.FactCount > 0 ? Capture().Facts.Facts[0].TimeS : double.NaN;
   private static double LogEndS() => Capture().Facts.FactCount > 0 ? Capture().Facts.Facts[Capture().Facts.FactCount - 1].TimeS : double.NaN;
 

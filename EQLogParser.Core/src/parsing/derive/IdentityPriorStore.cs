@@ -22,7 +22,7 @@ namespace EQLogParser
    * with itself: a guess that survives only because it was written down, repeated until it looks like evidence. That
    * is the same failure this project already documented for players.txt (names collected 2012-2026 read as "people",
    * ClassificationRules.cs:330-337). Moving priors INTO the derive is a real option, but it has to arrive with the
-   * mirror-vs-legacy parity tests in hand, not as a convenience.
+   * derived-vs-legacy parity tests in hand, not as a convenience.
    *
    * Three rules keep the file honest:
    *
@@ -33,7 +33,7 @@ namespace EQLogParser
    * in players.txt and pet mappings in petmapping.txt: copying any of those in here would launder an assertion into
    * statistics. Names the operator rejected are skipped outright - "no claim" outranks our memory.
    *
-   * - AGREEMENT IS IDEMPOTENT PER CAPTURE. The mirror re-derives whenever a filter or an override changes, so a
+   * - AGREEMENT IS IDEMPOTENT PER CAPTURE. Derivation re-runs whenever a filter or an override changes, so a
    * counter bumped per pass would report "41 captures agreed" for one evening re-derived 41 times. Sighting time is
    * the LOG's last event, not the clock, and the count advances only on a strictly newer capture.
    *
@@ -138,7 +138,7 @@ namespace EQLogParser
 
     /*
      * Fold one finished capture into the ledger. Called AFTER the rules pass, with the names that capture mentioned
-     * and the mirror's own last-event time; every argument may be empty and simply records nothing.
+     * and the engine's own last-event time; every argument may be empty and simply records nothing.
      *
      * captureEndS is the log's clock rather than DateTimeOffset.UtcNow for the idempotency rule above: re-deriving
      * the same file reports the same time, so agreement cannot inflate, and two captures of the same evening taken an

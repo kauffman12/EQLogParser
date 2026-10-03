@@ -208,7 +208,7 @@ public class DerivedTotalsTest
    * A meter reset is a TIME question, not a row question: zeroing the overlay does not choose different fights, it
    * asks the same fights about the seconds since the reset. Legacy answers that by keeping its own running totals
    * (DamageOverlayStatsBuilder, with `OverlayDamageMode` deciding expiry: 0 = on kill, else N seconds of quiet);
-   * the mirror answers it with one extra argument to the calculation it already had. These four tests are what keeps
+   * the engine answers it with one extra argument to the calculation it already had. These four tests are what keeps
    * that argument honest — a slice that silently double-counted its seam, widened its own clock, or got cached under
    * the unwindowed row would each look plausible on screen.
    */

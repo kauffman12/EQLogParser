@@ -277,7 +277,7 @@ namespace EQLogParser
       }
 
       // No session gate: while the reader pump runs this window is either showing the band or docked-hidden
-      // (mirror off), and a hidden band costs nothing. The only veto is "rows already landed this session".
+      // (engine off), and a hidden band costs nothing. The only veto is "rows already landed this session".
       if (_loadBandSettled) return;
 
       // The reading phase says nothing HERE: the status line at the top of the application counts the same pump's
@@ -350,7 +350,7 @@ namespace EQLogParser
       return selected;
     }
 
-    // Whether this window has a live session behind it: the answer to "does the mirror answer for this log at
+    // Whether this window has a live session behind it: the answer to "does the engine answer for this log at
     // all", which is what MainWindow asks before choosing who owns GetFights while both windows can exist.
     internal bool SessionActive => _session != null;
 

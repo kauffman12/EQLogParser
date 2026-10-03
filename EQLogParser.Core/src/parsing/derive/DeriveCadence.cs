@@ -1,7 +1,7 @@
 namespace EQLogParser
 {
   /*
-   * When the mirror is allowed to run another pass, decided apart from the session so the rule can be tested without a
+   * When the engine is allowed to run another pass, decided apart from the session so the rule can be tested without a
    * dispatcher. The question is genuinely two questions, and conflating them is what made the derived surfaces go stale:
    *
    *   "The load finished."      The count stopped moving between two ticks. This is what a bulk file load needs — one

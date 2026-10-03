@@ -174,7 +174,7 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir)) return overrides;
 
       // Path.Combine rather than the `@"\"` concatenation its neighbours use: this has to round-trip on a host
-      // where a backslash is a filename character, and the mirror's rule tests run there.
+      // where a backslash is a filename character, and the engine's rule tests run there.
       LoadProperties(overrides, ReadList(Path.Combine(ConfigDir, serverName, IdentityOverridesFileName)));
       return overrides;
     }

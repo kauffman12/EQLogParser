@@ -58,7 +58,7 @@ namespace EQLogParser
     public static volatile bool IsEmuParsingEnabled;
 
     /// <summary>
-    /// Whether the combat mirror taps the pipeline and the derived fight list window is shown.
+    /// Whether the the derivation taps the pipeline and the derived fight list window is shown.
     /// Read when a log opens; toggling applies to the next log (the tap cannot see history).
     /// </summary>
     public static volatile bool IsCombatMirrorEnabled;

@@ -19,7 +19,7 @@ using EQLogParser;
 
 namespace EQLogParser
 {
-  // Owns the combat mirror for one log-open: taps the pipeline statics, receives the chat fan-out,
+  // Owns the the derivation for one log-open: taps the pipeline statics, receives the chat fan-out,
   // and produces derived-list snapshots. Subscriptions are process-global parser events, so exactly
   // one session may run at a time — MainWindow creates it before LogReader starts and disposes it
   // when the log closes, mirroring the harness lifecycle (RunCore) that proved this wiring.
@@ -70,7 +70,7 @@ namespace EQLogParser
 
     /*
      * Healing in its own table, sharing the damage table's interned names — see HealFact for why the streams
-     * are separate. Captured from here so the mirror's heal population is exactly the population the healing
+     * are separate. Captured from here so the engine's heal population is exactly the population the healing
      * board reads (RecordsStore gets the same records, off the same event).
      */
     private readonly HealFactTable _heals;
@@ -402,7 +402,7 @@ namespace EQLogParser
       _quietTimer.Stop();
       _capture.Stop();
 
-      // The fact table is the biggest thing the mirror holds; a disposed session must not stay the reason
+      // The fact table is the biggest thing the engine holds; a disposed session must not stay the reason
       // a closed log's records are still reachable.
       _snapshot = null;
       _carriedTimeline = null;
@@ -464,7 +464,7 @@ namespace EQLogParser
 
     /*
      * The fights this window answers for, as legacy-shaped rows: the door MainWindow.GetFights feeds to the
-     * spell, taunt, death and export paths while the mirror is attached. Materialization is the same pass a board
+     * spell, taunt, death and export paths while the engine is attached. Materialization is the same pass a board
      * click pays - records rebuilt from the facts - but nothing here is stored twice (the snapshot keeps the
      * derived rows; this only hands out the legacy shape the older consumers read). `selected` is the grid's own
      * selection; null means every visible row in list order, exactly what the display list shows.
@@ -505,9 +505,9 @@ namespace EQLogParser
     /*
      * The damage meter's own question: every row this capture holds that was still alive when the window opened,
      * measured through the window. No hidden-pet re-adding is needed because the scope is already every row (a pet's
-     * row is in it), which is also why a mirror-fed meter and a mirror-list select-all can be compared at all.
+     * row is in it), which is also why a capture-fed meter and a derived-list select-all can be compared at all.
      *
-     * Null means the mirror has nothing to say yet (no derive landed, or nothing fought since the window opened);
+     * Null means the engine has nothing to say yet (no derive landed, or nothing fought since the window opened);
      * what to paint for that is the overlay's call, exactly as it is today.
      */
     /*
@@ -669,7 +669,7 @@ namespace EQLogParser
     {
       private readonly CombatCapture _capture;
 
-      public IdentityChatSink(CombatCapture mirror) => _capture = mirror;
+      public IdentityChatSink(CombatCapture capture) => _capture = capture;
 
       public void Init()
       {
@@ -679,7 +679,7 @@ namespace EQLogParser
     }
   }
 
-  // Forwards to several chat sinks in order — the seam that lets ChatDB archiving and the mirror
+  // Forwards to several chat sinks in order — the seam that lets ChatDB archiving and the engine
   // share the single IChatSink slot LogProcessor takes, without Core knowing about either.
   internal sealed class CompositeChatSink(params IChatSink[] sinks) : IChatSink
   {

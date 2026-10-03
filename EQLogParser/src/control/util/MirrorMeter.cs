@@ -28,8 +28,8 @@ namespace EQLogParser
      * window open, close a hidden one for real — cannot end up arguing over two different numbers. */
     internal static double TimeoutFor(int damageMode) => LiveFights.TimeoutFor(damageMode);
 
-    // "Is a pull going on?" from the capture instead of FightManager's overlay-fight set. No session, no fight: a mirror that
-    // is not capturing has nothing to show, which is the same answer as an empty board and does not fall back to anything.
+    // "Is a pull going on?" from the capture instead of FightManager's overlay-fight set. No session, no fight: a capture that
+    // is not running has nothing to show, which is the same answer as an empty board and does not fall back to anything.
     internal static bool HasLiveFight(int damageMode) => DeriveEngine.Active?.HasLiveFight(TimeoutFor(damageMode)) == true;
 
     /* The same question for a caller holding no meter window, so no dial is in hand to read: the saved setting is where a

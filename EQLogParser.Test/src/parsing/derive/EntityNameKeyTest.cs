@@ -5,7 +5,7 @@ namespace EQLogParser;
 /*
  * Entity names are looked up without caring about letter case, everywhere an entity is asked about.
  *
- * The two halves of the mirror spell names differently and neither is wrong:
+ * The two halves of the engine spell names differently and neither is wrong:
  *
  *   - FACTS carry sentence-case names. ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain all finish with
  *     TextUtils.CapitalizeFirst, so a mob is "A bone walker" in every damage, heal and death record.

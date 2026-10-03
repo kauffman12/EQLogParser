@@ -5,7 +5,7 @@ using EQLogParser;
 
 namespace EQLogParser;
 
-// Opt-in performance bench for the mirror derive pipeline over a REAL log (field report: the WPF
+// Opt-in performance bench for the engine derive pipeline over a REAL log (field report: the WPF
 // app captured 2.1M facts and the visible snapshot never arrived - the derive-phase cost at
 // millions of facts had never been measured). Runs only when EQLP_DERIVE_BENCH names a log file:
 //   EQLP_DERIVE_BENCH=local/eqlog_Kizant_xegony-selected2.txt dotnet test --filter Bench --logger "console;verbosity=detailed"
@@ -28,7 +28,7 @@ public class RealLogBenchTest
 
         // Same regex as PipelineHarness.RunCore. An earlier version ended in \.txt$ while reading
         // the name WITHOUT extension, so it never matched: PlayerName stayed empty, every record
-        // kept "You" instead of the character name, and legacy+mirror both under-counted together
+        // kept "You" instead of the character name, and legacy and derived both under-counted together
         // (222 vs the real 261 on the 09-17 capture) - two consistent numbers is not proof.
         var selfMatch = System.Text.RegularExpressions.Regex.Match(
             Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$",
@@ -70,8 +70,8 @@ public class RealLogBenchTest
         fm.EventsNewFight += _ => Interlocked.Increment(ref legacyFights);
 
         var facts = new DamageFactTable(100_000);
-        var mirror = new CombatCapture(facts);
-        if (!tapOff) mirror.Start();
+        var capture = new CombatCapture(facts);
+        if (!tapOff) capture.Start();
 
         var totalSw = Stopwatch.StartNew();
         try
@@ -82,7 +82,7 @@ public class RealLogBenchTest
             var ingestSw = Stopwatch.StartNew();
             using (var items = new System.Collections.Concurrent.BlockingCollection<LogReaderItem>(
                        new System.Collections.Concurrent.ConcurrentQueue<LogReaderItem>(), 100_000))
-            using (var processor = new LogProcessor(path, tapOff ? new NoOpChat() : (IChatSink)new IdentityChatSink(mirror), new NoOpHook()))
+            using (var processor = new LogProcessor(path, tapOff ? new NoOpChat() : (IChatSink)new IdentityChatSink(capture), new NoOpHook()))
             {
                 processor.LinkTo(items);
 
@@ -138,7 +138,7 @@ public class RealLogBenchTest
                               + $"damage facts alone={(long)facts.FactCount * Unsafe.SizeOf<DamageFact>() / (1024 * 1024):N0} MB"
                               + (tapOff ? "  [TAP OFF: this is what the legacy pipeline costs to load]" : ""));
 
-            mirror.Stop();
+            capture.Stop();
 
             // The phases below are what the derived fight list adds between "file read" and "list on screen".
             if (tapOff)
@@ -175,7 +175,7 @@ public class RealLogBenchTest
         }
         finally
         {
-            mirror.Stop();
+            capture.Stop();
             FightManager.Instance = priorInstance;
             DamageLineParser.FightManager = priorParserFm;
             Console.Out.Flush();
@@ -398,12 +398,12 @@ public class RealLogBenchTest
     private sealed class IdentityChatSink : IChatSink
     {
         private readonly CombatCapture _capture;
-        public IdentityChatSink(CombatCapture mirror) => _capture = mirror;
+        public IdentityChatSink(CombatCapture capture) => _capture = capture;
         public void Init() { }
         public void Add(ChatType chat) => _capture.HandleChat(chat);
     }
 
-    // Used by the tap-off baseline: the parser must not see the mirror on either channel.
+    // Used by the tap-off baseline: the parser must not see the engine on either channel.
     private sealed class NoOpChat : IChatSink
     {
         public void Init() { }

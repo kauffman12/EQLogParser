@@ -26,7 +26,7 @@ public class CharmWindowPolicyTest
     // Runs the real parser over synthetic lines and applies the rules cold, exactly like a capture.
     private static ClassificationOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-charm-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-charm-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Charmone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 

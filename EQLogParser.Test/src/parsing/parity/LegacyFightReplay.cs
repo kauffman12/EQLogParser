@@ -7,7 +7,7 @@ namespace EQLogParser
   // expiry, slain flush) is a line-for-line replay of the current pipeline with two deliberate
   // swaps:
   //   * PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name) at ingest time -> the fact's own
-  //     AttackerPlayerSide/DefenderPlayerSide flags: the mirror captured exactly that call's
+  //     AttackerPlayerSide/DefenderPlayerSide flags: the capture captured exactly that call's
   //     answer on the same thread at the same instant (a fact, not a judgment — verified
   //     mid-log names read player-side only from their evidence time onward, like the live
   //     registry did). Phase 2 rules will layer retroactive reclassification over this.
@@ -39,7 +39,7 @@ namespace EQLogParser
       public int NonTankingSeq;
     }
 
-    // all four streams are in consumer order (Seq is a single counter assigned by the mirror at
+    // all four streams are in consumer order (Seq is a single counter assigned by the engine at
     // append time); a replay must apply them in exactly that order, so each step takes the lowest
     // Seq among the stream heads.
     public static List<DerivedFight> Derive(IFactTable facts)

@@ -28,7 +28,7 @@ public class CharmRowProjectionTest
 
     private static ClassificationOutcome Run(out EntityTimeline timeline, out DamageFactTable facts, params string[] lines)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-charmrow-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-charmrow-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Charmrow_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 

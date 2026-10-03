@@ -4,9 +4,9 @@ namespace EQLogParser
 {
   internal class PreLineParser
   {
-    // Mirror evidence (D8): fires this parser's own recognitions with provenance. Purely additive -
+    // Classification evidence (D8): fires this parser's own recognitions with provenance. Purely additive -
     // no branch consumes or alters anything for this; CombatCapture is the only subscriber and the
-    // legacy pipeline behaves exactly as before. Kind values are EvidenceFact.Ev* (mirror module).
+    // legacy pipeline behaves exactly as before. Kind values are EvidenceFact.Ev* (parsing/derive).
     internal static event Action<string, double, byte> EventsEvidence;
 
     /*

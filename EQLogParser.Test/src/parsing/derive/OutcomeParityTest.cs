@@ -7,7 +7,7 @@ namespace EQLogParser;
  *
  * The tank board's first columns are counts of things that did NOT happen: `# Attempts`, `% Hit`, `Misses`,
  * `Blocks`, `Dodges`, `Parries`. Each one comes out of StatsUtil.UpdateDamageStats reading a record's LABEL, so
- * the mirror's job was never to count them — only to refuse to throw away the lines that carry them. Those lines
+ * the engine's job was never to count them — only to refuse to throw away the lines that carry them. Those lines
  * are the "X tries to <verb> Y, but ..." family, and the parser turns each into a record with total 0 and one of
  * seven labels (Block, Dodge, Miss, Parry, Riposte, Absorb, Invulnerable), so they ride the same
  * EventsDamageProcessed seam as damage and land in the fact table like any other hit.

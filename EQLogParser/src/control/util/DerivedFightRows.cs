@@ -147,7 +147,7 @@ namespace EQLogParser
            * worse than approximate: under a minute it returns an empty string (so the 46-second first life of
            * Waxwork Abolishion showed no duration at all), and 112 s and 162 s both read "1 minute"/"2 minutes",
            * which is no way to compare two pulls. The legacy grid has no duration column — the seconds lived in the
-           * row tooltip (`Time Alive: 46s`) — so this is the mirror's own number and it might as well be exact.
+           * row tooltip (`Time Alive: 46s`) — so this is the engine's own number and it might as well be exact.
            *
            * And it counts them the way the product counts them: INCLUSIVE (DerivedFight.DurationSeconds), which is
            * what makes this cell agree with the tooltip of the legacy row above it and, one click away, with the

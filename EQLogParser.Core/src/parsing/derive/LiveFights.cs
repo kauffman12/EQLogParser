@@ -7,7 +7,7 @@ namespace EQLogParser
    * "Is a fight happening right now?", asked of rows that were derived after the fact.
    *
    * The legacy meter never had to ask: FightManager kept a set of overlay fights updated per line, so "something is going
-   * on" was a dictionary somebody else maintained and the meter only had to look at it. A mirror row is not that — it is a
+   * on" was a dictionary somebody else maintained and the meter only had to look at it. A derived row is not that — it is a
    * life reconstructed from facts, and the only thing that says whether it is STILL a life is where its last fact sits
    * relative to the newest one in the capture. So the question gets answered here, over rows, on one clock:
    *

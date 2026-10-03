@@ -96,7 +96,7 @@ namespace EQLogParser
       registry.EventsRemoveVerifiedPlayer -= OnRemovedVerifiedPlayer;
     }
 
-    // Chat reaches the mirror through the pipeline's IChatSink seam (the app adapter and the test
+    // Chat reaches the engine through the pipeline's IChatSink seam (the app adapter and the test
     // harness fan out here); every chat line becomes one EvChat fact, channel included.
     // Runs derivation logic against the fact table with ingest parked at the gate.
     public T DeriveQuiescent<T>(Func<T> derive)

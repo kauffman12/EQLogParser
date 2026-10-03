@@ -301,7 +301,7 @@ namespace EQLogParser
     }
 
     /*
-     * Which hand of its rail a row's block hangs on, and it is the mirror of the lean this column was told to make: a column that bends
+     * Which hand of its rail a row's block hangs on, and it is the engine of the lean this column was told to make: a column that bends
      * LEFT turns its rows around so the digits hang RIGHT. That is not decoration — the lean and the digits want the same hand, because a
      * rail row's block has always hung left (f3ba116f), so a leftward bend was spending air the glyphs already occupied and came out at
      * 0 px in a 1280 window (docs/DesignNotes.md → "Which way an arc leans"). Turning the row gives the bow the whole lane and costs the

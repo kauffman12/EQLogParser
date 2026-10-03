@@ -601,7 +601,7 @@ namespace EQLogParser
 
     /* The outgoing band's fall runs down toward the strip and stops on its own spawn line, so the gap stays clear because of
      * where the flight finishes; the sweep below is what proves the sentence rather than the clamp catching it afterwards.
-     * Both sides of the mirror are pinned so a "cleanup" cannot silently delete one. */
+     * Both sides of the engine are pinned so a "cleanup" cannot silently delete one. */
     [TestMethod]
     public void FountainOnTheOutgoingBandFallsDownward()
     {
@@ -714,7 +714,7 @@ namespace EQLogParser
         Assert.IsTrue(hit.Rise < 0, $"incoming spray must travel away from the gap, downward (Rise {hit.Rise:0.#})");
         Assert.IsTrue(hit.FallDist < 0, "and its fall must mirror back up toward the gap, not down to the window edge");
 
-        /* The invariant that makes the mirror safe is not "less than it sank", it is "back to where it started": a full
+        /* The invariant that makes the engine safe is not "less than it sank", it is "back to where it started": a full
          * mirrored return tops out exactly on its spawn line, which sits inside the band, so no draw can reach the strip and
          * none needs the clamp. A return deeper than the throw would.
          */

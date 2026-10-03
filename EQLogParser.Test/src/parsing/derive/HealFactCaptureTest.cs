@@ -12,7 +12,7 @@ namespace EQLogParser;
  * The comparison is worth stating precisely, because it is the strongest form this test could take.
  * HealingLineParser fires EventsHealProcessed immediately after RecordsStore.Instance.Add, for every heal
  * it stored, and nothing between those two statements can classify or drop anything (HealingLineParser.cs:46).
- * So "mirror heals" and "heals the healing board has available" are the same population by construction, and
+ * So "captured heals" and "heals the healing board has available" are the same population by construction, and
  * any difference here is a capture bug rather than a disagreement about interpretation. A test that compared
  * heal facts against another sum of itself would pass forever and prove nothing.
  *
@@ -56,7 +56,7 @@ public class HealFactCaptureTest
     [TestMethod]
     public void AFactIsItsMeasuredSizeNotWishes()
     {
-        Assert.AreEqual(32, Unsafe.SizeOf<DamageFact>(), "damage facts are the most numerous thing the mirror holds");
+        Assert.AreEqual(32, Unsafe.SizeOf<DamageFact>(), "damage facts are the most numerous thing the engine holds");
         Assert.AreEqual(40, Unsafe.SizeOf<HealFact>());
 
         /*
@@ -114,7 +114,7 @@ public class HealFactCaptureTest
 
         Assert.IsTrue(stored.Count > 0, "the fixture must produce healing at all, or this test proves nothing");
         Assert.AreEqual(stored.Count, run.HealFacts.HealCount,
-            "a heal the healing board can see and the mirror did not capture is data lost at the door");
+            "a heal the healing board can see and the engine did not capture is data lost at the door");
 
         long storedTotal = 0, storedAsked = 0;
         for (var i = 0; i < stored.Count; i++)
@@ -136,7 +136,7 @@ public class HealFactCaptureTest
         Assert.AreEqual(storedAsked, factAsked);
 
         // Field for field, in the order both sides saw them. Values only, never instance identity: heals are
-        // shared by value (RepeatStore), and a mirror fact is a copy of the record's contents by design.
+        // shared by value (RepeatStore), and a captured fact is a copy of the record's contents by design.
         for (var i = 0; i < stored.Count; i++)
         {
             var rec = stored[i].Item2;
@@ -284,7 +284,7 @@ public class HealFactCaptureTest
         ClassificationRules.Apply(run.Facts, timeline);
         var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
         // Named by what the parser fired, not by the fixture's spelling: the capitalisation is normalization
-        // upstream of the mirror, and this row's name is data — a hardcoded lowercase would silently select
+        // upstream of the engine, and this row's name is data — a hardcoded lowercase would silently select
         // nothing and every assertion below it would run on an empty block list.
         var boss = rows.OrderByDescending(r => r.DamageTotal).First();
         Assert.IsTrue(boss.Name.EndsWith("frostbound sentinel", StringComparison.OrdinalIgnoreCase), $"unexpected top row {boss.Name}");

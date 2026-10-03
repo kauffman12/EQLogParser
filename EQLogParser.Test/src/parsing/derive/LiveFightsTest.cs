@@ -5,7 +5,7 @@ namespace EQLogParser;
 /*
  * "Is a fight happening right now?" over derived rows, which is the question the damage meter had answered for it by
  * FightManager's overlay-fight set: a dictionary that a line of the log added to, so "something is going on" was a fact
- * somebody else maintained. Nothing maintains it in the mirror — a row is a reconstruction — so the rule gets written down
+ * somebody else maintained. Nothing maintains it in the engine — a row is a reconstruction — so the rule gets written down
  * here and pinned, because everything about it is a choice the legacy code never had to state:
  *
  *   - WHICH CLOCK. The capture's newest event, not the wall. A load running at 170k facts/s is minutes behind the clock;

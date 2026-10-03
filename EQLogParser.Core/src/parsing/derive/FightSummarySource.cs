@@ -10,11 +10,11 @@ namespace EQLogParser
    * The derived fight list in the shape the existing damage summary already reads: the boss-directed
    * facts of one projected fight, rebuilt as DamageRecord objects inside Fight.DamageBlocks.
    *
-   * Why this exists at all: the point of the mirror is that the current per-line pipeline and a
+   * Why this exists at all: the point of the engine is that the current per-line pipeline and a
    * fact-table projection can be looked at side by side over the same log. The cheapest honest way to
    * compare them is to let the real summary tabs render the derived side — the same builder, the same
    * grids, so any disagreement is a classification difference and not two different pieces of UI
-   * disagreeing with each other. Nothing here teaches the summary about the mirror; it is handed
+   * disagreeing with each other. Nothing here teaches the summary about the engine; it is handed
    * ordinary Fight objects.
    *
    * What a materialized fight holds:
@@ -185,7 +185,7 @@ namespace EQLogParser
      * The same row materialized through a TIME window: the damage meter's "since I zeroed it" slice of a fight that
      * ran on either side of that moment. Legacy keeps such a slice as its own state (DamageOverlayStatsBuilder holds
      * per-player totals plus a TimeRange of when each player was active, and zeroes them on reset), which is exactly
-     * the bookkeeping this mirror exists to stop duplicating — so a window asks the SAME materializer for the records
+     * the bookkeeping this source exists to stop duplicating — so a window asks the SAME materializer for the records
      * whose seconds fall inside it, and the activity segments, hit counts and bounds that come back are the slice's.
      *
      * NOT CACHED, and that is the load-bearing decision. _summaries is keyed by DerivedFight alone, so storing a
@@ -492,7 +492,7 @@ namespace EQLogParser
   }
 
   // A derived selection turned into stats input: the materialized fights plus the AllRanges window the
-  // summary expects (FightTable builds its own from the selected rows' BeginTime..LastTime, so the mirror
+  // summary expects (FightTable builds its own from the selected rows' BeginTime..LastTime, so the engine
   // list has to hand over the same thing or DPS would be measured against a different clock).
   internal sealed record SummaryInput(IReadOnlyList<Fight> Fights, TimeRange AllRanges)
   {

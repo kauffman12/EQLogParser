@@ -2,7 +2,7 @@ namespace EQLogParser;
 
 // Registry end-state + evidence times as manual identity assignments (D2 warm-registry seeding).
 // Strengths stay below the Phase 2 rule tiers so rule output overrides this seed when both are
-// present (R10 > R2 > …). Shared by the test harness and the app's mirror session so cold/warm
+// present (R10 > R2 > …). Shared by the test harness and the app's derive engine so cold/warm
 // semantics can never drift between them.
 internal static class RegistrySeed
 {

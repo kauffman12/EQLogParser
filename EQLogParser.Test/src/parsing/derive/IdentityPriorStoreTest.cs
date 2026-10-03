@@ -12,7 +12,7 @@ namespace EQLogParser;
  *     session's character (R0-local), Manual verdicts (mirror-overrides.txt), roster names (players.txt) and this
  *     file's own contents are inputs rather than evidence: they answer the same way in every capture, so writing them
  *     down is noise that cannot be corrected from, and would turn an assertion into statistics about itself.
- *   - Agreement is idempotent per capture. The mirror re-derives whenever a filter or override changes; a counter
+ *   - Agreement is idempotent per capture. Derivation re-runs whenever a filter or override changes; a counter
  *     bumped per pass would report "41 captures agreed" for one evening replayed 41 times.
  *   - A changed verdict restarts the count, so nothing advertises forty confirmations of a belief held for one.
  *   - It expires, measured against the newest entry rather than the wall clock, and a rejected name is never

@@ -30,7 +30,7 @@ namespace EQLogParser
 
     /*
      * The healer's own name carries its owner ("Bulgar`s pet", "Bulgar`s warder"). Flag rather than a
-     * resolved owner: the mirror stores what the line says and rules decide what it means (D1). The
+     * resolved owner: the engine stores what the line says and rules decide what it means (D1). The
      * explicit "Owner:" annotation has no equivalent here because HealProcessedEvent carries no raw line —
      * extending that event is the documented route if heal lines turn out to need it, not a second parse.
      */
@@ -154,7 +154,7 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(spell)) return HealFact.NoSpell;
       if (_spellMap.TryGetValue(spell, out var idx)) return idx;
-      if (_spells.Count >= HealFact.NoSpell) throw new InvalidOperationException("mirror: spell table exceeded capacity");
+      if (_spells.Count >= HealFact.NoSpell) throw new InvalidOperationException("capture: spell table exceeded capacity");
       _spells.Add(spell);
       idx = (ushort)(_spells.Count - 1);
       _spellMap[spell] = idx;

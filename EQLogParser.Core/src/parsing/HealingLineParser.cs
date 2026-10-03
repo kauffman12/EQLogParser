@@ -45,7 +45,7 @@ namespace EQLogParser
            * and dies, and the raid's answer to it is a wasted click, not healing. Legacy already refused the damage
            * side (DamageLineParser.InIgnoreList) and this refuses the heal side, in the parser rather than in a
            * viewer, because dropping it later would still intern the eye's name — and an ignored name that reaches
-           * the mirror's pool sits in the identity list as a permanent Unknown for a thing the pipeline has already
+           * the engine's pool sits in the identity list as a permanent Unknown for a thing the pipeline has already
            * decided not to count. The line is still a heal line: handled, just not stored (R19,
            * ClassificationRules.EyeSummonOwnerInName).
            */

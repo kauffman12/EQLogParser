@@ -148,7 +148,7 @@ public class RealLogBoardsTest
     private static string PersonOf(string rowName) =>
         rowName.EndsWith(" +Pets", StringComparison.Ordinal) ? rowName[..^" +Pets".Length] : rowName;
 
-    /* The people a board is a report about, by the mirror's own final verdict: Player and Merc only. Pet rows are
+    /* The people a board is a report about, by the engine's own final verdict: Player and Merc only. Pet rows are
      * covered through PersonOf, and a name no rule placed is not evidence about the raid either way (it is still
      * printed in the raw census above, where the reader can see what it did). */
     private static HashSet<string> RaidSidePeople(Dictionary<string, PlayerStats> board, EntityTimeline timeline) =>
@@ -483,7 +483,7 @@ public class RealLogBoardsTest
                           + $"derived={derivedTanking?.Values.Sum(p => p.Total):N0}");
         var tankingDiffs = ReportBoard("tanking", legacyTanking ?? [], derivedTanking ?? [], DamageFields, 20);
 
-        // The same census restricted to names the mirror calls people at the end of the capture: the population the
+        // The same census restricted to names the engine calls people at the end of the capture: the population the
         // derived board is defined over. What is left out of this line is legacy's pet and mob traffic.
 
 
@@ -803,7 +803,7 @@ public class RealLogBoardsTest
     }
 
     /*
-     * The per-consumer surfaces that moved to the mirror - the spell board (each fight's Dd/DoT/Proc dictionaries)
+     * The per-consumer surfaces that moved to the engine - the spell board (each fight's Dd/DoT/Proc dictionaries)
      * and the taunt board (each fight's TauntBlocks) - measured at the same altitude as the boards above: select
      * EVERY fight, compare per person, report rather than force. The engines legitimately differ about record
      * attribution (legacy drops a record it cannot place and folds pets only once its registry learned them; the

@@ -41,7 +41,7 @@ namespace EQLogParser
      * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
      * (DerivedTotals), instead of the overlay's own running totals. The meter's policy stays here, because it always was
      * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. the engagement gap,
-     * otherwise N seconds), and the window starting at the reset. That is why the mirror holds no "current fight": the
+     * otherwise N seconds), and the window starting at the reset. That is why the engine holds no "current fight": the
      * seconds a board covers is this component's business.
      */
     private bool _mirrorMeterWarned;
@@ -402,7 +402,7 @@ namespace EQLogParser
      * The same board, derived. Window = [reset moment, now]; a row that went quiet for longer than the meter's own
      * timeout expires the board (legacy zeroes it, and the next window starts here rather than at the old reset), which
      * is the display rule DamageMeterConfigState.DamageResetMode always encoded — kept on this side of the seam so the
-     * mirror stays free of "what a meter is showing right now".
+     * the engine stays free of "what a meter is showing right now".
      *
      * There is no fallback to the legacy tally anywhere on this path. A derived board that quietly became a legacy one
      * is indistinguishable from correct numbers, which is the worst failure a meter can have — so failures blank the
@@ -460,7 +460,7 @@ namespace EQLogParser
         }
 
         /*
-         * Nothing in the window yet: hold what is on screen. A mirror pass runs when the log goes quiet, so a fight in
+         * Nothing in the window yet: hold what is on screen. A derive pass runs when the log goes quiet, so a fight in
          * progress can be a few seconds from landing, and flickering an empty board between passes would read as "the
          * raid stopped doing damage". This is also the one place where the derived meter differs in FEEL from the
          * legacy one second-to-second: legacy accumulates per line as they parse, this updates per derive.
@@ -622,7 +622,7 @@ namespace EQLogParser
 
         /*
          * Hiding a meter with nothing behind it closes it for real. The two engines are asked the same question in their own
-         * terms: legacy kept a set of overlay fights, the mirror asks whether any row is still going inside the window that
+         * terms: legacy kept a set of overlay fights, the engine asks whether any row is still going inside the window that
          * zeroes this board (LiveFights). One consequence of the second phrasing is worth knowing: on a derived meter a
          * window hidden between pulls closes instead of waiting out the log, and comes back on the next pull through
          * DeriveEngine.NewFightObserved rather than lingering invisibly until the app restarts.

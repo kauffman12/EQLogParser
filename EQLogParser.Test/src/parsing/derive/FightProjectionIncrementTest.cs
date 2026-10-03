@@ -149,7 +149,7 @@ public class FightProjectionIncrementTest
     [TestMethod]
     public void ANewIdentityVerdictBuysAFullRebuild()
     {
-        // Rows MIGRATE when evidence arrives — that is the feature the mirror exists for — so a changed classification
+        // Rows MIGRATE when evidence arrives — that is the feature the engine exists for — so a changed classification
         // may never be answered by continuing: an exchange keyed on the raider has to move onto the mob it was fighting.
         var log = new Capture();
         log.Hit("Echohead", "Illuminai", 50, 0);
@@ -442,7 +442,7 @@ public class FightProjectionIncrementTest
     // The same two steps DeriveEngine runs per pass: roster seed, then the rules over facts and heals.
     private static Parsed ParseAndClassify(string[] lines, string fixtureName)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-inc-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-inc-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, fixtureName);   // the fixture's own name keeps any player-name seeding intact
         File.WriteAllLines(log, lines);
 

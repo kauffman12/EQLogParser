@@ -28,7 +28,7 @@ public class IdentityOverrideStoreTest
     _savedConfigDir = ConfigUtil.ConfigDir;
     _savedServerName = ConfigUtil.ServerName;
 
-    _tempDir = Path.Combine(Path.GetTempPath(), "mirror-overrides-" + Guid.NewGuid().ToString("N"));
+    _tempDir = Path.Combine(Path.GetTempPath(), "derive-overrides-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(_tempDir);
     ConfigUtil.ConfigDir = _tempDir;
     ConfigUtil.ServerName = "Ovrtest";
@@ -159,7 +159,7 @@ public class IdentityOverrideStoreTest
 
   private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
   {
-    var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-ovrrun-" + Guid.NewGuid().ToString("N")));
+    var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-ovrrun-" + Guid.NewGuid().ToString("N")));
     var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
     try
     {

@@ -13,7 +13,7 @@ public class FightParityDiffTest
 {
     private static string MiniFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "mini-fight.txt");
     private static string GapFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "gap-fight.txt");
-    private static string ReportDir => Path.Combine(AppContext.BaseDirectory, "mirror-reports");
+    private static string ReportDir => Path.Combine(AppContext.BaseDirectory, "derive-reports");
 
     [TestMethod]
     public void MiniFight_DerivedMatchesCurrentPipeline()
@@ -21,7 +21,7 @@ public class FightParityDiffTest
         Assert.IsTrue(File.Exists(MiniFightPath), $"missing fixture: {MiniFightPath}");
 
         var run = PipelineHarness.RunFileDerived(MiniFightPath);
-        Assert.IsTrue(run.Facts.FactCount > 0, "no damage facts captured — mirror tap not wired?");
+        Assert.IsTrue(run.Facts.FactCount > 0, "no damage facts captured — capture tap not wired?");
         Assert.AreEqual(1, run.Facts.DeathCount, "expected exactly one slain fact on this fixture");
 
         var report = FightParityDiff.Compare(run.Fights, run.DerivedFights, logName: "mini-fight.txt", factCount: run.Facts.FactCount);
@@ -61,7 +61,7 @@ public class FightParityDiffTest
         var path = MiniFightPath;
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path}");
 
-        // A/B: run without the mirror, then with it + derive. The §6 targets (< 300 ms full derive,
+        // A/B: run without the engine, then with it + derive. The §6 targets (< 300 ms full derive,
         // < 2 % overhead) are judged on the large log — at fixture scale these are sanity bounds.
         var sw = Stopwatch.StartNew();
         _ = PipelineHarness.RunFile(path);
@@ -80,7 +80,7 @@ public class FightParityDiffTest
 
         Assert.IsTrue(deriveMs < 300, $"full derive took {deriveMs} ms — §6 target is < 300 ms even at fixture scale");
         Assert.IsTrue(derivedMs < baselineMs + Math.Max(50, baselineMs / 2),
-            $"mirror overhead too large: baseline={baselineMs}ms derived={derivedMs}ms");
+            $"derive overhead too large: baseline={baselineMs}ms derived={derivedMs}ms");
     }
 
     [TestMethod]
@@ -89,7 +89,7 @@ public class FightParityDiffTest
         var path = Environment.GetEnvironmentVariable("EQLP_DERIVE_LOG");
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
-            Console.WriteLine("[mirror] EQLP_DERIVE_LOG not set (or missing) — skipping the real-log comparison run.");
+            Console.WriteLine("[derive] EQLP_DERIVE_LOG not set (or missing) — skipping the real-log comparison run.");
             return;
         }
 
@@ -102,7 +102,7 @@ public class FightParityDiffTest
         report.WriteAll(ReportDir, baseName);
 
         var factBytes = run.Facts.EstimatedBytes;
-        Console.WriteLine($"[mirror] {Path.GetFileName(path)}: {wallMs}ms wall, {run.Facts.FactCount} facts ({factBytes / 1024 / 1024} MB buffer), " +
+        Console.WriteLine($"[derive] {Path.GetFileName(path)}: {wallMs}ms wall, {run.Facts.FactCount} facts ({factBytes / 1024 / 1024} MB buffer), " +
             $"fights current={report.CurrentFightCount} derived={report.DerivedFightCount}, matched={report.MatchedFights}/{Math.Max(report.CurrentFightCount, report.DerivedFightCount)}");
         Console.WriteLine(report.ToText());
 

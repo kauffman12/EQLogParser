@@ -3,7 +3,7 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * Corpses in the log, and what the mirror does with them: as little as possible.
+ * Corpses in the log, and what the engine does with them: as little as possible.
  *
  * Three shapes exist, and only two of them ever appear in a fact.
  *
@@ -29,7 +29,7 @@ public class RaisedCorpseTest
 {
     private static DamageFactTable Run(out EntityTimeline timeline, params string[] lines)
     {
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-corpse-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-corpse-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Corpseone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
         File.WriteAllLines(log, lines);
 
@@ -101,7 +101,7 @@ public class RaisedCorpseTest
     [TestMethod]
     public void ACorpseEffectHittingUsIsAHostileNotSomebodysPet()
     {
-        // The 488 M HP shape. The attacker loses its suffix in the parser, so what reaches the mirror is
+        // The 488 M HP shape. The attacker loses its suffix in the parser, so what reaches the engine is
         // `A remnant`: an unknown name damaging the local player, which is a hostile row and nothing else.
         var facts = Run(out var timeline,
             "[Sun Apr 26 18:49:00 2026] A remnant's corpse hits You for 1200 points of damage.");

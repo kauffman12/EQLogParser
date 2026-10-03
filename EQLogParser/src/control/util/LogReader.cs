@@ -237,7 +237,7 @@ namespace EQLogParser
            * is the only cost of the number being big; the drain above reads everything available before sleeping, so nothing queues up
            * behind a smaller one.
            *
-           * It was dropped to 75 ms while chasing the meter's ~3.4 s refresh, and given back afterwards: with the mirror now folding on
+           * It was dropped to 75 ms while chasing the meter's ~3.4 s refresh, and given back afterwards: with the engine now folding on
            * `DeriveCadence.FastFloorSeconds` (0.5 s) the wait is almost entirely inside the cadence, where this much of it overlaps
            * with a pass that was not due yet anyway, so polling thirteen times a second buys hundredths rather than tenths of a second
            * (docs/DesignNotes.md -> "How long a meter update takes"). If the tail ever needs to be prompter again, the order is this knob

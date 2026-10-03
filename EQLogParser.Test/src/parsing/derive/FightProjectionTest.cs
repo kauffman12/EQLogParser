@@ -30,7 +30,7 @@ public class FightProjectionTest
     private static DerivedFight? Row(List<DerivedFight> rows, string name)
         => rows.FirstOrDefault(r => r.Name == name);
 
-    // ---- row migration: the dynamic case the mirror exists for ----
+    // ---- row migration: the dynamic case the engine exists for ----
 
     [TestMethod]
     public void PlayerEvidence_MigratesTheRowToTheNpcItWasFighting()

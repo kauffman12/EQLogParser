@@ -153,7 +153,7 @@ namespace EQLogParser
       AppSettings.IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = AppSettings.IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      // Combat mirror (experimental derived fight list) — the tap attaches when a log opens
+      // The derivation (experimental derived fight list) — the tap attaches when a log opens
       AppSettings.IsCombatMirrorEnabled = ConfigUtil.IfSet("EnableCombatMirror");
       combatMirrorIcon.Visibility = AppSettings.IsCombatMirrorEnabled ? Visibility.Visible : Visibility.Hidden;
 
@@ -166,7 +166,7 @@ namespace EQLogParser
         DockingManager.SetState(mirrorFightWindow, DockState.Dock);
 
       /*
-       * Selecting rows in the derived list rebuilds the DAMAGE summary from the mirror's own facts. One
+       * Selecting rows in the derived list rebuilds the DAMAGE summary from the engine's own facts. One
        * board on purpose (see MirrorFightTable.DerivedSelectionChanged): the experiment is to click the same
        * fight in both lists and read two engines' answers, and that only means something while exactly one
        * of the two lists owns the numbers at a time.
@@ -333,17 +333,17 @@ namespace EQLogParser
     }
 
     /*
-     * The app's fight-range provider: the spell/taunt/death/export paths read fights from here. While the mirror
+     * The app's fight-range provider: the spell/taunt/death/export paths read fights from here. While the engine
      * is attached to a log it answers (legacy-shaped rows materialized off its facts - see
      * DeriveEngine.MaterializeFights); the legacy table keeps answering until the deletion pass removes both it
      * and this second branch. Both windows cannot own one export, so the ordering is the rule, not an accident:
-     * mirror first, legacy while the mirror is off.
+     * derived first, legacy while the engine is off.
      */
     internal List<Fight> GetFights(bool selected = false)
     {
-      if (mirrorFightWindow?.Content is MirrorFightTable mirror && mirror.SessionActive)
+      if (mirrorFightWindow?.Content is MirrorFightTable fightTable && fightTable.SessionActive)
       {
-        return mirror.GetFights(selected);
+        return fightTable.GetFights(selected);
       }
 
       if (npcWindow?.Content is FightTable table)
@@ -355,13 +355,13 @@ namespace EQLogParser
     }
 
     // The scoped variant for consumers that only need fights overlapping a span (the death viewer's 20-second
-    // window around a kill). From the mirror this materializes only the rows whose activity windows touch it;
+    // window around a kill). From the engine this materializes only the rows whose activity windows touch it;
     // from the legacy store it is the cheap old list plus the same predicate the viewer always applied.
     internal List<Fight> GetFightsOverlapping(double fromT, double toT)
     {
-      if (mirrorFightWindow?.Content is MirrorFightTable mirror && mirror.SessionActive)
+      if (mirrorFightWindow?.Content is MirrorFightTable fightTable && fightTable.SessionActive)
       {
-        return mirror.GetFightsOverlapping(fromT, toT);
+        return fightTable.GetFightsOverlapping(fromT, toT);
       }
 
       var all = npcWindow?.Content is FightTable table ? table.GetFights() : [];
@@ -444,7 +444,7 @@ namespace EQLogParser
          * "Was anything happening?" asked of whichever engine is feeding the meter. On a derived meter this is LiveFights over
          * the capture's rows rather than FightManager's overlay-fight set, so the window opens when the capture's last moments
          * hold a fight instead of when the log ever contained one — and if nothing was live, NewFightObserved opens it on the
-         * next pull instead. No session running answers false: a mirror that is not capturing has no fights, and this path does
+         * next pull instead. No session running answers false: a capture that is not running has no facts, and this path does
          * not fall back to a second engine to have something to say.
          */
         if (MirrorMeter.Enabled ? MirrorMeter.HasLiveFight() : FightManager.Instance.HasOverlayFights())
@@ -689,12 +689,12 @@ namespace EQLogParser
 
     /*
      * The auto-open rule, attached to whichever engine reports fights. Both engines raise on a worker thread (the parse
-     * thread for FightManager, the derive thread for the mirror), so the window is still created through the dispatcher and
+     * thread for FightManager, the derive thread for the engine), so the window is still created through the dispatcher and
      * re-checked there — the meter opens once, at most, however many passes announce the same pull.
      *
      * This is also what gives the meter's X its meaning: closing the window does not disable anything, so damage brings the
      * board back (and back to the same numbers — a closed window does not reset the meter's start). "Disable Meter" is how you
-     * keep it shut. Legacy announced on every damage line of a fight, which is why its X behaved that way; the mirror raises
+     * keep it shut. Legacy announced on every damage line of a fight, which is why its X behaved that way; the engine raises
      * at derive rate instead, and AutoOpenMeter's already-open check swallows all but the first.
      */
     private void SubscribeOverlayFights()
@@ -704,8 +704,8 @@ namespace EQLogParser
     }
 
     // Removes BOTH, unconditionally: `-=` on a handler that was never attached is a no-op, while the old
-    // Enabled-keyed branch read the dial AFTER the toggle had already flipped it - so a mirror-off flip removed the
-    // legacy handler and left the static mirror one attached, which is exactly the pin-on-process-lifetime leak the
+    // Enabled-keyed branch read the dial AFTER the toggle had already flipped it - so an off flip removed the
+    // legacy handler and left the static derived one attached, which is exactly the pin-on-process-lifetime leak the
     // comment below the Subscribe pair warns about. Subscribe stays the conditional pair: exactly one engine reports.
     private void UnsubscribeOverlayFights()
     {
@@ -759,7 +759,7 @@ namespace EQLogParser
       {
         // The tap only sees lines from the moment it subscribes - stop cleanly rather than
         // keep a half-log session; the next log open starts fresh. The overlay fights subscription is re-homed for
-        // whichever engine is on now (its mirror source is static, and legacy auto-open would otherwise stay dead
+        // whichever engine is on now (its derived board time is static, and legacy auto-open would otherwise stay dead
         // until the next log open or power cycle).
         UnsubscribeOverlayFights();
         SubscribeOverlayFights();
@@ -884,7 +884,7 @@ namespace EQLogParser
     }
 
     /*
-     * The same question ComputeStats asks of FightManager state, asked of the combat mirror instead: the
+     * The same question ComputeStats asks of FightManager state, asked of the the derivation instead: the
      * builders get ordinary Fight objects whose blocks were rebuilt from captured facts, so the boards show what
      * the derived list thinks happened without any summary knowing anything new. Damage and tanking are both fed
      * here, off the same materialized rows — a derived row carries what the raid did to it in DamageBlocks and
@@ -1461,7 +1461,7 @@ namespace EQLogParser
               PlayerRegistry.Instance.Init();
 
               // R10: the operator's own verdicts on names are per server too (mirror-overrides.txt), and they
-              // have to be loaded before the mirror's first derive or the rules answer alone.
+              // have to be loaded before the engine's first derive or the rules answer alone.
               IdentityOverrideStore.Instance.Init(server);
 
               // Same per-server reasoning for the sighting ledger (identity-priors.txt): what older logs on THIS
@@ -1479,7 +1479,7 @@ namespace EQLogParser
             AppSettings.CurrentLogFile = theFile;
 
             // Mirror session subscribes to the parser statics before any line flows, and shares
-            // the single chat sink slot via fan-out (archive first, mirror second — D8 seam).
+            // the single chat sink slot via fan-out (archive first, derivation second — D8 seam).
             _engine?.Dispose();
             _engine = null;
             IChatSink chatSink = new ChatDbSink();

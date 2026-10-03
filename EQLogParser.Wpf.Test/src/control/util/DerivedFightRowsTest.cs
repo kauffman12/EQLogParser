@@ -8,7 +8,7 @@ namespace EQLogParser.Wpf.Test
   /// than approximate. Under a minute they are an EMPTY string (so Waxwork Abolishion's first life, 18:34:08 to
   /// 18:34:53, showed no duration at all), and 112 s and 162 s collapse to "1 minute"/"2 minutes", which is no way
   /// to compare two pulls. The legacy grid has no duration column whatsoever (its seconds lived in the row tooltip,
-  /// `Time Alive: 46s` for that same life), so this is the mirror's own number — and it is counted inclusively, which
+  /// `Time Alive: 46s` for that same life), so this is the engine's own number — and it is counted inclusively, which
   /// is what makes it the SAME 46 as the tooltip rather than the 45 you get by subtracting two timestamps. The numbers
   /// below are those measured rows; see DerivedFightTest for why the +1 belongs to DerivedFight rather than here.
   /// </summary>

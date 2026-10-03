@@ -29,7 +29,7 @@ namespace EQLogParser
     // Mirrors one accepted (or replayed) record into the bound collection on the UI thread. The
     // raiser is the chat-parsing thread, so this must stay fire-and-forget — InvokeAsyncLogged
     // because a plain discarded post leaves a failure (e.g. collection torn down during shutdown)
-    // unobserved and silently stops the mirror. Both paths insert at index 0 and Subscribe replays
+    // unobserved and silently stops the engine. Both paths insert at index 0 and Subscribe replays
     // oldest-first, so the window stays newest-first either way.
     private void MirrorRecord(QuickShareRecord record) => UiUtil.InvokeAsyncLogged(
       () => Records.Insert(0, record), "QuickShareManager: mirroring accepted record into the bound collection");

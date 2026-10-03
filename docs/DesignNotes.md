@@ -14,7 +14,7 @@ that the next session — human or machine — starts from where the design actu
 ### The one-sentence version
 
 The app no longer tells the story of a raid *while parsing it*. Lines are parsed cheaply into **facts** (damage,
-healing, outcomes) held in append-only tables; a background **mirror** folds facts plus an identity rule book into
+healing, outcomes) held in append-only tables; a background **derivation** folds facts plus an identity rule book into
 **rows** and boards on a cadence; every surface — fight list, all three boards, the overlay meter — reads that derived
 side behind one dial (`EnableCombatMirror`). The legacy per-line accumulation (`FightManager`, parse-time `StatsUtil`)
 still runs, but it now feeds nothing the user sees except its own retired table, and its deletion is an ordered work
@@ -29,18 +29,18 @@ queue, not an experiment.
   order; re-reading the same file could disagree with itself (a real file spans **329 hours**; another **616 days**).
 - **Every view paid at ingest.** The meter's arithmetic ran whether or not anyone was looking, per line, on the parse
   path.
-- **Nothing was re-decidable.** A better rule discovered next week could not correct last night's board. The mirror
+- **Nothing was re-decidable.** A better rule discovered next week could not correct last night's board. Derivation
   re-derives; rows migrate; overrides ride the replay.
 
 ### The pipeline as built
 
 ```
-lines ──parsers──▶ CombatMirror
+lines ──parsers──▶ CombatCapture
                     ├─ DamageFactTable (32 B/fact: names, spell, label mask, direction flags)
                     └─ HealFactTable   (40 B/fact: asks/landed/over; one shared name pool,
                                         ONE sequence across both tables)
                           │
-             MirrorDeriveCadence.Decide ── None | ProjectionOnly | Full
+             DeriveCadence.Decide ── None | ProjectionOnly | Full
                           │                     (quiet 1 s ⇒ Full; ≥25k facts/s ⇒ park both)
              ClassificationRules.Apply (Full only)
                     ├─ R0–R20 rule book → EntityTimeline (kind + strength + reason per name)
@@ -48,14 +48,14 @@ lines ──parsers──▶ CombatMirror
                     └─ per-rule aggregates carried between passes (ClassificationState); a
                        stage whose boundary digest is unchanged replays in microseconds
                           │
-             FightProjection.Project (every lane) — facts → DerivedFight rows + MirrorDamageIndex
+             FightProjection.Project (every lane) — facts → DerivedFight rows + FightFactIndex
                     ├─ one row per life (30 s split gap = legacy's expiry, both directions)
                     ├─ charm windows: the mob's death; its pet gets no row, its damage folds
                     │  under the charmer (`+Pets`) — hidden from the list, never deleted
                     └─ two ordinal sets per row: facts AT the owner / facts BY the owner
                           │
         ┌─────────────────┼──────────────────────┬─────────────────────┐
-   MirrorFightTable   MirrorSummaryFights/Heals  MirrorMeter + LiveFights   Names window /
+   MirrorFightTable   FightSummarySource/Heals  MirrorMeter + LiveFights   Names window /
    (legacy's 3 cols,  (the REAL builders get     ("still going" on the      identity census
     sections, search,  materialized records —    capture's clock; the
     overrides)         same code as legacy)      meter's quiet dial is the
@@ -66,7 +66,7 @@ The load-bearing invariants: **one sequence** so heals and hits can be merged in
 **names case-insensitive everywhere** (the parser capitalizes, evidence lines keep what EQ wrote); a fact carries the
 **modifier mask** because filters read it off the reproduced record; a row's two boards are split by the *same*
 comparison that fills the index, so a materialized block cannot drift from the row it came from. The deep dives are
-§"Combat mirror", §"A row is one life", §"Damage taken…", and the `AGENTS.md` bullets they generated.
+§"Derived damage summary from captured facts", §"A row is one life", §"Damage taken…", and the `AGENTS.md` bullets they generated.
 
 ### The identity rule book (R0–R20) in one breath
 
@@ -83,9 +83,9 @@ are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' sixteen
 eyes) — a new word arrives with a census over several eras, settings text if user-visible, and tests; nothing is
 inferred into them.
 
-### Cadence and cost: when the mirror runs, and what it carries
+### Cadence and cost: when derivation runs, and what it carries
 
-- The pump ticks at **100 ms**; `MirrorDeriveCadence.Decide` answers WHICH pass, not whether: nothing new ⇒ None;
+- The pump ticks at **100 ms**; `DeriveCadence.Decide` answers WHICH pass, not whether: nothing new ⇒ None;
   count quiet 1 s ⇒ **Full** (never answer the end-of-load moment cheaply — that is when rules finally see the whole
   capture); growth ≥ **25 k facts/s** ⇒ park BOTH lanes (bulk reads at ~170k/s; a parked lane still holds the gate the
   loader needs); else Full every ~3–15 s (cost-scaled) and **ProjectionOnly** at a 0.5 s floor in between. A refresh
@@ -133,7 +133,7 @@ raises with its payload; a bare store reset raises nothing.
 
 ### The measurement culture (how we know any of this)
 
-Parity runs the REAL builders twice over one capture and compares **boards, not just rows** (`EQLP_MIRROR_BOARDS=…`,
+Parity runs the REAL builders twice over one capture and compares **boards, not just rows** (`EQLP_DERIVE_BOARDS=…`,
 per-person column pairs; healing exact at 403k heals/373 healers; damage's +0.54 % and tanking's people-vs-NPC split
 are documented in those runs, not smoothed over). Identity questions are asked only against a **classified** timeline
 (`ClassificationRules.Apply`) — the same census on a seeded one lied by ×350 and spawned two wrong documents before it
@@ -145,7 +145,7 @@ only place `EQLogParser.Wpf.Test` executes, so its laws must also be readable fr
 ### What is left (the deletion queue, in order)
 
 Done and measured: fight list, all three boards, the meter — each fully behind `EnableCombatMirror`, no fallback to
-legacy anywhere on those paths (a missing mirror answers *false*; it does not consult the old pipeline — fallbacks
+legacy anywhere on those paths (no session answers *false*; it does not consult the old pipeline — fallbacks
 hide errors). Remaining, from the working map (`docs/legacy-replacement-map.md`, untracked — the queue is mirrored here so this file is the durable home):
 
 1. **`EventViewer.IsLifetimeNpc` → timeline** — one consumer of one call; same question the Names window already answers.
@@ -160,7 +160,7 @@ Open costs stated honestly: classification's remaining ~250 ms floor is a per-ru
 R18 67, R15 54 on Incogitable) that rebuilds anyway whenever a rule finds something — so only a 3 s→1 s Full-pass floor
 is still at stake there; the `Wpf.Test` assembly has never executed anywhere (Linux builds it, cannot run it); and the
 GINA `{counter}` semantics question (local working doc `docs/counter-variable-issue.md`) is an open user-facing decision, unrelated to
-the mirror.
+the derivation.
 
 ### Standing decisions — reopen only with a decision, not a refactor
 
@@ -3611,15 +3611,15 @@ the rule above: the folder of the path on screen, or nothing at all when no path
 usually means another file in this folder. The dropdown itself is untouched: re-picking "Browse for Sound File" still
 does nothing, and the path is the door.
 
-## Combat mirror: a damage summary from derived facts
+## Derived damage summary from captured facts
 
-The mirror's first product seam. Selecting rows in the derived fight list runs the *existing* damage summary over
+The derivation's first product seam. Selecting rows in the derived fight list runs the *existing* damage summary over
 facts the projection captured, so two engines can be read side by side over one log. `EQLogParser.Core/src/parsing/
-mirror/MirrorSummaryFights.cs` holds it: `MirrorDamageIndex` (fight → the ordinals of its damage facts), `SummaryFightFor`
+derive/FightSummarySource.cs` holds it: `FightFactIndex` (fight → the ordinals of its damage facts), `SummaryFightFor`
 (ordinal list → an ordinary `Fight` whose `DamageBlocks` hold ordinary `DamageRecord`s, one `ActionGroup` per run of
-facts sharing a second — `FightManager.AddAction`'s own grouping rule), and `MirrorSummaryFights.Build` (selected rows →
+facts sharing a second — `FightManager.AddAction`'s own grouping rule), and `FightSummarySource.Build` (selected rows →
 fights plus the `TimeRange` window `FightTable` would have built for the same selection). Nothing in the summary knows
-the mirror exists; it is handed `Fight` objects.
+the derivation exists; it is handed `Fight` objects.
 
 The index is filled **during** the projection, through the `FactOwnershipHandler` sink, because the answer it needs —
 which end of the fact the row sits on — only exists inside `FightProjection`, at the second the timeline decided what
@@ -3640,13 +3640,13 @@ Neither failure prints anything, which is why they are written down.
 - A materialized record's `SubType` may never be null. The fact table stores "the line carried no modifier text" as
   `NoSubtype` (-1) and plain melee is the ordinary case of that; but `StatsUtil.UpdateDamageStats` looks the subtype up
   in a `ConcurrentDictionary`, which throws on a null key — inside `DamageStatsBuilder`'s own catch, which logs and
-  carries on. So a null there is an empty board, not a rougher one. `MirrorSummaryFights.SubTypeOf` substitutes the type
+  carries on. So a null there is an empty board, not a rougher one. `FightSummarySource.SubTypeOf` substitutes the type
   word: identical activity window, one breakdown row per kind instead of one per modifier message.
 
 So a materialization test must not stop at "the records match the facts". Assert the fight's time bounds are real, and
 run the result through the actual `DamageStatsBuilder` — that is where both traps surfaced.
 
-### What the two boards actually say, measured (`mini-data/mirror/mini-fight.txt`)
+### What the two boards actually say, measured (`mini-data/derive/mini-fight.txt`)
 
 All six damage-filter settings on (AppSettings' defaults), one boss, both lists selecting the same fight:
 
@@ -3666,16 +3666,16 @@ whose pet it is; that is R5 evidence, stored as a flag on the fact and cut back 
 `DamageStatsBuilder` folds a pet under the name in `AttackerOwner` when the registry has no mapping, which is where the
 "+Pets" rows come from.
 
-This difference is a rule difference, not arithmetic, and it must not be "fixed" into agreement: the mirror's whole
+This difference is a rule difference, not arithmetic, and it must not be "fixed" into agreement: the derivation's whole
 purpose is to decide at read time from everything the log said, rather than at parse time from what the registry
-happened to know when the first line of a pair arrived. `MirrorSummaryFightsTest` pins the shape instead — every legacy
+happened to know when the first line of a pair arrived. `FightSummarySourceTest` pins the shape instead — every legacy
 raider equal, derived-only entries all `+Pets`, and the delta equal to the owner-in-line damage computed from the fact
 table (not from either board).
 
 A materialized record carries the modifier mask off its fact, which is what makes `DamageValidator`'s six exclusion
 settings (assassinate, headshot, slay-undead, …) mean the same thing on both boards; see *The byte that filters live in*
-below. `EQLogParser.Test/src/parsing/mirror/MirrorSummaryFightsTest.cs` holds all of the above; the UI side is one-way
-(mirror selection → damage board) so that clicking the other list still owns its own boards.
+below. `EQLogParser.Test/src/parsing/derive/FightSummarySourceTest.cs` holds all of the above; the UI side is one-way
+(derived-list selection → damage board) so that clicking the other list still owns its own boards.
 
 ### The byte that filters live in, and the field it moved into
 
@@ -3683,7 +3683,7 @@ below. `EQLogParser.Test/src/parsing/mirror/MirrorSummaryFightsTest.cs` holds al
 two more bytes after it went to `OverTotal`, "how much more was asked for than landed", which is a thing only a heal
 line says. Damage never wrote it, the damage summary never read it, and it cost four bytes in every one of the ~13 M
 damage facts on the 393 MB capture (~52 MB) so a derived record could carry a zero nobody consumed. `ModifiersMask` slid
-into those bytes: the struct is still 32 B (`DamageFactSizeShouldNotGrowPastPadding`), and now `MirrorSummaryFights`
+into those bytes: the struct is still 32 B (`DamageFactSizeShouldNotGrowPastPadding`), and now `FightSummarySource`
 can hand `DamageValidator` the mask it reads — before this, every derived total read **high** the moment one of the six
 filters was switched off, because a mask of 0 excludes nothing.
 
@@ -3698,7 +3698,7 @@ from facts.
 ### Healing joins the capture, in its own table
 
 Heals now flow into `HealFactTable` off `HealingLineParser.EventsHealProcessed` — deliberately *not* into the damage
-table. Measured with a temporary probe over `EQLogParser.Test/data/mirror/heal-fight.txt`: 5 of 9 events are heals, and
+table. Measured with a temporary probe over `EQLogParser.Test/data/derive/heal-fight.txt`: 5 of 9 events are heals, and
 one array of the union (42 B: 36 for the shared fields plus the four damage-only bytes a heal can never write, and
 always a zero) sat **57 % full of zeros** at capacity, **40 %** after trimming to what is shared. Split, each stream
 pays only its own tail: 32 B and 40 B.
@@ -3711,7 +3711,7 @@ edge cases, they are the healing report: on the reference capture 16,947 of 582,
 either be dropped from the board or force the spine to grow an out-of-fight range while healing damage by the same
 name stays inside it.
 
-Three rules the split keeps honest, all pinned by `MirrorHealCaptureTest`:
+Three rules the split keeps honest, all pinned by `HealFactCaptureTest`:
 
 - **One sequence across both tables.** The damage table owns the counter and hands it out (`NextSeq()`); a heal takes
   one. Each table's facts are appended under the caller's lock, so seq increases within each stream and the merged
@@ -3727,7 +3727,7 @@ Three rules the split keeps honest, all pinned by `MirrorHealCaptureTest`:
 paren it is the amount **after** over-heal was subtracted; *without* one it is 0, which means "the line said no more"
 and never "zero was asked". A projection that summed it as extra healing would add nothing where the line said nothing.
 
-### What falls out of the heal capture before the mirror ever sees it, measured
+### What falls out of the heal capture before derivation ever sees it, measured
 
 The parser fires `EventsHealProcessed` only for lines it resolves to a named healer and target, so three shapes are
 dropped upstream — these counts are from the 393 MB capture (`local/eqlog_Incogitable_xegony.txt`), against ~448,600
@@ -3744,7 +3744,7 @@ itself** (measured, not assumed — 10,194 of 10,194), so no raider's output mov
 at all, so the board could only have filed them under an unknown healer. The damage side of those same sentences is not
 lost — `` X`s pet `` parses as attacker and as defender. What would flip this is a capture where pet lines heal
 *raiders*, which is why the counts are written down rather than reasoned about; a fix should arrive with them
-re-measured, and `MirrorHealCaptureTest` re-asserts each shape against the parser's actual behaviour.
+re-measured, and `HealFactCaptureTest` re-asserts each shape against the parser's actual behaviour.
 
 ## The NPC registry in `data/npcs.txt`
 
@@ -3782,7 +3782,7 @@ these captures — the registry buys *provenance* (R6, plus fight edges in the l
 rest on a shape guess whenever nobody targets them. Shape coverage: **40 are article-shaped** (what R14 reads), **9 are
 bare words** (`Fade`, `Firethorn`, `Gwark`, `Lich`, `Magmath`, `Mite`, `NeuroKraken`, `Umber`, `Windshear`) — invisible to
 every shape rule, and precisely the shape a player is free to choose, which is why R6 caps a spaceless name at Weak and
-why the collision policy (a registry hit never outranks player evidence; see the `Terror` case in the mirror notes) has
+why the collision policy (a registry hit never outranks player evidence; see the `Terror` case in the identity design notes) has
 to stay. **Three carry a comma title** (`Kratakel, Lord Misery`, `Keltakun, Last Word`, `Ogna, Artisan of War`) and one of
 them is the biggest name in the set at 68,416 attack edges: no grammar rule can see that shape, so either a name list or
 the client's own target line is the only road to it. **Twelve have no combat line at all** (civilians, shades,
@@ -3855,7 +3855,7 @@ now go through `Path.Combine`, and the test asserts the files land *in* the serv
 
 ## The name census: what the Names window reads, and what an override costs
 
-`ClassificationReport` (Core, `src/parsing/mirror/`) is a snapshot of "what did this pipeline decide about every name
+`ClassificationReport` (Core, `src/parsing/derive/`) is a snapshot of "what did this pipeline decide about every name
 this capture mentioned", built for one purpose: letting a person audit classification instead of noticing one mistake
 mid-fight. The fight grids' right-click stays (that is where mistakes get noticed) but both it and the window go through
 `ClassificationCommands`, because before this there were two verbs writing two files — "Add player" went to
@@ -3904,7 +3904,7 @@ rules argue with their own memory until it looks corroborated — the same failu
 players.txt (ClassificationRules.cs:330-337, ~45 min poisoned on names-as-"people"). So the ledger is a **display
 fallback and nothing else**: `ClassificationReport.Build(..., priors)` borrows a verdict only where THIS log's rules said
 nothing, and `FightProjection`/the board never see the file. Graduating it into the derive is possible but has to arrive
-with mirror-vs-legacy parity tests, not as a convenience.
+with derived-vs-legacy parity tests, not as a convenience.
 
 Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
 
@@ -3928,7 +3928,7 @@ Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
   the load rewrites what is left rather than dropping them invisibly forever (`OldRowsThatRestOnTheDatabaseAreNotLoadedBack`).
   `Init` logs one INFO line — `Identity priors for <Server>: N remembered verdicts[, M rows refused as restatements…]` —
   because "did the memory load?" is otherwise unanswerable from a player's log file.
-- **Agreement is idempotent per capture.** The mirror re-derives whenever a filter or override changes, so sighting time
+- **Agreement is idempotent per capture.** Derivation re-runs whenever a filter or override changes, so sighting time
   is the LOG's last event (not the clock) and the counter advances only on a strictly newer capture — five derives of one
   evening report one sighting, not five.
 - **A changed verdict restarts the count**, so nothing advertises forty confirmations of a belief held for one.
@@ -3956,7 +3956,7 @@ the `ContentControl`s stay so an existing `EQLogParserLayout.xml` still loads.
 Design points worth keeping:
 
 - **Built on demand, off the UI thread.** A derive lands every few seconds while a log loads and a census nobody has
-  open would be discarded each time, so `MirrorSession.BuildNameCensus()` assembles the timeline exactly as a derive does
+  open would be discarded each time, so `DeriveEngine.BuildNameCensus()` assembles the timeline exactly as a derive does
   (roster seed → rules → overrides last) and is called on open / Re-scan / a derive that lands while visible. Facts can
   arrive mid-walk: a census is display data, so one row shifting by one fact between passes is accepted rather than
   putting a lock on the capture path; a refused walk keeps the previous list and logs.
@@ -3970,17 +3970,17 @@ Also added to the census: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved
 for real this time). Four new WPF-assembly tests (`EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`) pin the flag
 sentences; they **compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run.
 
-## The one calculation a scope asks (MirrorStats)
+## The one calculation a scope asks (DerivedTotals)
 
 The requirement came from how the damage meter is used: if I watch a log, kill ten mobs inside my reset window, then
 open the fight list and select the fights from that session, the two numbers must be **identical**. Legacy gets that
 for free — `FightManager._overlayFights` holds the *same* `Fight` objects the list displays, and both surfaces print a
-builder-produced `CombinedStats`. The mirror keeps the property by making it structural instead: monitoring stores
+builder-produced `CombinedStats`. The derived engine keeps the property by making it structural instead: monitoring stores
 (lines → facts → rows, nothing else), and every surface is a **reader** that asks one function about the rows it shows.
 
-`MirrorStats.For(rows, index, facts, heals)` = `MirrorSummaryFights.Build` (facts aimed at each row's own name) +
-`MirrorSummaryHeals.Materialize` (windowed by the rows' span, because a heal opens no fight) → a **fresh**
-`DamageStatsBuilder` instance → its `StatsGenerationEvent`. `MirrorSession.BuildScopeStats(rows)` adds the grid's
+`DerivedTotals.For(rows, index, facts, heals)` = `FightSummarySource.Build` (facts aimed at each row's own name) +
+`HealSummarySource.Materialize` (windowed by the rows' span, because a heal opens no fight) → a **fresh**
+`DamageStatsBuilder` instance → its `StatsGenerationEvent`. `DeriveEngine.BuildScopeStats(rows)` adds the grid's
 hidden-pet rule and is what the overlay will call.
 
 The load-bearing part is the private builder. `DamageStatsBuilder.Instance` is what an open summary, the charts and
@@ -4006,13 +4006,13 @@ reach no row at all, so "select these fights" and "everything in the window" are
 ## What a session cannot see: facts that reach no row (census)
 
 Pointing the damage meter at derived rows makes the meter's total and the list's select-all one function. That is only
-honest if "the union of the rows" ≈ "everything in the window", so `MirrorUnrowedFactsTest` puts a spy in front of
+honest if "the union of the rows" ≈ "everything in the window", so `UnrowedFactsTest` puts a spy in front of
 `FightProjection`'s ownership sink (which ordinals did ANY row claim?) and subtracts. Note this is one level outside
 `UnroutedFactCount`: *unrouted* facts reached a row and neither board wanted them; *unrowed* facts never reached one.
 
 CI pins the definition on two synthetic cases (raid-only facts = the residue, counted not vanished; an ordinary pull =
 zero gap, so `DamageFactCount + TankingFactCount + UnroutedFactCount` accounts for the whole capture). The real numbers
-come from `EQLP_MIRROR_UNROWED=<log>[;<log>]`, and they found a hole worth more than the tool:
+come from `EQLP_DERIVE_UNROWED=<log>[;<log>]`, and they found a hole worth more than the tool:
 
 | capture | facts | unrowed | share | damage in the gap | one name owns |
 |---|---|---|---|---|---|
@@ -4041,7 +4041,7 @@ branch), consult ownership (`EntityTimeline.IsOurPetAt` / `PlayerRegistry` pet m
 key such a fact on the **mob** (the defender here, since our pet is the attacker), credit it as damage aimed at that
 row's anchor, and carry `AttackerOwner = OwnerOf(name, t)` so the board folds it under the raider with `+Pets` exactly
 as a possessive-named pet does. Boss-vs-boss noise stays out — the exemption is ownership, not "attacker unknown". Then
-re-measure: this census, `MirrorRealLogBoardsTest`'s parity bars (Incogitable 4,473/4,473 field-matched, 2024
+re-measure: this census, `RealLogBoardsTest`'s parity bars (Incogitable 4,473/4,473 field-matched, 2024
 691/691), and the charm tests, because flipping which side a pet is on touches `CharmedOwned`/`RaidPet` labeling.
 
 ## Correction: the pet hole was not the side gate — it was a name looked up in the spell DB
@@ -4071,7 +4071,7 @@ the pet's 44,553 facts — all of it recovered, nothing else moved.
 `ARaidSideNameThatIsAlsoASelfTargetSpellStillGetsItsRows` pins what the meter needs, using a spell name from the DB as
 the combatant: its hits reach the boss's row, the board's raid total includes them, no caster row appears under the
 spell's name, and the damage arrives **on the owner's line** — `AttackerOwner` comes from `_charmers?.OwnerOf(...)` (the
-timeline the index carries, `MirrorDamageIndex(timeline)`), which is what `DamageStatsBuilder` folds by to print
+timeline the index carries, `FightFactIndex(timeline)`), which is what `DamageStatsBuilder` folds by to print
 `Bithika +Pets`. Two fixture traps learned here: the ownership interval must cover the facts' seconds (an interval of
 `0..100` against facts at `t=1001` silently means "no owner at that time", and the board grows a row named after the
 pet instead of folding), and the CI spell-DB fixture asserts `Inconclusive` rather than passing vacuously when the DB
@@ -4082,7 +4082,7 @@ player-side while being neither charm-flipped nor answered by `IsOurPetAt` at th
 sees it (`Incogitable -> A candlefolk flame worshipper` 90.5 M; `A candlefolk flame worshipper` itself is
 `Pet / RegistrySeed` with `ourPet False`). That is an interval/ownership-consistency question in the seed, not a gate
 mistake, and it is the next thing to measure rather than widen the exemption for. Also still owed: re-running
-`MirrorRealLogBoardsTest`'s parity bars now that derived sees this damage — the +19-20 % read as derived-running-high
+`RealLogBoardsTest`'s parity bars now that derived sees this damage — the +19-20 % read as derived-running-high
 should move toward legacy on the captures where a seed pet shared a spell name.
 
 ## Re-review of the legacy-replacement workstream (requirements vs what shipped)
@@ -4091,13 +4091,13 @@ Reviewed against what the operator actually asked for across this workstream, wi
 things were found wrong by measuring after claiming — both corrected below rather than quietly — and one requirement is
 deliberately not built yet because its safe shape needs a Windows run.
 
-**1. "Load a log, watch the fight list fill, and it must not get slower."** The mirror is an append-only capture plus a
+**1. "Load a log, watch the fight list fill, and it must not get slower."** The engine is an append-only capture plus a
 quiescent derive; nothing recalculates on the parse path. Re-measured during this review: `eqlog_Incogitable_xegony.txt`
 (344 MB) ingest **20.8 s**, classify+project **822 ms** for 4,174 rows, materialize 4,078 rows in 404 ms; 2024 capture
 ingest 45.9 s. `8ec9cc93` kept the last of the eager arithmetic off the hot path by making every board a reader.
 
-**2. "The overlay and the fight list must be the same numbers, exactly."** `MirrorStats.For(rows, index, facts, heals)`
-is now the only calculation, `MirrorSession.BuildScopeStats(rows)` the one wrapper (it applies the grid's hidden-pet rule
+**2. "The overlay and the fight list must be the same numbers, exactly."** `DerivedTotals.For(rows, index, facts, heals)`
+is now the only calculation, `DeriveEngine.BuildScopeStats(rows)` the one wrapper (it applies the grid's hidden-pet rule
 so a scope and a click see the same population). Pinned structurally: `ScopesAddUpToTheSameTotalAsTheirUnion`
 (`For(A ∪ B) == For(A) + For(B)`, the property that makes "the session so far" identical to "select-all"),
 `TenPullsInOneWindowTotalTheSameAsTheRowsOneByOne` (the operator's stated scenario), and
@@ -4108,12 +4108,12 @@ UI swap is mechanical now but needs to be watched on Windows, and it must ride t
 **3. "Pet damage counts for the player, shown as `X +Pets`, in the meter and in the summary of the same fights."**
 Pinned end to end by `ARaidSideNameThatIsAlsoASelfTargetSpellStillGetsItsRows`: hits reach the mob's row, the raid total
 includes them, no phantom caster named after a spell appears, and they arrive on the owner's line via `AttackerOwner`
-(the `MirrorDamageIndex(timeline)` → `OwnerOf` seam `DamageStatsBuilder` folds by). The parity print confirms this is
+(the `FightFactIndex(timeline)` → `OwnerOf` seam `DamageStatsBuilder` folds by). The parity print confirms this is
 what real boards do: derived-only rows on Incogitable are literally `Virul +Pets`, `Amengi +Pets`, …, while legacy keeps
 those pets as their own rows or drops them.
 
 **4. "Monitoring must not calculate DPS just because a meter could be open."** Monitoring appends facts and derives rows;
-`MirrorStats` runs only when a surface asks, on the asking surface's own builder instance (§"The one calculation a scope
+`DerivedTotals` runs only when a surface asks, on the asking surface's own builder instance (§"The one calculation a scope
 asks"). Legacy still accumulates per line inside `BattleRow`; deleting that is late in the map, but nothing new pays it.
 
 **5. "Keep the operator's knowledge; don't launder the model's guesses into it."** Rosters stay inputs forever;
@@ -4140,7 +4140,7 @@ is why only one event (`EventsClearedActiveData`, `180ff710`) had to move before
 
 **Outstanding, in the order that makes them safe:**
 - **Windowed scope** (the operator's "I can reset the meter at any time", so its window is often a *slice* of a row).
-  Needs `MirrorSummaryFights` materialization to accept `[from,to]` — and the trap to respect is its per-row `Fight`
+  Needs `FightSummarySource` materialization to accept `[from,to]` — and the trap to respect is its per-row `Fight`
   cache (`_summaries`, keyed by `DerivedFight`): a sliced `Fight` must never be served to an unwindowed selection, or a
   cleared meter would silently lower a summary. So: a separate non-cached windowed path, cost measured against a session's
   (small) ordinal runs, not slipped into the cached one.
@@ -4165,19 +4165,19 @@ rule set (`DamageOverlayStatsBuilder.ComputeOverlayDamageStats` + `DamageMeterCo
   autumn clock-change bug), and a row prints only while its own last second is within `FightManager.MaxTimeout`;
 - DPS is damage divided by **accumulated active seconds** (`TimeRange.GetTotal()`), never by wall clock since the fight.
 
-So three things, and only one of them belongs to the mirror: the accumulation and the expiry are display policy and stay
-in the overlay; what the mirror had to supply was *the arithmetic of a slice*. `MirrorStats.For(rows, index, facts, heals,
-fromT, toT)` is that argument (`MirrorSession.BuildScopeStats(rows, fromT, toT)` is its wrapper): same rows, only facts
+So three things, and only one of them belongs to the derivation: the accumulation and the expiry are display policy and stay
+in the overlay; what the derivation had to supply was *the arithmetic of a slice*. `DerivedTotals.For(rows, index, facts, heals,
+fromT, toT)` is that argument (`DeriveEngine.BuildScopeStats(rows, fromT, toT)` is its wrapper): same rows, only facts
 whose seconds lie inside the window, and — because the two materialization loops filter at the top and compute their
 bounds and activity segments from what survives — damage, hit counts and activity seconds all belong to the window
 together. Slicing is exact: a fact is in or out, so `For(rows,a,b) + For(rows,b,c) == For(rows,a,c)`
 (`AdjacentSlicesOfTheSameRowsAddUpToTheWhole`: 800 + 950 = the whole 1,750).
 
-**The hazard that decided the shape:** `MirrorDamageIndex._summaries` caches one `Fight` per `DerivedFight`, so a sliced
+**The hazard that decided the shape:** `FightFactIndex._summaries` caches one `Fight` per `DerivedFight`, so a sliced
 `Fight` stored under the same key would let a meter that was just zeroed serve its truncated numbers to the next
 unwindowed click on that row — both surfaces still agreeing perfectly, one of them wrong. Windowed materialization
 therefore goes through `SummaryFightInWindow`, which reuses the whole builder but never touches the cache; the 3-argument
-`MirrorSummaryFights.Build` delegates to the windowed one unbounded, so the click path keeps its cached materialization
+`FightSummarySource.Build` delegates to the windowed one unbounded, so the click path keeps its cached materialization
 and a reset meter cannot influence it at all. Pinned from both directions by `ASlicedRowIsNeverCachedAsTheRow`.
 
 **Two expectations I wrote and the log corrected** (both are now the assertions, because they are the properties that
@@ -4196,15 +4196,15 @@ Suite **1,467 pass** (5 opt-in), solution and `EQLogParser.Wpf.Test` at **0 warn
 unchanged by construction (delegation + a null case that cannot arise when unbounded), so the real-log parity bars
 measured earlier still stand; they get re-run with the overlay swap, which is the next step and needs a Windows run.
 
-## The meter reads the mirror now (opt-in), and only its source moved
+## The meter reads the derived engine now, and only its source moved
 
 `OverlayDamageFromMirror` (settings.txt, off by default) points `DamageOverlayWindow`'s once-a-second build at
-`MirrorStats.ForOverlay(rows, index, facts, heals, fromT, toT)` — damage and tanking halves, each on its own builder
+`DerivedTotals.ForOverlay(rows, index, facts, heals, fromT, toT)` — damage and tanking halves, each on its own builder
 instance, returned as the `DamageOverlayStats` container the overlay already paints. What did NOT move: the meter's
 policy. `_mirrorWindowT` is stamped at open/reset (`ResetOverlayFights` moves it too), and the expiry test is still
 legacy's — quiet for longer than `mode == 0 ? FightManager.FightTimeout : mode` and the board zeroes with the window
 reopening here. That split is the whole point of the seam: *which seconds* is the surface's business, *what they add up
-to* is the mirror's, and it is why no "current fight" concept had to be invented inside the capture.
+to* is the derivation's, and it is why no "current fight" concept had to be invented inside the capture.
 
 Two decisions worth keeping: a scope with nothing in it **holds the previous board** rather than painting zero (a derive
 runs when the log goes quiet, so an in-progress fight can be seconds from landing, and a blank board would read as
@@ -4259,7 +4259,7 @@ were stamped at row creation and never advanced afterwards, so every projected r
 equal to its own birth second — and `Sectionizer` walks `LastDamageTime` to place the non-tanking divider list, so the
 lie had a consumer. They are now maintained like `FightManager` maintains them (`Begin…` on the first fact in that
 direction, `Last…` on every one), split by direction using the same `aimedAtAnchor` comparison that separates
-`DamageToOwner` from `DamageByOwner` and files `MirrorDamageIndex`, so no two seams can disagree about which way a fact
+`DamageToOwner` from `DamageByOwner` and files `FightFactIndex`, so no two seams can disagree about which way a fact
 pointed. `NaN` is load-bearing: it means "this never happened", and a row nobody hit must not report a damage time of
 zero. That in turn exposed `Sectionizer`: `Math.Max(x, NaN)` is NaN, and one such row silenced every later "Fight N"
 divider in the list — an empty window is now skipped rather than folded in. (Legacy could never step on this: its
@@ -4270,7 +4270,7 @@ construction; a projected row counts both directions.)
 run through `FormatGeneralTime`, the fuzzy words formatter, which returns an **empty string** under a minute (so the
 first life of this boss showed no duration at all) and collapses 112 s and 162 s into "1 minute"/"2 minutes". The legacy
 grid has no duration column whatsoever — its seconds lived in the row tooltip, `Time Alive: 46s` — so this is the
-mirror's own number, and it might as well be exact. The inactivity divider keeps the words formatter on purpose: that
+derivation's own number, and it might as well be exact. The inactivity divider keeps the words formatter on purpose: that
 text is legacy's ("Inactivity > 5 minutes") and matching it is the point.
 
 Cost of the tighter split, measured on the same capture: rows **237 → 289**, and the stale-death rule below then
@@ -4280,7 +4280,7 @@ legacy's registry-gated rollup never placed.
 
 Pinned by `ABossThatFadesWhileItsAddsDie_GetsOneRowPerLife`, `AQuarterMinuteOfQuietIsStillTheSameFight`,
 `ARowRemembersItsDamageTimeApartFromItsTankingTime`, `ARowNobodyHit_HasNoDamageTimeRatherThanAFakeOne`,
-`ACharmSightingLongAfterTheLastSwingStillClosesTheRow` (all `EQLogParser.Test`) and `MirrorFightRowsTest`
+`ACharmSightingLongAfterTheLastSwingStillClosesTheRow` (all `EQLogParser.Test`) and `DerivedFightRowsTest`
 (`EQLogParser.Wpf.Test`, Windows-only). `OurPetTest`'s fixture had to be re-timed: its pet swing was written a full
 minute after the raid's, which the old gap folded into one row and the new one correctly calls two encounters.
 
@@ -4329,7 +4329,7 @@ public double Total => EndTime - BeginTime + 1;   // EQLogParser.Utils/src/TimeR
 
 That expression is not cosmetic — it is the **denominator of every DPS number on the damage board** (`TimeRange
 GetTotal()` → `TotalSeconds` → `Dps = Total / TotalSeconds`), and it is what `FightManager` writes into the legacy
-tooltip (`var ttl = fight.LastTime - fight.BeginTime + 1;` → `Time Alive: 46s`), which `MirrorSummaryFights` reproduces
+tooltip (`var ttl = fight.LastTime - fight.BeginTime + 1;` → `Time Alive: 46s`), which `FightSummarySource` reproduces
 word for word for a derived row. Subtract instead of count and the grid argues with the surface one click away from it,
 worst on the rows that are already hard to read: `A corrupted egg` at 18:52:46 took 36,588,567 damage with both bounds
 inside one second, so an exclusive column printed `00:00` above a summary saying "Time Alive: 1s" and dividing by one
@@ -4338,11 +4338,11 @@ second. A zero-length duration is not a short fight — it is an infinity-shaped
 **The rule:** `DerivedFight.DurationSeconds` = `Math.Max(1, LastTime - BeginTime + 1)`, or `0` when the row has no
 bounds at all (`BeginTime`/`LastTime` start at ±infinity and `TimeSpan.FromSeconds` refuses a NaN). The `+1` lives on
 the row, not in the formatter, so any other surface that needs "how long" takes the same arithmetic;
-`MirrorFightRows` only formats it. Waxwork Abolishion's first life (18:34:08 .. 18:34:53) reads `00:46`, the same 46 the
+`DerivedFightRows` only formats it. Waxwork Abolishion's first life (18:34:08 .. 18:34:53) reads `00:46`, the same 46 the
 legacy tooltip says for that row.
 
 Two things this does **not** touch. The grid's `Inactivity > mm:ss` divider is a gap *between* rows, nobody fought in
-it, and stays an exclusive difference. And `MirrorSummaryFights`' tooltip keeps its own copy of FightManager's
+it, and stays an exclusive difference. And `FightSummarySource`' tooltip keeps its own copy of FightManager's
 expression rather than calling `DurationSeconds`: it is reproducing the text of a legacy `Fight`, whose bounds can be
 clipped to the requested window (`summary.BeginTime < fromT`), so the two numbers are not always the same number.
 
@@ -4350,13 +4350,13 @@ Pinned by `DerivedFightTest` — `AFightInsideASingleSecondLivedOneSecond`,
 `SecondsAreCountedInclusivelyLikeTheBoardCountsThem` (asserts the row's seconds equal
 `new TimeSegment(begin, end).Total`, so the two conventions cannot drift apart quietly),
 `TheDurationCellPrintsTheTooltipsNumber` (the same format expression the grid uses, asserted where it runs on Linux) and
-`ARowWithoutBoundsSaysNothing`; `MirrorFightRowsTest` in the Windows assembly covers the row end to end.
+`ARowWithoutBoundsSaysNothing`; `DerivedFightRowsTest` in the Windows assembly covers the row end to end.
 
-## How often the mirror re-derives (2026-10)
+## How often derivation re-runs (2026-10)
 
 Symptom reported from live use: a derived damage meter had to be coaxed open with **Re-derive**, and then sat showing
 the same numbers for the whole encounter, moving only when Re-derive was clicked again. The fight list had the same
-disease and the summaries inherited it — they all read one `MirrorSnapshot`, and no new snapshot was arriving.
+disease and the summaries inherited it — they all read one `DerivedSnapshot`, and no new snapshot was arriving.
 
 The trigger was quiescence alone:
 
@@ -4366,7 +4366,7 @@ else _lastTickCount = count;
 ```
 
 That is the right question for a **file being loaded** ("have you stopped yet?") and the wrong one for a **live log**:
-during a raid a line arrives every fraction of a second, so two consecutive equal ticks never happen, and the mirror
+during a raid a line arrives every fraction of a second, so two consecutive equal ticks never happen, and the engine
 faithively declined to derive for the entire fight. Quiescence is a completion detector; it was being used as a refresh
 clock.
 
@@ -4374,9 +4374,9 @@ clock.
 heals), timing exactly what `RederiveAsync` does inside the gate — roster seed, `ClassificationRules.Apply`,
 `FightProjection.Build`, `Sectionizer.StampGroupIds`: **660 ms / 653 ms / 610 ms**, of which classification is
 200-250 ms. Refreshing while data is dirty is therefore cheap enough that not doing it was a bug rather than a saving.
-A pass does park ingest (`CombatMirror.DeriveQuiescent` is a `lock (_gate)`), so the cadence has to pay for that too.
+A pass does park ingest (`CombatCapture.DeriveQuiescent` is a `lock (_gate)`), so the cadence has to pay for that too.
 
-**The rule now** lives in `MirrorDeriveCadence` (Core, decided apart from the session because a `DispatcherTimer` is not
+**The rule now** lives in `DeriveCadence` (Core, decided apart from the session because a `DispatcherTimer` is not
 a test harness) and keeps both triggers:
 
 | situation | decision |
@@ -4403,14 +4403,14 @@ for two ticks", and `TheCadenceStaysInsideTheMetersOwnQuietRule` refuses a chang
 snapshot rather than the live pipeline, so without that nudge the first thing a user sees is an empty window until the
 cadence happens to fire — precisely the "I had to click Re-derive" complaint, in a milder form.
 
-Pinned by `MirrorDeriveCadenceTest`: quiet still fires, idle costs nothing, a tailing count refreshes without silence and
+Pinned by `DeriveCadenceTest`: quiet still fires, idle costs nothing, a tailing count refreshes without silence and
 not before the floor, the first pass does not wait for silence, a bulk load is left alone until it stops, the interval
 scales with measured cost (floor/middle/ceiling/NaN), and the ceiling stays under `FightManager.FightTimeout`. The
 session's feeding of the rule and the meter's open-nudge sit in the WPF assembly, so they build here and run on Windows.
 
-## A mirror pass that starts where the last one stopped (2026-10)
+## A derive pass that starts where the last one stopped (2026-10)
 
-"How often the mirror re-derives" above settled *when* a pass runs; this is about what a pass costs, because the two
+"How often derivation re-runs" above settled *when* a pass runs; this is about what a pass costs, because the two
 together decide how live the meter feels. The old meter never recomputed anything — `FightManager.ProcessRecord`
 increments totals as each line parses, so its numbers are ~0 s stale and only the repaint is throttled. A derived board
 computes rows from facts, and computing them every refresh is what buys rows that re-key themselves as evidence arrives,
@@ -4421,11 +4421,11 @@ Two plumbing wins went first (commit "Mirror: paint on the pass, and poll faster
 were pure latency rather than throughput: a derive finishing between two of the overlay's 1 s polls used to wait for the
 next poll to be *seen*, and the session asked the cadence once a second, so every threshold could fire up to a whole
 second late. The overlay now queues a repaint when `Derived` fires, and the session polls at 250 ms with the thresholds
-themselves rewritten from tick counts into seconds and facts/**second** (`MirrorDeriveCadence`) — rewritten, not just
+themselves rewritten from tick counts into seconds and facts/**second** (`DeriveCadence`) — rewritten, not just
 re-scaled, or a finer timer would have silently shortened the quiet window and the bulk-load guard.
 
 Then the projection itself. Measured on `eqlog_Incogitable_xegony.txt` (1,891,875 damage facts + 420,115 heals, 4,644
-rows) by `MirrorIncrementBenchmarkTest`:
+rows) by `DeriveIncrementBenchmarkTest`:
 
 | pass | projection | classification (rule replay) | total |
 |---|---|---|---|
@@ -4614,7 +4614,7 @@ tables, `NpcStatsViewer`, `Timeline`), which are a separate workstream because t
 
 ## A fight that is still going: porting the meter's show/reset rule (2026-10)
 
-The damage meter's *numbers* moved to the mirror first (`OverlayDamageFromMirror`, see "The meter reads the mirror now"),
+The damage meter's *numbers* moved to the derived engine first (`OverlayDamageFromMirror`, see "The meter reads the derived engine now"),
 and that left the meter in the worst intermediate state a surface can be in: it painted derived numbers while the three
 questions that decide whether you ever see them were still answered by `FightManager` —
 
@@ -4626,13 +4626,13 @@ questions that decide whether you ever see them were still answered by `FightMan
 
 None of those concepts exist in the capture. A derived row is not an object handed out at the moment a hit lands; it is a
 life reconstructed from facts on a pass. So the missing piece was not plumbing but a rule, written down in
-`EQLogParser.Core/src/parsing/mirror/LiveFights.cs`.
+`EQLogParser.Core/src/parsing/derive/LiveFights.cs`.
 
 ### Which clock, and why the measurement matters more than the argument
 
 `LiveFights` reads the **capture's own newest event** as "now", not wall time. The argument is easy (a load at ~170k facts/s
 runs minutes behind the wall); the measurement is what kills the alternative. Census over three captures, damage facts only
-(`EQLP_MIRROR_LIVE=<log> dotnet test --filter LiveFights_RealLog`):
+(`EQLP_DERIVE_LIVE=<log> dotnet test --filter LiveFights_RealLog`):
 
 | capture | rows | first→last damage fact inside the FILE | time with a fight live | dead stretches >30 s | announcements / rows with traffic |
 |---|---|---|---|---|---|
@@ -4652,7 +4652,7 @@ hit.
 
 ### One announcement per life, which is what the auto-open rule needed
 
-`MirrorSession.NewFightObserved` fires once per derive that opens a fight which the previous pass did not report live —
+`DeriveEngine.NewFightObserved` fires once per derive that opens a fight which the previous pass did not report live —
 4,542 times over Incogitable's 4,519 traffic-carrying rows, 269 over 269 on Kizant: **~1.00 per life**. That is the number
 that decides whether MainWindow may open a window on it: if a pull announced every derive (a pass every few seconds inside a
 three-minute fight) it would be re-opening a meter the user closed seconds ago, and if it announced once a night the rule
@@ -4682,7 +4682,7 @@ the 30 s engagement gap, otherwise N seconds) so the board's expiry and the live
 numbers. `LiveFights.GapS` is that same `FightProjection.EngagementGapS`, pinned as *behaviour* in `LiveFightsTest` (live at
 29 s, not at 31 s) because comparing two constant spellings of one number passes even when somebody edits it to 300.
 
-`NewFightObserved` is **static** on `MirrorSession` (like `ActiveChanged`) because its reader outlives a capture: the meter
+`NewFightObserved` is **static** on `DeriveEngine` (like `ActiveChanged`) because its reader outlives a capture: the meter
 must auto-open for the next log too. It is unsubscribed with the legacy event's old call sites folded into
 `SubscribeOverlayFights()`/`UnsubscribeOverlayFights()`, so a window cannot be kept alive by a handler nobody remembers to
 detach — and it is raised in its own `try` after `Derived`, because an auto-open throwing must not make the *derive* look
@@ -4691,7 +4691,7 @@ broken (the outer catch disables auto-derive; that decision belongs to the deriv
 **No fallback, again.** "No session" answers `false`, and `HasLiveFight` never consults FightManager on the derived path: a
 meter that quietly started trusting legacy visibility rules looks exactly like a correct one.
 
-Re-measure with `EQLP_MIRROR_LIVE=local/<log>.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"`.
+Re-measure with `EQLP_DERIVE_LIVE=local/<log>.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"`.
 What is left on this path is not the wiring but the default: flip `OverlayDamageFromMirror` on and delete
 `DamageOverlayStatsBuilder`, which is the legacy tally this bypasses.
 
@@ -4774,7 +4774,7 @@ inside a row is the gap rule working on a real capture — but the announcement 
 pins the new one, including the dead-row and stale-activity refusals, and `AClosedMeterReopensOntoTheSecondsItLeft` pins the four combinations of stored start, quiet length and dial.
 
 ```
-EQLP_MIRROR_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
+EQLP_DERIVE_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
   --filter LiveFights_RealLog --logger "console;verbosity=detailed"     # prints [live] coverage, starts, restarts, reopen ceiling
 ```
 
@@ -4785,7 +4785,7 @@ candidate causes here and they cost completely different things to fix.
 
 **The chain, live raid, with measurements.** A line is written by EQ → `LogReader`'s tail loop drains it (**up to 200 ms**, `Task.Delay(200)`;
 its `FileSystemWatcher` listens for Deleted/Renamed only, so nothing wakes this loop early) → captured into the fact tables (microseconds, under
-`CombatMirror._gate`) → the session's pump asks every **250 ms** whether to derive → `MirrorDeriveCadence` answers with
+`CombatCapture._gate`) → the session's pump asks every **250 ms** whether to derive → `DeriveCadence` answers with
 `clamp(4 × lastPassSeconds, 3 s, 15 s)` → the pass runs **under the same `_gate`**, so it stops capture while it runs → `Derived` fires → the overlay
 rebuilds its board and paints.
 
@@ -4804,7 +4804,7 @@ Three things fall out of that table.
 1. **Classification is the whole pass.** Projection is already incremental and costs nothing on a live increment; the rule book re-runs every pass
    whether or not anything was learned (R9 charm windows 83 ms, R18 healed-pet intervals 67, R15 heal breadth 54, R7 graph 36, line evidence 15–25,
    R5 ownership sweep 15). `4 × lastPassSeconds` therefore measures ~0.8 s and the floor does the actual governing.
-2. **A pass parks ingest**, because capture and derive share `CombatMirror._gate`. At a 1 s cadence a 260 ms pass holds that gate ~26 % of the time,
+2. **A pass parks ingest**, because capture and derive share `CombatCapture._gate`. At a 1 s cadence a 260 ms pass holds that gate ~26 % of the time,
    and the thread waiting on it is the parse thread. This — not CPU — is why the floor cannot simply be lowered.
 3. **Repainting is cheap for the windows players actually run** (single digits to ~20 ms), and expensive only for a window that accumulated thousands of
    rows, i.e. a meter that has not expired all night. Any refresh rule that gets fast must stay cheap relative to *that*, or a dense farm night turns every
@@ -4821,9 +4821,9 @@ Three things fall out of that table.
 - **(c) Trim the fixed overheads.** Tail delay 200 → 50–100 ms, pump 250 → 100 ms: about 0.3 s for nearly no risk, and it helps every derived surface, not just the meter.
 - **(d) Just lower `FloorSeconds`.** One constant, but it buys latency by parking ingest — I would not do this before (a) or (b) makes passes cheap.
 
-Probe kept as `EQLogParser.Test/src/parsing/mirror/MeterBoardCostRealLogTest.cs` (gated, skipped without the variable):
+Probe kept as `EQLogParser.Test/src/parsing/derive/MeterBoardCostRealLogTest.cs` (gated, skipped without the variable):
 ```
-EQLP_MIRROR_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
+EQLP_DERIVE_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
   --filter MeterBoardCost --logger "console;verbosity=detailed"
 ```
 
@@ -4832,7 +4832,7 @@ EQLP_MIRROR_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test
 Took **(c) then (a)** from the options above. Both are in, and the numbers below are arithmetic over the measurements in that table — they
 are a prediction about *perceived* delay, which only a live raid can confirm.
 
-**The cadence answers two questions now, not one.** `MirrorDeriveCadence.Decide(...) → DeriveKind { None, ProjectionOnly, Full }` replaces
+**The cadence answers two questions now, not one.** `DeriveCadence.Decide(...) → DeriveKind { None, ProjectionOnly, Full }` replaces
 `ShouldDerive`. `Full` classifies and projects (what the UI's Re-derive and every log opening ask for); `ProjectionOnly` folds the facts that
 arrived since over **the `EntityTimeline` instance the last full pass produced** and is paced by
 `FastFloorSeconds = 0.5`, while `Full` keeps exactly the cadence it always had — `clamp(4 × lastFullPassSeconds, 3 s, 15 s)`.
@@ -4852,7 +4852,7 @@ Order inside `Decide`, because each check is a different hazard:
 
 Point 4 is the one the session's bookkeeping can get wrong: if a cheap pass restarted the stopwatch that paces classification, a busy tail would run
 forever on the verdicts it happened to have at minute one and pets/charms would quietly stop folding. `ACheapPassNeverPushesTheExpensiveOneAway` pins
-the rule; `MirrorSession` keeps `_sinceAnyPass` and `_sinceFullPass` separately and restarts only the latter when a pass classified.
+the rule; `DeriveEngine` keeps `_sinceAnyPass` and `_sinceFullPass` separately and restarts only the latter when a pass classified.
 
 **Fixed overheads**: the session's pump 250 → **100 ms**, and nothing else. That is not tunable by event in either direction — the cadence reads
 durations, which `TheRuleDoesNotDependOnHowOftenItIsAsked` holds — so it buys promptness only, and it is what keeps a 0.5 s floor from landing with a
@@ -4866,8 +4866,8 @@ wait we were going to pay anyway. Polling thirteen times a second for hundredths
 
 **What a refresh costs now, per second of live raid**: ~2 cheap passes at 0–5 ms projection + row-building, plus one full pass per ≥3 s at
 186–261 ms → roughly **7–12 % of the ingest gate** against **6–9 %** before, in exchange for numbers moving in **~0.8–1.2 s** instead of ~3.4 s (the worst case carries the 200 ms tail delay above; a live raid's steady traffic mostly hides it behind the floor's phase).
-The unknown term in that sum is `MirrorFightRows.Build`, which runs on every lane and formats four columns per row over *every row the capture ever
-produced* (4,644 on one capture); it lives in the app assembly, so its number is `EQLogParser.Wpf.Test/src/control/util/MirrorSnapshotCostTest.cs`
+The unknown term in that sum is `DerivedFightRows.Build`, which runs on every lane and formats four columns per row over *every row the capture ever
+produced* (4,644 on one capture); it lives in the app assembly, so its number is `EQLogParser.Wpf.Test/src/control/util/DerivedSnapshotCostTest.cs`
 (Windows-only, 5,000 synthetic rows bound at 60 ms). If that ever climbs toward tens of milliseconds, widen the cheap lane by row count before
 touching either floor.
 
@@ -4945,13 +4945,13 @@ two-lane cadence: when derives only ran at load-end, stopping the loop cost a pa
 froze every derived surface for the rest of the night over one hiccup, silently except for one log line.
 
 **What replaced it, coarse to fine.** (1) A classification STAGE that throws is a bug in one check: `RunStage` swallows
-it, reports the full exception on `MirrorRuleOutcome.FailedRules` (Core owns no logger — the session writes the player's
+it, reports the full exception on `ClassificationOutcome.FailedRules` (Core owns no logger — the session writes the player's
 log), and retires *only that stage* after five consecutive failures; one clean run clears the streak, `ResetRuleHealth`
-(a new `MirrorSession`) hands the next capture — different data, possibly nothing like the poison — the full rule book.
+(a new `DeriveEngine`) hands the next capture — different data, possibly nothing like the poison — the full rule book.
 Soundness of partial classification: rules only ADD evidence, and every consumer already handles names nothing has
 placed (every log starts that way), so the degradation direction is "less known", never "wrong side"; a retired stage
 changes the timeline's content digest, and the carry gate re-folds rather than mixing rule books across passes.
-(2) A session-level throw retries on `MirrorDeriveCadence.RetryDelayS` — 1 s, doubling, capped at 60 s, zeroed by any
+(2) A session-level throw retries on `DeriveCadence.RetryDelayS` — 1 s, doubling, capped at 60 s, zeroed by any
 completed pass; a transient fault (locked file, AV scan) vanishes inside a second, deterministic poison becomes a slow
 repeating stack in eqlogparser.log, which *is* the diagnosis. (3) `IdentityPriorStore.Record` — a write for the NEXT
 log's benefit — cannot fail a pass at all: wrapped, logged, boards untouched. The Re-derive button and its handler are
@@ -4963,7 +4963,7 @@ arithmetic, retire-self-only, reset-on-new-session, never-silent) and the ladder
 **Why: every real-log measurement to date was one log format.** The reorganized corpus puts live captures under
 `local/logs/live/` and EMU-server captures under `local/logs/emu/`; the latter parse differently — Heroes Forge
 `(Owner: X)` attacker lines, old-EMU criticals (`scores a critical hit! (9110)` pairing with the next hit line),
-absorbed-damage shapes — behind the app's `EnableEmuParsing` setting, which only `DamageLineParser` reads. The mirror
+absorbed-damage shapes — behind the app's `EnableEmuParsing` setting, which only `DamageLineParser` reads. The capture
 ingest rides that same parser, so this was the first time the capture/classification/projection stack ever saw those
 grammars. `PipelineHarness` now honours `EQLP_EMU=1` (sets `AppSettings.IsEmuParsingEnabled` per run, restores it —
 process-global flag, live logs misparse with it left on).

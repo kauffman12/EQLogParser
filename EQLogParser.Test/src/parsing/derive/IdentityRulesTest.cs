@@ -236,7 +236,7 @@ public class IdentityRulesTest
         // Feedback XII" - the damage is the local player hitting themselves. Four instances over
         // three minutes, every defender player-side, must NOT produce an R7-side NPC: without the
         // guard this exact shape is what would brand the operator's own spell an enemy.
-        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "mirror-feedback-" + Guid.NewGuid().ToString("N")));
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-feedback-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Feedbackone_Eqgate.txt"); // filename seeds ConfigUtil.PlayerName via the harness
         var previousPlayerName = ConfigUtil.PlayerName;
         try

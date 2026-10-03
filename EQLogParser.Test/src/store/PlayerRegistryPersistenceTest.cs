@@ -13,7 +13,7 @@ namespace EQLogParser;
  *     parse handed the name straight back. A removal is now a row in the same file (`!Name`) and the learning
  *     paths are refused, while "Set as Player" (AddVerifiedPlayerByOperator) can still revive it.
  *   - Saying "not one of ours" makes no claim. It silences the guess; it does not name the enemy. That second
- *     thing is an assertion and belongs on the mirror's manual override (R10), not here.
+ *     thing is an assertion and belongs on the engine's manual override (R10), not here.
  *
  * ConfigUtil.ConfigDir/ServerName/PlayerName are process globals and PlayerRegistry is a process-lifetime
  * singleton, so each test parks them in a temp folder (same pattern as IdentityOverrideStoreTest) and leaves the

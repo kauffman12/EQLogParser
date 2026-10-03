@@ -99,7 +99,7 @@ namespace EQLogParser
    * into the fact table's name table — 32 B/record, no per-record allocation after init.
    *
    * The size is not an accident and it is worth knowing which bytes are load-bearing, because this is
-   * the most numerous thing the mirror holds: a 5 M-fact log is 160 MB of it. Seq + TimeS (and TimeS
+   * the most numerous thing the engine holds: a 5 M-fact log is 160 MB of it. Seq + TimeS (and TimeS
    * must be a long — see its comment) cannot shrink; AtkIdx/DefIdx/SubIdx are the interning that makes
    * the table cheap at all. Everything else lives in the padding around those: TypeId, Flags, ModMask.
    *
@@ -114,7 +114,7 @@ namespace EQLogParser
     public const byte FlagOwnerInLine = 2;   // ownership evidence ("X`s pet", "Owner: X") present on the raw line
 
     // What PlayerRegistry.IsPetOrPlayerOrMerc answered for this name at the instant the parser
-    // fired this event — captured by the mirror on the same thread, same instant as FightManager
+    // fired this event — captured by the engine on the same thread, same instant as FightManager
     // consumes it. This is a FACT (what the current pipeline saw), not a judgment: replaying the
     // pipeline requires the same answers, and Phase 2 rules layer retroactive reclassification on
     // top of them. Verified mid-log names therefore read player-side only from their evidence time
@@ -209,7 +209,7 @@ namespace EQLogParser
     }
   }
 
-  // One identity/side evidence event captured by the mirror (Phase 2 rules input). Facts stay
+  // One identity/side evidence event captured by the engine (Phase 2 rules input). Facts stay
   // factual: the event says what a parser recognized, never what it means. AuxIdx carries the one
   // secondary string some kinds have (class for who-roster, spell for casts, channel for chat),
   // -1 when absent.
@@ -276,7 +276,7 @@ namespace EQLogParser
   }
 
   // Storage contract for the fact tables (D2: in-RAM now, shaped so a chunked spill can be added
-  // later without touching the mirror or the deriver).
+  // later without touching the engine or the deriver).
   internal interface IFactTable
   {
     int FactCount { get; }
@@ -375,7 +375,7 @@ namespace EQLogParser
     public short InternName(string name)
     {
       if (_nameMap.TryGetValue(name, out var idx)) return idx;
-      if (_names.Count >= short.MaxValue) throw new InvalidOperationException("mirror: name table exceeded 65535 entries");
+      if (_names.Count >= short.MaxValue) throw new InvalidOperationException("capture: name table exceeded 65535 entries");
       _names.Add(TextUtils.CapitalizeFirst(name));
       idx = (short)(_names.Count - 1);
       _nameMap[name] = idx;
@@ -388,7 +388,7 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(subtype)) return -1;
       if (_subtypeMap.TryGetValue(subtype, out var idx)) return (short)idx;
-      if (_subtypes.Count >= ushort.MaxValue - 1) throw new InvalidOperationException("mirror: subtype table exceeded capacity");
+      if (_subtypes.Count >= ushort.MaxValue - 1) throw new InvalidOperationException("capture: subtype table exceeded capacity");
       _subtypes.Add(subtype);
       idx = (ushort)(_subtypes.Count - 1);
       _subtypeMap[subtype] = idx;

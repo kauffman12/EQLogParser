@@ -338,7 +338,7 @@ public class FightSummarySourceTest
     [TestMethod]
     public void ARowNothingIsAimedAtStillFeedsTheTankingBoard()
     {
-        // A classified mob hitting a classified raider: the row exists (that is the mirror's identity-aware
+        // A classified mob hitting a classified raider: the row exists (that is the engine's identity-aware
         // list doing its job) and every fact in it points the other way, so a DAMAGE summary over it has nothing
         // to show. Skipping the row outright — which is what this used to do — deleted the damage those players
         // took from the tanking board too, and narrowed AllRanges while it was at it. Legacy hands its own
@@ -686,7 +686,7 @@ public class FightSummarySourceTest
     }
 
     /*
-     * The claim the mirror exists to test, at the level of a board: same log, same fight, two engines. The
+     * The claim the engine exists to test, at the level of a board: same log, same fight, two engines. The
      * legacy list's Fight objects and the derived rows each feed DamageStatsBuilder separately and the two boards
      * are compared. Measured on this fixture (mini-fight.txt), with all six modifier filters on:
      *
@@ -765,7 +765,7 @@ public class FightSummarySourceTest
 
         // (2) The derived board may add only line-owned pets, folded under their owners.
         var extra = totals.StatsList.Where(s => !managerStats.StatsList.Any(m => m.Name == s.Name)).ToList();
-        Assert.IsTrue(extra.Count > 0, "this fixture is supposed to show the difference the mirror exists for");
+        Assert.IsTrue(extra.Count > 0, "this fixture is supposed to show the difference the engine exists for");
         foreach (var entry in extra)
         {
             Assert.IsTrue(entry.Name.EndsWith(" +Pets", StringComparison.Ordinal),

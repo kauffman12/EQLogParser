@@ -10,7 +10,7 @@ namespace EQLogParser
    * depended on the legacy per-line pipeline for one piece of information that has nothing to do with how fights are
    * produced. Moving it here is the first cut in docs/legacy-replacement-map.md: after this those files no longer name
    * FightManager at all, so deleting that class becomes a change they cannot break and not a change they must be
-   * rewritten for. The mirror will raise the same event when its capture resets (it does not yet — while both lists run
+   * rewritten for. The derivation will raise the same event when the capture resets (it does not yet — while both lists run
    * side by side, legacy's clear is the one that means "start over", and firing twice would blank a board that the other
    * pipeline is about to refill).
    */

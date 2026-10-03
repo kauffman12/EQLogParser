@@ -2,10 +2,10 @@ using EQLogParser;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace EQLogParser.Test.src.parsing.mirror;
+namespace EQLogParser.Test.src.parsing.derive;
 
 /*
- * When the mirror is allowed to run another pass (docs/combat-mirror-design.md, docs/DesignNotes.md). Two separate
+ * When the engine is allowed to run another pass (docs/combat-mirror-design.md, docs/DesignNotes.md). Two separate
  * questions had been conflated into one, and the conflation is what made the derived surfaces go stale: a finished load
  * needs one pass at the end; a live raid tail needs passes while the count keeps moving, because it never offers the
  * silence the old rule waited for.
