@@ -5,6 +5,176 @@ Read the relevant section before changing import, sharing or migration code so d
 quietly reversed. Style rules live in [CodingStandards.md](CodingStandards.md); this file answers
 *"why is it like this?"* and *"what must not change without a decision?"*.
 
+## The parsing direction: what we are building and why (2026-10)
+
+*Orientation chapter — the shape of the work before its details. Every law summarized here has a full section in this
+file (dates in headings), a short form in `AGENTS.md`, and tests; nothing new is decided on this page. It exists so
+that the next session — human or machine — starts from where the design actually is.*
+
+### The one-sentence version
+
+The app no longer tells the story of a raid *while parsing it*. Lines are parsed cheaply into **facts** (damage,
+healing, outcomes) held in append-only tables; a background **mirror** folds facts plus an identity rule book into
+**rows** and boards on a cadence; every surface — fight list, all three boards, the overlay meter — reads that derived
+side behind one dial (`EnableCombatMirror`). The legacy per-line accumulation (`FightManager`, parse-time `StatsUtil`)
+still runs, but it now feeds nothing the user sees except its own retired table, and its deletion is an ordered work
+queue, not an experiment.
+
+### Why parse-time accumulation was replaced
+
+- **Identity decisions froze at line time.** Is `Dangle` a pet, a merc, a charmed mob, an unverified raider? The old
+  pipeline had to answer the instant a line arrived and live with it all night. The evidence that answers correctly —
+  who heals it, what owns it, did it die — arrives later, spread across the log.
+- **Two clocks leaked into everything.** Expiry, durations, "is a fight still going" mixed wall time and per-line
+  order; re-reading the same file could disagree with itself (a real file spans **329 hours**; another **616 days**).
+- **Every view paid at ingest.** The meter's arithmetic ran whether or not anyone was looking, per line, on the parse
+  path.
+- **Nothing was re-decidable.** A better rule discovered next week could not correct last night's board. The mirror
+  re-derives; rows migrate; overrides ride the replay.
+
+### The pipeline as built
+
+```
+lines ──parsers──▶ CombatMirror
+                    ├─ DamageFactTable (32 B/fact: names, spell, label mask, direction flags)
+                    └─ HealFactTable   (40 B/fact: asks/landed/over; one shared name pool,
+                                        ONE sequence across both tables)
+                          │
+             MirrorDeriveCadence.Decide ── None | ProjectionOnly | Full
+                          │                     (quiet 1 s ⇒ Full; ≥25k facts/s ⇒ park both)
+             ClassificationRules.Apply (Full only)
+                    ├─ R0–R20 rule book → EntityTimeline (kind + strength + reason per name)
+                    ├─ overrides (user law, persisted) and the prior ledger beat inference
+                    └─ per-rule aggregates carried between passes (ClassificationState); a
+                       stage whose boundary digest is unchanged replays in microseconds
+                          │
+             FightProjection.Project (every lane) — facts → DerivedFight rows + MirrorDamageIndex
+                    ├─ one row per life (30 s split gap = legacy's expiry, both directions)
+                    ├─ charm windows: the mob's death; its pet gets no row, its damage folds
+                    │  under the charmer (`+Pets`) — hidden from the list, never deleted
+                    └─ two ordinal sets per row: facts AT the owner / facts BY the owner
+                          │
+        ┌─────────────────┼──────────────────────┬─────────────────────┐
+   MirrorFightTable   MirrorSummaryFights/Heals  MirrorMeter + LiveFights   Names window /
+   (legacy's 3 cols,  (the REAL builders get     ("still going" on the      identity census
+    sections, search,  materialized records —    capture's clock; the
+    overrides)         same code as legacy)      meter's quiet dial is the
+                                                  one wall-time exception)
+```
+
+The load-bearing invariants: **one sequence** so heals and hits can be merged into any later order truthfully;
+**names case-insensitive everywhere** (the parser capitalizes, evidence lines keep what EQ wrote); a fact carries the
+**modifier mask** because filters read it off the reproduced record; a row's two boards are split by the *same*
+comparison that fills the index, so a materialized block cannot drift from the row it came from. The deep dives are
+§"Combat mirror", §"A row is one life", §"Damage taken…", and the `AGENTS.md` bullets they generated.
+
+### The identity rule book (R0–R20) in one breath
+
+Evidence has a **strength ladder** (Certain > Strong > Medium), every claim names its reason, and the Names window
+shows the ledger — an identity on the board is traceable to the lines that earned it. Sketch: R0 the log's own "You",
+R1 raid-targeting, R2/R3 who-was-who chat and presence, R4 the spell DB, R5 ownership (five possessive words — `` `s
+pet/warder/ward/familiar/mount`` — swept from the name pool, not the facts), R6 the shipped NPC database, R7 the fight
+graph (opposition is an absolute veto; unknown defenders a 2 % allowance), R9 charm windows (a charmed mob IS a pet:
+owner-folded damage, no fight row), R10 manual overrides, R13 mercenaries, R14 the article test (`A bone walker` — the
+game's own "this is a thing" marker), R15 our side keeps healing it (≥10 lines from ≥2 Strong casters; caster BREADTH,
+never volume — bosses get raid AoE too), R16 comma titles, R17 drink/eat lines name a player, R18 healed pets, R19 eyes
+of X (an eye is not a combatant; hitting yours proves you exist), R20 the pet's own Snare claims Pet. The vocabularies
+are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' sixteen words in one byte, the three countable
+eyes) — a new word arrives with a census over several eras, settings text if user-visible, and tests; nothing is
+inferred into them.
+
+### Cadence and cost: when the mirror runs, and what it carries
+
+- The pump ticks at **100 ms**; `MirrorDeriveCadence.Decide` answers WHICH pass, not whether: nothing new ⇒ None;
+  count quiet 1 s ⇒ **Full** (never answer the end-of-load moment cheaply — that is when rules finally see the whole
+  capture); growth ≥ **25 k facts/s** ⇒ park BOTH lanes (bulk reads at ~170k/s; a parked lane still holds the gate the
+  loader needs); else Full every ~3–15 s (cost-scaled) and **ProjectionOnly** at a 0.5 s floor in between. A refresh
+  lands ~0.8–1.2 s behind live play for ~7–12 % of the ingest gate.
+- The cheap lane folds over the **timeline INSTANCE the last Full pass produced** — no rule book runs (classification
+  measured 186–261 ms of a pass; projection of a live increment is 0–5 ms). Two clocks: `_sinceAnyPass` paces the
+  cheap lane, `_sinceFullPass` the expensive one, and only a pass that classified may restart the latter.
+- Both lanes carry state between passes: `FightProjectionCache` (rows, open row per name, death queues, the index)
+  opens on `Covers(facts)` **plus** an incremental content digest of the timeline — additive, order-free, replay-stable.
+  Classification carries per-rule aggregates gated by each stage's own boundary digest; the timeline store stays FRESH
+  per pass (each rule replays its carried claims in stage order) because a carried timeline leaked verdicts upstream
+  rules must not see. A quiet Full tick measured ~380 ms of rules → **2 ms** on Incogitable (1.89 M facts).
+- Failure degrades one stage at a time: swallow-and-report, retire after five IN A ROW, session-level retry ladder
+  1 s→60 s; and in TESTS the same guard **rethrows** (`FailFastStages`, raised by both assemblies at init) because a
+  silently dead rule reads exactly like an empty column.
+
+### One clock law: the capture's time is the clock
+
+Every "still going / expired / how long" question answers against **the capture's newest event**, never wall time —
+except the meter's own quiet dial, which is a promise in real seconds to the user and stays on `DateTime.Now` (a file-
+growth stall must not hold the board up). Durations count seconds **inclusively** (`+1`, matching `TimeSegment.Total`,
+the DPS denominator every board already uses); a row splits at 30 s of silence in EITHER direction; a death closes
+only a row that was alive when it happened, and a row with no death inside it honestly says "still open". The legacy
+60-second boss pair and the old 300-second gap are both history, measured away on real logs.
+
+### What the surfaces may say (deliberate, since users read them)
+
+The derived list wears legacy's face: **Initial Hit Time | HP | Name**, inactivity dividers in legacy's warning color,
+tooltips, selection restored across every re-derive by name+begin (`FightKey`, since projection renumbers). What it no
+longer says, on purpose (2026-10, from live feedback): no reading-progress duplication inside the dock — the
+application-wide status line owns percent-and-seconds; the band's one phrase is "Building derived fight list…" (EOF →
+first snapshot, default color, indeterminate); no `Derived HH:mm:ss - N fights, M facts, X ms` stats line in a header
+narrower than its text. The header's remaining honest jobs: which session, an override verdict, a selection meaning, a
+failure being retried. The meter opens at launch only if the capture's LAST moments hold a fight; its X closes the
+window but disables nothing — next damage brings the board back onto the same seconds (the start second is static for
+exactly this).
+
+### Lifecycle signals belong to PATHS, not stores
+
+`CombatEvents.ActiveDataCleared` — what blanks seven grids/charts when a log closes or opens — is raised by the two
+CLEAR PATHS (`LifecycleManager.Clear` after its fan-out; the fight list's Clear All), never from inside
+`FightManager.Clear`. A signal that lives in a store scheduled for deletion silently stops firing the day it goes, and
+a board frozen on last night's raid is worse than an empty one. Pinned by `LifecycleManagerTest` both ways: the path
+raises with its payload; a bare store reset raises nothing.
+
+### The measurement culture (how we know any of this)
+
+Parity runs the REAL builders twice over one capture and compares **boards, not just rows** (`EQLP_MIRROR_BOARDS=…`,
+per-person column pairs; healing exact at 403k heals/373 healers; damage's +0.54 % and tanking's people-vs-NPC split
+are documented in those runs, not smoothed over). Identity questions are asked only against a **classified** timeline
+(`ClassificationRules.Apply`) — the same census on a seeded one lied by ×350 and spawned two wrong documents before it
+was caught. Real-log tests report what they find instead of asserting constants that match accidents; absolute counts
+go before equalities; findings need **several captures** before any of them becomes a rule. The suites run
+`DoNotParallelize`; on Linux the plain suite (~1,560 tests) runs everything except WPF/Skia surfaces — Windows is the
+only place `EQLogParser.Wpf.Test` executes, so its laws must also be readable from code.
+
+### What is left (the deletion queue, in order)
+
+Done and measured: fight list, all three boards, the meter — each fully behind `EnableCombatMirror`, no fallback to
+legacy anywhere on those paths (a missing mirror answers *false*; it does not consult the old pipeline — fallbacks
+hide errors). Remaining, from the working map (`docs/legacy-replacement-map.md`, untracked — the queue is mirrored here so this file is the durable home):
+
+1. **`EventViewer.IsLifetimeNpc` → timeline** — one consumer of one call; same question the Names window already answers.
+2. **The product call: flip `EnableCombatMirror` default-on**, burn it in, then delete `DamageOverlayStatsBuilder`.
+   This is judgment, not code — and it is the hinge that lets the legacy `FightTable` go next.
+3. **Line viewers onto the fact tables** (`HitLogViewer`, damage/heal/tank grids, per-name lifetimes) — *the main real
+   work left*. The facts hold the rows; what they lack is readers (and per-name lifetime materialization).
+4. **Stop parse-time accumulation** (`StatsUtil.UpdateDamageStats/UpdateHealStats` per line, then `RecordsStore`, then
+   `FightManager`/`Fight`/`BattleRow`) — only possible after 3, because the viewers still read those stores.
+
+Open costs stated honestly: classification's remaining ~250 ms floor is a per-rule watermark problem (R9 charm 83 ms,
+R18 67, R15 54 on Incogitable) that rebuilds anyway whenever a rule finds something — so only a 3 s→1 s Full-pass floor
+is still at stake there; the `Wpf.Test` assembly has never executed anywhere (Linux builds it, cannot run it); and the
+GINA `{counter}` semantics question (local working doc `docs/counter-variable-issue.md`) is an open user-facing decision, unrelated to
+the mirror.
+
+### Standing decisions — reopen only with a decision, not a refactor
+
+- **No fallbacks from derived surfaces to legacy.** They hide errors; absence must read as absence until the bug is fixed.
+- **Where the derived side disagrees with legacy because legacy was wrong** (pets folded via the line's own possessive,
+  a mob's victim never noise, one row per life), the difference is asserted AS the difference — numbers pinned, not
+  averaged into a parity percentage.
+- **Hidden means hidden, not deleted**: a pet row's damage still counts in every board its click could reach; hiding
+  lives in the display list, never in the snapshot.
+- **Vocabularies are closed** (FCT shapes, hit labels, owner suffixes, eyes, casting signatures): each arrives with a
+  settings word, a surface entry, and a test that refuses a smuggled fifth/sixteenth/third member.
+- **Numbers belong in the notes next to the law they justify.** Several of this file's sections exist because a
+  "simplification" measured worse; check them before re-simplifying anything.
+
 ## Trigger and Overlay Import
 
 "Import" means taking an `ExportTriggerNode` tree from some producer and merging it into the tree
@@ -487,7 +657,7 @@ of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
 ## Floating Combat Text
 
 `View → Floating Combat Text` shows the player's own combat numbers from live log records. The rendering choice is settled and recorded in
-`docs/NagFctReference.md` (SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale), and the loser has since been deleted rather
+the local working doc `docs/NagFctReference.md` (untracked; SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale), and the loser has since been deleted rather
 than kept as a reference - see "Shared policy, one renderer" below. This section covers why the *plumbing* is shaped the way it is, because that is
 the part a later change is most likely to undo by accident.
 
