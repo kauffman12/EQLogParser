@@ -1171,7 +1171,7 @@ namespace EQLogParser
 
     // Main Menu
     /*
-     * The Names window (see NamesTable). Docking it is not enough on its own: the census is built on demand, so a
+     * The Player/NPC Identity window (see NamesTable). Docking it is not enough on its own: the census is built on demand, so a
      * window reopened after an hour should answer about the log that is open now rather than about the one that was
      * open when it was last looked at.
      */

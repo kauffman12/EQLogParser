@@ -21,7 +21,7 @@ using EQLogParser;
 namespace EQLogParser
 {
   /*
-   * The Names window: every name in the capture, what it was called, and WHY. It replaces the three hand-maintained
+   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY. It replaces the three hand-maintained
    * panes (Verified Players / Verified Pets / Pet Owners), which could show what somebody typed but never what the
    * classifier concluded - so a wrong verdict had no surface to be noticed on, only a meter that looked odd.
    *
@@ -70,7 +70,7 @@ namespace EQLogParser
       if (session is null)
       {
         // A log that has not opened yet is not an error: the window simply has nothing to classify.
-        namesStatusText.Text = "Names: open a log to classify the names in it";
+        namesStatusText.Text = "Who is every name in this log? Player, pet or NPC - open a combat log to identify them";
         return;
       }
 
@@ -103,7 +103,7 @@ namespace EQLogParser
       _rows.Clear();
       foreach (var row in census.Rows) _rows.Add(RowFrom(row));
 
-      namesStatusText.Text = $"Names {census.TotalNames:N0}: {census.Players:N0} players, {census.Pets:N0} pets, " +
+      namesStatusText.Text = $"{census.TotalNames:N0} names: {census.Players:N0} players, {census.Pets:N0} pets, " +
                              $"{census.Mercs:N0} mercs, {census.Npcs:N0} NPCs, {census.Rejected:N0} rejected" +
                              (census.UnresolvedInCapture > 0 ? $" · {census.UnresolvedInCapture:N0} unplaced in this log" : string.Empty) +
                              (census.Disagreements > 0 ? $" · {census.Disagreements:N0} contradict the roster" : string.Empty);

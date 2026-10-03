@@ -273,9 +273,10 @@
             <!-- One window for everything the old three panes held, plus what they could never show: what the rules
                  concluded and which line said so. The panes themselves stay in the layout (an operator's saved
                  EQLogParserLayout.xml still names them) but their menu entries are gone - two surfaces for the same
-                 names is how a stale list stays trusted. -->
-            <MenuItem x:Name="namesWindowMenuItem" Header="_Names" Click="MenuItemNamesClick"
-                      ToolTip="Every name in this capture: what it was called, which rule said so, and what to do about it" />
+                 names is how a stale list stays trusted. The label says what it REPLACES, because that is where
+                 ten years of users reach for: no jargon, the old window names spelled out. -->
+            <MenuItem x:Name="namesWindowMenuItem" Header="Player/NPC _Identity" Click="MenuItemNamesClick"
+                      ToolTip="Shows who every name in the log is - player, pet or NPC - and replaces the old Verified Players, Verified Pets and Pet Owners windows" />
             <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners (legacy)" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="petMappingIcon" Tag="petMappingWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
@@ -546,7 +547,7 @@
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:MirrorFightTable />
         </ContentControl>
-        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Names" syncfusion:DockingManager.State="Hidden"
+        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Player/NPC Identity" syncfusion:DockingManager.State="Hidden"
                       syncfusion:DockingManager.SideInDockedMode="Tabbed" syncfusion:DockingManager.TargetNameInDockedMode="mirrorFightWindow"
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:NamesTable />
