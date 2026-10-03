@@ -53,6 +53,16 @@ namespace EQLogParser
     private List<string> _pendingOverride;
 
     /*
+     * Loading-band state (see mirrorLoadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
+     * landed" flag: the band goes down for good at the first Derived, even if the reader pump is still under 100 %
+     * (a quiet stretch mid-file can legitimately complete a derive early), and it comes back only with the next
+     * session. `_capturedFacts` rides in from the session's capture event so the band can show facts AND bytes -
+     * the file percentage is the reader's honest denominator, the count is the mirror's own work.
+     */
+    private bool _loadBandSettled;
+    private long _capturedFacts;
+
+    /*
      * What a row IS, across derives. DerivedFight.Id cannot say that: FightProjection renumbers the list on every
      * pass (Id = i + 1 over the rows of THAT pass), so one override - which removes rows on purpose - shifts
      * every number after it, and restoring by id would highlight whatever fight moved into the old slot while
@@ -124,9 +134,13 @@ namespace EQLogParser
           _announcedIds = [];
           _rows.Clear();
           mirrorStatus.Text = "Mirror: no log";
+          SetLoadBand(null);
         }
         else
         {
+          // A new session is a new load: the band may show again, and its counters start from nothing.
+          _loadBandSettled = false;
+          _capturedFacts = 0;
           mirrorStatus.Text = "Mirror: capturing...";
         }
       });
@@ -135,10 +149,17 @@ namespace EQLogParser
     // Derivation completes on a background thread; rows swap on the dispatcher. Big logs derive
     // thousands of fights — a whole-collection ItemsSource swap re-lays-out once instead of
     // signalling every row insert, and ItemsSourceChanged reapplies the divider filter.
-    private void OnDerived(MirrorSnapshot snapshot)
+    // Internal for the band's WPF test (a live session is not needed to hand this panel a snapshot); every
+    // production call arrives through the session's Derived event.
+    internal void OnDerived(MirrorSnapshot snapshot)
     {
       Dispatcher.InvokeAsync(() =>
       {
+        // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
+        // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
+        _loadBandSettled = true;
+        SetLoadBand(null);
+
         // The mark is a reference to an OLD row that the swap discards: drop it with the rows, or a cleared
         // highlight would sit on nothing and the next search would skip its own bookkeeping.
         ClearSearchMark();
@@ -221,12 +242,61 @@ namespace EQLogParser
              + (listed > 0 ? $", {listed} still on it" : string.Empty);
     }
 
-    // Capture heartbeat (dispatcher thread already). Only fires while no snapshot covers the
-    // newest facts, so it never stomps a fresh "Derived …" line.
+    /*
+     * Capture heartbeat (dispatcher thread already). The count used to replace the status line every tick, which
+     * read as a terminal ticking past; it belongs on the loading band, next to the file progress that says when
+     * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
+     * through OnDerived, which is the message.
+     */
     private void OnCapturing(long total)
     {
-      mirrorStatus.Text = $"Mirror: capturing... {total:N0} captured";
+      _capturedFacts = total;
+      if (mirrorLoadOverlay.Visibility == Visibility.Visible) UpdateLoadDetail();
     }
+
+    /*
+     * The reader pump MainWindow drives every ~500 ms while a file is open (byte progress through the log, the
+     * same reading its own status bar gives). Called on the dispatcher; `percent` counts against the size the
+     * file had when reading began, so a growing live tail runs past 100 - the band treats >= 100 as "reading is
+     * done", which is the truth from the reader's side, and waits for the first snapshot on its own.
+     */
+    internal void ReportCaptureProgress(double percent, double seconds)
+    {
+      if (Dispatcher.CheckAccess() == false)
+      {
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(percent, seconds));
+        return;
+      }
+
+      // No session gate: while the reader pump runs this window is either showing the band or docked-hidden
+      // (mirror off), and a hidden band costs nothing. The only veto is "rows already landed this session".
+      if (_loadBandSettled) return;
+
+      if (percent < 100.0)
+        SetLoadBand($"Reading log\u2026 {percent:0}%", indeterminate: false, percent);
+      else
+        SetLoadBand("Building derived fight list\u2026", indeterminate: true, 100.0);
+    }
+
+    // null takes the band down; UI thread.
+    private void SetLoadBand(string headline, bool indeterminate = false, double percent = 0)
+    {
+      if (headline is null)
+      {
+        mirrorLoadOverlay.Visibility = Visibility.Collapsed;
+        mirrorLoadBar.IsIndeterminate = false;
+        return;
+      }
+
+      mirrorLoadText.Text = headline;
+      mirrorLoadBar.IsIndeterminate = indeterminate;
+      if (!indeterminate) mirrorLoadBar.Value = percent;
+      UpdateLoadDetail();
+      mirrorLoadOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void UpdateLoadDetail()
+      => mirrorLoadDetail.Text = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : "waiting for first facts";
 
     private void Attach(MirrorSession session)
     {

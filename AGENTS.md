@@ -264,7 +264,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **The surface around it must never read as broken**: with `EnableCombatMirror` set, `MainWindow` docks the window at startup (a checked menu item
   means the window is there - "Mirror: no log" until one opens; docking only in the open-log path left a restarted app "checked but invisible",
   which shipped reading as "it stopped working after I restart"), and toggling ON over a live parse **starts a session immediately** (it used to
-  re-dock the window with no session, so uncheck/re-check did nothing until the next log open - the exact experiment the user reaches for). A
+  re-dock the window with no session, so uncheck/re-check did nothing until the next log open - the exact experiment the user reaches for). During a bulk load the derived list is legitimately empty (both derive lanes park), so `MirrorFightTable`
+  shows a loading band over the table fed by MainWindow's reader pump (`ReportCaptureProgress`: byte progress, then indeterminate "building" at EOF; the
+  session's first snapshot takes it down for good) - legacy filled rows per parsed line, the projection cannot (a cheap lane during bulk steals the ingest gate,
+  reverted on measurement), and the capture counter left the status line for the band. A
   mid-log attach is forward-only by construction: no backfill exists (facts before the tap were never captured), and the chat sink was fixed when
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
   One line per session in eqlogparser.log - `combat mirror: session started (file)` at open, `combat mirror: first derive - N facts, M rows`
