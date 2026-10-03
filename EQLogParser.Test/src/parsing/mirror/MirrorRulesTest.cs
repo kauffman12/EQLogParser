@@ -62,6 +62,9 @@ public class MirrorRulesTest
         // Player claim and no owner is invented from the spellbook owner above it.
         AssertIdentity(timeline, "Snapclaw", IdentityKind.Pet, "R20-petspell");
 
+        // R4 tier 1, berserker family: a name nothing else claims, proven by one sprint cast.
+        AssertIdentity(timeline, "Krietz", IdentityKind.Player, "R4-spell");
+
         // R6: multi-word NPC-database name asserts Npc at Medium. The damage parser stores the
         // attacker exactly as the log spells it ("A bixie commander"), so resolve by case match.
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
@@ -142,7 +145,7 @@ public class MirrorRulesTest
         // data/spells.txt) so the second gate on both cast rules passes for real captures.
         foreach (var spell in new[] { "Boastful Bellow XLVII", "Boastful Conclusion LIII", "Frenzy of Spirit XIII",
                                       "Paragon of Spirit XLI", "Focused Paragon of Spirit XXXIV", "Hobble of Spirits VI",
-                                      "Hobble of Spirits Snare VI" })
+                                      "Hobble of Spirits Snare VI", "Tireless Sprint VIII" })
         {
             Assert.IsNotNull(EQDataStore.Instance.GetSpellClass(spell), $"{spell} must resolve through the family seed");
         }
@@ -165,14 +168,21 @@ public class MirrorRulesTest
     }
 
     [TestMethod]
-    public void VersionedFamilyListsAreSixAndOneNoMore()
+    public void VersionedFamilyListsAreSevenAndOneNoMore()
     {
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
-        Assert.AreEqual(6, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(7, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
+
+        // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "Boastful Bellow", "Boastful Conclusion", "Frenzy of Spirit", "Paragon of Spirit",
+            "Focused Paragon of Spirit", "Hobble of Spirits", "Tireless Sprint",
+        }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
     }
 
     [TestMethod]

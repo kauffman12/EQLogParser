@@ -482,8 +482,9 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
-  `EQDataStore.ClassSafeSpellFamilies` (closed at **6**: Boastful Bellow/Boastful Conclusion → Bard,
-  Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord) claims the caster of
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **7**: Boastful Bellow/Boastful Conclusion → Bard,
+  Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker)
+  claims the caster of
   `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
   match and must be the whole tail**: versionless never prints (measured: 0 lines) and matches nothing,
   and a rank absent from `spells.txt` passes the text gate but fails the `GetSpellClass` gate — new
@@ -501,8 +502,23 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   attackers, but every attacker already held a stronger claim (zero yield = bug surface), so modifier
   masks stay stats-only. Class flows with no new system: the seeded `_spellsToClass` feeds
   `CastLineParser`'s existing registry `SetActivePlayerClass` path. Pinned by `MirrorRulesTest`
-  (`VersionedFamilyListsAreSixAndOneNoMore`, `...Split_Hobble...`); numbers: docs/combat-mirror-design.md
+  (`VersionedFamilyListsAreSevenAndOneNoMore`, `...Split_Hobble...`); numbers: docs/combat-mirror-design.md
   → "Casting words are identity".
+- **The frenzy verb claims a class, never a person — and classes are time-bounded.** `X frenzies on Y for N`
+  is the berserker frenzy AA (85,685 lines, zero article-shaped actors; a monster's frenzy reads
+  `is struck by a frenzied assault` and names no attacker), so `DamageLineParser`'s melee branch — gated on
+  `ParserUtil.IsHitTypeAddition`, the same seam that skips the verb's `on` — writes
+  `SetActivePlayerClass(attacker, GetClassLabel(SpellClass.Ber), 2, lineTime)` and **no identity**: no
+  verified-player, no timeline verdict. Whoever frenzies *is* a berserker, not necessarily a player; class
+  changes mid-log (Covennx: frenzy lines only in the 2025/26 captures), which is why class lives only in
+  `PlayerRegistry`'s **time-windowed** records: confidence 2 (peer of `CastLineParser`) commits the first
+  window immediately but an opposing class needs `LowConfidenceThreshold` = **8** sightings, committed from
+  the first odd sighting's own second — one stray cast cannot flip a class, a real reclass flips in a pull —
+  and `GetPlayerClass(name, t)` reads per second (before the first record it answers that record; not backdating).
+  Headless class writes need the App.xaml.cs host hook (`CombatRecordLookup.IsValidClassName`) wired or they
+  fail in silence — see `FrenzyClassTest` setup. Frenzy Strike AA casts (`... VII Caza`) stay unused: the AA
+  rank word breaks the roman-rank anchor; extending it is a measured step of its own. Numbers:
+  docs/combat-mirror-design.md → "The frenzy verb proves a class, never a person".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

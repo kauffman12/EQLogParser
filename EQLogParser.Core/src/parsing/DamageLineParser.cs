@@ -508,6 +508,17 @@ namespace EQLogParser
           record.ModifiersMask = LineModifiersParser.Crit;
           _lastCrit = null;
         }
+
+        // Berserker Frenzy: whoever performs the frenzy verb IS a berserker - 85,685 `X frenzies on Y`
+        // lines across 8 captures with zero article-shaped casters; a monster's frenzy instead reads
+        // "is struck by a frenzied assault", which carries no attacker name to misattribute. CLASS
+        // evidence only, never Player identity: the actor need not be a player, and class changes
+        // mid-log (Covennx has frenzy lines in the 2025-26 captures and none before), so this rides
+        // PlayerRegistry's time-bounded class records rather than any timeline verdict.
+        if (record is not null && ParserUtil.IsHitTypeAddition(split[hitTypeIndex]))
+        {
+          PlayerRegistry.Instance.SetActivePlayerClass(attacker, EQDataStore.Instance.GetClassLabel(SpellClass.Ber), 2, lineData.BeginTime);
+        }
       }
       // [Sun Apr 18 20:24:56 2021] Sonozen hit Jortreva the Crusader for 38948 points of fire damage by Burst of Flames. (Lucky Critical Twincast)
       // [Sat Jan 04 15:29:18 2025] Piemastaj hit Boss for 176000 points of unresistable damage by Elemental Conversion VI.

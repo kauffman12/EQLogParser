@@ -96,7 +96,10 @@ namespace EQLogParser
       ("Focused Paragon of Spirit", SpellClass.Bst),
       // The beastlord's OWN snare. NOT the pet's - see PetCastSpellFamilies; the roman-rank anchor is
       // what keeps this prefix from swallowing `Hobble of Spirits Snare VI`.
-      ("Hobble of Spirits", SpellClass.Bst)
+      ("Hobble of Spirits", SpellClass.Bst),
+      // The berserker's sprint spell: 8 ranks in spells.txt, single-bit Ber mask on every one; the
+      // log carries it as `Tolzol begins casting Tireless Sprint VIII.` (named raid casters only).
+      ("Tireless Sprint", SpellClass.Ber)
     ];
 
     // Pet-cast spell families: this exact spell is an ability of a beastlord's pet and never of the
@@ -465,6 +468,12 @@ namespace EQLogParser
       }
       return null;
     }
+
+    // SpellClass -> canonical class label ("Berserker"). Evidence that is not a spell name (the
+    // frenzy verb in DamageLineParser) uses this to ride the same registry vocabulary as the
+    // cast-based writes; an unset host label lookup answers empty, which PlayerRegistry refuses.
+    internal string GetClassLabel(SpellClass spellClass) =>
+      _classNames.TryGetValue(spellClass, out var name) ? name : string.Empty;
 
     // Catalog R4 tier 1: spell identity alone proves the caster is a player of one class, no
     // corroboration needed. The curated epics/Minstrels and every single-bit Spire row are seeded
