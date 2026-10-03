@@ -39,3 +39,6 @@
 [Sun Apr 26 18:50:40 2026] Brakka begins casting Battle Leap Warcry II.
 [Sun Apr 26 18:51:10 2026] Relaraa begins casting Focused Celestial Regeneration XXVII.
 [Sun Apr 26 18:51:40 2026] Faenwyn begins casting Spirit of the Wood XXVII.
+[Sun Apr 26 18:52:10 2026] Bramblechord begins casting Nature's Boon XXXII.
+[Sun Apr 26 18:52:40 2026] Isilwynn begins casting Eldritch Rune XI.
+[Sun Apr 26 18:53:10 2026] Willowmere begins casting Gather Mana IV.

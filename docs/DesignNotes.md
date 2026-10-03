@@ -4686,3 +4686,110 @@ fact that half a second later it would have been a perfectly good refresh.
 One consequence worth stating because somebody will try to "simplify" it away: an expensive pass writes two Info lines ("derive starting", "derive done");
 a cheap pass writes the same two at **Debug**. Two passes a second of Info logging would push the raid itself out of the file this app writes, which is the
 file anyone debugging a report is reading.
+
+
+### Re-measured after a season of identity rules (2026-10)
+
+With the rule count up from 14 to 20 and the casting-signature families at fifteen, the same Incogitable
+benchmark reads **classify 309 ms + project 435 ms = 744 ms** for a full pass (recorded 732 ms before the
+season began), continued projection still **0-5 ms**, quiet-tick projection **0 ms**. The whole batch of
+rules added since - pet spells, the class-ambiguous gate, frenzy verb classes, ten new spell families -
+costs tens of ms on the classify sweep, which runs only at the full cadence (~1 s even on a live tail).
+It is never per line: the family gate evaluates once per *distinct (caster, spell) claim* inside R4, and
+the capture path gained no check from any of it. The classify term remains dominated by the same five full
+sweeps (R9/R18/R15/R7/R6) as when they were itemized; a rule that outgrows them is the trigger to make
+sweeps incremental, and the gated benchmark is what shows that - not speculation.
+
+## Handlers that XAML fires early (2026-10)
+
+Two startup crashes in `MirrorFightTable`, one build apart, taught the same lesson twice — and the codebase already knew it.
+
+**Crash 1** (`f2438c88` shipped the HP checkbox): `NullReferenceException` at `ShowHpChanged`, inside
+`MirrorFightTable.InitializeComponent`, out through `MainWindow..ctor` → `CreateAppError`, every launch. XAML sets
+`IsChecked="True"` on a CheckBox whose `Checked/Unchecked` point at that handler, and WPF raises the event *as it applies the
+property* — mid-parse, when no named field of the control exists yet. The handler read `mirrorShowHp.IsChecked` off the null field.
+
+**The first fix was wrong in a way worth remembering.** It guarded `if (mirrorShowHp is null) return;` — testing the *sender*.
+
+**Crash 2** (same method, one deeper): NRE at `mirrorDamageColumn.IsHidden`, meaning the handler ran **past** the sender guard —
+`mirrorShowHp` was wired while `mirrorDamageColumn` (declared ~35 lines later in the markup, inside the grid) was not. So
+pre-load firings are not one event at one instant: whatever the exact mechanism (the checkbox carries a custom
+`Template="{StaticResource CustomCheckBoxTemplate}"`, and template materialization is a known way for a toggle to push its value
+back during parse), **multiple synthetic firings land at different points of the parse, each seeing a different half-wired pane.**
+A sender-null guard can only ever catch the subset where that one field happens to be null.
+
+**The convention every legacy table already follows**: guard on the *pane's readiness* — `dataGrid?.View != null`
+(FightTable, TankingSummary, DamageBreakdown with its literal `// check if call is during initialization`, HitLogViewer's
+`dataGrid is { View: not null }`). This is why that idiom looks redundant until it saves you. `SfDataGrid.View` materializes only
+when something assigns `ItemsSource`, and the constructor does that *before* syncing the checkboxes from saved settings:
+
+- during `InitializeComponent`: `mirrorGrid` (or its View) is null → every synthetic firing is swallowed, whatever field state it sees;
+- in the constructor's dial sync and after: View exists → real events, including `IsChecked = ConfigUtil.IfSet(...)`, run fully.
+
+Both mirror handlers now open with `if (mirrorGrid?.View is null) return;`. The rule generalizes to any pane: **a handler attached
+to a property XAML itself sets must test the one object that cannot exist until the pane is fully loaded** — not the sender, not
+"some field", but the readiness sentinel the rest of the app uses.
+
+**Test coverage, and its limits.** `MirrorFightTableStartupTest` (Wpf.Test) pins three things: plain construction (MainWindow's own
+path), "a saved-OFF dial survives XAML's IsChecked=True" (the silent corruption the synthetic toggle would cause), and — the half
+that keeps this fix honest — "a real post-load uncheck still hides the column and saves the dial", because a guard too eager to
+swallow passes every crash test while breaking the feature. These compile anywhere but only run on Windows; **constructing themed
+panes in tests needs the three app-level StaticResource keys** (`CustomCheckBoxTemplate`, `TemplateToolTip`, `EQIconStyle` live in
+App.xaml), which the headless host doesn't have — the test stubs them into a bare `Application.Current`. The stubs pin the
+construction contract, not theme fidelity; and a startup crash class that only a full app launch reproduces is a standing argument
+for launching the built app before shipping UI code.
+
+## The derive that survives its own rules (2026-10)
+
+**Why: a user asked, twice, "when would anyone ever press Re-derive?" — and the honest answer was once.** The button
+existed because a failed pass latched auto-derive OFF for the life of the session ("stop the loop, leave Re-derive
+available"). Enumerating the triggers said otherwise: quiescence fires a full pass at load end; the cadence keeps a live
+tail fresh; an identity override calls `RederiveAsync` itself (`MirrorFightTable.xaml.cs:393`); opening the derived meter
+forces a full pass (`DamageOverlayWindow.xaml.cs:226`). A press in healthy life recomputes what is already on screen.
+The button's entire job was the crash corner — furniture advertising our own bugs. And the latch itself predates the
+two-lane cadence: when derives only ran at load-end, stopping the loop cost a pass or two; under a 0.5-3 s refresh it
+froze every derived surface for the rest of the night over one hiccup, silently except for one log line.
+
+**What replaced it, coarse to fine.** (1) A classification STAGE that throws is a bug in one check: `RunStage` swallows
+it, reports the full exception on `MirrorRuleOutcome.FailedRules` (Core owns no logger — the session writes the player's
+log), and retires *only that stage* after five consecutive failures; one clean run clears the streak, `ResetRuleHealth`
+(a new `MirrorSession`) hands the next capture — different data, possibly nothing like the poison — the full rule book.
+Soundness of partial classification: rules only ADD evidence, and every consumer already handles names nothing has
+placed (every log starts that way), so the degradation direction is "less known", never "wrong side"; a retired stage
+changes the timeline's content digest, and the carry gate re-folds rather than mixing rule books across passes.
+(2) A session-level throw retries on `MirrorDeriveCadence.RetryDelayS` — 1 s, doubling, capped at 60 s, zeroed by any
+completed pass; a transient fault (locked file, AV scan) vanishes inside a second, deterministic poison becomes a slow
+repeating stack in eqlogparser.log, which *is* the diagnosis. (3) `IdentityPriorStore.Record` — a write for the NEXT
+log's benefit — cannot fail a pass at all: wrapped, logged, boards untouched. The Re-derive button and its handler are
+deleted; the fight table's failure status says "Derive failed (retrying automatically)". Tests: the guard laws (streak
+arithmetic, retire-self-only, reset-on-new-session, never-silent) and the ladder's shape.
+
+## The EMU corpus joins the parity battery (2026-10)
+
+**Why: every real-log measurement to date was one log format.** The reorganized corpus puts live captures under
+`local/logs/live/` and EMU-server captures under `local/logs/emu/`; the latter parse differently — Heroes Forge
+`(Owner: X)` attacker lines, old-EMU criticals (`scores a critical hit! (9110)` pairing with the next hit line),
+absorbed-damage shapes — behind the app's `EnableEmuParsing` setting, which only `DamageLineParser` reads. The mirror
+ingest rides that same parser, so this was the first time the capture/classification/projection stack ever saw those
+grammars. `PipelineHarness` now honours `EQLP_EMU=1` (sets `AppSettings.IsEmuParsingEnabled` per run, restores it —
+process-global flag, live logs misparse with it left on).
+
+**Sweep, `Boards_RealLog_PerRaiderParity`, all PASS:**
+
+| capture | facts (dmg/heal) | legacy→derived rows | raid damage | population law |
+|---|---|---|---|---|
+| Kugon (721 B old-EMU duel) | 7 / 0 | 1 → 1 | **34,073 = 34,073 exact** | 1/1 |
+| Silresa (0.6 MB) | 4,472 / 13 | 40 → 40 | **833,145 = 833,145 exact** | 5/5, healers 2/2 strict |
+| Catenza (2022, 1 MB) | 11,155 / 0 | 4 → 4 | −3.7 % (bare pet `Luna` → owner `+Pets`) | 23/23, absent 0 |
+| Bulron (148 MB) | 707,860 / 25,455 | 13,505 → 13,503 | +0.02 % | 35→36, absent 0, healers 33/33 strict |
+| Ikky (424 MB) | 1,498,088 / 22,703 | 24,958 → 24,955 | +0.07 % | 51→52, absent 0 |
+| Roper (790 MB) | 4,356,144 / 33,805 | **44,729 → 44,728** | +1.7 % | 18→22, absent 0 |
+
+The known findings all held on a foreign grammar: nobody legacy lists is ever absent (`absentFromDerived=0` six for
+six), differences are the recorded pet-folding renames, and healing parity stays strict where heals exist (a melee-only
+capture legitimately shows nothing — the boards test's "never empty" law was healed into "empty means BOTH doors
+silent", because `eqlog_Kugon_thornblade.txt` is nine lines of duel with no heal anywhere). Live regression alongside:
+Incogitable at its new path reproduces the recorded numbers byte-exact (578,233,842,799 → 581,343,395,690, 373/373
+healers, zero heal diffs), and its fight rows now count 4,471 = legacy's 4,471 exactly, where the first recorded run
+said 4,312 — the row-per-life split work closing that gap. The emu tanking line (Roper: legacy 35.5 M all-comers vs
+21.4 M people, derived 21.4 M) is the same "legacy's board counts NPCs" census as live logs.

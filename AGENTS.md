@@ -482,10 +482,11 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
-  `EQDataStore.ClassSafeSpellFamilies` (closed at **12**: Boastful Bellow/Boastful Conclusion → Bard,
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **15**: Boastful Bellow/Boastful Conclusion → Bard,
   Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker,
-  Celestial Regeneration/Focused Celestial Regeneration → Cleric, Spirit of the Wood → Druid,
-  Battle Leap Warcry/Battle Leap → Warrior **or** Berserker) claims the caster of
+  Celestial Regeneration/Focused Celestial Regeneration → Cleric, Spirit of the Wood/Nature's Boon →
+  Druid (their casters Tilwedarx/Tuona cross-check the two families), Gather Mana/Eldritch Rune →
+  Enchanter, Battle Leap Warcry/Battle Leap → Warrior **or** Berserker) claims the caster of
   `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
   match and must be the whole tail**: versionless never prints (measured: 0 lines) and matches nothing,
   and a rank absent from `spells.txt` passes the text gate but fails the data gate — new
@@ -508,7 +509,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   attackers, but every attacker already held a stronger claim (zero yield = bug surface), so modifier
   masks stay stats-only. Class flows with no new system: the seeded `_spellsToClass` feeds
   `CastLineParser`'s existing registry `SetActivePlayerClass` path. Pinned by `MirrorRulesTest`
-  (`VersionedFamilyListsAreTwelveAndOneNoMore`; `DerivedFightsMatchLiveParseFactForFact` is where the
+  (`VersionedFamilyListsAreFifteenAndOneNoMore`; `DerivedFightsMatchLiveParseFactForFact` is where the
   Hobble split lives in a test). Battle Leap Warcry itself prints
   **zero lines** in every local capture — it ships on user assertion plus the spell DB's War|Ber column,
   with plain Battle Leap's 470 zero-article casts as nearest corroboration; numbers:

@@ -110,6 +110,17 @@ namespace EQLogParser
       // lines names a proper noun (Tilwedarx, Tuona), zero possessive or article-shaped. The ~7.9k
       // heal lines naming the spell claim nothing, per the target rule.
       ("Spirit of the Wood", SpellClass.Dru),
+      // The enchanter pair (user-added 2026-10): Gather Mana, 12 DB ranks all single-bit Enc(8192),
+      // every one of the 45 `begins casting` lines a proper noun (Incogitable 27, Willmez,
+      // Trystych...); Eldritch Rune, 44 DB ranks all single-bit Enc, 175 cast lines with zero
+      // article-shaped casters (Sabrienah, Eilelyen, Erowydd...). Both claim the caster; targets of
+      // any heal/detriments naming them claim nothing, per the standing target rule.
+      ("Gather Mana", SpellClass.Enc),
+      ("Eldritch Rune", SpellClass.Enc),
+      // The druid's OTHER healing AA (user-added 2026-10): 33 DB ranks, all single-bit Dru; every
+      // one of the 36 cast lines a proper noun - Tilwedarx and Tuona, who cast it, are the very
+      // casters Spirit of the Wood proves druid, so the two families cross-check each other.
+      ("Nature's Boon", SpellClass.Dru),
       // MULTI-BIT entries are identity-safe but class-AMBIGUOUS (Warrior OR Berserker): the rank
       // proves its caster is a player - these are AA-derived warcries, which mobs are not given -
       // while GetSpellClass deliberately stays null so no registry write coin-flips a class.

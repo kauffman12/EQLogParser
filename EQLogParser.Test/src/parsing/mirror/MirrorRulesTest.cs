@@ -73,6 +73,12 @@ public class MirrorRulesTest
         // R4 tier 1, druid family (rank XXVII of the complete I-XLVI run).
         AssertIdentity(timeline, "Faenwyn", IdentityKind.Player, "R4-spell");
 
+        // R4 tier 1: the enchanter pair through the DB gate, and the USER-ASSERTED family (whose
+        // ranks the shipped spells.txt does not contain at all) through its own gate.
+        AssertIdentity(timeline, "Isilwynn", IdentityKind.Player, "R4-spell");
+        AssertIdentity(timeline, "Willowmere", IdentityKind.Player, "R4-spell");
+        AssertIdentity(timeline, "Bramblechord", IdentityKind.Player, "R4-spell");
+
         // R6: multi-word NPC-database name asserts Npc at Medium. The damage parser stores the
         // attacker exactly as the log spells it ("A bixie commander"), so resolve by case match.
         var bixie = facts.InternedNames.First(n => n.Contains("bixie commander", StringComparison.OrdinalIgnoreCase));
@@ -154,7 +160,8 @@ public class MirrorRulesTest
         foreach (var spell in new[] { "Boastful Bellow XLVII", "Boastful Conclusion LIII", "Frenzy of Spirit XIII",
                                       "Paragon of Spirit XLI", "Focused Paragon of Spirit XXXIV", "Hobble of Spirits VI",
                                       "Hobble of Spirits Snare VI", "Tireless Sprint VIII", "Celestial Regeneration XLII",
-                                      "Focused Celestial Regeneration XXVII", "Spirit of the Wood XLVI" })
+                                      "Focused Celestial Regeneration XXVII", "Spirit of the Wood XLVI",
+                                      "Gather Mana IV", "Eldritch Rune XI", "Nature's Boon XXXII" })
         {
             Assert.IsNotNull(EQDataStore.Instance.GetSpellClass(spell), $"{spell} must resolve through the family seed");
         }
@@ -176,6 +183,14 @@ public class MirrorRulesTest
         Assert.IsFalse(ClassificationRules.IsClassSafeCast("Battle Leap XIV"));
         Assert.IsFalse(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Battle Leap Warcry IX"));
 
+        // Nature's Boon (druid AA): a user-named spell whose ranks turned out to be IN the shipped
+        // data all along (33 of them, single-bit Dru), so it rides the DB gate like every other
+        // family - and rank XXXIV, beyond the data, is the silence law for this family specifically.
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Nature's Boon XXXII"));
+        Assert.AreEqual("Druid", EQDataStore.Instance.GetSpellClass("Nature's Boon XXXII"));
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Nature's Boon XXXIV"));
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Nature's Boon XXXIV"));
+
         // Roman-rank anchor: the bare family never matches (no capture prints it versionless).
         Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Boastful Bellow"));
 
@@ -194,13 +209,13 @@ public class MirrorRulesTest
     }
 
     [TestMethod]
-    public void VersionedFamilyListsAreTwelveAndOneNoMore()
+    public void VersionedFamilyListsAreFifteenAndOneNoMore()
     {
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
-        Assert.AreEqual(12, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(15, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 
         // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
@@ -208,8 +223,8 @@ public class MirrorRulesTest
         {
             "Boastful Bellow", "Boastful Conclusion", "Frenzy of Spirit", "Paragon of Spirit",
             "Focused Paragon of Spirit", "Hobble of Spirits", "Tireless Sprint",
-            "Celestial Regeneration", "Focused Celestial Regeneration",
-            "Spirit of the Wood", "Battle Leap Warcry", "Battle Leap",
+            "Celestial Regeneration", "Focused Celestial Regeneration", "Spirit of the Wood",
+            "Nature's Boon", "Gather Mana", "Eldritch Rune", "Battle Leap Warcry", "Battle Leap",
         }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
     }
 
