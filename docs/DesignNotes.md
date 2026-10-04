@@ -3957,16 +3957,23 @@ the `ContentControl`s stay so an existing `EQLogParserLayout.xml` still loads.
 
 Design points worth keeping:
 
-- **Asked, never fed.** `DeriveEngine.BuildNameCensus()` assembles the timeline exactly as a derive does (roster seed →
-  rules → overrides last), off the UI thread, and runs on **four explicit doors only**: the first time the pane is really
-  visible *and a session exists* (`FillOnFirstShow`; a show before any log opens does not spend the shot, or a later tab
-  click would read an empty grid forever), the menu opening it, a new log starting, and the Refresh button. It used to also run on every
-  `IsVisibleChanged`, which for a docked pane means each auto-hide slide, tab switch and restore — six words from the
-  operator describe what that felt like: *"it keeps updating as new data arrives"*. A list that refits itself under a
-  reader cannot be read, and a census nobody has open is thrown away every few seconds during a load. Nothing
-  subscribes to `DeriveEngine.Derived`; the Refresh button is not a workaround for a missing subscription, it IS the
-  design. Facts can still arrive mid-walk: a census is display data, so one row shifting by one fact between passes is
-  accepted rather than putting a lock on the capture path; a refused walk keeps the previous list and logs.
+- **Current while it is open, silent while it is shut** (changed 2026-11, from *asked, never fed*). `DeriveEngine.BuildNameCensus()`
+  assembles the timeline exactly as a derive does (roster seed → rules → overrides last) and runs off the UI thread. The pane
+  now takes its subscription on `IsVisibleChanged` — `FollowSession`/`UnfollowSession` around one `Derived` handler, plus
+  `ActiveChanged` so a closed log leaves nothing to follow and a new capture is never read through the engine that died — and
+  **the Refresh button is deleted rather than kept as a second way to ask**.
+  The first version subscribed to nothing on purpose: every visibility change used to fire a full census, and for a docked pane
+  that is each auto-hide slide and tab switch, which the operator described in six words — *"it keeps updating as new data
+  arrives"* — and a list that refits itself under a reader cannot be read. That reasoning was right about the CADENCE and wrong
+  about the conclusion: what it bought was a window that showed last night's raid while a live one scrolled, and the fix for a
+  rebuild-per-slide is a floor, not a button nobody presses. **An operator who does not know a button exists concludes the
+  feature is broken**, which is a worse failure than a list that moved once too often. So: rebuild once on show (before the
+  reader's eye reaches the grid), then one per derive pass floored at **2 s** (`AutoRefreshFloorMs`) while visible — a live raid
+  hands out passes around twice a second and the census walks every name plus the heal stream, which is enough to be felt at
+  full rate. Unsubscribed when hidden, so an auto-hide slide in the background costs nothing. Facts can still arrive mid-walk: a
+  census is display data, so one row shifting by one fact between passes is accepted rather than putting a lock on the capture
+  path; a refused walk keeps the previous list and logs. With no engine at all the grid is **emptied** (`ClearRows`) — last
+  night's names sitting over a closed log are worse than an empty table, and this pane shows no status line to explain them.
 - **No second source of truth.** Every verb goes through `ClassificationCommands` into the same per-server files (verdicts,
   roster, rejections) plus the ledger; nothing is stored in the window.
 - **Four columns: Name | Type | Why | Class, sorted by name, sized like every other table.** The header says TYPE because
@@ -3985,16 +3992,29 @@ Design points worth keeping:
 - **The Notes column became the WHY cell's tooltip, and then the tooltip lost its sentences.** It was mostly empty, and an
   almost-empty column is worse than no column because it reads as "checked and clean". But two of its lines have nowhere
   else to live — *"You chose NPC"* and *"Claim taken back"* are the only way this pane can tell a row an operator wrote
-  from one the rules inferred, and neither Type nor Why says it. So `ProvenanceFor` composes them on hover, one SHORT line
-  each (`Cast: Boastful Bellow XLVII`, `Healed by 20 raiders`, `Earlier logs x2`, `players.txt says player`, `Not in this
-  log`) and `NamesTableTest` pins each one, because each answers a different action: leave it, re-check it, or go fix a
-  meter that is wrong right now.
+  from one the rules inferred, and neither Type nor Why says it. So `ProvenanceFor` composes them on hover — and then stopped
+  composing: **the hover is exactly ONE line now, with no newline in the method at all**, the sentence that answers "why does it
+  say That" in a blink. Stacked label-and-colon detail (`Cast:`, `Earlier logs x2:`, `Not in this log`) turned the hover into a
+  form to fill in, and most of it repeated what the row already said. What survives is one proof clause carrying its own number —
+  `Cast Boastful Bellow XLVII`, `Healed by 20 raiders`, `It Fights Mobs in previous log x2` — or, for the two states no rule wrote,
+  the sentence that says so (`You chose NPC`, and a refusal reading *"Claim taken back — you said this name is not one of ours"*,
+  which **supersedes** the proof clause instead of joining it: a refused name has no live verdict to explain, so printing what the
+  rules would have said underneath was two answers to one question). One flag may ride on the same line behind the house middot,
+  because it is the reason to go fix something rather than another fact about the row: `From Chat · players.txt says Player` —
+  that pair is the state where a player's damage leaves the board. **Never blank**: an unplaced name reads *"Nothing identified it
+  yet — click the pencil to say what it is"*, because the empty cell is exactly the row somebody hovers. "Not in this log" is gone
+  outright: it read as an error message on a perfectly ordinary hand-written verdict, and the fact columns already show the absence.
+  `NamesTableTest` pins each surviving sentence and the one-line law (asserted again on the rejection row and the disagreement row,
+  the two states most likely to grow a second line).
 - **WHY speaks two words, and the vocabulary is closed** (2026-11). The column used to print `R15-healed` and
   `Prior:R7-graph`, which is the rule book's private vocabulary rendered in the one place a person reads instead of
   greps — and at three times the width of the class column. `IdentityVocabulary.WhyWord` (Core, next to the rules that
-  write these strings) maps each code to two words: `Healed`, `Chat`, `Who`, `Spell`, `Owner`, `NPC list`, `Name shape`,
-  `Chosen`… A borrowed answer keeps both facts (`Prior:R7-graph` → *Our side (earlier)* — the ledger stores the rule its
-  verdict came from, so the word is not invented), and R5's owner suffix comes off in the cell (*Owner*, not
+  write these strings) maps each code to two words: `Healed`, `Chat`, `Who`, `Spell`, `Owner in Name`, `NPC List`, `Mob Name`,
+  `Chosen`, `A Spell`… **A borrowed answer says the same thing a local one says** (`Prior:R7-graph` → *Fights Mobs*, not *Our
+  side (earlier)*): the ledger stores the rule its verdict came from so the word is still true, and the borrow is a fact about
+  WHERE the proof came from, which belongs in the tooltip — `It Fights Mobs in previous log x2`. The `(earlier)` suffix was
+  dropped on request after being tried in two places: paying column width for it made one cell carry two mysteries, and a
+  footnote-style superscript is not something a person reads. R5's owner suffix comes off in the cell (*Owner in Name*, not
   *R5-owner:Sancus*) because who owns a pet is Pet Owners' table.
   **An unknown code echoes itself rather than being guessed at**: a fallback like "Evidence" would file a new kind of proof
   under an old meaning, and provenance is the only thing this window exists to be honest about. Coverage is asserted twice
@@ -4041,6 +4061,14 @@ Design points worth keeping:
     The class list is `MainActions.ClassList`, hoisted out of `MainWindow`'s private field so the window that owns a name
     and the menus share ONE class vocabulary (`CombatRecordLookup.IsValidClassName` validates the word anyway, which is why
     the list's leading blank writes nothing rather than a roster row with an empty class);
+  - **some rows have no pencil at all** (`NameRow.Overrulable` → `IdentityVocabulary.CanOverrule`): a summon whose own spelling
+    carries its master (`Tuona`s ward`) and a spell effect (R21) each have exactly ONE right answer, and an icon offering four
+    wrong ones is worse than no icon — typing "Player" over `Sonic Bang` would put a spell on the roster. An operator's own
+    verdict always keeps its pencil, even on such a name: a wrong click must not be permanent;
+  - **"Clear claim" takes back both stores.** `IdentityPriorStore.Remove(name)` runs beside `ClassificationCommands.ClearVerdict`,
+    because a remembered verdict would otherwise hand the row straight back on the next pass wearing *"… in previous log"* — the
+    opposite of what the click looked like it did. Setting a verdict drops the prior too (this capture's answer now outranks it,
+    and `Recall` stops offering it once an override exists);
   - **the class pencil appears on a `Player` row and nowhere else** (`NameRow.ClassEditable`), because that verb is not a
     display choice: `SetDefaultPlayerClass` claims the name as a verified player AND appends it to players.txt. On an NPC row
     that is precisely the pollution this window exists to catch; Pet/Merc rows get nothing (mercenaries are not persisted,
@@ -4074,12 +4102,52 @@ fixed total, and a theme or font change moves this grid with the others (applied
 **Why not `DataGridUtil.RefreshTableColumns`:** its mapping table has no category for "a word plus an edit icon", and adding
 `Type` or `PlayerClass` there would resize every OTHER grid that maps a column by those words. `AllowResizingColumns` stays on.
 
-Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs` (the tooltip lines, the operator/rejection distinction, the
-cast and crowd sentences and their absence where they do not belong, `ClassEditable` per kind) — these **compile but cannot
-run on Linux**, so treat them as unbuilt evidence until a Windows run. The parts that do not need WPF moved to the
-cross-platform assembly on purpose: `IdentityVocabularyTest` (9: vocabulary coverage both directions, the corpus check, the
-echo-unknown law, prior/owner-suffix forms, the dropdown's five entries and its one Unknown), `CensusHealProofTest` (4) and
-`CensusCastProofTest` (4). Full cross-platform suite at this commit: **1562 passed, 8 skipped**.
+Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs` (the tooltip lines, the one-line law, the operator/rejection
+distinction, the cast and crowd sentences and their absence where they do not belong, `ClassEditable` per kind) — these
+**compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run. The parts that do not need WPF moved
+to the cross-platform assembly on purpose: `IdentityVocabularyTest` (vocabulary coverage both directions, the corpus check, the
+echo-unknown law, prior/owner-suffix forms, one-line tooltips and no blank tooltip, `Overrulable`, the dropdown's five entries
+and its one Unknown), `CensusHealProofTest` (4), `CensusCastProofTest` (4) and `SpellEffectIdentityTest` (4). Full
+cross-platform suite at this commit: **1569 passed, 8 skipped**.
+
+## A spell is not a fighter: R21, and the two proofs that a name is one (2026-11)
+
+The Names window reported `Curse XVII Rk. III | Player | Our side`, next to rows for Burning Glob Burst, Spiter Blood and a
+pile of chants — names in `spells.txt` standing in the roster column. The mechanism was the parser's own, and correct as far as
+it goes: when the client writes *"Goratoar has taken 18724 damage from Slicing Energy by ."* there is no caster to put in the
+attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries that onto
+the fact). Two such shapes exist — `by .` (**706** lines in `eqlog_Kizant_xegony-09-03-26.txt`) and `from your Mind Coil Rk. II.`
+(**135**) — while 45,904 lines of the same family name their caster normally and never put a spell in an attacker field.
+
+So a spell arrives in the name pool as an *actor*, and the identity rules read actors. **Half the directions were already
+answered by luck**: a boss dot beating on the raid looks hostile, so the graph called it NPC (right word, wrong reason —
+"it attacks us" for something that is not a "it" at all). The other half was the bug: over the first 250 MB of that capture R21
+places **49** spell names out of a 227-name pool, and **471** of their facts are aimed at MOBS — the raid's own dots landing on
+the raid's own targets, which is precisely the evidence R7 turns into "one of ours". `Tsikut's Chant of Frost Rk. III` (24 such
+facts), `Khrosik's Chant of Poison Rk. III` (22), `Strangle XVII Rk. III` (26), `Spiter Blood Rk. II` (21). The remaining **717**
+facts hit raid-side and keep their side; those rows only gain the truth about what they are.
+
+Four decisions:
+
+- **It runs as an early stage**, before the graph and before the raid-side rollups, so those never have to be argued with — and
+  at **Strong**, not Certain: an independent identity (R6's npc-database entry, R9's charm, a name some spell also matches) must
+  keep its better provenance. `BetterEvidenceOutranksTheSpellDictionary` pins that nothing claimed by chat, presence or a called
+  pet moves onto this rule.
+- **Two proofs, in the order a person would trust them: what the LINE said, then what the SPELL LIST says.** The flag is
+  stronger because it does not depend on this build shipping this expansion's data; the dictionary catches the rest, including
+  every formulation (`spells.txt` carries `Curse XVII` at 72133 and `Curse XVII Rk. II` at 72134 as separate rows), which is why
+  there is no name surgery here and no bare-rank fallback. On the measured corpus all **49/49** names are in `spells.txt`, so the
+  flag pass earns nothing today — it is kept as the guard for data this build does not carry, and tested as its own path (a rank
+  the fixture invents, `Gluttering Decay IX`, still becomes "A Spell" because the line ends `by .`). New content arriving
+  *silent rather than guessed at* is the same law R14/R16 follow for names.
+- **The self-target feedback shape gets NO verdict.** *"You have taken 16690 damage from Cloudburst Strike Feedback XII."* is the
+  local player's own spell bouncing back: calling it NPC is as wrong as calling it Player, and there is no entity behind the name
+  at all. R7 already refuses those edges; R21 refuses the name (both paths pinned, because the guard living on one of them is how
+  a hole like this survives).
+- **A spell row has no pencil** (`IdentityVocabulary.CanOverrule` consults the same `SpellNamed` recognizer the rule uses — a
+  rule and the words shown for its verdict must never disagree about where a spell name begins), and its cell says **A Spell**,
+  not "Our side"/"Enemy". The one recognizer is shared with the ignore-list gate exactly like `EyeSummonOwnerInName` (R19) does:
+  a meter and a rule that disagree about a name shape are two bugs and no test.
 
 ## The one calculation a scope asks (DerivedTotals)
 

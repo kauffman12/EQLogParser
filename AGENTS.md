@@ -323,10 +323,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
   One line per session in eqlogparser.log - `capture: started (file)` at open, `derive: first pass - N facts, M rows`
   at the first pass - so a list that silently fails to fill is diagnosed by which of the two lines is missing.
-- **The Names pane is asked, never fed, and its sentences live in a tooltip**: `NamesTable` subscribes to nothing. The census (a full classification pass) runs
-  when the pane is **first shown**, when the menu opens it, when a new log starts, and by the **Refresh** button — never on `DeriveEngine.Derived` and no longer
-  on every visibility change (`_filledOnce`, because auto-hide dock slides and tab switches each fired a rebuild, which reads as "the table keeps updating itself"
-  while somebody tries to read 4,000 rows). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
+- **The Names pane is current while open and silent while shut** (2026-11; it used to be "asked, never fed"): the census (a full classification pass) ran on
+  explicit doors plus a **Refresh** button, and never on `DeriveEngine.Derived` — the reasoning (auto-hide dock slides and tab switches each fired a rebuild, which
+  reads as "the table keeps updating itself" while somebody tries to read 4,000 rows) was right about the cadence and wrong about the conclusion: what it bought was a
+  window showing last night's raid over a live one, and **an operator who does not know a button exists concludes the feature is broken**. So `IsVisibleChanged` now
+  `FollowSession`/`UnfollowSession` around ONE `Derived` handler (rebuild on show, then one pass per derive floored at **2 s** — `AutoRefreshFloorMs`; a live raid hands
+  out passes ~2/s and the census walks every name plus the heal stream), `ActiveChanged` keeps it attached to the live engine only, the button is deleted rather than kept,
+  and with no session the grid is **emptied** (`ClearRows`) instead of holding last night's names. Anything asserting this must keep the floor (a test that pumps every pass
+  measures nothing) and the unsubscribe (a hidden pane costing census time is the bug this replaced). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
   names by output (`ClassificationReport` still totals them — that is its own row order), and Owner left because `PlayerRegistry` answers it and the Pet Owners
   window lists the same pairs. Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
   (`ClassificationReport.Row.ReasonDetail` — taken per **gate**, not per caster, because "Hobble of Spirits VI" is a prefix of the pet's "Hobble of Spirits Snare
@@ -334,15 +338,34 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). No status line: like
   the fight list the pane says nothing about itself, so the census counts ride the caption's tooltip.
-- **Identity WORDS live in `IdentityVocabulary` (Core), and its coverage is asserted twice**: the Why column used to print `R15-healed` / `Prior:R7-graph` at
-  256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`, `Who`,
-  `Spell`, `Owner`, `NPC list`, `Chosen`…), keeps the borrow marker on priors (`Prior:R7-graph` → *Our side (earlier)*; the ledger stores the rule a verdict came
-  from, so the word is not invented) and drops R5's owner suffix in the cell. **An unmapped code echoes itself rather than being guessed at** — a fallback like
+- **Identity WORDS live in `IdentityVocabulary` (Core), its coverage is asserted twice, and its tooltip is ONE line**: the Why column used to print `R15-healed` /
+  `Prior:R7-graph` at 256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`,
+  `Who`, `Spell`, `Owner in Name`, `NPC List`, `Chosen`, `A Spell`…), **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Fights Mobs*;
+  the ledger stores the rule so the word is true) and puts the borrow in the tooltip instead — `It Fights Mobs in previous log x2`. The `(earlier)` cell marker was dropped
+  on request after being tried twice: column width for a provenance footnote, and one cell carrying two mysteries. **The hover is exactly one short proof clause** (no
+  `Cast:`/`Earlier logs:` labels, no "Not in this log" — that read as an error on an ordinary hand-written verdict) and it is **never blank**: an unplaced name answers
+  *"Nothing identified it yet — click the pencil to say what it is"*, because the empty cell is the row somebody hovers. `NameRow.Provenance` asserts no newline for every
+  state and never carries a newline (asserted again on the refusal row and the disagreement row, the two most likely to grow a second one; a refusal's own sentence
+  **supersedes** the proof clause, and the roster flag rides behind the house middot — `From Chat · players.txt says Player`). **An unmapped code echoes itself rather than being guessed at** — a fallback like
   "Evidence" would file a new kind of proof under an old meaning, and provenance is the one thing this pane must be honest about. `IdentityVocabularyTest` checks
   the explicit list in both directions (missing word *and* stale word) **and** runs the rules fixture asserting no row reaches the screen wearing its code; that
   corpus check immediately caught a code nobody had written a word for (`R3-chat`). Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
+- **A spell effect is not a fighter (R21), and it takes TWO proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
+  caster for the attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries it onto the fact) — and a spell in an
+  attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`
+  (against 45,904 that name their caster normally); over its first 250 MB `ApplySpellEffects` places **49** names out of a 227-name pool and **471** of their facts are aimed at
+  **mobs** — the raid's own dots on the raid's own targets, which is exactly the evidence R7 reads as "one of ours" (`Tsikut's Chant of Frost Rk. III` 24, `Strangle XVII Rk. III` 26,
+  `Spiter Blood Rk. II` 21). That is how a curse reached the roster column as "Player | Our side"; the 717 raid-directed facts keep their side and only gain the truth (`A Spell`).
+  Three laws. (1) **Early stage, Strong not Certain** — an independent identity (R6 npcdb, R9 charm, a name some spell also matches) keeps its better provenance
+  (`BetterEvidenceOutranksTheSpellDictionary`), so a rule that fires on dictionary membership may never paint over evidence. (2) **Line shape first, `spells.txt` second** — the flag
+  does not depend on this build shipping this expansion's data, and the dictionary answers every formulation because each rank is its OWN row (`Curse XVII` 72133, `Curse XVII Rk. II`
+  72134), so there is no name surgery and no bare-rank guessing; measured corpus is **49/49 in spells.txt**, i.e. the flag path earns nothing today and stays as the guard for data we
+  do not ship, tested through its own fixture rank (`Gluttering Decay IX`). (3) **`… Feedback XII.` on `You have taken` gets NO verdict** — that is the local player's own spell bouncing
+  back: NPC is as wrong as Player and no entity exists. R7 refuses those edges, R21 refuses the name, both pinned, because a guard on one path only is how this survived. One recognizer
+  (`SpellNamed`, shared with `IdentityVocabulary.CanOverrule`) so a rule and its own display words cannot disagree about where a spell name begins — same discipline as `EyeSummonOwnerInName`.
+  Tests: `SpellEffectIdentityTest` (real line shapes both directions, the flag-only rank, the feedback refusal, evidence outranks the dictionary).
 - **A verdict is edited in its own cell; a context menu hides verbs** (2026-11): the Names grid has **no** ContextMenu at all — right-drag is how a person grabs a
   block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
   Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper MainWindow's Pet Owners edit and DamageSummary's Group cell call - joined, not re-written, because its
@@ -352,6 +375,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching stays with the two
   title-bar icons and the fight grids' menu; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
+  Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and an R21 spell effect each have one
+  right answer, and offering four wrong ones invites typing "Player" over `Sonic Bang`; an operator's own verdict always keeps its icon so a wrong click is never permanent. And
+  **"Clear claim" removes the ledger entry too** (`IdentityPriorStore.Remove` beside `ClassificationCommands.ClearVerdict`), or the row comes straight back on the next pass wearing
+  *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its
   own, but every other surface reads the LAST derive's snapshot. And `BuildNameCensus` classifies with a **throwaway** `ClassificationState` — it builds its own
   `EntityTimeline`, so carried aggregates have nothing to be incremental over, and sharing them would put a UI-thread walk inside the derive pump's cursor tables
