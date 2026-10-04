@@ -21,6 +21,12 @@ namespace EQLogParser.Wpf.Test;
  * (repeating stack plus retry interval) and the boards answer a selection. What remains is only what a band can
  * own: the wait between EOF and the first snapshot.
  *
+ * And it belongs to an open nobody chose. `FightTable.AllowsLoadBand` is off unless MainWindow turns it on, which it
+ * does only for the startup open the auto-monitor performs; through File / Recent Files the operator asked for the load
+ * while looking at the status line that counts it, so the same EOF tick must leave this panel collapsed (see
+ * AManuallyOpenedLogStaysSilent). Both directions are pinned because the flag defaults to silent: a future open path
+ * that forgets to set it loses an announcement rather than gaining an overlay nobody wanted.
+ *
  * Same construction contract as FightTableStartupTest - STA thread because WPF will not build a
  * FrameworkElement on MTA, stubbed app-level StaticResources because the test host never loads App.xaml.
  */
@@ -92,11 +98,30 @@ public sealed class FightTableLoadBandTest
   }
 
   [TestMethod]
-  public void AEofTickRaisesTheBuildingBand()
+  public void AManuallyOpenedLogStaysSilent()
   {
     Sta.Run(() =>
     {
       var table = new FightTable();
+
+      /*
+       * The default IS the manual open: MainWindow raises AllowsLoadBand only for the automatic startup open. Same EOF
+       * tick as the next test, opposite outcome - the status line at the top of the application already counts a load
+       * the operator is watching after their own click.
+       */
+      table.ReportCaptureProgress(100);
+      Flush();
+      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "a log you picked yourself gets no band");
+      Assert.AreEqual("", table.loadText.Text);
+    });
+  }
+
+  [TestMethod]
+  public void AEofTickRaisesTheBuildingBand()
+  {
+    Sta.Run(() =>
+    {
+      var table = new FightTable { AllowsLoadBand = true };   // the startup open, which nobody asked for by hand
 
       // EOF: reading is done but the list is not - only this panel can say so, over an indeterminate bar.
       table.ReportCaptureProgress(100);
@@ -112,7 +137,7 @@ public sealed class FightTableLoadBandTest
   {
     Sta.Run(() =>
     {
-      var table = new FightTable();
+      var table = new FightTable { AllowsLoadBand = true };
       table.ReportCaptureProgress(100);
       Flush();
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);

@@ -223,8 +223,9 @@ namespace EQLogParser
       var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
       if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
       {
-        // OpenLogFile with update status
-        OpenLogFile(previousFile, 0);
+        // OpenLogFile with update status. `true` = the app opened this on its own, which is the one case where the
+        // fight list shows its loading band (see FightTable.AllowsLoadBand).
+        OpenLogFile(previousFile, 0, true);
       }
 
       // workaround to set initial theme properly
@@ -1307,7 +1308,12 @@ namespace EQLogParser
       classEditPopup.IsOpen = false;
     }
 
-    private void OpenLogFile(string previousFile, int lastMins)
+    /*
+     * `openedAutomatically` distinguishes the startup open (auto-monitor restored the last log; nobody is looking at
+     * this window yet and no scan was asked for by hand) from an open through File / Recent Files. The only thing it
+     * changes is whether the fight list may raise its loading band over the grid for this session.
+     */
+    private void OpenLogFile(string previousFile, int lastMins, bool openedAutomatically = false)
     {
       var openMark = PerfCounters.Begin(OpenLogId);
       try
@@ -1387,6 +1393,9 @@ namespace EQLogParser
             // One line per open: if the derived list ever silently fails to fill, this is the line that is
             // missing from the log (session created) or that arrives without rows following it (derive stuck).
             Log.Info($"capture: started ({Path.GetFileName(theFile)})");
+
+            // Set before the reader starts so the first pump tick already knows whose open this is.
+            if (npcWindow?.Content is FightTable bandPane) bandPane.AllowsLoadBand = openedAutomatically;
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
             _ = _eqLogReader.StartAsync();

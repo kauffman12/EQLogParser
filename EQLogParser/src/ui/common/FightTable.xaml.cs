@@ -241,6 +241,15 @@ namespace EQLogParser
     }
 
     /*
+     * Whether THIS session's load may put the band up — and it is off unless somebody turns it on, because only one
+     * open path wants it. MainWindow sets it before the reader starts: true for the automatic startup open (the
+     * auto-monitor restoring the last log, where the fight list is empty and silent and nothing else says work has
+     * begun), false for every open the operator chose (File / Recent — the application status line counts percent and
+     * seconds off the same pump right then, so a panel over the grid duplicates it while they wait for their own click).
+     */
+    internal bool AllowsLoadBand { get; set; }
+
+    /*
      * Capture heartbeat (dispatcher thread already). The count used to replace the status line every tick, which
      * read as a terminal ticking past; it belongs on the loading band, next to the file progress that says when
      * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
@@ -267,9 +276,12 @@ namespace EQLogParser
         return;
       }
 
-      // No session gate: while the reader pump runs this window is either showing the band or docked-hidden
-      // (engine off), and a hidden band costs nothing. The only veto is "rows already landed this session".
-      if (_loadBandSettled) return;
+      /*
+       * Two vetoes, in order: an open nobody asked to be announced (see AllowsLoadBand), and "rows already landed this
+       * session". There is no session gate beyond those: while the pump runs this window is either showing the band or
+       * docked-hidden (engine off), and a hidden band costs nothing.
+       */
+      if (!AllowsLoadBand || _loadBandSettled) return;
 
       // The reading phase says nothing HERE: the status line at the top of the application counts the same pump's
       // percent (and seconds) already, and a second copy in the dock duplicates it. The one gap only this panel can
