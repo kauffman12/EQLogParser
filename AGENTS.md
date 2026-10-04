@@ -64,7 +64,18 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   those outside; `ConfigUtil` is static state and answers anywhere); and **flush at the priority the handlers queued
   at (Normal), never lower** — pumping at SystemIdle also runs the pane's first arrange, whose pass starts an
   indeterminate ProgressBar's infinite animation on a windowless thread and hung both band-showing tests for the
-  full 60 s budget while the band-collapsed twin sailed through.
+  full 60 s budget while the band-collapsed twin sailed through. The host carries a third, process-shaped law (measured
+  2026-11; mechanism in docs/DesignNotes.md → "A test host is unlicensed"): the tests register no Syncfusion license key
+  (the app's `RegisterLicense("")` is a literal no-op), and on a machine whose keyless validation produces a message, the
+  **first** `SfDataGrid` construction in a process enters Syncfusion's unlicensed notice — `LicenseMessage.DisplayMessage`,
+  which does a SYNCHRONOUS `Application.Current.Dispatcher.Invoke` that a non-pumping test thread can never complete, so the
+  body wedges inside `SfDataGrid.ctor` for the full 60 s budget (at the sixth construction a process counter past five
+  raises the over-limit `shouldQuit`, whose branch re-enters the same display without asking the flag — exactly two bodies
+  hang per run). `Wpf.Test/src/AssemblyLifecycle.cs`
+  sets `SyncfusionLicenseProvider.IsLicenseExceptionShown = true` in `[AssemblyInitialize]` — before ANY construction —
+  because with it set from process start every `GetLicenseType` reads null instead of a message; setting it later would not
+  silence the `shouldQuit` re-entry. If an STA body ever wedges in a Syncfusion constructor again, that line is the first
+  suspect.
 - **XAML-fired handlers guard the PANE, not the sender**: a handler attached to a property XAML itself sets (`IsChecked="True"`) runs
   DURING `InitializeComponent`, and not all named fields are wired at once — measured startup crashes came in both shapes: once with the
   checkbox field itself null, once with the checkbox wired while a column declared later in the markup was not (NRE one line past a
